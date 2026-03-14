@@ -21,48 +21,107 @@
         </div>
     @endif
 
+    {{-- Cards Summary --}}
+    <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-xl-6 g-3 mb-4">
+        <div class="col">
+            <div class="card rounded-4 mb-0 h-100">
+                <div class="card-body p-3">
+                    <p class="mb-1 small">Total Kontrak Aktif</p>
+                    <h5 class="mb-0 fw-bold">{{ $totalAktif }}</h5>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card rounded-4 mb-0 h-100">
+                <div class="card-body p-3">
+                    <p class="mb-1 small">Total Kontrak Selesai</p>
+                    <h5 class="mb-0 fw-bold">{{ $totalSelesai }}</h5>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card rounded-4 mb-0 h-100">
+                <div class="card-body p-3">
+                    <p class="mb-1 small">Kontrak dgn Adendum</p>
+                    <h5 class="mb-0 fw-bold">{{ $totalAdendum }}</h5>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card rounded-4 mb-0 h-100">
+                <div class="card-body p-3">
+                    <p class="mb-1 small">Total Nilai Seluruh Kontrak</p>
+                    <h5 class="mb-0 fw-bold">Rp {{ number_format($totalNilaiAll/1000000, 1, ',', '.') }} Jt</h5>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card rounded-4 bg-warning mb-0 border-0 h-100">
+                <div class="card-body p-3">
+                    <p class="mb-1 small">Hampir Habis Nilainya (&lt;20%)</p>
+                    <h5 class="mb-0 fw-bold">{{ $hampirHabisNilai }}</h5>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card rounded-4 bg-danger text-white mb-0 border-0 h-100">
+                <div class="card-body p-3">
+                    <p class="mb-1 small">Hampir Habis Masa (&lt;30 Hr)</p>
+                    <h5 class="mb-0 fw-bold">{{ $hampirHabisMasa }}</h5>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="card">
         <div class="card-body">
             <div class="table-responsive">
                 <table id="example" class="table table-striped table-bordered" style="width:100%">
                     <thead>
                         <tr>
-                            <th>No Kontrak</th>
-                            <th>Tanggal</th>
-                            <th>Mitra</th>
-                            <th>Pagu/COA</th>
-                            <th>Total Nilai</th>
-                            <th>Periode</th>
+                            <th>No</th>
+                            <th>Nomor/Uraian Kontrak</th>
+                            <th>Nama Supplier/Mitra</th>
+                            <th>Tanggal Kontrak</th>
+                            <th class="text-end">Nilai Awal</th>
+                            <th class="text-end">Realisasi</th>
+                            <th class="text-end">Sisa Kontrak</th>
                             <th>Status</th>
                             <th>Aksi</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach ($contracts as $contract)
+                        @foreach ($contracts as $index => $contract)
                             <tr>
-                                <td>{{ $contract->contract_number }}</td>
-                                <td>{{ \Carbon\Carbon::parse($contract->date)->format('d/m/Y') }}</td>
-                                <td>{{ $contract->supplier->name ?? '-' }}</td>
-                                <td>{{ $contract->budget->coa ?? '-' }}</td>
-                                <td>Rp {{ number_format($contract->total_amount, 0, ',', '.') }}</td>
+                                <td>{{ $index + 1 }}</td>
                                 <td>
-                                    {{ \Carbon\Carbon::parse($contract->start_date)->format('d/m/y') }} - 
-                                    {{ \Carbon\Carbon::parse($contract->end_date)->format('d/m/y') }}
+                                    <div class="fw-bold text-primary">{{ $contract->contract_number }}</div>
+                                    <div class="small text-muted text-wrap" style="max-width: 200px;">{{ Str::limit($contract->description, 50) }}</div>
                                 </td>
+                                <td>{{ $contract->supplier->name ?? '-' }}</td>
+                                <td>{{ \Carbon\Carbon::parse($contract->date)->format('d/m/Y') }}</td>
+                                <td class="text-end">Rp {{ number_format($contract->total_amount, 0, ',', '.') }}</td>
+                                <td class="text-end text-success">Rp {{ number_format($contract->realisasi_pembayaran, 0, ',', '.') }}</td>
+                                <td class="text-end text-warning">Rp {{ number_format($contract->sisa_kontrak, 0, ',', '.') }}</td>
                                 <td>
-                                    <span class="badge bg-{{ $contract->status == 'Active' ? 'success' : ($contract->status == 'Draft' ? 'warning' : 'secondary') }}">
+                                    @php
+                                        $sc = match($contract->status) {
+                                            'Draft' => 'secondary', 'Active', 'Aktif' => 'success',
+                                            'Menunggu Verifikasi' => 'info', 'Completed', 'Selesai' => 'primary',
+                                            'Dibatalkan', 'Cancelled' => 'danger',
+                                            default => 'warning'
+                                        };
+                                    @endphp
+                                    <span class="badge bg-{{ $sc }}">
                                         {{ $contract->status }}
                                     </span>
                                 </td>
                                 <td>
                                     <div class="d-flex align-items-center gap-2">
-                                        <a href="{{ route('contracts.show', $contract->id) }}" class="btn btn-sm btn-outline-info" title="Detail"><i class="bi bi-eye-fill"></i></a>
-                                        <a href="{{ route('contracts.edit', $contract->id) }}" class="btn btn-sm btn-outline-warning" title="Edit"><i class="bi bi-pencil-fill"></i></a>
-                                        <form action="{{ route('contracts.destroy', $contract->id) }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin menghapus kontrak ini? Data terkait mungkin ikut terhapus!');">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Hapus"><i class="bi bi-trash-fill"></i></button>
-                                        </form>
+                                        <a href="{{ route('contracts.show', $contract->id) }}" class="btn btn-sm btn-outline-info" title="Detail"><i class="bi bi-eye-fill"></i> Detail</a>
+                                        <a href="{{ route('contracts.edit', $contract->id) }}" class="btn btn-sm btn-outline-warning" title="Edit"><i class="bi bi-pencil-fill"></i> Edit</a>
+                                        <!-- Note: Real implementation for tambahkan adendum can pop a modal or redirect to detail page segment, linking to detail page for now -->
+                                        <a href="{{ route('contracts.show', $contract->id) }}#adendum" class="btn btn-sm btn-outline-primary" title="Tambah Adendum"><i class="bi bi-journal-plus"></i> Adendum</a>
                                     </div>
                                 </td>
                             </tr>

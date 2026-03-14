@@ -5,6 +5,20 @@
 @section('content')
     <x-page-title title="Dashboard" subtitle="Keuangan APTP" />
 
+    {{-- Welcome Card --}}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card rounded-4 bg-primary text-white mb-0">
+                <div class="card-body p-4 d-flex align-items-center">
+                    <div>
+                        <h4 class="mb-1 text-white fw-bold">Selamat kembali, {{ auth()->user()->name }}! 👋</h4>
+                        <p class="mb-0 text-white-50">Berikut adalah ringkasan performa keuangan dan tagihan terkini.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     {{-- Summary Cards Row --}}
     <div class="row">
         <div class="col-xl-3 col-md-6 d-flex align-items-stretch">
@@ -15,7 +29,7 @@
                             <span class="material-icons-outlined fs-5">account_balance_wallet</span>
                         </div>
                         <div>
-                            <p class="mb-0 text-muted small">Total Pagu Anggaran</p>
+                            <p class="mb-0 small">Total Pagu Anggaran</p>
                             <h4 class="mb-0 fw-bold">Rp {{ number_format($totalPagu, 0, ',', '.') }}</h4>
                         </div>
                     </div>
@@ -33,14 +47,14 @@
                             <span class="material-icons-outlined fs-5">payments</span>
                         </div>
                         <div>
-                            <p class="mb-0 text-muted small">Realisasi (SP2D)</p>
+                            <p class="mb-0 small">Realisasi (SP2D)</p>
                             <h4 class="mb-0 fw-bold text-success">Rp {{ number_format($totalRealisasi, 0, ',', '.') }}</h4>
                         </div>
                     </div>
                     <div class="progress" style="height:5px;">
                         <div class="progress-bar bg-success" style="width: {{ $persenRealisasi }}%"></div>
                     </div>
-                    <p class="mb-0 mt-1 small text-muted">{{ $persenRealisasi }}% dari Pagu</p>
+                    <p class="mb-0 mt-1 small">{{ $persenRealisasi }}% dari Pagu</p>
                 </div>
             </div>
         </div>
@@ -52,7 +66,7 @@
                             <span class="material-icons-outlined fs-5">savings</span>
                         </div>
                         <div>
-                            <p class="mb-0 text-muted small">Sisa Anggaran</p>
+                            <p class="mb-0 small">Sisa Anggaran</p>
                             <h4 class="mb-0 fw-bold text-warning">Rp {{ number_format($sisaAnggaran, 0, ',', '.') }}</h4>
                         </div>
                     </div>
@@ -70,8 +84,8 @@
                             <span class="material-icons-outlined fs-5">description</span>
                         </div>
                         <div>
-                            <p class="mb-0 text-muted small">Kontrak Aktif / Mitra</p>
-                            <h4 class="mb-0 fw-bold">{{ $totalKontrakAktif }} <span class="text-muted fs-6">/ {{ $totalMitra }} mitra</span></h4>
+                            <p class="mb-0 small">Kontrak Aktif / Mitra</p>
+                            <h4 class="mb-0 fw-bold">{{ $totalKontrakAktif }} <span class=" fs-6">/ {{ $totalMitra }} mitra</span></h4>
                         </div>
                     </div>
                 </div>

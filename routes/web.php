@@ -68,4 +68,7 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
         Route::get('/mitra', [DashboardController::class, 'mitra'])->name('mitra.dashboard');
     });
 });
+// Template Preview Route
+Route::get('/template', [HomeController::class, 'index'])->name('template.dashboard');
+
 Route::get('{any}', [HomeController::class, 'root'])->where('any', '.*');

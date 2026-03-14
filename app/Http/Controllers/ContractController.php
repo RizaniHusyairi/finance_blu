@@ -5,7 +5,11 @@ namespace App\Http\Controllers;
 use App\Models\Contract;
 use App\Models\Supplier;
 use App\Models\Budget;
+use App\Models\User;
+use App\Models\ContractTerm;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
 
 class ContractController extends Controller
 {
@@ -14,8 +18,37 @@ class ContractController extends Controller
      */
     public function index()
     {
-        $contracts = Contract::with(['supplier', 'budget'])->get();
-        return view('contracts.index', compact('contracts'));
+        $contracts = Contract::with(['supplier', 'budget', 'addendums', 'transactions' => function($q) {
+            $q->where('status', 'Paid SP2D');
+        }])->latest()->get();
+
+        $totalAktif = $contracts->where('status', 'Active')->count();
+        $totalSelesai = $contracts->whereIn('status', ['Completed', 'Selesai'])->count();
+        $totalAdendum = $contracts->filter(function($c) { return $c->addendums->count() > 0; })->count();
+        $totalNilaiAll = $contracts->sum('total_amount');
+        
+        $hampirHabisNilai = 0;
+        $hampirHabisMasa = 0;
+
+        foreach ($contracts as $c) {
+            $realisasi = $c->transactions->sum('gross_amount') ?? 0;
+            $c->realisasi_pembayaran = $realisasi;
+            $c->sisa_kontrak = $c->total_amount - $realisasi;
+
+            if ($c->status == 'Active') {
+                if ($c->total_amount > 0 && $c->sisa_kontrak <= ($c->total_amount * 0.2)) {
+                    $hampirHabisNilai++;
+                }
+                if ($c->end_date && \Carbon\Carbon::parse($c->end_date)->isBetween(now(), now()->addDays(30))) {
+                    $hampirHabisMasa++;
+                }
+            }
+        }
+
+        return view('contracts.index', compact(
+            'contracts', 'totalAktif', 'totalSelesai', 'totalAdendum', 
+            'totalNilaiAll', 'hampirHabisNilai', 'hampirHabisMasa'
+        ));
     }
 
     /**
@@ -25,7 +58,17 @@ class ContractController extends Controller
     {
         $suppliers = Supplier::all();
         $budgets = Budget::all();
-        return view('contracts.create', compact('suppliers', 'budgets'));
+        
+        // Fetch PPK and Pejabat Pengadaan
+        $ppk_users = User::role('PPK')->get();
+        $pengadaan_users = User::role('Pejabat Pengadaan')->get();
+        
+        // Generate Transaction ID
+        $latest = Contract::latest('id')->first();
+        $nextId = $latest ? $latest->id + 1 : 1;
+        $idTransaksi = 'TRX-KONTRAK-' . date('Y') . '-' . str_pad($nextId, 4, '0', STR_PAD_LEFT);
+
+        return view('contracts.create', compact('suppliers', 'budgets', 'ppk_users', 'pengadaan_users', 'idTransaksi'));
     }
 
     /**
@@ -34,21 +77,139 @@ class ContractController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'contract_number' => 'required|string|max:255|unique:contracts,contract_number',
+            'contract_number' => 'required|string|max:255|unique:contracts',
             'date' => 'required|date',
             'description' => 'required|string',
             'supplier_id' => 'required|exists:suppliers,id',
             'budget_id' => 'required|exists:budgets,id',
-            'total_amount' => 'required|numeric',
-            'status' => 'required|string',
+            'total_amount' => 'required|numeric|min:0',
+            'mata_uang' => 'required|string',
+            'cara_bayar' => 'required|string',
+            'tahun_anggaran' => 'required|integer',
+            'ppk_id' => 'required|exists:users,id',
+            'pejabat_pengadaan_id' => 'nullable|exists:users,id',
+            'id_transaksi' => 'required|string',
+            'nomor_spk_sp' => 'nullable|string',
+            
+            // Waktu Pekerjaan
+            'jangka_waktu_pekerjaan' => 'required|integer|min:1',
+            'satuan_waktu_pekerjaan' => 'required|string',
             'start_date' => 'required|date',
             'end_date' => 'required|date|after_or_equal:start_date',
-            'type' => 'nullable|string',
+            
+            // Pemeliharaan
+            'ada_masa_pemeliharaan' => 'nullable|boolean',
+            'jangka_waktu_pemeliharaan' => 'nullable|integer',
+            'tanggal_mulai_pemeliharaan' => 'nullable|date',
+            'tanggal_selesai_pemeliharaan' => 'nullable|date',
+            
+            // Addendum Base (Opsional)
+            'ada_addendum' => 'nullable|boolean',
+            
+            // Jaminan UM
+            'ada_jaminan_um' => 'nullable|boolean',
+            'penjamin_um' => 'nullable|string',
+            'nomor_jaminan_um' => 'nullable|string',
+            'tanggal_jaminan_um' => 'nullable|date',
+            'masa_berlaku_jaminan' => 'nullable|integer',
+            'tanggal_mulai_jaminan' => 'nullable|date',
+            'tanggal_selesai_jaminan' => 'nullable|date',
+
+            // Uang Muka
+            'ada_uang_muka' => 'nullable|boolean',
+            'nilai_uang_muka' => 'nullable|numeric',
+            'persentase_uang_muka' => 'nullable|numeric',
+            'jumlah_angsuran_um' => 'nullable|integer',
+            'jumlah_termin' => 'required|integer|min:1',
+
+            // Array Termins // Only required if cara_bayar is termin, but our JS disables inputs, so it might send empty. For safety, let's keep it required but ensure JS sends.
+            'termins' => 'required|array',
+            
+            // Array UM
+            'angsuran_ums' => 'nullable|array',
         ]);
 
-        Contract::create($validated);
+        try {
+            DB::beginTransaction();
 
-        return redirect()->route('contracts.index')->with('success', 'Contract created successfully.');
+            $status = $request->has('simpan_draft') ? 'Draft' : 'Active';
+
+            $contract = Contract::create([
+                'id_transaksi' => $validated['id_transaksi'],
+                'contract_number' => $validated['contract_number'],
+                'nomor_spk_sp' => $validated['nomor_spk_sp'] ?? null,
+                'date' => $validated['date'],
+                'description' => $validated['description'],
+                'supplier_id' => $validated['supplier_id'],
+                'budget_id' => $validated['budget_id'],
+                'total_amount' => $validated['total_amount'],
+                'mata_uang' => $validated['mata_uang'],
+                'cara_bayar' => $validated['cara_bayar'],
+                'tahun_anggaran' => $validated['tahun_anggaran'],
+                'ppk_id' => $validated['ppk_id'],
+                'pejabat_pengadaan_id' => $validated['pejabat_pengadaan_id'] ?? null,
+                'start_date' => $validated['start_date'],
+                'end_date' => $validated['end_date'],
+                'jangka_waktu_pekerjaan' => $validated['jangka_waktu_pekerjaan'],
+                'satuan_waktu_pekerjaan' => $validated['satuan_waktu_pekerjaan'],
+                'ada_masa_pemeliharaan' => $request->has('ada_masa_pemeliharaan') ? 1 : 0,
+                'jangka_waktu_pemeliharaan' => $validated['jangka_waktu_pemeliharaan'] ?? null,
+                'tanggal_mulai_pemeliharaan' => $validated['tanggal_mulai_pemeliharaan'] ?? null,
+                'tanggal_selesai_pemeliharaan' => $validated['tanggal_selesai_pemeliharaan'] ?? null,
+                'jumlah_termin' => $validated['jumlah_termin'],
+                'ada_uang_muka' => $request->has('ada_uang_muka') ? 1 : 0,
+                'nilai_uang_muka' => $validated['nilai_uang_muka'] ?? null,
+                'persentase_uang_muka' => $validated['persentase_uang_muka'] ?? null,
+                'jumlah_angsuran_um' => $validated['jumlah_angsuran_um'] ?? null,
+                'penjamin_um' => $validated['penjamin_um'] ?? null,
+                'nomor_jaminan_um' => $validated['nomor_jaminan_um'] ?? null,
+                'tanggal_jaminan_um' => $validated['tanggal_jaminan_um'] ?? null,
+                'masa_berlaku_jaminan' => $validated['masa_berlaku_jaminan'] ?? null,
+                'tanggal_mulai_jaminan' => $validated['tanggal_mulai_jaminan'] ?? null,
+                'tanggal_selesai_jaminan' => $validated['tanggal_selesai_jaminan'] ?? null,
+                'status' => $status,
+                'type' => 'Jasa', // Default, but can be updated or extracted from form if needed
+            ]);
+
+            // Save Termins
+            if (isset($validated['termins'])) {
+                foreach ($validated['termins'] as $termin) {
+                    ContractTerm::create([
+                        'contract_id' => $contract->id,
+                        'type' => 'Termin',
+                        'term_name' => $termin['keterangan'] ?? 'Termin',
+                        'percentage' => $termin['persentase'] ?? 0,
+                        'amount' => $termin['nilai'] ?? 0,
+                        'target_date' => $termin['target_date'] ?? null,
+                        'status' => 'Pending'
+                    ]);
+                }
+            }
+
+            // Save Uang Muka if exists
+            if ($request->has('ada_uang_muka') && isset($validated['angsuran_ums'])) {
+                foreach ($validated['angsuran_ums'] as $angsuran) {
+                    ContractTerm::create([
+                        'contract_id' => $contract->id,
+                        'type' => 'Uang Muka',
+                        'term_name' => $angsuran['keterangan'] ?? 'Potongan Uang Muka',
+                        'percentage' => 0, // Um usually deducted, distinct metric
+                        'amount' => $angsuran['nilai'] ?? 0,
+                        'status' => 'Pending'
+                    ]);
+                }
+            }
+
+            // (Optional) addendum base if needed in the future, skipping addendum creation on `create`
+
+            DB::commit();
+
+            return redirect()->route('contracts.index')->with('success', 'Kontrak berhasil ditambahkan.');
+            
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withInput()->withErrors(['error' => 'Gagal menyimpan kontrak: ' . $e->getMessage()]);
+        }
     }
 
     /**

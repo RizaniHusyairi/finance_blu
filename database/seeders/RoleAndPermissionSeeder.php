@@ -63,6 +63,17 @@ class RoleAndPermissionSeeder extends Seeder
 
         $operator->syncRoles(['Operator BLU']);
 
+        // Create Pejabat Pengadaan for Testing
+        $pengadaan = User::updateOrCreate([
+            'email' => 'pengadaan@admin.com',
+        ], [
+            'name' => 'Pejabat Pengadaan Test',
+            'email_verified_at' => now(),
+            'password' => Hash::make('password'),
+        ]);
+
+        $pengadaan->syncRoles(['Pejabat Pengadaan']);
+
         // Create a Mitra for Testing
         $mitra = User::updateOrCreate([
             'email' => 'vendor@test.com',
