@@ -7,19 +7,19 @@
         <div class="">
             <div class="row g-0">
                 <div
-                    class="col-12 col-xl-7 col-xxl-8 auth-cover-left align-items-center justify-content-center d-none d-xl-flex border-end bg-transparent">
+                    class="col-12 col-xl-7 col-xxl-6 auth-cover-left align-items-center justify-content-center d-none d-xl-flex border-end bg-transparent">
 
                     <div class="card rounded-0 mb-0 border-0 shadow-none bg-transparent bg-none">
-                        <div class="card-body">
-                            <img src="{{ URL::asset('build/images/auth/login1.png') }}" class="img-fluid auth-img-cover-login"
-                                width="650" alt="">
+                        <div class="">
+                            <img src="{{ URL::asset('logo/logo_apt_anim.gif') }}" class="img-fluid auth-img-cover-login"
+                                width="9550" alt="">
                         </div>
                     </div>
 
                 </div>
 
                 <div
-                    class="col-12 col-xl-5 col-xxl-4 auth-cover-right align-items-center justify-content-center border-top border-4 border-primary border-gradient-1">
+                    class="col-12 col-xl-5 col-xxl-6 auth-cover-right align-items-center justify-content-center border-top border-4 border-primary border-gradient-1">
                     <div class="card rounded-0 m-3 mb-0 border-0 shadow-none bg-none">
                         <div class="card-body p-sm-5">
                             <img src="{{ URL::asset('build/images/logo1.png') }}" class="mb-4" width="145"

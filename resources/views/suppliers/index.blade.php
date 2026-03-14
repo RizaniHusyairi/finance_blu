@@ -8,6 +8,41 @@
 @section('content')
     <x-page-title title="Master Data" subtitle="Supplier & Mitra" />
 
+    <div class="row row-cols-1 row-cols-sm-2 row-cols-md-4 g-3 mb-4">
+        <div class="col">
+            <div class="card rounded-4 mb-0 h-100">
+                <div class="card-body p-3">
+                    <p class="mb-1 small">Total Supplier</p>
+                    <h5 class="mb-0 fw-bold">{{ $totalSupplier }}</h5>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card rounded-4 mb-0 h-100">
+                <div class="card-body p-3">
+                    <p class="mb-1 small">Supplier Aktif</p>
+                    <h5 class="mb-0 fw-bold">{{ $supplierAktif }}</h5>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card rounded-4 mb-0 h-100">
+                <div class="card-body p-3">
+                    <p class="mb-1 small">Penyedia Brg/Jasa</p>
+                    <h5 class="mb-0 fw-bold">{{ $penyediaBarangJasa }}</h5>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card rounded-4 mb-0 h-100">
+                <div class="card-body p-3">
+                    <p class="mb-1 small">Data Belum Lengkap</p>
+                    <h5 class="mb-0 fw-bold">{{ $dataBelumLengkap }}</h5>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h6 class="mb-0 text-uppercase">Daftar Supplier / Mitra</h6>
         <a href="{{ route('suppliers.create') }}" class="btn btn-primary"><i class="bi bi-plus"></i> Tambah Mitra</a>

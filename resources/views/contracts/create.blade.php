@@ -97,8 +97,8 @@
                                 </select>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Sistem Bayar (Beban Anggaran/COA) <span class="text-danger">*</span></label>
-                                <select class="form-select" name="budget_id" required>
+                                <label for="single-select-field" class="form-label">Sistem Bayar (Beban Anggaran/COA) <span class="text-danger">*</span></label>
+                                <select class="form-select" name="budget_id" id="single-select-field" required>
                                     <option value="">-- Pilih Pagu --</option>
                                     @foreach($budgets as $budget)
                                         <option value="{{ $budget->id }}">{{ $budget->coa }} (Sisa: Rp {{ number_format($budget->remaining_budget,0,',','.') }})</option>

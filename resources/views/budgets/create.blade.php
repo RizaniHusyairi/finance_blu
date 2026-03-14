@@ -3,81 +3,270 @@
     Tambah Pagu Anggaran
 @endsection
 @section('content')
-    <x-page-title title="Master Data" subtitle="Tambah Pagu Anggaran" />
-
-    <div class="card">
-        <div class="card-body">
-            <h5 class="mb-4">Form Tambah Pagu Anggaran (DIPA)</h5>
-            <form action="{{ route('budgets.store') }}" method="POST">
-                @csrf
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label for="year" class="form-label">Tahun Anggaran <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control @error('year') is-invalid @enderror" id="year" name="year" value="{{ old('year', date('Y')) }}" required>
-                        @error('year') <div class="invalid-feedback">{{ $message }}</div> @enderror
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label for="coa" class="form-label">Kode COA / MAK <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control @error('coa') is-invalid @enderror" id="coa" name="coa" value="{{ old('coa') }}" required>
-                        @error('coa') <div class="invalid-feedback">{{ $message }}</div> @enderror
-                    </div>
-                </div>
-
-                <div class="mb-3">
-                    <label for="description" class="form-label">Uraian Pagu <span class="text-danger">*</span></label>
-                    <textarea class="form-control @error('description') is-invalid @enderror" id="description" name="description" rows="2" required>{{ old('description') }}</textarea>
-                    @error('description') <div class="invalid-feedback">{{ $message }}</div> @enderror
-                </div>
-
-                <div class="mb-4">
-                    <label for="initial_budget" class="form-label">Nilai Pagu Awal (Rp) <span class="text-danger">*</span></label>
-                    <input type="number" step="0.01" class="form-control @error('initial_budget') is-invalid @enderror" id="initial_budget" name="initial_budget" value="{{ old('initial_budget') }}" required>
-                    @error('initial_budget') <div class="invalid-feedback">{{ $message }}</div> @enderror
-                </div>
-
-                <h6 class="border-bottom pb-2">Detail Kode (Opsional)</h6>
-                <div class="row">
-                    <div class="col-md-3 mb-3">
-                        <label for="program_code" class="form-label">Program</label>
-                        <input type="text" class="form-control" id="program_code" name="program_code" value="{{ old('program_code') }}">
-                    </div>
-                    <div class="col-md-3 mb-3">
-                        <label for="activity_code" class="form-label">Kegiatan</label>
-                        <input type="text" class="form-control" id="activity_code" name="activity_code" value="{{ old('activity_code') }}">
-                    </div>
-                    <div class="col-md-3 mb-3">
-                        <label for="output_code" class="form-label">Output/KRO</label>
-                        <input type="text" class="form-control" id="output_code" name="output_code" value="{{ old('output_code') }}">
-                    </div>
-                    <div class="col-md-3 mb-3">
-                        <label for="suboutput_code" class="form-label">Suboutput/RO</label>
-                        <input type="text" class="form-control" id="suboutput_code" name="suboutput_code" value="{{ old('suboutput_code') }}">
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col-md-3 mb-3">
-                        <label for="component_code" class="form-label">Komponen</label>
-                        <input type="text" class="form-control" id="component_code" name="component_code" value="{{ old('component_code') }}">
-                    </div>
-                    <div class="col-md-3 mb-3">
-                        <label for="subcomponent_code" class="form-label">Subkomponen</label>
-                        <input type="text" class="form-control" id="subcomponent_code" name="subcomponent_code" value="{{ old('subcomponent_code') }}">
-                    </div>
-                    <div class="col-md-3 mb-3">
-                        <label for="account_code" class="form-label">Akun</label>
-                        <input type="text" class="form-control" id="account_code" name="account_code" value="{{ old('account_code') }}">
-                    </div>
-                    <div class="col-md-3 mb-3">
-                        <label for="item_code" class="form-label">Item / Detail</label>
-                        <input type="text" class="form-control" id="item_code" name="item_code" value="{{ old('item_code') }}">
-                    </div>
-                </div>
-
-                <div class="mt-4">
-                    <button type="submit" class="btn btn-primary px-4">Simpan</button>
-                    <a href="{{ route('budgets.index') }}" class="btn btn-secondary px-4">Batal</a>
-                </div>
-            </form>
-        </div>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0 fw-bold">Tambah Pagu Anggaran</h5>
+        <a href="{{ route('budgets.index') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Kembali ke Daftar</a>
     </div>
+
+    @if ($errors->any())
+        <div class="alert alert-danger">
+            <ul class="mb-0">
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
+    <form action="{{ route('budgets.store') }}" method="POST" id="formPagu">
+        @csrf
+
+        {{-- Section 1 — Struktur Kode Anggaran --}}
+        <div class="card rounded-4 mb-4">
+            <div class="card-body p-4">
+                <h6 class="mb-4 fw-bold"><i class="bi bi-diagram-3 me-2"></i>1. Struktur Kode Anggaran</h6>
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Tahun Anggaran <span class="text-danger">*</span></label>
+                        <select class="form-select" name="year" id="year" required>
+                            @for ($y = date('Y') + 1; $y >= date('Y') - 2; $y--)
+                                <option value="{{ $y }}" {{ old('year', date('Y')) == $y ? 'selected' : '' }}>{{ $y }}</option>
+                            @endfor
+                        </select>
+                    </div>
+                    <div class="col-md-8"></div>
+
+                    <div class="col-md-3">
+                        <label class="form-label">Kode Program <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control coa-part" name="program_code" id="program_code" value="{{ old('program_code') }}" placeholder="Contoh: GA" required oninput="buildCOA()">
+                        <small>kd_program</small>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Kode Kegiatan <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control coa-part" name="activity_code" id="activity_code" value="{{ old('activity_code') }}" placeholder="Contoh: 4645" required oninput="buildCOA()">
+                        <small>kd_giat</small>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Kode Output <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control coa-part" name="output_code" id="output_code" value="{{ old('output_code') }}" placeholder="Contoh: CBE" required oninput="buildCOA()">
+                        <small>kd_output</small>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Kode Suboutput <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control coa-part" name="suboutput_code" id="suboutput_code" value="{{ old('suboutput_code') }}" placeholder="Contoh: 001" required oninput="buildCOA()">
+                        <small>kd_suboutput</small>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Kode Komponen <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control coa-part" name="component_code" id="component_code" value="{{ old('component_code') }}" placeholder="Contoh: 054" required oninput="buildCOA()">
+                        <small>kd_komponen</small>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Kode Subkomponen <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control coa-part" name="subcomponent_code" id="subcomponent_code" value="{{ old('subcomponent_code') }}" placeholder="Contoh: A" required oninput="buildCOA()">
+                        <small>kd_subkomponen</small>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Kode Akun <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control coa-part" name="account_code" id="account_code" value="{{ old('account_code') }}" placeholder="Contoh: 537113" required oninput="buildCOA()">
+                        <small>kd_akun</small>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Kode Item <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control coa-part" name="item_code" id="item_code" value="{{ old('item_code') }}" placeholder="Contoh: 00001" required oninput="buildCOA()">
+                        <small>kd_item</small>
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label fw-bold">COA (Auto-Generate)</label>
+                        <input type="text" class="form-control fw-bold" id="coa_display" readonly placeholder="COA akan terbentuk otomatis dari kode di atas">
+                        <div id="coa_warning" class="mt-1" style="display:none;">
+                            <span class="badge bg-danger"><i class="bi bi-exclamation-triangle me-1"></i>COA ini sudah digunakan!</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {{-- Section 2 — Informasi Anggaran --}}
+        <div class="card rounded-4 mb-4">
+            <div class="card-body p-4">
+                <h6 class="mb-4 fw-bold"><i class="bi bi-cash-stack me-2"></i>2. Informasi Anggaran</h6>
+                <div class="row g-3">
+                    <div class="col-12">
+                        <label class="form-label">Uraian Pagu Anggaran <span class="text-danger">*</span></label>
+                        <textarea class="form-control" rows="3" name="description" id="description" placeholder="Masukkan uraian pagu anggaran" required>{{ old('description') }}</textarea>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Nilai Pagu (Rp) <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="pagu_display" placeholder="Masukkan nominal pagu anggaran" oninput="formatCurrency(this); updateSummary()">
+                        <input type="hidden" name="initial_budget" id="initial_budget" value="{{ old('initial_budget') }}">
+                        <small>Gunakan angka tanpa titik atau koma, format otomatis</small>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Status Pagu <span class="text-danger">*</span></label>
+                        <select class="form-select" name="status_pagu" id="status_pagu" required onchange="updateSummary()">
+                            <option value="Aktif" {{ old('status_pagu', 'Aktif') == 'Aktif' ? 'selected' : '' }}>Aktif</option>
+                            <option value="Nonaktif" {{ old('status_pagu') == 'Nonaktif' ? 'selected' : '' }}>Nonaktif</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3"></div>
+                    <div class="col-12">
+                        <label class="form-label">Catatan</label>
+                        <textarea class="form-control" rows="2" name="catatan" placeholder="Tambahkan catatan bila diperlukan">{{ old('catatan') }}</textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {{-- Section 3 — Ringkasan Otomatis --}}
+        <div class="card rounded-4 mb-4">
+            <div class="card-body p-4">
+                <h6 class="mb-4 fw-bold"><i class="bi bi-clipboard-data me-2"></i>3. Ringkasan Otomatis</h6>
+                <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-xl-6 g-3">
+                    <div class="col">
+                        <div class="card rounded-4 mb-0 h-100">
+                            <div class="card-body p-3">
+                                <p class="mb-1 small">Tahun Anggaran</p>
+                                <h6 class="mb-0 fw-bold" id="sum-tahun">{{ date('Y') }}</h6>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="card rounded-4 mb-0 h-100">
+                            <div class="card-body p-3">
+                                <p class="mb-1 small">COA Lengkap</p>
+                                <h6 class="mb-0 fw-bold text-break" id="sum-coa" style="font-size: 0.75rem;">-</h6>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="card rounded-4 mb-0 h-100">
+                            <div class="card-body p-3">
+                                <p class="mb-1 small">Pagu Awal</p>
+                                <h6 class="mb-0 fw-bold" id="sum-pagu">Rp 0</h6>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="card rounded-4 mb-0 h-100">
+                            <div class="card-body p-3">
+                                <p class="mb-1 small">Realisasi Awal</p>
+                                <h6 class="mb-0 fw-bold">Rp 0</h6>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="card rounded-4 mb-0 h-100">
+                            <div class="card-body p-3">
+                                <p class="mb-1 small">Sisa Awal</p>
+                                <h6 class="mb-0 fw-bold" id="sum-sisa">Rp 0</h6>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="card rounded-4 mb-0 h-100">
+                            <div class="card-body p-3">
+                                <p class="mb-1 small">Status Pagu</p>
+                                <h6 class="mb-0 fw-bold" id="sum-status">Aktif</h6>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {{-- Tombol Aksi --}}
+        <div class="card rounded-4 mb-5">
+            <div class="card-body p-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" value="1" id="simpan_draft" name="simpan_draft">
+                    <label class="form-check-label" for="simpan_draft">Simpan sebagai Draft (Nonaktif)</label>
+                </div>
+                <div class="d-flex gap-2">
+                    <a href="{{ route('budgets.index') }}" class="btn btn-outline-secondary px-4" onclick="return confirmBatal()">Batal</a>
+                    <button type="reset" class="btn btn-outline-secondary px-4" onclick="return confirm('Apakah Anda yakin ingin mereset seluruh form?')">Reset Form</button>
+                    <button type="submit" class="btn btn-primary px-5 fw-bold">Simpan Pagu</button>
+                </div>
+            </div>
+        </div>
+
+    </form>
 @endsection
+
+@push('script')
+<script>
+    const existingCoas = @json($existingCoas);
+
+    document.addEventListener("DOMContentLoaded", function () {
+        buildCOA();
+        updateSummary();
+        // Restore pagu display if old value exists
+        let oldPagu = document.getElementById('initial_budget').value;
+        if (oldPagu) {
+            document.getElementById('pagu_display').value = formatNumber(parseInt(oldPagu));
+        }
+    });
+
+    function buildCOA() {
+        let parts = [
+            document.getElementById('program_code').value.trim(),
+            document.getElementById('activity_code').value.trim(),
+            document.getElementById('output_code').value.trim(),
+            document.getElementById('suboutput_code').value.trim(),
+            document.getElementById('component_code').value.trim(),
+            document.getElementById('subcomponent_code').value.trim(),
+            document.getElementById('account_code').value.trim(),
+            document.getElementById('item_code').value.trim(),
+        ];
+
+        let allFilled = parts.every(p => p.length > 0);
+        let coa = parts.join('.');
+        document.getElementById('coa_display').value = allFilled ? coa : '';
+        document.getElementById('sum-coa').innerText = allFilled ? coa : '-';
+
+        // Check duplicate
+        let warning = document.getElementById('coa_warning');
+        if (allFilled && existingCoas.includes(coa)) {
+            warning.style.display = 'block';
+        } else {
+            warning.style.display = 'none';
+        }
+
+        // Update tahun
+        document.getElementById('sum-tahun').innerText = document.getElementById('year').value;
+    }
+
+    function formatCurrency(el) {
+        let raw = el.value.replace(/\D/g, '');
+        let num = parseInt(raw) || 0;
+        document.getElementById('initial_budget').value = num;
+        el.value = formatNumber(num);
+    }
+
+    function formatNumber(n) {
+        return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    }
+
+    function formatRupiah(n) {
+        return 'Rp ' + formatNumber(n);
+    }
+
+    function updateSummary() {
+        let pagu = parseInt(document.getElementById('initial_budget').value) || 0;
+        document.getElementById('sum-pagu').innerText = formatRupiah(pagu);
+        document.getElementById('sum-sisa').innerText = formatRupiah(pagu);
+        document.getElementById('sum-status').innerText = document.getElementById('status_pagu').value;
+        document.getElementById('sum-tahun').innerText = document.getElementById('year').value;
+    }
+
+    function confirmBatal() {
+        let desc = document.getElementById('description').value.trim();
+        let prog = document.getElementById('program_code').value.trim();
+        if (desc || prog) {
+            return confirm('Data sudah terisi. Apakah Anda yakin ingin membatalkan?');
+        }
+        return true;
+    }
+</script>
+@endpush

@@ -16,4 +16,9 @@ class Supplier extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    public function contracts()
+    {
+        return $this->hasMany(Contract::class);
+    }
 }
