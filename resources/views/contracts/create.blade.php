@@ -248,7 +248,7 @@
                                         <th>Persentase (%)</th>
                                         <th>Nilai (Rp)</th>
                                         <th>Target Tanggal Bayar</th>
-                                        <th style="width: 50px;">Aksi</th>
+                                        <!-- <th style="width: 50px;">Aksi</th> -->
                                     </tr>
                                 </thead>
                                 <tbody id="termin_table_body">
@@ -256,7 +256,7 @@
                                 </tbody>
                             </table>
                         </div>
-                        <button type="button" class="btn btn-sm btn-outline-primary mt-2" onclick="addTerminRow()"><i class="bi bi-plus"></i> Tambah Termin Manual</button>
+                        
                     </div>
                 </div>
             </div>
@@ -525,9 +525,7 @@
             <td>
                 <input type="date" class="form-control form-control-sm" name="termins[${index}][target_date]">
             </td>
-            <td>
-                <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeTerminRow(${index})"><i class="bi bi-trash"></i></button>
-            </td>
+        
         `;
         document.getElementById('termin_table_body').appendChild(tr);
     }

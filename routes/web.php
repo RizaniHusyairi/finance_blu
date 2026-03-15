@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\HomeController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\BluPaymentSubmissionController;
 use App\Http\Controllers\BudgetController;
 use App\Http\Controllers\ContractController;
 use App\Http\Controllers\ContractAddendumController;
@@ -30,6 +31,13 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
     Route::middleware("role:$internalRoles")->group(function () {
         // Internal Dashboard (KPA, PPK, Operator BLU, Bendahara)
         Route::get('/dashboard', [DashboardController::class, 'internal'])->name('dashboard');
+
+        Route::middleware('role:Super Admin|Operator BLU')->group(function () {
+            Route::get('/pengajuan-pembayaran-blu', [BluPaymentSubmissionController::class, 'index'])
+                ->name('blu-payment-submissions.index');
+            Route::get('/pengajuan-pembayaran-blu/{submissionNumber}', [BluPaymentSubmissionController::class, 'show'])
+                ->name('blu-payment-submissions.show');
+        });
 
         // Master Data Routes
         Route::resource('employees', EmployeeController::class);

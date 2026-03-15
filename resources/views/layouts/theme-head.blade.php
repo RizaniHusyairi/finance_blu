@@ -6,11 +6,11 @@
 
         try {
             var storedTheme = localStorage.getItem(storageKey);
-            var theme = allowedThemes.indexOf(storedTheme) !== -1 ? storedTheme : fallbackTheme;
+            var theme = window.themeOverride || (allowedThemes.indexOf(storedTheme) !== -1 ? storedTheme : fallbackTheme);
 
             document.documentElement.setAttribute('data-bs-theme', theme);
         } catch (error) {
-            document.documentElement.setAttribute('data-bs-theme', fallbackTheme);
+            document.documentElement.setAttribute('data-bs-theme', window.themeOverride || fallbackTheme);
         }
     })();
 </script>

@@ -2,10 +2,10 @@
    <aside class="sidebar-wrapper" data-simplebar="true">
     <div class="sidebar-header">
       <div class="logo-icon">
-        <img src="{{ URL::asset('build/images/logo-icon.png') }}" class="logo-img" alt="">
+        <img src="{{ URL::asset('logo/Logo-BLU-Speed.png') }}" class="logo-img" alt="">
       </div>
       <div class="logo-name flex-grow-1">
-        <h5 class="mb-0">Maxton</h5>
+        <h5 class="mb-0">SIKUT BLU </h5>
       </div>
       <div class="sidebar-close">
         <span class="material-icons-outlined">close</span>
@@ -73,6 +73,10 @@
               <div class="menu-title">Tagihan & Bayar</div>
             </a>
             <ul>
+              @hasanyrole('Super Admin|Operator BLU')
+              <li><a href="{{ route('blu-payment-submissions.index') }}"><i class="material-icons-outlined">arrow_right</i>Pengajuan Pembayaran BLU</a>
+              </li>
+              @endhasanyrole
               <li><a href="{{ route('transactions.index') }}"><i class="material-icons-outlined">arrow_right</i>Daftar Transaksi</a>
               </li>
               @hasanyrole('Super Admin|Operator BLU|PPABP|Operator Perjaldin')

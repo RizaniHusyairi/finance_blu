@@ -9,6 +9,12 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <link rel="icon" href="{{ URL::asset('build/images/favicon-32x32.png') }}" type="image/png">
 
+    @if (isset($themeOverride))
+        <script>
+            window.themeOverride = '{{ $themeOverride }}';
+        </script>
+    @endif
+
     @include('layouts.theme-head')
 
     @include('layouts.head-css')

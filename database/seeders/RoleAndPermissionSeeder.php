@@ -73,6 +73,17 @@ class RoleAndPermissionSeeder extends Seeder
         ]);
 
         $pengadaan->syncRoles(['Pejabat Pengadaan']);
+        
+        // Create Pejabat Pengadaan for Testing
+        $ppk = User::updateOrCreate([
+            'email' => 'ppk@admin.com',
+        ], [
+            'name' => 'Pejabat Pembuat Komitmen Test',
+            'email_verified_at' => now(),
+            'password' => Hash::make('password'),
+        ]);
+
+        $ppk->syncRoles(['PPK']);
 
         // Create a Mitra for Testing
         $mitra = User::updateOrCreate([

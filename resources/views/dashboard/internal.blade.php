@@ -11,7 +11,7 @@
             <div class="card rounded-4 bg-primary text-white mb-0">
                 <div class="card-body p-4 d-flex align-items-center">
                     <div>
-                        <h4 class="mb-1 text-white fw-bold">Selamat kembali, {{ auth()->user()->name }}! 👋</h4>
+                        <h4 class="mb-1 text-white fw-bold">Selamat Datang Kembali, {{ auth()->user()->name }}! 👋</h4>
                         <p class="mb-0 text-white-50">Berikut adalah ringkasan performa keuangan dan tagihan terkini.</p>
                     </div>
                 </div>
