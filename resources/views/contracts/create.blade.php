@@ -56,6 +56,10 @@
                                 <label class="form-label">Uraian / Pekerjaan <span class="text-danger">*</span></label>
                                 <textarea class="form-control" rows="3" name="description" required></textarea>
                             </div>
+                            <div class="col-12">
+                                <label class="form-label">Ketentuan Sanksi</label>
+                                <textarea class="form-control" rows="3" name="ketentuan_sanksi" placeholder="Contoh: Sanksi denda 1/1000 per hari keterlambatan..."></textarea>
+                            </div>
                             <div class="col-md-6">
                                 <label class="form-label">Penyedia / Mitra <span class="text-danger">*</span></label>
                                 <select class="form-select" name="supplier_id" id="supplier_id" required onchange="fillSupplierInfo()">
@@ -247,7 +251,6 @@
                                         <th>Keterangan</th>
                                         <th>Persentase (%)</th>
                                         <th>Nilai (Rp)</th>
-                                        <th>Target Tanggal Bayar</th>
                                         <!-- <th style="width: 50px;">Aksi</th> -->
                                     </tr>
                                 </thead>
@@ -365,7 +368,7 @@
                         </div>
                         <div class="d-flex gap-2">
                             <button type="reset" class="btn btn-outline-secondary px-4" onclick="return confirm('Apakah Anda yakin ingin mereset seluruh form yang telah diisi?')">Reset Form</button>
-                            <button type="submit" class="btn btn-primary px-5 fw-bold" id="btn_submit">Simpan Kontrak</button>
+                            <button type="submit" class="btn btn-primary px-5 fw-bold" id="btn_submit"><i class="bi bi-send me-1"></i>Simpan & Ajukan ke PPK</button>
                         </div>
                     </div>
                 </div>
@@ -521,9 +524,6 @@
             </td>
             <td>
                 <input type="number" step="0.01" class="form-control form-control-sm nilai_termin" name="termins[${index}][nilai]" value="${defaultNilai}" onkeyup="calcTerminTotal()">
-            </td>
-            <td>
-                <input type="date" class="form-control form-control-sm" name="termins[${index}][target_date]">
             </td>
         
         `;

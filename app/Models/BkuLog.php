@@ -13,6 +13,11 @@ class BkuLog extends Model
     
     public function transaction()
     {
-        return $this->belongsTo(Transaction::class);
+        return $this->belongsTo(BluPaymentSubmission::class, 'transaction_id');
+    }
+
+    public function bluPaymentSubmission()
+    {
+        return $this->belongsTo(BluPaymentSubmission::class, 'transaction_id');
     }
 }

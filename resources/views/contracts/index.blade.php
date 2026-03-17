@@ -32,18 +32,18 @@
             </div>
         </div>
         <div class="col">
-            <div class="card rounded-4 mb-0 h-100">
+            <div class="card rounded-4 bg-info text-white mb-0 border-0 h-100">
                 <div class="card-body p-3">
-                    <p class="mb-1 small">Total Kontrak Selesai</p>
-                    <h5 class="mb-0 fw-bold">{{ $totalSelesai }}</h5>
+                    <p class="mb-1 small">Menunggu Persetujuan PPK</p>
+                    <h5 class="mb-0 fw-bold">{{ $contracts->where('status', 'Menunggu Persetujuan PPK')->count() }}</h5>
                 </div>
             </div>
         </div>
         <div class="col">
             <div class="card rounded-4 mb-0 h-100">
                 <div class="card-body p-3">
-                    <p class="mb-1 small">Kontrak dgn Adendum</p>
-                    <h5 class="mb-0 fw-bold">{{ $totalAdendum }}</h5>
+                    <p class="mb-1 small">Total Kontrak Selesai</p>
+                    <h5 class="mb-0 fw-bold">{{ $totalSelesai }}</h5>
                 </div>
             </div>
         </div>
@@ -106,8 +106,11 @@
                                 <td>
                                     @php
                                         $sc = match($contract->status) {
-                                            'Draft' => 'secondary', 'Active', 'Aktif' => 'success',
-                                            'Menunggu Verifikasi' => 'info', 'Completed', 'Selesai' => 'primary',
+                                            'Draft' => 'secondary',
+                                            'Active', 'Aktif' => 'success',
+                                            'Menunggu Persetujuan PPK' => 'info',
+                                            'Ditolak PPK' => 'danger',
+                                            'Completed', 'Selesai' => 'primary',
                                             'Dibatalkan', 'Cancelled' => 'danger',
                                             default => 'warning'
                                         };

@@ -13,11 +13,21 @@ class ApprovalLog extends Model
     
     public function transaction()
     {
-        return $this->belongsTo(Transaction::class);
+        return $this->belongsTo(BluPaymentSubmission::class, 'transaction_id');
+    }
+
+    public function bluPaymentSubmission()
+    {
+        return $this->belongsTo(BluPaymentSubmission::class, 'transaction_id');
     }
     
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function contract()
+    {
+        return $this->belongsTo(Contract::class);
     }
 }

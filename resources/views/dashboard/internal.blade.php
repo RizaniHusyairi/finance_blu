@@ -156,7 +156,7 @@
                                     <td>{{ $t->transaction_number }}</td>
                                     <td><span class="badge bg-info text-dark">{{ $t->status }}</span></td>
                                     <td class="text-end">Rp {{ number_format($t->amount, 0, ',', '.') }}</td>
-                                    <td><a href="{{ route('transactions.show', $t->id) }}" class="btn btn-sm btn-outline-primary">Proses</a></td>
+                                    <td><a href="{{ route('blu-payment-submissions.show-detail', $t->id) }}" class="btn btn-sm btn-outline-primary">Proses</a></td>
                                 </tr>
                                 @empty
                                 <tr><td colspan="4" class="text-center text-muted py-3">Tidak ada yang perlu diproses.</td></tr>
@@ -187,7 +187,7 @@
                             <tbody>
                                 @foreach($recentTransactions as $t)
                                 <tr>
-                                    <td><a href="{{ route('transactions.show', $t->id) }}">{{ $t->transaction_number }}</a></td>
+                                    <td><a href="{{ route('blu-payment-submissions.show-detail', $t->id) }}">{{ $t->transaction_number }}</a></td>
                                     <td><span class="badge bg-secondary">{{ $t->type }}</span></td>
                                     <td>
                                         @php

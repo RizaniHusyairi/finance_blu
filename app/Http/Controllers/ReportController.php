@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Budget;
-use App\Models\Transaction;
+use App\Models\BluPaymentSubmission;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 
@@ -18,7 +18,7 @@ class ReportController extends Controller
         $month = $request->input('month'); // null = all months
         $budgetId = $request->input('budget_id');
 
-        $query = Transaction::with(['contract.supplier', 'budget', 'taxes'])
+        $query = BluPaymentSubmission::with(['contract.supplier', 'budget', 'taxes'])
             ->whereYear('date', $year)
             ->where('status', 'Paid SP2D')
             ->orderBy('date', 'asc');
@@ -44,7 +44,7 @@ class ReportController extends Controller
         $runningSaldo = $totalPagu;
 
         foreach ($transactions as $t) {
-            $taxTotal = $t->taxes->sum('tax_amount');
+            $taxTotal = $t->taxes->sum('amount');
             $netto = $t->gross_amount - $taxTotal;
             $runningDebit += $netto;
             $runningSaldo = $totalPagu - $runningDebit;
@@ -85,7 +85,7 @@ class ReportController extends Controller
         $month = $request->input('month');
         $budgetId = $request->input('budget_id');
 
-        $query = Transaction::with(['contract.supplier', 'budget', 'taxes'])
+        $query = BluPaymentSubmission::with(['contract.supplier', 'budget', 'taxes'])
             ->whereYear('date', $year)
             ->where('status', 'Paid SP2D')
             ->orderBy('date', 'asc');
@@ -110,7 +110,7 @@ class ReportController extends Controller
         $runningSaldo = $totalPagu;
 
         foreach ($transactions as $t) {
-            $taxTotal = $t->taxes->sum('tax_amount');
+            $taxTotal = $t->taxes->sum('amount');
             $netto = $t->gross_amount - $taxTotal;
             $runningDebit += $netto;
             $runningSaldo = $totalPagu - $runningDebit;

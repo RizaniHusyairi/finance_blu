@@ -77,12 +77,6 @@
               <li><a href="{{ route('blu-payment-submissions.index') }}"><i class="material-icons-outlined">arrow_right</i>Pengajuan Pembayaran BLU</a>
               </li>
               @endhasanyrole
-              <li><a href="{{ route('transactions.index') }}"><i class="material-icons-outlined">arrow_right</i>Daftar Transaksi</a>
-              </li>
-              @hasanyrole('Super Admin|Operator BLU|PPABP|Operator Perjaldin')
-              <li><a href="{{ route('transactions.create') }}"><i class="material-icons-outlined">arrow_right</i>Input Tagihan</a>
-              </li>
-              @endhasanyrole
             </ul>
           </li>
           @endhasanyrole

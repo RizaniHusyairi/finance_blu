@@ -7,9 +7,11 @@ use App\Models\Supplier;
 use App\Models\Budget;
 use App\Models\User;
 use App\Models\ContractTerm;
+use App\Models\ApprovalLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 
 class ContractController extends Controller
 {
@@ -90,6 +92,7 @@ class ContractController extends Controller
             'pejabat_pengadaan_id' => 'nullable|exists:users,id',
             'id_transaksi' => 'required|string',
             'nomor_spk_sp' => 'nullable|string',
+            'ketentuan_sanksi' => 'nullable|string',
             
             // Waktu Pekerjaan
             'jangka_waktu_pekerjaan' => 'required|integer|min:1',
@@ -132,7 +135,7 @@ class ContractController extends Controller
         try {
             DB::beginTransaction();
 
-            $status = $request->has('simpan_draft') ? 'Draft' : 'Active';
+            $status = $request->has('simpan_draft') ? 'Draft' : 'Menunggu Persetujuan PPK';
 
             $contract = Contract::create([
                 'id_transaksi' => $validated['id_transaksi'],
@@ -140,6 +143,7 @@ class ContractController extends Controller
                 'nomor_spk_sp' => $validated['nomor_spk_sp'] ?? null,
                 'date' => $validated['date'],
                 'description' => $validated['description'],
+                'ketentuan_sanksi' => $validated['ketentuan_sanksi'] ?? null,
                 'supplier_id' => $validated['supplier_id'],
                 'budget_id' => $validated['budget_id'],
                 'total_amount' => $validated['total_amount'],
@@ -168,6 +172,7 @@ class ContractController extends Controller
                 'tanggal_mulai_jaminan' => $validated['tanggal_mulai_jaminan'] ?? null,
                 'tanggal_selesai_jaminan' => $validated['tanggal_selesai_jaminan'] ?? null,
                 'status' => $status,
+                'submitted_by' => Auth::id(),
                 'type' => 'Jasa', // Default, but can be updated or extracted from form if needed
             ]);
 
@@ -202,9 +207,21 @@ class ContractController extends Controller
 
             // (Optional) addendum base if needed in the future, skipping addendum creation on `create`
 
+            // Log approval if submitted directly
+            if ($status === 'Menunggu Persetujuan PPK') {
+                ApprovalLog::create([
+                    'contract_id'  => $contract->id,
+                    'user_id'      => Auth::id(),
+                    'role_name'    => Auth::user()->getRoleNames()->first() ?? '-',
+                    'status_from'  => null,
+                    'status_to'    => 'Menunggu Persetujuan PPK',
+                    'notes'        => 'Kontrak diajukan untuk persetujuan PPK.',
+                ]);
+            }
+
             DB::commit();
 
-            return redirect()->route('contracts.index')->with('success', 'Kontrak berhasil ditambahkan.');
+            return redirect()->route('contracts.index')->with('success', 'Kontrak berhasil ' . ($status === 'Draft' ? 'disimpan sebagai draft.' : 'diajukan ke PPK.'));
             
         } catch (\Exception $e) {
             DB::rollBack();
@@ -217,8 +234,83 @@ class ContractController extends Controller
      */
     public function show(Contract $contract)
     {
-        $contract->load(['supplier', 'budget', 'addendums', 'terms', 'transactions']);
+        $contract->load(['supplier', 'budget', 'addendums', 'terms', 'transactions', 'approvalLogs.user', 'submittedBy']);
         return view('contracts.show', compact('contract'));
+    }
+
+    /**
+     * Submit a Draft contract for PPK approval.
+     */
+    public function submit(Contract $contract)
+    {
+        if ($contract->status !== 'Draft' && $contract->status !== 'Ditolak PPK') {
+            return back()->with('error', 'Kontrak tidak dapat diajukan dari status saat ini.');
+        }
+
+        $oldStatus = $contract->status;
+        $contract->update([
+            'status'       => 'Menunggu Persetujuan PPK',
+            'submitted_by' => Auth::id(),
+        ]);
+
+        ApprovalLog::create([
+            'contract_id'  => $contract->id,
+            'user_id'      => Auth::id(),
+            'role_name'    => Auth::user()->getRoleNames()->first() ?? '-',
+            'status_from'  => $oldStatus,
+            'status_to'    => 'Menunggu Persetujuan PPK',
+            'notes'        => 'Kontrak diajukan untuk persetujuan PPK.',
+        ]);
+
+        return back()->with('success', 'Kontrak berhasil diajukan ke PPK untuk persetujuan.');
+    }
+
+    /**
+     * PPK approves a contract.
+     */
+    public function approve(Request $request, Contract $contract)
+    {
+        if ($contract->status !== 'Menunggu Persetujuan PPK') {
+            return back()->with('error', 'Kontrak tidak dalam status menunggu persetujuan.');
+        }
+
+        $contract->update(['status' => 'Active']);
+
+        ApprovalLog::create([
+            'contract_id'  => $contract->id,
+            'user_id'      => Auth::id(),
+            'role_name'    => 'PPK',
+            'status_from'  => 'Menunggu Persetujuan PPK',
+            'status_to'    => 'Active',
+            'notes'        => $request->input('notes', 'Kontrak disetujui oleh PPK.'),
+        ]);
+
+        return back()->with('success', 'Kontrak berhasil disetujui.');
+    }
+
+    /**
+     * PPK rejects a contract.
+     */
+    public function reject(Request $request, Contract $contract)
+    {
+        $request->validate(['notes' => 'required|string|max:500']);
+
+        if ($contract->status !== 'Menunggu Persetujuan PPK') {
+            return back()->with('error', 'Kontrak tidak dalam status menunggu persetujuan.');
+        }
+
+        $contract->update(['status' => 'Ditolak PPK']);
+
+        ApprovalLog::create([
+            'contract_id'  => $contract->id,
+            'user_id'      => Auth::id(),
+            'role_name'    => 'PPK',
+            'status_from'  => 'Menunggu Persetujuan PPK',
+            'status_to'    => 'Ditolak PPK',
+            'notes'        => $request->input('notes'),
+        ]);
+
+        return back()->with('success', 'Kontrak ditolak.');
     }
 
     /**
@@ -247,6 +339,7 @@ class ContractController extends Controller
             'start_date' => 'required|date',
             'end_date' => 'required|date|after_or_equal:start_date',
             'type' => 'nullable|string',
+            'ketentuan_sanksi' => 'nullable|string',
         ]);
 
         $contract->update($validated);

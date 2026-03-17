@@ -1,9 +1,9 @@
 @extends('layouts.app')
 @section('title')
-    Detail Tagihan (Transaksi)
+    Detail Tagihan (Pengajuan Pembayaran BLU)
 @endsection
 @section('content')
-    <x-page-title title="Tagihan & Pembayaran" subtitle="Detail Transaksi" />
+    <x-page-title title="Tagihan & Pembayaran" subtitle="Detail Pengajuan" />
 
     @if(session('success'))
         <div class="alert alert-success border-0 bg-success alert-dismissible fade show">
@@ -91,13 +91,13 @@
                             @endphp
                             
                             @foreach($transaction->taxes as $tax)
-                                @php $totalTaxes += $tax->tax_amount; @endphp
+                                @php $totalTaxes += $tax->amount; @endphp
                                 <tr>
                                     <td>
                                         <div class="d-flex justify-content-between">
-                                            <span>Pajak: {{ $tax->tax_type }} ({{ $tax->percentage }}%) - DPP: Rp {{ number_format($tax->dpp_amount, 0, ',', '.') }}</span>
+                                            <span>Pajak: {{ $tax->tax_name }} {{ $tax->tax_account ? '('.$tax->tax_account.')' : '' }}</span>
                                             @if($transaction->status == 'Draft' || $transaction->status == 'Rejected')
-                                                <form action="{{ route('transactions.taxes.destroy', [$transaction->id, $tax->id]) }}" method="POST" class="d-inline">
+                                                <form action="{{ route('blu-payment-submissions.taxes.destroy', [$transaction->id, $tax->id]) }}" method="POST" class="d-inline">
                                                     @csrf
                                                     @method('DELETE')
                                                     <button type="submit" class="btn btn-sm text-danger p-0" onclick="return confirm('Hapus pajak ini?');"><i class="bi bi-x-circle"></i></button>
@@ -105,11 +105,10 @@
                                             @endif
                                         </div>
                                     </td>
-                                    <td class="text-end text-danger">- Rp {{ number_format($tax->tax_amount, 2, ',', '.') }}</td>
+                                    <td class="text-end text-danger">- Rp {{ number_format($tax->amount, 2, ',', '.') }}</td>
                                 </tr>
                             @endforeach
                             
-                            <!-- Placeholder for Dpp, PPN, PPh -->
                             @php
                                 $netAmount = $transaction->amount - $totalTaxes;
                             @endphp
@@ -135,16 +134,16 @@
                 <div class="card-footer bg-light">
                     <!-- Action Buttons based on Role & Status -->
                     <div class="d-flex gap-2 flex-wrap">
-                        <a href="{{ route('transactions.index') }}" class="btn btn-secondary">Kembali</a>
+                        <a href="{{ route('blu-payment-submissions.index') }}" class="btn btn-secondary">Kembali</a>
                         @if($transaction->status == 'Draft' || $transaction->status == 'Rejected')
-                            <a href="{{ route('transactions.edit', $transaction->id) }}" class="btn btn-warning">Edit Draft</a>
-                            <form action="{{ route('transactions.submit', $transaction->id) }}" method="POST">
+                            <a href="{{ route('blu-payment-submissions.edit', $transaction->id) }}" class="btn btn-warning">Edit Draft</a>
+                            <form action="{{ route('blu-payment-submissions.submit', $transaction->id) }}" method="POST">
                                 @csrf
                                 <button type="submit" class="btn btn-primary" onclick="return confirm('Ajukan berkas untuk Verifikasi?')">Ajukan Verifikasi</button>
                             </form>
                         @endif
                         @if(in_array($transaction->status, ['Verified', 'Approved SPP', 'Approved SPM']))
-                            <form action="{{ route('transactions.approve', $transaction->id) }}" method="POST">
+                            <form action="{{ route('blu-payment-submissions.approve', $transaction->id) }}" method="POST">
                                 @csrf
                                 @php
                                     $approveLabel = 'Approve';
@@ -152,7 +151,7 @@
                                     elseif($transaction->status == 'Approved SPP') $approveLabel = 'Approve SPM (PPSPM)';
                                     elseif($transaction->status == 'Approved SPM') $approveLabel = 'Konfirmasi SP2D (Bendahara)';
                                 @endphp
-                                <button type="submit" class="btn btn-success" onclick="return confirm('Setujui transaksi ini?')"><i class="bi bi-check2-circle"></i> {{ $approveLabel }}</button>
+                                <button type="submit" class="btn btn-success" onclick="return confirm('Setujui pengajuan ini?')"><i class="bi bi-check2-circle"></i> {{ $approveLabel }}</button>
                             </form>
                             <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#rejectModal"><i class="bi bi-x-circle"></i> Tolak / Kembalikan</button>
                         @endif
@@ -220,9 +219,9 @@
                          <button class="btn btn-outline-secondary w-100 mb-2" disabled><i class="bi bi-printer"></i> Cetak SPP</button>
                          <button class="btn btn-outline-secondary w-100" disabled><i class="bi bi-printer"></i> Cetak SPM</button>
                      @else
-                         <a href="{{ route('transactions.print.spp', $transaction->id) }}" target="_blank" class="btn btn-outline-primary w-100 mb-2"><i class="bi bi-printer"></i> Cetak SPP (PDF)</a>
+                         <a href="{{ route('blu-payment-submissions.print.spp', $transaction->id) }}" target="_blank" class="btn btn-outline-primary w-100 mb-2"><i class="bi bi-printer"></i> Cetak SPP (PDF)</a>
                          @if(!in_array($transaction->status, ['Draft', 'Rejected', 'Verified']))
-                             <a href="{{ route('transactions.print.spm', $transaction->id) }}" target="_blank" class="btn btn-outline-success w-100"><i class="bi bi-printer"></i> Cetak SPM (PDF)</a>
+                             <a href="{{ route('blu-payment-submissions.print.spm', $transaction->id) }}" target="_blank" class="btn btn-outline-success w-100"><i class="bi bi-printer"></i> Cetak SPM (PDF)</a>
                          @else
                              <button class="btn btn-outline-secondary w-100" disabled><i class="bi bi-printer"></i> Cetak SPM (Belum tersedia)</button>
                          @endif
@@ -237,7 +236,7 @@
     <div class="modal fade" id="rejectModal" tabindex="-1" aria-labelledby="rejectModalLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
-                <form action="{{ route('transactions.reject', $transaction->id) }}" method="POST">
+                <form action="{{ route('blu-payment-submissions.reject', $transaction->id) }}" method="POST">
                     @csrf
                     <div class="modal-header bg-danger text-white">
                         <h5 class="modal-title" id="rejectModalLabel">Tolak / Kembalikan Berkas</h5>
@@ -264,14 +263,13 @@
     <div class="modal fade" id="addTaxModal" tabindex="-1" aria-labelledby="addTaxModalLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
-                <form action="{{ route('transactions.taxes.store', $transaction->id) }}" method="POST">
+                <form action="{{ route('blu-payment-submissions.taxes.store', $transaction->id) }}" method="POST">
                     @csrf
                     <div class="modal-header">
                         <h5 class="modal-title" id="addTaxModalLabel">Tambah Rincian Pajak</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
-                        <!-- Helper for raw transaction amount -->
                         <input type="hidden" id="raw_amount" value="{{ $transaction->amount }}">
 
                         <div class="mb-3">
@@ -353,13 +351,12 @@
         taxAmountInput.value = taxAmount.toFixed(2);
     }
     
-    // Auto-fill typical percentages based on type selection to help user
     document.getElementById('tax_type')?.addEventListener('change', function() {
         const type = this.value;
         const pc = document.getElementById('percentage');
         if(type === 'PPN') pc.value = 11;
         else if(type === 'PPh 23') pc.value = 2;
-        else if(type === 'PPh 4(2)') pc.value = 10; // commonly for rent
+        else if(type === 'PPh 4(2)') pc.value = 10;
         
         calculateTax();
     });

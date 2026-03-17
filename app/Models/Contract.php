@@ -33,6 +33,21 @@ class Contract extends Model
     
     public function transactions()
     {
-        return $this->hasMany(Transaction::class);
+        return $this->hasMany(BluPaymentSubmission::class);
+    }
+
+    public function bluPaymentSubmissions()
+    {
+        return $this->hasMany(BluPaymentSubmission::class);
+    }
+
+    public function approvalLogs()
+    {
+        return $this->hasMany(ApprovalLog::class)->latest();
+    }
+
+    public function submittedBy()
+    {
+        return $this->belongsTo(User::class, 'submitted_by');
     }
 }

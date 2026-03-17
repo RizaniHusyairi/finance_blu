@@ -254,7 +254,7 @@
           <a href="javascript:void(0);" class="dropdown-toggle dropdown-toggle-nocaret" data-bs-toggle="dropdown">
              <img src="https://placehold.co/110x110/png" class="rounded-circle p-1 border" width="45" height="45" alt="">
           </a>
-          <div class="dropdown-menu dropdown-user dropdown-menu-end shadow">
+          <div class="dropdown-menu dropdown-user dropdown-menu-end shadow z-1000">
             <a class="dropdown-item  gap-2 py-2" href="javascript:;">
               <div class="text-center">
                 <img src="https://placehold.co/110x110/png" class="rounded-circle p-1 shadow mb-3" width="90" height="90"

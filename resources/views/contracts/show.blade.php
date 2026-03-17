@@ -15,7 +15,17 @@
                             <h5 class="mb-0 text-info">Informasi Kontrak</h5>
                         </div>
                         <div>
-                            <span class="badge bg-{{ $contract->status == 'Active' ? 'success' : ($contract->status == 'Draft' ? 'warning' : 'secondary') }} font-14">
+                            @php
+                                $badgeColor = match($contract->status) {
+                                    'Active' => 'success',
+                                    'Draft' => 'secondary',
+                                    'Menunggu Persetujuan PPK' => 'info',
+                                    'Ditolak PPK' => 'danger',
+                                    'Completed', 'Selesai' => 'primary',
+                                    default => 'warning',
+                                };
+                            @endphp
+                            <span class="badge bg-{{ $badgeColor }} font-14">
                                 {{ $contract->status }}
                             </span>
                         </div>
@@ -42,6 +52,10 @@
                             <tr>
                                 <th>Uraian Pekerjaan</th>
                                 <td>: {{ $contract->description }}</td>
+                            </tr>
+                            <tr>
+                                <th>Ketentuan Sanksi</th>
+                                <td>: {{ $contract->ketentuan_sanksi ?? '-' }}</td>
                             </tr>
                             <tr>
                                 <th>Total Nilai (Rp)</th>
@@ -199,6 +213,92 @@
                      @endif
                 </div>
             </div>
+
+            {{-- Approval Actions --}}
+            @if(in_array($contract->status, ['Draft', 'Ditolak PPK']))
+                @if(auth()->user()->hasAnyRole(['Super Admin', 'Operator BLU', 'Pejabat Pengadaan']))
+                    <div class="card mt-4 border-top border-4 border-primary">
+                        <div class="card-body">
+                            <h6 class="mb-3 text-primary"><i class="bi bi-send me-2"></i>Ajukan Kontrak</h6>
+                            <p class="small text-muted mb-3">Kontrak ini berstatus <strong>{{ $contract->status }}</strong>. Ajukan ke PPK untuk mendapatkan persetujuan.</p>
+                            <form action="{{ route('contracts.submit', $contract->id) }}" method="POST" onsubmit="return confirm('Ajukan kontrak ini ke PPK untuk persetujuan?');">
+                                @csrf
+                                <button type="submit" class="btn btn-primary w-100"><i class="bi bi-send me-1"></i>Ajukan ke PPK</button>
+                            </form>
+                        </div>
+                    </div>
+                @endif
+            @endif
+
+            @if($contract->status === 'Menunggu Persetujuan PPK')
+                @if(auth()->user()->hasRole('PPK') || auth()->user()->hasRole('Super Admin'))
+                    <div class="card mt-4 border-top border-4 border-success">
+                        <div class="card-body">
+                            <h6 class="mb-3 text-success"><i class="bi bi-clipboard-check me-2"></i>Persetujuan PPK</h6>
+                            <p class="small text-muted mb-3">Kontrak ini menunggu persetujuan Anda.</p>
+                            
+                            {{-- Approve --}}
+                            <form action="{{ route('contracts.approve', $contract->id) }}" method="POST" class="mb-2" onsubmit="return confirm('Setujui kontrak ini?');">
+                                @csrf
+                                <div class="mb-2">
+                                    <textarea class="form-control form-control-sm" name="notes" rows="2" placeholder="Catatan persetujuan (opsional)"></textarea>
+                                </div>
+                                <button type="submit" class="btn btn-success w-100"><i class="bi bi-check-circle me-1"></i>Setujui Kontrak</button>
+                            </form>
+
+                            {{-- Reject --}}
+                            <form action="{{ route('contracts.reject', $contract->id) }}" method="POST" onsubmit="return confirm('Tolak kontrak ini?');">
+                                @csrf
+                                <div class="mb-2">
+                                    <textarea class="form-control form-control-sm" name="notes" rows="2" placeholder="Alasan penolakan *" required></textarea>
+                                </div>
+                                <button type="submit" class="btn btn-outline-danger w-100"><i class="bi bi-x-circle me-1"></i>Tolak Kontrak</button>
+                            </form>
+                        </div>
+                    </div>
+                @else
+                    <div class="card mt-4 border-top border-4 border-info">
+                        <div class="card-body text-center">
+                            <i class="bi bi-hourglass-split text-info font-22"></i>
+                            <p class="small text-muted mt-2 mb-0">Menunggu persetujuan dari PPK</p>
+                        </div>
+                    </div>
+                @endif
+            @endif
+
+            {{-- Approval Log History --}}
+            @if($contract->approvalLogs && $contract->approvalLogs->count() > 0)
+                <div class="card mt-4">
+                    <div class="card-body">
+                        <h6 class="mb-3"><i class="bi bi-clock-history me-2"></i>Riwayat Persetujuan</h6>
+                        <div class="timeline-sm">
+                            @foreach($contract->approvalLogs as $log)
+                                <div class="d-flex mb-3 pb-3 {{ !$loop->last ? 'border-bottom' : '' }}">
+                                    <div class="flex-shrink-0 me-3">
+                                        @php
+                                            $logIcon = match($log->status_to) {
+                                                'Active' => 'bi-check-circle-fill text-success',
+                                                'Ditolak PPK' => 'bi-x-circle-fill text-danger',
+                                                'Menunggu Persetujuan PPK' => 'bi-send-fill text-primary',
+                                                default => 'bi-circle text-secondary',
+                                            };
+                                        @endphp
+                                        <i class="bi {{ $logIcon }} font-18"></i>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <div class="fw-bold small">{{ $log->status_to }}</div>
+                                        <div class="text-muted small">{{ $log->user->name ?? '-' }} ({{ $log->role_name }})</div>
+                                        @if($log->notes)
+                                            <div class="small fst-italic mt-1">{{ $log->notes }}</div>
+                                        @endif
+                                        <div class="text-muted small mt-1">{{ $log->created_at->format('d M Y H:i') }}</div>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
+            @endif
             
             <div class="d-grid mt-4">
                  <a href="{{ route('contracts.index') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-2"></i>Kembali ke Daftar</a>

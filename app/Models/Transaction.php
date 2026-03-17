@@ -44,17 +44,17 @@ class Transaction extends Model
     
     public function taxes()
     {
-        return $this->hasMany(TransactionTax::class);
+        return $this->hasMany(TransactionTax::class, 'transaction_id');
     }
     
     public function approvalLogs()
     {
-        return $this->hasMany(ApprovalLog::class);
+        return $this->hasMany(ApprovalLog::class, 'transaction_id');
     }
     
     public function bkuLogs()
     {
-        return $this->hasMany(BkuLog::class);
+        return $this->hasMany(BkuLog::class, 'transaction_id');
     }
 
     public function getAmountAttribute(): float
@@ -73,7 +73,7 @@ class Transaction extends Model
     public function syncNetAmount(): void
     {
         $grossAmount = (float) $this->gross_amount;
-        $taxTotal = (float) $this->taxes()->sum('tax_amount');
+        $taxTotal = (float) $this->taxes()->sum('amount');
 
         $this->forceFill([
             'net_amount' => max($grossAmount - $taxTotal, 0),

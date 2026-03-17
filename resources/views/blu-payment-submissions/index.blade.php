@@ -99,7 +99,7 @@
                     </p>
                 </div>
                 <div class="d-flex flex-wrap gap-2">
-                    <a href="{{ route('transactions.create') }}" class="btn btn-primary px-4">
+                    <a href="{{ route('blu-payment-submissions.create') }}" class="btn btn-primary px-4">
                         <i class="bi bi-plus-circle me-1"></i> Tambah Pengajuan
                     </a>
                     <button type="button" class="btn btn-outline-success px-4 js-demo-action" data-message="Fitur export Excel akan dihubungkan ke backend pada tahap berikutnya.">
@@ -298,7 +298,7 @@
                 </div>
                 <h4 class="fw-bold mb-2">Belum ada pengajuan pembayaran BLU</h4>
                 <p class="text-muted mb-4">Mulai buat pengajuan pembayaran baru untuk memproses tagihan BLU</p>
-                <a href="{{ route('transactions.create') }}" class="btn btn-primary px-4">
+                <a href="{{ route('blu-payment-submissions.create') }}" class="btn btn-primary px-4">
                     <i class="bi bi-plus-circle me-1"></i> Tambah Pengajuan
                 </a>
             </div>

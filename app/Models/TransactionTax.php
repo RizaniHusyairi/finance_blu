@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Models\Transaction;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -14,6 +13,11 @@ class TransactionTax extends Model
     
     public function transaction()
     {
-        return $this->belongsTo(Transaction::class);
+        return $this->belongsTo(BluPaymentSubmission::class, 'transaction_id');
+    }
+
+    public function bluPaymentSubmission()
+    {
+        return $this->belongsTo(BluPaymentSubmission::class, 'transaction_id');
     }
 }

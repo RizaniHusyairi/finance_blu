@@ -1,9 +1,9 @@
 @extends('layouts.app')
 @section('title')
-    Edit Tagihan (Transaksi)
+    Edit Tagihan (Pengajuan Pembayaran BLU)
 @endsection
 @section('content')
-    <x-page-title title="Tagihan & Pembayaran" subtitle="Edit Transaksi" />
+    <x-page-title title="Tagihan & Pembayaran" subtitle="Edit Pengajuan" />
 
     <div class="card border-top border-4 border-warning">
         <div class="card-body p-5">
@@ -12,7 +12,7 @@
                 <h5 class="mb-0 text-warning">Edit Tagihan (Draft SPP)</h5>
             </div>
             
-            <form action="{{ route('transactions.update', $transaction->id) }}" method="POST">
+            <form action="{{ route('blu-payment-submissions.update', $transaction->id) }}" method="POST">
                 @csrf
                 @method('PUT')
                 
@@ -112,8 +112,8 @@
                 <div class="row">
                     <label class="col-sm-3 col-form-label"></label>
                     <div class="col-sm-9">
-                        <button type="submit" class="btn btn-primary px-4">Update Draft Transaksi</button>
-                        <a href="{{ route('transactions.index') }}" class="btn btn-secondary px-4">Batal</a>
+                        <button type="submit" class="btn btn-primary px-4">Update Draft Pengajuan</button>
+                        <a href="{{ route('blu-payment-submissions.index') }}" class="btn btn-secondary px-4">Batal</a>
                     </div>
                 </div>
             </form>
@@ -170,7 +170,7 @@
                         let sel = term.id == preValue ? 'selected' : '';
                         termSelect.innerHTML += `<option value="${term.id}" data-amount="${term.amount}" ${disabled} ${sel}>${term.term_name} - Rp ${parseFloat(term.amount).toLocaleString('id-ID')} ${statusText}</option>`;
                     });
-                     setAmountFromTerm(); // set if preloaded
+                     setAmountFromTerm();
                 } else {
                     termRow.style.display = 'none';
                 }

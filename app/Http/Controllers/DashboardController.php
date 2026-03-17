@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Budget;
 use App\Models\Contract;
-use App\Models\Transaction;
+use App\Models\BluPaymentSubmission;
 use App\Models\Supplier;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -18,7 +18,7 @@ class DashboardController extends Controller
     {
         // Summary cards
         $totalPagu = Budget::sum('initial_budget');
-        $totalRealisasi = Transaction::where('status', 'Paid SP2D')->sum('gross_amount');
+        $totalRealisasi = BluPaymentSubmission::where('status', 'Paid SP2D')->sum('gross_amount');
         $sisaAnggaran = $totalPagu - $totalRealisasi;
         $persenRealisasi = $totalPagu > 0 ? round(($totalRealisasi / $totalPagu) * 100, 1) : 0;
 
@@ -26,7 +26,7 @@ class DashboardController extends Controller
         $totalMitra = Supplier::count();
 
         // Transaction status breakdown for donut chart
-        $statusCounts = Transaction::select('status', DB::raw('count(*) as total'))
+        $statusCounts = BluPaymentSubmission::select('status', DB::raw('count(*) as total'))
             ->groupBy('status')
             ->pluck('total', 'status')
             ->toArray();
@@ -39,13 +39,13 @@ class DashboardController extends Controller
         foreach ($budgets as $b) {
             $budgetLabels[] = $b->coa;
             $budgetPagu[] = (float) $b->initial_budget;
-            $budgetRealisasi[] = Transaction::where('budget_id', $b->id)
+            $budgetRealisasi[] = BluPaymentSubmission::where('budget_id', $b->id)
                 ->where('status', 'Paid SP2D')
                 ->sum('gross_amount');
         }
 
         // Recent transactions for table
-        $recentTransactions = Transaction::with(['contract', 'budget'])
+        $recentTransactions = BluPaymentSubmission::with(['contract', 'budget'])
             ->latest()
             ->take(5)
             ->get();
@@ -58,7 +58,7 @@ class DashboardController extends Controller
             ->get();
 
         // Transactions needing approval (status = Verified, Approved SPP, or Approved SPM)
-        $pendingApproval = Transaction::whereIn('status', ['Verified', 'Approved SPP', 'Approved SPM'])
+        $pendingApproval = BluPaymentSubmission::whereIn('status', ['Verified', 'Approved SPP', 'Approved SPM'])
             ->with(['contract', 'budget'])
             ->latest()
             ->take(5)
@@ -94,7 +94,7 @@ class DashboardController extends Controller
 
             $contractIds = $contracts->pluck('id');
 
-            $transactions = Transaction::whereIn('contract_id', $contractIds)
+            $transactions = BluPaymentSubmission::whereIn('contract_id', $contractIds)
                 ->with(['contract', 'budget', 'taxes'])
                 ->latest()
                 ->get();

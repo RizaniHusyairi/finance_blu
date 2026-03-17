@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>SPM - {{ $transaction->transaction_number }}</title>
+    <title>SPP - {{ $transaction->transaction_number }}</title>
     <style>
         body { font-family: 'Times New Roman', serif; font-size: 12pt; margin: 2cm; color: #333; }
         .header { text-align: center; margin-bottom: 20px; border-bottom: 3px double #000; padding-bottom: 10px; }
@@ -24,7 +24,6 @@
         .signature-area td { text-align: center; padding: 5px; vertical-align: top; width: 50%; }
         .bold { font-weight: bold; }
         .mt-2 { margin-top: 20px; }
-        .info-box { border: 1px solid #ccc; padding: 10px; margin: 10px 0; background: #fafafa; }
     </style>
 </head>
 <body>
@@ -36,22 +35,18 @@
     </div>
 
     <div class="doc-title">
-        <h2>SURAT PERINTAH MEMBAYAR (SPM)</h2>
-        <p>Nomor: SPM-{{ $transaction->transaction_number }}</p>
-        <p>Tanggal: {{ \Carbon\Carbon::now()->isoFormat('D MMMM Y') }}</p>
-    </div>
-
-    <div class="info-box">
-        <p><strong>Dasar:</strong> Surat Permintaan Pembayaran (SPP) Nomor {{ $transaction->transaction_number }} tanggal {{ \Carbon\Carbon::parse($transaction->date)->isoFormat('D MMMM Y') }}</p>
+        <h2>SURAT PERMINTAAN PEMBAYARAN (SPP)</h2>
+        <p>Nomor: {{ $transaction->transaction_number }}</p>
+        <p>Tanggal: {{ \Carbon\Carbon::parse($transaction->date)->isoFormat('D MMMM Y') }}</p>
     </div>
 
     <table class="info">
         <tr>
-            <td>Jenis SPM</td>
-            <td>: SPM-{{ $transaction->type }}</td>
+            <td>Jenis Pembayaran</td>
+            <td>: {{ $transaction->type }} ({{ $transaction->type == 'LS' ? 'Langsung' : ($transaction->type == 'UP' ? 'Uang Persediaan' : 'Tambahan Uang Persediaan') }})</td>
         </tr>
         <tr>
-            <td>Uraian Pembayaran</td>
+            <td>Uraian</td>
             <td>: {{ $transaction->description }}</td>
         </tr>
         <tr>
@@ -62,22 +57,20 @@
             <td>Kode Akun / MAK</td>
             <td>: {{ $transaction->budget ? $transaction->budget->coa : '-' }}</td>
         </tr>
-        @if($transaction->contract && $transaction->contract->supplier)
+        @if($transaction->contract)
         <tr>
-            <td>Penerima / Penyedia</td>
-            <td>: {{ $transaction->contract->supplier->name }}</td>
+            <td>Nomor Kontrak</td>
+            <td>: {{ $transaction->contract->contract_number }}</td>
         </tr>
         <tr>
-            <td>NPWP Penerima</td>
-            <td>: {{ $transaction->contract->supplier->npwp ?? '-' }}</td>
+            <td>Nama Penyedia</td>
+            <td>: {{ $transaction->contract->supplier->name ?? '-' }}</td>
         </tr>
+        @endif
+        @if($transaction->term)
         <tr>
-            <td>No. Rekening</td>
-            <td>: {{ $transaction->contract->supplier->bank_account ?? '-' }}</td>
-        </tr>
-        <tr>
-            <td>Bank</td>
-            <td>: {{ $transaction->contract->supplier->bank_name ?? '-' }}</td>
+            <td>Termin Pembayaran</td>
+            <td>: {{ $transaction->term->term_name }}</td>
         </tr>
         @endif
     </table>
@@ -99,11 +92,11 @@
             </tr>
             @php $totalTax = 0; $no = 2; @endphp
             @foreach($transaction->taxes as $tax)
-                @php $totalTax += $tax->tax_amount; @endphp
+                @php $totalTax += $tax->amount; @endphp
                 <tr>
                     <td class="text-center">{{ $no++ }}</td>
                     <td>Potongan {{ $tax->tax_type }} ({{ $tax->percentage }}%)</td>
-                    <td class="text-right">({{ number_format($tax->tax_amount, 2, ',', '.') }})</td>
+                    <td class="text-right">({{ number_format($tax->amount, 2, ',', '.') }})</td>
                 </tr>
             @endforeach
         </tbody>
@@ -119,24 +112,19 @@
         </tfoot>
     </table>
 
-    <p class="mt-2"><strong>Dengan ini diperintahkan untuk membayar sejumlah:</strong></p>
-    <p style="font-size: 13pt; font-weight: bold; text-align: center; border: 1px solid #000; padding: 8px; margin: 10px 0;">
-        Rp {{ number_format($transaction->amount - $totalTax, 2, ',', '.') }}
-    </p>
-
-    <div class="signature-area">
+    <div class="signature-area mt-2">
         <table>
             <tr>
                 <td>
                     <p>Mengetahui,</p>
-                    <p class="bold">Kuasa Pengguna Anggaran (KPA)</p>
+                    <p class="bold">Pejabat Pembuat Komitmen (PPK)</p>
                     <br><br><br><br>
                     <p class="bold" style="border-top: 1px solid #000; display: inline-block; padding-top: 4px;">( ............................ )</p>
                     <p>NIP. ...............................</p>
                 </td>
                 <td>
                     <p>{{ \Carbon\Carbon::now()->isoFormat('D MMMM Y') }}</p>
-                    <p class="bold">Pejabat Penandatangan SPM (PPSPM)</p>
+                    <p class="bold">Bendahara Pengeluaran</p>
                     <br><br><br><br>
                     <p class="bold" style="border-top: 1px solid #000; display: inline-block; padding-top: 4px;">( ............................ )</p>
                     <p>NIP. ...............................</p>

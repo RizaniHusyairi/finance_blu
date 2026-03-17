@@ -50,6 +50,13 @@
                         @error('type') <div class="invalid-feedback">{{ $message }}</div> @enderror
                     </div>
                 </div>
+                <div class="row mb-4">
+                    <label for="ketentuan_sanksi" class="col-sm-3 col-form-label">Ketentuan Sanksi</label>
+                    <div class="col-sm-9">
+                        <textarea class="form-control @error('ketentuan_sanksi') is-invalid @enderror" id="ketentuan_sanksi" name="ketentuan_sanksi" rows="3">{{ old('ketentuan_sanksi', $contract->ketentuan_sanksi) }}</textarea>
+                        @error('ketentuan_sanksi') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                    </div>
+                </div>
 
                 <hr>
                 <h6 class="mb-3 mt-4">Keterkaitan Master Data</h6>
