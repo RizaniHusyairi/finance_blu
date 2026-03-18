@@ -115,12 +115,16 @@
             </div>
 
             <!-- Termin Pembayaran Tab/Section placeholder -->
+            @php
+                $terminItems = $contract->terms->filter(fn($t) => $t->type === 'Termin' || $t->type === null);
+                $angsuranItems = $contract->terms->filter(fn($t) => $t->type === 'Angsuran');
+            @endphp
             <div class="card mt-4">
                 <div class="card-header bg-transparent border-bottom">
                     <div class="d-flex justify-content-between align-items-center">
                         <h6 class="mb-0">Termin Pembayaran</h6>
                         <div class="d-flex gap-2 align-items-center">
-                            <span class="badge bg-light text-dark border">Total: {{ $contract->terms->sum('percentage') }}%</span>
+                            <span class="badge bg-light text-dark border">Total: {{ $terminItems->sum('percentage') }}%</span>
                             <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#terminModal"><i class="bi bi-plus"></i> Set Termin</button>
                         </div>
                     </div>
@@ -129,7 +133,7 @@
                      @error('percentage')
                         <div class="alert alert-danger py-2">{{ $message }}</div>
                      @enderror
-                     @if($contract->terms->count() > 0)
+                     @if($terminItems->count() > 0)
                         <div class="table-responsive">
                              <table class="table table-striped table-sm">
                                 <thead>
@@ -142,7 +146,7 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                     @foreach($contract->terms as $term)
+                                     @foreach($terminItems as $term)
                                         <tr>
                                             <td>{{ $term->term_name }}</td>
                                             <td>{{ $term->percentage }}%</td>
@@ -167,6 +171,57 @@
                      @endif
                 </div>
             </div>
+
+            {{-- Tabel Angsuran Uang Muka (tampil hanya jika kontrak ada uang muka) --}}
+            @if($contract->ada_uang_muka)
+            <div class="card mt-4 border-top border-4 border-warning">
+                <div class="card-header bg-transparent border-bottom">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-cash-coin me-2 text-warning font-18"></i>
+                            <h6 class="mb-0">Angsuran Uang Muka</h6>
+                        </div>
+                        <span class="badge bg-warning text-dark">UM: Rp {{ number_format($contract->nilai_uang_muka, 0, ',', '.') }} ({{ $contract->persentase_uang_muka }}%)</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    @if($angsuranItems->count() > 0)
+                        <div class="table-responsive">
+                            <table class="table table-striped table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Angsuran</th>
+                                        <th>Persentase</th>
+                                        <th>Nilai (Rp)</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($angsuranItems as $angsuran)
+                                    <tr>
+                                        <td>{{ $angsuran->term_name }}</td>
+                                        <td>{{ $angsuran->percentage }}%</td>
+                                        <td>Rp {{ number_format($angsuran->amount, 0, ',', '.') }}</td>
+                                        <td><span class="badge bg-{{ $angsuran->status == 'Paid' ? 'success' : 'warning' }}">{{ $angsuran->status }}</span></td>
+                                    </tr>
+                                    @endforeach
+                                </tbody>
+                                <tfoot>
+                                    <tr class="fw-bold">
+                                        <td>Total</td>
+                                        <td>{{ $angsuranItems->sum('percentage') }}%</td>
+                                        <td>Rp {{ number_format($angsuranItems->sum('amount'), 0, ',', '.') }}</td>
+                                        <td></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    @else
+                        <p class="text-muted mb-0">Belum ada data angsuran uang muka.</p>
+                    @endif
+                </div>
+            </div>
+            @endif
 
         </div>
 

@@ -22,17 +22,9 @@ class ContractTermSeeder extends Seeder
 
             $sisaSetelahUM = $totalAmount - $nilaiUM;
 
-            // ── 1. Termin Uang Muka (jika ada) ──
-            if ($adaUM && $nilaiUM > 0) {
-                ContractTerm::updateOrCreate(
-                    ['contract_id' => $contract->id, 'term_name' => 'Uang Muka'],
-                    [
-                        'percentage' => round(($nilaiUM / $totalAmount) * 100, 2),
-                        'amount'     => $nilaiUM,
-                        'status'     => 'Pending',
-                    ]
-                );
-            }
+            // ── 1. Uang Muka ──
+            // Data uang muka disimpan di tabel contracts saja
+            // (kolom: nilai_uang_muka, persentase_uang_muka, dll.)
 
             // ── 2. Termin Pekerjaan ──
             // Bagi sisa setelah uang muka ke jumlah termin
@@ -72,6 +64,7 @@ class ContractTermSeeder extends Seeder
                     ContractTerm::updateOrCreate(
                         ['contract_id' => $contract->id, 'term_name' => "Angsuran UM {$j}"],
                         [
+                            'type'       => 'Angsuran',
                             'percentage' => round(($amt / $totalAmount) * 100, 2),
                             'amount'     => $amt,
                             'status'     => 'Pending',
