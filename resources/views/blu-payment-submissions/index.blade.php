@@ -20,10 +20,7 @@
             height: 48px;
         }
 
-        .filter-shell {
-            background: #f8fbff;
-            border: 1px solid #e5eefc;
-        }
+
 
         .submission-table thead th {
             white-space: nowrap;
@@ -155,7 +152,7 @@
                 <div class="col-12 col-lg-4">
                     <label for="searchSubmission" class="form-label fw-semibold">Cari Pengajuan</label>
                     <div class="input-group">
-                        <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                        <span class="input-group-text"><i class="bi bi-search"></i></span>
                         <input type="text" id="searchSubmission" class="form-control" placeholder="Cari nomor pengajuan, uraian, supplier, atau kontrak">
                     </div>
                 </div>
@@ -192,7 +189,6 @@
                 <p class="text-muted mb-0">Pantau status, nilai tagihan, dan progres pencairan dalam satu tampilan ringkas.</p>
             </div>
             <div class="d-flex align-items-center gap-2 text-muted small">
-                <span class="badge bg-light text-dark border">Data Dummy</span>
                 <span>{{ $submissions->count() }} pengajuan</span>
             </div>
         </div>
@@ -246,7 +242,7 @@
                                             @endif
                                         </div>
                                     @else
-                                        <span class="badge bg-light text-dark border">Non-Kontrak</span>
+                                        <span class="badge rounded-pill bg-light text-white">Non-Kontrak</span>
                                     @endif
                                 </td>
                                 <td class="text-end align-top fw-semibold">Rp {{ number_format($submission['gross_amount'], 0, ',', '.') }}</td>
