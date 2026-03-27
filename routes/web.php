@@ -60,6 +60,9 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
     Route::middleware('role:Super Admin|Pejabat Pengadaan|PPK')->group(function () {
         Route::resource('contracts', ContractController::class);
         Route::post('/contracts/{contract}/addendums', [ContractAddendumController::class, 'store'])->name('addendums.store');
+        Route::post('/contracts/{contract}/addendums/{addendum}/submit', [ContractAddendumController::class, 'submit'])->name('addendums.submit');
+        Route::post('/contracts/{contract}/addendums/{addendum}/approve', [ContractAddendumController::class, 'approve'])->name('addendums.approve');
+        Route::post('/contracts/{contract}/addendums/{addendum}/reject', [ContractAddendumController::class, 'reject'])->name('addendums.reject');
         Route::delete('/contracts/{contract}/addendums/{addendum}', [ContractAddendumController::class, 'destroy'])->name('addendums.destroy');
         Route::post('/contracts/{contract}/terms', [ContractTermController::class, 'store'])->name('terms.store');
         Route::delete('/contracts/{contract}/terms/{term}', [ContractTermController::class, 'destroy'])->name('terms.destroy');

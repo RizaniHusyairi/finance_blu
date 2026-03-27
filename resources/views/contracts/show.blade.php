@@ -83,6 +83,7 @@
                                         <th>No. Adendum</th>
                                         <th>Tanggal</th>
                                         <th>Keterangan</th>
+                                        <th>Status</th>
                                         <th>Nilai Baru</th>
                                         <th>Waktu Baru</th>
                                         <th>Aksi</th>
@@ -94,14 +95,49 @@
                                         <td>{{ $addendum->addendum_number }}</td>
                                         <td>{{ \Carbon\Carbon::parse($addendum->date)->format('d/m/Y') }}</td>
                                         <td>{{ Str::limit($addendum->reason, 30) }}</td>
+                                        <td>
+                                            @php
+                                                $badgeStatus = match($addendum->status) {
+                                                    'Draft' => 'secondary',
+                                                    'Menunggu PPK' => 'info',
+                                                    'Disetujui' => 'success',
+                                                    'Ditolak' => 'danger',
+                                                    default => 'warning'
+                                                };
+                                            @endphp
+                                            <span class="badge bg-{{ $badgeStatus }}">{{ $addendum->status }}</span>
+                                        </td>
                                         <td>{{ $addendum->new_total_amount ? 'Rp ' . number_format($addendum->new_total_amount, 0, ',', '.') : '-' }}</td>
                                         <td>{{ $addendum->new_end_date ? \Carbon\Carbon::parse($addendum->new_end_date)->format('d/m/Y') : '-' }}</td>
                                         <td>
-                                            <form action="{{ route('addendums.destroy', [$contract->id, $addendum->id]) }}" method="POST" onsubmit="return confirm('Hapus adendum ini?');">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-1"><i class="bi bi-trash"></i></button>
-                                            </form>
+                                            <div class="d-flex align-items-center gap-1">
+                                                @if(in_array($addendum->status, ['Draft', 'Ditolak']) && auth()->user()->hasAnyRole(['Super Admin', 'Operator BLU', 'Pejabat Pengadaan']))
+                                                    <form action="{{ route('addendums.submit', [$contract->id, $addendum->id]) }}" method="POST" onsubmit="return confirm('Ajukan adendum ini ke PPK?');">
+                                                        @csrf
+                                                        <button type="submit" class="btn btn-sm btn-outline-primary py-0 px-1" title="Ajukan ke PPK"><i class="bi bi-send"></i></button>
+                                                    </form>
+                                                @endif
+
+                                                @if($addendum->status === 'Menunggu PPK' && (auth()->user()->hasRole('PPK') || auth()->user()->hasRole('Super Admin')))
+                                                    <form action="{{ route('addendums.approve', [$contract->id, $addendum->id]) }}" method="POST" onsubmit="return confirm('Setujui adendum ini?');">
+                                                        @csrf
+                                                        <button type="submit" class="btn btn-sm btn-outline-success py-0 px-1" title="Setujui"><i class="bi bi-check-lg"></i></button>
+                                                    </form>
+                                                    <form action="{{ route('addendums.reject', [$contract->id, $addendum->id]) }}" method="POST" onsubmit="var notes = prompt('Alasan penolakan:'); if(notes) { this.notes.value = notes; return true; } return false;">
+                                                        @csrf
+                                                        <input type="hidden" name="notes" value="">
+                                                        <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-1" title="Tolak"><i class="bi bi-x-lg"></i></button>
+                                                    </form>
+                                                @endif
+
+                                                @if(in_array($addendum->status, ['Draft', 'Ditolak']) && auth()->user()->hasAnyRole(['Super Admin', 'Operator BLU', 'Pejabat Pengadaan']))
+                                                    <form action="{{ route('addendums.destroy', [$contract->id, $addendum->id]) }}" method="POST" onsubmit="return confirm('Hapus adendum ini?');">
+                                                        @csrf
+                                                        @method('DELETE')
+                                                        <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-1" title="Hapus"><i class="bi bi-trash"></i></button>
+                                                    </form>
+                                                @endif
+                                            </div>
                                         </td>
                                     </tr>
                                     @endforeach
