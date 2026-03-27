@@ -18,7 +18,7 @@ class BluPaymentSubmissionController extends Controller
 
     public function create()
     {
-        $contracts = Contract::where('status', 'Active')->with('terms')->get();
+        $contracts = Contract::where('status', 'Aktif')->with('terms')->get();
         $budgets = Budget::all();
         $suppliers = Supplier::orderBy('name')->get();
         $ppks = User::role('PPK')->get();
@@ -151,7 +151,7 @@ class BluPaymentSubmissionController extends Controller
                 ->with('error', 'Pengajuan yang sedang diproses tidak dapat diubah.');
         }
 
-        $contracts = Contract::where('status', 'Active')->with('terms')->get();
+        $contracts = Contract::where('status', 'Aktif')->with('terms')->get();
         $budgets = Budget::all();
         $suppliers = Supplier::orderBy('name')->get();
         $ppks = User::role('PPK')->get();

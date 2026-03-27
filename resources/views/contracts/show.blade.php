@@ -17,11 +17,11 @@
                         <div>
                             @php
                                 $badgeColor = match($contract->status) {
-                                    'Active' => 'success',
+                                    'Aktif' => 'success',
                                     'Draft' => 'secondary',
-                                    'Menunggu Persetujuan PPK' => 'info',
-                                    'Ditolak PPK' => 'danger',
-                                    'Completed', 'Selesai' => 'primary',
+                                    'Menunggu PPK' => 'info',
+                                    'Revisi', 'Ditolak PPK' => 'danger',
+                                    'Selesai' => 'primary',
                                     default => 'warning',
                                 };
                             @endphp
@@ -270,7 +270,7 @@
             </div>
 
             {{-- Approval Actions --}}
-            @if(in_array($contract->status, ['Draft', 'Ditolak PPK']))
+            @if(in_array($contract->status, ['Draft', 'Revisi', 'Ditolak PPK']))
                 @if(auth()->user()->hasAnyRole(['Super Admin', 'Operator BLU', 'Pejabat Pengadaan']))
                     <div class="card mt-4 border-top border-4 border-primary">
                         <div class="card-body">
@@ -285,7 +285,7 @@
                 @endif
             @endif
 
-            @if($contract->status === 'Menunggu Persetujuan PPK')
+            @if($contract->status === 'Menunggu PPK')
                 @if(auth()->user()->hasRole('PPK') || auth()->user()->hasRole('Super Admin'))
                     <div class="card mt-4 border-top border-4 border-success">
                         <div class="card-body">
@@ -332,9 +332,9 @@
                                     <div class="flex-shrink-0 me-3">
                                         @php
                                             $logIcon = match($log->status_to) {
-                                                'Active' => 'bi-check-circle-fill text-success',
-                                                'Ditolak PPK' => 'bi-x-circle-fill text-danger',
-                                                'Menunggu Persetujuan PPK' => 'bi-send-fill text-primary',
+                                                'Aktif' => 'bi-check-circle-fill text-success',
+                                                'Revisi', 'Ditolak PPK' => 'bi-x-circle-fill text-danger',
+                                                'Menunggu PPK' => 'bi-send-fill text-primary',
                                                 default => 'bi-circle text-secondary',
                                             };
                                         @endphp

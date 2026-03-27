@@ -13,7 +13,7 @@ class SupplierController extends Controller
 
         $totalSupplier = Supplier::count();
         $supplierAktif = Supplier::whereHas('contracts', function ($query) {
-            $query->whereIn('status', ['Active', 'Draft']); // Adjust as needed, assuming active means having ongoing contracts. We use Active here to match contract status.
+            $query->whereIn('status', ['Aktif', 'Draft']); // Adjust as needed, assuming active means having ongoing contracts. We use Aktif here to match contract status.
         })->count();
         $penyediaBarangJasa = Supplier::where('type', 'like', '%Barang%')
                                      ->orWhere('type', 'like', '%Jasa%')

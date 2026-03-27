@@ -22,7 +22,7 @@ class DashboardController extends Controller
         $sisaAnggaran = $totalPagu - $totalRealisasi;
         $persenRealisasi = $totalPagu > 0 ? round(($totalRealisasi / $totalPagu) * 100, 1) : 0;
 
-        $totalKontrakAktif = Contract::where('status', 'Active')->count();
+        $totalKontrakAktif = Contract::where('status', 'Aktif')->count();
         $totalMitra = Supplier::count();
 
         // Transaction status breakdown for donut chart
@@ -51,7 +51,7 @@ class DashboardController extends Controller
             ->get();
 
         // Active contracts
-        $activeContracts = Contract::where('status', 'Active')
+        $activeContracts = Contract::where('status', 'Aktif')
             ->with('supplier')
             ->latest()
             ->take(5)

@@ -34,8 +34,8 @@
         <div class="col">
             <div class="card rounded-4 bg-info text-white mb-0 border-0 h-100">
                 <div class="card-body p-3">
-                    <p class="mb-1 small">Menunggu Persetujuan PPK</p>
-                    <h5 class="mb-0 fw-bold">{{ $contracts->where('status', 'Menunggu Persetujuan PPK')->count() }}</h5>
+                    <p class="mb-1 small">Menunggu PPK</p>
+                    <h5 class="mb-0 fw-bold">{{ $contracts->where('status', 'Menunggu PPK')->count() }}</h5>
                 </div>
             </div>
         </div>
@@ -107,11 +107,11 @@
                                     @php
                                         $sc = match($contract->status) {
                                             'Draft' => 'secondary',
-                                            'Active', 'Aktif' => 'success',
-                                            'Menunggu Persetujuan PPK' => 'info',
-                                            'Ditolak PPK' => 'danger',
-                                            'Completed', 'Selesai' => 'primary',
-                                            'Dibatalkan', 'Cancelled' => 'danger',
+                                            'Aktif' => 'success',
+                                            'Menunggu PPK' => 'info',
+                                            'Revisi', 'Ditolak PPK' => 'danger',
+                                            'Selesai' => 'primary',
+                                            'Batal' => 'danger',
                                             default => 'warning'
                                         };
                                     @endphp

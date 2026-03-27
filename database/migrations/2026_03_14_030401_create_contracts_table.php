@@ -19,7 +19,7 @@ return new class extends Migration
             $table->foreignId('supplier_id')->constrained()->cascadeOnDelete();
             $table->foreignId('budget_id')->constrained()->cascadeOnDelete();
             $table->decimal('total_amount', 20, 2)->default(0);
-            $table->string('status')->default('Active'); // Active, Completed
+            $table->enum('status', ['Draft', 'Menunggu PPK', 'Revisi', 'Ditolak PPK', 'Aktif', 'Selesai', 'Batal'])->default('Draft'); // Draft, Menunggu PPK, Revisi, Ditolak PPK, Aktif, Selesai, Batal
             $table->date('start_date')->nullable();
             $table->date('end_date')->nullable();
             $table->string('type')->nullable(); // Barang / Jasa

@@ -40,7 +40,7 @@ class ContractTermSeeder extends Seeder
                 $pct = round(($amount / $totalAmount) * 100, 2);
 
                 // Status: untuk kontrak Completed, set termin pertama Paid
-                $status = ($contract->status === 'Completed' && $i === 1) ? 'Paid' : 'Pending';
+                $status = ($contract->status === 'Selesai' && $i === 1) ? 'Paid' : 'Pending';
 
                 ContractTerm::updateOrCreate(
                     ['contract_id' => $contract->id, 'term_name' => "Termin {$i}"],

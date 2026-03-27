@@ -24,8 +24,8 @@ class ContractController extends Controller
             $q->where('status', 'Paid SP2D');
         }])->latest()->get();
 
-        $totalAktif = $contracts->where('status', 'Active')->count();
-        $totalSelesai = $contracts->whereIn('status', ['Completed', 'Selesai'])->count();
+        $totalAktif = $contracts->where('status', 'Aktif')->count();
+        $totalSelesai = $contracts->whereIn('status', ['Selesai'])->count();
         $totalAdendum = $contracts->filter(function($c) { return $c->addendums->count() > 0; })->count();
         $totalNilaiAll = $contracts->sum('total_amount');
         
@@ -37,7 +37,7 @@ class ContractController extends Controller
             $c->realisasi_pembayaran = $realisasi;
             $c->sisa_kontrak = $c->total_amount - $realisasi;
 
-            if ($c->status == 'Active') {
+            if ($c->status == 'Aktif') {
                 if ($c->total_amount > 0 && $c->sisa_kontrak <= ($c->total_amount * 0.2)) {
                     $hampirHabisNilai++;
                 }
@@ -135,7 +135,7 @@ class ContractController extends Controller
         try {
             DB::beginTransaction();
 
-            $status = $request->has('simpan_draft') ? 'Draft' : 'Menunggu Persetujuan PPK';
+            $status = $request->has('simpan_draft') ? 'Draft' : 'Menunggu PPK';
 
             $contract = Contract::create([
                 'id_transaksi' => $validated['id_transaksi'],
@@ -208,13 +208,13 @@ class ContractController extends Controller
             // (Optional) addendum base if needed in the future, skipping addendum creation on `create`
 
             // Log approval if submitted directly
-            if ($status === 'Menunggu Persetujuan PPK') {
+            if ($status === 'Menunggu PPK') {
                 ApprovalLog::create([
                     'contract_id'  => $contract->id,
                     'user_id'      => Auth::id(),
                     'role_name'    => Auth::user()->getRoleNames()->first() ?? '-',
                     'status_from'  => null,
-                    'status_to'    => 'Menunggu Persetujuan PPK',
+                    'status_to'    => 'Menunggu PPK',
                     'notes'        => 'Kontrak diajukan untuk persetujuan PPK.',
                 ]);
             }
@@ -243,13 +243,13 @@ class ContractController extends Controller
      */
     public function submit(Contract $contract)
     {
-        if ($contract->status !== 'Draft' && $contract->status !== 'Ditolak PPK') {
+        if ($contract->status !== 'Draft' && $contract->status !== 'Revisi' && $contract->status !== 'Ditolak PPK') {
             return back()->with('error', 'Kontrak tidak dapat diajukan dari status saat ini.');
         }
 
         $oldStatus = $contract->status;
         $contract->update([
-            'status'       => 'Menunggu Persetujuan PPK',
+            'status'       => 'Menunggu PPK',
             'submitted_by' => Auth::id(),
         ]);
 
@@ -258,7 +258,7 @@ class ContractController extends Controller
             'user_id'      => Auth::id(),
             'role_name'    => Auth::user()->getRoleNames()->first() ?? '-',
             'status_from'  => $oldStatus,
-            'status_to'    => 'Menunggu Persetujuan PPK',
+            'status_to'    => 'Menunggu PPK',
             'notes'        => 'Kontrak diajukan untuk persetujuan PPK.',
         ]);
 
@@ -270,18 +270,18 @@ class ContractController extends Controller
      */
     public function approve(Request $request, Contract $contract)
     {
-        if ($contract->status !== 'Menunggu Persetujuan PPK') {
+        if ($contract->status !== 'Menunggu PPK') {
             return back()->with('error', 'Kontrak tidak dalam status menunggu persetujuan.');
         }
 
-        $contract->update(['status' => 'Active']);
+        $contract->update(['status' => 'Aktif']);
 
         ApprovalLog::create([
             'contract_id'  => $contract->id,
             'user_id'      => Auth::id(),
             'role_name'    => 'PPK',
-            'status_from'  => 'Menunggu Persetujuan PPK',
-            'status_to'    => 'Active',
+            'status_from'  => 'Menunggu PPK',
+            'status_to'    => 'Aktif',
             'notes'        => $request->input('notes', 'Kontrak disetujui oleh PPK.'),
         ]);
 
@@ -295,7 +295,7 @@ class ContractController extends Controller
     {
         $request->validate(['notes' => 'required|string|max:500']);
 
-        if ($contract->status !== 'Menunggu Persetujuan PPK') {
+        if ($contract->status !== 'Menunggu PPK') {
             return back()->with('error', 'Kontrak tidak dalam status menunggu persetujuan.');
         }
 
@@ -305,7 +305,7 @@ class ContractController extends Controller
             'contract_id'  => $contract->id,
             'user_id'      => Auth::id(),
             'role_name'    => 'PPK',
-            'status_from'  => 'Menunggu Persetujuan PPK',
+            'status_from'  => 'Menunggu PPK',
             'status_to'    => 'Ditolak PPK',
             'notes'        => $request->input('notes'),
         ]);
