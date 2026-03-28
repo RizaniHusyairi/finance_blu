@@ -59,6 +59,7 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
     // Manajemen Kontrak (Kontrak, Addendum, Termin)
     Route::middleware('role:Super Admin|Pejabat Pengadaan|PPK')->group(function () {
         Route::resource('contracts', ContractController::class);
+        Route::get('/contracts/{contract}/addendums/create', [ContractAddendumController::class, 'create'])->name('addendums.create');
         Route::post('/contracts/{contract}/addendums', [ContractAddendumController::class, 'store'])->name('addendums.store');
         Route::post('/contracts/{contract}/addendums/{addendum}/submit', [ContractAddendumController::class, 'submit'])->name('addendums.submit');
         Route::post('/contracts/{contract}/addendums/{addendum}/approve', [ContractAddendumController::class, 'approve'])->name('addendums.approve');
@@ -74,7 +75,7 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
     });
 
     // Tagihan & Bayar — Pengajuan Pembayaran BLU (CRUD + Workflow)
-    Route::middleware('role:Super Admin|Operator BLU|PPABP|Operator Perjaldin|PPK|PPSPM|Bendahara Pengeluaran|Bendahara Penerimaan')->group(function () {
+    Route::middleware('role:Super Admin|Operator BLU|PPABP|PPK|PPSPM|Bendahara Pengeluaran|Bendahara Penerimaan')->group(function () {
         Route::get('/blu-payment-submissions/create', [BluPaymentSubmissionController::class, 'create'])->name('blu-payment-submissions.create');
         Route::post('/blu-payment-submissions', [BluPaymentSubmissionController::class, 'store'])->name('blu-payment-submissions.store');
         Route::get('/blu-payment-submissions/{blu_payment_submission}', [BluPaymentSubmissionController::class, 'showDetail'])->name('blu-payment-submissions.show-detail');

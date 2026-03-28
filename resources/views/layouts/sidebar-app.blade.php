@@ -80,7 +80,7 @@
             </ul>
           </li>
           @endhasrole
-          @hasanyrole('Super Admin|Operator BLU|PPABP|Operator Perjaldin|PPK|PPSPM|Bendahara Pengeluaran|Bendahara Penerimaan')
+          @hasanyrole('Super Admin|Operator BLU|PPABP|PPSPM|Bendahara Pengeluaran|Bendahara Penerimaan')
           <li>
             <a href="javascript:;" class="has-arrow">
               <div class="parent-icon"><i class="material-icons-outlined">payments</i>
@@ -95,7 +95,7 @@
             </ul>
           </li>
           @endhasanyrole
-          @hasanyrole('Super Admin|KPA|Kepala Subbagian Keuangan dan Tata Usaha|Kepala Seksi Pelayanan dan Kerjasama|PPK|Bendahara Pengeluaran|Bendahara Penerimaan')
+          @hasanyrole('Super Admin|KPA|Kepala Subbagian Keuangan dan Tata Usaha|Kepala Seksi Pelayanan dan Kerjasama|Bendahara Pengeluaran|Bendahara Penerimaan')
           <li>
             <a href="{{ route('reports.bku') }}">
               <div class="parent-icon"><i class="material-icons-outlined">summarize</i>

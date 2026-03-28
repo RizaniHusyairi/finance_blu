@@ -100,5 +100,16 @@ class RoleAndPermissionSeeder extends Seeder
             ['user_id' => $mitra->id],
             ['name' => 'Vendor Test']
         );
+
+         // Create Pejabat Pengadaan for Testing
+        $perjaldin = User::updateOrCreate([
+            'email' => 'perjaldin@admin.com',
+        ], [
+            'name' => 'Operator Perjaldin Test',
+            'email_verified_at' => now(),
+            'password' => Hash::make('password'),
+        ]);
+
+        $perjaldin->syncRoles(['Operator Perjaldin']);
     }
 }

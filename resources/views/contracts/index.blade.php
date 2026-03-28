@@ -160,8 +160,8 @@
                                                         <button type="submit" class="btn btn-sm btn-outline-primary" title="Ajukan"><i class="bi bi-send"></i></button>
                                                     </form>
                                                 @elseif(in_array($displayStatus, ['Aktif', 'Selesai', 'Completed']))
-                                                    {{-- The "Buat Addendum" link redirects to contract detail page where the modal is available --}}
-                                                    <a href="{{ route('contracts.show', $contract->id) }}#addendum" class="btn btn-sm btn-outline-info" title="Buat Addendum"><i class="bi bi-file-earmark-plus"></i></a>
+                                                    {{-- Link point to the standalone create addendum page --}}
+                                                    <a href="{{ route('addendums.create', $contract->id) }}" class="btn btn-sm btn-outline-info" title="Buat Addendum"><i class="bi bi-file-earmark-plus"></i></a>
                                                     <a href="{{ route('contracts.show', $contract->id) }}" class="btn btn-sm btn-outline-secondary" title="View"><i class="bi bi-eye"></i></a>
                                                 @else
                                                     {{-- Default view --}}

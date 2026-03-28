@@ -136,36 +136,6 @@
                 </div>
             </div>
 
-            {{-- 2. Section: Addendum --}}
-            <div class="col-12 mb-4">
-                <div class="card rounded-4 border-top border-4 border-info h-100 shadow-sm">
-                    <div class="card-body p-4">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="mb-0 fw-bold text-info"><i class="bi bi-journal-plus me-2"></i>2. Addendum</h6>
-                            <div class="form-check form-switch">
-                                <input class="form-check-input" type="checkbox" role="switch" id="ada_addendum" onchange="toggleAddendum()">
-                                <label class="form-check-label" for="ada_addendum">Ada Addendum</label>
-                            </div>
-                        </div>
-                        <div id="addendum_section" style="display: none;">
-                            <div class="row g-3">
-                                <div class="col-md-4">
-                                    <label class="form-label">Addendum Ke-</label>
-                                    <input type="number" class="form-control" name="addendum_ke">
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label">Nomor Addendum</label>
-                                    <input type="text" class="form-control" name="nomor_addendum">
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label">Tanggal Addendum</label>
-                                    <input type="date" class="form-control" name="tanggal_addendum">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
 
             {{-- 3. Waktu Pelaksanaan Pekerjaan --}}
             <div class="col-12 mb-4">
@@ -401,11 +371,6 @@
     }
 
     // Toggle logic for sections
-    function toggleAddendum() {
-        let isChecked = document.getElementById('ada_addendum').checked;
-        document.getElementById('addendum_section').style.display = isChecked ? 'block' : 'none';
-    }
-
     function togglePemeliharaan() {
         let isChecked = document.getElementById('ada_masa_pemeliharaan').checked;
         document.getElementById('pemeliharaan_section').style.display = isChecked ? 'block' : 'none';
