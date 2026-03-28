@@ -15,4 +15,9 @@ class ContractAddendum extends Model
     {
         return $this->belongsTo(Contract::class);
     }
+
+    public function submittedBy()
+    {
+        return $this->belongsTo(User::class, 'submitted_by');
+    }
 }
