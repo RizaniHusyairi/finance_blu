@@ -11,6 +11,11 @@ use Illuminate\Support\Facades\DB;
 
 class ContractAddendumController extends Controller
 {
+    public function create(Contract $contract)
+    {
+        return view('contracts.create_addendum', compact('contract'));
+    }
+
     public function store(Request $request, Contract $contract)
     {
         $validated = $request->validate([
