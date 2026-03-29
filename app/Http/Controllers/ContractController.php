@@ -7,6 +7,7 @@ use App\Models\Supplier;
 use App\Models\Budget;
 use App\Models\User;
 use App\Models\ContractTerm;
+use App\Models\ContractDocument;
 use App\Models\ApprovalLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -155,6 +156,15 @@ class ContractController extends Controller
             
             // Array UM
             'angsuran_ums' => 'nullable|array',
+
+            // Documents
+            'doc_bapp' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
+            'doc_bap' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
+            'doc_bast' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
+            'doc_ringkasan_kontrak' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
+            'doc_spmk' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
+            'doc_lainnya' => 'nullable|array',
+            'doc_lainnya.*' => 'file|mimes:pdf,jpg,jpeg,png|max:5120',
         ]);
 
         try {
@@ -232,6 +242,43 @@ class ContractController extends Controller
 
             // (Optional) addendum base if needed in the future, skipping addendum creation on `create`
 
+            // Save uploaded documents
+            $docTypes = [
+                'doc_bapp' => 'BAPP',
+                'doc_bap' => 'BAP',
+                'doc_bast' => 'BAST',
+                'doc_ringkasan_kontrak' => 'Ringkasan Kontrak',
+                'doc_spmk' => 'SPMK',
+            ];
+
+            foreach ($docTypes as $inputName => $typeName) {
+                if ($request->hasFile($inputName)) {
+                    $file = $request->file($inputName);
+                    $path = $file->store('contract_documents/' . $contract->id, 'public');
+                    ContractDocument::create([
+                        'contract_id' => $contract->id,
+                        'document_type' => $typeName,
+                        'document_name' => $file->getClientOriginalName(),
+                        'file_path' => $path,
+                        'uploaded_by' => Auth::id(),
+                    ]);
+                }
+            }
+
+            // Handle multiple "Lainnya" files
+            if ($request->hasFile('doc_lainnya')) {
+                foreach ($request->file('doc_lainnya') as $file) {
+                    $path = $file->store('contract_documents/' . $contract->id, 'public');
+                    ContractDocument::create([
+                        'contract_id' => $contract->id,
+                        'document_type' => 'Lainnya',
+                        'document_name' => $file->getClientOriginalName(),
+                        'file_path' => $path,
+                        'uploaded_by' => Auth::id(),
+                    ]);
+                }
+            }
+
             // Log approval if submitted directly
             if ($status === 'Menunggu PPK') {
                 ApprovalLog::create([
@@ -259,7 +306,7 @@ class ContractController extends Controller
      */
     public function show(Contract $contract)
     {
-        $contract->load(['supplier', 'budget', 'addendums', 'terms', 'transactions', 'approvalLogs.user', 'submittedBy']);
+        $contract->load(['supplier', 'budget', 'addendums', 'terms', 'transactions', 'approvalLogs.user', 'submittedBy', 'documents']);
         return view('contracts.show', compact('contract'));
     }
 

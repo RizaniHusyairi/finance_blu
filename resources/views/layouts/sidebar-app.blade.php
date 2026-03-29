@@ -89,7 +89,7 @@
             </ul>
           </li>
           @endhasrole
-          @hasanyrole('Super Admin|Operator BLU|PPSPM|Bendahara Pengeluaran|Bendahara Penerimaan')
+          @hasanyrole('Super Admin|Operator BLU')
           <li>
             <a href="javascript:;" class="has-arrow">
               <div class="parent-icon"><i class="material-icons-outlined">payments</i>

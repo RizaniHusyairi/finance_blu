@@ -18,7 +18,7 @@
         </div>
     @endif
 
-    <form action="{{ route('contracts.store') }}" method="POST" id="formKontrak">
+    <form action="{{ route('contracts.store') }}" method="POST" id="formKontrak" enctype="multipart/form-data">
         @csrf
 
         {{-- Top Right Summary Badges --}}
@@ -321,6 +321,47 @@
                                     <label class="form-label">Tanggal Selesai Jaminan</label>
                                     <input type="date" class="form-control" name="tanggal_selesai_jaminan">
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- 8. Dokumen Pendukung --}}
+            <div class="col-12 mb-4">
+                <div class="card rounded-4 border-top border-4 border-dark h-100 shadow-sm">
+                    <div class="card-body p-4">
+                        <h6 class="mb-4 fw-bold"><i class="bi bi-file-earmark-arrow-up me-2"></i>Dokumen Pendukung Kontrak</h6>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">BAPP (Berita Acara Pemeriksaan Pekerjaan)</label>
+                                <input type="file" class="form-control" name="doc_bapp" accept=".pdf,.jpg,.jpeg,.png">
+                                <small>Format: PDF, JPG, PNG (maks 5MB)</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">BAP (Berita Acara Pembayaran)</label>
+                                <input type="file" class="form-control" name="doc_bap" accept=".pdf,.jpg,.jpeg,.png">
+                                <small>Format: PDF, JPG, PNG (maks 5MB)</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">BAST (Berita Acara Serah Terima)</label>
+                                <input type="file" class="form-control" name="doc_bast" accept=".pdf,.jpg,.jpeg,.png">
+                                <small>Format: PDF, JPG, PNG (maks 5MB)</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Ringkasan Kontrak</label>
+                                <input type="file" class="form-control" name="doc_ringkasan_kontrak" accept=".pdf,.jpg,.jpeg,.png">
+                                <small>Format: PDF, JPG, PNG (maks 5MB)</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">SPMK (Surat Perintah Mulai Kerja)</label>
+                                <input type="file" class="form-control" name="doc_spmk" accept=".pdf,.jpg,.jpeg,.png">
+                                <small>Format: PDF, JPG, PNG (maks 5MB)</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Lampiran Pendukung Lainnya</label>
+                                <input type="file" class="form-control" name="doc_lainnya[]" accept=".pdf,.jpg,.jpeg,.png" multiple>
+                                <small>Bisa upload banyak file sekaligus (maks 5MB per file)</small>
                             </div>
                         </div>
                     </div>

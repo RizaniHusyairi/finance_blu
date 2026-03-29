@@ -266,6 +266,59 @@
             </div>
             @endif
 
+            {{-- Dokumen Pendukung --}}
+            <div class="card mt-4">
+                <div class="card-header bg-transparent border-bottom">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0"><i class="bi bi-folder2-open me-2"></i>Dokumen Pendukung</h6>
+                        <span class="badge bg-secondary">{{ $contract->documents->count() }} file</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    @if($contract->documents->count() > 0)
+                        <div class="table-responsive">
+                            <table class="table table-sm table-striped align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>Jenis Dokumen</th>
+                                        <th>Nama File</th>
+                                        <th>Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($contract->documents as $doc)
+                                    <tr>
+                                        <td>
+                                            @php
+                                                $iconClass = match($doc->document_type) {
+                                                    'BAPP' => 'bi-file-earmark-check text-success',
+                                                    'BAP' => 'bi-file-earmark-text text-primary',
+                                                    'BAST' => 'bi-file-earmark-arrow-down text-info',
+                                                    'Ringkasan Kontrak' => 'bi-file-earmark-richtext text-warning',
+                                                    'SPMK' => 'bi-file-earmark-ruled text-danger',
+                                                    default => 'bi-file-earmark text-secondary',
+                                                };
+                                            @endphp
+                                            <i class="bi {{ $iconClass }} me-1"></i>
+                                            <span class="badge bg-light border">{{ $doc->document_type }}</span>
+                                        </td>
+                                        <td class="small">{{ $doc->document_name }}</td>
+                                        <td>
+                                            <a href="{{ asset('storage/' . $doc->file_path) }}" target="_blank" class="btn btn-sm btn-outline-primary py-0 px-2" title="Lihat / Download">
+                                                <i class="bi bi-download"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    @else
+                        <p class="mb-0">Belum ada dokumen yang diunggah.</p>
+                    @endif
+                </div>
+            </div>
+
         </div>
 
         <div class="col-12 col-lg-4">
