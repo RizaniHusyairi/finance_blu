@@ -84,4 +84,9 @@ class Transaction extends Model
             'net_amount' => max($grossAmount - $taxTotal, 0),
         ])->save();
     }
+
+    public function spps()
+    {
+        return $this->morphMany(Spp::class, 'sppable');
+    }
 }

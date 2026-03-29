@@ -55,4 +55,9 @@ class Contract extends Model
     {
         return $this->hasMany(ContractDocument::class);
     }
+
+    public function spps()
+    {
+        return $this->morphMany(Spp::class, 'sppable');
+    }
 }

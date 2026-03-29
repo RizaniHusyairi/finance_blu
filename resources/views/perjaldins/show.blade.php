@@ -156,7 +156,7 @@
                             @foreach($pejabat->perjaldin->logs as $log)
                                 <li class="list-group-item bg-transparent border-0 position-relative pb-4">
                                     <span class="position-absolute bg-primary rounded-circle border border-white border-2" 
-                                          style="width: 14px; height: 14px; left: -24px; top: 18px;">
+                                          style="width: 14px; height: 14px; left: -8px; top: 18px;">
                                     </span>
                                     <div class="ps-2 pt-1">
                                         <div class="d-flex justify-content-between align-items-center">

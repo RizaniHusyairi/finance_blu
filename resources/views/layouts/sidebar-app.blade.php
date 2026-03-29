@@ -107,7 +107,7 @@
                   <i class="material-icons-outlined">arrow_right</i>Honor
                 </a>
               </li>
-            <li><a href="#"><i class="material-icons-outlined">arrow_right</i>Kontrak</a></li>
+            <li><a href="{{ route('contracts.index') }}"><i class="material-icons-outlined">arrow_right</i>Kontrak</a></li>
             <li><a href="{{ route('verifikasi-ppk.index') }}"><i class="material-icons-outlined">arrow_right</i>Perjaldin</a></li>
             <li><a href="{{ route('perjaldin-blu.history') }}"><i class="material-icons-outlined">arrow_right</i>Riwayat Perjaldin</a></li>
             <li><a href="{{ route('verifikasi-ppk.spp.index') }}"><i class="material-icons-outlined">arrow_right</i>SPP</a></li>
@@ -136,8 +136,8 @@
           </a>
           <ul>
             <li><a href="{{ route('spps.perjaldin.index') }}"><i class="material-icons-outlined">arrow_right</i>SPP Perjaldin</a></li>
-            <li><a href="#"><i class="material-icons-outlined">arrow_right</i>SPP Honor</a></li>
-            <li><a href="#"><i class="material-icons-outlined">arrow_right</i>SPP Kontrak</a></li>
+            <li><a href="{{ route('spps.honor.index') }}"><i class="material-icons-outlined">arrow_right</i>SPP Honor</a></li>
+            <li><a href="{{ route('spps.kontrak.index') }}"><i class="material-icons-outlined">arrow_right</i>SPP Kontrak</a></li>
           </ul>
         </li>
         <li>
@@ -147,18 +147,6 @@
           </a>
           <ul>
             <li><a href="{{ route('spms.index') }}"><i class="material-icons-outlined">arrow_right</i>SPM Perjaldin</a></li>
-          </ul>
-        </li>
-        <li>
-          <a href="javascript:;" class="has-arrow">
-            <div class="parent-icon"><i class="material-icons-outlined">payments</i>
-            </div>
-            <div class="menu-title">Tagihan & Bayar</div>
-          </a>
-          <ul>
-            <li><a href="{{ route('blu-payment-submissions.index') }}"><i
-                  class="material-icons-outlined">arrow_right</i>Pengajuan Pembayaran BLU</a>
-            </li>
           </ul>
         </li>
         @endhasanyrole
