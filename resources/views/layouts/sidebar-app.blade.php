@@ -81,6 +81,7 @@
               <div class="menu-title">Verifikasi</div>
             </a>
             <ul>
+              <li><a href="#"><i class="material-icons-outlined">arrow_right</i>Honor</a></li>
               <li><a href="{{ route('contracts.verifikasi') }}"><i class="material-icons-outlined">arrow_right</i>Kontrak & Addendum</a></li>
               <li><a href="#"><i class="material-icons-outlined">arrow_right</i>SPP</a></li>
               <li><a href="#"><i class="material-icons-outlined">arrow_right</i>SPM</a></li>
