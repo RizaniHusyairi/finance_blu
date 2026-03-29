@@ -74,7 +74,8 @@ class RoleAndPermissionSeeder extends Seeder
 
         $pengadaan->syncRoles(['Pejabat Pengadaan']);
         
-        // Create Pejabat Pengadaan for Testing
+       
+        
         $ppk = User::updateOrCreate([
             'email' => 'ppk@admin.com',
         ], [
@@ -85,15 +86,47 @@ class RoleAndPermissionSeeder extends Seeder
 
         $ppk->syncRoles(['PPK']);
 
-        $ppabp = User::updateOrCreate([
-            'email' => 'ppabp@admin.com',
+        // Create Kasubag for Testing
+        $kasubag = User::updateOrCreate([
+            'email' => 'kasubag@admin.com',
         ], [
-            'name' => 'Petugas Pengelolaan Administrasi Belanja Pegawai',
+            'name' => 'Kepala Subbagian Keuangan Test',
             'email_verified_at' => now(),
             'password' => Hash::make('password'),
         ]);
 
-        $ppabp->syncRoles(['PPABP']);
+        $kasubag->syncRoles(['Kepala Subbagian Keuangan dan Tata Usaha']);
+
+        // Create PPSPM for Testing
+        $ppspm = User::updateOrCreate([
+            'email' => 'ppspm@admin.com',
+        ], [
+            'name' => 'PPSPM Test',
+            'email_verified_at' => now(),
+            'password' => Hash::make('password'),
+        ]);
+
+        $ppspm->syncRoles(['PPSPM']);
+
+        // Create Bendahara Pengeluaran for Testing
+        $bendaharaPengeluaran = User::updateOrCreate([
+            'email' => 'bendahara.pengeluaran@admin.com',
+        ], [
+            'name' => 'Bendahara Pengeluaran Test',
+            'email_verified_at' => now(),
+            'password' => Hash::make('password'),
+        ]);
+        $bendaharaPengeluaran->syncRoles(['Bendahara Pengeluaran']);
+
+        // Create Bendahara Penerimaan for Testing
+        $bendaharaPenerimaan = User::updateOrCreate([
+            'email' => 'bendahara.penerimaan@admin.com',
+        ], [
+            'name' => 'Bendahara Penerimaan Test',
+            'email_verified_at' => now(),
+            'password' => Hash::make('password'),
+        ]);
+        $bendaharaPenerimaan->syncRoles(['Bendahara Penerimaan']);
 
         // Create a Mitra for Testing
         $mitra = User::updateOrCreate([

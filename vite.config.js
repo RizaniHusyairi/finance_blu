@@ -17,11 +17,13 @@ export default defineConfig({
         cssCodeSplit: true,
         rollupOptions: {
             output: {
-                assetFileNames: (css) => {
-                    if (css.name.split('.').pop() == 'css') {
-                        return 'css/' + `[name]` + '.css';
+                assetFileNames: (assetInfo) => {
+                    // In Vite 5+ (Rollup v4+), assetInfo.name could be undefined, check assetInfo.names instead
+                    const name = assetInfo.name || (assetInfo.names ? assetInfo.names[0] : '');
+                    if (name && name.split('.').pop() == 'css') {
+                        return 'css/[name].css';
                     } else {
-                        return 'icons/' + css.name;
+                        return name ? 'icons/' + name : 'icons/[name].[ext]';
                     }
                 },
                 entryFileNames: 'js/' + `[name]` + `.js`,
