@@ -33,7 +33,7 @@
               @endrole
             </ul>
           </li>
-          @hasanyrole('Super Admin|KPA|Kepala Subbagian Keuangan dan Tata Usaha|Kepala Seksi Pelayanan dan Kerjasama|Pejabat Pengadaan|Operator BLU|PPABP')
+          @hasanyrole('Super Admin|KPA|Kepala Subbagian Keuangan dan Tata Usaha|Kepala Seksi Pelayanan dan Kerjasama|Pejabat Pengadaan|Operator BLU')
           <li>
             <a href="javascript:;" class="has-arrow">
               <div class="parent-icon"><i class="material-icons-outlined">folder</i>
@@ -41,7 +41,7 @@
               <div class="menu-title">Master Data</div>
             </a>
             <ul>
-              @hasanyrole('Super Admin|Operator BLU|PPABP')
+              @hasanyrole('Super Admin|Operator BLU')
               <li><a href="{{ route('employees.index') }}"><i class="material-icons-outlined">arrow_right</i>Pegawai & Pejabat</a>
               </li>
               @endhasanyrole
@@ -65,22 +65,68 @@
             </a>
           </li>
           @endhasanyrole
+
+          @hasanyrole('Super Admin|PPABP')
+          <li>
+            <a href="javascript:;" class="has-arrow">
+              <div class="parent-icon">
+                <i class="material-icons-outlined">payments</i>
+              </div>
+              <div class="menu-title">Manajemen Honor</div>
+            </a>
+            <ul>
+              <li>
+                <a href="{{ route('honorarium.index') }}">
+                  <i class="material-icons-outlined">arrow_right</i>Data Honorarium
+                </a>
+              </li>
+            </ul>
+          </li>
+          @endhasanyrole
+
           @hasrole('PPK')
           <li>
             <a href="javascript:;" class="has-arrow">
-              <div class="parent-icon"><i class="material-icons-outlined">verified</i></div>
+              <div class="parent-icon">
+                <i class="material-icons-outlined">verified</i>
+              </div>
               <div class="menu-title">Verifikasi</div>
             </a>
             <ul>
-              <li><a href="#"><i class="material-icons-outlined">arrow_right</i>Kontrak</a></li>
-              <li><a href="#"><i class="material-icons-outlined">arrow_right</i>SPP</a></li>
-              <li><a href="#"><i class="material-icons-outlined">arrow_right</i>SPM</a></li>
-              <li><a href="#"><i class="material-icons-outlined">arrow_right</i>NPI</a></li>
-              <li><a href="#"><i class="material-icons-outlined">arrow_right</i>SP2D</a></li>
+              <li>
+                <a href="{{ route('honorarium.ppk.pending') }}">
+                  <i class="material-icons-outlined">arrow_right</i>Honor
+                </a>
+              </li>
+              <li>
+                <a href="#">
+                  <i class="material-icons-outlined">arrow_right</i>Kontrak
+                </a>
+              </li>
+              <li>
+                <a href="#">
+                  <i class="material-icons-outlined">arrow_right</i>SPP
+                </a>
+              </li>
+              <li>
+                <a href="#">
+                  <i class="material-icons-outlined">arrow_right</i>SPM
+                </a>
+              </li>
+              <li>
+                <a href="#">
+                  <i class="material-icons-outlined">arrow_right</i>NPI
+                </a>
+              </li>
+              <li>
+                <a href="#">
+                  <i class="material-icons-outlined">arrow_right</i>SP2D
+                </a>
+              </li>
             </ul>
           </li>
           @endhasrole
-          @hasanyrole('Super Admin|Operator BLU|PPABP|Operator Perjaldin|PPSPM|Bendahara Pengeluaran|Bendahara Penerimaan')
+          @hasanyrole('Super Admin|Operator BLU|Operator Perjaldin|PPSPM|Bendahara Pengeluaran|Bendahara Penerimaan')
           <li>
             <a href="javascript:;" class="has-arrow">
               <div class="parent-icon"><i class="material-icons-outlined">payments</i>

@@ -57,6 +57,11 @@ class Transaction extends Model
         return $this->hasMany(BkuLog::class, 'transaction_id');
     }
 
+    public function honorariumItems()
+    {
+        return $this->hasMany(HonorariumItem::class, 'transaction_id');
+    }
+
     public function getAmountAttribute(): float
     {
         return (float) $this->gross_amount;

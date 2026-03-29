@@ -85,6 +85,16 @@ class RoleAndPermissionSeeder extends Seeder
 
         $ppk->syncRoles(['PPK']);
 
+        $ppabp = User::updateOrCreate([
+            'email' => 'ppabp@admin.com',
+        ], [
+            'name' => 'Petugas Pengelolaan Administrasi Belanja Pegawai',
+            'email_verified_at' => now(),
+            'password' => Hash::make('password'),
+        ]);
+
+        $ppabp->syncRoles(['PPABP']);
+
         // Create a Mitra for Testing
         $mitra = User::updateOrCreate([
             'email' => 'vendor@test.com',
