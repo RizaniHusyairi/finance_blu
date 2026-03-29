@@ -160,12 +160,23 @@
                                                         <button type="submit" class="btn btn-sm btn-outline-primary" title="Ajukan"><i class="bi bi-send"></i></button>
                                                     </form>
                                                 @elseif(in_array($displayStatus, ['Aktif', 'Selesai', 'Completed']))
-                                                    {{-- The "Buat Addendum" link redirects to contract detail page where the modal is available --}}
-                                                    <a href="{{ route('contracts.show', $contract->id) }}#addendum" class="btn btn-sm btn-outline-info" title="Buat Addendum"><i class="bi bi-file-earmark-plus"></i></a>
+                                                    {{-- Link point to the standalone create addendum page --}}
+                                                    <a href="{{ route('addendums.create', $contract->id) }}" class="btn btn-sm btn-outline-info" title="Buat Addendum"><i class="bi bi-file-earmark-plus"></i></a>
                                                     <a href="{{ route('contracts.show', $contract->id) }}" class="btn btn-sm btn-outline-secondary" title="View"><i class="bi bi-eye"></i></a>
+                                                @elseif($displayStatus === 'Menunggu PPK' && auth()->user()->hasAnyRole(['PPK', 'Super Admin']))
+                                                     <form action="{{ route('contracts.approve', $contract->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Setujui kontrak ini?');">
+                                                         @csrf
+                                                         <button type="submit" class="btn btn-sm btn-outline-success" title="Setujui"><i class="bi bi-check-lg"></i></button>
+                                                     </form>
+                                                     <form action="{{ route('contracts.reject', $contract->id) }}" method="POST" class="d-inline" onsubmit="var notes = prompt('Alasan penolakan:'); if(notes) { this.notes.value = notes; return true; } return false;">
+                                                         @csrf
+                                                         <input type="hidden" name="notes" value="">
+                                                         <button type="submit" class="btn btn-sm btn-outline-danger" title="Tolak"><i class="bi bi-x-lg"></i></button>
+                                                     </form>
+                                                     <a href="{{ route('contracts.show', $contract->id) }}" class="btn btn-sm btn-outline-secondary" title="View"><i class="bi bi-eye"></i></a>
                                                 @else
-                                                    {{-- Default view --}}
-                                                    <a href="{{ route('contracts.show', $contract->id) }}" class="btn btn-sm btn-outline-secondary" title="View"><i class="bi bi-eye"></i></a>
+                                                     {{-- Default view --}}
+                                                     <a href="{{ route('contracts.show', $contract->id) }}" class="btn btn-sm btn-outline-secondary" title="View"><i class="bi bi-eye"></i></a>
                                                 @endif
                                             </div>
                                         </td>

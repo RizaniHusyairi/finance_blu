@@ -2,222 +2,149 @@
 
 namespace Database\Seeders;
 
-use App\Models\Budget;
-use App\Models\Contract;
-use App\Models\Supplier;
-use App\Models\User;
 use Illuminate\Database\Seeder;
+use App\Models\Contract;
+use App\Models\ContractTerm;
+use App\Models\ContractAddendum;
+use App\Models\User;
+use App\Models\Budget;
+use App\Models\Supplier;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class ContractSeeder extends Seeder
 {
-    public function run(): void
+    public function run()
     {
-        $ppk = User::where('email', 'ppk@admin.com')->first();
-        $pejabatPengadaan = User::where('email', 'pengadaan@admin.com')->first();
+        $ppk = User::role('PPK')->first();
+        $pengadaan = User::role('Pejabat Pengadaan')->first();
+        $operator = User::role('Operator BLU')->first();
+        $budget = Budget::first() ?? Budget::factory()->create();
+        $supplier = Supplier::first() ?? Supplier::factory()->create();
 
-        $contracts = [
+        // 1. Kontrak Sekali Bayar (Aktif)
+        $c1 = Contract::updateOrCreate(
+            ['contract_number' => 'SPK-901/KONTRAK/2026'],
             [
-                'contract_number' => 'SPK-BLU/2026/001',
-                'nomor_spk_sp' => 'SPK/TERM-INT/III/2026/001',
-                'supplier_name' => 'PT. GARUDA TAWAKAL ABADI',
-                'budget_coa' => 'GA.4645.CBE.001.054.A.537113.00001',
-                'date' => '2026-01-15',
-                'description' => 'Pekerjaan lanjutan pengembangan gedung terminal penumpang internasional.',
-                'total_amount' => 1850000000,
-                'status' => 'Aktif',
-                'start_date' => '2026-01-20',
-                'end_date' => '2026-07-20',
-                'type' => 'Jasa',
-                'mata_uang' => 'IDR',
-                'cara_bayar' => 'Termin',
-                'tahun_anggaran' => 2026,
-                'jangka_waktu_pekerjaan' => 6,
-                'satuan_waktu_pekerjaan' => 'Bulan',
-                'jumlah_termin' => 3,
-                'ada_uang_muka' => true,
-                'nilai_uang_muka' => 370000000,
-                'persentase_uang_muka' => 20,
-                'jumlah_angsuran_um' => 2,
-                'penjamin_um' => 'Bank Tabungan Negara',
-                'nomor_jaminan_um' => 'JAM-UM-2026-001',
-                'tanggal_jaminan_um' => '2026-01-18',
-                'masa_berlaku_jaminan' => 180,
-                'tanggal_mulai_jaminan' => '2026-01-20',
-                'tanggal_selesai_jaminan' => '2026-07-18',
-                'id_transaksi' => 'TRX-KONTRAK-2026-0001',
-            ],
-            [
-                'contract_number' => 'SPK-BLU/2026/002',
-                'nomor_spk_sp' => 'SPK/FASILITAS/III/2026/002',
-                'supplier_name' => 'CV. MAHAKAM RAYA HARMONI',
-                'budget_coa' => 'GA.4645.CBE.001.054.A.537113.00002',
-                'date' => '2026-02-03',
-                'description' => 'Pemenuhan fasilitas dan accessories alur keberangkatan dan kedatangan terminal.',
-                'total_amount' => 825000000,
-                'status' => 'Aktif',
-                'start_date' => '2026-02-10',
-                'end_date' => '2026-05-10',
-                'type' => 'Barang',
-                'mata_uang' => 'IDR',
-                'cara_bayar' => 'Sekali Bayar',
-                'tahun_anggaran' => 2026,
-                'jangka_waktu_pekerjaan' => 90,
-                'satuan_waktu_pekerjaan' => 'Hari',
-                'jumlah_termin' => 1,
-                'ada_uang_muka' => false,
-                'nilai_uang_muka' => null,
-                'persentase_uang_muka' => null,
-                'jumlah_angsuran_um' => null,
-                'penjamin_um' => null,
-                'nomor_jaminan_um' => null,
-                'tanggal_jaminan_um' => null,
-                'masa_berlaku_jaminan' => null,
-                'tanggal_mulai_jaminan' => null,
-                'tanggal_selesai_jaminan' => null,
-                'id_transaksi' => 'TRX-KONTRAK-2026-0002',
-            ],
-            [
-                'contract_number' => 'SPK-BLU/2026/003',
-                'nomor_spk_sp' => 'SPK/BAGASI/III/2026/003',
-                'supplier_name' => 'CV. GUNA AKHLAK SUKSES',
-                'budget_coa' => 'GA.4645.CBE.001.054.A.537113.00003',
-                'date' => '2026-02-18',
-                'description' => 'Lanjutan pembuatan alur bagasi kedatangan untuk peningkatan layanan terminal.',
-                'total_amount' => 95000000,
-                'status' => 'Selesai',
-                'start_date' => '2026-02-20',
-                'end_date' => '2026-03-31',
-                'type' => 'Jasa',
-                'mata_uang' => 'IDR',
-                'cara_bayar' => 'Sekali Bayar',
-                'tahun_anggaran' => 2026,
-                'jangka_waktu_pekerjaan' => 40,
-                'satuan_waktu_pekerjaan' => 'Hari',
-                'jumlah_termin' => 1,
-                'ada_uang_muka' => false,
-                'nilai_uang_muka' => null,
-                'persentase_uang_muka' => null,
-                'jumlah_angsuran_um' => null,
-                'penjamin_um' => null,
-                'nomor_jaminan_um' => null,
-                'tanggal_jaminan_um' => null,
-                'masa_berlaku_jaminan' => null,
-                'tanggal_mulai_jaminan' => null,
-                'tanggal_selesai_jaminan' => null,
-                'id_transaksi' => 'TRX-KONTRAK-2026-0003',
-            ],
-            [
-                'contract_number' => 'SPK-BLU/2026/004',
-                'nomor_spk_sp' => 'SPK/CCTV/III/2026/004',
-                'supplier_name' => 'PT. JAYA KENCANA',
-                'budget_coa' => 'GA.4646.CAD.001.051.A.537112.00001',
-                'date' => '2026-03-01',
-                'description' => 'Pengadaan dan pemasangan CCTV bandar udara pada area operasional utama.',
-                'total_amount' => 485000000,
-                'status' => 'Aktif',
-                'start_date' => '2026-03-05',
-                'end_date' => '2026-06-05',
-                'type' => 'Barang',
-                'mata_uang' => 'IDR',
-                'cara_bayar' => 'Termin',
-                'tahun_anggaran' => 2026,
-                'jangka_waktu_pekerjaan' => 3,
-                'satuan_waktu_pekerjaan' => 'Bulan',
-                'jumlah_termin' => 2,
-                'ada_uang_muka' => true,
-                'nilai_uang_muka' => 97000000,
-                'persentase_uang_muka' => 20,
-                'jumlah_angsuran_um' => 2,
-                'penjamin_um' => 'Bank Central Asia',
-                'nomor_jaminan_um' => 'JAM-UM-2026-004',
-                'tanggal_jaminan_um' => '2026-03-03',
-                'masa_berlaku_jaminan' => 120,
-                'tanggal_mulai_jaminan' => '2026-03-05',
-                'tanggal_selesai_jaminan' => '2026-07-03',
-                'id_transaksi' => 'TRX-KONTRAK-2026-0004',
-            ],
-            [
-                'contract_number' => 'SPK-BLU/2026/005',
-                'nomor_spk_sp' => 'SPK/PKPPK/III/2026/005',
-                'supplier_name' => 'CV. ANUGERAH ZIKIR KELUARGA UTAMA',
-                'budget_coa' => 'GA.4646.CBE.001.055.A.537113.00001',
-                'date' => '2026-03-10',
-                'description' => 'Perluasan halaman parkir kendaraan PKP-PK untuk mendukung operasional sisi udara.',
-                'total_amount' => 875000000,
-                'status' => 'Draft',
-                'start_date' => '2026-03-15',
-                'end_date' => '2026-08-15',
-                'type' => 'Jasa',
-                'mata_uang' => 'IDR',
-                'cara_bayar' => 'Termin',
-                'tahun_anggaran' => 2026,
-                'jangka_waktu_pekerjaan' => 5,
-                'satuan_waktu_pekerjaan' => 'Bulan',
-                'jumlah_termin' => 3,
-                'ada_masa_pemeliharaan' => true,
-                'jangka_waktu_pemeliharaan' => 90,
-                'tanggal_mulai_pemeliharaan' => '2026-08-16',
-                'tanggal_selesai_pemeliharaan' => '2026-11-14',
-                'ada_uang_muka' => false,
-                'nilai_uang_muka' => null,
-                'persentase_uang_muka' => null,
-                'jumlah_angsuran_um' => null,
-                'penjamin_um' => null,
-                'nomor_jaminan_um' => null,
-                'tanggal_jaminan_um' => null,
-                'masa_berlaku_jaminan' => null,
-                'tanggal_mulai_jaminan' => null,
-                'tanggal_selesai_jaminan' => null,
-                'id_transaksi' => 'TRX-KONTRAK-2026-0005',
-            ],
-        ];
+            'date' => Carbon::parse('2026-01-10'),
+            'nomor_spk_sp' => 'SP-901/X/2026',
+            'description' => 'Pekerjaan Pemeliharaan AC Gedung Kantor',
+            'ketentuan_sanksi' => 'Sanksi denda 1/1000 per hari keterlambatan.',
+            'mata_uang' => 'IDR',
+            'total_amount' => 50000000,
+            'cara_bayar' => 'Sekali Bayar',
+            'supplier_id' => $supplier->id,
+            'budget_id' => $budget->id,
+            'pejabat_pengadaan_id' => $pengadaan->id ?? $operator->id ?? 1,
+            'ppk_id' => $ppk->id ?? 1,
+            'submitted_by' => $pengadaan->id ?? $operator->id ?? 1,
+            'status' => 'Aktif',
+            'end_date' => Carbon::parse('2026-03-10'),
+        ]);
+        
+        ContractTerm::firstOrCreate(['contract_id' => $c1->id, 'term_name' => 'Pembayaran Lunas 100%'], [
+            'percentage' => 100,
+            'amount' => 50000000,
+            'status' => 'Belum Diajukan',
+        ]);
 
-        foreach ($contracts as $item) {
-            $supplier = Supplier::where('name', $item['supplier_name'])->first();
-            $budget = Budget::where('coa', $item['budget_coa'])->first();
+        ContractAddendum::firstOrCreate(['contract_id' => $c1->id, 'addendum_number' => 'ADD-01/SPK-901/2026'], [
+            'date' => Carbon::parse('2026-02-01'),
+            'new_total_amount' => 55000000,
+            'new_end_date' => Carbon::parse('2026-04-10'),
+            'reason' => 'Perubahan lingkup pekerjaan penambahan 2 unit AC.',
+            'status' => 'Disetujui',
+            'submitted_by' => $pengadaan->id ?? $operator->id ?? 1,
+        ]);
+        
+        $c1->update([
+            'total_amount' => 55000000,
+            'end_date' => Carbon::parse('2026-04-10'),
+        ]);
 
-            if (! $supplier || ! $budget) {
-                continue;
-            }
 
-            Contract::updateOrCreate(
-                ['contract_number' => $item['contract_number']],
-                [
-                    'id_transaksi' => $item['id_transaksi'],
-                    'nomor_spk_sp' => $item['nomor_spk_sp'],
-                    'date' => $item['date'],
-                    'description' => $item['description'],
-                    'supplier_id' => $supplier->id,
-                    'budget_id' => $budget->id,
-                    'ppk_id' => $ppk?->id,
-                    'pejabat_pengadaan_id' => $pejabatPengadaan?->id,
-                    'total_amount' => $item['total_amount'],
-                    'status' => $item['status'],
-                    'start_date' => $item['start_date'],
-                    'end_date' => $item['end_date'],
-                    'type' => $item['type'],
-                    'mata_uang' => $item['mata_uang'],
-                    'cara_bayar' => $item['cara_bayar'],
-                    'tahun_anggaran' => $item['tahun_anggaran'],
-                    'jangka_waktu_pekerjaan' => $item['jangka_waktu_pekerjaan'],
-                    'satuan_waktu_pekerjaan' => $item['satuan_waktu_pekerjaan'],
-                    'ada_masa_pemeliharaan' => $item['ada_masa_pemeliharaan'] ?? false,
-                    'jangka_waktu_pemeliharaan' => $item['jangka_waktu_pemeliharaan'] ?? null,
-                    'tanggal_mulai_pemeliharaan' => $item['tanggal_mulai_pemeliharaan'] ?? null,
-                    'tanggal_selesai_pemeliharaan' => $item['tanggal_selesai_pemeliharaan'] ?? null,
-                    'jumlah_termin' => $item['jumlah_termin'],
-                    'ada_uang_muka' => $item['ada_uang_muka'],
-                    'nilai_uang_muka' => $item['nilai_uang_muka'],
-                    'persentase_uang_muka' => $item['persentase_uang_muka'],
-                    'jumlah_angsuran_um' => $item['jumlah_angsuran_um'],
-                    'penjamin_um' => $item['penjamin_um'],
-                    'nomor_jaminan_um' => $item['nomor_jaminan_um'],
-                    'tanggal_jaminan_um' => $item['tanggal_jaminan_um'],
-                    'masa_berlaku_jaminan' => $item['masa_berlaku_jaminan'],
-                    'tanggal_mulai_jaminan' => $item['tanggal_mulai_jaminan'],
-                    'tanggal_selesai_jaminan' => $item['tanggal_selesai_jaminan'],
-                ]
-            );
-        }
+        // 2. Kontrak Termin (Menunggu PPK)
+        $c2 = Contract::updateOrCreate(
+            ['contract_number' => 'SPK-902/KONTRAK/2026'],
+            [
+            'date' => Carbon::parse('2026-02-15'),
+            'description' => 'Pembangunan Pagar Pembatas Bandara',
+            'mata_uang' => 'IDR',
+            'total_amount' => 200000000,
+            'cara_bayar' => 'Termin',
+            'supplier_id' => $supplier->id,
+            'budget_id' => $budget->id,
+            'pejabat_pengadaan_id' => $pengadaan->id ?? $operator->id ?? 1,
+            'ppk_id' => $ppk->id ?? 1,
+            'submitted_by' => $pengadaan->id ?? $operator->id ?? 1,
+            'status' => 'Menunggu PPK',
+            'end_date' => Carbon::parse('2026-08-15'),
+        ]);
+
+        ContractTerm::firstOrCreate(['contract_id' => $c2->id, 'term_name' => 'Termin 1 (30%)'], ['percentage' => 30, 'amount' => 60000000, 'status' => 'Belum Diajukan']);
+        ContractTerm::firstOrCreate(['contract_id' => $c2->id, 'term_name' => 'Termin 2 (40%)'], ['percentage' => 40, 'amount' => 80000000, 'status' => 'Belum Diajukan']);
+        ContractTerm::firstOrCreate(['contract_id' => $c2->id, 'term_name' => 'Termin 3 (30%)'], ['percentage' => 30, 'amount' => 60000000, 'status' => 'Belum Diajukan']);
+
+
+        // 3. Kontrak Draft
+        Contract::updateOrCreate(
+            ['contract_number' => 'SPK-903/KONTRAK/2026'],
+            [
+            'date' => Carbon::parse('2026-03-01'),
+            'description' => 'Pengadaan Seragam Dinas',
+            'mata_uang' => 'IDR',
+            'total_amount' => 35000000,
+            'cara_bayar' => 'Sekali Bayar',
+            'supplier_id' => $supplier->id,
+            'budget_id' => $budget->id,
+            'pejabat_pengadaan_id' => $pengadaan->id ?? $operator->id ?? 1,
+            'ppk_id' => $ppk->id ?? 1,
+            'submitted_by' => $pengadaan->id ?? $operator->id ?? 1,
+            'status' => 'Draft',
+            'end_date' => Carbon::parse('2026-04-01'),
+        ]);
+
+
+        // 4. Kontrak Ditolak PPK
+        Contract::updateOrCreate(
+            ['contract_number' => 'SPK-904/KONTRAK/2026'],
+            [
+            'date' => Carbon::parse('2026-03-10'),
+            'description' => 'Pengadaan Komputer Kantor',
+            'mata_uang' => 'IDR',
+            'total_amount' => 120000000,
+            'cara_bayar' => 'Sekali Bayar',
+            'supplier_id' => $supplier->id,
+            'budget_id' => $budget->id,
+            'pejabat_pengadaan_id' => $pengadaan->id ?? $operator->id ?? 1,
+            'ppk_id' => $ppk->id ?? 1,
+            'submitted_by' => $pengadaan->id ?? $operator->id ?? 1,
+            'status' => 'Ditolak PPK',
+            'end_date' => Carbon::parse('2026-05-10'),
+        ]);
+
+
+        // 5. Kontrak Termin Aktif
+        $c5 = Contract::updateOrCreate(
+            ['contract_number' => 'SPK-905/KONTRAK/2026'],
+            [
+            'date' => Carbon::parse('2026-01-20'),
+            'description' => 'Sewa Kendaraan Operasional Tahunan',
+            'mata_uang' => 'IDR',
+            'total_amount' => 150000000,
+            'cara_bayar' => 'Termin',
+            'supplier_id' => $supplier->id,
+            'budget_id' => $budget->id,
+            'pejabat_pengadaan_id' => $pengadaan->id ?? $operator->id ?? 1,
+            'ppk_id' => $ppk->id ?? 1,
+            'submitted_by' => $pengadaan->id ?? $operator->id ?? 1,
+            'status' => 'Aktif',
+            'end_date' => Carbon::parse('2026-12-31'),
+        ]);
+
+        ContractTerm::firstOrCreate(['contract_id' => $c5->id, 'term_name' => 'Triwulan 1'], ['percentage' => 25, 'amount' => 37500000, 'status' => 'Diajukan']);
+        ContractTerm::firstOrCreate(['contract_id' => $c5->id, 'term_name' => 'Triwulan 2'], ['percentage' => 25, 'amount' => 37500000, 'status' => 'Belum Diajukan']);
+        ContractTerm::firstOrCreate(['contract_id' => $c5->id, 'term_name' => 'Triwulan 3'], ['percentage' => 25, 'amount' => 37500000, 'status' => 'Belum Diajukan']);
+        ContractTerm::firstOrCreate(['contract_id' => $c5->id, 'term_name' => 'Triwulan 4'], ['percentage' => 25, 'amount' => 37500000, 'status' => 'Belum Diajukan']);
     }
 }
