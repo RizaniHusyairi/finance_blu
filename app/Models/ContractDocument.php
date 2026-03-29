@@ -5,19 +5,19 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class ContractAddendum extends Model
+class ContractDocument extends Model
 {
     use HasFactory;
 
     protected $guarded = ['id'];
-    
+
     public function contract()
     {
         return $this->belongsTo(Contract::class);
     }
 
-    public function submittedBy()
+    public function uploader()
     {
-        return $this->belongsTo(User::class, 'submitted_by');
+        return $this->belongsTo(User::class, 'uploaded_by');
     }
 }

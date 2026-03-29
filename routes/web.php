@@ -11,6 +11,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\SupplierController;
 use Illuminate\Support\Facades\Auth;
+use App\Http\Controllers\HonorariumController;
 
 Auth::routes();
 
@@ -71,8 +72,16 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
 
     // Manajemen Kontrak (Kontrak, Addendum, Termin)
     Route::middleware('role:Super Admin|Pejabat Pengadaan|PPK')->group(function () {
+        Route::get('/contracts/verifikasi', [ContractController::class, 'verifikasiIndex'])->name('contracts.verifikasi');
         Route::resource('contracts', ContractController::class);
+        Route::post('/contracts/{contract}/submit', [ContractController::class, 'submit'])->name('contracts.submit');
+        Route::post('/contracts/{contract}/approve', [ContractController::class, 'approve'])->name('contracts.approve');
+        Route::post('/contracts/{contract}/reject', [ContractController::class, 'reject'])->name('contracts.reject');
+        Route::get('/contracts/{contract}/addendums/create', [ContractAddendumController::class, 'create'])->name('addendums.create');
         Route::post('/contracts/{contract}/addendums', [ContractAddendumController::class, 'store'])->name('addendums.store');
+        Route::post('/contracts/{contract}/addendums/{addendum}/submit', [ContractAddendumController::class, 'submit'])->name('addendums.submit');
+        Route::post('/contracts/{contract}/addendums/{addendum}/approve', [ContractAddendumController::class, 'approve'])->name('addendums.approve');
+        Route::post('/contracts/{contract}/addendums/{addendum}/reject', [ContractAddendumController::class, 'reject'])->name('addendums.reject');
         Route::delete('/contracts/{contract}/addendums/{addendum}', [ContractAddendumController::class, 'destroy'])->name('addendums.destroy');
         Route::post('/contracts/{contract}/terms', [ContractTermController::class, 'store'])->name('terms.store');
         Route::delete('/contracts/{contract}/terms/{term}', [ContractTermController::class, 'destroy'])->name('terms.destroy');
@@ -81,6 +90,17 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
         Route::post('/contracts/{contract}/submit', [ContractController::class, 'submit'])->name('contracts.submit');
         Route::post('/contracts/{contract}/approve', [ContractController::class, 'approve'])->name('contracts.approve');
         Route::post('/contracts/{contract}/reject', [ContractController::class, 'reject'])->name('contracts.reject');
+    });
+    // Honorarium Routes
+    Route::middleware('role:Super Admin|PPABP')->group(function () {
+        Route::get('/honorarium', [HonorariumController::class, 'index'])->name('honorarium.index');
+        Route::get('/honorarium/create', [HonorariumController::class, 'create'])->name('honorarium.create');
+        Route::post('/honorarium', [HonorariumController::class, 'store'])->name('honorarium.store');
+
+        Route::get('/honorarium/{honorarium}', [HonorariumController::class, 'show'])->name('honorarium.show');
+        Route::get('/honorarium/{honorarium}/edit', [HonorariumController::class, 'edit'])->name('honorarium.edit');
+        Route::put('/honorarium/{honorarium}', [HonorariumController::class, 'update'])->name('honorarium.update');
+        Route::delete('/honorarium/{honorarium}', [HonorariumController::class, 'destroy'])->name('honorarium.destroy');
     });
 
     // Manajemen Perjaldin — Operator Perjaldin
@@ -196,6 +216,17 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
         Route::get('/blu-payment-submissions/{blu_payment_submission}/print-spp', [\App\Http\Controllers\DocumentController::class, 'printSpp'])->name('blu-payment-submissions.print.spp');
         Route::get('/blu-payment-submissions/{blu_payment_submission}/print-spm', [\App\Http\Controllers\DocumentController::class, 'printSpm'])->name('blu-payment-submissions.print.spm');
     });
+
+    Route::middleware('role:PPK')->group(function () {
+    Route::get('/honorarium/ppk/pending', [HonorariumController::class, 'pendingPpk'])
+        ->name('honorarium.ppk.pending');
+
+    Route::post('/honorarium/{honorarium}/approve-ppk', [HonorariumController::class, 'approvePpk'])
+        ->name('honorarium.approve-ppk');
+
+    Route::post('/honorarium/{honorarium}/reject-ppk', [HonorariumController::class, 'rejectPpk'])
+        ->name('honorarium.reject-ppk');
+});
 
     // Laporan BKU
     Route::middleware('role:Super Admin|KPA|Kepala Subbagian Keuangan dan Tata Usaha|Kepala Seksi Pelayanan dan Kerjasama|PPK|Bendahara Pengeluaran|Bendahara Penerimaan')->group(function () {

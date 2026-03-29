@@ -18,7 +18,7 @@
         </div>
     @endif
 
-    <form action="{{ route('contracts.store') }}" method="POST" id="formKontrak">
+    <form action="{{ route('contracts.store') }}" method="POST" id="formKontrak" enctype="multipart/form-data">
         @csrf
 
         {{-- Top Right Summary Badges --}}
@@ -34,7 +34,7 @@
             <div class="col-12 mb-4">
                 <div class="card rounded-4 border-top border-4 border-primary h-100 shadow-sm">
                     <div class="card-body p-4">
-                        <h6 class="mb-4 fw-bold text-primary"><i class="bi bi-info-circle me-2"></i>1. Informasi Utama Kontrak</h6>
+                        <h6 class="mb-4 fw-bold text-primary"><i class="bi bi-info-circle me-2"></i>Informasi Utama Kontrak</h6>
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label class="form-label">ID Transaksi</label>
@@ -89,7 +89,8 @@
                                 <label class="form-label">Nilai Kontrak <span class="text-danger">*</span></label>
                                 <div class="input-group">
                                     <span class="input-group-text">Rp</span>
-                                    <input type="number" step="0.01" class="form-control form-control-lg fw-bold text-end" name="total_amount" id="total_amount" value="0" required onkeyup="updateSummary()">
+                                    <input type="text" class="form-control form-control-lg fw-bold text-end" id="total_amount_display" value="0" required onkeyup="formatRupiah(this); updateSummary()">
+                                    <input type="hidden" name="total_amount" id="total_amount" value="0">
                                 </div>
                             </div>
                             <div class="col-md-6">
@@ -136,42 +137,12 @@
                 </div>
             </div>
 
-            {{-- 2. Section: Addendum --}}
-            <div class="col-12 mb-4">
-                <div class="card rounded-4 border-top border-4 border-info h-100 shadow-sm">
-                    <div class="card-body p-4">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="mb-0 fw-bold text-info"><i class="bi bi-journal-plus me-2"></i>2. Addendum</h6>
-                            <div class="form-check form-switch">
-                                <input class="form-check-input" type="checkbox" role="switch" id="ada_addendum" onchange="toggleAddendum()">
-                                <label class="form-check-label" for="ada_addendum">Ada Addendum</label>
-                            </div>
-                        </div>
-                        <div id="addendum_section" style="display: none;">
-                            <div class="row g-3">
-                                <div class="col-md-4">
-                                    <label class="form-label">Addendum Ke-</label>
-                                    <input type="number" class="form-control" name="addendum_ke">
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label">Nomor Addendum</label>
-                                    <input type="text" class="form-control" name="nomor_addendum">
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label">Tanggal Addendum</label>
-                                    <input type="date" class="form-control" name="tanggal_addendum">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
 
             {{-- 3. Waktu Pelaksanaan Pekerjaan --}}
             <div class="col-12 mb-4">
                 <div class="card rounded-4 border-top border-4 border-success h-100 shadow-sm">
                     <div class="card-body p-4">
-                        <h6 class="mb-4 fw-bold text-success"><i class="bi bi-calendar-check me-2"></i>3. Waktu Pelaksanaan Pekerjaan</h6>
+                        <h6 class="mb-4 fw-bold text-success"><i class="bi bi-calendar-check me-2"></i>Waktu Pelaksanaan Pekerjaan</h6>
                         <div class="row g-3">
                             <div class="col-md-3">
                                 <label class="form-label">Jangka Waktu <span class="text-danger">*</span></label>
@@ -204,7 +175,7 @@
                 <div class="card rounded-4 border-top border-4 border-secondary h-100 shadow-sm">
                     <div class="card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="mb-0 fw-bold text-secondary"><i class="bi bi-tools me-2"></i>4. Waktu Pemeliharaan</h6>
+                            <h6 class="mb-0 fw-bold text-secondary"><i class="bi bi-tools me-2"></i>Waktu Pemeliharaan</h6>
                             <div class="form-check form-switch">
                                 <input class="form-check-input" type="checkbox" role="switch" id="ada_masa_pemeliharaan" name="ada_masa_pemeliharaan" value="1" onchange="togglePemeliharaan()">
                                 <label class="form-check-label" for="ada_masa_pemeliharaan">Ada Pemeliharaan</label>
@@ -234,7 +205,7 @@
             <div class="col-12 mb-4">
                 <div class="card rounded-4 border-top border-4 border-warning h-100 shadow-sm">
                     <div class="card-body p-4">
-                        <h6 class="mb-4 fw-bold text-warning"><i class="bi bi-cash-stack me-2"></i>5. Pembayaran & Termin</h6>
+                        <h6 class="mb-4 fw-bold text-warning"><i class="bi bi-cash-stack me-2"></i>Pembayaran & Termin</h6>
                         <div class="row g-3 mb-4">
                             <div class="col-md-4">
                                 <label class="form-label">Jumlah Termin</label>
@@ -269,7 +240,7 @@
                 <div class="card rounded-4 border-top border-4 border-success h-100 shadow-sm">
                     <div class="card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="mb-0 fw-bold text-success"><i class="bi bi-wallet2 me-2"></i>6. Uang Muka</h6>
+                            <h6 class="mb-0 fw-bold text-success"><i class="bi bi-wallet2 me-2"></i>Uang Muka</h6>
                             <div class="form-check form-switch">
                                 <input class="form-check-input" type="checkbox" role="switch" id="ada_uang_muka" name="ada_uang_muka" value="1" onchange="toggleUangMuka()">
                                 <label class="form-check-label" for="ada_uang_muka">Ada Uang Muka</label>
@@ -318,7 +289,7 @@
                 <div class="card rounded-4 border-top border-4 border-info h-100 shadow-sm">
                     <div class="card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="mb-0 fw-bold text-info"><i class="bi bi-shield-check me-2"></i>7. Jaminan Uang Muka</h6>
+                            <h6 class="mb-0 fw-bold text-info"><i class="bi bi-shield-check me-2"></i>Jaminan Uang Muka</h6>
                             <div class="form-check form-switch">
                                 <input class="form-check-input" type="checkbox" role="switch" id="ada_jaminan_um" onchange="toggleJaminan()">
                                 <label class="form-check-label" for="ada_jaminan_um">Input Data Jaminan</label>
@@ -350,6 +321,47 @@
                                     <label class="form-label">Tanggal Selesai Jaminan</label>
                                     <input type="date" class="form-control" name="tanggal_selesai_jaminan">
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- 8. Dokumen Pendukung --}}
+            <div class="col-12 mb-4">
+                <div class="card rounded-4 border-top border-4 border-dark h-100 shadow-sm">
+                    <div class="card-body p-4">
+                        <h6 class="mb-4 fw-bold"><i class="bi bi-file-earmark-arrow-up me-2"></i>Dokumen Pendukung Kontrak</h6>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">BAPP (Berita Acara Pemeriksaan Pekerjaan)</label>
+                                <input type="file" class="form-control" name="doc_bapp" accept=".pdf,.jpg,.jpeg,.png">
+                                <small>Format: PDF, JPG, PNG (maks 5MB)</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">BAP (Berita Acara Pembayaran)</label>
+                                <input type="file" class="form-control" name="doc_bap" accept=".pdf,.jpg,.jpeg,.png">
+                                <small>Format: PDF, JPG, PNG (maks 5MB)</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">BAST (Berita Acara Serah Terima)</label>
+                                <input type="file" class="form-control" name="doc_bast" accept=".pdf,.jpg,.jpeg,.png">
+                                <small>Format: PDF, JPG, PNG (maks 5MB)</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Ringkasan Kontrak</label>
+                                <input type="file" class="form-control" name="doc_ringkasan_kontrak" accept=".pdf,.jpg,.jpeg,.png">
+                                <small>Format: PDF, JPG, PNG (maks 5MB)</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">SPMK (Surat Perintah Mulai Kerja)</label>
+                                <input type="file" class="form-control" name="doc_spmk" accept=".pdf,.jpg,.jpeg,.png">
+                                <small>Format: PDF, JPG, PNG (maks 5MB)</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Lampiran Pendukung Lainnya</label>
+                                <input type="file" class="form-control" name="doc_lainnya[]" accept=".pdf,.jpg,.jpeg,.png" multiple>
+                                <small>Bisa upload banyak file sekaligus (maks 5MB per file)</small>
                             </div>
                         </div>
                     </div>
@@ -391,6 +403,25 @@
         return "Rp " + parseFloat(amount).toLocaleString('id-ID');
     }
 
+    // Auto format input with dots
+    function formatRupiah(element) {
+        let val = element.value.replace(/[^,\d]/g, '').toString();
+        let split = val.split(',');
+        let sisa = split[0].length % 3;
+        let rupiah = split[0].substr(0, sisa);
+        let ribuan = split[0].substr(sisa).match(/\d{3}/gi);
+
+        if (ribuan) {
+            let separator = sisa ? '.' : '';
+            rupiah += separator + ribuan.join('.');
+        }
+
+        rupiah = split[1] != undefined ? rupiah + ',' + split[1] : rupiah;
+        element.value = rupiah;
+        
+        let numericValue = val.replace(',', '.'); // Convert to JS float format
+        document.getElementById('total_amount').value = numericValue ? numericValue : 0;    }
+
     // Update Summary Header badgers
     function updateSummary() {
         let nilaiKontrak = parseFloat(document.getElementById('total_amount').value) || 0;
@@ -401,11 +432,6 @@
     }
 
     // Toggle logic for sections
-    function toggleAddendum() {
-        let isChecked = document.getElementById('ada_addendum').checked;
-        document.getElementById('addendum_section').style.display = isChecked ? 'block' : 'none';
-    }
-
     function togglePemeliharaan() {
         let isChecked = document.getElementById('ada_masa_pemeliharaan').checked;
         document.getElementById('pemeliharaan_section').style.display = isChecked ? 'block' : 'none';

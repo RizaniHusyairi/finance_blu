@@ -50,4 +50,9 @@ class Contract extends Model
     {
         return $this->belongsTo(User::class, 'submitted_by');
     }
+
+    public function documents()
+    {
+        return $this->hasMany(ContractDocument::class);
+    }
 }

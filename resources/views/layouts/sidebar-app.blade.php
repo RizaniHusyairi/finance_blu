@@ -6,7 +6,7 @@
     </div>
     <div class="logo-name flex-grow-1">
       <h5 class="mb-0">SIKUT BLU </h5>
-    </div>
+        </div>
     <div class="sidebar-close">
       <span class="material-icons-outlined">close</span>
     </div>
@@ -78,6 +78,23 @@
           </a>
         </li>
         @endhasrole
+        @hasanyrole('Super Admin|PPABP')
+          <li>
+            <a href="javascript:;" class="has-arrow">
+              <div class="parent-icon">
+                <i class="material-icons-outlined">payments</i>
+              </div>
+              <div class="menu-title">Manajemen Honor</div>
+            </a>
+            <ul>
+              <li>
+                <a href="{{ route('honorarium.index') }}">
+                  <i class="material-icons-outlined">arrow_right</i>Data Honorarium
+                </a>
+              </li>
+            </ul>
+          </li>
+          @endhasanyrole
         @hasrole('PPK')
         <li>
           <a href="javascript:;" class="has-arrow">
@@ -85,6 +102,11 @@
             <div class="menu-title">Verifikasi</div>
           </a>
           <ul>
+          <li>
+                <a href="{{ route('honorarium.ppk.pending') }}">
+                  <i class="material-icons-outlined">arrow_right</i>Honor
+                </a>
+              </li>
             <li><a href="#"><i class="material-icons-outlined">arrow_right</i>Kontrak</a></li>
             <li><a href="{{ route('verifikasi-ppk.index') }}"><i class="material-icons-outlined">arrow_right</i>Perjaldin</a></li>
             <li><a href="{{ route('perjaldin-blu.history') }}"><i class="material-icons-outlined">arrow_right</i>Riwayat Perjaldin</a></li>

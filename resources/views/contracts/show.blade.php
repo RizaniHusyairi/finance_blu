@@ -14,7 +14,7 @@
                             <div><i class="bi bi-info-circle me-2 font-22 text-info"></i></div>
                             <h5 class="mb-0 text-info">Informasi Kontrak</h5>
                         </div>
-                        <div>
+                        <div class="d-flex align-items-center gap-2">
                             @php
                                 $badgeColor = match($contract->status) {
                                     'Aktif' => 'success',
@@ -25,6 +25,7 @@
                                     default => 'warning',
                                 };
                             @endphp
+                            
                             <span class="badge bg-{{ $badgeColor }} font-14">
                                 {{ $contract->status }}
                             </span>
@@ -71,7 +72,9 @@
                 <div class="card-header bg-transparent border-bottom">
                     <div class="d-flex justify-content-between align-items-center">
                         <h6 class="mb-0">Daftar Adendum</h6>
-                        <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addendumModal"><i class="bi bi-plus"></i> Tambah Adendum</button>
+                        @if($contract->status === 'Aktif')
+                        <a href="{{ route('addendums.create', $contract->id) }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-plus"></i> Tambah Adendum</a>
+                        @endif
                     </div>
                 </div>
                 <div class="card-body">
@@ -83,6 +86,7 @@
                                         <th>No. Adendum</th>
                                         <th>Tanggal</th>
                                         <th>Keterangan</th>
+                                        <th>Status</th>
                                         <th>Nilai Baru</th>
                                         <th>Waktu Baru</th>
                                         <th>Aksi</th>
@@ -94,14 +98,49 @@
                                         <td>{{ $addendum->addendum_number }}</td>
                                         <td>{{ \Carbon\Carbon::parse($addendum->date)->format('d/m/Y') }}</td>
                                         <td>{{ Str::limit($addendum->reason, 30) }}</td>
+                                        <td>
+                                            @php
+                                                $badgeStatus = match($addendum->status) {
+                                                    'Draft' => 'secondary',
+                                                    'Menunggu PPK' => 'info',
+                                                    'Disetujui' => 'success',
+                                                    'Ditolak' => 'danger',
+                                                    default => 'warning'
+                                                };
+                                            @endphp
+                                            <span class="badge bg-{{ $badgeStatus }}">{{ $addendum->status }}</span>
+                                        </td>
                                         <td>{{ $addendum->new_total_amount ? 'Rp ' . number_format($addendum->new_total_amount, 0, ',', '.') : '-' }}</td>
                                         <td>{{ $addendum->new_end_date ? \Carbon\Carbon::parse($addendum->new_end_date)->format('d/m/Y') : '-' }}</td>
                                         <td>
-                                            <form action="{{ route('addendums.destroy', [$contract->id, $addendum->id]) }}" method="POST" onsubmit="return confirm('Hapus adendum ini?');">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-1"><i class="bi bi-trash"></i></button>
-                                            </form>
+                                            <div class="d-flex align-items-center gap-1">
+                                                @if(in_array($addendum->status, ['Draft', 'Ditolak']) && auth()->user()->hasAnyRole(['Super Admin', 'Operator BLU', 'Pejabat Pengadaan']))
+                                                    <form action="{{ route('addendums.submit', [$contract->id, $addendum->id]) }}" method="POST" onsubmit="return confirm('Ajukan adendum ini ke PPK?');">
+                                                        @csrf
+                                                        <button type="submit" class="btn btn-sm btn-outline-primary py-0 px-1" title="Ajukan ke PPK"><i class="bi bi-send"></i></button>
+                                                    </form>
+                                                @endif
+
+                                                @if($addendum->status === 'Menunggu PPK' && (auth()->user()->hasRole('PPK') || auth()->user()->hasRole('Super Admin')))
+                                                    <form action="{{ route('addendums.approve', [$contract->id, $addendum->id]) }}" method="POST" onsubmit="return confirm('Setujui adendum ini?');">
+                                                        @csrf
+                                                        <button type="submit" class="btn btn-sm btn-outline-success py-0 px-1" title="Setujui"><i class="bi bi-check-lg"></i></button>
+                                                    </form>
+                                                    <form action="{{ route('addendums.reject', [$contract->id, $addendum->id]) }}" method="POST" onsubmit="var notes = prompt('Alasan penolakan:'); if(notes) { this.notes.value = notes; return true; } return false;">
+                                                        @csrf
+                                                        <input type="hidden" name="notes" value="">
+                                                        <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-1" title="Tolak"><i class="bi bi-x-lg"></i></button>
+                                                    </form>
+                                                @endif
+
+                                                @if(in_array($addendum->status, ['Draft', 'Ditolak']) && auth()->user()->hasAnyRole(['Super Admin', 'Operator BLU', 'Pejabat Pengadaan']))
+                                                    <form action="{{ route('addendums.destroy', [$contract->id, $addendum->id]) }}" method="POST" onsubmit="return confirm('Hapus adendum ini?');">
+                                                        @csrf
+                                                        @method('DELETE')
+                                                        <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-1" title="Hapus"><i class="bi bi-trash"></i></button>
+                                                    </form>
+                                                @endif
+                                            </div>
                                         </td>
                                     </tr>
                                     @endforeach
@@ -109,7 +148,7 @@
                             </table>
                         </div>
                     @else
-                        <p class="text-muted mb-0">Belum ada data adendum.</p>
+                        <p class="mb-0">Belum ada data adendum.</p>
                     @endif
                 </div>
             </div>
@@ -124,8 +163,10 @@
                     <div class="d-flex justify-content-between align-items-center">
                         <h6 class="mb-0">Termin Pembayaran</h6>
                         <div class="d-flex gap-2 align-items-center">
-                            <span class="badge bg-light text-dark border">Total: {{ $terminItems->sum('percentage') }}%</span>
+                            <span class="badge bg-light  border">Total: {{ $terminItems->sum('percentage') }}%</span>
+                            @if(!in_array($contract->status, ['Menunggu PPK', 'Aktif']))
                             <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#terminModal"><i class="bi bi-plus"></i> Set Termin</button>
+                            @endif
                         </div>
                     </div>
                 </div>
@@ -153,11 +194,13 @@
                                             <td>Rp {{ number_format($term->amount, 0, ',', '.') }}</td>
                                             <td><span class="badge bg-{{ $term->status == 'Paid' ? 'success' : 'warning' }}">{{ $term->status }}</span></td>
                                             <td>
+                                                @if(!in_array($contract->status, ['Menunggu PPK', 'Aktif']))
                                                 <form action="{{ route('terms.destroy', [$contract->id, $term->id]) }}" method="POST" onsubmit="return confirm('Hapus termin ini?');">
                                                     @csrf
                                                     @method('DELETE')
                                                     <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-1" {{ $term->status == 'Paid' ? 'disabled' : '' }}><i class="bi bi-trash"></i></button>
                                                 </form>
+                                                @endif
                                             </td>
                                         </tr>
                                      @endforeach
@@ -165,7 +208,7 @@
                             </table>
                         </div>
                      @else
-                        <div class="alert alert-warning mb-0 border-0 bg-warning text-dark">
+                        <div class="alert alert-warning mb-0 border-0 bg-warning">
                             Termin pembayaran belum diatur. Nilai kontrak belum dibreakdown.
                         </div>
                      @endif
@@ -181,7 +224,7 @@
                             <i class="bi bi-cash-coin me-2 text-warning font-18"></i>
                             <h6 class="mb-0">Angsuran Uang Muka</h6>
                         </div>
-                        <span class="badge bg-warning text-dark">UM: Rp {{ number_format($contract->nilai_uang_muka, 0, ',', '.') }} ({{ $contract->persentase_uang_muka }}%)</span>
+                        <span class="badge bg-warning">UM: Rp {{ number_format($contract->nilai_uang_muka, 0, ',', '.') }} ({{ $contract->persentase_uang_muka }}%)</span>
                     </div>
                 </div>
                 <div class="card-body">
@@ -217,11 +260,64 @@
                             </table>
                         </div>
                     @else
-                        <p class="text-muted mb-0">Belum ada data angsuran uang muka.</p>
+                        <p class="mb-0">Belum ada data angsuran uang muka.</p>
                     @endif
                 </div>
             </div>
             @endif
+
+            {{-- Dokumen Pendukung --}}
+            <div class="card mt-4">
+                <div class="card-header bg-transparent border-bottom">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0"><i class="bi bi-folder2-open me-2"></i>Dokumen Pendukung</h6>
+                        <span class="badge bg-secondary">{{ $contract->documents->count() }} file</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    @if($contract->documents->count() > 0)
+                        <div class="table-responsive">
+                            <table class="table table-sm table-striped align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>Jenis Dokumen</th>
+                                        <th>Nama File</th>
+                                        <th>Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($contract->documents as $doc)
+                                    <tr>
+                                        <td>
+                                            @php
+                                                $iconClass = match($doc->document_type) {
+                                                    'BAPP' => 'bi-file-earmark-check text-success',
+                                                    'BAP' => 'bi-file-earmark-text text-primary',
+                                                    'BAST' => 'bi-file-earmark-arrow-down text-info',
+                                                    'Ringkasan Kontrak' => 'bi-file-earmark-richtext text-warning',
+                                                    'SPMK' => 'bi-file-earmark-ruled text-danger',
+                                                    default => 'bi-file-earmark text-secondary',
+                                                };
+                                            @endphp
+                                            <i class="bi {{ $iconClass }} me-1"></i>
+                                            <span class="badge bg-light border">{{ $doc->document_type }}</span>
+                                        </td>
+                                        <td class="small">{{ $doc->document_name }}</td>
+                                        <td>
+                                            <a href="{{ asset('storage/' . $doc->file_path) }}" target="_blank" class="btn btn-sm btn-outline-primary py-0 px-2" title="Lihat / Download">
+                                                <i class="bi bi-download"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    @else
+                        <p class="mb-0">Belum ada dokumen yang diunggah.</p>
+                    @endif
+                </div>
+            </div>
 
         </div>
 
@@ -231,7 +327,7 @@
                     <h6 class="mb-3">Informasi Mitra</h6>
                     @if($contract->supplier)
                         <p class="mb-1"><strong>{{ $contract->supplier->name }}</strong></p>
-                        <p class="mb-1 text-muted small">{{ $contract->supplier->address }}</p>
+                        <p class="mb-1 small">{{ $contract->supplier->address }}</p>
                         <hr>
                         <ul class="list-unstyled mb-0 small">
                             <li class="mb-2"><i class="bi bi-telephone me-2"></i>{{ $contract->supplier->phone ?? '-' }}</li>
@@ -249,7 +345,7 @@
                     <h6 class="mb-3">Beban Anggaran (COA)</h6>
                      @if($contract->budget)
                         <p class="mb-1 fw-bold">{{ $contract->budget->year }} - {{ $contract->budget->coa }}</p>
-                        <p class="mb-2 small text-muted">{{ $contract->budget->description }}</p>
+                        <p class="mb-2 small">{{ $contract->budget->description }}</p>
                         
                         <div class="d-flex justify-content-between mb-1 small">
                             <span>Pagu Awal:</span>
@@ -275,7 +371,7 @@
                     <div class="card mt-4 border-top border-4 border-primary">
                         <div class="card-body">
                             <h6 class="mb-3 text-primary"><i class="bi bi-send me-2"></i>Ajukan Kontrak</h6>
-                            <p class="small text-muted mb-3">Kontrak ini berstatus <strong>{{ $contract->status }}</strong>. Ajukan ke PPK untuk mendapatkan persetujuan.</p>
+                            <p class="small mb-3">Kontrak ini berstatus <strong>{{ $contract->status }}</strong>. Ajukan ke PPK untuk mendapatkan persetujuan.</p>
                             <form action="{{ route('contracts.submit', $contract->id) }}" method="POST" onsubmit="return confirm('Ajukan kontrak ini ke PPK untuk persetujuan?');">
                                 @csrf
                                 <button type="submit" class="btn btn-primary w-100"><i class="bi bi-send me-1"></i>Ajukan ke PPK</button>
@@ -290,7 +386,7 @@
                     <div class="card mt-4 border-top border-4 border-success">
                         <div class="card-body">
                             <h6 class="mb-3 text-success"><i class="bi bi-clipboard-check me-2"></i>Persetujuan PPK</h6>
-                            <p class="small text-muted mb-3">Kontrak ini menunggu persetujuan Anda.</p>
+                            <p class="small  mb-3">Kontrak ini menunggu persetujuan Anda.</p>
                             
                             {{-- Approve --}}
                             <form action="{{ route('contracts.approve', $contract->id) }}" method="POST" class="mb-2" onsubmit="return confirm('Setujui kontrak ini?');">
@@ -315,7 +411,7 @@
                     <div class="card mt-4 border-top border-4 border-info">
                         <div class="card-body text-center">
                             <i class="bi bi-hourglass-split text-info font-22"></i>
-                            <p class="small text-muted mt-2 mb-0">Menunggu persetujuan dari PPK</p>
+                            <p class="small mt-2 mb-0">Menunggu persetujuan dari PPK</p>
                         </div>
                     </div>
                 @endif
@@ -342,11 +438,11 @@
                                     </div>
                                     <div class="flex-grow-1">
                                         <div class="fw-bold small">{{ $log->status_to }}</div>
-                                        <div class="text-muted small">{{ $log->user->name ?? '-' }} ({{ $log->role_name }})</div>
+                                        <div class=" small">{{ $log->user->name ?? '-' }} ({{ $log->role_name }})</div>
                                         @if($log->notes)
                                             <div class="small fst-italic mt-1">{{ $log->notes }}</div>
                                         @endif
-                                        <div class="text-muted small mt-1">{{ $log->created_at->format('d M Y H:i') }}</div>
+                                        <div class=" small mt-1">{{ $log->created_at->format('d M Y H:i') }}</div>
                                     </div>
                                 </div>
                             @endforeach
@@ -431,7 +527,7 @@
                         <div class="mb-3">
                             <label class="form-label">Nilai Termin (Rp) <span class="text-danger">*</span></label>
                             <input type="number" step="0.01" class="form-control bg-light" name="amount" id="termAmount" readonly required>
-                            <small class="text-muted">Dihitung otomatis berdasarkan persentase.</small>
+                            <small class="">Dihitung otomatis berdasarkan persentase.</small>
                         </div>
                     </div>
                     <div class="modal-footer">
