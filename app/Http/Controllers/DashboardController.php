@@ -16,6 +16,9 @@ class DashboardController extends Controller
      */
     public function internal()
     {
+        if (\Illuminate\Support\Facades\Auth::user()->hasRole('Pejabat Pengadaan')) {
+            return $this->pejabatPengadaan();   
+        }
         // Summary cards
         $totalPagu = Budget::sum('initial_budget');
         $totalRealisasi = BluPaymentSubmission::where('status', 'Paid SP2D')->sum('gross_amount');
@@ -110,5 +113,79 @@ class DashboardController extends Controller
             'supplier', 'contracts', 'transactions',
             'totalKontrak', 'totalNilaiKontrak', 'totalDibayar', 'totalPending'
         ));
+    }
+    /**
+     * Dashboard khusus Role Pejabat Pengadaan
+     */
+    private function pejabatPengadaan()
+    {
+        $data = \Illuminate\Support\Facades\Cache::remember('dash_pejabat_pengadaan_' . auth()->id(), 60, function() {
+            $now = now();
+            
+            // KPI 1: Kontrak Aktif
+            $kontrakAktif = \App\Models\KontrakPengadaan::where('status_kontrak', 'AKTIF')->count();
+            $selesaiBulanIni = \App\Models\KontrakPengadaan::where('status_kontrak', 'SELESAI')
+                                ->whereMonth('tanggal_selesai', $now->month)
+                                ->whereYear('tanggal_selesai', $now->year)
+                                ->count();
+            
+            // KPI 2: Total Nilai Berjalan
+            $nilaiKontrakAktif = \App\Models\KontrakPengadaan::where('status_kontrak', 'AKTIF')
+                                ->sum('nilai_total_kontrak');
+                                
+            // KPI 3: Tagihan Menunggu (Pending PPK/Bendahara)
+            $tagihanMenunggu = \App\Models\Tagihan::whereIn('status', ['PENDING_PPK', 'PENDING_BENDAHARA'])->count();
+            
+            // KPI 4: Butuh Perhatian (Ditolak / Revisi)
+            $tagihanRevisi = \App\Models\Tagihan::whereIn('status', ['DITOLAK_PPK', 'REVISI_BENDAHARA', 'REVISI'])->count();
+
+            // CHART KIRI: Serapan Anggaran Kontrak (Pagu DIPA vs Kontrak)
+            $totalPaguDipa = \App\Models\MasterDipa::sum('total_pagu');
+            $chartSerapan = [
+                'Terpakai (Nilai Kontrak)' => \App\Models\KontrakPengadaan::where('status_kontrak', '!=', 'DIBATALKAN')->sum('nilai_total_kontrak'),
+                'Sisa Pagu Khusus' => max(0, $totalPaguDipa - \App\Models\KontrakPengadaan::where('status_kontrak', '!=', 'DIBATALKAN')->sum('nilai_total_kontrak'))
+            ];
+
+            // CHART KANAN: Distribusi Status Tagihan
+            $chartStatusTagihan = \App\Models\Tagihan::where('tipe_tagihan', 'KONTRAK')
+                ->select('status', \Illuminate\Support\Facades\DB::raw('count(*) as total'))
+                ->groupBy('status')
+                ->pluck('total', 'status')
+                ->toArray();
+
+            // TABEL KIRI: Peringatan Jatuh Tempo (H-14)
+            $jatuhTempo = \App\Models\KontrakPengadaan::where('status_kontrak', 'AKTIF')
+                        ->where('tanggal_selesai', '<=', $now->copy()->addDays(14))
+                        ->orderBy('tanggal_selesai', 'asc')
+                        ->take(5)
+                        ->get();
+
+            // TABEL KANAN: Tagihan Dikembalikan / Revisi
+            $tagihanBermasalah = \App\Models\Tagihan::whereIn('status', ['DITOLAK_PPK', 'REVISI_BENDAHARA', 'REVISI'])
+                                ->with(['logs' => function($q) {
+                                    $q->latest()->limit(1); // Ambil log penolakan terakhir
+                                }])
+                                ->latest()
+                                ->take(5)
+                                ->get();
+
+            return [
+                'kpi' => [
+                    'kontrak_aktif' => $kontrakAktif,
+                    'selesai_bulan_ini' => $selesaiBulanIni,
+                    'nilai_kontrak_aktif' => $nilaiKontrakAktif,
+                    'tagihan_menunggu' => $tagihanMenunggu,
+                    'tagihan_revisi' => $tagihanRevisi,
+                ],
+                'chart_serapan_labels' => array_keys($chartSerapan),
+                'chart_serapan_data' => array_values($chartSerapan),
+                'chart_status_labels' => array_keys($chartStatusTagihan),
+                'chart_status_data' => array_values($chartStatusTagihan),
+                'table_jatuh_tempo' => $jatuhTempo,
+                'table_tagihan_revisi' => $tagihanBermasalah,
+            ];
+        });
+
+        return view('dashboard.pejabat_pengadaan', $data);
     }
 }

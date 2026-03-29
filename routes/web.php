@@ -2,7 +2,6 @@
 
 use App\Http\Controllers\HomeController;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\BluPaymentSubmissionController;
 use App\Http\Controllers\BudgetController;
 use App\Http\Controllers\ContractController;
 use App\Http\Controllers\ContractAddendumController;
@@ -38,14 +37,6 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
     Route::get('/notifications/fetch', [\App\Http\Controllers\NotificationController::class, 'fetch'])->name('notifications.fetch');
     Route::post('/notifications/mark-read', [\App\Http\Controllers\NotificationController::class, 'markAsRead'])->name('notifications.mark-read');
 
-    // Pengajuan Pembayaran BLU (dummy index + show)
-    Route::middleware('role:Super Admin|Operator BLU')->group(function () {
-        Route::get('/pengajuan-pembayaran-blu', [BluPaymentSubmissionController::class, 'index'])
-            ->name('blu-payment-submissions.index');
-        Route::get('/pengajuan-pembayaran-blu/{submissionNumber}', [BluPaymentSubmissionController::class, 'show'])
-            ->name('blu-payment-submissions.show');
-    });
-
     // Verifikasi Perjaldin - hanya PPK
     Route::middleware('role:Super Admin|PPK')->group(function () {
         Route::get('/perjaldin-blu', [\App\Http\Controllers\PerjaldinBluController::class, 'index'])->name('perjaldin-blu.index');
@@ -72,6 +63,9 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
 
     // Manajemen Kontrak (Kontrak, Addendum, Termin)
     Route::middleware('role:Super Admin|Pejabat Pengadaan|PPK')->group(function () {
+        Route::get('/tagihan/kontrak/create', [\App\Http\Controllers\TagihanController::class, 'createKontrak'])->name('tagihan.kontrak.create');
+        Route::post('/tagihan/kontrak/store', [\App\Http\Controllers\TagihanController::class, 'storeKontrak'])->name('tagihan.kontrak.store');
+
         Route::get('/contracts/verifikasi', [ContractController::class, 'verifikasiIndex'])->name('contracts.verifikasi');
         Route::resource('contracts', ContractController::class);
         Route::post('/contracts/{contract}/submit', [ContractController::class, 'submit'])->name('contracts.submit');
@@ -96,11 +90,10 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
         Route::get('/honorarium', [HonorariumController::class, 'index'])->name('honorarium.index');
         Route::get('/honorarium/create', [HonorariumController::class, 'create'])->name('honorarium.create');
         Route::post('/honorarium', [HonorariumController::class, 'store'])->name('honorarium.store');
-
-        Route::get('/honorarium/{honorarium}', [HonorariumController::class, 'show'])->name('honorarium.show');
-        Route::get('/honorarium/{honorarium}/edit', [HonorariumController::class, 'edit'])->name('honorarium.edit');
-        Route::put('/honorarium/{honorarium}', [HonorariumController::class, 'update'])->name('honorarium.update');
-        Route::delete('/honorarium/{honorarium}', [HonorariumController::class, 'destroy'])->name('honorarium.destroy');
+        Route::get('/honorarium/{id}', [HonorariumController::class, 'show'])->name('honorarium.show');
+        Route::get('/honorarium/{id}/edit', [HonorariumController::class, 'edit'])->name('honorarium.edit');
+        Route::put('/honorarium/{id}', [HonorariumController::class, 'update'])->name('honorarium.update');
+        Route::delete('/honorarium/{id}', [HonorariumController::class, 'destroy'])->name('honorarium.destroy');
     });
 
     // Manajemen Perjaldin — Operator Perjaldin
@@ -109,15 +102,10 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
         Route::get('/perjaldins/create', [\App\Http\Controllers\PerjaldinController::class, 'create'])->name('perjaldins.create');
         Route::post('/perjaldins', [\App\Http\Controllers\PerjaldinController::class, 'store'])->name('perjaldins.store');
         Route::post('/perjaldins/bulk-submit', [\App\Http\Controllers\PerjaldinController::class, 'bulkSubmit'])->name('perjaldins.bulk-submit');
-        // Edit/Delete entire Perjaldin (header + all pejabats)
-        Route::get('/perjaldins-header/{perjaldin}/edit', [\App\Http\Controllers\PerjaldinController::class, 'editPerjaldin'])->name('perjaldins.edit-perjaldin');
-        Route::put('/perjaldins-header/{perjaldin}', [\App\Http\Controllers\PerjaldinController::class, 'updatePerjaldin'])->name('perjaldins.update-perjaldin');
-        Route::delete('/perjaldins-header/{perjaldin}', [\App\Http\Controllers\PerjaldinController::class, 'destroyPerjaldin'])->name('perjaldins.destroy-perjaldin');
-        // Single Pejabat detail/edit/delete
-        Route::get('/perjaldins/{pejabat}', [\App\Http\Controllers\PerjaldinController::class, 'show'])->name('perjaldins.show');
-        Route::get('/perjaldins/{pejabat}/edit', [\App\Http\Controllers\PerjaldinController::class, 'edit'])->name('perjaldins.edit');
-        Route::put('/perjaldins/{pejabat}', [\App\Http\Controllers\PerjaldinController::class, 'update'])->name('perjaldins.update');
-        Route::delete('/perjaldins/{pejabat}', [\App\Http\Controllers\PerjaldinController::class, 'destroy'])->name('perjaldins.destroy');
+        Route::get('/perjaldins/{id}', [\App\Http\Controllers\PerjaldinController::class, 'show'])->name('perjaldins.show');
+        Route::get('/perjaldins/{id}/edit', [\App\Http\Controllers\PerjaldinController::class, 'editPerjaldin'])->name('perjaldins.edit-perjaldin');
+        Route::put('/perjaldins/{id}', [\App\Http\Controllers\PerjaldinController::class, 'updatePerjaldin'])->name('perjaldins.update-perjaldin');
+        Route::delete('/perjaldins/{id}', [\App\Http\Controllers\PerjaldinController::class, 'destroyPerjaldin'])->name('perjaldins.destroy-perjaldin');
     });
 
     // Verifikasi Perjaldin & SPP — PPK
@@ -204,28 +192,7 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
         Route::post('/sp2ds/spp/{spp_id}/bku', [\App\Http\Controllers\Sp2dController::class, 'catatBku'])->name('sp2ds.catat-bku');
     });
 
-    // Tagihan & Bayar — Pengajuan Pembayaran BLU (CRUD + Workflow)
-    Route::middleware('role:Super Admin|Operator BLU|PPABP|PPK|PPSPM|Bendahara Pengeluaran|Bendahara Penerimaan')->group(function () {
-        Route::get('/blu-payment-submissions/create', [BluPaymentSubmissionController::class, 'create'])->name('blu-payment-submissions.create');
-        Route::post('/blu-payment-submissions', [BluPaymentSubmissionController::class, 'store'])->name('blu-payment-submissions.store');
-        Route::get('/blu-payment-submissions/{blu_payment_submission}', [BluPaymentSubmissionController::class, 'showDetail'])->name('blu-payment-submissions.show-detail');
-        Route::get('/blu-payment-submissions/{blu_payment_submission}/edit', [BluPaymentSubmissionController::class, 'edit'])->name('blu-payment-submissions.edit');
-        Route::put('/blu-payment-submissions/{blu_payment_submission}', [BluPaymentSubmissionController::class, 'update'])->name('blu-payment-submissions.update');
-        Route::delete('/blu-payment-submissions/{blu_payment_submission}', [BluPaymentSubmissionController::class, 'destroy'])->name('blu-payment-submissions.destroy');
-
-        // Workflow actions
-        Route::post('/blu-payment-submissions/{blu_payment_submission}/submit', [BluPaymentSubmissionController::class, 'submit'])->name('blu-payment-submissions.submit');
-        Route::post('/blu-payment-submissions/{blu_payment_submission}/approve', [BluPaymentSubmissionController::class, 'approve'])->name('blu-payment-submissions.approve');
-        Route::post('/blu-payment-submissions/{blu_payment_submission}/reject', [BluPaymentSubmissionController::class, 'reject'])->name('blu-payment-submissions.reject');
-
-        // Tax management
-        Route::post('/blu-payment-submissions/{blu_payment_submission}/taxes', [\App\Http\Controllers\BluPaymentSubmissionTaxController::class, 'store'])->name('blu-payment-submissions.taxes.store');
-        Route::delete('/blu-payment-submissions/{blu_payment_submission}/taxes/{tax}', [\App\Http\Controllers\BluPaymentSubmissionTaxController::class, 'destroy'])->name('blu-payment-submissions.taxes.destroy');
-
-        // Document Generation (PDF)
-        Route::get('/blu-payment-submissions/{blu_payment_submission}/print-spp', [\App\Http\Controllers\DocumentController::class, 'printSpp'])->name('blu-payment-submissions.print.spp');
-        Route::get('/blu-payment-submissions/{blu_payment_submission}/print-spm', [\App\Http\Controllers\DocumentController::class, 'printSpm'])->name('blu-payment-submissions.print.spm');
-    });
+    
 
     Route::middleware('role:PPK')->group(function () {
     Route::get('/honorarium/ppk/pending', [HonorariumController::class, 'pendingPpk'])

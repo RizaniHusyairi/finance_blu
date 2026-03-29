@@ -7,7 +7,7 @@
 
     <div class="card">
         <div class="card-body">
-            <h6 class="mb-4">Edit Pengajuan Perjaldin</h6>
+            <h6 class="mb-4">Edit Pengajuan Perjaldin — <span class="text-primary">{{ $tagihan->nomor_tagihan }}</span></h6>
             @if ($errors->any())
                 <div class="alert alert-danger border-0 bg-danger alert-dismissible fade show">
                     <ul class="text-white mb-0">
@@ -19,31 +19,49 @@
                 </div>
             @endif
 
-            <form action="{{ route('perjaldins.update-perjaldin', $perjaldin->perjaldin_id) }}" method="POST">
+            @php
+                // Parse deskripsi to extract uraian and no_bast
+                $parts = explode(' | BAST: ', $tagihan->deskripsi);
+                $uraian = $parts[0] ?? $tagihan->deskripsi;
+                $noBast = $parts[1] ?? '';
+            @endphp
+
+            <form action="{{ route('perjaldins.update-perjaldin', $tagihan->id) }}" method="POST">
                 @csrf
                 @method('PUT')
 
-                <h5 class="mb-3 border-bottom pb-2">Informasi Rencana Acara</h5>
+                <h5 class="mb-3 border-bottom pb-2">Informasi Rencana Acara & Anggaran</h5>
                 <div class="row mb-4">
-                    <div class="col-md-6 mb-3">
+                    <div class="col-md-4 mb-3">
                         <label class="form-label">Uraian / Judul Perjalanan Dinas <span class="text-danger">*</span></label>
-                        <input type="text" name="uraian" class="form-control" placeholder="Contoh: Rapat Koordinasi..."
-                            required value="{{ old('uraian', $perjaldin->uraian) }}">
+                        <input type="text" name="deskripsi" class="form-control" placeholder="Contoh: Rapat Koordinasi..."
+                            required value="{{ old('deskripsi', $uraian) }}">
                     </div>
-                    <div class="col-md-6 mb-3">
+                    <div class="col-md-4 mb-3">
                         <label class="form-label">No BAST (Opsional)</label>
-                        <input type="text" name="no_bast" class="form-control" placeholder="" value="{{ old('no_bast', $perjaldin->no_bast) }}">
+                        <input type="text" name="no_bast" class="form-control" value="{{ old('no_bast', $noBast) }}">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Sumber Anggaran (DIPA) <span class="text-danger">*</span></label>
+                        <select name="master_dipa_id" class="form-select" required>
+                            <option value="">-- Pilih DIPA --</option>
+                            @foreach($dipas as $dipa)
+                                <option value="{{ $dipa->id }}" {{ old('master_dipa_id', $tagihan->master_dipa_id) == $dipa->id ? 'selected' : '' }}>
+                                    {{ $dipa->tahun_anggaran }} — {{ $dipa->nomor_dipa ?? 'DIPA #'.$dipa->id }}
+                                </option>
+                            @endforeach
+                        </select>
                     </div>
                 </div>
 
-                <h5 class="mb-3 border-bottom pb-2">Daftar Pejabat / Pegawai Berangkat</h5>
+                <h5 class="mb-3 border-bottom pb-2">Daftar Pegawai yang Berangkat</h5>
                 <div class="table-responsive">
                     <table class="table table-bordered align-middle" id="repeaterTable" style="min-width: 1500px;">
                         <thead class="table-light text-center">
                             <tr>
                                 <th>#</th>
                                 <th>Pegawai</th>
-                                <th>No SPT / SPPD</th>
+                                <th>No SPT</th>
                                 <th>Tujuan</th>
                                 <th>Tanggal & Lama</th>
                                 <th>Rincian Biaya (Tiket, Transport, Penginapan, UH, Representasi)</th>
@@ -53,75 +71,68 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach(old('pejabats', $perjaldin->pejabats) as $index => $p)
+                            @foreach($tagihan->detailPerjaldin as $index => $detail)
                             <tr class="item-row">
                                 <td class="text-center row-number">{{ $index + 1 }}</td>
                                 <td>
-                                    <input type="hidden" name="pejabats[{{ $index }}][pejabat_id]" value="{{ $p['pejabat_id'] ?? '' }}">
-                                    <div class="mb-2">
-                                        <select class="form-select employee-select" name="pejabats[{{ $index }}][employee_id]">
-                                            <option value="">-- Pilih Pegawai dari Sistem --</option>
-                                            @foreach($employees as $emp)
-                                                <option value="{{ $emp->id }}" data-nip="{{ $emp->nip }}"
-                                                    data-name="{{ $emp->name }}" {{ ($p['employee_id'] ?? '') == $emp->id ? 'selected' : '' }}>{{ $emp->name }}</option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-                                    <input type="text" class="form-control mb-1 employee-name"
-                                        name="pejabats[{{ $index }}][nama_pejabat]" placeholder="Nama Pegawai" required value="{{ $p['nama_pejabat'] ?? '' }}">
-                                    <input type="text" class="form-control employee-nip" name="pejabats[{{ $index }}][nip]"
-                                        placeholder="NIP" value="{{ $p['nip'] ?? '' }}">
+                                    <input type="hidden" name="peserta[{{ $index }}][detail_id]" value="{{ $detail->id }}">
+                                    <select class="form-select pegawai-select" name="peserta[{{ $index }}][pegawai_id]" required>
+                                        <option value="">-- Pilih Pegawai --</option>
+                                        @foreach($pegawais as $peg)
+                                            <option value="{{ $peg->id }}" data-nip="{{ $peg->nip }}" {{ $detail->pegawai_id == $peg->id ? 'selected' : '' }}>
+                                                {{ $peg->nama_lengkap }} {{ $peg->nip ? '('.$peg->nip.')' : '' }}
+                                            </option>
+                                        @endforeach
+                                    </select>
                                 </td>
                                 <td>
-                                    <input type="text" class="form-control mb-1" name="pejabats[{{ $index }}][no_spt]"
-                                        placeholder="No SPT" required value="{{ $p['no_spt'] ?? '' }}">
-                                    <input type="text" class="form-control" name="pejabats[{{ $index }}][no_sppd]"
-                                        placeholder="No SPPD" required value="{{ $p['no_sppd'] ?? '' }}">
+                                    <input type="text" class="form-control" name="peserta[{{ $index }}][no_spt]"
+                                        placeholder="No SPT" required value="{{ old("peserta.$index.no_spt", $detail->no_spt) }}">
                                 </td>
                                 <td>
-                                    <textarea class="form-control" name="pejabats[{{ $index }}][tujuan]" rows="2"
-                                        placeholder="Tujuan..." required>{{ $p['tujuan'] ?? '' }}</textarea>
+                                    <textarea class="form-control" name="peserta[{{ $index }}][tujuan]" rows="2"
+                                        placeholder="Tujuan..." required>{{ old("peserta.$index.tujuan", $detail->tujuan) }}</textarea>
                                 </td>
                                 <td>
-                                    <input type="date" class="form-control mb-1" name="pejabats[{{ $index }}][tanggal_berangkat]"
-                                        required value="{{ $p['tanggal_berangkat'] ?? '' }}">
+                                    <input type="date" class="form-control mb-1" name="peserta[{{ $index }}][tgl_berangkat]"
+                                        required value="{{ old("peserta.$index.tgl_berangkat", $detail->tgl_berangkat) }}">
                                     <div class="input-group">
-                                        <input type="number" class="form-control" name="pejabats[{{ $index }}][lama_perjalanan_dinas]"
-                                            placeholder="Lama" required min="1" value="{{ $p['lama_perjalanan_dinas'] ?? '' }}">
+                                        <input type="number" class="form-control" name="peserta[{{ $index }}][lama_hari]"
+                                            placeholder="Lama" required min="1" value="{{ old("peserta.$index.lama_hari", $detail->lama_hari) }}">
                                         <span class="input-group-text">Hari</span>
                                     </div>
                                 </td>
                                 <td>
                                     <div class="d-flex flex-wrap gap-1">
                                         <input type="text" class="form-control form-control-sm biaya-input"
-                                            name="pejabats[{{ $index }}][tiket]" placeholder="Tiket" style="width: 120px;"
-                                            onkeyup="calculateJumlah(this)" value="{{ number_format((float)($p['tiket'] ?? 0), 0, '.', ',') }}">
+                                            name="peserta[{{ $index }}][biaya_tiket]" placeholder="Tiket" style="width: 120px;"
+                                            onkeyup="calculateJumlah(this)" value="{{ number_format((float)$detail->biaya_tiket, 0, '.', ',') }}">
                                         <input type="text" class="form-control form-control-sm biaya-input"
-                                            name="pejabats[{{ $index }}][transport]" placeholder="Transport" style="width: 120px;"
-                                            onkeyup="calculateJumlah(this)" value="{{ number_format((float)($p['transport'] ?? 0), 0, '.', ',') }}">
+                                            name="peserta[{{ $index }}][biaya_transport]" placeholder="Transport" style="width: 120px;"
+                                            onkeyup="calculateJumlah(this)" value="{{ number_format((float)$detail->biaya_transport, 0, '.', ',') }}">
                                         <input type="text" class="form-control form-control-sm biaya-input"
-                                            name="pejabats[{{ $index }}][penginapan]" placeholder="Penginapan" style="width: 120px;"
-                                            onkeyup="calculateJumlah(this)" value="{{ number_format((float)($p['penginapan'] ?? 0), 0, '.', ',') }}">
+                                            name="peserta[{{ $index }}][biaya_penginapan]" placeholder="Penginapan" style="width: 120px;"
+                                            onkeyup="calculateJumlah(this)" value="{{ number_format((float)$detail->biaya_penginapan, 0, '.', ',') }}">
                                         <input type="text" class="form-control form-control-sm biaya-input"
-                                            name="pejabats[{{ $index }}][uang_harian]" placeholder="Uang Harian" style="width: 120px;"
-                                            onkeyup="calculateJumlah(this)" value="{{ number_format((float)($p['uang_harian'] ?? 0), 0, '.', ',') }}">
+                                            name="peserta[{{ $index }}][uang_harian]" placeholder="Uang Harian" style="width: 120px;"
+                                            onkeyup="calculateJumlah(this)" value="{{ number_format((float)$detail->uang_harian, 0, '.', ',') }}">
                                         <input type="text" class="form-control form-control-sm biaya-input"
-                                            name="pejabats[{{ $index }}][uang_representasi]" placeholder="Representasi"
-                                            style="width: 120px;" onkeyup="calculateJumlah(this)" value="{{ number_format((float)($p['uang_representasi'] ?? 0), 0, '.', ',') }}">
+                                            name="peserta[{{ $index }}][uang_representasi]" placeholder="Representasi"
+                                            style="width: 120px;" onkeyup="calculateJumlah(this)" value="{{ number_format((float)$detail->uang_representasi, 0, '.', ',') }}">
                                     </div>
                                 </td>
                                 <td>
                                     @php
-                                        $subtotal = ($p['tiket'] ?? 0) + ($p['transport'] ?? 0) + ($p['penginapan'] ?? 0) + ($p['uang_harian'] ?? 0) + ($p['uang_representasi'] ?? 0);
+                                        $subtotal = $detail->biaya_tiket + $detail->biaya_transport + $detail->biaya_penginapan + $detail->uang_harian + $detail->uang_representasi;
                                     @endphp
                                     <input type="text" class="form-control text-end row-jumlah" readonly value="{{ number_format((float)$subtotal, 0, '.', ',') }}">
                                 </td>
                                 <td>
-                                    <input type="text" class="form-control" name="pejabats[{{ $index }}][rekening]"
-                                        placeholder="Ex: 0001 (BRI)" value="{{ $p['rekening'] ?? '' }}">
+                                    <input type="text" class="form-control" name="peserta[{{ $index }}][rekening]"
+                                        placeholder="Ex: 0001 (BRI)" value="{{ old("peserta.$index.rekening", $detail->rekening) }}">
                                 </td>
                                 <td class="text-center">
-                                    <button type="button" class="btn btn-outline-danger btn-sm btn-delete-row" {{ count(old('pejabats', $perjaldin->pejabats)) == 1 ? 'disabled' : '' }}><i
+                                    <button type="button" class="btn btn-outline-danger btn-sm btn-delete-row" {{ $tagihan->detailPerjaldin->count() == 1 ? 'disabled' : '' }}><i
                                             class="bi bi-trash"></i></button>
                                 </td>
                             </tr>
@@ -142,7 +153,7 @@
 
                 <div class="mt-3">
                     <button type="button" class="btn btn-secondary" id="btnAddRow"><i class="bi bi-plus-circle"></i> Tambah
-                        Pejabat</button>
+                        Pegawai</button>
                 </div>
 
                 <div class="mt-5 text-end">
@@ -159,36 +170,27 @@
             <tr class="item-row">
                 <td class="text-center row-number"></td>
                 <td>
-                    <input type="hidden" name="pejabats[__INDEX__][pejabat_id]" value="">
-                    <div class="mb-2">
-                        <select class="form-select employee-select" name="pejabats[__INDEX__][employee_id]">
-                            <option value="">-- Pilih Pegawai dari Sistem --</option>
-                            @foreach($employees as $emp)
-                                <option value="{{ $emp->id }}" data-nip="{{ $emp->nip }}"
-                                    data-name="{{ $emp->name }}">{{ $emp->name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <input type="text" class="form-control mb-1 employee-name"
-                        name="pejabats[__INDEX__][nama_pejabat]" placeholder="Nama Pegawai" required>
-                    <input type="text" class="form-control employee-nip" name="pejabats[__INDEX__][nip]"
-                        placeholder="NIP">
+                    <input type="hidden" name="peserta[__INDEX__][detail_id]" value="">
+                    <select class="form-select pegawai-select" name="peserta[__INDEX__][pegawai_id]" required>
+                        <option value="">-- Pilih Pegawai --</option>
+                        @foreach($pegawais as $peg)
+                            <option value="{{ $peg->id }}" data-nip="{{ $peg->nip }}">{{ $peg->nama_lengkap }} {{ $peg->nip ? '('.$peg->nip.')' : '' }}</option>
+                        @endforeach
+                    </select>
                 </td>
                 <td>
-                    <input type="text" class="form-control mb-1" name="pejabats[__INDEX__][no_spt]"
+                    <input type="text" class="form-control" name="peserta[__INDEX__][no_spt]"
                         placeholder="No SPT" required>
-                    <input type="text" class="form-control" name="pejabats[__INDEX__][no_sppd]"
-                        placeholder="No SPPD" required>
                 </td>
                 <td>
-                    <textarea class="form-control" name="pejabats[__INDEX__][tujuan]" rows="2"
+                    <textarea class="form-control" name="peserta[__INDEX__][tujuan]" rows="2"
                         placeholder="Tujuan..." required></textarea>
                 </td>
                 <td>
-                    <input type="date" class="form-control mb-1" name="pejabats[__INDEX__][tanggal_berangkat]"
+                    <input type="date" class="form-control mb-1" name="peserta[__INDEX__][tgl_berangkat]"
                         required>
                     <div class="input-group">
-                        <input type="number" class="form-control" name="pejabats[__INDEX__][lama_perjalanan_dinas]"
+                        <input type="number" class="form-control" name="peserta[__INDEX__][lama_hari]"
                             placeholder="Lama" required min="1">
                         <span class="input-group-text">Hari</span>
                     </div>
@@ -196,19 +198,19 @@
                 <td>
                     <div class="d-flex flex-wrap gap-1">
                         <input type="text" class="form-control form-control-sm biaya-input"
-                            name="pejabats[__INDEX__][tiket]" placeholder="Tiket" style="width: 120px;"
+                            name="peserta[__INDEX__][biaya_tiket]" placeholder="Tiket" style="width: 120px;"
                             onkeyup="calculateJumlah(this)">
                         <input type="text" class="form-control form-control-sm biaya-input"
-                            name="pejabats[__INDEX__][transport]" placeholder="Transport" style="width: 120px;"
+                            name="peserta[__INDEX__][biaya_transport]" placeholder="Transport" style="width: 120px;"
                             onkeyup="calculateJumlah(this)">
                         <input type="text" class="form-control form-control-sm biaya-input"
-                            name="pejabats[__INDEX__][penginapan]" placeholder="Penginapan" style="width: 120px;"
+                            name="peserta[__INDEX__][biaya_penginapan]" placeholder="Penginapan" style="width: 120px;"
                             onkeyup="calculateJumlah(this)">
                         <input type="text" class="form-control form-control-sm biaya-input"
-                            name="pejabats[__INDEX__][uang_harian]" placeholder="Uang Harian" style="width: 120px;"
+                            name="peserta[__INDEX__][uang_harian]" placeholder="Uang Harian" style="width: 120px;"
                             onkeyup="calculateJumlah(this)">
                         <input type="text" class="form-control form-control-sm biaya-input"
-                            name="pejabats[__INDEX__][uang_representasi]" placeholder="Representasi"
+                            name="peserta[__INDEX__][uang_representasi]" placeholder="Representasi"
                             style="width: 120px;" onkeyup="calculateJumlah(this)">
                     </div>
                 </td>
@@ -216,7 +218,7 @@
                     <input type="text" class="form-control text-end row-jumlah" readonly value="0">
                 </td>
                 <td>
-                    <input type="text" class="form-control" name="pejabats[__INDEX__][rekening]"
+                    <input type="text" class="form-control" name="peserta[__INDEX__][rekening]"
                         placeholder="Ex: 0001 (BRI)">
                 </td>
                 <td class="text-center">
@@ -230,16 +232,13 @@
 
 @push('script')
     <script>
-        let rowIdx = {{ count(old('pejabats', $perjaldin->pejabats)) }};
+        let rowIdx = {{ $tagihan->detailPerjaldin->count() }};
 
-        // Formatting numbers to string with commas
         function formatNumber(n) {
             return n.toString().replace(/\D/g, "").replace(/\B(?=(\d{3})+(?!\d))/g, ",");
         }
 
-        // Auto calculate per row and grand total
         window.calculateJumlah = function (element) {
-            // Format the input value while typing
             let val = $(element).val();
             $(element).val(formatNumber(val));
 
@@ -265,36 +264,14 @@
         $(document).ready(function () {
             calculateGrandTotal();
 
-            // Auto fill Name and NIP when Employee selected
-            $(document).on('change', '.employee-select', function () {
-                let tr = $(this).closest('tr');
-                let selected = $(this).find('option:selected');
-                if (selected.val() != '') {
-                    tr.find('.employee-name').val(selected.data('name'));
-                    tr.find('.employee-nip').val(selected.data('nip'));
-                } else {
-                    tr.find('.employee-name').val('');
-                    tr.find('.employee-nip').val('');
-                }
-            });
-
             // Add Row
             $('#btnAddRow').click(function () {
                 let templateContent = $('#rowTemplate').html();
-                // Replace index placeholders
                 let newRowHtml = templateContent.replace(/__INDEX__/g, rowIdx);
-                
                 let newRow = $(newRowHtml);
-
-                // Append to table
                 $('#repeaterTable tbody').append(newRow);
-
-                // Update row numbers
                 updateRowNumbers();
-
-                // Enable all delete buttons since we have more than 1 row now
                 $('.btn-delete-row').prop('disabled', false);
-
                 rowIdx++;
             });
 
@@ -304,7 +281,6 @@
                     $(this).closest('tr').remove();
                     updateRowNumbers();
                     calculateGrandTotal();
-                    
                     if ($('#repeaterTable tbody tr.item-row').length === 1) {
                          $('.btn-delete-row').prop('disabled', true);
                     }

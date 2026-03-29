@@ -22,27 +22,38 @@
             <form action="{{ route('perjaldins.store') }}" method="POST">
                 @csrf
 
-                <h5 class="mb-3 border-bottom pb-2">Informasi Rencana Acara</h5>
+                <h5 class="mb-3 border-bottom pb-2">Informasi Rencana Acara & Anggaran</h5>
                 <div class="row mb-4">
-                    <div class="col-md-6 mb-3">
+                    <div class="col-md-4 mb-3">
                         <label class="form-label">Uraian / Judul Perjalanan Dinas <span class="text-danger">*</span></label>
-                        <input type="text" name="uraian" class="form-control" placeholder="Contoh: Rapat Koordinasi..."
-                            required value="{{ old('uraian') }}">
+                        <input type="text" name="deskripsi" class="form-control" placeholder="Contoh: Rapat Koordinasi..."
+                            required value="{{ old('deskripsi') }}">
                     </div>
-                    <div class="col-md-6 mb-3">
+                    <div class="col-md-4 mb-3">
                         <label class="form-label">No BAST (Opsional)</label>
                         <input type="text" name="no_bast" class="form-control" placeholder="" value="{{ old('no_bast') }}">
                     </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Sumber Anggaran (DIPA) <span class="text-danger">*</span></label>
+                        <select name="master_dipa_id" class="form-select" required>
+                            <option value="">-- Pilih DIPA --</option>
+                            @foreach($dipas as $dipa)
+                                <option value="{{ $dipa->id }}" {{ old('master_dipa_id') == $dipa->id ? 'selected' : '' }}>
+                                    {{ $dipa->tahun_anggaran }} — {{ $dipa->nomor_dipa ?? 'DIPA #'.$dipa->id }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
                 </div>
 
-                <h5 class="mb-3 border-bottom pb-2">Daftar Pejabat / Pegawai Berangkat</h5>
+                <h5 class="mb-3 border-bottom pb-2">Daftar Pegawai yang Berangkat</h5>
                 <div class="table-responsive">
                     <table class="table table-bordered align-middle" id="repeaterTable" style="min-width: 1500px;">
                         <thead class="table-light text-center">
                             <tr>
                                 <th>#</th>
                                 <th>Pegawai</th>
-                                <th>No SPT / SPPD</th>
+                                <th>No SPT</th>
                                 <th>Tujuan</th>
                                 <th>Tanggal & Lama</th>
                                 <th>Rincian Biaya (Tiket, Transport, Penginapan, UH, Representasi)</th>
@@ -56,35 +67,26 @@
                             <tr class="item-row">
                                 <td class="text-center row-number">1</td>
                                 <td>
-                                    <div class="mb-2">
-                                        <select class="form-select employee-select" name="pejabats[0][employee_id]">
-                                            <option value="">-- Pilih Pegawai dari Sistem --</option>
-                                            @foreach($employees as $emp)
-                                                <option value="{{ $emp->id }}" data-nip="{{ $emp->nip }}"
-                                                    data-name="{{ $emp->name }}">{{ $emp->name }}</option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-                                    <input type="text" class="form-control mb-1 employee-name"
-                                        name="pejabats[0][nama_pejabat]" placeholder="Nama Pegawai" required>
-                                    <input type="text" class="form-control employee-nip" name="pejabats[0][nip]"
-                                        placeholder="NIP">
+                                    <select class="form-select pegawai-select" name="peserta[0][pegawai_id]" required>
+                                        <option value="">-- Pilih Pegawai --</option>
+                                        @foreach($pegawais as $peg)
+                                            <option value="{{ $peg->id }}" data-nip="{{ $peg->nip }}">{{ $peg->nama_lengkap }} {{ $peg->nip ? '('.$peg->nip.')' : '' }}</option>
+                                        @endforeach
+                                    </select>
                                 </td>
                                 <td>
-                                    <input type="text" class="form-control mb-1" name="pejabats[0][no_spt]"
+                                    <input type="text" class="form-control" name="peserta[0][no_spt]"
                                         placeholder="No SPT" required>
-                                    <input type="text" class="form-control" name="pejabats[0][no_sppd]"
-                                        placeholder="No SPPD" required>
                                 </td>
                                 <td>
-                                    <textarea class="form-control" name="pejabats[0][tujuan]" rows="2"
+                                    <textarea class="form-control" name="peserta[0][tujuan]" rows="2"
                                         placeholder="Tujuan..." required></textarea>
                                 </td>
                                 <td>
-                                    <input type="date" class="form-control mb-1" name="pejabats[0][tanggal_berangkat]"
+                                    <input type="date" class="form-control mb-1" name="peserta[0][tgl_berangkat]"
                                         required>
                                     <div class="input-group">
-                                        <input type="number" class="form-control" name="pejabats[0][lama_perjalanan_dinas]"
+                                        <input type="number" class="form-control" name="peserta[0][lama_hari]"
                                             placeholder="Lama" required min="1">
                                         <span class="input-group-text">Hari</span>
                                     </div>
@@ -92,19 +94,19 @@
                                 <td>
                                     <div class="d-flex flex-wrap gap-1">
                                         <input type="text" class="form-control form-control-sm biaya-input"
-                                            name="pejabats[0][tiket]" placeholder="Tiket" style="width: 120px;"
+                                            name="peserta[0][biaya_tiket]" placeholder="Tiket" style="width: 120px;"
                                             onkeyup="calculateJumlah(this)">
                                         <input type="text" class="form-control form-control-sm biaya-input"
-                                            name="pejabats[0][transport]" placeholder="Transport" style="width: 120px;"
+                                            name="peserta[0][biaya_transport]" placeholder="Transport" style="width: 120px;"
                                             onkeyup="calculateJumlah(this)">
                                         <input type="text" class="form-control form-control-sm biaya-input"
-                                            name="pejabats[0][penginapan]" placeholder="Penginapan" style="width: 120px;"
+                                            name="peserta[0][biaya_penginapan]" placeholder="Penginapan" style="width: 120px;"
                                             onkeyup="calculateJumlah(this)">
                                         <input type="text" class="form-control form-control-sm biaya-input"
-                                            name="pejabats[0][uang_harian]" placeholder="Uang Harian" style="width: 120px;"
+                                            name="peserta[0][uang_harian]" placeholder="Uang Harian" style="width: 120px;"
                                             onkeyup="calculateJumlah(this)">
                                         <input type="text" class="form-control form-control-sm biaya-input"
-                                            name="pejabats[0][uang_representasi]" placeholder="Representasi"
+                                            name="peserta[0][uang_representasi]" placeholder="Representasi"
                                             style="width: 120px;" onkeyup="calculateJumlah(this)">
                                     </div>
                                 </td>
@@ -112,7 +114,7 @@
                                     <input type="text" class="form-control text-end row-jumlah" readonly value="0">
                                 </td>
                                 <td>
-                                    <input type="text" class="form-control" name="pejabats[0][rekening]"
+                                    <input type="text" class="form-control" name="peserta[0][rekening]"
                                         placeholder="Ex: 0001 (BRI)">
                                 </td>
                                 <td class="text-center">
@@ -136,7 +138,7 @@
 
                 <div class="mt-3">
                     <button type="button" class="btn btn-secondary" id="btnAddRow"><i class="bi bi-plus-circle"></i> Tambah
-                        Pejabat</button>
+                        Pegawai</button>
                 </div>
 
                 <div class="mt-5 text-end">
@@ -159,7 +161,6 @@
 
         // Auto calculate per row and grand total
         window.calculateJumlah = function (element) {
-            // Format the input value while typing
             let val = $(element).val();
             $(element).val(formatNumber(val));
 
@@ -184,30 +185,14 @@
 
         $(document).ready(function () {
 
-            // Auto fill Name and NIP when Employee selected
-            $(document).on('change', '.employee-select', function () {
-                let tr = $(this).closest('tr');
-                let selected = $(this).find('option:selected');
-                if (selected.val() != '') {
-                    tr.find('.employee-name').val(selected.data('name'));
-                    tr.find('.employee-nip').val(selected.data('nip'));
-                } else {
-                    tr.find('.employee-name').val('');
-                    tr.find('.employee-nip').val('');
-                }
-            });
-
             // Add Row
             $('#btnAddRow').click(function () {
-                // Clone first row
                 let newRow = $('#repeaterTable tbody tr:first').clone();
 
-                // Clear values in clone
                 newRow.find('input, textarea').val('');
                 newRow.find('.row-jumlah').val('0');
-                newRow.find('.employee-select').prop('selectedIndex', 0);
+                newRow.find('.pegawai-select').prop('selectedIndex', 0);
 
-                // Re-index names
                 newRow.find('input, select, textarea').each(function () {
                     var name = $(this).attr('name');
                     if (name) {
@@ -216,15 +201,11 @@
                     }
                 });
 
-                // Enable delete button on new row
                 newRow.find('.btn-delete-row').prop('disabled', false);
-
-                // Append to table
                 $('#repeaterTable tbody').append(newRow);
-
-                // Update row numbers
                 updateRowNumbers();
-
+                // Enable all delete buttons since we have > 1 row
+                $('.btn-delete-row').prop('disabled', false);
                 rowIdx++;
             });
 
@@ -234,6 +215,9 @@
                     $(this).closest('tr').remove();
                     updateRowNumbers();
                     calculateGrandTotal();
+                    if ($('#repeaterTable tbody tr').length === 1) {
+                        $('.btn-delete-row').prop('disabled', true);
+                    }
                 }
             });
 

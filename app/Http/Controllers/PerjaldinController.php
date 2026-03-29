@@ -4,319 +4,326 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use App\Models\Pejabat;
-use App\Models\Perjaldin;
-use App\Models\Employee;
+use App\Models\Tagihan;
+use App\Models\DetailPerjaldin;
+use App\Models\MasterPegawai;
+use App\Models\MasterDipa;
+use App\Models\LogStatusDokumen;
 
 class PerjaldinController extends Controller
 {
+    /**
+     * Daftar semua Tagihan Perjaldin (menggantikan Perjaldin lawas).
+     */
     public function index()
     {
-        $perjaldins = Perjaldin::with('pejabats')->latest()->get();
-        return view('perjaldins.index', compact('perjaldins'));
+        $tagihans = Tagihan::where('tipe_tagihan', 'PERJALDIN')
+            ->with(['detailPerjaldin.pegawai', 'logs' => fn($q) => $q->latest()->limit(1)])
+            ->latest()
+            ->get();
+
+        return view('perjaldins.index', compact('tagihans'));
     }
 
+    /**
+     * Form tambah Perjaldin (menggunakan MasterPegawai).
+     */
     public function create()
     {
-        $employees = Employee::all();
-        return view('perjaldins.create', compact('employees'));
+        $pegawais = MasterPegawai::where('status_aktif', true)->orderBy('nama_lengkap')->get();
+        $dipas = MasterDipa::orderByDesc('tahun_anggaran')->get();
+        return view('perjaldins.create', compact('pegawais', 'dipas'));
     }
 
+    /**
+     * Simpan data Perjaldin sebagai Tagihan + DetailPerjaldin.
+     */
     public function store(Request $request)
     {
-        // Strip out commas from currency inputs before validating
+        // Strip commas from currency inputs
         $input = $request->all();
-        if (isset($input['pejabats']) && is_array($input['pejabats'])) {
-            foreach ($input['pejabats'] as &$pejabat) {
-                if (isset($pejabat['tiket'])) $pejabat['tiket'] = str_replace(',', '', $pejabat['tiket']);
-                if (isset($pejabat['transport'])) $pejabat['transport'] = str_replace(',', '', $pejabat['transport']);
-                if (isset($pejabat['uang_harian'])) $pejabat['uang_harian'] = str_replace(',', '', $pejabat['uang_harian']);
-                if (isset($pejabat['penginapan'])) $pejabat['penginapan'] = str_replace(',', '', $pejabat['penginapan']);
-                if (isset($pejabat['uang_representasi'])) $pejabat['uang_representasi'] = str_replace(',', '', $pejabat['uang_representasi']);
+        if (isset($input['peserta']) && is_array($input['peserta'])) {
+            foreach ($input['peserta'] as &$p) {
+                foreach (['biaya_tiket', 'biaya_transport', 'biaya_penginapan', 'uang_harian', 'uang_representasi'] as $field) {
+                    if (isset($p[$field])) $p[$field] = str_replace(',', '', $p[$field]);
+                }
             }
             $request->merge($input);
         }
 
         $request->validate([
-            'uraian' => 'required|string|max:255',
-            'no_bast' => 'nullable|string|max:255',
-            'pejabats' => 'required|array|min:1',
-            'pejabats.*.employee_id' => 'nullable|exists:employees,id',
-            'pejabats.*.nama_pejabat' => 'required|string|max:255',
-            'pejabats.*.nip' => 'nullable|string|max:50',
-            'pejabats.*.no_spt' => 'required|string|max:255',
-            'pejabats.*.no_sppd' => 'required|string|max:255',
-            'pejabats.*.tujuan' => 'required|string|max:255',
-            'pejabats.*.tanggal_berangkat' => 'required|date',
-            'pejabats.*.lama_perjalanan_dinas' => 'required|integer|min:1',
-            'pejabats.*.tiket' => 'nullable|numeric|min:0',
-            'pejabats.*.transport' => 'nullable|numeric|min:0',
-            'pejabats.*.uang_harian' => 'nullable|numeric|min:0',
-            'pejabats.*.penginapan' => 'nullable|numeric|min:0',
-            'pejabats.*.uang_representasi' => 'nullable|numeric|min:0',
-            'pejabats.*.rekening' => 'nullable|string|max:255',
+            'deskripsi' => 'required|string|max:255',
+            'no_bast' => 'nullable|string|max:100',
+            'master_dipa_id' => 'required|exists:master_dipas,id',
+            'peserta' => 'required|array|min:1',
+            'peserta.*.pegawai_id' => 'required|exists:master_pegawai,id',
+            'peserta.*.no_spt' => 'required|string|max:100',
+            'peserta.*.tujuan' => 'required|string|max:100',
+            'peserta.*.rekening' => 'nullable|string|max:100',
+            'peserta.*.tgl_berangkat' => 'required|date',
+            'peserta.*.lama_hari' => 'required|integer|min:1',
+            'peserta.*.biaya_tiket' => 'nullable|numeric|min:0',
+            'peserta.*.biaya_transport' => 'nullable|numeric|min:0',
+            'peserta.*.biaya_penginapan' => 'nullable|numeric|min:0',
+            'peserta.*.uang_harian' => 'nullable|numeric|min:0',
+            'peserta.*.uang_representasi' => 'nullable|numeric|min:0',
         ]);
 
-        DB::transaction(function () use ($request) {
-            $perjaldin = Perjaldin::create([
-                'uraian' => $request->uraian,
-                'no_bast' => $request->no_bast,
+        try {
+            DB::beginTransaction();
+
+            // Hitung total bruto dari semua peserta
+            $totalBruto = 0;
+            foreach ($request->peserta as $p) {
+                $totalBruto += ($p['biaya_tiket'] ?? 0) + ($p['biaya_transport'] ?? 0)
+                             + ($p['biaya_penginapan'] ?? 0) + ($p['uang_harian'] ?? 0)
+                             + ($p['uang_representasi'] ?? 0);
+            }
+
+            // Generate nomor tagihan
+            $tahun = date('Y');
+            $urut = Tagihan::whereYear('created_at', $tahun)->where('tipe_tagihan', 'PERJALDIN')->count() + 1;
+            $nomorTagihan = 'PJD-' . $tahun . '-' . str_pad($urut, 4, '0', STR_PAD_LEFT);
+
+            $tagihan = Tagihan::create([
+                'nomor_tagihan' => $nomorTagihan,
+                'tipe_tagihan' => 'PERJALDIN',
+                'master_dipa_id' => $request->master_dipa_id,
+                'deskripsi' => $request->deskripsi . ($request->no_bast ? ' | BAST: ' . $request->no_bast : ''),
+                'total_bruto' => $totalBruto,
+                'total_potongan' => 0,
+                'total_netto' => $totalBruto,
+                'status' => 'DRAFT',
+                'created_by' => auth()->id(),
             ]);
 
-            foreach ($request->pejabats as $pejabatData) {
-                // Remove commas/formatting from monetary inputs if any
-                $tiket = isset($pejabatData['tiket']) ? str_replace(',', '', $pejabatData['tiket']) : 0;
-                $transport = isset($pejabatData['transport']) ? str_replace(',', '', $pejabatData['transport']) : 0;
-                $uang_harian = isset($pejabatData['uang_harian']) ? str_replace(',', '', $pejabatData['uang_harian']) : 0;
-                $penginapan = isset($pejabatData['penginapan']) ? str_replace(',', '', $pejabatData['penginapan']) : 0;
-                $uang_representasi = isset($pejabatData['uang_representasi']) ? str_replace(',', '', $pejabatData['uang_representasi']) : 0;
-
-                Pejabat::create([
-                    'perjaldin_id' => $perjaldin->perjaldin_id,
-                    'employee_id' => $pejabatData['employee_id'] ?? null,
-                    'nama_pejabat' => $pejabatData['nama_pejabat'],
-                    'nip' => $pejabatData['nip'] ?? null,
-                    'no_spt' => $pejabatData['no_spt'],
-                    'no_sppd' => $pejabatData['no_sppd'],
-                    'tujuan' => $pejabatData['tujuan'],
-                    'tanggal_berangkat' => $pejabatData['tanggal_berangkat'],
-                    'lama_perjalanan_dinas' => $pejabatData['lama_perjalanan_dinas'],
-                    'tiket' => $tiket ?: 0,
-                    'transport' => $transport ?: 0,
-                    'uang_harian' => $uang_harian ?: 0,
-                    'penginapan' => $penginapan ?: 0,
-                    'uang_representasi' => $uang_representasi ?: 0,
-                    'rekening' => $pejabatData['rekening'] ?? null,
-                    'status' => 'Draft',
+            // Insert detail per peserta
+            foreach ($request->peserta as $pesertaData) {
+                DetailPerjaldin::create([
+                    'tagihan_id' => $tagihan->id,
+                    'pegawai_id' => $pesertaData['pegawai_id'],
+                    'no_spt' => $pesertaData['no_spt'],
+                    'tujuan' => $pesertaData['tujuan'],
+                    'rekening' => $pesertaData['rekening'] ?? null,
+                    'tgl_berangkat' => $pesertaData['tgl_berangkat'],
+                    'lama_hari' => $pesertaData['lama_hari'],
+                    'biaya_tiket' => $pesertaData['biaya_tiket'] ?? 0,
+                    'biaya_transport' => $pesertaData['biaya_transport'] ?? 0,
+                    'biaya_penginapan' => $pesertaData['biaya_penginapan'] ?? 0,
+                    'uang_harian' => $pesertaData['uang_harian'] ?? 0,
+                    'uang_representasi' => $pesertaData['uang_representasi'] ?? 0,
                 ]);
             }
-        });
 
-        return redirect()->route('perjaldins.index')->with('success', 'Data Perjaldin berhasil ditambahkan.');
+            // Log status awal
+            LogStatusDokumen::create([
+                'dokumen_type' => Tagihan::class,
+                'dokumen_id' => $tagihan->id,
+                'status_lama' => '-',
+                'status_baru' => 'DRAFT',
+                'diubah_oleh' => auth()->id(),
+                'catatan' => 'Tagihan Perjaldin dibuat oleh Operator.',
+            ]);
+
+            DB::commit();
+            return redirect()->route('perjaldins.index')->with('success', 'Data Perjaldin berhasil ditambahkan.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withInput()->withErrors(['error' => 'Gagal menyimpan: ' . $e->getMessage()]);
+        }
     }
 
+    /**
+     * Ajukan beberapa Tagihan Perjaldin sekaligus ke PPK.
+     */
     public function bulkSubmit(Request $request)
     {
         $request->validate([
-            'perjaldin_ids'   => 'required|array',
-            'perjaldin_ids.*' => 'exists:perjaldins,perjaldin_id',
+            'tagihan_ids' => 'required|array',
+            'tagihan_ids.*' => 'exists:tagihan,id',
         ]);
 
-        $updatedCount = Perjaldin::whereIn('perjaldin_id', $request->perjaldin_ids)
-                  ->whereIn('status', ['Draft', 'Revisi'])
-                  ->update([
-                      'status'              => 'Proses Verifikasi',
-                      'is_ppk_approved'     => false,
-                      'is_kasubag_approved' => false,
-                      'catatan_revisi'      => null,
-                      'revisi_oleh'         => null,
-                  ]);
+        $updatedCount = Tagihan::whereIn('id', $request->tagihan_ids)
+            ->where('tipe_tagihan', 'PERJALDIN')
+            ->whereIn('status', ['DRAFT', 'REVISI_PPK', 'DITOLAK_PPK'])
+            ->update(['status' => 'PENDING_PPK']);
 
         if ($updatedCount > 0) {
-            foreach($request->perjaldin_ids as $pId) {
-                \App\Models\PerjaldinLog::create([
-                    'perjaldin_id' => $pId,
-                    'user_name' => auth()->user()->name,
-                    'action' => 'Mengajukan',
-                    'catatan' => 'Operator mengajukan dokumen untuk verifikasi.'
+            foreach ($request->tagihan_ids as $id) {
+                LogStatusDokumen::create([
+                    'dokumen_type' => Tagihan::class,
+                    'dokumen_id' => $id,
+                    'status_lama' => 'DRAFT',
+                    'status_baru' => 'PENDING_PPK',
+                    'diubah_oleh' => auth()->id(),
+                    'catatan' => 'Operator mengajukan dokumen untuk verifikasi PPK.',
                 ]);
             }
 
-            $verifikators = \App\Models\User::role(['PPK', 'Kepala Subbagian Keuangan dan Tata Usaha'])->get();
-            \Illuminate\Support\Facades\Notification::send($verifikators, new \App\Notifications\WorkflowNotification([
-                'title' => 'Pengajuan Perjaldin Baru',
-                'message' => "Ada {$updatedCount} Pengajuan Perjaldin baru menunggu verifikasi Anda.",
-                'url' => route('verifikasi-ppk.index'),
-                'icon' => 'assignment',
-                'color' => 'warning'
-            ]));
+            // Kirim notifikasi ke PPK (jika class notifikasi tersedia)
+            try {
+                $verifikators = \App\Models\User::role('PPK')->get();
+                \Illuminate\Support\Facades\Notification::send($verifikators, new \App\Notifications\WorkflowNotification([
+                    'title' => 'Pengajuan Perjaldin Baru',
+                    'message' => "Ada {$updatedCount} Pengajuan Perjaldin baru menunggu verifikasi Anda.",
+                    'url' => route('verifikasi-ppk.index'),
+                    'icon' => 'assignment',
+                    'color' => 'warning'
+                ]));
+            } catch (\Exception $e) {
+                // Notifikasi gagal tidak menghentikan proses
+            }
         }
 
-        return redirect()->route('perjaldins.index')->with('success', 'Perjaldin berhasil diajukan dan sedang menunggu verifikasi PPK & Kasubag.');
+        return redirect()->route('perjaldins.index')
+            ->with('success', "{$updatedCount} Perjaldin berhasil diajukan untuk verifikasi PPK.");
     }
 
-    public function show(Pejabat $pejabat)
+    /**
+     * Detail satu Tagihan Perjaldin.
+     */
+    public function show($id)
     {
-        $pejabat->load(['perjaldin', 'employee']);
-        return view('perjaldins.show', compact('pejabat'));
+        $tagihan = Tagihan::where('tipe_tagihan', 'PERJALDIN')
+            ->with(['detailPerjaldin.pegawai', 'logs' => fn($q) => $q->latest()])
+            ->findOrFail($id);
+        return view('perjaldins.show', compact('tagihan'));
     }
 
-    public function edit(Pejabat $pejabat)
+    /**
+     * Form edit Tagihan Perjaldin.
+     */
+    public function editPerjaldin($id)
     {
-        $pejabat->load('perjaldin');
-        $employees = Employee::all();
-        return view('perjaldins.edit', compact('pejabat', 'employees'));
+        $tagihan = Tagihan::where('tipe_tagihan', 'PERJALDIN')
+            ->with('detailPerjaldin.pegawai')
+            ->findOrFail($id);
+
+        // Hanya boleh di-edit saat DRAFT atau REVISI
+        if (!in_array($tagihan->status, ['DRAFT', 'REVISI_PPK', 'DITOLAK_PPK'])) {
+            return redirect()->route('perjaldins.index')
+                ->withErrors(['error' => 'Tagihan tidak bisa diedit karena statusnya sudah: ' . $tagihan->status]);
+        }
+
+        $pegawais = MasterPegawai::where('status_aktif', true)->orderBy('nama_lengkap')->get();
+        $dipas = MasterDipa::orderByDesc('tahun_anggaran')->get();
+        return view('perjaldins.edit-perjaldin', compact('tagihan', 'pegawais', 'dipas'));
     }
 
-    public function update(Request $request, Pejabat $pejabat)
+    /**
+     * Update Tagihan Perjaldin beserta detail pesertanya.
+     */
+    public function updatePerjaldin(Request $request, $id)
     {
+        $tagihan = Tagihan::where('tipe_tagihan', 'PERJALDIN')->findOrFail($id);
+
+        if (!in_array($tagihan->status, ['DRAFT', 'REVISI_PPK', 'DITOLAK_PPK'])) {
+            return redirect()->route('perjaldins.index')
+                ->withErrors(['error' => 'Tagihan tidak bisa diedit karena statusnya sudah: ' . $tagihan->status]);
+        }
+
         // Strip commas
         $input = $request->all();
-        if (isset($input['tiket'])) $input['tiket'] = str_replace(',', '', $input['tiket']);
-        if (isset($input['transport'])) $input['transport'] = str_replace(',', '', $input['transport']);
-        if (isset($input['uang_harian'])) $input['uang_harian'] = str_replace(',', '', $input['uang_harian']);
-        if (isset($input['penginapan'])) $input['penginapan'] = str_replace(',', '', $input['penginapan']);
-        if (isset($input['uang_representasi'])) $input['uang_representasi'] = str_replace(',', '', $input['uang_representasi']);
-        $request->merge($input);
-
-        $request->validate([
-            'uraian' => 'required|string|max:255',
-            'no_bast' => 'nullable|string|max:255',
-            'employee_id' => 'nullable|exists:employees,id',
-            'nama_pejabat' => 'required|string|max:255',
-            'nip' => 'nullable|string|max:50',
-            'no_spt' => 'required|string|max:255',
-            'no_sppd' => 'required|string|max:255',
-            'tujuan' => 'required|string|max:255',
-            'tanggal_berangkat' => 'required|date',
-            'lama_perjalanan_dinas' => 'required|integer|min:1',
-            'tiket' => 'nullable|numeric|min:0',
-            'transport' => 'nullable|numeric|min:0',
-            'uang_harian' => 'nullable|numeric|min:0',
-            'penginapan' => 'nullable|numeric|min:0',
-            'uang_representasi' => 'nullable|numeric|min:0',
-            'rekening' => 'nullable|string|max:255',
-        ]);
-
-        DB::transaction(function () use ($request, $pejabat) {
-            // Update parent Perjaldin details if changed
-            $pejabat->perjaldin->update([
-                'uraian' => $request->uraian,
-                'no_bast' => $request->no_bast,
-            ]);
-
-            // Update specific Pejabat details
-            $pejabat->update([
-                'employee_id' => $request->employee_id,
-                'nama_pejabat' => $request->nama_pejabat,
-                'nip' => $request->nip,
-                'no_spt' => $request->no_spt,
-                'no_sppd' => $request->no_sppd,
-                'tujuan' => $request->tujuan,
-                'tanggal_berangkat' => $request->tanggal_berangkat,
-                'lama_perjalanan_dinas' => $request->lama_perjalanan_dinas,
-                'tiket' => $request->tiket ?? 0,
-                'transport' => $request->transport ?? 0,
-                'uang_harian' => $request->uang_harian ?? 0,
-                'penginapan' => $request->penginapan ?? 0,
-                'uang_representasi' => $request->uang_representasi ?? 0,
-                'rekening' => $request->rekening,
-            ]);
-        });
-
-        return redirect()->route('perjaldins.index')->with('success', 'Data Pejabat / Perjaldin berhasil diperbarui.');
-    }
-
-    public function editPerjaldin(Perjaldin $perjaldin)
-    {
-        $perjaldin->load('pejabats.employee');
-        $employees = Employee::all();
-        return view('perjaldins.edit-perjaldin', compact('perjaldin', 'employees'));
-    }
-
-    public function updatePerjaldin(Request $request, Perjaldin $perjaldin)
-    {
-        $input = $request->all();
-        if (isset($input['pejabats']) && is_array($input['pejabats'])) {
-            foreach ($input['pejabats'] as &$pejabat) {
-                if (isset($pejabat['tiket'])) $pejabat['tiket'] = str_replace(',', '', $pejabat['tiket']);
-                if (isset($pejabat['transport'])) $pejabat['transport'] = str_replace(',', '', $pejabat['transport']);
-                if (isset($pejabat['uang_harian'])) $pejabat['uang_harian'] = str_replace(',', '', $pejabat['uang_harian']);
-                if (isset($pejabat['penginapan'])) $pejabat['penginapan'] = str_replace(',', '', $pejabat['penginapan']);
-                if (isset($pejabat['uang_representasi'])) $pejabat['uang_representasi'] = str_replace(',', '', $pejabat['uang_representasi']);
+        if (isset($input['peserta']) && is_array($input['peserta'])) {
+            foreach ($input['peserta'] as &$p) {
+                foreach (['biaya_tiket', 'biaya_transport', 'biaya_penginapan', 'uang_harian', 'uang_representasi'] as $field) {
+                    if (isset($p[$field])) $p[$field] = str_replace(',', '', $p[$field]);
+                }
             }
             $request->merge($input);
         }
 
         $request->validate([
-            'uraian' => 'required|string|max:255',
-            'no_bast' => 'nullable|string|max:255',
-            'pejabats' => 'required|array|min:1',
-            'pejabats.*.pejabat_id' => 'nullable|exists:pejabats,pejabat_id',
-            'pejabats.*.employee_id' => 'nullable|exists:employees,id',
-            'pejabats.*.nama_pejabat' => 'required|string|max:255',
-            'pejabats.*.nip' => 'nullable|string|max:50',
-            'pejabats.*.no_spt' => 'required|string|max:255',
-            'pejabats.*.no_sppd' => 'required|string|max:255',
-            'pejabats.*.tujuan' => 'required|string|max:255',
-            'pejabats.*.tanggal_berangkat' => 'required|date',
-            'pejabats.*.lama_perjalanan_dinas' => 'required|integer|min:1',
-            'pejabats.*.tiket' => 'nullable|numeric|min:0',
-            'pejabats.*.transport' => 'nullable|numeric|min:0',
-            'pejabats.*.uang_harian' => 'nullable|numeric|min:0',
-            'pejabats.*.penginapan' => 'nullable|numeric|min:0',
-            'pejabats.*.uang_representasi' => 'nullable|numeric|min:0',
-            'pejabats.*.rekening' => 'nullable|string|max:255',
+            'deskripsi' => 'required|string|max:255',
+            'no_bast' => 'nullable|string|max:100',
+            'master_dipa_id' => 'required|exists:master_dipas,id',
+            'peserta' => 'required|array|min:1',
+            'peserta.*.detail_id' => 'nullable|exists:detail_perjaldin,id',
+            'peserta.*.pegawai_id' => 'required|exists:master_pegawai,id',
+            'peserta.*.no_spt' => 'required|string|max:100',
+            'peserta.*.tujuan' => 'required|string|max:100',
+            'peserta.*.rekening' => 'nullable|string|max:100',
+            'peserta.*.tgl_berangkat' => 'required|date',
+            'peserta.*.lama_hari' => 'required|integer|min:1',
+            'peserta.*.biaya_tiket' => 'nullable|numeric|min:0',
+            'peserta.*.biaya_transport' => 'nullable|numeric|min:0',
+            'peserta.*.biaya_penginapan' => 'nullable|numeric|min:0',
+            'peserta.*.uang_harian' => 'nullable|numeric|min:0',
+            'peserta.*.uang_representasi' => 'nullable|numeric|min:0',
         ]);
 
-        DB::transaction(function () use ($request, $perjaldin) {
-            $perjaldin->update([
-                'uraian' => $request->uraian,
-                'no_bast' => $request->no_bast,
-                // Reset approval workflow jika diedit saat revisi
-                'status' => 'Draft',
-                'is_ppk_approved'     => false,
-                'is_kasubag_approved' => false,
+        try {
+            DB::beginTransaction();
+
+            // Hitung total bruto
+            $totalBruto = 0;
+            foreach ($request->peserta as $p) {
+                $totalBruto += ($p['biaya_tiket'] ?? 0) + ($p['biaya_transport'] ?? 0)
+                             + ($p['biaya_penginapan'] ?? 0) + ($p['uang_harian'] ?? 0)
+                             + ($p['uang_representasi'] ?? 0);
+            }
+
+            $tagihan->update([
+                'master_dipa_id' => $request->master_dipa_id,
+                'deskripsi' => $request->deskripsi . ($request->no_bast ? ' | BAST: ' . $request->no_bast : ''),
+                'total_bruto' => $totalBruto,
+                'total_netto' => $totalBruto - $tagihan->total_potongan,
+                'status' => 'DRAFT', // Reset ke draft saat diedit
             ]);
 
-            $existingIds = $perjaldin->pejabats->pluck('pejabat_id')->toArray();
-            $submittedIds = collect($request->pejabats)->pluck('pejabat_id')->filter()->toArray();
+            // Hapus detail lama lalu re-insert
+            DetailPerjaldin::where('tagihan_id', $tagihan->id)->delete();
 
-            // Delete removed pejabats
-            $toDelete = array_diff($existingIds, $submittedIds);
-            if (!empty($toDelete)) {
-                Pejabat::whereIn('pejabat_id', $toDelete)->delete();
+            foreach ($request->peserta as $pesertaData) {
+                DetailPerjaldin::create([
+                    'tagihan_id' => $tagihan->id,
+                    'pegawai_id' => $pesertaData['pegawai_id'],
+                    'no_spt' => $pesertaData['no_spt'],
+                    'tujuan' => $pesertaData['tujuan'],
+                    'rekening' => $pesertaData['rekening'] ?? null,
+                    'tgl_berangkat' => $pesertaData['tgl_berangkat'],
+                    'lama_hari' => $pesertaData['lama_hari'],
+                    'biaya_tiket' => $pesertaData['biaya_tiket'] ?? 0,
+                    'biaya_transport' => $pesertaData['biaya_transport'] ?? 0,
+                    'biaya_penginapan' => $pesertaData['biaya_penginapan'] ?? 0,
+                    'uang_harian' => $pesertaData['uang_harian'] ?? 0,
+                    'uang_representasi' => $pesertaData['uang_representasi'] ?? 0,
+                ]);
             }
 
-            foreach ($request->pejabats as $pejabatData) {
-                $tiket = isset($pejabatData['tiket']) ? str_replace(',', '', $pejabatData['tiket']) : 0;
-                $transport = isset($pejabatData['transport']) ? str_replace(',', '', $pejabatData['transport']) : 0;
-                $uang_harian = isset($pejabatData['uang_harian']) ? str_replace(',', '', $pejabatData['uang_harian']) : 0;
-                $penginapan = isset($pejabatData['penginapan']) ? str_replace(',', '', $pejabatData['penginapan']) : 0;
-                $uang_representasi = isset($pejabatData['uang_representasi']) ? str_replace(',', '', $pejabatData['uang_representasi']) : 0;
+            LogStatusDokumen::create([
+                'dokumen_type' => Tagihan::class,
+                'dokumen_id' => $tagihan->id,
+                'status_lama' => $tagihan->getOriginal('status'),
+                'status_baru' => 'DRAFT',
+                'diubah_oleh' => auth()->id(),
+                'catatan' => 'Data perjaldin diperbarui oleh Operator.',
+            ]);
 
-                $data = [
-                    'employee_id' => $pejabatData['employee_id'] ?? null,
-                    'nama_pejabat' => $pejabatData['nama_pejabat'],
-                    'nip' => $pejabatData['nip'] ?? null,
-                    'no_spt' => $pejabatData['no_spt'],
-                    'no_sppd' => $pejabatData['no_sppd'],
-                    'tujuan' => $pejabatData['tujuan'],
-                    'tanggal_berangkat' => $pejabatData['tanggal_berangkat'],
-                    'lama_perjalanan_dinas' => $pejabatData['lama_perjalanan_dinas'],
-                    'tiket' => $tiket ?: 0,
-                    'transport' => $transport ?: 0,
-                    'uang_harian' => $uang_harian ?: 0,
-                    'penginapan' => $penginapan ?: 0,
-                    'uang_representasi' => $uang_representasi ?: 0,
-                    'rekening' => $pejabatData['rekening'] ?? null,
-                    'status' => 'Draft',
-                ];
-
-                if (!empty($pejabatData['pejabat_id'])) {
-                    // Update existing
-                    Pejabat::where('pejabat_id', $pejabatData['pejabat_id'])->update($data);
-                } else {
-                    // Create new
-                    $data['perjaldin_id'] = $perjaldin->perjaldin_id;
-                    Pejabat::create($data);
-                }
-            }
-        });
-
-        return redirect()->route('perjaldins.index')->with('success', 'Data Perjaldin berhasil diperbarui.');
+            DB::commit();
+            return redirect()->route('perjaldins.index')->with('success', 'Data Perjaldin berhasil diperbarui.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withInput()->withErrors(['error' => 'Gagal memperbarui: ' . $e->getMessage()]);
+        }
     }
 
-    public function destroy(Pejabat $pejabat)
+    /**
+     * Hapus Tagihan Perjaldin beserta seluruh detail.
+     */
+    public function destroyPerjaldin($id)
     {
-        $pejabat->delete();
-        return redirect()->route('perjaldins.index')->with('success', 'Data Pejabat berhasil dihapus dari daftar keberangkatan.');
-    }
+        $tagihan = Tagihan::where('tipe_tagihan', 'PERJALDIN')->findOrFail($id);
 
-    public function destroyPerjaldin(Perjaldin $perjaldin)
-    {
-        $perjaldin->pejabats()->delete();
-        $perjaldin->delete();
-        return redirect()->route('perjaldins.index')->with('success', 'Perjaldin beserta seluruh data pejabatnya berhasil dihapus.');
+        if (!in_array($tagihan->status, ['DRAFT', 'REVISI_PPK', 'DITOLAK_PPK'])) {
+            return redirect()->route('perjaldins.index')
+                ->withErrors(['error' => 'Tidak dapat menghapus tagihan dengan status: ' . $tagihan->status]);
+        }
+
+        DetailPerjaldin::where('tagihan_id', $tagihan->id)->delete();
+        $tagihan->logs()->delete();
+        $tagihan->delete();
+
+        return redirect()->route('perjaldins.index')->with('success', 'Perjaldin beserta seluruh datanya berhasil dihapus.');
     }
 }

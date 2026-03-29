@@ -2,353 +2,248 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Budget;
-use App\Models\Transaction;
-use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use App\Models\Tagihan;
+use App\Models\DetailHonorarium;
+use App\Models\MasterPersonelEksternal;
+use App\Models\MasterDipa;
+use App\Models\LogStatusDokumen;
 
 class HonorariumController extends Controller
 {
     public function index()
     {
-        $honorariums = Transaction::with(['budget'])
-            ->where('type', 'HONORARIUM')
+        $tagihans = Tagihan::where('tipe_tagihan', 'HONORARIUM')
+            ->with(['detailHonorarium.personel', 'logs' => fn($q) => $q->latest()->limit(1)])
             ->latest()
             ->get();
 
-        return view('honorarium.index', compact('honorariums'));
+        return view('honorarium.index', compact('tagihans'));
     }
 
     public function create()
     {
-        $budgets = Budget::orderBy('coa')->get();
-        $ppks = User::role('PPK')->get();
+        $personels = MasterPersonelEksternal::orderBy('nama_lengkap')->get();
+        $dipas = MasterDipa::orderByDesc('tahun_anggaran')->get();
+        $nextNumber = $this->generateNextNumber();
 
-        $nextNumber = $this->generateNextHonorariumNumber();
-
-        return view('honorarium.create', compact('budgets', 'ppks', 'nextNumber'));
+        return view('honorarium.create', compact('personels', 'dipas', 'nextNumber'));
     }
 
     public function store(Request $request)
-        {
-            $validated = $request->validate([
-                'transaction_number'   => 'required|string|max:255|unique:transactions,transaction_number',
-                'date'                 => 'required|date',
-                'spp_number'           => 'required|string|max:255|unique:transactions,spp_number',
-                'spp_date'             => 'required|date',
-                'bast_number'          => 'required|string|max:255',
-                'bast_date'            => 'required|date',
-                'activity_number'      => 'nullable|string|max:255',
-                'budget_id'            => 'required|exists:budgets,id',
-                'ppk_id'               => 'nullable|exists:users,id',
-                'description'          => 'required|string',
-                'submit_type'          => 'required|in:draft,submit_ppk',
+    {
+        // Strip commas from currency inputs
+        $input = $request->all();
+        if (isset($input['items']) && is_array($input['items'])) {
+            foreach ($input['items'] as &$item) {
+                foreach (['nilai_honor', 'pph'] as $field) {
+                    if (isset($item[$field])) $item[$field] = str_replace(',', '', $item[$field]);
+                }
+            }
+            $request->merge($input);
+        }
 
-                'items'                        => 'required|array|min:1',
-                'items.*.name'                 => 'required|string|max:255',
-                'items.*.nrp'                  => 'nullable|string|max:255',
-                'items.*.rank_corps'           => 'nullable|string|max:255',
-                'items.*.position'             => 'nullable|string|max:255',
-                'items.*.honor_amount'         => 'required|numeric|min:0',
-                'items.*.pph_amount'           => 'nullable|numeric|min:0',
-                'items.*.bank_account_number'  => 'nullable|string|max:255',
-                'items.*.bank_name'            => 'nullable|string|max:255',
-                'items.*.bank_account_name'    => 'nullable|string|max:255',
-                'items.*.phone_number'         => 'nullable|string|max:255',
+        $request->validate([
+            'deskripsi' => 'required|string|max:255',
+            'master_dipa_id' => 'required|exists:master_dipas,id',
+            'submit_type' => 'required|in:draft,submit_ppk',
+            'items' => 'required|array|min:1',
+            'items.*.personel_id' => 'required|exists:master_personel_eksternal,id',
+            'items.*.nilai_honor' => 'required|numeric|min:0',
+            'items.*.pph' => 'nullable|numeric|min:0',
+            'items.*.rekening' => 'nullable|string|max:100',
+            'items.*.jenis_bank' => 'nullable|string|max:50',
+            'items.*.nama_rekening' => 'nullable|string|max:100',
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $totalBruto = collect($request->items)->sum(fn($i) => (float)($i['nilai_honor'] ?? 0));
+            $totalPph = collect($request->items)->sum(fn($i) => (float)($i['pph'] ?? 0));
+            $totalNetto = $totalBruto - $totalPph;
+
+            $tahun = date('Y');
+            $urut = Tagihan::whereYear('created_at', $tahun)->where('tipe_tagihan', 'HONORARIUM')->count() + 1;
+            $nomorTagihan = 'HON-' . $tahun . '-' . str_pad($urut, 4, '0', STR_PAD_LEFT);
+
+            $status = $request->submit_type === 'submit_ppk' ? 'PENDING_PPK' : 'DRAFT';
+
+            $tagihan = Tagihan::create([
+                'nomor_tagihan' => $nomorTagihan,
+                'tipe_tagihan' => 'HONORARIUM',
+                'master_dipa_id' => $request->master_dipa_id,
+                'deskripsi' => $request->deskripsi,
+                'total_bruto' => $totalBruto,
+                'total_potongan' => $totalPph,
+                'total_netto' => $totalNetto,
+                'status' => $status,
+                'created_by' => auth()->id(),
             ]);
 
-            $grossAmount = collect($validated['items'])->sum(function ($item) {
-                return (float) ($item['honor_amount'] ?? 0);
-            });
-
-            $totalPph = collect($validated['items'])->sum(function ($item) {
-                return (float) ($item['pph_amount'] ?? 0);
-            });
-
-            $netAmount = $grossAmount - $totalPph;
-
-            $transaction = Transaction::create([
-                'activity_number'      => $validated['activity_number'] ?? null,
-                'transaction_number'   => $validated['transaction_number'],
-                'date'                 => $validated['date'],
-                'type'                 => 'HONORARIUM',
-                'payment_method'       => 'SP2D BLU - TRF',
-                'description'          => $validated['description'],
-                'jenis_pengajuan'      => 'Non Kontrak',
-                'jenis_dokumen_dasar'  => 'BAST',
-                'bast_number'          => $validated['bast_number'],
-                'bast_date'            => $validated['bast_date'],
-                'spp_number'           => $validated['spp_number'],
-                'spp_date'             => $validated['spp_date'],
-                'budget_id'            => $validated['budget_id'],
-                'ppk_id'               => $validated['ppk_id'] ?? null,
-                'gross_amount'         => $grossAmount,
-                'net_amount'           => $netAmount,
-                'status'               => $validated['submit_type'] === 'submit_ppk'
-                ? 'Menunggu Persetujuan PPK'
-                : 'Draft',
-            ]);
-
-            foreach ($validated['items'] as $index => $item) {
-                $honor = (float) ($item['honor_amount'] ?? 0);
-                $pph = (float) ($item['pph_amount'] ?? 0);
-
-                $transaction->honorariumItems()->create([
-                    'sequence_no'          => $index + 1,
-                    'name'                 => $item['name'],
-                    'nrp'                  => $item['nrp'] ?? null,
-                    'rank_corps'           => $item['rank_corps'] ?? null,
-                    'position'             => $item['position'] ?? null,
-                    'honor_amount'         => $honor,
-                    'pph_amount'           => $pph,
-                    'net_amount'           => $honor - $pph,
-                    'bank_account_number'  => $item['bank_account_number'] ?? null,
-                    'bank_name'            => $item['bank_name'] ?? null,
-                    'bank_account_name'    => $item['bank_account_name'] ?? null,
-                    'phone_number'         => $item['phone_number'] ?? null,
+            foreach ($request->items as $itemData) {
+                DetailHonorarium::create([
+                    'tagihan_id' => $tagihan->id,
+                    'personel_id' => $itemData['personel_id'],
+                    'nilai_honor' => $itemData['nilai_honor'] ?? 0,
+                    'pph' => $itemData['pph'] ?? 0,
+                    'rekening' => $itemData['rekening'] ?? '',
+                    'jenis_bank' => $itemData['jenis_bank'] ?? '',
+                    'nama_rekening' => $itemData['nama_rekening'] ?? '',
                 ]);
             }
 
-            return redirect()
-                ->route('honorarium.index')
-                ->with('success', 'Data honorarium berhasil disimpan.');
+            LogStatusDokumen::create([
+                'dokumen_type' => Tagihan::class,
+                'dokumen_id' => $tagihan->id,
+                'status_lama' => '-',
+                'status_baru' => $status,
+                'diubah_oleh' => auth()->id(),
+                'catatan' => $status === 'PENDING_PPK'
+                    ? 'Tagihan Honorarium langsung diajukan ke PPK.'
+                    : 'Tagihan Honorarium dibuat sebagai Draft.',
+            ]);
+
+            DB::commit();
+            return redirect()->route('honorarium.index')->with('success', 'Data honorarium berhasil disimpan.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withInput()->withErrors(['error' => 'Gagal menyimpan: ' . $e->getMessage()]);
+        }
+    }
+
+    public function show($id)
+    {
+        $tagihan = Tagihan::where('tipe_tagihan', 'HONORARIUM')
+            ->with(['detailHonorarium.personel', 'logs' => fn($q) => $q->latest()])
+            ->findOrFail($id);
+
+        return view('honorarium.show', compact('tagihan'));
+    }
+
+    public function edit($id)
+    {
+        $tagihan = Tagihan::where('tipe_tagihan', 'HONORARIUM')
+            ->with('detailHonorarium.personel')
+            ->findOrFail($id);
+
+        if (!in_array($tagihan->status, ['DRAFT', 'DITOLAK_PPK'])) {
+            return redirect()->route('honorarium.index')
+                ->with('error', 'Data dengan status ' . $tagihan->status . ' tidak bisa diedit.');
         }
 
-        public function show(Transaction $honorarium)
-{
-    abort_if($honorarium->type !== 'HONORARIUM', 404);
+        $personels = MasterPersonelEksternal::orderBy('nama_lengkap')->get();
+        $dipas = MasterDipa::orderByDesc('tahun_anggaran')->get();
 
-    $honorarium->load(['budget', 'honorariumItems']);
-
-    return view('honorarium.show', compact('honorarium'));
-}
-
-public function edit(Transaction $honorarium)
-{
-    abort_if($honorarium->type !== 'HONORARIUM', 404);
-
-    if ($this->isApproved($honorarium)) {
-        return redirect()
-            ->route('honorarium.index')
-            ->with('error', 'Data yang sudah di-approve tidak bisa diedit.');
+        return view('honorarium.edit', compact('tagihan', 'personels', 'dipas'));
     }
 
-    $budgets = Budget::orderBy('coa')->get();
-    $ppks = User::role('PPK')->get();
-    $honorarium->load('honorariumItems');
+    public function update(Request $request, $id)
+    {
+        $tagihan = Tagihan::where('tipe_tagihan', 'HONORARIUM')->findOrFail($id);
 
-    return view('honorarium.edit', compact('honorarium', 'budgets', 'ppks'));
-}
+        if (!in_array($tagihan->status, ['DRAFT', 'DITOLAK_PPK'])) {
+            return redirect()->route('honorarium.index')
+                ->with('error', 'Data dengan status ' . $tagihan->status . ' tidak bisa diedit.');
+        }
 
-public function update(Request $request, Transaction $honorarium)
-{
-    abort_if($honorarium->type !== 'HONORARIUM', 404);
+        $input = $request->all();
+        if (isset($input['items']) && is_array($input['items'])) {
+            foreach ($input['items'] as &$item) {
+                foreach (['nilai_honor', 'pph'] as $field) {
+                    if (isset($item[$field])) $item[$field] = str_replace(',', '', $item[$field]);
+                }
+            }
+            $request->merge($input);
+        }
 
-    if ($this->isApproved($honorarium)) {
-        return redirect()
-            ->route('honorarium.index')
-            ->with('error', 'Data yang sudah di-approve tidak bisa diedit.');
-    }
-
-    $validated = $request->validate([
-    'date'                 => 'required|date',
-    'spp_number'           => 'required|string|max:255|unique:transactions,spp_number,' . $honorarium->id,
-    'spp_date'             => 'required|date',
-    'bast_number'          => 'required|string|max:255',
-    'bast_date'            => 'required|date',
-    'activity_number'      => 'nullable|string|max:255',
-    'budget_id'            => 'required|exists:budgets,id',
-    'ppk_id'               => 'nullable|exists:users,id',
-    'description'          => 'required|string',
-    'submit_type'          => 'required|in:draft,submit_ppk',
-
-    'items'                        => 'required|array|min:1',
-    'items.*.name'                 => 'required|string|max:255',
-    'items.*.nrp'                  => 'nullable|string|max:255',
-    'items.*.rank_corps'           => 'nullable|string|max:255',
-    'items.*.position'             => 'nullable|string|max:255',
-    'items.*.honor_amount'         => 'required|numeric|min:0',
-    'items.*.pph_amount'           => 'nullable|numeric|min:0',
-    'items.*.bank_account_number'  => 'nullable|string|max:255',
-    'items.*.bank_name'            => 'nullable|string|max:255',
-    'items.*.bank_account_name'    => 'nullable|string|max:255',
-    'items.*.phone_number'         => 'nullable|string|max:255',
-]);
-
-    $grossAmount = collect($validated['items'])->sum(fn ($item) => (float) ($item['honor_amount'] ?? 0));
-    $totalPph = collect($validated['items'])->sum(fn ($item) => (float) ($item['pph_amount'] ?? 0));
-    $netAmount = $grossAmount - $totalPph;
-
-    $honorarium->update([
-    'activity_number'      => $validated['activity_number'] ?? null,
-    'date'                 => $validated['date'],
-    'payment_method'       => 'SP2D BLU - TRF',
-    'description'          => $validated['description'],
-    'jenis_pengajuan'      => 'Non Kontrak',
-    'jenis_dokumen_dasar'  => 'BAST',
-    'bast_number'          => $validated['bast_number'],
-    'bast_date'            => $validated['bast_date'],
-    'spp_number'           => $validated['spp_number'],
-    'spp_date'             => $validated['spp_date'],
-    'budget_id'            => $validated['budget_id'],
-    'ppk_id'               => $validated['ppk_id'] ?? null,
-    'gross_amount'         => $grossAmount,
-    'net_amount'           => $netAmount,
-    'status'               => $validated['submit_type'] === 'submit_ppk'
-        ? 'Menunggu Persetujuan PPK'
-        : 'Draft',
-]);
-
-    $honorarium->honorariumItems()->delete();
-
-    foreach ($validated['items'] as $index => $item) {
-        $honor = (float) ($item['honor_amount'] ?? 0);
-        $pph = (float) ($item['pph_amount'] ?? 0);
-
-        $honorarium->honorariumItems()->create([
-            'sequence_no'          => $index + 1,
-            'name'                 => $item['name'],
-            'nrp'                  => $item['nrp'] ?? null,
-            'rank_corps'           => $item['rank_corps'] ?? null,
-            'position'             => $item['position'] ?? null,
-            'honor_amount'         => $honor,
-            'pph_amount'           => $pph,
-            'net_amount'           => $honor - $pph,
-            'bank_account_number'  => $item['bank_account_number'] ?? null,
-            'bank_name'            => $item['bank_name'] ?? null,
-            'bank_account_name'    => $item['bank_account_name'] ?? null,
-            'phone_number'         => $item['phone_number'] ?? null,
+        $request->validate([
+            'deskripsi' => 'required|string|max:255',
+            'master_dipa_id' => 'required|exists:master_dipas,id',
+            'submit_type' => 'required|in:draft,submit_ppk',
+            'items' => 'required|array|min:1',
+            'items.*.personel_id' => 'required|exists:master_personel_eksternal,id',
+            'items.*.nilai_honor' => 'required|numeric|min:0',
+            'items.*.pph' => 'nullable|numeric|min:0',
+            'items.*.rekening' => 'nullable|string|max:100',
+            'items.*.jenis_bank' => 'nullable|string|max:50',
+            'items.*.nama_rekening' => 'nullable|string|max:100',
         ]);
+
+        try {
+            DB::beginTransaction();
+
+            $totalBruto = collect($request->items)->sum(fn($i) => (float)($i['nilai_honor'] ?? 0));
+            $totalPph = collect($request->items)->sum(fn($i) => (float)($i['pph'] ?? 0));
+            $totalNetto = $totalBruto - $totalPph;
+
+            $statusLama = $tagihan->status;
+            $statusBaru = $request->submit_type === 'submit_ppk' ? 'PENDING_PPK' : 'DRAFT';
+
+            $tagihan->update([
+                'master_dipa_id' => $request->master_dipa_id,
+                'deskripsi' => $request->deskripsi,
+                'total_bruto' => $totalBruto,
+                'total_potongan' => $totalPph,
+                'total_netto' => $totalNetto,
+                'status' => $statusBaru,
+            ]);
+
+            // Delete old, re-insert
+            DetailHonorarium::where('tagihan_id', $tagihan->id)->delete();
+
+            foreach ($request->items as $itemData) {
+                DetailHonorarium::create([
+                    'tagihan_id' => $tagihan->id,
+                    'personel_id' => $itemData['personel_id'],
+                    'nilai_honor' => $itemData['nilai_honor'] ?? 0,
+                    'pph' => $itemData['pph'] ?? 0,
+                    'rekening' => $itemData['rekening'] ?? '',
+                    'jenis_bank' => $itemData['jenis_bank'] ?? '',
+                    'nama_rekening' => $itemData['nama_rekening'] ?? '',
+                ]);
+            }
+
+            LogStatusDokumen::create([
+                'dokumen_type' => Tagihan::class,
+                'dokumen_id' => $tagihan->id,
+                'status_lama' => $statusLama,
+                'status_baru' => $statusBaru,
+                'diubah_oleh' => auth()->id(),
+                'catatan' => 'Data honorarium diperbarui oleh PPABP.',
+            ]);
+
+            DB::commit();
+            return redirect()->route('honorarium.index')->with('success', 'Data honorarium berhasil diupdate.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withInput()->withErrors(['error' => 'Gagal memperbarui: ' . $e->getMessage()]);
+        }
     }
 
-    return redirect()
-        ->route('honorarium.index')
-        ->with('success', 'Data honorarium berhasil diupdate.');
-}
+    public function destroy($id)
+    {
+        $tagihan = Tagihan::where('tipe_tagihan', 'HONORARIUM')->findOrFail($id);
 
-public function pendingPpk()
-{
-    $honorariums = Transaction::with(['budget', 'honorariumItems'])
-        ->where('type', 'HONORARIUM')
-        ->where('ppk_id', auth()->id())
-        ->where('status', 'Menunggu Persetujuan PPK')
-        ->latest()
-        ->get();
+        if (!in_array($tagihan->status, ['DRAFT', 'DITOLAK_PPK'])) {
+            return redirect()->route('honorarium.index')
+                ->with('error', 'Data dengan status ' . $tagihan->status . ' tidak bisa dihapus.');
+        }
 
-    return view('honorarium.ppk-pending', compact('honorariums'));
-}
+        DetailHonorarium::where('tagihan_id', $tagihan->id)->delete();
+        $tagihan->logs()->delete();
+        $tagihan->delete();
 
-public function approvePpk(Transaction $honorarium)
-{
-    abort_if($honorarium->type !== 'HONORARIUM', 404);
-
-    if ((int) $honorarium->ppk_id !== (int) auth()->id()) {
-        abort(403, 'Pengajuan ini bukan untuk PPK yang sedang login.');
+        return redirect()->route('honorarium.index')->with('success', 'Data honorarium berhasil dihapus.');
     }
 
-    if ($honorarium->status !== 'Menunggu Persetujuan PPK') {
-        return redirect()
-            ->route('honorarium.ppk.pending')
-            ->with('error', 'Status data ini tidak bisa disetujui.');
-    }
-
-    $honorarium->update([
-        'status' => 'Disetujui PPK',
-    ]);
-
-    // optional log
-    if (method_exists($honorarium, 'approvalLogs')) {
-        $honorarium->approvalLogs()->create([
-            'user_id' => auth()->id(),
-            'status_from' => 'Menunggu Persetujuan PPK',
-            'status_to' => 'Disetujui PPK',
-            'notes' => 'Pengajuan honorarium disetujui oleh PPK.',
-        ]);
-    }
-
-    return redirect()
-        ->route('honorarium.ppk.pending')
-        ->with('success', 'Honorarium berhasil disetujui PPK.');
-}
-
-public function rejectPpk(Request $request, Transaction $honorarium)
-{
-    abort_if($honorarium->type !== 'HONORARIUM', 404);
-
-    if ((int) $honorarium->ppk_id !== (int) auth()->id()) {
-        abort(403, 'Pengajuan ini bukan untuk PPK yang sedang login.');
-    }
-
-    if ($honorarium->status !== 'Menunggu Persetujuan PPK') {
-        return redirect()
-            ->route('honorarium.ppk.pending')
-            ->with('error', 'Status data ini tidak bisa ditolak.');
-    }
-
-    $honorarium->update([
-        'status' => 'Ditolak PPK',
-    ]);
-
-    // optional log
-    if (method_exists($honorarium, 'approvalLogs')) {
-        $honorarium->approvalLogs()->create([
-            'user_id' => auth()->id(),
-            'status_from' => 'Menunggu Persetujuan PPK',
-            'status_to' => 'Ditolak PPK',
-            'notes' => 'Pengajuan honorarium ditolak oleh PPK.',
-        ]);
-    }
-
-    return redirect()
-        ->route('honorarium.ppk.pending')
-        ->with('success', 'Honorarium berhasil ditolak PPK.');
-}
-
-public function destroy(Transaction $honorarium)
-{
-    abort_if($honorarium->type !== 'HONORARIUM', 404);
-
-    if ($this->isApproved($honorarium)) {
-        return redirect()
-            ->route('honorarium.index')
-            ->with('error', 'Data yang sudah di-approve tidak bisa dihapus.');
-    }
-
-    $honorarium->honorariumItems()->delete();
-    $honorarium->delete();
-
-    return redirect()
-        ->route('honorarium.index')
-        ->with('success', 'Data honorarium berhasil dihapus.');
-}
-
-private function isApproved(Transaction $honorarium): bool
-{
-    return in_array($honorarium->status, [
-        'Menunggu Persetujuan PPK',
-        'Disetujui PPK',
-        'Approved',
-        'Approved SPP',
-        'Approved SPM',
-        'Paid SP2D',
-    ]);
-}
-    private function generateNextHonorariumNumber(): string
+    private function generateNextNumber(): string
     {
         $year = now()->format('Y');
-
-        $last = Transaction::whereYear('created_at', $year)
-            ->where('type', 'HONORARIUM')
-            ->whereNotNull('transaction_number')
-            ->orderByDesc('id')
-            ->first();
-
-        $next = 1;
-
-        if ($last && preg_match('/(\d+)$/', $last->transaction_number, $match)) {
-            $next = ((int) $match[1]) + 1;
-        }
-
-        return 'HON-BLU/APTP-' . $year . '/' . str_pad($next, 4, '0', STR_PAD_LEFT);
+        $count = Tagihan::whereYear('created_at', $year)
+            ->where('tipe_tagihan', 'HONORARIUM')
+            ->count();
+        return 'HON-' . $year . '-' . str_pad($count + 1, 4, '0', STR_PAD_LEFT);
     }
 }

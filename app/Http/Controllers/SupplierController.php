@@ -2,30 +2,23 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Supplier;
+use App\Models\MasterMitraVendor;
+use App\Models\RekeningBank;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class SupplierController extends Controller
 {
     public function index()
     {
-        $suppliers = Supplier::all();
-
-        $totalSupplier = Supplier::count();
-        $supplierAktif = Supplier::whereHas('contracts', function ($query) {
-            $query->whereIn('status', ['Aktif', 'Draft']); // Adjust as needed, assuming active means having ongoing contracts. We use Aktif here to match contract status.
-        })->count();
-        $penyediaBarangJasa = Supplier::where('type', 'like', '%Barang%')
-                                     ->orWhere('type', 'like', '%Jasa%')
-                                     ->orWhere('type', 'like', '%Penyedia%')
-                                     ->count();
-        $dataBelumLengkap = Supplier::whereNull('npwp')
-                                   ->orWhereNull('bank_account')
-                                   ->orWhereNull('address')
-                                   ->orWhereNull('phone')
-                                   ->orWhere('npwp', '')
-                                   ->orWhere('bank_account', '')
-                                   ->count();
+        // Eager load the polymorphic relationship `rekening` to prevent N+1 Queries
+        $suppliers = MasterMitraVendor::with('rekening')->get();
+        
+        $totalSupplier = $suppliers->count();
+        // Cukup ambil data total untuk stat card atas (bisa disesuaikan nanti)
+        $supplierAktif = $suppliers->where('kategori', 'VENDOR_PENGELUARAN')->count(); // Misal: supplier aktif = vendor pengeluaran yg ready
+        $penyediaBarangJasa = $suppliers->where('tipe_supplier', '02 - Penyedia/Badan Usaha')->count();
+        $dataBelumLengkap = $suppliers->whereNull('npwp')->count();
 
         return view('suppliers.index', compact(
             'suppliers', 'totalSupplier', 'supplierAktif', 'penyediaBarangJasa', 'dataBelumLengkap'
@@ -34,91 +27,131 @@ class SupplierController extends Controller
 
     public function create()
     {
-        $latest = Supplier::latest('id')->first();
-        $nextId = $latest ? $latest->id + 1 : 1;
-        $idSupplier = 'SUP-' . date('Y') . '-' . str_pad($nextId, 4, '0', STR_PAD_LEFT);
-
-        return view('suppliers.create', compact('idSupplier'));
+        return view('suppliers.create');
     }
 
     public function store(Request $request)
     {
-        $rules = [
-            'name' => 'required|string|max:255',
-            'type' => 'required|string|max:255',
-            'address' => 'required|string',
-            'npwp_status' => 'required|string|in:Tersedia,Terlampir,Belum Ada',
-            'rekening_status' => 'required|string|in:Tersedia,Terlampir,Belum Ada',
-            'status' => 'required|string|in:Aktif,Nonaktif',
-            'phone' => 'nullable|string|max:20',
-            'catatan' => 'nullable|string',
-            'id_supplier' => 'required|string',
-        ];
+        $validated = $request->validate([
+            // Validasi Mitra/Vendor
+            'kategori' => 'required|in:VENDOR_PENGELUARAN,MITRA_PENERIMAAN,KEDUANYA',
+            'tipe_supplier' => 'required|string|max:50',
+            'nama_perusahaan' => 'required|string|max:150',
+            'nama_direktur' => 'nullable|string|max:100',
+            'npwp' => 'nullable|string|max:30',
+            'no_telepon' => 'nullable|string|max:30',
+            'alamat' => 'nullable|string',
+            
+            // Validasi Rekening Bank
+            'nama_bank' => 'required|string|max:50',
+            'nomor_rekening' => 'required|string|max:50',
+            'nama_rekening' => 'required|string|max:150',
+        ]);
 
-        // Conditional validation
-        if ($request->npwp_status === 'Tersedia') {
-            $rules['npwp'] = 'required|string|max:255';
-        } else {
-            $rules['npwp'] = 'nullable|string|max:255';
+        try {
+            DB::beginTransaction();
+
+            $mitra = MasterMitraVendor::create([
+                'kategori' => $validated['kategori'],
+                'tipe_supplier' => $validated['tipe_supplier'],
+                'nama_perusahaan' => $validated['nama_perusahaan'],
+                'nama_direktur' => $validated['nama_direktur'],
+                'npwp' => $validated['npwp'],
+                'no_telepon' => $validated['no_telepon'],
+                'alamat' => $validated['alamat'],
+            ]);
+
+            RekeningBank::create([
+                'pemilik_type' => MasterMitraVendor::class,
+                'pemilik_id' => $mitra->id,
+                'nama_bank' => $validated['nama_bank'],
+                'nomor_rekening' => $validated['nomor_rekening'],
+                'nama_rekening' => $validated['nama_rekening'],
+            ]);
+
+            DB::commit();
+
+            return redirect()->route('suppliers.index')->with('success', 'Mitra & Vendor berhasil ditambahkan beserta rekening.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withInput()->withErrors(['error' => 'Gagal menyimpan data: ' . $e->getMessage()]);
         }
-
-        if ($request->rekening_status === 'Tersedia') {
-            $rules['bank_name'] = 'required|string|max:255';
-            $rules['bank_account'] = 'required|string|max:255';
-            $rules['account_name'] = 'required|string|max:255';
-        } else {
-            $rules['bank_name'] = 'nullable|string|max:255';
-            $rules['bank_account'] = 'nullable|string|max:255';
-            $rules['account_name'] = 'nullable|string|max:255';
-        }
-
-        $validated = $request->validate($rules);
-
-        // Check duplicate name
-        $existing = Supplier::where('name', $validated['name'])->exists();
-        if ($existing && !$request->has('confirm_duplicate')) {
-            return back()->withInput()->withErrors(['name' => 'Supplier dengan nama yang sama sudah ada. Centang konfirmasi duplikat untuk tetap menyimpan.']);
-        }
-
-        if ($request->has('simpan_draft')) {
-            $validated['status'] = 'Nonaktif';
-        }
-
-        Supplier::create($validated);
-
-        return redirect()->route('suppliers.index')->with('success', 'Supplier berhasil ditambahkan.');
     }
 
-    public function show(Supplier $supplier)
+    public function show($id)
     {
+        $supplier = MasterMitraVendor::findOrFail($id);
         return view('suppliers.show', compact('supplier'));
     }
 
-    public function edit(Supplier $supplier)
+    public function edit($id)
     {
+        $supplier = MasterMitraVendor::findOrFail($id);
         return view('suppliers.edit', compact('supplier'));
     }
 
-    public function update(Request $request, Supplier $supplier)
+    public function update(Request $request, $id)
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'type' => 'nullable|string|max:255',
-            'address' => 'nullable|string',
-            'npwp' => 'nullable|string|max:255',
-            'bank_name' => 'nullable|string|max:255',
-            'bank_account' => 'nullable|string|max:255',
-            'account_name' => 'nullable|string|max:255',
-            'phone' => 'nullable|string|max:255',
+            // Validasi Mitra/Vendor
+            'kategori' => 'required|in:VENDOR_PENGELUARAN,MITRA_PENERIMAAN,KEDUANYA',
+            'tipe_supplier' => 'required|string|max:50',
+            'nama_perusahaan' => 'required|string|max:150',
+            'nama_direktur' => 'nullable|string|max:100',
+            'npwp' => 'nullable|string|max:30',
+            'no_telepon' => 'nullable|string|max:30',
+            'alamat' => 'nullable|string',
+            
+            // Validasi Rekening Bank
+            'nama_bank' => 'required|string|max:50',
+            'nomor_rekening' => 'required|string|max:50',
+            'nama_rekening' => 'required|string|max:150',
         ]);
 
-        $supplier->update($validated);
+        try {
+            DB::beginTransaction();
 
-        return redirect()->route('suppliers.index')->with('success', 'Supplier updated successfully.');
+            $mitra = MasterMitraVendor::findOrFail($id);
+            $mitra->update([
+                'kategori' => $validated['kategori'],
+                'tipe_supplier' => $validated['tipe_supplier'],
+                'nama_perusahaan' => $validated['nama_perusahaan'],
+                'nama_direktur' => $validated['nama_direktur'],
+                'npwp' => $validated['npwp'],
+                'no_telepon' => $validated['no_telepon'],
+                'alamat' => $validated['alamat'],
+            ]);
+
+            // Update atau Create Rekening Bank
+            $rek = $mitra->rekening()->first();
+            if ($rek) {
+                $rek->update([
+                    'nama_bank' => $validated['nama_bank'],
+                    'nomor_rekening' => $validated['nomor_rekening'],
+                    'nama_rekening' => $validated['nama_rekening'],
+                ]);
+            } else {
+                RekeningBank::create([
+                    'pemilik_type' => MasterMitraVendor::class,
+                    'pemilik_id' => $mitra->id,
+                    'nama_bank' => $validated['nama_bank'],
+                    'nomor_rekening' => $validated['nomor_rekening'],
+                    'nama_rekening' => $validated['nama_rekening'],
+                ]);
+            }
+
+            DB::commit();
+
+            return redirect()->route('suppliers.index')->with('success', 'Data Mitra & Vendor berhasil diperbarui.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withInput()->withErrors(['error' => 'Gagal memperbarui data: ' . $e->getMessage()]);
+        }
     }
 
-    public function destroy(Supplier $supplier)
+    public function destroy($id)
     {
+        $supplier = MasterMitraVendor::findOrFail($id);
         $supplier->delete();
 
         return redirect()->route('suppliers.index')->with('success', 'Supplier deleted successfully.');

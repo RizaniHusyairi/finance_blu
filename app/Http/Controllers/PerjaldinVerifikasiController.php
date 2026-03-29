@@ -3,83 +3,84 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\Perjaldin;
+use App\Models\Tagihan;
+use App\Models\LogStatusDokumen;
 use App\Models\User;
-use App\Notifications\PerjaldinRevisiNotification;
 use Illuminate\Support\Facades\Auth;
 
 class PerjaldinVerifikasiController extends Controller
 {
     /**
-     * Dashboard PPK - tampilkan perjaldin yang sedang "Proses Verifikasi"
+     * Dashboard PPK - tampilkan tagihan perjaldin yang status bukan DRAFT
      */
     public function ppkIndex()
     {
-        $perjaldins = Perjaldin::where('status', '!=', 'Draft')
-                               ->with('pejabats')
-                               ->latest()
-                               ->get();
-        return view('verifikasi_ppk.index', compact('perjaldins'));
+        $tagihans = Tagihan::where('tipe_tagihan', 'PERJALDIN')
+            ->whereNotIn('status', ['DRAFT'])
+            ->with(['detailPerjaldin.pegawai', 'logs' => fn($q) => $q->latest()])
+            ->latest()
+            ->get();
+        return view('verifikasi_ppk.index', compact('tagihans'));
     }
 
     /**
-     * Dashboard Kasubag - tampilkan perjaldin yang sedang "Proses Verifikasi"
+     * Dashboard Kasubag - tampilkan tagihan perjaldin yang status bukan DRAFT
      */
     public function kasubagIndex()
     {
-        $perjaldins = Perjaldin::where('status', '!=', 'Draft')
-                               ->with('pejabats')
-                               ->latest()
-                               ->get();
-        return view('verifikasi_kasubag.index', compact('perjaldins'));
+        $tagihans = Tagihan::where('tipe_tagihan', 'PERJALDIN')
+            ->whereNotIn('status', ['DRAFT'])
+            ->with(['detailPerjaldin.pegawai', 'logs' => fn($q) => $q->latest()])
+            ->latest()
+            ->get();
+        return view('verifikasi_kasubag.index', compact('tagihans'));
     }
 
     /**
-     * Approve - PPK atau Kasubag menyetujui
+     * Approve - PPK menyetujui tagihan perjaldin
      */
     public function approve($id)
     {
-        $perjaldin = Perjaldin::findOrFail($id);
+        $tagihan = Tagihan::where('tipe_tagihan', 'PERJALDIN')->findOrFail($id);
         $user = Auth::user();
 
-        if ($user->hasRole('PPK')) {
-            $perjaldin->is_ppk_approved = true;
-            $approverRole = 'PPK';
-        } elseif ($user->hasRole('Kepala Subbagian Keuangan dan Tata Usaha')) {
-            $perjaldin->is_kasubag_approved = true;
-            $approverRole = 'Kasubag';
-        } else {
-            $approverRole = 'Sistem';
+        if (!in_array($tagihan->status, ['PENDING_PPK'])) {
+            return redirect()->back()->withErrors(['error' => 'Tagihan ini tidak dalam status menunggu persetujuan.']);
         }
 
-        \App\Models\PerjaldinLog::create([
-            'perjaldin_id' => $perjaldin->perjaldin_id,
-            'user_name' => $user->name,
-            'action' => 'Menyetujui',
-            'catatan' => "Disetujui oleh {$approverRole}."
+        $statusLama = $tagihan->status;
+        $tagihan->update([
+            'status' => 'DISETUJUI_PPK',
+            'diverifikasi_ppk_id' => $user->id,
+            'waktu_verifikasi_ppk' => now(),
         ]);
 
-        if ($perjaldin->is_ppk_approved && $perjaldin->is_kasubag_approved) {
-            $perjaldin->status = 'Disetujui';
-            
-            // Beritahu Operator bahwa keduanya sudah disetujui
+        LogStatusDokumen::create([
+            'dokumen_type' => Tagihan::class,
+            'dokumen_id' => $tagihan->id,
+            'status_lama' => $statusLama,
+            'status_baru' => 'DISETUJUI_PPK',
+            'diubah_oleh' => $user->id,
+            'catatan' => 'Disetujui oleh PPK.',
+        ]);
+
+        // Notifikasi ke Operator
+        try {
             $operators = User::role('Operator Perjaldin')->get();
             \Illuminate\Support\Facades\Notification::send($operators, new \App\Notifications\WorkflowNotification([
-                'title' => 'Perjaldin Disetujui',
-                'message' => "Perjaldin '{$perjaldin->uraian}' telah disetujui penuh.",
+                'title' => 'Perjaldin Disetujui PPK',
+                'message' => "Tagihan '{$tagihan->deskripsi}' telah disetujui PPK.",
                 'url' => route('perjaldins.index'),
                 'icon' => 'check_circle',
                 'color' => 'success'
             ]));
-        }
+        } catch (\Exception $e) {}
 
-        $perjaldin->save();
-
-        return redirect()->back()->with('success', 'Persetujuan Anda berhasil disimpan.');
+        return redirect()->back()->with('success', 'Persetujuan PPK berhasil disimpan.');
     }
 
     /**
-     * Revisi - salah satu pihak mengembalikan untuk revisi
+     * Revisi - PPK mengembalikan tagihan untuk direvisi
      */
     public function revisi(Request $request, $id)
     {
@@ -87,43 +88,34 @@ class PerjaldinVerifikasiController extends Controller
             'catatan_revisi' => 'required|string',
         ]);
 
-        $perjaldin = Perjaldin::with('pejabats')->findOrFail($id);
+        $tagihan = Tagihan::where('tipe_tagihan', 'PERJALDIN')->findOrFail($id);
         $user = Auth::user();
 
-        // Tentukan nama role yang melakukan revisi
-        if ($user->hasRole('PPK')) {
-            $revisiOleh = 'PPK';
-        } elseif ($user->hasRole('Kepala Subbagian Keuangan dan Tata Usaha')) {
-            $revisiOleh = 'Kasubag';
-        } else {
-            $revisiOleh = $user->name;
-        }
-
-        // Reset approval flags & update status
-        $perjaldin->update([
-            'status'              => 'Revisi',
-            'is_ppk_approved'     => false,
-            'is_kasubag_approved' => false,
-            'catatan_revisi'      => $request->catatan_revisi,
-            'revisi_oleh'         => $revisiOleh,
+        $statusLama = $tagihan->status;
+        $tagihan->update([
+            'status' => 'DITOLAK_PPK',
         ]);
 
-        \App\Models\PerjaldinLog::create([
-            'perjaldin_id' => $perjaldin->perjaldin_id,
-            'user_name' => $user->name,
-            'action' => 'Merevisi',
-            'catatan' => "Mengembalikan untuk direvisi. Catatan: {$request->catatan_revisi}"
+        LogStatusDokumen::create([
+            'dokumen_type' => Tagihan::class,
+            'dokumen_id' => $tagihan->id,
+            'status_lama' => $statusLama,
+            'status_baru' => 'DITOLAK_PPK',
+            'diubah_oleh' => $user->id,
+            'catatan' => $request->catatan_revisi,
         ]);
 
-        // Kirim notifikasi ke semua user dengan role "Operator Perjaldin"
-        $operatorPerjaldin = User::role('Operator Perjaldin')->get();
-        \Illuminate\Support\Facades\Notification::send($operatorPerjaldin, new \App\Notifications\WorkflowNotification([
-            'title' => "Revisi dari {$revisiOleh}",
-            'message' => "Perjaldin '{$perjaldin->uraian}' dikembalikan. Catatan: {$request->catatan_revisi}",
-            'url' => route('perjaldins.index'),
-            'icon' => 'error',
-            'color' => 'danger'
-        ]));
+        // Notifikasi ke Operator
+        try {
+            $operatorPerjaldin = User::role('Operator Perjaldin')->get();
+            \Illuminate\Support\Facades\Notification::send($operatorPerjaldin, new \App\Notifications\WorkflowNotification([
+                'title' => 'Revisi dari PPK',
+                'message' => "Tagihan Perjaldin dikembalikan. Catatan: {$request->catatan_revisi}",
+                'url' => route('perjaldins.index'),
+                'icon' => 'error',
+                'color' => 'danger'
+            ]));
+        } catch (\Exception $e) {}
 
         return redirect()->back()->with('success', "Data berhasil dikembalikan untuk revisi. Operator Perjaldin telah dinotifikasi.");
     }

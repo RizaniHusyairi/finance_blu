@@ -24,7 +24,7 @@
             <div class="card h-100 border-0 shadow-sm text-white" style="background-color: #0dcaf0;">
                 <div class="card-body p-3">
                     <h6 class="card-title fw-normal mb-1">Menunggu Anda (PPK)</h6>
-                    <h3 class="fw-bold mb-0 text-white">{{ \App\Models\Perjaldin::where('status', 'Proses Verifikasi')->where('is_ppk_approved', false)->count() }}</h3>
+                    <h3 class="fw-bold mb-0 text-white">{{ $tagihans->where('status', 'PENDING_PPK')->count() }}</h3>
                 </div>
             </div>
         </div>
@@ -32,7 +32,7 @@
             <div class="card h-100 border-0 shadow-sm bg-white text-dark">
                 <div class="card-body p-3">
                     <h6 class="card-title fw-normal text-muted mb-1">Sudah Anda Setujui</h6>
-                    <h3 class="fw-bold mb-0">{{ \App\Models\Perjaldin::where('status', 'Proses Verifikasi')->where('is_ppk_approved', true)->count() }}</h3>
+                    <h3 class="fw-bold mb-0">{{ $tagihans->where('status', 'DISETUJUI_PPK')->count() }}</h3>
                 </div>
             </div>
         </div>
@@ -40,15 +40,15 @@
             <div class="card h-100 border-0 shadow-sm bg-danger text-white">
                 <div class="card-body p-3">
                     <h6 class="card-title fw-normal mb-1">Dikembalikan (Revisi)</h6>
-                    <h3 class="fw-bold mb-0">{{ \App\Models\Perjaldin::where('status', 'Revisi')->count() }}</h3>
+                    <h3 class="fw-bold mb-0">{{ $tagihans->where('status', 'DITOLAK_PPK')->count() }}</h3>
                 </div>
             </div>
         </div>
         <div class="col">
             <div class="card h-100 border-0 shadow-sm text-white" style="background-color: #20c997;">
                 <div class="card-body p-3">
-                    <h6 class="card-title fw-normal mb-1">Disetujui Penuh (Selesai)</h6>
-                    <h3 class="fw-bold mb-0 text-white">{{ \App\Models\Perjaldin::whereNotIn('status', ['Draft', 'Proses Verifikasi', 'Revisi'])->count() }}</h3>
+                    <h6 class="card-title fw-normal mb-1">Proses SPP / Selesai</h6>
+                    <h3 class="fw-bold mb-0 text-white">{{ $tagihans->whereIn('status', ['PROSES_SPP', 'SPP_TERBIT'])->count() }}</h3>
                 </div>
             </div>
         </div>
@@ -56,108 +56,93 @@
 
     <div class="card">
         <div class="card-body">
-            <h6 class="mb-3">Daftar Perjaldin Menunggu Verifikasi PPK</h6>
+            <h6 class="mb-3">Daftar Tagihan Perjaldin</h6>
             <div class="table-responsive">
                 <table id="example" class="table table-striped table-bordered" style="width:100%">
                     <thead class="table-light">
                         <tr>
                             <th>No</th>
-                            <th>Uraian</th>
+                            <th>No. Tagihan & Uraian</th>
                             <th>Peserta</th>
-                            <th>Status Persetujuan</th>
+                            <th>Total Bruto</th>
+                            <th>Status</th>
                             <th class="text-center">Aksi</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach ($perjaldins as $idx => $perjaldin)
+                        @foreach ($tagihans as $idx => $tagihan)
                         <tr>
                             <td>{{ $idx + 1 }}</td>
                             <td>
-                                <strong>{{ $perjaldin->uraian }}</strong><br>
-                                <small class="text-muted">No BAST: {{ $perjaldin->no_bast ?: '-' }}</small>
+                                <strong>{{ $tagihan->nomor_tagihan }}</strong><br>
+                                <small>{{ $tagihan->deskripsi }}</small>
                             </td>
                             <td>
                                 <small>
-                                @foreach($perjaldin->pejabats as $p)
-                                    <span class="badge bg-light text-dark border">{{ $p->nama_pejabat }}</span>
+                                @foreach($tagihan->detailPerjaldin as $detail)
+                                    <span class="badge bg-light text-dark border">{{ $detail->pegawai->nama_lengkap ?? '-' }}</span>
                                 @endforeach
                                 </small>
                             </td>
+                            <td class="fw-bold">Rp {{ number_format($tagihan->total_bruto, 0, ',', '.') }}</td>
                             <td>
-                                <div class="d-flex gap-2 flex-wrap">
-                                    @if($perjaldin->status == 'Proses Verifikasi' || $perjaldin->status == 'Revisi')
-                                        @if($perjaldin->is_ppk_approved)
-                                            <span class="badge bg-success"><i class="bi bi-check-circle"></i> PPK: Disetujui</span>
-                                        @else
-                                            <span class="badge bg-warning text-dark"><i class="bi bi-clock"></i> PPK: Menunggu</span>
-                                        @endif
-                                        @if($perjaldin->is_kasubag_approved)
-                                            <span class="badge bg-success"><i class="bi bi-check-circle"></i> Kasubag: Disetujui</span>
-                                        @else
-                                            <span class="badge bg-secondary"><i class="bi bi-clock"></i> Kasubag: Menunggu</span>
-                                        @endif
-                                    @else
-                                        @php
-                                            $latestSpp = $perjaldin->spps->sortByDesc('updated_at')->first();
-                                            $finalLbl = 'Selesai Verifikasi';
-                                            $finalCls = 'bg-success';
-                                            if ($latestSpp) {
-                                                if ($latestSpp->status_spp == 'Lunas') $finalLbl = 'Lunas (BKU)';
-                                                elseif ($latestSpp->status_spp == 'SP2D Terbit') $finalLbl = 'Sudah Cair';
-                                                elseif (strpos($latestSpp->status_spp, 'NPI') !== false) $finalLbl = 'Proses NPI';
-                                                elseif (strpos($latestSpp->status_spp, 'SPM') !== false) $finalLbl = 'Proses SPM';
-                                                elseif ($latestSpp->status_spp == 'Disetujui PPK') $finalLbl = 'Siap SPM';
-                                            }
-                                        @endphp
-                                        <span class="badge {{ $finalCls }} pe-3"><i class="bi bi-check-all"></i> {{ $finalLbl }}</span>
-                                    @endif
-                                </div>
+                                @switch($tagihan->status)
+                                    @case('PENDING_PPK')
+                                        <span class="badge bg-warning text-dark"><i class="bi bi-clock"></i> Menunggu PPK</span>
+                                        @break
+                                    @case('DISETUJUI_PPK')
+                                        <span class="badge bg-success"><i class="bi bi-check-circle"></i> Disetujui</span>
+                                        @break
+                                    @case('DITOLAK_PPK')
+                                        <span class="badge bg-danger"><i class="bi bi-x-circle"></i> Dikembalikan</span>
+                                        @break
+                                    @default
+                                        <span class="badge bg-info text-dark">{{ $tagihan->status }}</span>
+                                @endswitch
                             </td>
                             <td>
                                 <div class="d-flex gap-2 justify-content-center flex-wrap">
-                                    @if(!$perjaldin->is_ppk_approved)
-                                    <form action="{{ route('verifikasi-ppk.approve', $perjaldin->perjaldin_id) }}" method="POST" onsubmit="return confirm('Setujui Perjaldin ini?')">
+                                    @if($tagihan->status == 'PENDING_PPK')
+                                    <form action="{{ route('verifikasi-ppk.approve', $tagihan->id) }}" method="POST" onsubmit="return confirm('Setujui Tagihan Perjaldin ini?')">
                                         @csrf
                                         <button type="submit" class="btn btn-sm btn-success"><i class="bi bi-check-circle-fill"></i> Setujui</button>
                                     </form>
-                                    @else
+                                    <button type="button" class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#revisiModal{{ $tagihan->id }}">
+                                        <i class="bi bi-pencil-square"></i> Revisi
+                                    </button>
+                                    @elseif($tagihan->status == 'DISETUJUI_PPK')
                                         <span class="badge bg-success py-2"><i class="bi bi-check-all"></i> Sudah Disetujui</span>
+                                    @elseif($tagihan->status == 'DITOLAK_PPK')
+                                        <span class="badge bg-danger py-2"><i class="bi bi-x-circle"></i> Sudah Dikembalikan</span>
                                     @endif
-                                    @if($perjaldin->status == 'Proses Verifikasi')
-                                        <button type="button" class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#revisiModal{{ $perjaldin->perjaldin_id }}">
-                                            <i class="bi bi-pencil-square"></i> Revisi
-                                        </button>
-                                    @endif
-                                    <button type="button" class="btn btn-sm btn-info text-white" data-bs-toggle="modal" data-bs-target="#riwayatModal{{ $perjaldin->perjaldin_id }}">
+                                    <button type="button" class="btn btn-sm btn-info text-white" data-bs-toggle="modal" data-bs-target="#riwayatModal{{ $tagihan->id }}">
                                         <i class="bi bi-clock-history"></i> Riwayat
                                     </button>
                                 </div>
 
-                                {{-- Modal Riwayat Aktivitas --}}
-                                <div class="modal fade" id="riwayatModal{{ $perjaldin->perjaldin_id }}" tabindex="-1">
+                                {{-- Modal Riwayat --}}
+                                <div class="modal fade" id="riwayatModal{{ $tagihan->id }}" tabindex="-1">
                                     <div class="modal-dialog modal-lg">
                                         <div class="modal-content">
                                             <div class="modal-header bg-light">
-                                                <h5 class="modal-title"><i class="bi bi-clock-history"></i> Log Aktivitas Dokumen</h5>
+                                                <h5 class="modal-title"><i class="bi bi-clock-history"></i> Log Aktivitas</h5>
                                                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                             </div>
                                             <div class="modal-body text-start pb-4">
-                                                <h6 class="fw-bold mb-4 text-center">{{ $perjaldin->uraian }}</h6>
-                                                
-                                                @if($perjaldin->logs->isEmpty())
-                                                    <div class="alert alert-secondary text-center"><small>Belum ada riwayat tercatat.</small></div>
+                                                <h6 class="fw-bold mb-4 text-center">{{ $tagihan->deskripsi }}</h6>
+                                                @if($tagihan->logs->isEmpty())
+                                                    <div class="alert alert-secondary text-center"><small>Belum ada riwayat.</small></div>
                                                 @else
                                                     <ul class="list-group list-group-flush border-start border-2 border-info ms-3">
-                                                        @foreach($perjaldin->logs as $log)
+                                                        @foreach($tagihan->logs as $log)
                                                             <li class="list-group-item bg-transparent border-0 position-relative pb-4">
-                                                                <span class="position-absolute bg-info rounded-circle border border-white border-2" 
+                                                                <span class="position-absolute bg-info rounded-circle border border-white border-2"
                                                                       style="width: 14px; height: 14px; left: -24px; top: 12px;"></span>
                                                                 <div class="ps-2">
                                                                     <div class="d-flex justify-content-between align-items-center mb-1">
-                                                                        <strong class="text-info">{{ $log->action }}</strong>
+                                                                        <strong class="text-info">{{ $log->status_baru }}</strong>
                                                                         <small class="text-muted">{{ $log->created_at->format('d M Y, H:i') }}</small>
                                                                     </div>
-                                                                    <div class="small fw-semibold text-dark"><i class="bi bi-person"></i> {{ $log->user_name }}</div>
                                                                     @if($log->catatan)
                                                                         <div class="mt-2 bg-light p-2 rounded small border-start border-3 border-secondary">
                                                                             {{ $log->catatan }}
@@ -177,17 +162,17 @@
                                 </div>
 
                                 {{-- Modal Revisi --}}
-                                <div class="modal fade" id="revisiModal{{ $perjaldin->perjaldin_id }}" tabindex="-1">
+                                <div class="modal fade" id="revisiModal{{ $tagihan->id }}" tabindex="-1">
                                     <div class="modal-dialog">
                                         <div class="modal-content">
                                             <div class="modal-header">
                                                 <h5 class="modal-title">Catatan Revisi</h5>
                                                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                             </div>
-                                            <form action="{{ route('verifikasi-ppk.revisi', $perjaldin->perjaldin_id) }}" method="POST">
+                                            <form action="{{ route('verifikasi-ppk.revisi', $tagihan->id) }}" method="POST">
                                                 @csrf
                                                 <div class="modal-body">
-                                                    <p>Anda akan mengembalikan Perjaldin <strong>"{{ $perjaldin->uraian }}"</strong> untuk direvisi oleh Operator Perjaldin.</p>
+                                                    <p>Kembalikan tagihan <strong>"{{ $tagihan->deskripsi }}"</strong> untuk direvisi Operator.</p>
                                                     <div class="mb-3">
                                                         <label class="form-label fw-bold">Catatan Revisi <span class="text-danger">*</span></label>
                                                         <textarea class="form-control" name="catatan_revisi" rows="4" required placeholder="Tuliskan hal yang perlu diperbaiki..."></textarea>

@@ -21,35 +21,35 @@ class ContractController extends Controller
      */
     public function index()
     {
-        $contracts = Contract::with(['supplier', 'budget', 'addendums', 'transactions' => function($q) {
-            $q->where('status', 'Paid SP2D');
-        }])->latest()->get();
+        $contracts = \App\Models\KontrakPengadaan::with(['vendor', 'addendums'])->latest()->get();
+        $addendums = \App\Models\KontrakAddendum::with(['kontrakUtama.vendor'])->latest()->get();
 
-        $totalAktif = $contracts->where('status', 'Aktif')->count();
-        $totalSelesai = $contracts->whereIn('status', ['Selesai'])->count();
+        $totalAktif = $contracts->where('status_kontrak', 'AKTIF')->count();
+        $totalSelesai = $contracts->where('status_kontrak', 'SELESAI')->count();
         $totalAdendum = $contracts->filter(function($c) { return $c->addendums->count() > 0; })->count();
-        $totalNilaiAll = $contracts->sum('total_amount');
+        $totalNilaiAll = $contracts->sum('nilai_total_kontrak');
         
         $hampirHabisNilai = 0;
         $hampirHabisMasa = 0;
 
         foreach ($contracts as $c) {
-            $realisasi = $c->transactions->sum('gross_amount') ?? 0;
+            // Placeholder: hitung realisasi jika tagihan/termin nanti dibuat
+            $realisasi = 0; 
             $c->realisasi_pembayaran = $realisasi;
-            $c->sisa_kontrak = $c->total_amount - $realisasi;
+            $c->sisa_kontrak = $c->nilai_total_kontrak - $realisasi;
 
-            if ($c->status == 'Aktif') {
-                if ($c->total_amount > 0 && $c->sisa_kontrak <= ($c->total_amount * 0.2)) {
+            if ($c->status_kontrak == 'AKTIF') {
+                if ($c->nilai_total_kontrak > 0 && $c->sisa_kontrak <= ($c->nilai_total_kontrak * 0.2)) {
                     $hampirHabisNilai++;
                 }
-                if ($c->end_date && \Carbon\Carbon::parse($c->end_date)->isBetween(now(), now()->addDays(30))) {
+                if ($c->tanggal_selesai && \Carbon\Carbon::parse($c->tanggal_selesai)->isBetween(now(), now()->addDays(30))) {
                     $hampirHabisMasa++;
                 }
             }
         }
 
         return view('contracts.index', compact(
-            'contracts', 'totalAktif', 'totalSelesai', 'totalAdendum', 
+            'contracts', 'addendums', 'totalAktif', 'totalSelesai', 'totalAdendum', 
             'totalNilaiAll', 'hampirHabisNilai', 'hampirHabisMasa'
         ));
     }
@@ -82,21 +82,16 @@ class ContractController extends Controller
     /**
      * Show the form for creating a new resource.
      */
+    /**
+     * Show the form for creating a new resource.
+     */
     public function create()
     {
-        $suppliers = Supplier::all();
-        $budgets = Budget::all();
-        
-        // Fetch PPK and Pejabat Pengadaan
-        $ppk_users = User::role('PPK')->get();
-        $pengadaan_users = User::role('Pejabat Pengadaan')->get();
-        
-        // Generate Transaction ID
-        $latest = Contract::latest('id')->first();
-        $nextId = $latest ? $latest->id + 1 : 1;
-        $idTransaksi = 'TRX-KONTRAK-' . date('Y') . '-' . str_pad($nextId, 4, '0', STR_PAD_LEFT);
+        $vendors = \App\Models\MasterMitraVendor::all();
+        // Hanya DIPA tahun berjalan
+        $dipas = \App\Models\MasterDipa::where('tahun_anggaran', date('Y'))->get();
 
-        return view('contracts.create', compact('suppliers', 'budgets', 'ppk_users', 'pengadaan_users', 'idTransaksi'));
+        return view('contracts.create', compact('vendors', 'dipas'));
     }
 
     /**
@@ -105,196 +100,132 @@ class ContractController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'contract_number' => 'required|string|max:255|unique:contracts',
-            'date' => 'required|date',
-            'description' => 'required|string',
-            'supplier_id' => 'required|exists:suppliers,id',
-            'budget_id' => 'required|exists:budgets,id',
-            'total_amount' => 'required|numeric|min:0',
-            'mata_uang' => 'required|string',
-            'cara_bayar' => 'required|string',
-            'tahun_anggaran' => 'required|integer',
-            'ppk_id' => 'required|exists:users,id',
-            'pejabat_pengadaan_id' => 'nullable|exists:users,id',
-            'id_transaksi' => 'required|string',
-            'nomor_spk_sp' => 'nullable|string',
-            'ketentuan_sanksi' => 'nullable|string',
-            
-            // Waktu Pekerjaan
-            'jangka_waktu_pekerjaan' => 'required|integer|min:1',
-            'satuan_waktu_pekerjaan' => 'required|string',
-            'start_date' => 'required|date',
-            'end_date' => 'required|date|after_or_equal:start_date',
-            
-            // Pemeliharaan
-            'ada_masa_pemeliharaan' => 'nullable|boolean',
-            'jangka_waktu_pemeliharaan' => 'nullable|integer',
-            'tanggal_mulai_pemeliharaan' => 'nullable|date',
-            'tanggal_selesai_pemeliharaan' => 'nullable|date',
-            
-            // Addendum Base (Opsional)
-            'ada_addendum' => 'nullable|boolean',
-            
-            // Jaminan UM
-            'ada_jaminan_um' => 'nullable|boolean',
-            'penjamin_um' => 'nullable|string',
-            'nomor_jaminan_um' => 'nullable|string',
-            'tanggal_jaminan_um' => 'nullable|date',
-            'masa_berlaku_jaminan' => 'nullable|integer',
-            'tanggal_mulai_jaminan' => 'nullable|date',
-            'tanggal_selesai_jaminan' => 'nullable|date',
-
-            // Uang Muka
+            'vendor_id' => 'required|exists:master_mitra_vendor,id',
+            'master_dipa_id' => 'required|exists:master_dipas,id',
+            'nama_pekerjaan' => 'required|string',
+            'nomor_spk' => 'required|string|unique:kontrak_pengadaan,nomor_spk',
+            'tanggal_spk' => 'required|date',
+            'tanggal_mulai' => 'required|date',
+            'satuan_waktu' => 'required|in:HARI,MINGGU,BULAN',
+            'jangka_waktu' => 'required|integer|min:1',
+            'tanggal_selesai' => 'required|date|after_or_equal:tanggal_mulai',
+            'nilai_total_kontrak' => 'required|numeric|min:0',
+            'metode_pembayaran' => 'required|in:LUMPSUM,TERMIN',
             'ada_uang_muka' => 'nullable|boolean',
-            'nilai_uang_muka' => 'nullable|numeric',
-            'persentase_uang_muka' => 'nullable|numeric',
-            'jumlah_angsuran_um' => 'nullable|integer',
-            'jumlah_termin' => 'required|integer|min:1',
-
-            // Array Termins // Only required if cara_bayar is termin, but our JS disables inputs, so it might send empty. For safety, let's keep it required but ensure JS sends.
-            'termins' => 'required|array',
+            'nilai_uang_muka' => 'nullable|numeric|min:0',
             
-            // Array UM
-            'angsuran_ums' => 'nullable|array',
-
-            // Documents
-            'doc_bapp' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
-            'doc_bap' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
-            'doc_bast' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
-            'doc_ringkasan_kontrak' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
-            'doc_spmk' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
-            'doc_lainnya' => 'nullable|array',
-            'doc_lainnya.*' => 'file|mimes:pdf,jpg,jpeg,png|max:5120',
+            // Uploads
+            'file_spk' => 'nullable|file|mimes:pdf|max:5120',
+            'file_spmk' => 'nullable|file|mimes:pdf|max:5120',
+            'file_ringkasan_kontrak' => 'nullable|file|mimes:pdf|max:5120',
+            
+            // Termin
+            'termin_jenis' => 'nullable|array',
+            'termin_keterangan' => 'nullable|array',
+            'termin_persentase' => 'nullable|array',
+            'termin_nilai' => 'nullable|array',
         ]);
 
         try {
             DB::beginTransaction();
 
-            $status = $request->has('simpan_draft') ? 'Draft' : 'Menunggu PPK';
+            $dipa = \App\Models\MasterDipa::findOrFail($validated['master_dipa_id']);
+            
+            // Cek sisa pagu DIPA
+            $terpakai = \App\Models\KontrakPengadaan::where('master_dipa_id', $dipa->id)
+                ->where('status_kontrak', '!=', 'DIBATALKAN')
+                ->sum('nilai_total_kontrak');
+            $sisaPagu = $dipa->total_pagu - $terpakai;
 
-            $contract = Contract::create([
-                'id_transaksi' => $validated['id_transaksi'],
-                'contract_number' => $validated['contract_number'],
-                'nomor_spk_sp' => $validated['nomor_spk_sp'] ?? null,
-                'date' => $validated['date'],
-                'description' => $validated['description'],
-                'ketentuan_sanksi' => $validated['ketentuan_sanksi'] ?? null,
-                'supplier_id' => $validated['supplier_id'],
-                'budget_id' => $validated['budget_id'],
-                'total_amount' => $validated['total_amount'],
-                'mata_uang' => $validated['mata_uang'],
-                'cara_bayar' => $validated['cara_bayar'],
-                'tahun_anggaran' => $validated['tahun_anggaran'],
-                'ppk_id' => $validated['ppk_id'],
-                'pejabat_pengadaan_id' => $validated['pejabat_pengadaan_id'] ?? null,
-                'start_date' => $validated['start_date'],
-                'end_date' => $validated['end_date'],
-                'jangka_waktu_pekerjaan' => $validated['jangka_waktu_pekerjaan'],
-                'satuan_waktu_pekerjaan' => $validated['satuan_waktu_pekerjaan'],
-                'ada_masa_pemeliharaan' => $request->has('ada_masa_pemeliharaan') ? 1 : 0,
-                'jangka_waktu_pemeliharaan' => $validated['jangka_waktu_pemeliharaan'] ?? null,
-                'tanggal_mulai_pemeliharaan' => $validated['tanggal_mulai_pemeliharaan'] ?? null,
-                'tanggal_selesai_pemeliharaan' => $validated['tanggal_selesai_pemeliharaan'] ?? null,
-                'jumlah_termin' => $validated['jumlah_termin'],
+            if ($validated['nilai_total_kontrak'] > $sisaPagu) {
+                return back()->withInput()->withErrors([
+                    'error' => "Gagal disimpan: Nilai Kontrak (Rp " . number_format($validated['nilai_total_kontrak'],0,',','.') . 
+                               ") melebihi sisa pagu anggaran DIPA yang tersedia (Rp " . number_format($sisaPagu,0,',','.') . ")."
+                ]);
+            }
+
+            // Clean format Rupiah to numeric (already done by validate if input is right? No, standard HTML <input> gives the string, wait, frontend JS `oninput` copies the clean value to hidden inputs `nilai_total_kontrak_value` and `nilai_uang_muka_value` so laravel receives clean numerics).
+
+            // Upload files
+            $pathSpk = $request->hasFile('file_spk') ? $request->file('file_spk')->store('kontrak/spk', 'public') : null;
+            $pathSpmk = $request->hasFile('file_spmk') ? $request->file('file_spmk')->store('kontrak/spmk', 'public') : null;
+            $pathRingkasan = $request->hasFile('file_ringkasan_kontrak') ? $request->file('file_ringkasan_kontrak')->store('kontrak/ringkasan', 'public') : null;
+
+            $kontrak = \App\Models\KontrakPengadaan::create([
+                'vendor_id' => $validated['vendor_id'],
+                'master_dipa_id' => $validated['master_dipa_id'],
+                'nomor_spk' => $validated['nomor_spk'],
+                'tanggal_spk' => $validated['tanggal_spk'],
+                'nama_pekerjaan' => $validated['nama_pekerjaan'],
+                'nilai_total_kontrak' => $validated['nilai_total_kontrak'],
+                'metode_pembayaran' => $validated['metode_pembayaran'],
                 'ada_uang_muka' => $request->has('ada_uang_muka') ? 1 : 0,
-                'nilai_uang_muka' => $validated['nilai_uang_muka'] ?? null,
-                'persentase_uang_muka' => $validated['persentase_uang_muka'] ?? null,
-                'jumlah_angsuran_um' => $validated['jumlah_angsuran_um'] ?? null,
-                'penjamin_um' => $validated['penjamin_um'] ?? null,
-                'nomor_jaminan_um' => $validated['nomor_jaminan_um'] ?? null,
-                'tanggal_jaminan_um' => $validated['tanggal_jaminan_um'] ?? null,
-                'masa_berlaku_jaminan' => $validated['masa_berlaku_jaminan'] ?? null,
-                'tanggal_mulai_jaminan' => $validated['tanggal_mulai_jaminan'] ?? null,
-                'tanggal_selesai_jaminan' => $validated['tanggal_selesai_jaminan'] ?? null,
-                'status' => $status,
-                'submitted_by' => Auth::id(),
-                'type' => 'Jasa', // Default, but can be updated or extracted from form if needed
+                'nilai_uang_muka' => $request->has('ada_uang_muka') ? ($validated['nilai_uang_muka'] ?? 0) : 0,
+                'sisa_uang_muka_belum_lunas' => $request->has('ada_uang_muka') ? ($validated['nilai_uang_muka'] ?? 0) : 0,
+                'jangka_waktu' => $validated['jangka_waktu'],
+                'satuan_waktu' => $validated['satuan_waktu'],
+                'tanggal_mulai' => $validated['tanggal_mulai'],
+                'tanggal_selesai' => $validated['tanggal_selesai'],
+                'status_kontrak' => 'AKTIF',
+                
+                'file_spk' => $pathSpk,
+                'file_spmk' => $pathSpmk,
+                'file_ringkasan_kontrak' => $pathRingkasan,
             ]);
 
-            // Save Termins
-            if (isset($validated['termins'])) {
-                foreach ($validated['termins'] as $termin) {
-                    ContractTerm::create([
-                        'contract_id' => $contract->id,
-                        'type' => 'Termin',
-                        'term_name' => $termin['keterangan'] ?? 'Termin',
-                        'percentage' => $termin['persentase'] ?? 0,
-                        'amount' => $termin['nilai'] ?? 0,
-                        'target_date' => $termin['target_date'] ?? null,
-                        'status' => 'Pending'
+            // Buat Termin Pembayaran
+            if ($validated['metode_pembayaran'] === 'TERMIN') {
+                $jns = $request->input('termin_jenis', []);
+                $ket = $request->input('termin_keterangan', []);
+                $prs = $request->input('termin_persentase', []);
+                $nl  = $request->input('termin_nilai', []);
+                
+                $totalPersenCheck = array_sum($prs);
+                if ($totalPersenCheck != 100) {
+                    throw new \Exception("Total Persentase Termin harus tepat 100% (Saat ini $totalPersenCheck%).");
+                }
+
+                foreach ($jns as $index => $jenis) {
+                    \App\Models\KontrakTermin::create([
+                        'kontrak_pengadaan_id' => $kontrak->id,
+                        'termin_ke' => $index + 1,
+                        'keterangan_termin' => $ket[$index] ?? '-',
+                        'persentase' => $prs[$index],
+                        'nilai_bruto_termin' => $nl[$index],
+                        'jenis_termin' => $jenis,
+                        'status_termin' => 'READY_TO_BILL' // First termin is ready
                     ]);
                 }
-            }
-
-            // Save Uang Muka if exists
-            if ($request->has('ada_uang_muka') && isset($validated['angsuran_ums'])) {
-                foreach ($validated['angsuran_ums'] as $angsuran) {
-                    ContractTerm::create([
-                        'contract_id' => $contract->id,
-                        'type' => 'Uang Muka',
-                        'term_name' => $angsuran['keterangan'] ?? 'Potongan Uang Muka',
-                        'percentage' => 0, // Um usually deducted, distinct metric
-                        'amount' => $angsuran['nilai'] ?? 0,
-                        'status' => 'Pending'
-                    ]);
+                
+                // Set status uang muka jika ada
+                if ($request->has('ada_uang_muka')) {
+                    $terminUm = \App\Models\KontrakTermin::where('kontrak_pengadaan_id', $kontrak->id)
+                        ->where('jenis_termin', 'UANG_MUKA')->first();
+                    if (!$terminUm) {
+                        throw new \Exception("Anda menyatakan ada uang muka, tetapi tidak ada skema termin berjenis 'Uang Muka'.");
+                    }
                 }
-            }
 
-            // (Optional) addendum base if needed in the future, skipping addendum creation on `create`
-
-            // Save uploaded documents
-            $docTypes = [
-                'doc_bapp' => 'BAPP',
-                'doc_bap' => 'BAP',
-                'doc_bast' => 'BAST',
-                'doc_ringkasan_kontrak' => 'Ringkasan Kontrak',
-                'doc_spmk' => 'SPMK',
-            ];
-
-            foreach ($docTypes as $inputName => $typeName) {
-                if ($request->hasFile($inputName)) {
-                    $file = $request->file($inputName);
-                    $path = $file->store('contract_documents/' . $contract->id, 'public');
-                    ContractDocument::create([
-                        'contract_id' => $contract->id,
-                        'document_type' => $typeName,
-                        'document_name' => $file->getClientOriginalName(),
-                        'file_path' => $path,
-                        'uploaded_by' => Auth::id(),
-                    ]);
-                }
-            }
-
-            // Handle multiple "Lainnya" files
-            if ($request->hasFile('doc_lainnya')) {
-                foreach ($request->file('doc_lainnya') as $file) {
-                    $path = $file->store('contract_documents/' . $contract->id, 'public');
-                    ContractDocument::create([
-                        'contract_id' => $contract->id,
-                        'document_type' => 'Lainnya',
-                        'document_name' => $file->getClientOriginalName(),
-                        'file_path' => $path,
-                        'uploaded_by' => Auth::id(),
-                    ]);
-                }
-            }
-
-            // Log approval if submitted directly
-            if ($status === 'Menunggu PPK') {
-                ApprovalLog::create([
-                    'contract_id'  => $contract->id,
-                    'user_id'      => Auth::id(),
-                    'role_name'    => Auth::user()->getRoleNames()->first() ?? '-',
-                    'status_from'  => null,
-                    'status_to'    => 'Menunggu PPK',
-                    'notes'        => 'Kontrak diajukan untuk persetujuan PPK.',
+                // Lock termin selanjutnya (termin > 1) sementara
+                \App\Models\KontrakTermin::where('kontrak_pengadaan_id', $kontrak->id)
+                    ->where('termin_ke', '>', 1)
+                    ->update(['status_termin' => 'LOCKED']);
+            } else {
+                // LUMPSUM
+                \App\Models\KontrakTermin::create([
+                    'kontrak_pengadaan_id' => $kontrak->id,
+                    'termin_ke' => 1,
+                    'keterangan_termin' => 'Pelunasan Sekaligus (LUMPSUM)',
+                    'persentase' => 100,
+                    'nilai_bruto_termin' => $validated['nilai_total_kontrak'],
+                    'jenis_termin' => 'PELUNASAN',
+                    'status_termin' => 'READY_TO_BILL'
                 ]);
             }
 
             DB::commit();
 
-            return redirect()->route('contracts.index')->with('success', 'Kontrak berhasil ' . ($status === 'Draft' ? 'disimpan sebagai draft.' : 'diajukan ke PPK.'));
-            
+            return redirect()->route('contracts.index')->with('success', 'Kontrak Pengadaan berhasil dibuat (Status: AKTIF).');
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->withInput()->withErrors(['error' => 'Gagal menyimpan kontrak: ' . $e->getMessage()]);
@@ -304,10 +235,57 @@ class ContractController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(Contract $contract)
+    /**
+     * Display the specified resource.
+     */
+    public function show($id)
     {
-        $contract->load(['supplier', 'budget', 'addendums', 'terms', 'transactions', 'approvalLogs.user', 'submittedBy', 'documents']);
-        return view('contracts.show', compact('contract'));
+        $kontrak = \App\Models\KontrakPengadaan::with(['termin.detailKontrak.tagihan.logs.user', 'addendums', 'vendor', 'dipa'])->findOrFail($id);
+
+        // 1. Ambil log pembuatan kontrak
+        $logPembuatan = collect([[
+            'tanggal' => $kontrak->created_at,
+            'judul' => 'Kontrak (SPK) Dibuat & Aktif',
+            'aktor' => 'Sistem (Pembuat Awal)',
+            'catatan' => 'Nilai: Rp ' . number_format($kontrak->nilai_total_kontrak, 0, ',', '.'),
+            'ikon' => 'bi-file-signature'
+        ]]);
+
+        // 2. Ambil log dari Addendum (jika ada)
+        $logAddendum = $kontrak->addendums->map(function($add) {
+            return [
+                'tanggal' => $add->created_at,
+                'judul' => 'Addendum ' . $add->nomor_addendum . ' Dibuat',
+                'aktor' => 'Sistem',
+                'catatan' => $add->keterangan_alasan ?? 'Perubahan kontrak',
+                'ikon' => 'bi-pencil-square'
+            ];
+        });
+
+        // 3. Ambil pergerakan Tagihan & SP2D dari Termin Kontrak ini
+        $logPencairan = collect();
+        foreach ($kontrak->termin as $termin) {
+            if ($termin->detailKontrak && $termin->detailKontrak->tagihan) {
+                foreach ($termin->detailKontrak->tagihan->logs as $log) {
+                    $logPencairan->push([
+                        'tanggal' => $log->created_at,
+                        'judul' => 'Status Tagihan: ' . $log->status_baru,
+                        'aktor' => $log->user ? $log->user->name . ' (' . $log->role_saat_itu . ')' : 'Sistem (' . $log->role_saat_itu . ')',
+                        'catatan' => $log->catatan ?? '-',
+                        'ikon' => 'bi-cash-coin'
+                    ]);
+                }
+            }
+        }
+
+        // 4. Gabungkan semua log, lalu urutkan dari yang paling baru
+        $semuaAktivitas = $logPembuatan
+            ->concat($logAddendum)
+            ->concat($logPencairan)
+            ->sortByDesc('tanggal')
+            ->values();
+
+        return view('contracts.show', compact('kontrak', 'semuaAktivitas'));
     }
 
     /**
