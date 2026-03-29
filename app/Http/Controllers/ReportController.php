@@ -18,22 +18,82 @@ class ReportController extends Controller
         $month = $request->input('month'); // null = all months
         $budgetId = $request->input('budget_id');
 
-        $query = BluPaymentSubmission::with(['contract.supplier', 'budget', 'taxes'])
+        // 1. Ambil data Tagihan Umum (Paid SP2D)
+        $queryTagihan = BluPaymentSubmission::with(['contract.supplier', 'budget', 'taxes'])
             ->whereYear('date', $year)
-            ->where('status', 'Paid SP2D')
-            ->orderBy('date', 'asc');
+            ->where('status', 'Paid SP2D');
 
         if ($month) {
-            $query->whereMonth('date', $month);
+            $queryTagihan->whereMonth('date', $month);
         }
 
         if ($budgetId) {
-            $query->where('budget_id', $budgetId);
+            $queryTagihan->where('budget_id', $budgetId);
         }
 
-        $transactions = $query->get();
+        $tagihans = $queryTagihan->get();
 
-        // Calculate running balance
+        // 2. Ambil data Perjaldin (Spp Lunas)
+        $queryPerjaldin = \App\Models\Spp::where('status_spp', 'Lunas')
+            ->where(function ($q) use ($year) {
+                $q->whereYear('tanggal_sp2d', $year)
+                  ->orWhereNull('tanggal_sp2d');
+            });
+
+        if ($month) {
+            $queryPerjaldin->where(function ($q) use ($month) {
+                $q->whereMonth('tanggal_sp2d', $month)
+                  ->orWhereNull('tanggal_sp2d');
+            });
+        }
+
+        // Filter Anggaran untuk Perjaldin (berdasarkan Coa/Akun MAK)
+        if ($budgetId) {
+            $selectedBudget = \App\Models\Budget::find($budgetId);
+            if ($selectedBudget) {
+                $queryPerjaldin->where('akun_mak', 'LIKE', '%' . $selectedBudget->coa . '%');
+            }
+        }
+
+        $perjaldins = $queryPerjaldin->get();
+
+        // 3. Mapping data ke Format Baris BKU yang seragam
+        $allTransactions = collect();
+
+        foreach ($tagihans as $t) {
+            $taxTotal = $t->taxes->sum('amount');
+            $allTransactions->push([
+                'date' => $t->date,
+                'transaction_number' => $t->transaction_number,
+                'description' => $t->description,
+                'supplier' => $t->contract->supplier->name ?? '-',
+                'bruto' => $t->gross_amount,
+                'tax' => $taxTotal,
+                'netto' => $t->gross_amount - $taxTotal,
+                'budget_coa' => $t->budget->coa ?? '-',
+                'type' => $t->type ?? 'Tagihan',
+            ]);
+        }
+
+        foreach ($perjaldins as $s) {
+            $rowDate = $s->tanggal_sp2d ?? $s->updated_at;
+            $allTransactions->push([
+                'date' => $rowDate,
+                'transaction_number' => $s->nomor_sp2d ?? 'BELUM DICATAT',
+                'description' => $s->uraian,
+                'supplier' => 'Pegawai (Internal)',
+                'bruto' => $s->jumlah_uang,
+                'tax' => 0,
+                'netto' => $s->jumlah_uang,
+                'budget_coa' => $s->akun_mak,
+                'type' => 'Perjaldin',
+            ]);
+        }
+
+        // 4. Urutkan berdasarkan Tanggal
+        $sortedTransactions = $allTransactions->sortBy('date');
+
+        // 5. Kalkulasi Saldo Berjalan (Running Balance)
         $budgets = Budget::all();
         $totalPagu = $budgetId
             ? (float) (Budget::find($budgetId)?->initial_budget ?? 0)
@@ -43,25 +103,13 @@ class ReportController extends Controller
         $runningDebit = 0;
         $runningSaldo = $totalPagu;
 
-        foreach ($transactions as $t) {
-            $taxTotal = $t->taxes->sum('amount');
-            $netto = $t->gross_amount - $taxTotal;
-            $runningDebit += $netto;
+        foreach ($sortedTransactions as $row) {
+            $runningDebit += $row['netto'];
             $runningSaldo = $totalPagu - $runningDebit;
 
-            $bkuRows[] = [
-                'date' => $t->date,
-                'transaction_number' => $t->transaction_number,
-                'description' => $t->description,
-                'supplier' => $t->contract->supplier->name ?? '-',
-                'bruto' => $t->gross_amount,
-                'tax' => $taxTotal,
-                'netto' => $netto,
-                'cumulative_debit' => $runningDebit,
-                'saldo' => $runningSaldo,
-                'budget_coa' => $t->budget->coa ?? '-',
-                'type' => $t->type,
-            ];
+            $row['cumulative_debit'] = $runningDebit;
+            $row['saldo'] = $runningSaldo;
+            $bkuRows[] = $row;
         }
 
         $filterMonths = [
@@ -85,22 +133,81 @@ class ReportController extends Controller
         $month = $request->input('month');
         $budgetId = $request->input('budget_id');
 
-        $query = BluPaymentSubmission::with(['contract.supplier', 'budget', 'taxes'])
+        // 1. Ambil data Tagihan Umum (Paid SP2D)
+        $queryTagihan = BluPaymentSubmission::with(['contract.supplier', 'budget', 'taxes'])
             ->whereYear('date', $year)
-            ->where('status', 'Paid SP2D')
-            ->orderBy('date', 'asc');
+            ->where('status', 'Paid SP2D');
 
         if ($month) {
-            $query->whereMonth('date', $month);
+            $queryTagihan->whereMonth('date', $month);
         }
 
         if ($budgetId) {
-            $query->where('budget_id', $budgetId);
+            $queryTagihan->where('budget_id', $budgetId);
         }
 
-        $transactions = $query->get();
+        $tagihans = $queryTagihan->get();
 
-        $budgets = Budget::all();
+        // 2. Ambil data Perjaldin (Spp Lunas)
+        $queryPerjaldin = \App\Models\Spp::where('status_spp', 'Lunas')
+            ->where(function ($q) use ($year) {
+                $q->whereYear('tanggal_sp2d', $year)
+                  ->orWhereNull('tanggal_sp2d');
+            });
+
+        if ($month) {
+            $queryPerjaldin->where(function ($q) use ($month) {
+                $q->whereMonth('tanggal_sp2d', $month)
+                  ->orWhereNull('tanggal_sp2d');
+            });
+        }
+
+        if ($budgetId) {
+            $selectedBudget = \App\Models\Budget::find($budgetId);
+            if ($selectedBudget) {
+                $queryPerjaldin->where('akun_mak', 'LIKE', '%' . $selectedBudget->coa . '%');
+            }
+        }
+
+        $perjaldins = $queryPerjaldin->get();
+
+        // 3. Mapping data ke Format Baris BKU yang seragam
+        $allTransactions = collect();
+
+        foreach ($tagihans as $t) {
+            $taxTotal = $t->taxes->sum('amount');
+            $allTransactions->push([
+                'date' => $t->date,
+                'transaction_number' => $t->transaction_number,
+                'description' => $t->description,
+                'supplier' => $t->contract->supplier->name ?? '-',
+                'bruto' => $t->gross_amount,
+                'tax' => $taxTotal,
+                'netto' => $t->gross_amount - $taxTotal,
+                'budget_coa' => $t->budget->coa ?? '-',
+                'type' => $t->type ?? 'Tagihan',
+            ]);
+        }
+
+        foreach ($perjaldins as $s) {
+            $rowDate = $s->tanggal_sp2d ?? $s->updated_at;
+            $allTransactions->push([
+                'date' => $rowDate,
+                'transaction_number' => $s->nomor_sp2d ?? 'BELUM DICATAT',
+                'description' => $s->uraian,
+                'supplier' => 'Pegawai (Internal)',
+                'bruto' => $s->jumlah_uang,
+                'tax' => 0,
+                'netto' => $s->jumlah_uang,
+                'budget_coa' => $s->akun_mak,
+                'type' => 'Perjaldin',
+            ]);
+        }
+
+        // 4. Urutkan berdasarkan Tanggal
+        $sortedTransactions = $allTransactions->sortBy('date');
+
+        // 5. Kalkulasi Saldo Berjalan (Running Balance)
         $totalPagu = $budgetId
             ? (float) (Budget::find($budgetId)?->initial_budget ?? 0)
             : (float) Budget::sum('initial_budget');
@@ -109,25 +216,13 @@ class ReportController extends Controller
         $runningDebit = 0;
         $runningSaldo = $totalPagu;
 
-        foreach ($transactions as $t) {
-            $taxTotal = $t->taxes->sum('amount');
-            $netto = $t->gross_amount - $taxTotal;
-            $runningDebit += $netto;
+        foreach ($sortedTransactions as $row) {
+            $runningDebit += $row['netto'];
             $runningSaldo = $totalPagu - $runningDebit;
 
-            $bkuRows[] = [
-                'date' => $t->date,
-                'transaction_number' => $t->transaction_number,
-                'description' => $t->description,
-                'supplier' => $t->contract->supplier->name ?? '-',
-                'bruto' => $t->gross_amount,
-                'tax' => $taxTotal,
-                'netto' => $netto,
-                'cumulative_debit' => $runningDebit,
-                'saldo' => $runningSaldo,
-                'budget_coa' => $t->budget->coa ?? '-',
-                'type' => $t->type,
-            ];
+            $row['cumulative_debit'] = $runningDebit;
+            $row['saldo'] = $runningSaldo;
+            $bkuRows[] = $row;
         }
 
         $filterMonths = [
