@@ -1,28 +1,13 @@
-Array
+﻿Array
 (
     [0] => id
-    [1] => transaction_number
-    [2] => date
-    [3] => contract_id
-    [4] => term_id
-    [5] => supplier_id
-    [6] => budget_id
-    [7] => type
-    [8] => payment_method
-    [9] => description
-    [10] => bast_number
-    [11] => bast_date
-    [12] => spp_number
-    [13] => spp_date
-    [14] => spm_number
-    [15] => spm_date
-    [16] => npi_number
-    [17] => npi_date
-    [18] => sp2d_number
-    [19] => sp2d_date
-    [20] => gross_amount
-    [21] => net_amount
-    [22] => status
-    [23] => created_at
-    [24] => updated_at
+    [1] => contract_id
+    [2] => term_name
+    [3] => type
+    [4] => percentage
+    [5] => amount
+    [6] => target_date
+    [7] => status
+    [8] => created_at
+    [9] => updated_at
 )

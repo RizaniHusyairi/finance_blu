@@ -16,7 +16,6 @@ class DatabaseSeeder extends Seeder
             SupplierSeeder::class,
             BudgetSeeder::class,
             ContractSeeder::class,
-            ContractTermSeeder::class,
             TransactionSeeder::class,
         ]);
     }

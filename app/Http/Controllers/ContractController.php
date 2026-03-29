@@ -54,6 +54,31 @@ class ContractController extends Controller
     }
 
     /**
+     * Display a listing of the contracts for PPK verification.
+     */
+    public function verifikasiIndex()
+    {
+        $contractsMenunggu = Contract::with(['supplier', 'addendums'])->where('status', 'Menunggu PPK')->latest()->get();
+        // Also get contracts already approved/rejected by PPK
+        $contractsRiwayat = Contract::with(['supplier', 'addendums'])->whereIn('status', ['Aktif', 'Ditolak PPK', 'Selesai'])->latest()->get();
+        
+        // Count for widgets
+        $totalMenunggu = $contractsMenunggu->count();
+        $totalDisetujui = $contractsRiwayat->where('status', 'Aktif')->count();
+        $totalDitolak = $contractsRiwayat->where('status', 'Ditolak PPK')->count();
+
+        // Also get Addendums waiting for approval directly if we want to show them? Actually let's just use the contracts collection 
+        // Or we can query addendums separately. For now, let's keep it simple.
+        $addendumsMenunggu = \App\Models\ContractAddendum::with('contract')->where('status', 'Menunggu PPK')->latest()->get();
+        $totalAddendumMenunggu = $addendumsMenunggu->count();
+
+        return view('contracts.verifikasi_index', compact(
+            'contractsMenunggu', 'contractsRiwayat', 'totalMenunggu', 'totalDisetujui', 
+            'totalDitolak', 'addendumsMenunggu', 'totalAddendumMenunggu'
+        ));
+    }
+
+    /**
      * Show the form for creating a new resource.
      */
     public function create()

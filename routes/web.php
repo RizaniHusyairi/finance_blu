@@ -58,7 +58,11 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
 
     // Manajemen Kontrak (Kontrak, Addendum, Termin)
     Route::middleware('role:Super Admin|Pejabat Pengadaan|PPK')->group(function () {
+        Route::get('/contracts/verifikasi', [ContractController::class, 'verifikasiIndex'])->name('contracts.verifikasi');
         Route::resource('contracts', ContractController::class);
+        Route::post('/contracts/{contract}/submit', [ContractController::class, 'submit'])->name('contracts.submit');
+        Route::post('/contracts/{contract}/approve', [ContractController::class, 'approve'])->name('contracts.approve');
+        Route::post('/contracts/{contract}/reject', [ContractController::class, 'reject'])->name('contracts.reject');
         Route::get('/contracts/{contract}/addendums/create', [ContractAddendumController::class, 'create'])->name('addendums.create');
         Route::post('/contracts/{contract}/addendums', [ContractAddendumController::class, 'store'])->name('addendums.store');
         Route::post('/contracts/{contract}/addendums/{addendum}/submit', [ContractAddendumController::class, 'submit'])->name('addendums.submit');

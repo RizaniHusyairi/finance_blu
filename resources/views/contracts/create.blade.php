@@ -34,7 +34,7 @@
             <div class="col-12 mb-4">
                 <div class="card rounded-4 border-top border-4 border-primary h-100 shadow-sm">
                     <div class="card-body p-4">
-                        <h6 class="mb-4 fw-bold text-primary"><i class="bi bi-info-circle me-2"></i>1. Informasi Utama Kontrak</h6>
+                        <h6 class="mb-4 fw-bold text-primary"><i class="bi bi-info-circle me-2"></i>Informasi Utama Kontrak</h6>
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label class="form-label">ID Transaksi</label>
@@ -89,7 +89,8 @@
                                 <label class="form-label">Nilai Kontrak <span class="text-danger">*</span></label>
                                 <div class="input-group">
                                     <span class="input-group-text">Rp</span>
-                                    <input type="number" step="0.01" class="form-control form-control-lg fw-bold text-end" name="total_amount" id="total_amount" value="0" required onkeyup="updateSummary()">
+                                    <input type="text" class="form-control form-control-lg fw-bold text-end" id="total_amount_display" value="0" required onkeyup="formatRupiah(this); updateSummary()">
+                                    <input type="hidden" name="total_amount" id="total_amount" value="0">
                                 </div>
                             </div>
                             <div class="col-md-6">
@@ -141,7 +142,7 @@
             <div class="col-12 mb-4">
                 <div class="card rounded-4 border-top border-4 border-success h-100 shadow-sm">
                     <div class="card-body p-4">
-                        <h6 class="mb-4 fw-bold text-success"><i class="bi bi-calendar-check me-2"></i>3. Waktu Pelaksanaan Pekerjaan</h6>
+                        <h6 class="mb-4 fw-bold text-success"><i class="bi bi-calendar-check me-2"></i>Waktu Pelaksanaan Pekerjaan</h6>
                         <div class="row g-3">
                             <div class="col-md-3">
                                 <label class="form-label">Jangka Waktu <span class="text-danger">*</span></label>
@@ -174,7 +175,7 @@
                 <div class="card rounded-4 border-top border-4 border-secondary h-100 shadow-sm">
                     <div class="card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="mb-0 fw-bold text-secondary"><i class="bi bi-tools me-2"></i>4. Waktu Pemeliharaan</h6>
+                            <h6 class="mb-0 fw-bold text-secondary"><i class="bi bi-tools me-2"></i>Waktu Pemeliharaan</h6>
                             <div class="form-check form-switch">
                                 <input class="form-check-input" type="checkbox" role="switch" id="ada_masa_pemeliharaan" name="ada_masa_pemeliharaan" value="1" onchange="togglePemeliharaan()">
                                 <label class="form-check-label" for="ada_masa_pemeliharaan">Ada Pemeliharaan</label>
@@ -204,7 +205,7 @@
             <div class="col-12 mb-4">
                 <div class="card rounded-4 border-top border-4 border-warning h-100 shadow-sm">
                     <div class="card-body p-4">
-                        <h6 class="mb-4 fw-bold text-warning"><i class="bi bi-cash-stack me-2"></i>5. Pembayaran & Termin</h6>
+                        <h6 class="mb-4 fw-bold text-warning"><i class="bi bi-cash-stack me-2"></i>Pembayaran & Termin</h6>
                         <div class="row g-3 mb-4">
                             <div class="col-md-4">
                                 <label class="form-label">Jumlah Termin</label>
@@ -239,7 +240,7 @@
                 <div class="card rounded-4 border-top border-4 border-success h-100 shadow-sm">
                     <div class="card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="mb-0 fw-bold text-success"><i class="bi bi-wallet2 me-2"></i>6. Uang Muka</h6>
+                            <h6 class="mb-0 fw-bold text-success"><i class="bi bi-wallet2 me-2"></i>Uang Muka</h6>
                             <div class="form-check form-switch">
                                 <input class="form-check-input" type="checkbox" role="switch" id="ada_uang_muka" name="ada_uang_muka" value="1" onchange="toggleUangMuka()">
                                 <label class="form-check-label" for="ada_uang_muka">Ada Uang Muka</label>
@@ -288,7 +289,7 @@
                 <div class="card rounded-4 border-top border-4 border-info h-100 shadow-sm">
                     <div class="card-body p-4">
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="mb-0 fw-bold text-info"><i class="bi bi-shield-check me-2"></i>7. Jaminan Uang Muka</h6>
+                            <h6 class="mb-0 fw-bold text-info"><i class="bi bi-shield-check me-2"></i>Jaminan Uang Muka</h6>
                             <div class="form-check form-switch">
                                 <input class="form-check-input" type="checkbox" role="switch" id="ada_jaminan_um" onchange="toggleJaminan()">
                                 <label class="form-check-label" for="ada_jaminan_um">Input Data Jaminan</label>
@@ -360,6 +361,25 @@
     function formatCurrency(amount) {
         return "Rp " + parseFloat(amount).toLocaleString('id-ID');
     }
+
+    // Auto format input with dots
+    function formatRupiah(element) {
+        let val = element.value.replace(/[^,\d]/g, '').toString();
+        let split = val.split(',');
+        let sisa = split[0].length % 3;
+        let rupiah = split[0].substr(0, sisa);
+        let ribuan = split[0].substr(sisa).match(/\d{3}/gi);
+
+        if (ribuan) {
+            let separator = sisa ? '.' : '';
+            rupiah += separator + ribuan.join('.');
+        }
+
+        rupiah = split[1] != undefined ? rupiah + ',' + split[1] : rupiah;
+        element.value = rupiah;
+        
+        let numericValue = val.replace(',', '.'); // Convert to JS float format
+        document.getElementById('total_amount').value = numericValue ? numericValue : 0;    }
 
     // Update Summary Header badgers
     function updateSummary() {

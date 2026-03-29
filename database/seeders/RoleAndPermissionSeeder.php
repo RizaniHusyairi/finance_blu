@@ -111,5 +111,15 @@ class RoleAndPermissionSeeder extends Seeder
         ]);
 
         $perjaldin->syncRoles(['Operator Perjaldin']);
+        
+        $ppabp = User::updateOrCreate([
+            'email' => 'ppabp@admin.com',
+        ], [
+            'name' => 'PPABP Test',
+            'email_verified_at' => now(),
+            'password' => Hash::make('password'),
+        ]);
+
+        $ppabp->syncRoles(['PPABP']);
     }
 }
