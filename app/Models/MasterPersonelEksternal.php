@@ -2,18 +2,14 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
-
-class MasterPersonelEksternal extends Model
+class MasterPersonelEksternal extends MasterPihak
 {
-    use HasFactory;
+    protected $table = 'master_pihak';
 
-    protected $table = 'master_personel_eksternal';
-    protected $guarded = ['id'];
-
-    public function detailHonorarium()
+    protected static function booted(): void
     {
-        return $this->hasMany(DetailHonorarium::class, 'personel_id');
+        static::addGlobalScope('personel_only', function ($query) {
+            $query->where('jenis_entitas', 'PERORANGAN');
+        });
     }
 }

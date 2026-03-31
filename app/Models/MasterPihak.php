@@ -1,0 +1,62 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
+
+class MasterPihak extends Model
+{
+    use SoftDeletes;
+
+    protected $table = 'master_pihak';
+
+    protected $fillable = [
+        'kategori',
+        'jenis_entitas',
+        'kode_pihak',
+        'user_id',
+        'npwp',
+        'nama_pihak',
+        'nama_penanggung_jawab',
+        'tipe_supplier',
+        'alamat',
+        'email',
+        'no_telepon',
+        'status_aktif',
+    ];
+
+    protected $casts = [
+        'status_aktif' => 'boolean',
+    ];
+
+    public function rekening()
+    {
+        return $this->morphMany(RekeningBank::class, 'pemilik');
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function getNamaPerusahaanAttribute()
+    {
+        return $this->nama_pihak;
+    }
+
+    public function setNamaPerusahaanAttribute($value)
+    {
+        $this->attributes['nama_pihak'] = $value;
+    }
+
+    public function getNamaDirekturAttribute()
+    {
+        return $this->nama_penanggung_jawab;
+    }
+
+    public function setNamaDirekturAttribute($value)
+    {
+        $this->attributes['nama_penanggung_jawab'] = $value;
+    }
+}

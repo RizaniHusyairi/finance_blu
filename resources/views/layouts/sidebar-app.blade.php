@@ -99,7 +99,7 @@
         <li>
           <a href="javascript:;" class="has-arrow">
             <div class="parent-icon"><i class="material-icons-outlined">draw</i></div>
-            <div class="menu-title">Verifikasi Perikatan</div>
+            <div class="menu-title">Verifikasi SPMK</div>
           </a>
           <ul>
             <li>

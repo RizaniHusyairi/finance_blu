@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use App\Models\ArsipDokumen;
 
 class ContractController extends Controller
 {
@@ -57,12 +58,12 @@ class ContractController extends Controller
         
         $filter = $request->input('status', 'ALL');
         
-        if ($filter === 'PENDING_PPK') {
-            $query->where('status_kontrak', 'PENDING_PPK');
-        } elseif ($filter === 'REVISI') {
-            $query->where('status_kontrak', 'REVISI');
+        if ($filter === 'PENDING_REVIEW') {
+            $query->where('status_kontrak', 'PENDING_REVIEW');
+        } elseif ($filter === 'DRAFT') {
+            $query->where('status_kontrak', 'DRAFT');
         } elseif ($filter === 'ALL') {
-            $query->whereIn('status_kontrak', ['PENDING_PPK', 'REVISI']); 
+            $query->whereIn('status_kontrak', ['PENDING_REVIEW', 'DRAFT']); 
         }
 
         $contracts = $query->get();
@@ -78,7 +79,7 @@ class ContractController extends Controller
         
         // Cek Pagu DIPA
         $terpakai = \App\Models\KontrakPengadaan::where('master_dipa_id', $kontrak->master_dipa_id)
-            ->whereNotIn('status_kontrak', ['DIBATALKAN', 'DRAFT', 'REVISI']) // Hitung yang Aktif, Selesai, dan Pending PPK lain
+            ->whereNotIn('status_kontrak', ['DIBATALKAN', 'DRAFT', 'DRAFT']) // Hitung yang Aktif, Selesai, dan Pending PPK lain
             ->where('id', '!=', $kontrak->id)
             ->sum('nilai_total_kontrak');
             
@@ -109,7 +110,7 @@ class ContractController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'vendor_id' => 'required|exists:master_mitra_vendor,id',
+            'vendor_id' => 'required|exists:master_pihak,id',
             'master_dipa_id' => 'required|exists:master_dipas,id',
             'nama_pekerjaan' => 'required|string',
             'nomor_spk' => 'required|string|unique:kontrak_pengadaan,nomor_spk',
@@ -176,10 +177,12 @@ class ContractController extends Controller
                 'tanggal_mulai' => $validated['tanggal_mulai'],
                 'tanggal_selesai' => $validated['tanggal_selesai'],
                 'status_kontrak' => 'DRAFT',
-                
-                'file_spk' => $pathSpk,
-                'file_spmk' => $pathSpmk,
-                'file_ringkasan_kontrak' => $pathRingkasan,
+            ]);
+
+            $this->syncKontrakArsip($kontrak, [
+                'SPK' => $pathSpk,
+                'SPMK' => $pathSpmk,
+                'RINGKASAN_KONTRAK' => $pathRingkasan,
             ]);
 
             // Buat Termin Pembayaran
@@ -333,7 +336,7 @@ class ContractController extends Controller
         try {
             foreach ($contracts as $contract) {
                 $contract->update([
-                    'status_kontrak' => 'PENDING_PPK',
+                    'status_kontrak' => 'PENDING_REVIEW',
                 ]);
 
                 \App\Models\LogStatusDokumen::create([
@@ -342,7 +345,7 @@ class ContractController extends Controller
                     'user_id'           => Auth::id(),
                     'role_saat_itu'     => Auth::user()->getRoleNames()->first() ?? '-',
                     'status_sebelumnya' => 'DRAFT',
-                    'status_baru'       => 'PENDING_PPK',
+                    'status_baru'       => 'PENDING_REVIEW',
                     'aksi'              => 'SUBMIT_BULK',
                     'catatan'           => 'Kontrak diajukan untuk persetujuan PPK (Bulk).',
                     'ip_address'        => request()->ip(),
@@ -363,13 +366,13 @@ class ContractController extends Controller
     {
         $contract = \App\Models\KontrakPengadaan::findOrFail($id);
 
-        if ($contract->status_kontrak !== 'DRAFT' && $contract->status_kontrak !== 'REVISI') {
+        if ($contract->status_kontrak !== 'DRAFT' && $contract->status_kontrak !== 'DRAFT') {
             return back()->with('error', 'Kontrak tidak dapat diajukan dari status saat ini.');
         }
 
         $oldStatus = $contract->status_kontrak;
         $contract->update([
-            'status_kontrak' => 'PENDING_PPK',
+            'status_kontrak' => 'PENDING_REVIEW',
         ]);
 
         \App\Models\LogStatusDokumen::create([
@@ -378,7 +381,7 @@ class ContractController extends Controller
             'user_id'           => Auth::id(),
             'role_saat_itu'     => Auth::user()->getRoleNames()->first() ?? '-',
             'status_sebelumnya' => $oldStatus,
-            'status_baru'       => 'PENDING_PPK',
+            'status_baru'       => 'PENDING_REVIEW',
             'aksi'              => 'SUBMIT',
             'catatan'           => 'Kontrak diajukan untuk persetujuan PPK.',
             'ip_address'        => request()->ip(),
@@ -394,7 +397,7 @@ class ContractController extends Controller
     {
         $contract = \App\Models\KontrakPengadaan::findOrFail($id);
 
-        if ($contract->status_kontrak !== 'PENDING_PPK') {
+        if ($contract->status_kontrak !== 'PENDING_REVIEW') {
             return back()->with('error', 'Kontrak tidak dalam status menunggu persetujuan.');
         }
 
@@ -405,7 +408,7 @@ class ContractController extends Controller
             'dokumen_id'        => $contract->id,
             'user_id'           => Auth::id(),
             'role_saat_itu'     => 'PPK',
-            'status_sebelumnya' => 'PENDING_PPK',
+            'status_sebelumnya' => 'PENDING_REVIEW',
             'status_baru'       => 'AKTIF',
             'aksi'              => 'APPROVE',
             'catatan'           => $request->input('notes', 'Kontrak disetujui oleh PPK.'),
@@ -423,25 +426,25 @@ class ContractController extends Controller
         $request->validate(['notes' => 'required|string|max:500']);
         $contract = \App\Models\KontrakPengadaan::findOrFail($id);
 
-        if ($contract->status_kontrak !== 'PENDING_PPK') {
+        if ($contract->status_kontrak !== 'PENDING_REVIEW') {
             return back()->with('error', 'Kontrak tidak dalam status menunggu persetujuan.');
         }
 
-        $contract->update(['status_kontrak' => 'REVISI']);
+        $contract->update(['status_kontrak' => 'DRAFT']);
 
         \App\Models\LogStatusDokumen::create([
             'dokumen_type'      => \App\Models\KontrakPengadaan::class,
             'dokumen_id'        => $contract->id,
             'user_id'           => Auth::id(),
             'role_saat_itu'     => 'PPK',
-            'status_sebelumnya' => 'PENDING_PPK',
-            'status_baru'       => 'REVISI',
+            'status_sebelumnya' => 'PENDING_REVIEW',
+            'status_baru'       => 'DRAFT',
             'aksi'              => 'REJECT',
             'catatan'           => $request->input('notes'),
             'ip_address'        => request()->ip(),
         ]);
 
-        return back()->with('success', 'Kontrak ditolak / dikembalikan untuk revisi.');
+        return back()->with('success', 'Kontrak ditolak / dikembalikan untuk DRAFT.');
     }
 
     /**
@@ -451,8 +454,8 @@ class ContractController extends Controller
     {
         $kontrak = \App\Models\KontrakPengadaan::with('termin')->findOrFail($id);
         
-        // Prevent editing if not DRAFT or REVISI
-        if (!in_array($kontrak->status_kontrak, ['DRAFT', 'REVISI'])) {
+        // Prevent editing if not DRAFT or DRAFT
+        if (!in_array($kontrak->status_kontrak, ['DRAFT', 'DRAFT'])) {
             return redirect()->route('contracts.index')->with('error', 'Kontrak tidak dapat diubah karena sudah diajukan atau aktif.');
         }
 
@@ -469,12 +472,12 @@ class ContractController extends Controller
     {
         $kontrak = \App\Models\KontrakPengadaan::findOrFail($id);
         
-        if (!in_array($kontrak->status_kontrak, ['DRAFT', 'REVISI'])) {
+        if (!in_array($kontrak->status_kontrak, ['DRAFT', 'DRAFT'])) {
             return redirect()->route('contracts.index')->with('error', 'Kontrak tidak dapat diubah karena statusnya saat ini.');
         }
 
         $validated = $request->validate([
-            'vendor_id' => 'required|exists:master_mitra_vendor,id',
+            'vendor_id' => 'required|exists:master_pihak,id',
             'master_dipa_id' => 'required|exists:master_dipas,id',
             'nama_pekerjaan' => 'required|string',
             'nomor_spk' => 'required|string|unique:kontrak_pengadaan,nomor_spk,' . $kontrak->id,
@@ -507,7 +510,7 @@ class ContractController extends Controller
             
             // Cek sisa pagu DIPA (exclude this contract itself)
             $terpakai = \App\Models\KontrakPengadaan::where('master_dipa_id', $dipa->id)
-                ->whereNotIn('status_kontrak', ['DIBATALKAN', 'DRAFT', 'REVISI'])
+                ->whereNotIn('status_kontrak', ['DIBATALKAN', 'DRAFT', 'DRAFT'])
                 ->where('id', '!=', $kontrak->id)
                 ->sum('nilai_total_kontrak');
             $sisaPagu = $dipa->total_pagu - $terpakai;
@@ -559,10 +562,12 @@ class ContractController extends Controller
                 'satuan_waktu' => $validated['satuan_waktu'],
                 'tanggal_mulai' => $validated['tanggal_mulai'],
                 'tanggal_selesai' => $validated['tanggal_selesai'],
-                
-                'file_spk' => $validated['file_spk'],
-                'file_spmk' => $validated['file_spmk'],
-                'file_ringkasan_kontrak' => $validated['file_ringkasan_kontrak'],
+            ]);
+
+            $this->syncKontrakArsip($kontrak, [
+                'SPK' => $validated['file_spk'],
+                'SPMK' => $validated['file_spmk'],
+                'RINGKASAN_KONTRAK' => $validated['file_ringkasan_kontrak'],
             ]);
 
             // Hapus Termin Lama
@@ -645,16 +650,45 @@ class ContractController extends Controller
     {
         $contract = \App\Models\KontrakPengadaan::findOrFail($id);
         
-        if (!in_array($contract->status_kontrak, ['DRAFT', 'REVISI'])) {
+        if (!in_array($contract->status_kontrak, ['DRAFT', 'DRAFT'])) {
             return redirect()->route('contracts.index')->with('error', 'Kontrak aktif tidak dapat dihapus.');
         }
         
-        if ($contract->file_spk) \Illuminate\Support\Facades\Storage::disk('public')->delete($contract->file_spk);
-        if ($contract->file_spmk) \Illuminate\Support\Facades\Storage::disk('public')->delete($contract->file_spmk);
-        if ($contract->file_ringkasan_kontrak) \Illuminate\Support\Facades\Storage::disk('public')->delete($contract->file_ringkasan_kontrak);
+        foreach ($contract->arsipDokumen as $arsip) {
+            \Illuminate\Support\Facades\Storage::disk($arsip->disk ?? 'public')->delete($arsip->path_file);
+            $arsip->delete();
+        }
         
         $contract->delete();
 
         return redirect()->route('contracts.index')->with('success', 'Kontrak berhasil dihapus.');
     }
+
+    private function syncKontrakArsip(\App\Models\KontrakPengadaan $kontrak, array $files): void
+    {
+        foreach ($files as $jenis => $path) {
+            if (!$path) {
+                continue;
+            }
+
+            $existing = $kontrak->arsipDokumen()->where('jenis_dokumen', $jenis)->first();
+
+            if ($existing) {
+                \Illuminate\Support\Facades\Storage::disk($existing->disk ?? 'public')->delete($existing->path_file);
+                $existing->delete();
+            }
+
+            $kontrak->arsipDokumen()->create([
+                'jenis_dokumen' => $jenis,
+                'nama_file_asli' => basename($path),
+                'path_file' => $path,
+                'disk' => 'public',
+                'uploaded_by' => Auth::id(),
+                'uploaded_at' => now(),
+                'is_active' => true,
+            ]);
+        }
+    }
 }
+
+

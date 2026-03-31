@@ -2,30 +2,14 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-
-class MasterMitraVendor extends Model
+class MasterMitraVendor extends MasterPihak
 {
-    protected $table = 'master_mitra_vendor';
+    protected $table = 'master_pihak';
 
-    protected $fillable = [
-        'kategori',
-        'tipe_supplier',
-        'user_id',
-        'npwp',
-        'nama_perusahaan',
-        'nama_direktur',
-        'alamat',
-        'no_telepon',
-    ];
-
-    public function rekening()
+    protected static function booted(): void
     {
-        return $this->morphMany(RekeningBank::class, 'pemilik');
-    }
-
-    public function user()
-    {
-        return $this->belongsTo(User::class);
+        static::addGlobalScope('vendor_only', function ($query) {
+            $query->whereIn('jenis_entitas', ['BADAN_USAHA', 'INSTANSI', 'SATKER', 'KOLEKTIF']);
+        });
     }
 }

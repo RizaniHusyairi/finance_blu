@@ -11,12 +11,10 @@ class SupplierController extends Controller
 {
     public function index()
     {
-        // Eager load the polymorphic relationship `rekening` to prevent N+1 Queries
         $suppliers = MasterMitraVendor::with('rekening')->get();
-        
+
         $totalSupplier = $suppliers->count();
-        // Cukup ambil data total untuk stat card atas (bisa disesuaikan nanti)
-        $supplierAktif = $suppliers->where('kategori', 'VENDOR_PENGELUARAN')->count(); // Misal: supplier aktif = vendor pengeluaran yg ready
+        $supplierAktif = $suppliers->where('status_aktif', true)->count();
         $penyediaBarangJasa = $suppliers->where('tipe_supplier', '02 - Penyedia/Badan Usaha')->count();
         $dataBelumLengkap = $suppliers->whereNull('npwp')->count();
 
@@ -33,17 +31,14 @@ class SupplierController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            // Validasi Mitra/Vendor
             'kategori' => 'required|in:VENDOR_PENGELUARAN,MITRA_PENERIMAAN,KEDUANYA',
             'tipe_supplier' => 'required|string|max:50',
             'nama_perusahaan' => 'required|string|max:150',
-            'nama_direktur' => 'nullable|string|max:100',
+            'nama_direktur' => 'nullable|string|max:150',
             'npwp' => 'nullable|string|max:30',
             'no_telepon' => 'nullable|string|max:30',
             'alamat' => 'nullable|string',
-            
-            // Validasi Rekening Bank
-            'nama_bank' => 'required|string|max:50',
+            'nama_bank' => 'required|string|max:100',
             'nomor_rekening' => 'required|string|max:50',
             'nama_rekening' => 'required|string|max:150',
         ]);
@@ -52,21 +47,23 @@ class SupplierController extends Controller
             DB::beginTransaction();
 
             $mitra = MasterMitraVendor::create([
-                'kategori' => $validated['kategori'],
+                'kategori' => $this->mapKategori($validated['kategori']),
+                'jenis_entitas' => 'BADAN_USAHA',
                 'tipe_supplier' => $validated['tipe_supplier'],
                 'nama_perusahaan' => $validated['nama_perusahaan'],
-                'nama_direktur' => $validated['nama_direktur'],
-                'npwp' => $validated['npwp'],
-                'no_telepon' => $validated['no_telepon'],
-                'alamat' => $validated['alamat'],
+                'nama_direktur' => $validated['nama_direktur'] ?? null,
+                'npwp' => $validated['npwp'] ?? null,
+                'no_telepon' => $validated['no_telepon'] ?? null,
+                'alamat' => $validated['alamat'] ?? null,
+                'status_aktif' => true,
             ]);
 
-            RekeningBank::create([
-                'pemilik_type' => MasterMitraVendor::class,
-                'pemilik_id' => $mitra->id,
+            $mitra->rekening()->create([
                 'nama_bank' => $validated['nama_bank'],
                 'nomor_rekening' => $validated['nomor_rekening'],
                 'nama_rekening' => $validated['nama_rekening'],
+                'is_default' => true,
+                'status_aktif' => true,
             ]);
 
             DB::commit();
@@ -80,30 +77,27 @@ class SupplierController extends Controller
 
     public function show($id)
     {
-        $supplier = MasterMitraVendor::findOrFail($id);
+        $supplier = MasterMitraVendor::with('rekening')->findOrFail($id);
         return view('suppliers.show', compact('supplier'));
     }
 
     public function edit($id)
     {
-        $supplier = MasterMitraVendor::findOrFail($id);
+        $supplier = MasterMitraVendor::with('rekening')->findOrFail($id);
         return view('suppliers.edit', compact('supplier'));
     }
 
     public function update(Request $request, $id)
     {
         $validated = $request->validate([
-            // Validasi Mitra/Vendor
             'kategori' => 'required|in:VENDOR_PENGELUARAN,MITRA_PENERIMAAN,KEDUANYA',
             'tipe_supplier' => 'required|string|max:50',
             'nama_perusahaan' => 'required|string|max:150',
-            'nama_direktur' => 'nullable|string|max:100',
+            'nama_direktur' => 'nullable|string|max:150',
             'npwp' => 'nullable|string|max:30',
             'no_telepon' => 'nullable|string|max:30',
             'alamat' => 'nullable|string',
-            
-            // Validasi Rekening Bank
-            'nama_bank' => 'required|string|max:50',
+            'nama_bank' => 'required|string|max:100',
             'nomor_rekening' => 'required|string|max:50',
             'nama_rekening' => 'required|string|max:150',
         ]);
@@ -111,18 +105,17 @@ class SupplierController extends Controller
         try {
             DB::beginTransaction();
 
-            $mitra = MasterMitraVendor::findOrFail($id);
+            $mitra = MasterMitraVendor::with('rekening')->findOrFail($id);
             $mitra->update([
-                'kategori' => $validated['kategori'],
+                'kategori' => $this->mapKategori($validated['kategori']),
                 'tipe_supplier' => $validated['tipe_supplier'],
                 'nama_perusahaan' => $validated['nama_perusahaan'],
-                'nama_direktur' => $validated['nama_direktur'],
-                'npwp' => $validated['npwp'],
-                'no_telepon' => $validated['no_telepon'],
-                'alamat' => $validated['alamat'],
+                'nama_direktur' => $validated['nama_direktur'] ?? null,
+                'npwp' => $validated['npwp'] ?? null,
+                'no_telepon' => $validated['no_telepon'] ?? null,
+                'alamat' => $validated['alamat'] ?? null,
             ]);
 
-            // Update atau Create Rekening Bank
             $rek = $mitra->rekening()->first();
             if ($rek) {
                 $rek->update([
@@ -131,12 +124,12 @@ class SupplierController extends Controller
                     'nama_rekening' => $validated['nama_rekening'],
                 ]);
             } else {
-                RekeningBank::create([
-                    'pemilik_type' => MasterMitraVendor::class,
-                    'pemilik_id' => $mitra->id,
+                $mitra->rekening()->create([
                     'nama_bank' => $validated['nama_bank'],
                     'nomor_rekening' => $validated['nomor_rekening'],
                     'nama_rekening' => $validated['nama_rekening'],
+                    'is_default' => true,
+                    'status_aktif' => true,
                 ]);
             }
 
@@ -155,5 +148,14 @@ class SupplierController extends Controller
         $supplier->delete();
 
         return redirect()->route('suppliers.index')->with('success', 'Supplier deleted successfully.');
+    }
+
+    private function mapKategori(string $kategori): string
+    {
+        return match ($kategori) {
+            'MITRA_PENERIMAAN' => 'PENERIMAAN',
+            'KEDUANYA' => 'KEDUANYA',
+            default => 'PENGELUARAN',
+        };
     }
 }

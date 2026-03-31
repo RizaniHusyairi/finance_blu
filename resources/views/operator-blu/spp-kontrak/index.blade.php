@@ -1,13 +1,13 @@
 @extends('layouts.app')
 
-@section('title', 'Verifikasi Tagihan Honorarium')
+@section('title', 'Antrean Pembuatan SPP Kontrak')
 
 @push('css')
     <link href="{{ URL::asset('build/plugins/datatable/css/dataTables.bootstrap5.min.css') }}" rel="stylesheet" />
 @endpush
 
 @section('content')
-    <x-page-title title="Verifikasi Tagihan Honorarium" subtitle="Taskbox PPK" />
+    <x-page-title title="Antrean Pembuatan SPP Kontrak" subtitle="Taskbox Operator BLU" />
 
     @if(session('success'))
         <div class="alert alert-success border-0 bg-success alert-dismissible fade show">
@@ -34,16 +34,15 @@
         </div>
     @endif
 
-    <div class="card border-0 overflow-hidden mb-4" style="background: linear-gradient(90deg, #f59e0b 0%, #facc15 100%);">
+    <div class="card border-0 bg-info bg-gradient mb-4">
         <div class="card-body p-4">
             <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
                 <div>
-                    <p class="text-dark text-opacity-75 fw-semibold mb-2">Menunggu Verifikasi Anda</p>
-                    <h2 class="fw-bold mb-0 text-dark">{{ $tagihans->count() }}</h2>
+                    <p class="text-white text-opacity-75 fw-semibold mb-2">Siap Diterbitkan SPP</p>
+                    <h2 class="fw-bold text-white mb-0">{{ $tagihans->count() }}</h2>
                 </div>
-                <div class="d-flex align-items-center justify-content-center rounded-circle bg-white bg-opacity-50"
-                     style="width: 64px; height: 64px;">
-                    <i class="bi bi-hourglass-split fs-2 text-dark"></i>
+                <div class="bg-white bg-opacity-25 rounded-circle d-flex align-items-center justify-content-center p-3">
+                    <i class="bi bi-check2-circle fs-1 text-white"></i>
                 </div>
             </div>
         </div>
@@ -51,19 +50,19 @@
 
     <div class="card rounded-4">
         <div class="card-header bg-transparent border-bottom-0 pt-4 px-4">
-            <h5 class="mb-1 fw-bold">Daftar Tagihan Menunggu Persetujuan</h5>
-            <p class="text-muted mb-0">Semua dokumen pada tabel ini berstatus <span class="fw-semibold">PENDING_PPK</span>.</p>
+            <h5 class="mb-1 fw-bold">Daftar Tagihan Siap Proses SPP</h5>
+            <p class="text-muted mb-0">Hanya menampilkan tagihan kontrak yang sudah diverifikasi PPK dan berstatus <span class="fw-semibold">READY_FOR_SPP</span>.</p>
         </div>
         <div class="card-body px-4 pb-4">
             <div class="table-responsive">
-                <table id="honorarium-verification-table" class="table table-hover align-middle mb-0" style="width:100%">
+                <table id="spp-kontrak-table" class="table table-hover align-middle mb-0" style="width:100%">
                     <thead class="table-light">
                         <tr>
                             <th style="width: 60px;">No</th>
-                            <th style="width: 160px;">Waktu Pengajuan</th>
-                            <th>No. Tagihan & Uraian</th>
-                            <th style="width: 140px;">Jumlah Personel</th>
-                            <th style="width: 180px;">Total Bersih (Netto)</th>
+                            <th style="width: 165px;">Waktu Verifikasi PPK</th>
+                            <th>No. BAST &amp; Pekerjaan</th>
+                            <th style="width: 220px;">Vendor / Mitra</th>
+                            <th style="width: 190px;">Nilai Netto (Cair)</th>
                             <th style="width: 220px;">Aksi</th>
                         </tr>
                     </thead>
@@ -71,18 +70,20 @@
                         @forelse($tagihans as $tagihan)
                             <tr>
                                 <td class="text-center fw-semibold">{{ $loop->iteration }}</td>
-                                <td data-order="{{ optional($tagihan->created_at)->timestamp }}">
-                                    <div class="fw-bold">{{ optional($tagihan->created_at)->format('d M Y') }}</div>
-                                    <small class="text-muted">{{ optional($tagihan->created_at)->format('H:i') }}</small>
+                                <td data-order="{{ optional($tagihan->waktu_verifikasi_ppk)->timestamp }}">
+                                    <div class="fw-bold">{{ optional($tagihan->waktu_verifikasi_ppk)->format('d M Y') ?? '-' }}</div>
+                                    <small class="text-muted">{{ optional($tagihan->waktu_verifikasi_ppk)->format('H:i') ?? '-' }}</small>
                                 </td>
                                 <td>
                                     <div class="fw-bold text-primary mb-1">{{ $tagihan->nomor_tagihan }}</div>
-                                    <div class="text-muted small">{{ \Illuminate\Support\Str::limit($tagihan->deskripsi, 50) }}</div>
+                                    <div class="text-muted small">
+                                        {{ \Illuminate\Support\Str::limit(optional(optional(optional($tagihan->detailKontrak)->termin)->kontrak)->nama_pekerjaan ?? '-', 50) }}
+                                    </div>
                                 </td>
                                 <td>
-                                    <span class="badge bg-light text-dark border px-3 py-2">
-                                        {{ $tagihan->detailHonorarium->count() }} Orang
-                                    </span>
+                                    <div class="fw-semibold">
+                                        {{ optional(optional(optional($tagihan->detailKontrak)->termin)->kontrak->vendor)->nama_perusahaan ?? '-' }}
+                                    </div>
                                 </td>
                                 <td>
                                     <div class="fw-bold text-success fs-6">
@@ -90,16 +91,16 @@
                                     </div>
                                 </td>
                                 <td>
-                                    <a href="{{ route('ppk.tagihan.honorarium.verify', $tagihan->id) }}"
-                                       class="btn btn-primary w-100">
-                                        [🔍 Periksa & Verifikasi]
+                                    <a href="{{ route('operator.spp.kontrak.show', $tagihan->id) }}"
+                                       class="btn btn-outline-primary w-100">
+                                        [🔍 Detail &amp; Periksa]
                                     </a>
                                 </td>
                             </tr>
                         @empty
                             <tr>
                                 <td colspan="6" class="text-center text-muted py-4">
-                                    Belum ada tagihan honorarium yang menunggu verifikasi PPK.
+                                    Belum ada tagihan kontrak yang siap diterbitkan SPP.
                                 </td>
                             </tr>
                         @endforelse
@@ -115,7 +116,7 @@
     <script src="{{ URL::asset('build/plugins/datatable/js/dataTables.bootstrap5.min.js') }}"></script>
     <script>
         $(document).ready(function () {
-            $('#honorarium-verification-table').DataTable({
+            $('#spp-kontrak-table').DataTable({
                 order: [[1, 'desc']],
                 pageLength: 10,
                 language: {

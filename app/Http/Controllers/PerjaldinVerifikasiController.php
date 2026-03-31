@@ -10,9 +10,6 @@ use Illuminate\Support\Facades\Auth;
 
 class PerjaldinVerifikasiController extends Controller
 {
-    /**
-     * Dashboard PPK - tampilkan tagihan perjaldin yang status bukan DRAFT
-     */
     public function ppkIndex()
     {
         $tagihans = Tagihan::where('tipe_tagihan', 'PERJALDIN')
@@ -23,9 +20,6 @@ class PerjaldinVerifikasiController extends Controller
         return view('verifikasi_ppk.index', compact('tagihans'));
     }
 
-    /**
-     * Dashboard Kasubag - tampilkan tagihan perjaldin yang status bukan DRAFT
-     */
     public function kasubagIndex()
     {
         $tagihans = Tagihan::where('tipe_tagihan', 'PERJALDIN')
@@ -36,9 +30,6 @@ class PerjaldinVerifikasiController extends Controller
         return view('verifikasi_kasubag.index', compact('tagihans'));
     }
 
-    /**
-     * Approve - PPK menyetujui tagihan perjaldin
-     */
     public function approve($id)
     {
         $tagihan = Tagihan::where('tipe_tagihan', 'PERJALDIN')->findOrFail($id);
@@ -51,20 +42,20 @@ class PerjaldinVerifikasiController extends Controller
         $statusLama = $tagihan->status;
         $tagihan->update([
             'status' => 'DISETUJUI_PPK',
-            'diverifikasi_ppk_id' => $user->id,
-            'waktu_verifikasi_ppk' => now(),
         ]);
 
         LogStatusDokumen::create([
             'dokumen_type' => Tagihan::class,
             'dokumen_id' => $tagihan->id,
-            'status_lama' => $statusLama,
+            'user_id' => $user->id,
+            'role_saat_itu' => $user->getRoleNames()->first() ?? 'PPK',
+            'status_sebelumnya' => $statusLama,
             'status_baru' => 'DISETUJUI_PPK',
-            'diubah_oleh' => $user->id,
+            'aksi' => 'APPROVE',
             'catatan' => 'Disetujui oleh PPK.',
+            'ip_address' => request()->ip(),
         ]);
 
-        // Notifikasi ke Operator
         try {
             $operators = User::role('Operator Perjaldin')->get();
             \Illuminate\Support\Facades\Notification::send($operators, new \App\Notifications\WorkflowNotification([
@@ -74,14 +65,12 @@ class PerjaldinVerifikasiController extends Controller
                 'icon' => 'check_circle',
                 'color' => 'success'
             ]));
-        } catch (\Exception $e) {}
+        } catch (\Exception $e) {
+        }
 
         return redirect()->back()->with('success', 'Persetujuan PPK berhasil disimpan.');
     }
 
-    /**
-     * Revisi - PPK mengembalikan tagihan untuk direvisi
-     */
     public function revisi(Request $request, $id)
     {
         $request->validate([
@@ -99,13 +88,15 @@ class PerjaldinVerifikasiController extends Controller
         LogStatusDokumen::create([
             'dokumen_type' => Tagihan::class,
             'dokumen_id' => $tagihan->id,
-            'status_lama' => $statusLama,
+            'user_id' => $user->id,
+            'role_saat_itu' => $user->getRoleNames()->first() ?? 'PPK',
+            'status_sebelumnya' => $statusLama,
             'status_baru' => 'DITOLAK_PPK',
-            'diubah_oleh' => $user->id,
+            'aksi' => 'REJECT',
             'catatan' => $request->catatan_revisi,
+            'ip_address' => request()->ip(),
         ]);
 
-        // Notifikasi ke Operator
         try {
             $operatorPerjaldin = User::role('Operator Perjaldin')->get();
             \Illuminate\Support\Facades\Notification::send($operatorPerjaldin, new \App\Notifications\WorkflowNotification([
@@ -115,8 +106,9 @@ class PerjaldinVerifikasiController extends Controller
                 'icon' => 'error',
                 'color' => 'danger'
             ]));
-        } catch (\Exception $e) {}
+        } catch (\Exception $e) {
+        }
 
-        return redirect()->back()->with('success', "Data berhasil dikembalikan untuk revisi. Operator Perjaldin telah dinotifikasi.");
+        return redirect()->back()->with('success', 'Data berhasil dikembalikan untuk revisi. Operator Perjaldin telah dinotifikasi.');
     }
 }

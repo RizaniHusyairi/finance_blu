@@ -3,9 +3,12 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class MasterCoa extends Model
 {
+    use SoftDeletes;
+
     protected $table = 'master_coas';
 
     protected $fillable = [
@@ -20,5 +23,10 @@ class MasterCoa extends Model
         'kode_mak_lengkap',
         'nama_akun',
         'jenis_akun',
+        'status_aktif',
+    ];
+
+    protected $casts = [
+        'status_aktif' => 'boolean',
     ];
 }

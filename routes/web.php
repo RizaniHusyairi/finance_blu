@@ -204,6 +204,9 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
     Route::get('/honorarium/ppk/pending', [HonorariumController::class, 'pendingPpk'])
         ->name('honorarium.ppk.pending');
 
+    Route::get('/honorarium/ppk/{honorarium}/verify', [HonorariumController::class, 'verifyPpk'])
+        ->name('ppk.tagihan.honorarium.verify');
+
     Route::post('/honorarium/{honorarium}/approve-ppk', [HonorariumController::class, 'approvePpk'])
         ->name('honorarium.approve-ppk');
 

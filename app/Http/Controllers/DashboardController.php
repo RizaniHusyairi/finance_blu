@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\MasterDipa;
+use App\Models\RiwayatRevisiDipa;
 use App\Models\MasterCoa;
 use App\Models\DetailDipa;
 use App\Models\KontrakPengadaan;
@@ -32,7 +33,7 @@ class DashboardController extends Controller
         // ============================================================
         // KPI CARDS
         // ============================================================
-        $totalPagu = MasterDipa::sum('total_pagu');
+        $totalPagu = RiwayatRevisiDipa::where('is_active', true)->sum('total_pagu');
         $totalRealisasi = DB::table('realisasi_anggaran')->sum('nominal_cair');
         $sisaAnggaran = max(0, $totalPagu - $totalRealisasi);
         $persenRealisasi = $totalPagu > 0 ? round(($totalRealisasi / $totalPagu) * 100, 1) : 0;
@@ -41,7 +42,7 @@ class DashboardController extends Controller
         $totalMitra = MasterMitraVendor::count();
 
         // Tagihan pipeline summary
-        $tagihanPending = Tagihan::whereIn('status', ['DRAFT', 'PENDING_PPK', 'PENDING_BENDAHARA'])->count();
+        $tagihanPending = Tagihan::whereIn('status', ['DRAFT', 'PENDING_REVIEW', 'PENDING_BENDAHARA'])->count();
         $tagihanRevisi  = Tagihan::whereIn('status', ['DITOLAK_PPK', 'REVISI_BENDAHARA', 'REVISI'])->count();
 
         // SPP yang sudah diproses bulan ini
@@ -64,14 +65,14 @@ class DashboardController extends Controller
         $chartBarRealisasi = [];
 
         foreach ($jenisAkun as $ja) {
-            $pagu = DB::table('detail_dipas')
-                ->join('master_coas', 'detail_dipas.coa_id', '=', 'master_coas.id')
+            $pagu = DB::table('dipa_revision_items')
+                ->join('master_coas', 'dipa_revision_items.coa_id', '=', 'master_coas.id')
                 ->where('master_coas.kd_akun', 'like', $ja['pattern'] . '%')
-                ->sum('detail_dipas.nilai_pagu');
+                ->sum('dipa_revision_items.nilai_pagu');
             
             $realisasi = DB::table('realisasi_anggaran')
-                ->join('detail_dipas', 'realisasi_anggaran.detail_dipa_id', '=', 'detail_dipas.id')
-                ->join('master_coas', 'detail_dipas.coa_id', '=', 'master_coas.id')
+                ->join('dipa_revision_items', 'realisasi_anggaran.dipa_revision_item_id', '=', 'dipa_revision_items.id')
+                ->join('master_coas', 'dipa_revision_items.coa_id', '=', 'master_coas.id')
                 ->where('master_coas.kd_akun', 'like', $ja['pattern'] . '%')
                 ->sum('realisasi_anggaran.nominal_cair');
             
@@ -100,7 +101,7 @@ class DashboardController extends Controller
         // ============================================================
         // TABLE: Tagihan Menunggu / Pending
         // ============================================================
-        $pendingTagihan = Tagihan::whereIn('status', ['PENDING_PPK', 'PENDING_BENDAHARA'])
+        $pendingTagihan = Tagihan::whereIn('status', ['PENDING_REVIEW', 'PENDING_BENDAHARA'])
             ->latest()
             ->take(5)
             ->get();
@@ -187,13 +188,13 @@ class DashboardController extends Controller
                                 ->sum('nilai_total_kontrak');
                                 
             // KPI 3: Tagihan Menunggu (Pending PPK/Bendahara)
-            $tagihanMenunggu = \App\Models\Tagihan::whereIn('status', ['PENDING_PPK', 'PENDING_BENDAHARA'])->count();
+            $tagihanMenunggu = \App\Models\Tagihan::whereIn('status', ['PENDING_REVIEW', 'PENDING_BENDAHARA'])->count();
             
             // KPI 4: Butuh Perhatian (Ditolak / Revisi)
             $tagihanRevisi = \App\Models\Tagihan::whereIn('status', ['DITOLAK_PPK', 'REVISI_BENDAHARA', 'REVISI'])->count();
 
             // CHART KIRI: Serapan Anggaran Kontrak (Pagu DIPA vs Kontrak)
-            $totalPaguDipa = \App\Models\MasterDipa::sum('total_pagu');
+            $totalPaguDipa = \App\Models\RiwayatRevisiDipa::where('is_active', true)->sum('total_pagu');
             $chartSerapan = [
                 'Terpakai (Nilai Kontrak)' => \App\Models\KontrakPengadaan::where('status_kontrak', '!=', 'DIBATALKAN')->sum('nilai_total_kontrak'),
                 'Sisa Pagu Khusus' => max(0, $totalPaguDipa - \App\Models\KontrakPengadaan::where('status_kontrak', '!=', 'DIBATALKAN')->sum('nilai_total_kontrak'))
@@ -251,10 +252,10 @@ class DashboardController extends Controller
             $now = now();
             
             // KPI 1: SPK Baru
-            $kpi_kontrak_baru = \App\Models\KontrakPengadaan::where('status_kontrak', 'PENDING_PPK')->count();
+            $kpi_kontrak_baru = \App\Models\KontrakPengadaan::where('status_kontrak', 'PENDING_REVIEW')->count();
             
             // KPI 2: Tagihan BAST
-            $kpi_tagihan_bast = \App\Models\Tagihan::where('status', 'PENDING_PPK')->count();
+            $kpi_tagihan_bast = \App\Models\Tagihan::where('status', 'PENDING_REVIEW')->count();
             
             // KPI 3: Pencairan
             $spp = DB::table('dokumen_spp')->whereNull('disetujui_ppk_id')->count();
@@ -263,18 +264,18 @@ class DashboardController extends Controller
             $kpi_pencairan = $spp + $npi + $sp2d;
 
             // KPI 4: Sisa Pagu DIPA
-            $totalPaguDipa = DB::table('master_dipas')->sum('total_pagu');
+            $totalPaguDipa = DB::table('dipa_revisions')->where('is_active', true)->sum('total_pagu');
             $totalRealisasi = DB::table('realisasi_anggaran')->sum('nominal_cair');
             $sisaPagu = max(0, $totalPaguDipa - $totalRealisasi);
 
             // Alert Kritis Belanja Modal 53
-            $pagu53 = DB::table('detail_dipas')
-                ->join('master_coas', 'detail_dipas.coa_id', '=', 'master_coas.id')
+            $pagu53 = DB::table('dipa_revision_items')
+                ->join('master_coas', 'dipa_revision_items.coa_id', '=', 'master_coas.id')
                 ->where('master_coas.kode_mak_lengkap', 'like', '%53%')
-                ->sum('detail_dipas.nilai_pagu');
+                ->sum('dipa_revision_items.nilai_pagu');
             $realisasi53 = DB::table('realisasi_anggaran')
-                ->join('detail_dipas', 'realisasi_anggaran.detail_dipa_id', '=', 'detail_dipas.id')
-                ->join('master_coas', 'detail_dipas.coa_id', '=', 'master_coas.id')
+                ->join('dipa_revision_items', 'realisasi_anggaran.dipa_revision_item_id', '=', 'dipa_revision_items.id')
+                ->join('master_coas', 'dipa_revision_items.coa_id', '=', 'master_coas.id')
                 ->where('master_coas.kode_mak_lengkap', 'like', '%53%')
                 ->sum('realisasi_anggaran.nominal_cair');
                 
@@ -295,11 +296,11 @@ class DashboardController extends Controller
             ];
 
             // Bar: Serapan 51, 52, 53
-            $pagu51 = DB::table('detail_dipas')->join('master_coas', 'detail_dipas.coa_id', '=', 'master_coas.id')->where('master_coas.kode_mak_lengkap', 'like', '%51%')->sum('detail_dipas.nilai_pagu');
-            $pagu52 = DB::table('detail_dipas')->join('master_coas', 'detail_dipas.coa_id', '=', 'master_coas.id')->where('master_coas.kode_mak_lengkap', 'like', '%52%')->sum('detail_dipas.nilai_pagu');
+            $pagu51 = DB::table('dipa_revision_items')->join('master_coas', 'dipa_revision_items.coa_id', '=', 'master_coas.id')->where('master_coas.kode_mak_lengkap', 'like', '%51%')->sum('dipa_revision_items.nilai_pagu');
+            $pagu52 = DB::table('dipa_revision_items')->join('master_coas', 'dipa_revision_items.coa_id', '=', 'master_coas.id')->where('master_coas.kode_mak_lengkap', 'like', '%52%')->sum('dipa_revision_items.nilai_pagu');
             
-            $realisasi51 = DB::table('realisasi_anggaran')->join('detail_dipas', 'realisasi_anggaran.detail_dipa_id', '=', 'detail_dipas.id')->join('master_coas', 'detail_dipas.coa_id', '=', 'master_coas.id')->where('master_coas.kode_mak_lengkap', 'like', '%51%')->sum('realisasi_anggaran.nominal_cair');
-            $realisasi52 = DB::table('realisasi_anggaran')->join('detail_dipas', 'realisasi_anggaran.detail_dipa_id', '=', 'detail_dipas.id')->join('master_coas', 'detail_dipas.coa_id', '=', 'master_coas.id')->where('master_coas.kode_mak_lengkap', 'like', '%52%')->sum('realisasi_anggaran.nominal_cair');
+            $realisasi51 = DB::table('realisasi_anggaran')->join('dipa_revision_items', 'realisasi_anggaran.dipa_revision_item_id', '=', 'dipa_revision_items.id')->join('master_coas', 'dipa_revision_items.coa_id', '=', 'master_coas.id')->where('master_coas.kode_mak_lengkap', 'like', '%51%')->sum('realisasi_anggaran.nominal_cair');
+            $realisasi52 = DB::table('realisasi_anggaran')->join('dipa_revision_items', 'realisasi_anggaran.dipa_revision_item_id', '=', 'dipa_revision_items.id')->join('master_coas', 'dipa_revision_items.coa_id', '=', 'master_coas.id')->where('master_coas.kode_mak_lengkap', 'like', '%52%')->sum('realisasi_anggaran.nominal_cair');
 
             $chartBarLabels = ['Belanja Pegawai (51)', 'Belanja Barang (52)', 'Belanja Modal (53)'];
             $chartBarPagu = [$pagu51, $pagu52, $pagu53];
@@ -307,15 +308,15 @@ class DashboardController extends Controller
 
             // Tabs Data
             // Kontrak Baru
-            $tabKontrak = \App\Models\KontrakPengadaan::where('status_kontrak', 'PENDING_PPK')->latest()->get();
+            $tabKontrak = \App\Models\KontrakPengadaan::where('status_kontrak', 'PENDING_REVIEW')->latest()->get();
             // Tagihan
-            $tabTagihan = \App\Models\Tagihan::where('status', 'PENDING_PPK')->latest()->get();
+            $tabTagihan = \App\Models\Tagihan::where('status', 'PENDING_REVIEW')->latest()->get();
             
             // Pencairan (Union of SPP, NPI, SP2D)
             $listSpp = DB::table('dokumen_spp')
                 ->join('users', 'dokumen_spp.dibuat_oleh_id', '=', 'users.id')
                 ->select('dokumen_spp.id', 'dokumen_spp.nomor_spp as nomor', 'dokumen_spp.nominal_spp as nilai', 'users.name as pembuat')
-                ->whereNull('dokumen_spp.disetujui_ppk_id')
+                ->where('dokumen_spp.status', 'DRAFT')
                 ->get()->map(function($i) { $i->jenis = 'SPP'; $i->prioritas = 'Sedang'; $i->url_reject = route('verifikasi-ppk.spp.revisi', $i->id); $i->url_approve = route('verifikasi-ppk.spp.approve', $i->id); return $i; });
                 
             $listNpi = DB::table('dokumen_npi')
@@ -323,7 +324,7 @@ class DashboardController extends Controller
                 ->join('dokumen_spm', 'dokumen_npi.spm_id', '=', 'dokumen_spm.id')
                 ->join('dokumen_spp', 'dokumen_spm.spp_id', '=', 'dokumen_spp.id')
                 ->select('dokumen_npi.id', 'dokumen_npi.nomor_npi as nomor', 'dokumen_spp.nominal_spp as nilai', 'users.name as pembuat')
-                ->whereNull('dokumen_npi.disetujui_ppk_id')
+                ->where('dokumen_npi.status', 'DRAFT')
                 ->get()->map(function($i) { $i->jenis = 'NPI'; $i->prioritas = 'Sedang'; $i->url_reject = route('verifikasi-ppk.npi.revisi', $i->id); $i->url_approve = route('verifikasi-ppk.npi.approve', $i->id);  return $i; });
                 
             $listSp2d = DB::table('dokumen_sp2d')
@@ -332,7 +333,7 @@ class DashboardController extends Controller
                 ->join('dokumen_spm', 'dokumen_npi.spm_id', '=', 'dokumen_spm.id')
                 ->join('dokumen_spp', 'dokumen_spm.spp_id', '=', 'dokumen_spp.id')
                 ->select('dokumen_sp2d.id', 'dokumen_sp2d.nomor_sp2d as nomor', 'dokumen_spp.nominal_spp as nilai', 'users.name as pembuat')
-                ->whereNull('dokumen_sp2d.disetujui_ppk_id')
+                ->where('dokumen_sp2d.status', 'DRAFT')
                 ->get()->map(function($i) { $i->jenis = 'SP2D'; $i->prioritas = 'Tinggi'; $i->url_reject = '#'; $i->url_approve = '#'; return $i; });
 
             $tabPencairan = $listSpp->concat($listNpi)->concat($listSp2d);
@@ -360,3 +361,5 @@ class DashboardController extends Controller
         return view('dashboard.ppk', $data);
     }
 }
+
+

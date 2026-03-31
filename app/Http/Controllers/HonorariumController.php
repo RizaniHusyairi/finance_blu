@@ -4,14 +4,44 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 use App\Models\Tagihan;
 use App\Models\DetailHonorarium;
 use App\Models\MasterPersonelEksternal;
 use App\Models\MasterDipa;
 use App\Models\LogStatusDokumen;
+use App\Models\User;
+use Illuminate\Support\Facades\Notification;
 
 class HonorariumController extends Controller
 {
+    public function pendingPpk()
+    {
+        $tagihans = Tagihan::where('tipe_tagihan', 'HONORARIUM')
+            ->where('status', 'PENDING_PPK')
+            ->with(['detailHonorarium', 'logs' => fn($q) => $q->latest()])
+            ->latest()
+            ->get();
+
+        return view('honorarium.ppk-pending', compact('tagihans'));
+    }
+
+    public function verifyPpk($id)
+    {
+        $tagihan = Tagihan::where('tipe_tagihan', 'HONORARIUM')
+            ->with(['detailHonorarium', 'logs' => fn($q) => $q->latest()])
+            ->findOrFail($id);
+
+        if (!in_array($tagihan->status, ['PENDING_PPK', 'DISETUJUI_PPK', 'DITOLAK_PPK', 'PROSES_SPP', 'SPP_TERBIT'])) {
+            return redirect()->route('honorarium.ppk.pending')
+                ->with('error', 'Tagihan honorarium ini tidak tersedia dalam antrean verifikasi PPK.');
+        }
+
+        $dokumenPendukung = collect();
+
+        return view('honorarium.ppk_verify', compact('tagihan', 'dokumenPendukung'));
+    }
+
     public function index()
     {
         $tagihans = Tagihan::where('tipe_tagihan', 'HONORARIUM')
@@ -102,12 +132,15 @@ class HonorariumController extends Controller
             LogStatusDokumen::create([
                 'dokumen_type' => Tagihan::class,
                 'dokumen_id' => $tagihan->id,
-                'status_lama' => '-',
+                'user_id' => Auth::id(),
+                'role_saat_itu' => Auth::user()->getRoleNames()->first() ?? '-',
+                'status_sebelumnya' => null,
                 'status_baru' => $status,
-                'diubah_oleh' => auth()->id(),
+                'aksi' => $status === 'PENDING_PPK' ? 'SUBMIT' : 'SIMPAN_DRAFT',
                 'catatan' => $status === 'PENDING_PPK'
                     ? 'Tagihan Honorarium langsung diajukan ke PPK.'
                     : 'Tagihan Honorarium dibuat sebagai Draft.',
+                'ip_address' => $request->ip(),
             ]);
 
             DB::commit();
@@ -218,10 +251,13 @@ class HonorariumController extends Controller
             LogStatusDokumen::create([
                 'dokumen_type' => Tagihan::class,
                 'dokumen_id' => $tagihan->id,
-                'status_lama' => $statusLama,
+                'user_id' => Auth::id(),
+                'role_saat_itu' => Auth::user()->getRoleNames()->first() ?? '-',
+                'status_sebelumnya' => $statusLama,
                 'status_baru' => $statusBaru,
-                'diubah_oleh' => auth()->id(),
+                'aksi' => $statusBaru === 'PENDING_PPK' ? 'UPDATE_SUBMIT' : 'UPDATE_DRAFT',
                 'catatan' => 'Data honorarium diperbarui oleh PPABP.',
+                'ip_address' => $request->ip(),
             ]);
 
             DB::commit();
@@ -248,6 +284,114 @@ class HonorariumController extends Controller
         return redirect()->route('honorarium.index')->with('success', 'Data honorarium berhasil dihapus.');
     }
 
+    public function approvePpk($id)
+    {
+        $tagihan = Tagihan::where('tipe_tagihan', 'HONORARIUM')->findOrFail($id);
+        $user = Auth::user();
+
+        if ($tagihan->status !== 'PENDING_PPK') {
+            return redirect()->back()->withErrors(['error' => 'Tagihan honorarium ini tidak sedang menunggu persetujuan PPK.']);
+        }
+
+        DB::beginTransaction();
+
+        try {
+            $statusLama = $tagihan->status;
+
+            $tagihan->update([
+                'status' => 'DISETUJUI_PPK',
+            ]);
+
+            LogStatusDokumen::create([
+                'dokumen_type' => Tagihan::class,
+                'dokumen_id' => $tagihan->id,
+                'user_id' => $user->id,
+                'role_saat_itu' => $user->getRoleNames()->first() ?? 'PPK',
+                'status_sebelumnya' => $statusLama,
+                'status_baru' => 'DISETUJUI_PPK',
+                'aksi' => 'APPROVE',
+                'catatan' => 'Tagihan honorarium disetujui oleh PPK dan diteruskan ke proses SPP.',
+                'ip_address' => request()->ip(),
+            ]);
+
+            DB::commit();
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->back()->withErrors(['error' => 'Gagal menyetujui tagihan honorarium: ' . $e->getMessage()]);
+        }
+
+        try {
+            $operators = User::role('PPABP')->get();
+            Notification::send($operators, new \App\Notifications\WorkflowNotification([
+                'title' => 'Tagihan Honorarium Disetujui PPK',
+                'message' => "Tagihan '{$tagihan->nomor_tagihan}' telah disetujui PPK dan siap diproses ke SPP.",
+                'url' => route('honorarium.index'),
+                'icon' => 'check_circle',
+                'color' => 'success',
+            ]));
+        } catch (\Exception $e) {
+            // Kegagalan notifikasi tidak menghentikan proses utama.
+        }
+
+        return redirect()->route('honorarium.ppk.pending')->with('success', 'Tagihan honorarium berhasil disetujui.');
+    }
+
+    public function rejectPpk(Request $request, $id)
+    {
+        $request->validate([
+            'catatan_revisi' => 'required|string',
+        ]);
+
+        $tagihan = Tagihan::where('tipe_tagihan', 'HONORARIUM')->findOrFail($id);
+        $user = Auth::user();
+
+        if ($tagihan->status !== 'PENDING_PPK') {
+            return redirect()->back()->withErrors(['error' => 'Tagihan honorarium ini tidak sedang menunggu persetujuan PPK.']);
+        }
+
+        DB::beginTransaction();
+
+        try {
+            $statusLama = $tagihan->status;
+
+            $tagihan->update([
+                'status' => 'DITOLAK_PPK',
+            ]);
+
+            LogStatusDokumen::create([
+                'dokumen_type' => Tagihan::class,
+                'dokumen_id' => $tagihan->id,
+                'user_id' => $user->id,
+                'role_saat_itu' => $user->getRoleNames()->first() ?? 'PPK',
+                'status_sebelumnya' => $statusLama,
+                'status_baru' => 'DITOLAK_PPK',
+                'aksi' => 'REJECT',
+                'catatan' => $request->catatan_revisi,
+                'ip_address' => request()->ip(),
+            ]);
+
+            DB::commit();
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->back()->withErrors(['error' => 'Gagal mengembalikan tagihan honorarium: ' . $e->getMessage()]);
+        }
+
+        try {
+            $operators = User::role('PPABP')->get();
+            Notification::send($operators, new \App\Notifications\WorkflowNotification([
+                'title' => 'Revisi Tagihan Honorarium dari PPK',
+                'message' => "Tagihan '{$tagihan->nomor_tagihan}' dikembalikan untuk revisi. Catatan: {$request->catatan_revisi}",
+                'url' => route('honorarium.index'),
+                'icon' => 'error',
+                'color' => 'danger',
+            ]));
+        } catch (\Exception $e) {
+            // Kegagalan notifikasi tidak menghentikan proses utama.
+        }
+
+        return redirect()->route('honorarium.ppk.pending')->with('success', 'Tagihan honorarium berhasil dikembalikan untuk revisi.');
+    }
+
     private function generateNextNumber(): string
     {
         $year = now()->format('Y');
@@ -257,3 +401,4 @@ class HonorariumController extends Controller
         return 'HON-' . $year . '-' . str_pad($count + 1, 4, '0', STR_PAD_LEFT);
     }
 }
+

@@ -327,3 +327,4 @@ class PerjaldinController extends Controller
         return redirect()->route('perjaldins.index')->with('success', 'Perjaldin beserta seluruh datanya berhasil dihapus.');
     }
 }
+

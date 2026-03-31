@@ -87,16 +87,6 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        // 6. Tabel Master Personel Eksternal (Honorarium)
-        Schema::create('master_personel_eksternal', function (Blueprint $table) {
-            $table->id();
-            $table->string('nrp_nik', 50)->unique();
-            $table->string('nama_lengkap', 100);
-            $table->string('pangkat', 50);
-            $table->string('jabatan', 100);
-            $table->string('no_hp', 100);
-            $table->timestamps();
-        });
 
         Schema::create('master_pegawai', function (Blueprint $table) {
             $table->id();
@@ -139,11 +129,10 @@ return new class extends Migration
         Schema::dropIfExists('master_tarif_pajak');
         Schema::dropIfExists('master_coas');
         Schema::dropIfExists('rekening_bank');
-        Schema::dropIfExists('master_personel_eksternal');
         Schema::dropIfExists('master_mitra_vendor');
         Schema::dropIfExists('riwayat_revisi_dipa');
-        Schema::dropIfExists('master_dipas');
         Schema::dropIfExists('detail_dipas');
+        Schema::dropIfExists('master_dipas');
         Schema::dropIfExists('master_pegawai');
        
     }
@@ -177,7 +166,19 @@ return new class extends Migration
             $table->date('tanggal_mulai');
             $table->date('tanggal_selesai');
             $table->enum('status_kontrak', ['DRAFT', 'PENDING_PPK', 'REVISI', 'AKTIF', 'SELESAI', 'DIBATALKAN'])->default('DRAFT');
-            // --- KOLOM VERIFIKASI PPK ---
+            $table->foreignId('detail_dipa_id')->nullable()
+                  ->constrained('detail_dipas')->nullOnDelete();
+            
+            // 2. Jangka Waktu Pemeliharaan (Biasanya dalam Hari)
+            $table->integer('masa_pemeliharaan_hari')->default(0)
+                  ->comment('Diambil dari Resume Kontrak poin 11');
+
+            // 3. Ketentuan Sanksi / Denda
+            $table->string('ketentuan_sanksi', 255)->nullable()
+                  ->comment('Diambil dari Resume Kontrak poin 12, misal: 1/1000 per hari');
+            
+            // Opsi Tambahan: Mata Uang (Default IDR sesuai sheet InputKontrak)
+            $table->string('mata_uang', 10)->default('IDR');
             $table->foreignId('disetujui_ppk_id')->nullable()->constrained('users')->nullOnDelete();
             $table->dateTime('waktu_persetujuan_ppk')->nullable();
             // --- KOLOM FILE DOKUMEN KONTRAK AWAL ---
@@ -363,6 +364,9 @@ return new class extends Migration
             $table->decimal('biaya_transport', 15, 2)->default(0);
             $table->decimal('biaya_penginapan', 15, 2)->default(0);
             $table->decimal('uang_harian', 15, 2)->default(0);
+            $table->decimal('uang_representasi', 15, 2)->default(0);
+            
+            
             $table->timestamps();
         });
 
@@ -399,7 +403,10 @@ return new class extends Migration
         Schema::create('detail_honorarium', function (Blueprint $table) {
             $table->id();
             $table->foreignId('tagihan_id')->constrained('tagihan')->cascadeOnDelete();
-            $table->foreignId('personel_id')->constrained('master_personel_eksternal')->restrictOnDelete();
+            $table->string('nama_personel', 255);
+            $table->string('nrp_nip', 100)->nullable();
+            $table->string('pangkat_korp', 100)->nullable();
+            $table->string('jabatan', 100)->nullable();
             $table->decimal('nilai_honor', 15, 2);
             $table->decimal('pph', 15, 2);
             $table->string('rekening', 100);
@@ -430,7 +437,7 @@ return new class extends Migration
         Schema::dropIfExists('detail_honorarium');
         Schema::dropIfExists('detail_kontrak');
         Schema::dropIfExists('detail_perjaldin');
-        Schema::dropIfExists('log_aktivitas_tagihan');
+        Schema::dropIfExists('log_status_dokumen');
         Schema::dropIfExists('potongan_tagihan');
         Schema::dropIfExists('tagihan');
         Schema::dropIfExists('transaksi_penerimaan');

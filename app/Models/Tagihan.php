@@ -3,11 +3,19 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Tagihan extends Model
 {
+    use SoftDeletes;
+
     protected $table = 'tagihan';
     protected $guarded = ['id'];
+
+    public function pihak()
+    {
+        return $this->belongsTo(MasterPihak::class, 'pihak_id');
+    }
 
     public function detailKontrak()
     {
@@ -27,5 +35,29 @@ class Tagihan extends Model
     public function detailHonorarium()
     {
         return $this->hasMany(DetailHonorarium::class, 'tagihan_id');
+    }
+
+    public function potonganTagihan()
+    {
+        return $this->hasMany(PotonganTagihan::class, 'tagihan_id');
+    }
+
+    public function potongans()
+    {
+        return $this->potonganTagihan();
+    }
+
+    public function arsipDokumen()
+    {
+        return $this->morphMany(ArsipDokumen::class, 'documentable');
+    }
+
+    public function getWaktuVerifikasiPpkAttribute()
+    {
+        $log = $this->relationLoaded('logs')
+            ? $this->logs->firstWhere('status_baru', 'READY_FOR_SPP') ?? $this->logs->firstWhere('status_baru', 'DISETUJUI_PPK')
+            : $this->logs()->whereIn('status_baru', ['READY_FOR_SPP', 'DISETUJUI_PPK'])->latest()->first();
+
+        return optional($log)->created_at;
     }
 }
