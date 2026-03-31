@@ -13,6 +13,9 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             RoleAndPermissionSeeder::class,
+            MasterCoaSeeder::class,
+            MasterDipaSeeder::class,
+            MitraVendorSeeder::class,
         ]);
     }
 }

@@ -47,10 +47,10 @@
                     @foreach($tagihan->detailHonorarium as $detail)
                         <tr>
                             <td>{{ $loop->iteration }}</td>
-                            <td>{{ $detail->personel->nama_lengkap ?? '-' }}</td>
-                            <td>{{ $detail->personel->nrp_nik ?? '-' }}</td>
-                            <td>{{ $detail->personel->pangkat ?? '-' }}</td>
-                            <td>{{ $detail->personel->jabatan ?? '-' }}</td>
+                            <td>{{ $detail->nama_personel ?? '-' }}</td>
+                            <td>{{ $detail->nrp_nip ?? '-' }}</td>
+                            <td>{{ $detail->pangkat_korp ?? '-' }}</td>
+                            <td>{{ $detail->jabatan ?? '-' }}</td>
                             <td>Rp {{ number_format($detail->nilai_honor, 0, ',', '.') }}</td>
                             <td>Rp {{ number_format($detail->pph, 0, ',', '.') }}</td>
                             <td class="fw-bold">Rp {{ number_format($detail->nilai_honor - $detail->pph, 0, ',', '.') }}</td>

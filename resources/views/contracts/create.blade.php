@@ -194,8 +194,8 @@
                                             </table>
                                         </div>
                                         <div class="d-flex justify-content-between px-2 pt-2 border-top">
-                                            <small class="text-muted" id="termin_peringatan">Total Persentase: <strong id="total_persen_display">0%</strong></small>
-                                            <small class="text-muted fw-bold">Total Nilai: <strong class="text-success" id="total_nilai_termin_display">Rp 0</strong></small>
+                                            <small class="" id="termin_peringatan">Total Persentase: <strong id="total_persen_display">0%</strong></small>
+                                            <small class=" fw-bold">Total Nilai: <strong class="text-success" id="total_nilai_termin_display">Rp 0</strong></small>
                                         </div>
                                     </div>
                                 </div>
@@ -209,7 +209,7 @@
             <div class="col-12 mb-4">
                 <div class="card shadow-sm border-0 rounded-4 h-100">
                     <div class="card-header bg-secondary text-white py-3 rounded-top-4">
-                        <h6 class="mb-0 fw-bold"><i class="bi bi-paperclip me-2"></i>4. Unggah Dokumen Perikatan (.PDF)</h6>
+                        <h6 class="mb-0 fw-bold"><i class="bi bi-paperclip me-2"></i>4. Unggah Dokumen (.PDF)</h6>
                     </div>
                     <div class="card-body p-4">
                         <div class="alert alert-light border shadow-sm mb-4">
@@ -217,15 +217,15 @@
                         </div>
                         <div class="row g-4">
                             <div class="col-md-4">
-                                <label class="form-label fw-bold">Dokumen SPK <small class="text-muted">(Opsional saat ini)</small></label>
+                                <label class="form-label fw-bold">Dokumen SPK <small class="">(Opsional saat ini)</small></label>
                                 <input type="file" class="form-control" name="file_spk" accept=".pdf">
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label fw-bold">Dokumen SPMK <small class="text-muted">(Opsional)</small></label>
+                                <label class="form-label fw-bold">Dokumen SPMK <small class="">(Opsional)</small></label>
                                 <input type="file" class="form-control" name="file_spmk" accept=".pdf">
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label fw-bold">Ringkasan Kontrak <small class="text-muted">(Opsional)</small></label>
+                                <label class="form-label fw-bold">Ringkasan Kontrak <small class="">(Opsional)</small></label>
                                 <input type="file" class="form-control" name="file_ringkasan_kontrak" accept=".pdf">
                             </div>
                         </div>

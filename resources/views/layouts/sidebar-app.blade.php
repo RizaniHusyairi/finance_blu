@@ -43,7 +43,7 @@
             <div class="menu-title">Master Data</div>
           </a>
           <ul>
-            @hasanyrole('Super Admin|Operator BLU|PPABP')
+            @hasanyrole('Super Admin|Operator BLU')
             <li><a href="{{ route('employees.index') }}"><i class="material-icons-outlined">arrow_right</i>Pegawai &
                 Pejabat</a>
             </li>

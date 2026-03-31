@@ -15,7 +15,7 @@ class HonorariumController extends Controller
     public function index()
     {
         $tagihans = Tagihan::where('tipe_tagihan', 'HONORARIUM')
-            ->with(['detailHonorarium.personel', 'logs' => fn($q) => $q->latest()->limit(1)])
+            ->with(['detailHonorarium', 'logs' => fn($q) => $q->latest()->limit(1)])
             ->latest()
             ->get();
 
@@ -24,11 +24,10 @@ class HonorariumController extends Controller
 
     public function create()
     {
-        $personels = MasterPersonelEksternal::orderBy('nama_lengkap')->get();
         $dipas = MasterDipa::orderByDesc('tahun_anggaran')->get();
         $nextNumber = $this->generateNextNumber();
 
-        return view('honorarium.create', compact('personels', 'dipas', 'nextNumber'));
+        return view('honorarium.create', compact('dipas', 'nextNumber'));
     }
 
     public function store(Request $request)
@@ -49,7 +48,10 @@ class HonorariumController extends Controller
             'master_dipa_id' => 'required|exists:master_dipas,id',
             'submit_type' => 'required|in:draft,submit_ppk',
             'items' => 'required|array|min:1',
-            'items.*.personel_id' => 'required|exists:master_personel_eksternal,id',
+            'items.*.nama_personel' => 'required|string|max:255',
+            'items.*.nrp_nip' => 'nullable|string|max:100',
+            'items.*.pangkat_korp' => 'nullable|string|max:100',
+            'items.*.jabatan' => 'nullable|string|max:100',
             'items.*.nilai_honor' => 'required|numeric|min:0',
             'items.*.pph' => 'nullable|numeric|min:0',
             'items.*.rekening' => 'nullable|string|max:100',
@@ -85,7 +87,10 @@ class HonorariumController extends Controller
             foreach ($request->items as $itemData) {
                 DetailHonorarium::create([
                     'tagihan_id' => $tagihan->id,
-                    'personel_id' => $itemData['personel_id'],
+                    'nama_personel' => $itemData['nama_personel'],
+                    'nrp_nip' => $itemData['nrp_nip'] ?? null,
+                    'pangkat_korp' => $itemData['pangkat_korp'] ?? null,
+                    'jabatan' => $itemData['jabatan'] ?? null,
                     'nilai_honor' => $itemData['nilai_honor'] ?? 0,
                     'pph' => $itemData['pph'] ?? 0,
                     'rekening' => $itemData['rekening'] ?? '',
@@ -116,7 +121,7 @@ class HonorariumController extends Controller
     public function show($id)
     {
         $tagihan = Tagihan::where('tipe_tagihan', 'HONORARIUM')
-            ->with(['detailHonorarium.personel', 'logs' => fn($q) => $q->latest()])
+            ->with(['detailHonorarium', 'logs' => fn($q) => $q->latest()])
             ->findOrFail($id);
 
         return view('honorarium.show', compact('tagihan'));
@@ -125,7 +130,7 @@ class HonorariumController extends Controller
     public function edit($id)
     {
         $tagihan = Tagihan::where('tipe_tagihan', 'HONORARIUM')
-            ->with('detailHonorarium.personel')
+            ->with('detailHonorarium')
             ->findOrFail($id);
 
         if (!in_array($tagihan->status, ['DRAFT', 'DITOLAK_PPK'])) {
@@ -133,10 +138,9 @@ class HonorariumController extends Controller
                 ->with('error', 'Data dengan status ' . $tagihan->status . ' tidak bisa diedit.');
         }
 
-        $personels = MasterPersonelEksternal::orderBy('nama_lengkap')->get();
         $dipas = MasterDipa::orderByDesc('tahun_anggaran')->get();
 
-        return view('honorarium.edit', compact('tagihan', 'personels', 'dipas'));
+        return view('honorarium.edit', compact('tagihan', 'dipas'));
     }
 
     public function update(Request $request, $id)
@@ -163,7 +167,10 @@ class HonorariumController extends Controller
             'master_dipa_id' => 'required|exists:master_dipas,id',
             'submit_type' => 'required|in:draft,submit_ppk',
             'items' => 'required|array|min:1',
-            'items.*.personel_id' => 'required|exists:master_personel_eksternal,id',
+            'items.*.nama_personel' => 'required|string|max:255',
+            'items.*.nrp_nip' => 'nullable|string|max:100',
+            'items.*.pangkat_korp' => 'nullable|string|max:100',
+            'items.*.jabatan' => 'nullable|string|max:100',
             'items.*.nilai_honor' => 'required|numeric|min:0',
             'items.*.pph' => 'nullable|numeric|min:0',
             'items.*.rekening' => 'nullable|string|max:100',
@@ -196,7 +203,10 @@ class HonorariumController extends Controller
             foreach ($request->items as $itemData) {
                 DetailHonorarium::create([
                     'tagihan_id' => $tagihan->id,
-                    'personel_id' => $itemData['personel_id'],
+                    'nama_personel' => $itemData['nama_personel'],
+                    'nrp_nip' => $itemData['nrp_nip'] ?? null,
+                    'pangkat_korp' => $itemData['pangkat_korp'] ?? null,
+                    'jabatan' => $itemData['jabatan'] ?? null,
                     'nilai_honor' => $itemData['nilai_honor'] ?? 0,
                     'pph' => $itemData['pph'] ?? 0,
                     'rekening' => $itemData['rekening'] ?? '',

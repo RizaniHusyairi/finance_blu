@@ -72,7 +72,10 @@
                         <thead class="table-light text-center">
                             <tr>
                                 <th style="width: 50px;">No</th>
-                                <th>Personel</th>
+                                <th>Nama Personel</th>
+                                <th>NRP/NIP</th>
+                                <th>Pangkat/Korp</th>
+                                <th>Jabatan</th>
                                 <th>Honor (Rp)</th>
                                 <th>PPh (Rp)</th>
                                 <th>Netto</th>
@@ -85,7 +88,7 @@
                         <tbody></tbody>
                         <tfoot>
                             <tr class="table-light fw-bold">
-                                <td colspan="2" class="text-end">TOTAL</td>
+                                <td colspan="5" class="text-end">TOTAL</td>
                                 <td><input type="text" class="form-control form-control-sm bg-light" id="grandHonor" readonly></td>
                                 <td><input type="text" class="form-control form-control-sm bg-light" id="grandPph" readonly></td>
                                 <td><input type="text" class="form-control form-control-sm bg-light" id="grandNetto" readonly></td>
@@ -110,19 +113,9 @@
 
     <script>
     let rowIndex = 0;
-    const personelsData = @json($personels);
 
     function toNumber(value) { return parseFloat(String(value).replace(/,/g, '')) || 0; }
     function formatRp(value) { return new Intl.NumberFormat('id-ID').format(value); }
-
-    function buildPersonelOptions(selectedId) {
-        let html = '<option value="">-- Pilih Personel --</option>';
-        personelsData.forEach(p => {
-            const sel = p.id == selectedId ? 'selected' : '';
-            html += `<option value="${p.id}" ${sel}>${p.nama_lengkap} (${p.nrp_nik})</option>`;
-        });
-        return html;
-    }
 
     function updateRowNumbers() {
         document.querySelectorAll('#honorariumTable tbody tr').forEach((row, i) => {
@@ -160,9 +153,16 @@
         tr.innerHTML = `
             <td class="text-center row-no"></td>
             <td>
-                <select name="items[${rowIndex}][personel_id]" class="form-select form-select-sm" required>
-                    ${buildPersonelOptions(data.personel_id ?? '')}
-                </select>
+                <input type="text" name="items[${rowIndex}][nama_personel]" class="form-control form-control-sm" value="${data.nama_personel ?? ''}" required>
+            </td>
+            <td>
+                <input type="text" name="items[${rowIndex}][nrp_nip]" class="form-control form-control-sm" value="${data.nrp_nip ?? ''}">
+            </td>
+            <td>
+                <input type="text" name="items[${rowIndex}][pangkat_korp]" class="form-control form-control-sm" value="${data.pangkat_korp ?? ''}">
+            </td>
+            <td>
+                <input type="text" name="items[${rowIndex}][jabatan]" class="form-control form-control-sm" value="${data.jabatan ?? ''}">
             </td>
             <td><input type="number" step="0.01" min="0" name="items[${rowIndex}][nilai_honor]" class="form-control form-control-sm honor_amount" value="${data.nilai_honor ?? 0}" required></td>
             <td><input type="number" step="0.01" min="0" name="items[${rowIndex}][pph]" class="form-control form-control-sm pph_amount" value="${data.pph ?? 0}"></td>

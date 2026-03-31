@@ -2,80 +2,125 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Budget;
-use App\Models\Contract;
-use App\Models\BluPaymentSubmission;
-use App\Models\Supplier;
+use App\Models\MasterDipa;
+use App\Models\MasterCoa;
+use App\Models\DetailDipa;
+use App\Models\KontrakPengadaan;
+use App\Models\Tagihan;
+use App\Models\MasterMitraVendor;
+use App\Models\DokumenSpp;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 
 class DashboardController extends Controller
 {
     /**
-     * Internal Dashboard (KPA, PPK, Operator BLU, Bendahara)
+     * Internal Dashboard (KPA, Operator BLU, Bendahara, Kasubag, PPSPM, dll)
      */
     public function internal()
     {
-        if (\Illuminate\Support\Facades\Auth::user()->hasRole('Pejabat Pengadaan')) {
+        if (Auth::user()->hasRole('Pejabat Pengadaan')) {
             return $this->pejabatPengadaan();   
         }
-        if (\Illuminate\Support\Facades\Auth::user()->hasRole('PPK')) {
+        if (Auth::user()->hasRole('PPK')) {
             return $this->ppk();   
         }
-        // Summary cards
-        $totalPagu = Budget::sum('initial_budget');
-        $totalRealisasi = BluPaymentSubmission::where('status', 'Paid SP2D')->sum('gross_amount');
-        $sisaAnggaran = $totalPagu - $totalRealisasi;
+
+        $now = now();
+
+        // ============================================================
+        // KPI CARDS
+        // ============================================================
+        $totalPagu = MasterDipa::sum('total_pagu');
+        $totalRealisasi = DB::table('realisasi_anggaran')->sum('nominal_cair');
+        $sisaAnggaran = max(0, $totalPagu - $totalRealisasi);
         $persenRealisasi = $totalPagu > 0 ? round(($totalRealisasi / $totalPagu) * 100, 1) : 0;
 
-        $totalKontrakAktif = Contract::where('status', 'Aktif')->count();
-        $totalMitra = Supplier::count();
+        $totalKontrakAktif = KontrakPengadaan::where('status_kontrak', 'AKTIF')->count();
+        $totalMitra = MasterMitraVendor::count();
 
-        // Transaction status breakdown for donut chart
-        $statusCounts = BluPaymentSubmission::select('status', DB::raw('count(*) as total'))
+        // Tagihan pipeline summary
+        $tagihanPending = Tagihan::whereIn('status', ['DRAFT', 'PENDING_PPK', 'PENDING_BENDAHARA'])->count();
+        $tagihanRevisi  = Tagihan::whereIn('status', ['DITOLAK_PPK', 'REVISI_BENDAHARA', 'REVISI'])->count();
+
+        // SPP yang sudah diproses bulan ini
+        $sppBulanIni = DokumenSpp::whereMonth('tanggal_spp', $now->month)
+                        ->whereYear('tanggal_spp', $now->year)
+                        ->count();
+
+        // ============================================================
+        // CHART: Serapan per Jenis Belanja (51, 52, 53, BLU)
+        // ============================================================
+        $jenisAkun = [
+            ['label' => 'Belanja Pegawai (51)', 'pattern' => '51'],
+            ['label' => 'Belanja Barang (52)',   'pattern' => '52'],
+            ['label' => 'Belanja Modal (53)',    'pattern' => '53'],
+            ['label' => 'Belanja BLU (525)',     'pattern' => '525'],
+        ];
+
+        $chartBarLabels = [];
+        $chartBarPagu = [];
+        $chartBarRealisasi = [];
+
+        foreach ($jenisAkun as $ja) {
+            $pagu = DB::table('detail_dipas')
+                ->join('master_coas', 'detail_dipas.coa_id', '=', 'master_coas.id')
+                ->where('master_coas.kd_akun', 'like', $ja['pattern'] . '%')
+                ->sum('detail_dipas.nilai_pagu');
+            
+            $realisasi = DB::table('realisasi_anggaran')
+                ->join('detail_dipas', 'realisasi_anggaran.detail_dipa_id', '=', 'detail_dipas.id')
+                ->join('master_coas', 'detail_dipas.coa_id', '=', 'master_coas.id')
+                ->where('master_coas.kd_akun', 'like', $ja['pattern'] . '%')
+                ->sum('realisasi_anggaran.nominal_cair');
+            
+            $chartBarLabels[] = $ja['label'];
+            $chartBarPagu[] = (float) $pagu;
+            $chartBarRealisasi[] = (float) $realisasi;
+        }
+
+        // ============================================================
+        // CHART: Status Tagihan (Donut)
+        // ============================================================
+        $statusCounts = Tagihan::select('status', DB::raw('count(*) as total'))
             ->groupBy('status')
             ->pluck('total', 'status')
             ->toArray();
 
-        // Budget realization per COA for bar chart
-        $budgets = Budget::all();
-        $budgetLabels = [];
-        $budgetPagu = [];
-        $budgetRealisasi = [];
-        foreach ($budgets as $b) {
-            $budgetLabels[] = $b->coa;
-            $budgetPagu[] = (float) $b->initial_budget;
-            $budgetRealisasi[] = BluPaymentSubmission::where('budget_id', $b->id)
-                ->where('status', 'Paid SP2D')
-                ->sum('gross_amount');
-        }
-
-        // Recent transactions for table
-        $recentTransactions = BluPaymentSubmission::with(['contract', 'budget'])
+        // ============================================================
+        // TABLE: Kontrak Aktif Terbaru
+        // ============================================================
+        $activeContracts = KontrakPengadaan::where('status_kontrak', 'AKTIF')
+            ->with('vendor')
             ->latest()
             ->take(5)
             ->get();
 
-        // Active contracts
-        $activeContracts = Contract::where('status', 'Aktif')
-            ->with('supplier')
+        // ============================================================
+        // TABLE: Tagihan Menunggu / Pending
+        // ============================================================
+        $pendingTagihan = Tagihan::whereIn('status', ['PENDING_PPK', 'PENDING_BENDAHARA'])
             ->latest()
             ->take(5)
             ->get();
 
-        // Transactions needing approval (status = Verified, Approved SPP, or Approved SPM)
-        $pendingApproval = BluPaymentSubmission::whereIn('status', ['Verified', 'Approved SPP', 'Approved SPM'])
-            ->with(['contract', 'budget'])
-            ->latest()
+        // ============================================================
+        // TABLE: Kontrak Hampir Jatuh Tempo (H-14)
+        // ============================================================
+        $jatuhTempo = KontrakPengadaan::where('status_kontrak', 'AKTIF')
+            ->where('tanggal_selesai', '<=', $now->copy()->addDays(14))
+            ->with('vendor')
+            ->orderBy('tanggal_selesai', 'asc')
             ->take(5)
             ->get();
 
         return view('dashboard.internal', compact(
             'totalPagu', 'totalRealisasi', 'sisaAnggaran', 'persenRealisasi',
-            'totalKontrakAktif', 'totalMitra',
+            'totalKontrakAktif', 'totalMitra', 'tagihanPending', 'tagihanRevisi', 'sppBulanIni',
+            'chartBarLabels', 'chartBarPagu', 'chartBarRealisasi',
             'statusCounts',
-            'budgetLabels', 'budgetPagu', 'budgetRealisasi',
-            'recentTransactions', 'activeContracts', 'pendingApproval'
+            'activeContracts', 'pendingTagihan', 'jatuhTempo'
         ));
     }
 
@@ -86,34 +131,39 @@ class DashboardController extends Controller
     {
         $user = auth()->user();
 
-        // Find supplier linked to this user's email/name (simplified matching)
-        $supplier = Supplier::where('user_id', $user->id)->first();
+        // Find vendor/mitra linked to this user
+        $vendor = MasterMitraVendor::where('user_id', $user->id)->first();
 
         $contracts = collect();
-        $transactions = collect();
+        $tagihan = collect();
 
-        if ($supplier) {
-            $contracts = Contract::where('supplier_id', $supplier->id)
-                ->with(['terms'])
+        if ($vendor) {
+            $contracts = KontrakPengadaan::where('vendor_id', $vendor->id)
+                ->with(['termin'])
                 ->latest()
                 ->get();
 
             $contractIds = $contracts->pluck('id');
 
-            $transactions = BluPaymentSubmission::whereIn('contract_id', $contractIds)
-                ->with(['contract', 'budget', 'taxes'])
+            // Tagihan terkait kontrak mitra ini (via detail_kontrak)
+            $tagihan = Tagihan::where('tipe_tagihan', 'KONTRAK')
+                ->whereHas('detailKontrak', function($q) use ($contractIds) {
+                    $q->whereHas('kontrakTermin', function($q2) use ($contractIds) {
+                        $q2->whereIn('kontrak_pengadaan_id', $contractIds);
+                    });
+                })
                 ->latest()
                 ->get();
         }
 
         // Summary stats for the mitra
         $totalKontrak = $contracts->count();
-        $totalNilaiKontrak = $contracts->sum('total_amount');
-        $totalDibayar = $transactions->where('status', 'Paid SP2D')->sum('gross_amount');
-        $totalPending = $transactions->whereNotIn('status', ['Paid SP2D', 'Rejected'])->sum('gross_amount');
+        $totalNilaiKontrak = $contracts->sum('nilai_total_kontrak');
+        $totalDibayar = $tagihan->whereIn('status', ['CAIR', 'SP2D', 'SELESAI'])->sum('total_netto');
+        $totalPending = $tagihan->whereNotIn('status', ['CAIR', 'SP2D', 'SELESAI', 'DITOLAK_PPK'])->sum('total_netto');
 
         return view('dashboard.mitra', compact(
-            'supplier', 'contracts', 'transactions',
+            'vendor', 'contracts', 'tagihan',
             'totalKontrak', 'totalNilaiKontrak', 'totalDibayar', 'totalPending'
         ));
     }

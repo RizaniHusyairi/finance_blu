@@ -189,20 +189,36 @@ class ContractController extends Controller
                 $prs = $request->input('termin_persentase', []);
                 $nl  = $request->input('termin_nilai', []);
                 
+                $ada_uang_muka = $request->has('ada_uang_muka') ? 1 : 0;
+                $nilai_uang_muka = $ada_uang_muka ? ($validated['nilai_uang_muka'] ?? 0) : 0;
+
                 $totalPersenCheck = array_sum($prs);
                 if ($totalPersenCheck != 100) {
                     throw new \Exception("Total Persentase Termin harus tepat 100% (Saat ini $totalPersenCheck%).");
                 }
 
+                // Hitung rasio uang muka terhadap total kontrak
+                $rasioUangMuka = 0;
+                if ($ada_uang_muka && $validated['nilai_total_kontrak'] > 0) {
+                    $rasioUangMuka = $nilai_uang_muka / $validated['nilai_total_kontrak'];
+                }
+
                 foreach ($jns as $index => $jenis) {
+                    // Hitung potongan angsuran uang muka untuk termin PROGRESS & PELUNASAN
+                    $potonganAngsuran = 0;
+                    if ($ada_uang_muka && in_array($jenis, ['PROGRESS', 'PELUNASAN'])) {
+                        $potonganAngsuran = $nl[$index] * $rasioUangMuka;
+                    }
+
                     \App\Models\KontrakTermin::create([
                         'kontrak_pengadaan_id' => $kontrak->id,
                         'termin_ke' => $index + 1,
                         'keterangan_termin' => $ket[$index] ?? '-',
                         'persentase' => $prs[$index],
                         'nilai_bruto_termin' => $nl[$index],
+                        'potongan_angsuran_uang_muka' => $potonganAngsuran,
                         'jenis_termin' => $jenis,
-                        'status_termin' => 'READY_TO_BILL' // First termin is ready
+                        'status_termin' => 'READY_TO_BILL'
                     ]);
                 }
                 
@@ -564,13 +580,26 @@ class ContractController extends Controller
                     throw new \Exception("Total Persentase Termin harus tepat 100% (Saat ini $totalPersenCheck%).");
                 }
 
+                // Hitung rasio uang muka terhadap total kontrak
+                $rasioUangMuka = 0;
+                if ($ada_uang_muka && $validated['nilai_total_kontrak'] > 0) {
+                    $rasioUangMuka = $nilai_uang_muka / $validated['nilai_total_kontrak'];
+                }
+
                 foreach ($jns as $index => $jenis) {
+                    // Hitung potongan angsuran uang muka untuk termin PROGRESS & PELUNASAN
+                    $potonganAngsuran = 0;
+                    if ($ada_uang_muka && in_array($jenis, ['PROGRESS', 'PELUNASAN'])) {
+                        $potonganAngsuran = $nl[$index] * $rasioUangMuka;
+                    }
+
                     \App\Models\KontrakTermin::create([
                         'kontrak_pengadaan_id' => $kontrak->id,
                         'termin_ke' => $index + 1,
                         'keterangan_termin' => $ket[$index] ?? '-',
                         'persentase' => $prs[$index],
                         'nilai_bruto_termin' => $nl[$index],
+                        'potongan_angsuran_uang_muka' => $potonganAngsuran,
                         'jenis_termin' => $jenis,
                         'status_termin' => 'READY_TO_BILL'
                     ]);

@@ -16,9 +16,4 @@ class DetailHonorarium extends Model
     {
         return $this->belongsTo(Tagihan::class, 'tagihan_id');
     }
-
-    public function personel()
-    {
-        return $this->belongsTo(MasterPersonelEksternal::class, 'personel_id');
-    }
 }

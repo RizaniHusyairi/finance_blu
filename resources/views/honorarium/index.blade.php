@@ -60,7 +60,7 @@
                                 <td>{{ $item->deskripsi }}</td>
                                 <td>
                                     @foreach($item->detailHonorarium as $detail)
-                                        <span class="badge bg-light text-dark border">{{ $detail->personel->nama_lengkap ?? '-' }}</span>
+                                        <span class="badge bg-light text-dark border">{{ $detail->nama_personel ?? '-' }}</span>
                                     @endforeach
                                 </td>
                                 <td>Rp {{ number_format($item->total_bruto, 0, ',', '.') }}</td>

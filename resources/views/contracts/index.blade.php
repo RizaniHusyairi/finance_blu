@@ -5,25 +5,14 @@
 @push('css')
     <link href="{{ URL::asset('build/plugins/datatable/css/dataTables.bootstrap5.min.css') }}" rel="stylesheet" />
     <style>
-        .nav-tabs .nav-link {
-            font-weight: 600;
-            color: #6c757d;
-            border: none;
-            padding: 1rem 1.5rem;
-            border-bottom: 3px solid transparent;
-        }
-        .nav-tabs .nav-link.active {
-            color: #0d6efd;
-            background: transparent;
-            border-color: #0d6efd;
-        }
+  
     </style>
 @endpush
 @section('content')
     <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
         <div>
             <h4 class="mb-0 fw-bold">Manajemen Kontrak</h4>
-            <p class="text-muted mb-0 small">Pantau status pelaksanaan kontrak dan persetujuan addendum</p>
+            <p class="mb-0 small">Pantau status pelaksanaan kontrak dan persetujuan addendum</p>
         </div>
         <a href="{{ route('contracts.create') }}" class="btn btn-primary shadow-sm fw-bold">
             <i class="bi bi-plus-lg me-1"></i> Tambah Kontrak
@@ -38,15 +27,15 @@
     @endif
 
     <div class="card border-0 shadow-sm rounded-4">
-        <div class="card-header bg-white p-0 border-bottom rounded-top-4">
+        <div class="card-header p-0 border-bottom rounded-top-4">
             <ul class="nav nav-tabs px-3" id="contractTabs" role="tablist">
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link active fw-bold py-3 border-0 border-bottom border-3 border-primary text-primary" id="kontrak-tab" data-bs-toggle="tab" data-bs-target="#kontrak" type="button" role="tab" aria-controls="kontrak" aria-selected="true">
+                    <button class="nav-link fw-bold py-3 border-0 border-bottom border-3" id="kontrak-tab" data-bs-toggle="tab" data-bs-target="#kontrak" type="button" role="tab" aria-controls="kontrak" aria-selected="true">
                         <i class="bi bi-file-earmark-text me-2"></i>Daftar Kontrak Utama
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link fw-bold py-3 border-0 border-bottom border-3 text-secondary" id="addendum-tab" data-bs-toggle="tab" data-bs-target="#addendum" type="button" role="tab" aria-controls="addendum" aria-selected="false">
+                    <button class="nav-link fw-bold py-3 border-0 border-bottom border-3" id="addendum-tab" data-bs-toggle="tab" data-bs-target="#addendum" type="button" role="tab" aria-controls="addendum" aria-selected="false">
                         <i class="bi bi-journal-plus me-2"></i>Riwayat Addendum
                     </button>
                 </li>
