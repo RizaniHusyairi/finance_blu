@@ -92,9 +92,22 @@ return new class extends Migration
             $table->id();
             $table->string('nrp_nik', 50)->unique();
             $table->string('nama_lengkap', 100);
-            $table->string('instansi', 50);
-            $table->string('pangkat_golongan', 50);
+            $table->string('pangkat', 50);
             $table->string('jabatan', 100);
+            $table->string('no_hp', 100);
+            $table->timestamps();
+        });
+
+        Schema::create('master_pegawai', function (Blueprint $table) {
+            $table->id();
+            // Optional referensi ke tabel users jika pegawai tersebut berhak login
+            $table->foreignId('user_id')->nullable()->constrained('users')->nullOnDelete();
+            
+            $table->string('nip', 50)->unique()->nullable();
+            $table->string('nama_lengkap', 150);
+            $table->string('jabatan', 100)->nullable();
+            $table->string('npwp', 50)->nullable();
+            $table->boolean('status_aktif')->default(true);
             $table->timestamps();
         });
 
@@ -131,7 +144,7 @@ return new class extends Migration
         Schema::dropIfExists('riwayat_revisi_dipa');
         Schema::dropIfExists('master_dipas');
         Schema::dropIfExists('detail_dipas');
-  
+        Schema::dropIfExists('master_pegawai');
        
     }
 };
@@ -163,7 +176,10 @@ return new class extends Migration
             $table->enum('satuan_waktu', ['HARI', 'MINGGU', 'BULAN']);
             $table->date('tanggal_mulai');
             $table->date('tanggal_selesai');
-            $table->enum('status_kontrak', ['AKTIF', 'SELESAI', 'DIBATALKAN'])->default('AKTIF');
+            $table->enum('status_kontrak', ['DRAFT', 'PENDING_PPK', 'REVISI', 'AKTIF', 'SELESAI', 'DIBATALKAN'])->default('DRAFT');
+            // --- KOLOM VERIFIKASI PPK ---
+            $table->foreignId('disetujui_ppk_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->dateTime('waktu_persetujuan_ppk')->nullable();
             // --- KOLOM FILE DOKUMEN KONTRAK AWAL ---
             $table->string('file_spk')->nullable()->comment('Arsip Surat Perintah Kerja');
             $table->string('file_spmk')->nullable()->comment('Arsip Surat Perintah Mulai Kerja');
@@ -338,7 +354,7 @@ return new class extends Migration
         Schema::create('detail_perjaldin', function (Blueprint $table) {
             $table->id();
             $table->foreignId('tagihan_id')->constrained('tagihan')->cascadeOnDelete();
-            $table->foreignId('pegawai_id')->constrained('users')->restrictOnDelete();
+            $table->foreignId('pegawai_id')->constrained('master_pegawai')->restrictOnDelete();
             $table->string('no_spt', 100);
             $table->string('tujuan', 100);
             $table->date('tgl_berangkat');
@@ -385,6 +401,10 @@ return new class extends Migration
             $table->foreignId('tagihan_id')->constrained('tagihan')->cascadeOnDelete();
             $table->foreignId('personel_id')->constrained('master_personel_eksternal')->restrictOnDelete();
             $table->decimal('nilai_honor', 15, 2);
+            $table->decimal('pph', 15, 2);
+            $table->string('rekening', 100);
+            $table->string('jenis_bank', 50);
+            $table->string('nama_rekening', 100);
             $table->timestamps();
         });
 

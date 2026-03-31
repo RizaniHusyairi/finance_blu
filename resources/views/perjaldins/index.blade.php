@@ -173,12 +173,36 @@
                     if (el && el.checked && ('indeterminate' in el)) el.indeterminate = true;
                 }
             });
+
+            $('#bulkForm').on('submit', function(e) {
+                e.preventDefault();
+                let checked = table.$('input[type="checkbox"].row-checkbox:checked');
+                
+                if (checked.length === 0) {
+                    alert('Pilih minimal 1 tagihan perjaldin.');
+                    return false;
+                }
+
+                if (confirm('Ajukan ' + checked.length + ' Perjaldin untuk verifikasi PPK?')) {
+                    $('.dynamic-hidden-ids').remove();
+                    
+                    checked.each(function() {
+                        $('#bulkForm').append(
+                            $('<input>')
+                                .attr('type', 'hidden')
+                                .attr('name', 'tagihan_ids[]')
+                                .addClass('dynamic-hidden-ids')
+                                .val($(this).val())
+                        );
+                    });
+                    
+                    this.submit();
+                }
+            });
         });
 
         function submitBulk() {
-            var checkedCount = $('.row-checkbox:checked').length;
-            if (checkedCount === 0) { alert('Pilih minimal 1 tagihan perjaldin.'); return; }
-            if (confirm('Ajukan ' + checkedCount + ' Perjaldin untuk verifikasi PPK?')) $('#bulkForm').submit();
+            $('#bulkForm').trigger('submit');
         }
 
         function deletePerjaldin(url) {

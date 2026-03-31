@@ -28,4 +28,18 @@ class KontrakPengadaan extends Model
     {
         return $this->hasMany(KontrakTermin::class, 'kontrak_pengadaan_id');
     }
+
+    public function getTotalTerserapAttribute()
+    {
+        return $this->termin()->where('status_termin', 'SUDAH_DITAGIH')->sum('nilai_bruto_termin');
+    }
+
+    public function getPersentaseSerapanAttribute()
+    {
+        $total_terserap = $this->total_terserap;
+        if ($this->nilai_total_kontrak == 0) {
+            return 0;
+        }
+        return round(($total_terserap / $this->nilai_total_kontrak) * 100, 2);
+    }
 }

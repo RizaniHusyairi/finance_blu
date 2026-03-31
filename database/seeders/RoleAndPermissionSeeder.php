@@ -128,21 +128,7 @@ class RoleAndPermissionSeeder extends Seeder
         ]);
         $bendaharaPenerimaan->syncRoles(['Bendahara Penerimaan']);
 
-        // Create a Mitra for Testing
-        $mitra = User::updateOrCreate([
-            'email' => 'vendor@test.com',
-        ], [
-            'name' => 'Vendor Test',
-            'email_verified_at' => now(),
-            'password' => Hash::make('password'),
-        ]);
-
-        $mitra->syncRoles(['Mitra']);
-
-        Supplier::updateOrCreate(
-            ['user_id' => $mitra->id],
-            ['name' => 'Vendor Test']
-        );
+        
 
          // Create Pejabat Pengadaan for Testing
         $perjaldin = User::updateOrCreate([

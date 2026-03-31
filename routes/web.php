@@ -67,7 +67,9 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
         Route::post('/tagihan/kontrak/store', [\App\Http\Controllers\TagihanController::class, 'storeKontrak'])->name('tagihan.kontrak.store');
 
         Route::get('/contracts/verifikasi', [ContractController::class, 'verifikasiIndex'])->name('contracts.verifikasi');
+        Route::get('/contracts/verifikasi/{id}', [ContractController::class, 'verifikasiShow'])->name('contracts.verifikasi.show');
         Route::resource('contracts', ContractController::class);
+        Route::post('/contracts/submit-bulk', [ContractController::class, 'submitBulk'])->name('contracts.submit_bulk');
         Route::post('/contracts/{contract}/submit', [ContractController::class, 'submit'])->name('contracts.submit');
         Route::post('/contracts/{contract}/approve', [ContractController::class, 'approve'])->name('contracts.approve');
         Route::post('/contracts/{contract}/reject', [ContractController::class, 'reject'])->name('contracts.reject');
@@ -110,6 +112,10 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
 
     // Verifikasi Perjaldin & SPP — PPK
     Route::middleware('role:Super Admin|PPK')->group(function () {
+        // Verifikasi Tagihan Kontrak (BAST)
+        Route::get('/verifikasi-ppk/tagihan-kontrak', [\App\Http\Controllers\TagihanController::class, 'ppkIndex'])->name('ppk.tagihan.kontrak.index');
+        Route::get('/verifikasi-ppk/tagihan-kontrak/{id}/verify', [\App\Http\Controllers\TagihanController::class, 'verifyKontrak'])->name('ppk.tagihan.kontrak.verify');
+
         Route::get('/verifikasi-ppk', [\App\Http\Controllers\PerjaldinVerifikasiController::class, 'ppkIndex'])->name('verifikasi-ppk.index');
         Route::post('/verifikasi-ppk/{id}/approve', [\App\Http\Controllers\PerjaldinVerifikasiController::class, 'approve'])->name('verifikasi-ppk.approve');
         Route::post('/verifikasi-ppk/{id}/revisi', [\App\Http\Controllers\PerjaldinVerifikasiController::class, 'revisi'])->name('verifikasi-ppk.revisi');

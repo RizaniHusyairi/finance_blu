@@ -19,6 +19,9 @@ class DashboardController extends Controller
         if (\Illuminate\Support\Facades\Auth::user()->hasRole('Pejabat Pengadaan')) {
             return $this->pejabatPengadaan();   
         }
+        if (\Illuminate\Support\Facades\Auth::user()->hasRole('PPK')) {
+            return $this->ppk();   
+        }
         // Summary cards
         $totalPagu = Budget::sum('initial_budget');
         $totalRealisasi = BluPaymentSubmission::where('status', 'Paid SP2D')->sum('gross_amount');
@@ -187,5 +190,123 @@ class DashboardController extends Controller
         });
 
         return view('dashboard.pejabat_pengadaan', $data);
+    }
+
+    /**
+     * Dashboard khusus Role PPK
+     */
+    private function ppk()
+    {
+        $data = \Illuminate\Support\Facades\Cache::remember('dash_ppk_' . auth()->id(), 60, function() {
+            $now = now();
+            
+            // KPI 1: SPK Baru
+            $kpi_kontrak_baru = \App\Models\KontrakPengadaan::where('status_kontrak', 'PENDING_PPK')->count();
+            
+            // KPI 2: Tagihan BAST
+            $kpi_tagihan_bast = \App\Models\Tagihan::where('status', 'PENDING_PPK')->count();
+            
+            // KPI 3: Pencairan
+            $spp = DB::table('dokumen_spp')->whereNull('disetujui_ppk_id')->count();
+            $npi = DB::table('dokumen_npi')->whereNull('disetujui_ppk_id')->count();
+            $sp2d = DB::table('dokumen_sp2d')->whereNull('disetujui_ppk_id')->count();
+            $kpi_pencairan = $spp + $npi + $sp2d;
+
+            // KPI 4: Sisa Pagu DIPA
+            $totalPaguDipa = DB::table('master_dipas')->sum('total_pagu');
+            $totalRealisasi = DB::table('realisasi_anggaran')->sum('nominal_cair');
+            $sisaPagu = max(0, $totalPaguDipa - $totalRealisasi);
+
+            // Alert Kritis Belanja Modal 53
+            $pagu53 = DB::table('detail_dipas')
+                ->join('master_coas', 'detail_dipas.coa_id', '=', 'master_coas.id')
+                ->where('master_coas.kode_mak_lengkap', 'like', '%53%')
+                ->sum('detail_dipas.nilai_pagu');
+            $realisasi53 = DB::table('realisasi_anggaran')
+                ->join('detail_dipas', 'realisasi_anggaran.detail_dipa_id', '=', 'detail_dipas.id')
+                ->join('master_coas', 'detail_dipas.coa_id', '=', 'master_coas.id')
+                ->where('master_coas.kode_mak_lengkap', 'like', '%53%')
+                ->sum('realisasi_anggaran.nominal_cair');
+                
+            $alertModal = null;
+            if ($pagu53 > 0) {
+                $sisa53 = $pagu53 - $realisasi53;
+                $persen53 = ($sisa53 / $pagu53) * 100;
+                if ($persen53 < 10) {
+                    $alertModal = "Peringatan: Pagu DIPA untuk Belanja Modal (MAK 53) tersisa kurang dari 10% (Sisa " . number_format($persen53, 1) . "%)!";
+                }
+            }
+
+            // Charts
+            // Doughnut: Serapan DIPA
+            $chartSerapan = [
+                'Terserap (SP2D)' => $totalRealisasi,
+                'Sisa Pagu' => $sisaPagu
+            ];
+
+            // Bar: Serapan 51, 52, 53
+            $pagu51 = DB::table('detail_dipas')->join('master_coas', 'detail_dipas.coa_id', '=', 'master_coas.id')->where('master_coas.kode_mak_lengkap', 'like', '%51%')->sum('detail_dipas.nilai_pagu');
+            $pagu52 = DB::table('detail_dipas')->join('master_coas', 'detail_dipas.coa_id', '=', 'master_coas.id')->where('master_coas.kode_mak_lengkap', 'like', '%52%')->sum('detail_dipas.nilai_pagu');
+            
+            $realisasi51 = DB::table('realisasi_anggaran')->join('detail_dipas', 'realisasi_anggaran.detail_dipa_id', '=', 'detail_dipas.id')->join('master_coas', 'detail_dipas.coa_id', '=', 'master_coas.id')->where('master_coas.kode_mak_lengkap', 'like', '%51%')->sum('realisasi_anggaran.nominal_cair');
+            $realisasi52 = DB::table('realisasi_anggaran')->join('detail_dipas', 'realisasi_anggaran.detail_dipa_id', '=', 'detail_dipas.id')->join('master_coas', 'detail_dipas.coa_id', '=', 'master_coas.id')->where('master_coas.kode_mak_lengkap', 'like', '%52%')->sum('realisasi_anggaran.nominal_cair');
+
+            $chartBarLabels = ['Belanja Pegawai (51)', 'Belanja Barang (52)', 'Belanja Modal (53)'];
+            $chartBarPagu = [$pagu51, $pagu52, $pagu53];
+            $chartBarRealisasi = [$realisasi51, $realisasi52, $realisasi53];
+
+            // Tabs Data
+            // Kontrak Baru
+            $tabKontrak = \App\Models\KontrakPengadaan::where('status_kontrak', 'PENDING_PPK')->latest()->get();
+            // Tagihan
+            $tabTagihan = \App\Models\Tagihan::where('status', 'PENDING_PPK')->latest()->get();
+            
+            // Pencairan (Union of SPP, NPI, SP2D)
+            $listSpp = DB::table('dokumen_spp')
+                ->join('users', 'dokumen_spp.dibuat_oleh_id', '=', 'users.id')
+                ->select('dokumen_spp.id', 'dokumen_spp.nomor_spp as nomor', 'dokumen_spp.nominal_spp as nilai', 'users.name as pembuat')
+                ->whereNull('dokumen_spp.disetujui_ppk_id')
+                ->get()->map(function($i) { $i->jenis = 'SPP'; $i->prioritas = 'Sedang'; $i->url_reject = route('verifikasi-ppk.spp.revisi', $i->id); $i->url_approve = route('verifikasi-ppk.spp.approve', $i->id); return $i; });
+                
+            $listNpi = DB::table('dokumen_npi')
+                ->join('users', 'dokumen_npi.bendahara_penerimaan_id', '=', 'users.id')
+                ->join('dokumen_spm', 'dokumen_npi.spm_id', '=', 'dokumen_spm.id')
+                ->join('dokumen_spp', 'dokumen_spm.spp_id', '=', 'dokumen_spp.id')
+                ->select('dokumen_npi.id', 'dokumen_npi.nomor_npi as nomor', 'dokumen_spp.nominal_spp as nilai', 'users.name as pembuat')
+                ->whereNull('dokumen_npi.disetujui_ppk_id')
+                ->get()->map(function($i) { $i->jenis = 'NPI'; $i->prioritas = 'Sedang'; $i->url_reject = route('verifikasi-ppk.npi.revisi', $i->id); $i->url_approve = route('verifikasi-ppk.npi.approve', $i->id);  return $i; });
+                
+            $listSp2d = DB::table('dokumen_sp2d')
+                ->join('users', 'dokumen_sp2d.bendahara_pengeluaran_id', '=', 'users.id')
+                ->join('dokumen_npi', 'dokumen_sp2d.npi_id', '=', 'dokumen_npi.id')
+                ->join('dokumen_spm', 'dokumen_npi.spm_id', '=', 'dokumen_spm.id')
+                ->join('dokumen_spp', 'dokumen_spm.spp_id', '=', 'dokumen_spp.id')
+                ->select('dokumen_sp2d.id', 'dokumen_sp2d.nomor_sp2d as nomor', 'dokumen_spp.nominal_spp as nilai', 'users.name as pembuat')
+                ->whereNull('dokumen_sp2d.disetujui_ppk_id')
+                ->get()->map(function($i) { $i->jenis = 'SP2D'; $i->prioritas = 'Tinggi'; $i->url_reject = '#'; $i->url_approve = '#'; return $i; });
+
+            $tabPencairan = $listSpp->concat($listNpi)->concat($listSp2d);
+
+            return [
+                'alertModal' => $alertModal,
+                'kpi' => [
+                    'kontrak_baru' => $kpi_kontrak_baru,
+                    'tagihan_bast' => $kpi_tagihan_bast,
+                    'pencairan' => $kpi_pencairan,
+                    'sisa_pagu' => $sisaPagu,
+                    'total_pagu' => $totalPaguDipa,
+                ],
+                'chart_serapan_labels' => array_keys($chartSerapan),
+                'chart_serapan_data' => array_values($chartSerapan),
+                'chart_bar_labels' => $chartBarLabels,
+                'chart_bar_pagu' => $chartBarPagu,
+                'chart_bar_realisasi' => $chartBarRealisasi,
+                'tab_kontrak' => $tabKontrak,
+                'tab_tagihan' => $tabTagihan,
+                'tab_pencairan' => $tabPencairan,
+            ];
+        });
+
+        return view('dashboard.ppk', $data);
     }
 }

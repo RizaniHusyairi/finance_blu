@@ -17,13 +17,38 @@
                     <i class="bi bi-hash me-1"></i> Nomor SPK: <strong>{{ $kontrak->nomor_spk }}</strong>
                 </div>
             </div>
-            <div>
+            <div class="d-flex align-items-center gap-2">
                 @if($kontrak->status_kontrak == 'AKTIF')
                     <span class="badge bg-primary px-3 py-2 rounded-pill shadow-sm fs-6"><i class="bi bi-play-circle me-1"></i> AKTIF</span>
                 @elseif($kontrak->status_kontrak == 'SELESAI')
                     <span class="badge bg-success px-3 py-2 rounded-pill shadow-sm fs-6"><i class="bi bi-check-circle me-1"></i> SELESAI</span>
+                @elseif($kontrak->status_kontrak == 'DRAFT' || $kontrak->status_kontrak == 'REVISI')
+                    <span class="badge bg-secondary px-3 py-2 rounded-pill shadow-sm fs-6"><i class="bi bi-pencil me-1"></i> {{ $kontrak->status_kontrak }}</span>
                 @else
-                    <span class="badge bg-danger px-3 py-2 rounded-pill shadow-sm fs-6">{{ $kontrak->status_kontrak }}</span>
+                    <span class="badge bg-warning text-dark px-3 py-2 rounded-pill shadow-sm fs-6">{{ str_replace('_', ' ', $kontrak->status_kontrak) }}</span>
+                @endif
+
+                {{-- Aksi Pejabat Pengadaan --}}
+                @if(Auth::user()->hasRole('Pejabat Pengadaan') && in_array($kontrak->status_kontrak, ['DRAFT', 'REVISI']))
+                    <form action="{{ route('contracts.submit', $kontrak->id) }}" method="POST" class="m-0" onsubmit="return confirm('Ajukan kontrak ini ke PPK?')">
+                        @csrf
+                        <button type="submit" class="btn btn-warning btn-sm shadow-sm fw-bold">
+                            <i class="bi bi-send-check me-1"></i> Ajukan ke PPK
+                        </button>
+                    </form>
+                @endif
+                
+                {{-- Aksi PPK --}}
+                @if(Auth::user()->hasRole('PPK') && $kontrak->status_kontrak === 'PENDING_PPK')
+                    <button type="button" class="btn btn-danger btn-sm shadow-sm fw-bold" data-bs-toggle="modal" data-bs-target="#modalTolak">
+                        <i class="bi bi-arrow-return-left me-1"></i> Kembalikan (Revisi)
+                    </button>
+                    <form action="{{ route('contracts.approve', $kontrak->id) }}" method="POST" class="m-0" onsubmit="return confirm('Apakah Anda yakin menyetujui Kontrak ini?')">
+                        @csrf
+                        <button type="submit" class="btn btn-primary btn-sm shadow-sm fw-bold">
+                            <i class="bi bi-check-circle me-1"></i> Setujui Kontrak
+                        </button>
+                    </form>
                 @endif
             </div>
         </div>
@@ -35,26 +60,15 @@
                     <div>
                         <h6 class="text-muted fw-bold mb-1">Serapan Dana (Realisasi)</h6>
                         
-                        @php
-                            // Menghitung Termin yang SUDAH DITAGIH (Sebagai asumsi kasar Serapan jika SP2D belum final, dicontohkan dari nilai bruto termin)
-                            $totalTerserap = 0;
-                            foreach($kontrak->termin as $t) {
-                                if($t->status_termin == 'SUDAH_DITAGIH') {
-                                    $totalTerserap += $t->nilai_bruto_termin;
-                                }
-                            }
-                            $persentase = $kontrak->nilai_total_kontrak > 0 ? ($totalTerserap / $kontrak->nilai_total_kontrak) * 100 : 0;
-                        @endphp
-                        
-                        <h4 class="fw-bold text-success mb-0 d-inline-block">Rp {{ number_format($totalTerserap, 0, ',', '.') }}</h4>
+                        <h4 class="fw-bold text-success mb-0 d-inline-block">Rp {{ number_format($kontrak->total_terserap, 0, ',', '.') }}</h4>
                         <span class="text-muted ms-2">/ Rp {{ number_format($kontrak->nilai_total_kontrak, 0, ',', '.') }}</span>
                     </div>
                     <div class="text-end">
-                        <span class="badge bg-light text-primary border border-primary fs-6">{{ number_format($persentase, 1) }}% Tercapai</span>
+                        <span class="badge bg-light text-primary border border-primary fs-6">{{ number_format($kontrak->persentase_serapan, 1) }}% Tercapai</span>
                     </div>
                 </div>
                 <div class="progress" style="height: 12px; border-radius: 10px;">
-                    <div class="progress-bar progress-bar-striped progress-bar-animated bg-success" role="progressbar" style="width: {{ $persentase }}%" aria-valuenow="{{ $persentase }}" aria-valuemin="0" aria-valuemax="100"></div>
+                    <div class="progress-bar progress-bar-striped progress-bar-animated bg-success" role="progressbar" style="width: {{ $kontrak->persentase_serapan }}%" aria-valuenow="{{ $kontrak->persentase_serapan }}" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
             </div>
         </div>
@@ -204,11 +218,15 @@
                                             @endif
                                         </td>
                                         <td class="text-center">
-                                            @if($termin->status_termin == 'LOCKED' || $termin->status_termin == 'READY_TO_BILL')
-                                                <a href="{{ route('tagihan.kontrak.create', ['kontrak_id' => $kontrak->id]) }}" class="btn btn-sm btn-outline-primary" title="Buat Tagihan">
-                                                    <i class="bi bi-cash"></i> Buat
+                                            @if($kontrak->status_kontrak === 'AKTIF' && $termin->status_termin === 'READY_TO_BILL')
+                                                <a href="{{ route('tagihan.kontrak.create', ['kontrak_id' => $kontrak->id, 'termin_id' => $termin->id]) }}" class="btn btn-sm btn-primary shadow-sm" title="Buat Tagihan">
+                                                    <i class="bi bi-cash"></i> Buat Tagihan
                                                 </a>
-                                            @elseif($termin->status_termin == 'SUDAH_DITAGIH')
+                                            @elseif($kontrak->status_kontrak === 'AKTIF' && $termin->status_termin === 'LOCKED')
+                                                <button disabled class="btn btn-sm btn-outline-secondary" title="Termin Masih Terkunci">
+                                                    <i class="bi bi-lock-fill"></i> Terkunci
+                                                </button>
+                                            @elseif($termin->status_termin === 'SUDAH_DITAGIH')
                                                 <button class="btn btn-sm btn-light text-success border border-success" title="Lihat SP2D / Tagihan" disabled>
                                                     <i class="bi bi-search"></i> Lihat
                                                 </button>
@@ -316,4 +334,41 @@
         </div>
     </div>
 </div>
+</div>
+
+{{-- MODAL TOLAK KONTRAK UNTUK PPK --}}
+@if(Auth::user()->hasRole('PPK') && $kontrak->status_kontrak === 'PENDING_PPK')
+<div class="modal fade" id="modalTolak" tabindex="-1" aria-labelledby="modalTolakLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form method="POST" action="{{ route('contracts.reject', $kontrak->id) }}" class="modal-content border-0 rounded-4 shadow">
+            @csrf
+            <div class="modal-header bg-danger text-white border-bottom-0">
+                <h5 class="modal-title fw-bold" id="modalTolakLabel"><i class="bi bi-exclamation-triangle me-2"></i> Kembalikan Kontrak (Revisi)</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <p class="mb-3 text-muted">Silakan sebutkan alasan mengapa draf kontrak ini dikembalikan ke Pejabat Pengadaan untuk direvisi.</p>
+                <div class="mb-3">
+                    <label class="form-label fw-bold small text-danger">Catatan Revisi / Penolakan <span class="text-danger">*</span></label>
+                    <textarea name="notes" class="form-control" rows="4" placeholder="Contoh: Lampiran jaminan pelaksanaan nilai tidak sesuai..." required></textarea>
+                </div>
+            </div>
+            <div class="modal-footer bg-light border-top-0">
+                <button type="button" class="btn btn-outline-secondary fw-bold" data-bs-dismiss="modal">Batal</button>
+                <button type="submit" class="btn btn-danger fw-bold"><i class="bi bi-arrow-return-left me-1"></i> Simpan & Kirim Kembali</button>
+            </div>
+        </form>
+    </div>
+</div>
+@endif
+
 @endsection
+
+@push('css')
+<style>
+    .activity-timeline { border-left-color: #0d6efd !important; }
+    .timeline-item { padding-bottom: 1.5rem; }
+    .timeline-item:last-child { padding-bottom: 0; }
+    .timeline-icon { box-shadow: 0 0 0 4px #fff; }
+</style>
+@endpush

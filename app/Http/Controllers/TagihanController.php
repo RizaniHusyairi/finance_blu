@@ -155,4 +155,33 @@ class TagihanController extends Controller
             return back()->withInput()->withErrors(['error' => 'Gagal membuat tagihan: ' . $e->getMessage()]);
         }
     }
+
+    /**
+     * Tampilkan antrean verifikasi tagihan kontrak (BAST) untuk role PPK
+     */
+    public function ppkIndex()
+    {
+        $tagihans = Tagihan::with(['detailKontrak.termin.kontrak.vendor'])
+                    ->where('tipe_tagihan', 'KONTRAK')
+                    ->where('status', 'PENDING_PPK')
+                    ->latest()
+                    ->get();
+                    
+        return view('tagihans.ppk_index', compact('tagihans'));
+    }
+
+    /**
+     * Tampilkan detail tagihan BAST untuk diverifikasi PPK
+     */
+    public function verifyKontrak($id)
+    {
+        $tagihan = Tagihan::with(['detailKontrak.termin.kontrak.vendor', 'potongans', 'logs'])->findOrFail($id);
+        
+        // Cek jika status bukan PENDING_PPK
+        if ($tagihan->status !== 'PENDING_PPK') {
+            return redirect()->route('ppk.tagihan.kontrak.index')->with('error', 'Tagihan ini tidak sedang dalam antrean verifikasi Anda.');
+        }
+
+        return view('tagihans.ppk_verify', compact('tagihan'));
+    }
 }

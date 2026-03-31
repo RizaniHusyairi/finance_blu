@@ -27,7 +27,10 @@ return new class extends Migration
             $table->enum('satuan_waktu', ['HARI', 'MINGGU', 'BULAN']);
             $table->date('tanggal_mulai');
             $table->date('tanggal_selesai');
-            $table->enum('status_kontrak', ['AKTIF', 'SELESAI', 'DIBATALKAN'])->default('AKTIF');
+            $table->enum('status_kontrak', ['DRAFT', 'PENDING_PPK', 'REVISI', 'AKTIF', 'SELESAI', 'DIBATALKAN'])->default('DRAFT');
+            // --- KOLOM VERIFIKASI PPK ---
+            $table->foreignId('disetujui_ppk_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->dateTime('waktu_persetujuan_ppk')->nullable();
             // --- KOLOM FILE DOKUMEN KONTRAK AWAL ---
             $table->string('file_spk')->nullable()->comment('Arsip Surat Perintah Kerja');
             $table->string('file_spmk')->nullable()->comment('Arsip Surat Perintah Mulai Kerja');

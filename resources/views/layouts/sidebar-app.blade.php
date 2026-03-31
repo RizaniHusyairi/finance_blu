@@ -98,22 +98,97 @@
         @hasrole('PPK')
         <li>
           <a href="javascript:;" class="has-arrow">
-            <div class="parent-icon"><i class="material-icons-outlined">verified</i></div>
-            <div class="menu-title">Verifikasi</div>
+            <div class="parent-icon"><i class="material-icons-outlined">draw</i></div>
+            <div class="menu-title">Verifikasi Perikatan</div>
           </a>
           <ul>
-          <li>
-                <a href="{{ route('honorarium.ppk.pending') }}">
-                  <i class="material-icons-outlined">arrow_right</i>Honor
+            <li>
+                <a href="{{ route('contracts.verifikasi') }}">
+                  <i class="material-icons-outlined">arrow_right</i>Draft Kontrak & SPMK
                 </a>
-              </li>
-            <li><a href="{{ route('contracts.index') }}"><i class="material-icons-outlined">arrow_right</i>Kontrak</a></li>
-            <li><a href="{{ route('verifikasi-ppk.index') }}"><i class="material-icons-outlined">arrow_right</i>Perjaldin</a></li>
-            <li><a href="{{ route('perjaldin-blu.history') }}"><i class="material-icons-outlined">arrow_right</i>Riwayat Perjaldin</a></li>
-            <li><a href="{{ route('verifikasi-ppk.spp.index') }}"><i class="material-icons-outlined">arrow_right</i>SPP</a></li>
-            <li><a href="#"><i class="material-icons-outlined">arrow_right</i>SPM</a></li>
-            <li><a href="{{ route('verifikasi-ppk.npi.index') }}"><i class="material-icons-outlined">arrow_right</i>NPI</a></li>
-            <li><a href="#"><i class="material-icons-outlined">arrow_right</i>SP2D</a></li>
+            </li>
+          </ul>
+        </li>
+
+        <li>
+          <a href="javascript:;" class="has-arrow">
+            <div class="parent-icon"><i class="material-icons-outlined">fact_check</i></div>
+            <div class="menu-title">Verifikasi Tagihan</div>
+          </a>
+          <ul>
+            <li>
+                <a href="{{ route('ppk.tagihan.kontrak.index') }}">
+                  <i class="material-icons-outlined">arrow_right</i>Kontrak (BAST)
+                </a>
+            </li>
+            <li>
+                <a href="{{ route('verifikasi-ppk.index') }}">
+                  <i class="material-icons-outlined">arrow_right</i>Perjaldin
+                </a>
+            </li>
+            <li>
+                <a href="{{ route('honorarium.ppk.pending') }}">
+                  <i class="material-icons-outlined">arrow_right</i>Honorarium
+                </a>
+            </li>
+          </ul>
+        </li>
+
+        <li>
+          <a href="javascript:;" class="has-arrow">
+            <div class="parent-icon"><i class="material-icons-outlined">history_edu</i></div>
+            <div class="menu-title">Verifikasi Pencairan</div>
+          </a>
+          <ul>
+            <li>
+                <a href="{{ route('verifikasi-ppk.spp.index') }}">
+                  <i class="material-icons-outlined">arrow_right</i>SPP
+                </a>
+            </li>
+            <li>
+                <a href="{{ route('verifikasi-ppk.npi.index') }}">
+                  <i class="material-icons-outlined">arrow_right</i>NPI
+                </a>
+            </li>
+            <li>
+                <a href="#">
+                  <i class="material-icons-outlined">arrow_right</i>SP2D
+                </a>
+            </li>
+          </ul>
+        </li>
+
+        <li>
+          <a href="javascript:;" class="has-arrow">
+            <div class="parent-icon"><i class="material-icons-outlined">monitoring</i></div>
+            <div class="menu-title">Monitoring & Laporan</div>
+          </a>
+          <ul>
+            <li>
+                <a href="#">
+                  <i class="material-icons-outlined">arrow_right</i>Pengawasan DIPA
+                </a>
+            </li>
+            <li>
+                <a href="#">
+                  <i class="material-icons-outlined">arrow_right</i>Arsip Kontrak
+                </a>
+            </li>
+            <li>
+                <a href="{{ route('perjaldin-blu.history') }}">
+                  <i class="material-icons-outlined">arrow_right</i>Arsip Perjaldin
+                </a>
+            </li>
+            <li>
+                <a href="#">
+                  <i class="material-icons-outlined">arrow_right</i>Arsip Honorarium
+                </a>
+            </li>
+            <li>
+                <a href="#">
+                  <i class="material-icons-outlined">arrow_right</i>Pelacakan SP2D
+                </a>
+            </li>
           </ul>
         </li>
         @endhasrole
