@@ -14,7 +14,7 @@ class KontrakPengadaan extends Model
 
     public function vendor()
     {
-        return $this->belongsTo(MasterMitraVendor::class, 'vendor_id');
+        return $this->belongsTo(MasterPihak::class, 'vendor_id');
     }
 
     public function dipa()
@@ -55,6 +55,11 @@ class KontrakPengadaan extends Model
     public function getFileRingkasanKontrakAttribute()
     {
         return optional($this->arsipDokumen->firstWhere('jenis_dokumen', 'RINGKASAN_KONTRAK'))->path_file;
+    }
+
+    public function getFileJaminanUangMukaAttribute()
+    {
+        return optional($this->arsipDokumen->firstWhere('jenis_dokumen', 'JAMINAN_UANG_MUKA'))->path_file;
     }
 
     public function getTotalTerserapAttribute()

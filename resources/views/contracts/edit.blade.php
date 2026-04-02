@@ -3,6 +3,15 @@
     Edit Kontrak Pengadaan
 @endsection
 @section('content')
+    @php
+        $existingProgressTermins = $kontrak->termin->where('jenis_termin', 'PROGRESS')->values();
+        $existingRetensiTermin = $kontrak->termin->firstWhere('jenis_termin', 'RETENSI');
+        $oldProgressKeterangan = old('progress_keterangan', $existingProgressTermins->pluck('keterangan_termin')->all() ?: ['']);
+        $oldProgressPersentase = old('progress_persentase', $existingProgressTermins->pluck('persentase')->all() ?: ['']);
+        $progressRowCount = max(count($oldProgressKeterangan), count($oldProgressPersentase), 1);
+        $oldRetensiPersentase = old('retensi_persentase', $existingRetensiTermin->persentase ?? null);
+        $oldRetensiKeterangan = old('retensi_keterangan', $existingRetensiTermin->keterangan_termin ?? 'Retensi');
+    @endphp
     <div class="d-flex justify-content-between align-items-center mb-3">
         <div>
             <h5 class="mb-0 fw-bold">Edit Kontrak Pengadaan</h5>
@@ -41,7 +50,7 @@
                                     <option value="">-- Cari Vendor --</option>
                                     @foreach($vendors as $vendor)
                                         <option value="{{ $vendor->id }}" {{ old('vendor_id', $kontrak->vendor_id) == $vendor->id ? 'selected' : '' }}>
-                                            {{ $vendor->nama_perusahaan }} ({{ str_replace('_', ' ', $vendor->kategori) }})
+                                            {{ $vendor->nama_pihak }} ({{ str_replace('_', ' ', $vendor->kategori) }})
                                         </option>
                                     @endforeach
                                 </select>
@@ -90,7 +99,7 @@
                             <div class="col-md-3">
                                 <label class="form-label fw-bold">Satuan Waktu <span class="text-danger">*</span></label>
                                 <select class="form-select" id="satuan_waktu" name="satuan_waktu" required onchange="hitungTanggalSelesai()">
-                                    <option value="HARI" {{ old('satuan_waktu', $kontrak->satuan_waktu) == 'HARI' ? 'selected' : '' }}>Hari Kalender</option>
+                                    <option value="HARI" {{ old('satuan_waktu', $kontrak->satuan_waktu) == 'HARI' ? 'selected' : '' }}>Hari</option>
                                     <option value="MINGGU" {{ old('satuan_waktu', $kontrak->satuan_waktu) == 'MINGGU' ? 'selected' : '' }}>Minggu</option>
                                     <option value="BULAN" {{ old('satuan_waktu', $kontrak->satuan_waktu) == 'BULAN' ? 'selected' : '' }}>Bulan</option>
                                 </select>
@@ -152,12 +161,15 @@
                                 <div class="border rounded-4 p-4 bg-light">
                                     <div class="alert alert-warning py-2 mb-3 shadow-sm border-0 d-flex align-items-center">
                                         <i class="bi bi-exclamation-triangle-fill text-warning me-2 fs-5"></i> 
-                                        <span>Menyimpan halaman ini akan **memformat ulang** skema termin jika Anda merubah struktur tabel di bawah.</span>
+                                        <span>Menyimpan perubahan akan membentuk ulang termin otomatis dengan urutan PROGRESS, lalu PELUNASAN, lalu RETENSI.</span>
                                     </div>
                                     <div class="d-flex justify-content-between align-items-center mb-3">
-                                        <h6 class="fw-bold mb-0 text-primary"><i class="bi bi-list-columns-reverse me-2"></i>Rincian Skema Termin</h6>
-                                        <button type="button" class="btn btn-sm btn-outline-primary" id="btnTambahTermin" onclick="tambahRowTermin()">
-                                            <i class="bi bi-plus-circle me-1"></i> Tambah Termin
+                                        <div>
+                                            <h6 class="fw-bold mb-1 text-primary"><i class="bi bi-list-columns-reverse me-2"></i>Rincian Termin Progress</h6>
+                                            <small class="text-muted">Anda cukup mengatur progress dan retensi. Pelunasan akan dihitung otomatis dari sisa persentase kontrak.</small>
+                                        </div>
+                                        <button type="button" class="btn btn-sm btn-outline-primary" id="btnTambahTermin" onclick="tambahRowProgress()">
+                                            <i class="bi bi-plus-circle me-1"></i> Tambah Progress
                                         </button>
                                     </div>
                                     <div class="table-responsive">
@@ -165,21 +177,82 @@
                                             <thead class="table-light">
                                                 <tr>
                                                     <th class="text-center" width="5%">Ke</th>
-                                                    <th width="20%">Jenis</th>
-                                                    <th width="35%">Keterangan</th>
+                                                    <th width="40%">Keterangan Progress</th>
                                                     <th class="text-center" width="15%">Persen (%)</th>
-                                                    <th width="20%">Nilai Bruto (Rp)</th>
+                                                    <th width="25%">Nilai Bruto (Rp)</th>
                                                     <th class="text-center" width="5%">Aksi</th>
                                                 </tr>
                                             </thead>
                                             <tbody id="bodyTermin">
-                                                {{-- JS will render rows here on load if edit mode --}}
+                                                @for ($i = 0; $i < $progressRowCount; $i++)
+                                                    <tr class="termin-row" data-index="{{ $i + 1 }}">
+                                                        <td class="text-center termin-nomor fw-bold align-middle">{{ $i + 1 }}</td>
+                                                        <td>
+                                                            <input type="text" class="form-control" name="progress_keterangan[]" placeholder="Contoh: Progress Tahap {{ $i + 1 }}" value="{{ $oldProgressKeterangan[$i] ?? '' }}" required>
+                                                        </td>
+                                                        <td>
+                                                            <div class="input-group">
+                                                                <input type="number" class="form-control termin-persen text-center" name="progress_persentase[]" placeholder="0" min="0.01" max="100" step="0.0001" value="{{ $oldProgressPersentase[$i] ?? '' }}" required oninput="kalkulasiTotalTermin()">
+                                                                <span class="input-group-text">%</span>
+                                                            </div>
+                                                        </td>
+                                                        <td>
+                                                            <input type="text" class="form-control bg-light termin-nilai-display fw-bold text-success" placeholder="Rp 0" readonly>
+                                                        </td>
+                                                        <td class="text-center align-middle">
+                                                            <button type="button" class="btn btn-sm btn-outline-danger btn-hapus-termin" onclick="hapusRowProgress(this)" {{ $progressRowCount === 1 ? 'disabled' : '' }}><i class="bi bi-trash"></i></button>
+                                                        </td>
+                                                    </tr>
+                                                @endfor
                                             </tbody>
                                         </table>
                                     </div>
-                                    <div class="d-flex justify-content-between px-2 pt-2 border-top">
-                                        <small class="text-muted" id="termin_peringatan">Total Persentase: <strong id="total_persen_display">0%</strong></small>
-                                        <small class="text-muted fw-bold">Total Nilai: <strong class="text-success" id="total_nilai_termin_display">Rp 0</strong></small>
+                                    <div class="row g-3 mt-1">
+                                        <div class="col-lg-4">
+                                            <label class="form-label fw-bold">Retensi (%) <span class="text-danger">*</span></label>
+                                            <div class="input-group">
+                                                <input type="number" class="form-control text-center" id="retensi_persentase" name="retensi_persentase" placeholder="Contoh: 5" min="0.01" max="100" step="0.0001" value="{{ $oldRetensiPersentase }}" oninput="kalkulasiTotalTermin()">
+                                                <span class="input-group-text">%</span>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-4">
+                                            <label class="form-label fw-bold">Keterangan Retensi <span class="text-danger">*</span></label>
+                                            <input type="text" class="form-control" id="retensi_keterangan" name="retensi_keterangan" value="{{ $oldRetensiKeterangan }}" placeholder="Contoh: Retensi masa pemeliharaan">
+                                        </div>
+                                        <div class="col-lg-4">
+                                            <label class="form-label fw-bold">Nilai Retensi (Rp)</label>
+                                            <input type="text" class="form-control bg-light fw-bold text-danger" id="retensi_nilai_display" placeholder="Rp 0" readonly>
+                                        </div>
+                                    </div>
+                                    <div class="border rounded-4 bg-white p-3 mt-4">
+                                        <h6 class="fw-bold text-dark mb-3">Preview Termin Otomatis</h6>
+                                        <div class="table-responsive">
+                                            <table class="table table-sm align-middle mb-0">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Jenis</th>
+                                                        <th class="text-center">Persentase</th>
+                                                        <th class="text-end">Nilai</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <tr>
+                                                        <td class="fw-semibold text-primary">Pelunasan (otomatis)</td>
+                                                        <td class="text-center"><span id="pelunasan_persen_display">0%</span></td>
+                                                        <td class="text-end fw-bold text-success" id="pelunasan_nilai_display">Rp 0</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td class="fw-semibold text-danger">Retensi</td>
+                                                        <td class="text-center"><span id="retensi_persen_display">0%</span></td>
+                                                        <td class="text-end fw-bold text-danger" id="retensi_preview_display">Rp 0</td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex justify-content-between px-2 pt-3 border-top mt-3">
+                                        <small id="termin_peringatan">Total Progress + Retensi: <strong id="total_persen_display">0%</strong></small>
+                                        <small class="fw-bold">Total Nilai Progress: <strong class="text-success" id="total_nilai_termin_display">Rp 0</strong></small>
                                     </div>
                                 </div>
                             </div>
@@ -220,6 +293,14 @@
                                 @endif
                                 <input type="file" class="form-control" name="file_ringkasan_kontrak" accept=".pdf">
                             </div>
+                            <div class="col-md-4" id="wrapper_file_jaminan_um" style="display: none;">
+                                <label class="form-label fw-bold">Jaminan Uang Muka</label>
+                                @if($kontrak->file_jaminan_uang_muka)
+                                    <div class="mb-2"><a href="{{ Storage::url($kontrak->file_jaminan_uang_muka) }}" target="_blank" class="badge bg-warning text-dark text-decoration-none"><i class="bi bi-file-earmark-pdf"></i> Jaminan UM Saat Ini</a></div>
+                                @endif
+                                <input type="file" class="form-control" name="file_jaminan_um" id="file_jaminan_um" accept=".pdf">
+                                <small class="text-muted d-block mt-1">Field ini hanya tampil jika kontrak menggunakan uang muka.</small>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -258,11 +339,6 @@
 @push('script')
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
-    let terminCounter = 0;
-    
-    // Data Termin Exising dari Controller to JSON
-    let existingTermins = @json($kontrak->termin ?? []);
-
     document.addEventListener("DOMContentLoaded", function () {
         $('.select2').select2({ theme: 'classic' });
         toggleUangMuka();
@@ -281,17 +357,8 @@
                 }
             });
         });
-
-        // Load existing Termin rows if TERMIN
-        if (existingTermins.length > 0 && document.querySelector('input[name="metode_pembayaran"]:checked').value === 'TERMIN') {
-            existingTermins.forEach((t) => {
-                tambahRowTerminData(t.jenis_termin, t.keterangan_termin, t.persentase, t.nilai_bruto_termin);
-            });
-        } else if (document.querySelector('input[name="metode_pembayaran"]:checked').value === 'TERMIN' && existingTermins.length === 0) {
-            // Jika statusnya termin tapi tak ada datanya, create setidaknya baris pertama
-            tambahRowTermin();
-        }
-
+        toggleTerminWrapper();
+        updateNomorTermin();
         kalkulasiTotalTermin();
     });
 
@@ -314,18 +381,20 @@
     function toggleUangMuka() {
         let isChecked = document.getElementById('ada_uang_muka').checked;
         let wrapper = document.getElementById('wrapper_uang_muka');
+        let wrapperFileJaminan = document.getElementById('wrapper_file_jaminan_um');
         let inputDisplay = document.getElementById('nilai_uang_muka_display');
         let inputValue = document.getElementById('nilai_uang_muka_value');
+        let inputFileJaminan = document.getElementById('file_jaminan_um');
 
         if (isChecked) {
             wrapper.style.display = 'block';
+            wrapperFileJaminan.style.display = 'block';
             inputDisplay.required = true;
         } else {
             wrapper.style.display = 'none';
+            wrapperFileJaminan.style.display = 'none';
             inputDisplay.required = false;
-            // DONT reset value when toggling in edit mode immediately on load. 
-            // We only reset if the user interacts. But we let `hidden` handle it when submitting
-            // So if `ada_uang_muka` is unchecked upon saving, controller will ignore DP.
+            inputFileJaminan.value = '';
             document.getElementById('uang_muka_error').classList.add('d-none');
         }
     }
@@ -363,75 +432,61 @@
     }
 
     document.querySelectorAll('input[name="metode_pembayaran"]').forEach(radio => {
-        radio.addEventListener('change', function() {
-            let wp = document.getElementById('wrapper_termin');
-            if (this.value === 'TERMIN') {
-                wp.style.display = 'block';
-                if(terminCounter === 0) tambahRowTermin();
-                kalkulasiTotalTermin();
-            } else {
-                wp.style.display = 'none';
-            }
-        });
+        radio.addEventListener('change', toggleTerminWrapper);
     });
 
-    if (document.querySelector('input[name="metode_pembayaran"]:checked').value === 'TERMIN') {
-        document.getElementById('wrapper_termin').style.display = 'block';
+    function toggleTerminWrapper() {
+        let wp = document.getElementById('wrapper_termin');
+        let isTermin = document.querySelector('input[name="metode_pembayaran"]:checked').value === 'TERMIN';
+        let retensiInput = document.getElementById('retensi_persentase');
+        let retensiKeterangan = document.getElementById('retensi_keterangan');
+        let progressInputs = document.querySelectorAll('input[name="progress_keterangan[]"], input[name="progress_persentase[]"]');
+
+        wp.style.display = isTermin ? 'block' : 'none';
+        retensiInput.required = isTermin;
+        retensiKeterangan.required = isTermin;
+        progressInputs.forEach(input => {
+            input.required = isTermin;
+        });
+
+        kalkulasiTotalTermin();
     }
 
-    // Function to add a completely empty row
-    function tambahRowTermin() {
-        tambahRowTerminData('PROGRESS', '', '', '0');
-    }
-
-    // Function to add a prefilled row (for editing)
-    function tambahRowTerminData(jenis, ket, persen, nilai) {
-        terminCounter++;
+    function tambahRowProgress() {
         let tbody = document.getElementById('bodyTermin');
+        let rowNumber = tbody.querySelectorAll('.termin-row').length + 1;
         let newRow = document.createElement('tr');
         newRow.className = 'termin-row';
-        newRow.id = `row_termin_${terminCounter}`;
-        
-        // Jenis selection string builders
-        let jUM = (jenis == 'UANG_MUKA') ? 'selected' : '';
-        let jP = (jenis == 'PROGRESS') ? 'selected' : '';
-        let jL = (jenis == 'PELUNASAN') ? 'selected' : '';
-        let jR = (jenis == 'RETENSI') ? 'selected' : '';
-
+        newRow.setAttribute('data-index', rowNumber);
         newRow.innerHTML = `
-            <td class="text-center termin-nomor fw-bold align-middle"></td>
-            <td>
-                <select class="form-select" name="termin_jenis[]" required>
-                    <option value="UANG_MUKA" ${jUM}>Uang Muka</option>
-                    <option value="PROGRESS" ${jP}>Progress</option>
-                    <option value="PELUNASAN" ${jL}>Pelunasan</option>
-                    <option value="RETENSI" ${jR}>Retensi</option>
-                </select>
-            </td>
-            <td><input type="text" class="form-control" name="termin_keterangan[]" placeholder="Contoh: Tahap Lanjutan" value="${ket}" required></td>
+            <td class="text-center termin-nomor fw-bold align-middle">${rowNumber}</td>
+            <td><input type="text" class="form-control" name="progress_keterangan[]" placeholder="Contoh: Progress Tahap ${rowNumber}" required></td>
             <td>
                 <div class="input-group">
-                    <input type="number" class="form-control termin-persen text-center" name="termin_persentase[]" placeholder="0" min="1" max="100" value="${persen}" required oninput="hitungTermin(${terminCounter})">
+                    <input type="number" class="form-control termin-persen text-center" name="progress_persentase[]" placeholder="0" min="0.01" max="100" step="0.0001" required oninput="kalkulasiTotalTermin()">
                     <span class="input-group-text">%</span>
                 </div>
             </td>
             <td>
-                <input type="text" class="form-control bg-light termin-nilai-display fw-bold text-success" id="termin_nilai_display_${terminCounter}" placeholder="Rp 0" readonly>
-                <input type="hidden" class="termin-nilai-val" name="termin_nilai[]" id="termin_nilai_val_${terminCounter}" value="${nilai}">
+                <input type="text" class="form-control bg-light termin-nilai-display fw-bold text-success" placeholder="Rp 0" readonly>
             </td>
             <td class="text-center align-middle">
-                <button type="button" class="btn btn-sm btn-outline-danger" onclick="hapusRowTermin(${terminCounter})" ${terminCounter==1 && jenis=='PELUNASAN' && existingTermins.length <= 1 ? 'disabled' : ''}><i class="bi bi-trash"></i></button>
+                <button type="button" class="btn btn-sm btn-outline-danger btn-hapus-termin" onclick="hapusRowProgress(this)"><i class="bi bi-trash"></i></button>
             </td>
         `;
 
         tbody.appendChild(newRow);
         updateNomorTermin();
-        kalkulasiTotalTermin();
+        toggleTerminWrapper();
     }
 
-    function hapusRowTermin(id) {
-        let el = document.getElementById(`row_termin_${id}`);
-        if(el) el.remove();
+    function hapusRowProgress(button) {
+        let rows = document.querySelectorAll('.termin-row');
+        if (rows.length === 1) {
+            return;
+        }
+
+        button.closest('.termin-row').remove();
         updateNomorTermin();
         kalkulasiTotalTermin();
     }
@@ -440,60 +495,68 @@
         let rows = document.querySelectorAll('.termin-row');
         rows.forEach((row, index) => {
             row.querySelector('.termin-nomor').innerText = index + 1;
-            // Disable delete if it's the only remaining row
-            let btnHapus = row.querySelector('.btn-outline-danger');
-            if(rows.length === 1 && btnHapus) {
-                btnHapus.disabled = true;
-            } else if (btnHapus) {
-                btnHapus.disabled = false;
-            }
+            row.setAttribute('data-index', index + 1);
         });
-    }
 
-    function hitungTermin(id) {
-        kalkulasiTotalTermin();
+        document.querySelectorAll('.btn-hapus-termin').forEach(button => {
+            button.disabled = rows.length === 1;
+        });
     }
 
     function kalkulasiTotalTermin() {
         let methodIsTermin = document.querySelector('input[name="metode_pembayaran"]:checked') ? document.querySelector('input[name="metode_pembayaran"]:checked').value === 'TERMIN' : false;
-        if (!methodIsTermin) return;
+        if (!methodIsTermin) {
+            document.getElementById('total_persen_display').innerText = '0%';
+            document.getElementById('total_nilai_termin_display').innerText = 'Rp 0';
+            document.getElementById('pelunasan_persen_display').innerText = '0%';
+            document.getElementById('pelunasan_nilai_display').innerText = 'Rp 0';
+            document.getElementById('retensi_persen_display').innerText = '0%';
+            document.getElementById('retensi_preview_display').innerText = 'Rp 0';
+            document.getElementById('retensi_nilai_display').value = '';
+            return;
+        }
 
         let totalKontrakStr = document.getElementById('nilai_total_kontrak_value').value || 0;
         let totalKontrak = parseFloat(totalKontrakStr);
-        let totalPersen = 0;
-        let totalNilai = 0;
+        let totalProgressPersen = 0;
+        let totalProgressNilai = 0;
 
         let rows = document.querySelectorAll('.termin-row');
         
         rows.forEach(row => {
             let persenInput = row.querySelector('.termin-persen');
             let dispVal = row.querySelector('.termin-nilai-display');
-            let hidVal = row.querySelector('.termin-nilai-val');
             
             let p = parseFloat(persenInput.value) || 0;
-            totalPersen += p;
-            
-            let n = 0;
-            if (totalKontrak > 0 && p > 0) {
-                n = Math.round((p / 100) * totalKontrak);
-            }
-            
-            hidVal.value = n;
-            dispVal.value = formatRupiah(n.toString(), 'Rp ');
-            totalNilai += n;
+            let n = totalKontrak > 0 && p > 0 ? ((p / 100) * totalKontrak) : 0;
+
+            dispVal.value = formatRupiah(Math.round(n).toString(), 'Rp ');
+            totalProgressPersen += p;
+            totalProgressNilai += n;
         });
+
+        let retensiPersen = parseFloat(document.getElementById('retensi_persentase').value) || 0;
+        let retensiNilai = totalKontrak > 0 && retensiPersen > 0 ? ((retensiPersen / 100) * totalKontrak) : 0;
+        let pelunasanPersen = 100 - totalProgressPersen - retensiPersen;
+        let pelunasanNilai = totalKontrak > 0 ? ((pelunasanPersen / 100) * totalKontrak) : 0;
+        let totalPersen = totalProgressPersen + retensiPersen;
 
         let dispPersen = document.getElementById('total_persen_display');
         dispPersen.innerText = totalPersen + '%';
         if (totalPersen > 100) {
             dispPersen.className = 'text-danger fw-bold';
-        } else if (totalPersen === 100) {
+        } else if (Math.abs(totalPersen - 100) < 0.0001) {
             dispPersen.className = 'text-success fw-bold';
         } else {
             dispPersen.className = 'text-warning text-dark fw-bold';
         }
 
-        document.getElementById('total_nilai_termin_display').innerText = formatRupiah(totalNilai.toString(), 'Rp ');
+        document.getElementById('total_nilai_termin_display').innerText = formatRupiah(Math.round(totalProgressNilai).toString(), 'Rp ');
+        document.getElementById('retensi_nilai_display').value = formatRupiah(Math.round(retensiNilai).toString(), 'Rp ');
+        document.getElementById('retensi_persen_display').innerText = retensiPersen + '%';
+        document.getElementById('retensi_preview_display').innerText = formatRupiah(Math.round(retensiNilai).toString(), 'Rp ');
+        document.getElementById('pelunasan_persen_display').innerText = pelunasanPersen.toFixed(4).replace(/\.?0+$/, '') + '%';
+        document.getElementById('pelunasan_nilai_display').innerText = formatRupiah(Math.round(Math.max(pelunasanNilai, 0)).toString(), 'Rp ');
     }
 
     document.getElementById('nilai_total_kontrak_display').addEventListener('keyup', function() {

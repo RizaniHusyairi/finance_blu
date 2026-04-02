@@ -16,6 +16,21 @@ class Perjaldin extends Tagihan
 
     public function spps()
     {
-        return $this->hasMany(DokumenSpp::class, 'tagihan_id');
+        return $this->hasMany(Spp::class, 'tagihan_id');
+    }
+
+    public function getPerjaldinIdAttribute()
+    {
+        return $this->id;
+    }
+
+    public function getUraianAttribute()
+    {
+        return $this->deskripsi;
+    }
+
+    public function getNoBastAttribute()
+    {
+        return null;
     }
 }

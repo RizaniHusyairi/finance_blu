@@ -47,22 +47,22 @@
                     <tbody>
                         @foreach($honorarium->honorariumItems as $item)
                         <tr>
-                            <td>{{ $item->sequence_no }}</td>
-                            <td>{{ $item->name }}</td>
-                            <td>{{ $item->nrp ?? '-' }}</td>
-                            <td>{{ $item->rank_corps ?? '-' }}</td>
-                            <td class="text-end">{{ number_format($item->honor_amount, 0, ',', '.') }}</td>
-                            <td class="text-end">{{ number_format($item->pph_amount, 0, ',', '.') }}</td>
-                            <td class="text-end fw-bold">{{ number_format($item->net_amount, 0, ',', '.') }}</td>
+                            <td>{{ $loop->iteration }}</td>
+                            <td>{{ $item->nama_personel ?? $item->name }}</td>
+                            <td>{{ $item->nrp_nip ?? $item->nrp ?? '-' }}</td>
+                            <td>{{ $item->pangkat_korp ?? $item->rank_corps ?? '-' }}</td>
+                            <td class="text-end">{{ number_format((float) ($item->nilai_honor ?? $item->honor_amount ?? 0), 0, ',', '.') }}</td>
+                            <td class="text-end">{{ number_format((float) ($item->pph ?? $item->pph_amount ?? 0), 0, ',', '.') }}</td>
+                            <td class="text-end fw-bold">{{ number_format((float) (($item->nilai_honor ?? $item->honor_amount ?? 0) - ($item->pph ?? $item->pph_amount ?? 0)), 0, ',', '.') }}</td>
                         </tr>
                         @endforeach
                     </tbody>
                     <tfoot>
                         <tr class="table-light">
                             <th colspan="4" class="text-end">TOTAL</th>
-                            <th class="text-end">{{ number_format($honorarium->honorariumItems->sum('honor_amount'), 0, ',', '.') }}</th>
-                            <th class="text-end">{{ number_format($honorarium->honorariumItems->sum('pph_amount'), 0, ',', '.') }}</th>
-                            <th class="text-end">{{ number_format($honorarium->honorariumItems->sum('net_amount'), 0, ',', '.') }}</th>
+                            <th class="text-end">{{ number_format((float) $honorarium->honorariumItems->sum(fn ($item) => $item->nilai_honor ?? $item->honor_amount ?? 0), 0, ',', '.') }}</th>
+                            <th class="text-end">{{ number_format((float) $honorarium->honorariumItems->sum(fn ($item) => $item->pph ?? $item->pph_amount ?? 0), 0, ',', '.') }}</th>
+                            <th class="text-end">{{ number_format((float) $honorarium->honorariumItems->sum(fn ($item) => ($item->nilai_honor ?? $item->honor_amount ?? 0) - ($item->pph ?? $item->pph_amount ?? 0)), 0, ',', '.') }}</th>
                         </tr>
                     </tfoot>
                 </table>

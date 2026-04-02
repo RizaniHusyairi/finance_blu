@@ -1,4 +1,4 @@
-﻿@extends('layouts.app')
+@extends('layouts.app')
 
 @section('title', 'Rincian Tagihan (Siap SPP)')
 
@@ -9,6 +9,9 @@
     $vendor = $kontrak->vendor ?? null;
     $rekening = $vendor->rekening->first() ?? null;
     $potonganTagihans = collect($tagihan->potonganTagihan ?? $tagihan->potongans ?? []);
+    $potonganAngsuranUm = $potonganTagihans->firstWhere('jenis_potongan', 'ANGSURAN_UANG_MUKA');
+    $potonganPajak = $potonganTagihans->filter(fn ($item) => $item->jenis_potongan !== 'ANGSURAN_UANG_MUKA');
+    $totalPotonganPajak = $potonganPajak->sum('nominal_potongan');
 
     $lampiranDokumen = collect([
         ['label' => 'File BAST', 'path' => $detailKontrak->file_bast ?? null],
@@ -16,6 +19,7 @@
         ['label' => 'File BAP', 'path' => $detailKontrak->file_bap ?? null],
         ['label' => 'File Invoice', 'path' => $detailKontrak->file_invoice ?? null],
         ['label' => 'File Kwitansi', 'path' => $detailKontrak->file_kwitansi ?? null],
+        ['label' => 'Faktur Pajak', 'path' => $detailKontrak->file_faktur_pajak ?? null],
         ['label' => 'Lampiran Lainnya', 'path' => $detailKontrak->file_lampiran_lainnya ?? null],
     ])->filter(fn ($item) => !empty($item['path']))->values();
 @endphp
@@ -127,14 +131,24 @@
                             </div>
                         </div>
 
+                        <div class="list-group-item px-0 py-3 d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="fw-semibold">Potongan Angsuran Uang Muka</div>
+                                <small class="text-muted">Pemulihan uang muka dari termin yang dibayarkan</small>
+                            </div>
+                            <div class="fw-bold fs-5 text-warning">
+                                Rp {{ number_format($potonganAngsuranUm->nominal_potongan ?? 0, 0, ',', '.') }}
+                            </div>
+                        </div>
+
                         <div class="list-group-item px-0 py-3">
                             <div class="fw-semibold mb-3">Daftar Potongan / Pajak</div>
 
-                            @if($potonganTagihans->isNotEmpty())
+                            @if($potonganPajak->isNotEmpty())
                                 <div class="table-responsive">
                                     <table class="table table-sm table-borderless align-middle mb-0">
                                         <tbody>
-                                            @foreach($potonganTagihans as $potongan)
+                                            @foreach($potonganPajak as $potongan)
                                                 <tr>
                                                     <td class="ps-0">
                                                         <span class="fw-semibold">{{ $potongan->jenis_potongan ?? 'Potongan' }}</span>
@@ -153,17 +167,17 @@
                                     </table>
                                 </div>
                             @else
-                                <div class="text-muted">Tidak ada data potongan pada tagihan ini.</div>
+                                <div class="text-muted">Tidak ada data potongan pajak pada tagihan ini.</div>
                             @endif
                         </div>
 
                         <div class="list-group-item px-0 py-3 d-flex justify-content-between align-items-center">
                             <div>
-                                <div class="fw-semibold">Total Potongan</div>
-                                <small class="text-muted">Akumulasi seluruh potongan tagihan</small>
+                                <div class="fw-semibold">Total Potongan Pajak</div>
+                                <small class="text-muted">Akumulasi potongan pajak di luar angsuran uang muka</small>
                             </div>
                             <div class="fw-bold fs-5 text-danger">
-                                Rp {{ number_format($tagihan->total_potongan, 0, ',', '.') }}
+                                Rp {{ number_format($totalPotonganPajak, 0, ',', '.') }}
                             </div>
                         </div>
 
@@ -233,9 +247,10 @@
 
             <div class="d-flex justify-content-end pb-2">
                 <a href="{{ route('operator.spp.kontrak.create', $tagihan->id) }}" class="btn btn-primary btn-lg">
-                    [📝 Lanjut Buat Dokumen SPP]
+                    [?? Lanjut Buat Dokumen SPP]
                 </a>
             </div>
         </div>
     </div>
 @endsection
+

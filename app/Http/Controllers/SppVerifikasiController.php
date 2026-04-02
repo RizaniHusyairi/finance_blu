@@ -2,8 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\DokumenSpp;
+use App\Models\LogStatusDokumen;
 use App\Models\Spp;
+use App\Models\Tagihan;
+use App\Models\User;
+use App\Notifications\WorkflowNotification;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Notification;
 
 class SppVerifikasiController extends Controller
 {
@@ -12,10 +19,15 @@ class SppVerifikasiController extends Controller
      */
     public function sppIndex()
     {
-        // Ambil SPP yang statusnya Menunggu Verifikasi atau sudah Disetujui PPK/Revisi
-        // Filter by latest first
-        $spps = Spp::with('sppable')
-            ->orderByRaw("CASE WHEN status_spp = 'Menunggu Verifikasi' THEN 1 ELSE 2 END")
+        $spps = Spp::with(['tagihan', 'spm'])
+            ->orderByRaw(
+                "CASE 
+                    WHEN status = ? THEN 1
+                    WHEN status = ? THEN 2
+                    ELSE 3
+                END",
+                ['Menunggu Verifikasi', 'Revisi']
+            )
             ->latest()
             ->get();
 
@@ -27,18 +39,33 @@ class SppVerifikasiController extends Controller
      */
     public function approveSpp($spp_id)
     {
-        $spp = Spp::findOrFail($spp_id);
+        $spp = Spp::with('tagihan')->findOrFail($spp_id);
+
+        if ($spp->status !== 'Menunggu Verifikasi') {
+            return back()->with('warning', "SPP {$spp->nomor_spp} tidak sedang menunggu verifikasi.");
+        }
         
         $spp->update([
-            'status_spp' => 'Disetujui PPK',
-            'catatan_revisi' => null // bersihkan catatan revisi jika ada sebelumnya
+            'status' => 'Disetujui PPK',
         ]);
 
-        $operators = \App\Models\User::role('Operator BLU')->get();
-        \Illuminate\Support\Facades\Notification::send($operators, new \App\Notifications\WorkflowNotification([
+        LogStatusDokumen::create([
+            'dokumen_type' => DokumenSpp::class,
+            'dokumen_id' => $spp->id,
+            'user_id' => Auth::id(),
+            'role_saat_itu' => Auth::user()?->getRoleNames()->first() ?? 'PPK',
+            'status_sebelumnya' => 'Menunggu Verifikasi',
+            'status_baru' => 'Disetujui PPK',
+            'aksi' => 'APPROVE_PPK',
+            'catatan' => 'Dokumen SPP disetujui oleh PPK.',
+            'ip_address' => request()->ip(),
+        ]);
+
+        $operators = User::role('Operator BLU')->get();
+        Notification::send($operators, new WorkflowNotification([
             'title' => 'SPP Disetujui',
-            'message' => "SPP Kategori {$spp->kategori_biaya} telah disetujui PPK.",
-            'url' => route('spps.perjaldin.detail', $spp->sppable_id),
+            'message' => "SPP {$spp->nomor_spp} telah disetujui PPK.",
+            'url' => $this->resolveOperatorDetailRoute($spp),
             'icon' => 'verified',
             'color' => 'success'
         ]));
@@ -55,22 +82,53 @@ class SppVerifikasiController extends Controller
             'catatan_revisi' => 'required|string|max:1000'
         ]);
 
-        $spp = Spp::findOrFail($spp_id);
+        $spp = Spp::with('tagihan')->findOrFail($spp_id);
+
+        if ($spp->status !== 'Menunggu Verifikasi') {
+            return back()->with('warning', "SPP {$spp->nomor_spp} tidak sedang menunggu verifikasi.");
+        }
 
         $spp->update([
-            'status_spp' => 'Revisi',
-            'catatan_revisi' => $request->catatan_revisi
+            'status' => 'Revisi',
         ]);
 
-        $operators = \App\Models\User::role('Operator BLU')->get();
-        \Illuminate\Support\Facades\Notification::send($operators, new \App\Notifications\WorkflowNotification([
+        LogStatusDokumen::create([
+            'dokumen_type' => DokumenSpp::class,
+            'dokumen_id' => $spp->id,
+            'user_id' => Auth::id(),
+            'role_saat_itu' => Auth::user()?->getRoleNames()->first() ?? 'PPK',
+            'status_sebelumnya' => 'Menunggu Verifikasi',
+            'status_baru' => 'Revisi',
+            'aksi' => 'REVISI_PPK',
+            'catatan' => $request->catatan_revisi,
+            'ip_address' => request()->ip(),
+        ]);
+
+        $operators = User::role('Operator BLU')->get();
+        Notification::send($operators, new WorkflowNotification([
             'title' => 'SPP Direvisi PPK',
-            'message' => "Catatan: {$request->catatan_revisi}",
-            'url' => route('spps.perjaldin.detail', $spp->sppable_id),
+            'message' => "SPP {$spp->nomor_spp} perlu revisi. Catatan: {$request->catatan_revisi}",
+            'url' => $this->resolveOperatorDetailRoute($spp),
             'icon' => 'error_outline',
             'color' => 'danger'
         ]));
 
         return back()->with('warning', "Catatan revisi untuk SPP {$spp->nomor_spp} telah dikirim ke Operator BLU.");
+    }
+
+    private function resolveOperatorDetailRoute(Spp $spp): string
+    {
+        $tagihan = $spp->tagihan;
+
+        if (!$tagihan) {
+            return route('spps.kontrak.index');
+        }
+
+        return match ($tagihan->tipe_tagihan) {
+            'PERJALDIN' => route('spps.perjaldin.detail', $tagihan->id),
+            'HONORARIUM' => route('spps.honor.detail', $tagihan->id),
+            'KONTRAK' => route('spps.kontrak.detail', $tagihan->id),
+            default => route('verifikasi-ppk.spp.index'),
+        };
     }
 }

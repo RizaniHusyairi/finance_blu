@@ -6,7 +6,7 @@
     <link href="{{ URL::asset('build/plugins/datatable/css/dataTables.bootstrap5.min.css') }}" rel="stylesheet" />
 @endpush
 @section('content')
-    <x-page-title title="Verifikasi SPM" subtitle="Pejabat Penandatangan SPM" />
+    <x-page-title :title="$pageTitle ?? 'Verifikasi SPM'" :subtitle="$pageSubtitle ?? 'Pejabat Penandatangan SPM'" />
 
     @if(session('success'))
         <div class="alert alert-success border-0 bg-success alert-dismissible fade show">
@@ -20,15 +20,15 @@
             <div class="card h-100 border-0 shadow-sm text-white" style="background-color: #dc3545;">
                 <div class="card-body p-3">
                     <h6 class="card-title fw-normal mb-1">Menunggu Anda (SPM)</h6>
-                    <h3 class="fw-bold mb-0 text-white">{{ \App\Models\Spp::where('status_spp', 'Menunggu Verifikasi SPM')->count() }}</h3>
+                    <h3 class="fw-bold mb-0 text-white">{{ $pendingCount ?? 0 }}</h3>
                 </div>
             </div>
         </div>
         <div class="col">
             <div class="card h-100 border-0 shadow-sm bg-white text-dark">
                 <div class="card-body p-3">
-                    <h6 class="card-title fw-normal text-muted mb-1">Telah Disetujui (Terbit)</h6>
-                    <h3 class="fw-bold mb-0">{{ \App\Models\Spp::where('status_spp', 'SPM Terbit')->count() }}</h3>
+                    <h6 class="card-title fw-normal text-muted mb-1">Telah Diproses</h6>
+                    <h3 class="fw-bold mb-0">{{ $approvedCount ?? 0 }}</h3>
                 </div>
             </div>
         </div>
@@ -67,16 +67,20 @@
                                 Rp {{ number_format($spm->jumlah_uang, 0, ',', '.') }}
                             </td>
                             <td>
-                                @if($spm->status_spp == 'Menunggu Verifikasi SPM')
+                                @if(($stage ?? 'ppspm') === 'ppspm' && $spm->status === \App\Models\DokumenSpm::STATUS_SUBMITTED_PPSPM)
                                     <span class="badge bg-warning text-dark"><i class="bi bi-hourglass-split"></i> Perlu TTE Anda</span>
-                                @elseif($spm->status_spp == 'Revisi SPM')
+                                @elseif(($stage ?? 'ppspm') === 'kasubbag' && $spm->status === \App\Models\DokumenSpm::STATUS_SUBMITTED_KASUBAG)
+                                    <span class="badge bg-warning text-dark"><i class="bi bi-hourglass-split"></i> Perlu Persetujuan Anda</span>
+                                @elseif(in_array($spm->status, [\App\Models\DokumenSpm::STATUS_REJECTED_PPSPM, \App\Models\DokumenSpm::STATUS_REJECTED_KASUBAG]))
                                     <span class="badge bg-danger"><i class="bi bi-x-circle"></i> Direvisi</span>
-                                @elseif($spm->status_spp == 'SPM Terbit')
+                                @elseif($spm->status === \App\Models\DokumenSpm::STATUS_SUBMITTED_KASUBAG)
+                                    <span class="badge bg-info text-dark"><i class="bi bi-send-check"></i> Menunggu Kasubbag</span>
+                                @elseif($spm->status === \App\Models\DokumenSpm::STATUS_APPROVED_KASUBAG)
                                     <span class="badge bg-success"><i class="bi bi-check2-all"></i> Sah / Terbit</span>
                                 @endif
                             </td>
                             <td class="text-center">
-                                @if($spm->status_spp == 'Menunggu Verifikasi SPM')
+                                @if((($stage ?? 'ppspm') === 'ppspm' && $spm->status === \App\Models\DokumenSpm::STATUS_SUBMITTED_PPSPM) || (($stage ?? 'ppspm') === 'kasubbag' && $spm->status === \App\Models\DokumenSpm::STATUS_SUBMITTED_KASUBAG))
                                     <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#approveModal{{ $spm->spp_id }}">
                                         <i class="bi bi-check-lg"></i> Setujui
                                     </button>
@@ -87,7 +91,7 @@
                                     <span class="text-muted fst-italic">Telah di-Review</span>
                                 @endif
                                 <!-- Tombol Preview PDF SPM (Meskipun belum disetujui, bisa lihat drafnya) -->
-                                <a href="{{ route('spms.cetak-pdf', $spm->spp_id) }}" target="_blank" class="btn btn-sm btn-outline-secondary ms-1" title="Lihat Draf PDF">
+                                <a href="{{ route('spms.cetak-pdf', $spm->id) }}" target="_blank" class="btn btn-sm btn-outline-secondary ms-1" title="Lihat Draf PDF">
                                     <i class="bi bi-file-earmark-pdf"></i>
                                 </a>
 
@@ -109,7 +113,7 @@
                                             </div>
                                             <div class="modal-footer">
                                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-                                                <form action="{{ route('verifikasi-ppspm.spm.approve', $spm->spp_id) }}" method="POST">
+                                                <form action="{{ route($approveRouteName ?? 'verifikasi-ppspm.spm.approve', $spm->id) }}" method="POST">
                                                     @csrf
                                                     <button type="submit" class="btn btn-success">Ya, Terbitkan SPM</button>
                                                 </form>
@@ -126,7 +130,7 @@
                                                 <h5 class="modal-title text-white">Kembalikan SPM ke Operator</h5>
                                                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                                             </div>
-                                            <form action="{{ route('verifikasi-ppspm.spm.revisi', $spm->spp_id) }}" method="POST">
+                                            <form action="{{ route($rejectRouteName ?? 'verifikasi-ppspm.spm.revisi', $spm->id) }}" method="POST">
                                                 @csrf
                                                 <div class="modal-body text-start">
                                                     <div class="mb-3">

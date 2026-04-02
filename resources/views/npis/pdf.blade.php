@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>NPI BLU - {{ $spp->nomor_npi }}</title>
+    <title>NPI BLU - {{ $npi->nomor_npi }}</title>
     <style>
         @page { margin: 30px 40px; }
         body { font-family: "Arial", sans-serif; font-size: 11px; margin: 0; padding: 0; }
@@ -60,11 +60,11 @@
             <table style="width: 100%; border: none; border-collapse: collapse;">
                 <tr>
                     <td style="border: none; width: 90px; padding: 2px 0;">SPM No.</td>
-                    <td style="border: none; padding: 2px 0;">: &nbsp;<strong>{{ $spp->nomor_spm ?? $spp->nomor_spp }}</strong></td>
+                    <td style="border: none; padding: 2px 0;">: &nbsp;<strong>{{ $spm->nomor_spm ?? $spp->nomor_spp }}</strong></td>
                 </tr>
                 <tr>
                     <td style="border: none; padding: 2px 0;">Tanggal</td>
-                    <td style="border: none; padding: 2px 0;">: &nbsp;{{ $spp->tanggal_spm ? \Carbon\Carbon::parse($spp->tanggal_spm)->locale('id')->isoFormat('D MMMM Y') : \Carbon\Carbon::now()->locale('id')->isoFormat('D MMMM Y') }}</td>
+                    <td style="border: none; padding: 2px 0;">: &nbsp;{{ $spm->tanggal_spm ? \Carbon\Carbon::parse($spm->tanggal_spm)->locale('id')->isoFormat('D MMMM Y') : \Carbon\Carbon::now()->locale('id')->isoFormat('D MMMM Y') }}</td>
                 </tr>
             </table>
         </td>
@@ -77,11 +77,11 @@
                 </tr>
                 <tr>
                     <td style="border: none; padding: 2px 0;">Tanggal</td>
-                    <td style="border: none; padding: 2px 0;">: &nbsp;{{ $spp->tanggal_npi ? \Carbon\Carbon::parse($spp->tanggal_npi)->locale('id')->isoFormat('D MMMM Y') : \Carbon\Carbon::now()->locale('id')->isoFormat('D MMMM Y') }}</td>
+                    <td style="border: none; padding: 2px 0;">: &nbsp;{{ $npi->tanggal_npi ? \Carbon\Carbon::parse($npi->tanggal_npi)->locale('id')->isoFormat('D MMMM Y') : \Carbon\Carbon::now()->locale('id')->isoFormat('D MMMM Y') }}</td>
                 </tr>
                 <tr>
                     <td style="border: none; padding: 2px 0;">Nomor</td>
-                    <td style="border: none; padding: 2px 0;">: &nbsp;<strong>{{ $spp->nomor_npi }}</strong></td>
+                    <td style="border: none; padding: 2px 0;">: &nbsp;<strong>{{ $npi->nomor_npi }}</strong></td>
                 </tr>
                 <tr>
                     <td style="border: none; padding: 2px 0;">Tahun Anggaran</td>
@@ -120,8 +120,8 @@
 
             {{-- Keterangan Keperluan --}}
             <p style="margin: 14px 0 0 0;">
-                untuk keperluan pembayaran SPM Nomor &nbsp;&nbsp; <strong>{{ $spp->nomor_spm ?? $spp->nomor_spp }}</strong><br>
-                SPM Tanggal {{ $spp->tanggal_spm ? \Carbon\Carbon::parse($spp->tanggal_spm)->locale('id')->isoFormat('D MMMM Y') : date('d F Y') }}
+                untuk keperluan pembayaran SPM Nomor &nbsp;&nbsp; <strong>{{ $spm->nomor_spm ?? $spp->nomor_spp }}</strong><br>
+                SPM Tanggal {{ $spm->tanggal_spm ? \Carbon\Carbon::parse($spm->tanggal_spm)->locale('id')->isoFormat('D MMMM Y') : date('d F Y') }}
             </p>
 
             {{-- TANDA TANGAN --}}
@@ -139,10 +139,10 @@
 
                     {{-- Kanan: PPK --}}
                     <td style="width: 33%; vertical-align: top; text-align: center; padding: 0 10px;">
-                        <p style="margin: 0 0 4px 0;">Samarinda, {{ $spp->tanggal_npi ? \Carbon\Carbon::parse($spp->tanggal_npi)->locale('id')->isoFormat('D MMMM Y') : \Carbon\Carbon::now()->locale('id')->isoFormat('D MMMM Y') }}</p>
+                        <p style="margin: 0 0 4px 0;">Samarinda, {{ $npi->tanggal_npi ? \Carbon\Carbon::parse($npi->tanggal_npi)->locale('id')->isoFormat('D MMMM Y') : \Carbon\Carbon::now()->locale('id')->isoFormat('D MMMM Y') }}</p>
                         <p style="margin: 0 0 60px 0;">Pejabat Pembuat Komitmen</p>
-                        <p style="margin: 0;"><span style="text-decoration: underline; font-weight: bold;">{{ strtoupper($spp->penandatangan_nama ?? 'PPK') }}</span></p>
-                        <p style="margin: 2px 0;">NIP {{ $spp->penandatangan_nip ?? '-' }}</p>
+                        <p style="margin: 0;"><span style="text-decoration: underline; font-weight: bold;">{{ strtoupper($ppk->name ?? 'PPK') }}</span></p>
+                        <p style="margin: 2px 0;">NIP -</p>
                     </td>
                 </tr>
 

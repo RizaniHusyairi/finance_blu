@@ -50,7 +50,7 @@
                     </thead>
                     <tbody>
                         @php $no = 1; @endphp
-                        @foreach($perjaldin->spps->whereIn('status_spp', ['SPM Terbit', 'Menunggu TTD Bendahara Penerimaan', 'Menunggu Verifikasi PPK NPI', 'Revisi NPI', 'NPI Terbit']) as $spp)
+                        @foreach($perjaldin->spps->filter(fn($spp) => optional($spp->spm)->status === \App\Models\DokumenSpm::STATUS_APPROVED_KASUBAG || $spp->spm?->npi) as $spp)
                         @php $slug = 'npi' . $spp->spp_id; @endphp
                         <tr>
                             <td>{{ $no++ }}</td>
@@ -61,18 +61,18 @@
                             <td class="fw-bold text-primary">{{ $spp->kategori_biaya }}</td>
                             <td class="text-end fw-bold">Rp {{ number_format($spp->jumlah_uang, 0, ',', '.') }}</td>
                             <td class="text-center">
-                                @if($spp->status_spp == 'SPM Terbit')
+                                @if(optional($spp->spm)->status === \App\Models\DokumenSpm::STATUS_APPROVED_KASUBAG && !$spp->spm?->npi)
                                     <span class="badge bg-warning text-dark"><i class="bi bi-hourglass-split"></i> Perlu Dibuat NPI</span>
-                                @elseif(in_array($spp->status_spp, ['Menunggu TTD Bendahara Penerimaan', 'Menunggu Verifikasi PPK NPI']))
+                                @elseif(in_array($spp->status_spp, ['Menunggu Verifikasi Bendahara Penerimaan', 'Menunggu Verifikasi PPK NPI', 'Menunggu Verifikasi Kasubbag']))
                                     <span class="badge bg-info text-dark">
                                         <i class="bi bi-person-badge"></i> 
-                                        {{ $spp->status_spp == 'Menunggu TTD Bendahara Penerimaan' ? 'Menunggu Bendahara Penerimaan' : 'Menunggu PPK' }}
+                                        {{ $spp->status_spp == 'Menunggu Verifikasi Bendahara Penerimaan' ? 'Menunggu Bendahara Penerimaan' : ($spp->status_spp == 'Menunggu Verifikasi PPK NPI' ? 'Menunggu PPK' : 'Menunggu Kasubbag') }}
                                     </span>
                                     @if($spp->nomor_npi)
                                         <br><small class="text-muted">{{ $spp->nomor_npi }}</small>
                                     @endif
-                                @elseif($spp->status_spp == 'Revisi NPI')
-                                    <span class="badge bg-danger"><i class="bi bi-x-circle"></i> Revisi dari PPK</span>
+                                @elseif(in_array($spp->status_spp, ['Revisi Bendahara Penerimaan', 'Revisi NPI', 'Revisi Kasubbag']))
+                                    <span class="badge bg-danger"><i class="bi bi-x-circle"></i> {{ $spp->status_spp }}</span>
                                     @if($spp->catatan_revisi)
                                         <div class="text-danger small mt-1 fw-bold">"{{ $spp->catatan_revisi }}"</div>
                                     @endif
@@ -82,19 +82,19 @@
                                 @endif
                             </td>
                             <td class="text-center">
-                                @if(in_array($spp->status_spp, ['SPM Terbit', 'Revisi NPI']))
+                                @if((optional($spp->spm)->status === \App\Models\DokumenSpm::STATUS_APPROVED_KASUBAG && !$spp->spm?->npi) || in_array($spp->status_spp, ['Revisi Bendahara Penerimaan', 'Revisi NPI', 'Revisi Kasubbag']))
                                     <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#modal{{ $slug }}">
-                                        <i class="bi bi-pen"></i> {{ $spp->status_spp == 'Revisi NPI' ? 'Perbaiki NPI' : 'Buat NPI' }}
+                                        <i class="bi bi-pen"></i> {{ in_array($spp->status_spp, ['Revisi Bendahara Penerimaan', 'Revisi NPI', 'Revisi Kasubbag']) ? 'Perbaiki NPI' : 'Buat NPI' }}
                                     </button>
-                                @elseif(in_array($spp->status_spp, ['Menunggu TTD Bendahara Penerimaan', 'Menunggu Verifikasi PPK NPI']))
-                                    <a href="{{ route('npis.cetak-pdf', $spp->spp_id) }}" target="_blank" class="btn btn-sm btn-danger">
+                                @elseif($spp->spm?->npi && in_array($spp->status_spp, ['Menunggu Verifikasi Bendahara Penerimaan', 'Menunggu Verifikasi PPK NPI', 'Menunggu Verifikasi Kasubbag']))
+                                    <a href="{{ route('npis.cetak-pdf', $spp->spm->npi->id) }}" target="_blank" class="btn btn-sm btn-danger">
                                         <i class="bi bi-file-pdf"></i> PDF NPI
                                     </a>
                                     <span class="d-block text-muted fst-italic small mt-1">
-                                        {{ $spp->status_spp == 'Menunggu TTD Bendahara Penerimaan' ? 'Menunggu TTD' : 'Menunggu PPK' }}
+                                        {{ $spp->status_spp == 'Menunggu Verifikasi Bendahara Penerimaan' ? 'Menunggu Bendahara Penerimaan' : ($spp->status_spp == 'Menunggu Verifikasi PPK NPI' ? 'Menunggu PPK' : 'Menunggu Kasubbag') }}
                                     </span>
                                 @elseif($spp->status_spp == 'NPI Terbit')
-                                    <a href="{{ route('npis.cetak-pdf', $spp->spp_id) }}" target="_blank" class="btn btn-sm btn-danger">
+                                    <a href="{{ route('npis.cetak-pdf', $spp->spm->npi->id) }}" target="_blank" class="btn btn-sm btn-danger">
                                         <i class="bi bi-file-pdf"></i> PDF NPI
                                     </a>
                                 @endif
@@ -103,19 +103,19 @@
                                 <div class="modal fade" id="modal{{ $slug }}" tabindex="-1" aria-hidden="true">
                                     <div class="modal-dialog modal-lg text-start">
                                         <div class="modal-content">
-                                            <form action="{{ route('npis.store', $spp->spp_id) }}" method="POST">
+                                            <form action="{{ route('npis.store', $spp->spm->id) }}" method="POST">
                                                 @csrf
                                                 <div class="modal-header bg-primary text-white">
                                                     <h5 class="modal-title text-white">
                                                         <i class="bi bi-bank"></i>
-                                                        {{ $spp->status_spp == 'Revisi NPI' ? 'Perbaiki NPI' : 'Buat NPI' }}: {{ $spp->kategori_biaya }}
+                                                        {{ in_array($spp->status_spp, ['Revisi Bendahara Penerimaan', 'Revisi NPI', 'Revisi Kasubbag']) ? 'Perbaiki NPI' : 'Buat NPI' }}: {{ $spp->kategori_biaya }}
                                                     </h5>
                                                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                                                 </div>
                                                 <div class="modal-body">
-                                                    @if($spp->status_spp == 'Revisi NPI' && $spp->catatan_revisi)
+                                                    @if(in_array($spp->status_spp, ['Revisi Bendahara Penerimaan', 'Revisi NPI', 'Revisi Kasubbag']) && $spp->catatan_revisi)
                                                         <div class="alert alert-danger border-start border-4 border-danger px-3 py-2 mb-3">
-                                                            <strong><i class="bi bi-exclamation-triangle-fill"></i> Catatan Revisi PPK:</strong>
+                                                            <strong><i class="bi bi-exclamation-triangle-fill"></i> Catatan Revisi:</strong>
                                                             <p class="mb-0 mt-1 fst-italic">{{ $spp->catatan_revisi }}</p>
                                                         </div>
                                                     @endif
@@ -135,14 +135,27 @@
                                                         <div class="col-md-6">
                                                             <label class="form-label fw-bold">Tanggal NPI <span class="text-danger">*</span></label>
                                                             <input type="date" name="tanggal_npi" class="form-control" required
-                                                                   value="{{ $spp->tanggal_npi ?? date('Y-m-d') }}">
+                                                                   value="{{ optional($spp->tanggal_npi)->format('Y-m-d') ?? date('Y-m-d') }}">
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="mb-3">
+                                                        <label class="form-label fw-bold">Bendahara Penerimaan <span class="text-danger">*</span></label>
+                                                        <select name="bendahara_penerimaan_id" class="form-select" required>
+                                                            <option value="">-- Pilih Bendahara Penerimaan --</option>
+                                                            @foreach($bendaharaPenerimaans as $pejabat)
+                                                                <option value="{{ $pejabat->id }}" {{ optional(optional($spp->spm)->npi)->bendahara_penerimaan_id == $pejabat->id ? 'selected' : '' }}>
+                                                                    {{ $pejabat->name }}
+                                                                </option>
+                                                            @endforeach
+                                                        </select>
                                                         </div>
                                                     </div>
                                                 </div>
                                                 <div class="modal-footer">
                                                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
                                                     <button type="submit" class="btn btn-success">
-                                                        <i class="bi bi-send-check"></i> Ajukan NPI ke PPK
+                                                        <i class="bi bi-send-check"></i> Ajukan NPI ke Bendahara Penerimaan
                                                     </button>
                                                 </div>
                                             </form>

@@ -25,7 +25,7 @@
             <div class="card h-100 border-0 shadow-sm bg-warning text-dark">
                 <div class="card-body p-3">
                     <h6 class="card-title fw-normal mb-1">SPP Siap Dibuatkan SPM</h6>
-                    <h3 class="fw-bold mb-0">{{ \App\Models\Spp::where('status_spp', 'Disetujui PPK')->count() }}</h3>
+                    <h3 class="fw-bold mb-0">{{ \App\Models\Spp::doesntHave('spm')->where('status', 'Disetujui PPK')->count() }}</h3>
                 </div>
             </div>
         </div>
@@ -33,7 +33,7 @@
             <div class="card h-100 border-0 shadow-sm text-white" style="background-color: #0dcaf0;">
                 <div class="card-body p-3">
                     <h6 class="card-title fw-normal mb-1">Menunggu Verifikasi PPSPM</h6>
-                    <h3 class="fw-bold mb-0 text-white">{{ \App\Models\Spp::where('status_spp', 'Menunggu Verifikasi SPM')->count() }}</h3>
+                    <h3 class="fw-bold mb-0 text-white">{{ \App\Models\DokumenSpm::where('status', \App\Models\DokumenSpm::STATUS_SUBMITTED_PPSPM)->count() }}</h3>
                 </div>
             </div>
         </div>
@@ -41,15 +41,15 @@
             <div class="card h-100 border-0 shadow-sm bg-danger text-white">
                 <div class="card-body p-3">
                     <h6 class="card-title fw-normal mb-1">Dikembalikan (Revisi SPM)</h6>
-                    <h3 class="fw-bold mb-0">{{ \App\Models\Spp::where('status_spp', 'Revisi SPM')->count() }}</h3>
+                    <h3 class="fw-bold mb-0">{{ \App\Models\DokumenSpm::whereIn('status', [\App\Models\DokumenSpm::STATUS_REJECTED_PPSPM, \App\Models\DokumenSpm::STATUS_REJECTED_KASUBAG])->count() }}</h3>
                 </div>
             </div>
         </div>
         <div class="col">
             <div class="card h-100 border-0 shadow-sm text-white" style="background-color: #20c997;">
                 <div class="card-body p-3">
-                    <h6 class="card-title fw-normal mb-1">SPM Terbit (Selesai)</h6>
-                    <h3 class="fw-bold mb-0 text-white">{{ \App\Models\Spp::where('status_spp', 'SPM Terbit')->count() }}</h3>
+                    <h6 class="card-title fw-normal mb-1">SPM Final</h6>
+                    <h3 class="fw-bold mb-0 text-white">{{ \App\Models\DokumenSpm::where('status', \App\Models\DokumenSpm::STATUS_APPROVED_KASUBAG)->count() }}</h3>
                 </div>
             </div>
         </div>
@@ -72,17 +72,12 @@
                     <tbody>
                         @foreach ($perjaldins as $idx => $perjaldin)
                         @php
-                            $totalSppReady   = $perjaldin->spps->whereIn('status_spp', ['Disetujui PPK', 'Revisi SPM'])->count();
-                            $totalSpmDikirim = $perjaldin->spps->where('status_spp', 'Menunggu Verifikasi SPM')->count();
-                            $totalSpmTerbit  = $perjaldin->spps->whereIn('status_spp', [
-                                'SPM Terbit', 
-                                'Menunggu TTD Bendahara Penerimaan', 
-                                'Menunggu Verifikasi PPK NPI', 
-                                'Revisi NPI', 
-                                'NPI Terbit', 
-                                'SP2D Terbit', 
-                                'Lunas'
-                            ])->count();
+                            $totalSppReady   = $perjaldin->spps->filter(fn($spp) => !$spp->spm && $spp->status === 'Disetujui PPK')->count();
+                            $totalSpmDikirim = $perjaldin->spps->filter(fn($spp) => optional($spp->spm)->status === \App\Models\DokumenSpm::STATUS_SUBMITTED_PPSPM)->count();
+                            $totalSpmTerbit  = $perjaldin->spps->filter(fn($spp) => in_array(optional($spp->spm)->status, [
+                                \App\Models\DokumenSpm::STATUS_SUBMITTED_KASUBAG,
+                                \App\Models\DokumenSpm::STATUS_APPROVED_KASUBAG
+                            ], true))->count();
                             $totalSpp = $perjaldin->spps->count();
                         @endphp
                         <tr>

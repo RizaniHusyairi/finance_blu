@@ -4,6 +4,13 @@
 @section('content')
 <x-page-title title="Verifikasi Dokumen" subtitle="Daftar SPP Menunggu Verifikasi PPK" />
 
+@php
+    $menungguCount = $spps->where('status', 'Menunggu Verifikasi')->count();
+    $disetujuiCount = $spps->whereNotIn('status', ['Menunggu Verifikasi', 'Revisi'])->count();
+    $revisiCount = $spps->where('status', 'Revisi')->count();
+    $totalCount = $spps->count();
+@endphp
+
 @if(session('success'))
 <div class="alert alert-success alert-dismissible fade show" role="alert">
     {{ session('success') }}
@@ -21,7 +28,7 @@
         <div class="card h-100 border-0 shadow-sm text-white" style="background-color: #0dcaf0;">
             <div class="card-body p-3">
                 <h6 class="card-title fw-normal mb-1">Menunggu Anda (PPK)</h6>
-                <h3 class="fw-bold mb-0 text-white">{{ \App\Models\Spp::where('status_spp', 'Menunggu Verifikasi')->count() }}</h3>
+                <h3 class="fw-bold mb-0 text-white">{{ $menungguCount }}</h3>
             </div>
         </div>
     </div>
@@ -29,7 +36,7 @@
         <div class="card h-100 border-0 shadow-sm bg-white text-dark">
             <div class="card-body p-3">
                 <h6 class="card-title fw-normal text-muted mb-1">Telah Disetujui (PPK)</h6>
-                <h3 class="fw-bold mb-0">{{ \App\Models\Spp::whereNotIn('status_spp', ['Menunggu Verifikasi', 'Revisi'])->count() }}</h3>
+                <h3 class="fw-bold mb-0">{{ $disetujuiCount }}</h3>
             </div>
         </div>
     </div>
@@ -37,7 +44,7 @@
         <div class="card h-100 border-0 shadow-sm bg-danger text-white">
             <div class="card-body p-3">
                 <h6 class="card-title fw-normal mb-1">Dikembalikan (Revisi)</h6>
-                <h3 class="fw-bold mb-0">{{ \App\Models\Spp::where('status_spp', 'Revisi')->count() }}</h3>
+                <h3 class="fw-bold mb-0">{{ $revisiCount }}</h3>
             </div>
         </div>
     </div>
@@ -45,7 +52,7 @@
         <div class="card h-100 border-0 shadow-sm text-white" style="background-color: #20c997;">
             <div class="card-body p-3">
                 <h6 class="card-title fw-normal mb-1">Total Semua SPP Terbit</h6>
-                <h3 class="fw-bold mb-0 text-white">{{ \App\Models\Spp::count() }}</h3>
+                <h3 class="fw-bold mb-0 text-white">{{ $totalCount }}</h3>
             </div>
         </div>
     </div>
@@ -74,18 +81,18 @@
                             <small class="text-muted">{{ \Carbon\Carbon::parse($spp->tanggal_spp)->locale('id')->isoFormat('D MMMM Y') }}</small>
                         </td>
                         <td>
-                            <span class="badge bg-primary mb-1">{{ $spp->kategori_biaya }}</span><br>
-                            <small>{{ $spp->uraian }}</small>
+                            <span class="badge bg-primary mb-1">{{ $spp->tagihan->tipe_tagihan ?? 'SPP' }}</span><br>
+                            <small>{{ $spp->tagihan->deskripsi ?? '-' }}</small>
                         </td>
                         <td class="text-end fw-bold">
-                            Rp {{ number_format($spp->jumlah_uang, 0, ',', '.') }}
+                            Rp {{ number_format($spp->nominal_spp, 0, ',', '.') }}
                         </td>
                         <td class="text-center">
-                            @if($spp->status_spp == 'Menunggu Verifikasi')
+                            @if($spp->status == 'Menunggu Verifikasi')
                                 <span class="badge bg-warning text-dark"><i class="bi bi-clock"></i> Perlu Direviu</span>
-                            @elseif($spp->status_spp == 'Revisi')
+                            @elseif($spp->status == 'Revisi')
                                 <span class="badge bg-danger"><i class="bi bi-x-circle"></i> Dikembalikan</span>
-                            @elseif($spp->status_spp == 'Disetujui PPK')
+                            @elseif($spp->status == 'Disetujui PPK')
                                 <span class="badge bg-success"><i class="bi bi-check-circle"></i> Disetujui PPK</span>
                             @else
                                 <span class="badge bg-primary"><i class="bi bi-info-circle"></i> {{ $spp->status_spp }}</span>
@@ -96,7 +103,7 @@
                                 <i class="bi bi-eye"></i> Cek PDF
                             </a>
 
-                            @if($spp->status_spp == 'Menunggu Verifikasi')
+                            @if($spp->status == 'Menunggu Verifikasi')
                                 <!-- Tombol Setujui -->
                                 <form action="{{ route('verifikasi-ppk.spp.approve', $spp->spp_id) }}" method="POST" class="d-inline">
                                     @csrf

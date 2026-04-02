@@ -1,7 +1,31 @@
 @extends('layouts.app')
 @section('title', 'Verifikasi Dokumen Tagihan (BAST)')
 
+@php
+    $potonganTagihans = collect($tagihan->potonganTagihan ?? $tagihan->potongans ?? []);
+    $potonganAngsuranUm = $potonganTagihans->firstWhere('jenis_potongan', 'ANGSURAN_UANG_MUKA');
+    $potonganPajak = $potonganTagihans->filter(fn ($item) => $item->jenis_potongan !== 'ANGSURAN_UANG_MUKA');
+    $totalPotonganPajak = $potonganPajak->sum('nominal_potongan');
+    $fakturPajakPath = $tagihan->detailKontrak->file_faktur_pajak ?? $potonganPajak->first(fn ($item) => !empty($item->file_faktur_pajak))?->file_faktur_pajak;
+@endphp
+
 @section('content')
+    @if (session('success'))
+        <div class="alert alert-success border-0 alert-dismissible fade show shadow-sm d-flex align-items-center" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i>
+            <div>{{ session('success') }}</div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    @endif
+
+    @if (session('error'))
+        <div class="alert alert-danger border-0 alert-dismissible fade show shadow-sm d-flex align-items-center" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            <div>{{ session('error') }}</div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    @endif
+
     {{-- Header --}}
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
@@ -58,7 +82,7 @@
                         </li>
                         @endif
 
-                        @if($tagihan->potongans && $tagihan->potongans->count() > 0 && $tagihan->potongans->first()->file_faktur_pajak)
+                        @if($fakturPajakPath)
                         <li class="nav-item" role="presentation">
                             <button class="nav-link fw-bold py-3 border-0 border-bottom border-3 text-secondary" id="pajak-tab" data-bs-toggle="tab" data-bs-target="#pajak" type="button" role="tab" aria-controls="pajak" aria-selected="false">
                                 <i class="bi bi-file-earmark-pdf text-danger me-1"></i> Faktur Pajak
@@ -93,9 +117,9 @@
                         @endif
 
                         {{-- Tab Pajak --}}
-                        @if($tagihan->potongans && $tagihan->potongans->count() > 0 && $tagihan->potongans->first()->file_faktur_pajak)
+                        @if($fakturPajakPath)
                         <div class="tab-pane fade h-100" id="pajak" role="tabpanel" aria-labelledby="pajak-tab">
-                            <iframe src="{{ Storage::url($tagihan->potongans->first()->file_faktur_pajak) }}#toolbar=0" class="w-100 rounded-bottom-4" style="height: 75vh; border: none;"></iframe>
+                            <iframe src="{{ Storage::url($fakturPajakPath) }}#toolbar=0" class="w-100 rounded-bottom-4" style="height: 75vh; border: none;"></iframe>
                         </div>
                         @endif
 
@@ -138,14 +162,40 @@
                                     <span class="fw-bold text-dark">Rp {{ number_format($tagihan->total_bruto, 0, ',', '.') }}</span>
                                 </li>
                                 <li class="list-group-item d-flex justify-content-between align-items-center px-0 bg-transparent">
-                                    <span class="text-muted">Total Potongan/Pajak</span>
-                                    <span class="fw-bold text-danger">- Rp {{ number_format($tagihan->total_potongan, 0, ',', '.') }}</span>
+                                    <span class="text-muted">Potongan Angsuran Uang Muka</span>
+                                    <span class="fw-bold text-warning">
+                                        - Rp {{ number_format($potonganAngsuranUm->nominal_potongan ?? 0, 0, ',', '.') }}
+                                    </span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between align-items-center px-0 bg-transparent">
+                                    <span class="text-muted">Total Potongan Pajak</span>
+                                    <span class="fw-bold text-danger">- Rp {{ number_format($totalPotonganPajak, 0, ',', '.') }}</span>
                                 </li>
                                 <li class="list-group-item d-flex justify-content-between align-items-center px-0 bg-transparent border-top border-2 mt-2 pt-3">
                                     <span class="fw-bold text-dark">Nilai Netto (Dibayar)</span>
                                     <span class="fw-black text-success fs-5">Rp {{ number_format($tagihan->total_netto, 0, ',', '.') }}</span>
                                 </li>
                             </ul>
+                            @if($potonganTagihans->isNotEmpty())
+                                <div class="mt-3 pt-3 border-top">
+                                    <div class="small text-muted fw-bold mb-2">Rincian Potongan</div>
+                                    <div class="list-group list-group-flush">
+                                        @foreach($potonganTagihans as $potongan)
+                                            <div class="list-group-item px-0 py-2 d-flex justify-content-between align-items-start bg-transparent">
+                                                <div>
+                                                    <div class="fw-semibold">{{ $potongan->jenis_potongan }}</div>
+                                                    @if(!empty($potongan->deskripsi))
+                                                        <div class="small text-muted">{{ $potongan->deskripsi }}</div>
+                                                    @endif
+                                                </div>
+                                                <div class="fw-bold {{ $potongan->jenis_potongan === 'ANGSURAN_UANG_MUKA' ? 'text-warning' : 'text-danger' }}">
+                                                    Rp {{ number_format($potongan->nominal_potongan ?? 0, 0, ',', '.') }}
+                                                </div>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            @endif
                         </div>
 
                         {{-- Blok Tombol Aksi --}}
@@ -155,7 +205,7 @@
                             </button>
                             
                             {{-- Route aksi setuju ditambahkan nanti di Controller --}}
-                            <form action="#" method="POST" id="formApproveBAST" class="m-0">
+                            <form action="{{ route('ppk.tagihan.kontrak.approve', $tagihan->id) }}" method="POST" id="formApproveBAST" class="m-0">
                                 @csrf
                                 <button type="button" class="btn btn-primary py-3 fw-bold w-100 rounded-pill fs-6 shadow-sm" onclick="confirmBASTApproval()">
                                     <i class="bi bi-check-circle me-1"></i> Setujui & Teruskan ke SPP
@@ -173,7 +223,7 @@
     <div class="modal fade" id="modalRevisi" tabindex="-1" aria-labelledby="modalRevisiLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             {{-- Route aksi tolak/revisi ditambahkan nanti di Controller --}}
-            <form action="#" method="POST" class="modal-content border-0 rounded-4 shadow">
+            <form action="{{ route('ppk.tagihan.kontrak.reject', $tagihan->id) }}" method="POST" class="modal-content border-0 rounded-4 shadow">
                 @csrf
                 <div class="modal-header bg-danger text-white border-bottom-0">
                     <h5 class="modal-title fw-bold" id="modalRevisiLabel"><i class="bi bi-exclamation-triangle me-2"></i> Kembalikan untuk Revisi</h5>

@@ -7,9 +7,17 @@ use App\Models\Spp;
 use App\Models\Perjaldin;
 use App\Models\Transaction;
 use App\Models\Contract;
-use App\Models\Budget;
+use App\Models\Tagihan;
+use App\Models\DokumenSpp;
+use App\Models\LogStatusDokumen;
+use App\Models\MasterTarifPajak;
+use App\Models\PotonganTagihan;
+use App\Models\User;
+use App\Notifications\WorkflowNotification;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Notification;
 
 class SppController extends Controller
 {
@@ -18,16 +26,22 @@ class SppController extends Controller
      */
     public function perjaldinIndex()
     {
-        $perjaldins = Perjaldin::whereIn('status', ['Disetujui', 'Proses SPP', 'SPP Terbit'])
-            ->with(['spps'])
+        $perjaldins = Tagihan::where('tipe_tagihan', 'PERJALDIN')
+            ->whereIn('status', ['DISETUJUI_PPK', 'PROSES_SPP', 'SPP_TERBIT'])
+            ->with(['detailPerjaldin', 'spps', 'logs'])
             ->latest()
             ->get();
+
         return view('spps.perjaldin_index', compact('perjaldins'));
     }
 
     public function detailPerjaldin($perjaldin_id)
     {
-        $perjaldin = Perjaldin::with(['pejabats', 'spps'])->findOrFail($perjaldin_id);
+        $perjaldin = Perjaldin::with([
+            'pejabats.pegawai',
+            'spps.dipaRevisionItem.coa',
+            'dipa.activeRevision.items.coa',
+        ])->findOrFail($perjaldin_id);
         
         // Menghitung total tiap kategori
         $kategoriTotals = [
@@ -39,14 +53,14 @@ class SppController extends Controller
         ];
 
         foreach($perjaldin->pejabats as $p) {
-            $kategoriTotals['Tiket'] += $p->tiket;
-            $kategoriTotals['Transport'] += $p->transport;
-            $kategoriTotals['Penginapan'] += $p->penginapan;
+            $kategoriTotals['Tiket'] += (float) $p->biaya_tiket;
+            $kategoriTotals['Transport'] += (float) $p->biaya_transport;
+            $kategoriTotals['Penginapan'] += (float) $p->biaya_penginapan;
             $kategoriTotals['Uang Harian'] += $p->uang_harian;
             $kategoriTotals['Uang Representasi'] += $p->uang_representasi;
         }
 
-        $budgets = Budget::where('year', date('Y'))->get();
+        $budgets = $this->buildBudgetOptions($perjaldin->dipa);
 
         return view('spps.detail_perjaldin', compact('perjaldin', 'kategoriTotals', 'budgets'));
     }
@@ -120,9 +134,9 @@ class SppController extends Controller
 
     public function honorIndex()
     {
-        $honorariums = Transaction::with(['budget', 'spps'])
-            ->where('type', 'HONORARIUM')
-            ->whereIn('status', ['Disetujui PPK', 'Proses SPP', 'SPP Terbit'])
+        $honorariums = Tagihan::where('tipe_tagihan', 'HONORARIUM')
+            ->whereIn('status', ['DISETUJUI_PPK', 'PROSES_SPP', 'SPP_TERBIT'])
+            ->with(['detailHonorarium', 'spps', 'logs'])
             ->latest()
             ->get();
 
@@ -131,11 +145,15 @@ class SppController extends Controller
 
     public function detailHonor($honorarium_id)
     {
-        $honorarium = Transaction::with(['budget', 'honorariumItems', 'spps'])
-            ->where('type', 'HONORARIUM')
+        $honorarium = Transaction::with([
+                'budget.activeRevision.items.coa',
+                'honorariumItems',
+                'spps.dipaRevisionItem.coa',
+            ])
+            ->where('tipe_tagihan', 'HONORARIUM')
             ->findOrFail($honorarium_id);
 
-        $budgets = Budget::where('year', date('Y'))->get();
+        $budgets = $this->buildBudgetOptions($honorarium->budget);
 
         return view('spps.detail_honor', compact('honorarium', 'budgets'));
     }
@@ -154,7 +172,7 @@ class SppController extends Controller
             'penandatangan_nip' => 'required|string',
         ]);
 
-        $honorarium = Transaction::where('type', 'HONORARIUM')->findOrFail($honorarium_id);
+        $honorarium = Transaction::where('tipe_tagihan', 'HONORARIUM')->findOrFail($honorarium_id);
 
         $uraianText = 'Pembayaran Belanja Barang - ' . $honorarium->description;
 
@@ -208,8 +226,9 @@ class SppController extends Controller
 
     public function kontrakIndex()
     {
-        $contracts = Contract::with(['supplier', 'terms', 'spps'])
-            ->whereIn('status', ['Aktif', 'Proses SPP', 'SPP Terbit'])
+        $contracts = Tagihan::where('tipe_tagihan', 'KONTRAK')
+            ->whereIn('status', ['READY_FOR_SPP', 'PROSES_SPP', 'SPP_TERBIT'])
+            ->with(['detailKontrak.kontrakTermin.kontrak.vendor', 'spps', 'logs'])
             ->latest()
             ->get();
 
@@ -218,78 +237,184 @@ class SppController extends Controller
 
     public function detailKontrak($contract_id)
     {
-        $contract = Contract::with(['supplier', 'budget', 'terms', 'spps'])
+        $tagihan = Tagihan::where('tipe_tagihan', 'KONTRAK')
+            ->with([
+                'detailKontrak.kontrakTermin.kontrak.vendor.rekening',
+                'detailKontrak.kontrakTermin.kontrak.dipa.activeRevision.items.coa',
+                'spps.dipaRevisionItem.coa',
+            ])
             ->findOrFail($contract_id);
 
-        $budgets = Budget::where('year', date('Y'))->get();
+        $termin = $tagihan->detailKontrak?->kontrakTermin;
+        $kontrak = $termin?->kontrak;
+        $budgetItems = collect(optional(optional($kontrak?->dipa)->activeRevision)->items)
+            ->filter(fn ($item) => $item->status_aktif)
+            ->values();
+        $sppModel = $tagihan->spps->sortByDesc('created_at')->first();
+        $ppkUsers = User::role('PPK')->orderBy('name')->get();
+        $kasubbagUser = User::role('Kepala Subbagian Keuangan dan Tata Usaha')->orderBy('name')->first();
+        $pajaks = MasterTarifPajak::orderBy('jenis_pajak')->get();
 
-        // Group terms by type Termin only
-        $terminItems = $contract->terms->where('type', 'Termin');
-
-        return view('spps.detail_kontrak', compact('contract', 'budgets', 'terminItems'));
+        return view('spps.detail_kontrak', compact('tagihan', 'termin', 'kontrak', 'budgetItems', 'sppModel', 'ppkUsers', 'kasubbagUser', 'pajaks'));
     }
 
     public function storeKontrak(Request $request, $contract_id)
     {
+        $tagihan = Tagihan::where('tipe_tagihan', 'KONTRAK')
+            ->with(['detailKontrak.kontrakTermin.kontrak.dipa.activeRevision.items'])
+            ->findOrFail($contract_id);
+
+        $existingSpp = $tagihan->spps()->latest()->first();
+
         $request->validate([
-            'kategori_biaya' => 'required|string',
             'jumlah_uang' => 'required|numeric',
             'nomor_spp' => 'required|string',
             'tanggal_spp' => 'required|date',
-            'tahun_anggaran' => 'required|string',
-            'nomor_dipa' => 'required|string',
-            'tanggal_dipa' => 'required|date',
-            'akun_mak' => 'required|string',
-            'penandatangan_nama' => 'required|string',
-            'penandatangan_nip' => 'required|string',
+            'ppk_verifikator_id' => 'required|exists:users,id',
+            'pajak' => 'nullable|array',
+            'pajak.*.id' => 'required|exists:master_tarif_pajak,id',
+            'pajak.*.dpp' => 'required|numeric|min:0',
+            'pajak.*.nominal' => 'required|numeric|min:0',
+            'file_faktur_pajak' => 'nullable|file|mimes:pdf|max:5120',
+            'file_ebilling' => 'nullable|file|mimes:pdf|max:5120',
+            'nomor_spp' => [
+                'required',
+                'string',
+                Rule::unique('dokumen_spp', 'nomor_spp')->ignore($existingSpp?->id),
+            ],
         ]);
 
-        $contract = Contract::findOrFail($contract_id);
+        $kontrak = $tagihan->detailKontrak?->kontrakTermin?->kontrak;
+        $defaultBudgetItemId = $existingSpp?->dipa_revision_item_id
+            ?? collect(optional(optional($kontrak?->dipa)->activeRevision)->items)
+                ->firstWhere('status_aktif', true)?->id;
 
-        $uraianText = 'Pembayaran ' . $request->kategori_biaya . ' - ' . $contract->description;
+        if (!$defaultBudgetItemId) {
+            return back()->withInput()->withErrors([
+                'error' => 'Kontrak ini belum memiliki item DIPA aktif yang dapat dipakai untuk dokumen SPP.',
+            ]);
+        }
 
-        DB::transaction(function () use ($request, $contract, $uraianText) {
-            $contract->spps()->updateOrCreate(
+        DB::transaction(function () use ($request, $tagihan, $existingSpp, $defaultBudgetItemId) {
+            $potonganAngsuranUangMuka = (float) $tagihan->potonganTagihan()
+                ->where('jenis_potongan', 'ANGSURAN_UANG_MUKA')
+                ->sum('nominal_potongan');
+
+            $tagihan->potonganTagihan()
+                ->where('jenis_potongan', 'PAJAK')
+                ->get()
+                ->each(function ($potongan) {
+                    $potongan->arsipDokumen()->delete();
+                    $potongan->delete();
+                });
+
+            $totalPotonganPajak = 0;
+            foreach ($request->input('pajak', []) as $pj) {
+                $pajakModel = MasterTarifPajak::find($pj['id']);
+                $nominal = (float) ($pj['nominal'] ?? 0);
+                $totalPotonganPajak += $nominal;
+
+                PotonganTagihan::create([
+                    'tagihan_id' => $tagihan->id,
+                    'pajak_id' => $pj['id'],
+                    'jenis_potongan' => 'PAJAK',
+                    'deskripsi' => 'Potongan pajak pada saat pembuatan dokumen SPP.',
+                    'dpp' => (float) ($pj['dpp'] ?? 0),
+                    'persentase_tarif_snapshot' => $pajakModel?->persentase,
+                    'nama_pajak_snapshot' => $pajakModel?->jenis_pajak,
+                    'nominal_potongan' => $nominal,
+                ]);
+            }
+
+            $totalPotongan = $potonganAngsuranUangMuka + $totalPotonganPajak;
+            $totalNetto = max(0, (float) $tagihan->total_bruto - $totalPotongan);
+
+            $tagihan->update([
+                'total_potongan' => $totalPotongan,
+                'total_netto' => $totalNetto,
+            ]);
+
+            $spp = DokumenSpp::updateOrCreate(
+                ['id' => $existingSpp?->id],
                 [
-                    'kategori_biaya' => $request->kategori_biaya,
-                ],
-                [
-                    'jumlah_uang' => $request->jumlah_uang,
-                    'uraian' => $uraianText,
+                    'tagihan_id' => $tagihan->id,
+                    'dipa_revision_item_id' => $defaultBudgetItemId,
+                    'kategori_pembayaran' => 'SP2D BLU - TRF',
+                    'jenis_tagihan' => 'NON REMUNERASI',
+                    'nominal_spp' => $totalNetto,
                     'nomor_spp' => $request->nomor_spp,
                     'tanggal_spp' => $request->tanggal_spp,
-                    'tahun_anggaran' => $request->tahun_anggaran,
-                    'nomor_dipa' => $request->nomor_dipa,
-                    'tanggal_dipa' => $request->tanggal_dipa,
-                    'no_kontrak' => $contract->contract_number,
-                    'tgl_kontrak' => $contract->date,
-                    'akun_mak' => $request->akun_mak,
-                    'penandatangan_nama' => $request->penandatangan_nama,
-                    'penandatangan_nip' => $request->penandatangan_nip,
-                    'jenis_tagihan' => 'NON REMUNERASI',
-                    'jatuh_tempo' => 'Segera',
-                    'cara_bayar' => 'SP2D BLU - TRF',
-                    'status_spp' => 'Menunggu Verifikasi',
-                    'catatan_revisi' => null,
+                    'status' => 'Menunggu Verifikasi',
+                    'dibuat_oleh_id' => auth()->id(),
                 ]
             );
 
-            if ($contract->status === 'Aktif') {
-                $contract->update(['status' => 'Proses SPP']);
+            if ($request->hasFile('file_faktur_pajak') && $tagihan->detailKontrak) {
+                $spp->loadMissing('tagihan.detailKontrak');
+
+                $tagihan->detailKontrak->arsipDokumen()
+                    ->where('jenis_dokumen', 'FAKTUR_PAJAK')
+                    ->delete();
+
+                $tagihan->detailKontrak->arsipDokumen()->create([
+                    'jenis_dokumen' => 'FAKTUR_PAJAK',
+                    'nama_file_asli' => $request->file('file_faktur_pajak')->getClientOriginalName(),
+                    'path_file' => $request->file('file_faktur_pajak')->store('tagihan/pajak', 'public'),
+                    'disk' => 'public',
+                    'mime_type' => $request->file('file_faktur_pajak')->getMimeType(),
+                    'ukuran_file' => $request->file('file_faktur_pajak')->getSize(),
+                    'uploaded_by' => auth()->id(),
+                    'uploaded_at' => now(),
+                    'is_active' => true,
+                ]);
             }
+
+            if ($request->hasFile('file_ebilling')) {
+                $spp->arsipDokumen()
+                    ->where('jenis_dokumen', 'E_BILLING')
+                    ->delete();
+
+                $spp->arsipDokumen()->create([
+                    'jenis_dokumen' => 'E_BILLING',
+                    'nama_file_asli' => $request->file('file_ebilling')->getClientOriginalName(),
+                    'path_file' => $request->file('file_ebilling')->store('spp/ebilling', 'public'),
+                    'disk' => 'public',
+                    'mime_type' => $request->file('file_ebilling')->getMimeType(),
+                    'ukuran_file' => $request->file('file_ebilling')->getSize(),
+                    'uploaded_by' => auth()->id(),
+                    'uploaded_at' => now(),
+                    'is_active' => true,
+                ]);
+            }
+
+            $statusSebelumnya = $tagihan->status;
+            $tagihan->update(['status' => 'PROSES_SPP']);
+
+            LogStatusDokumen::create([
+                'dokumen_type' => Tagihan::class,
+                'dokumen_id' => $tagihan->id,
+                'user_id' => auth()->id(),
+                'role_saat_itu' => auth()->user()?->getRoleNames()->first() ?? 'Operator BLU',
+                'status_sebelumnya' => $statusSebelumnya,
+                'status_baru' => 'PROSES_SPP',
+                'aksi' => $existingSpp ? 'UPDATE_SPP' : 'CREATE_SPP',
+                'catatan' => 'Dokumen SPP kontrak dibuat/diperbarui oleh Operator BLU. Verifikator PPK dipilih: ' . optional(User::find($request->ppk_verifikator_id))->name,
+                'ip_address' => request()->ip(),
+            ]);
         });
 
-        // Notify PPK
-        $ppks = \App\Models\User::role('PPK')->get();
-        \Illuminate\Support\Facades\Notification::send($ppks, new \App\Notifications\WorkflowNotification([
-            'title' => 'SPP Kontrak Baru',
-            'message' => "SPP Kontrak ({$contract->contract_number} - {$request->kategori_biaya}) menunggu verifikasi Anda.",
-            'url' => route('verifikasi-ppk.spp.index'),
-            'icon' => 'receipt_long',
-            'color' => 'primary'
-        ]));
+        $selectedPpk = User::role('PPK')->find($request->ppk_verifikator_id);
+        if ($selectedPpk) {
+            Notification::send($selectedPpk, new WorkflowNotification([
+                'title' => 'SPP Kontrak Baru',
+                'message' => "SPP Kontrak ({$tagihan->nomor_tagihan}) menunggu verifikasi Anda.",
+                'url' => route('verifikasi-ppk.spp.index'),
+                'icon' => 'receipt_long',
+                'color' => 'primary',
+            ]));
+        }
 
-        return redirect()->route('spps.kontrak.detail', $contract_id)->with('success', 'SPP '.$request->kategori_biaya.' berhasil diterbitkan.');
+        return redirect()->route('spps.kontrak.detail', $tagihan->id)->with('success', 'SPP kontrak berhasil diterbitkan.');
     }
 
     // ===================================================================
@@ -311,5 +436,19 @@ class SppController extends Controller
         $pdf->setPaper('a4', 'portrait');
 
         return $pdf->stream('SPP-BLU-' . str_replace('/', '-', $spp->nomor_spp) . '.pdf');
+    }
+
+    private function buildBudgetOptions($dipa)
+    {
+        return collect(optional(optional($dipa)->activeRevision)->items)
+            ->filter(fn ($item) => $item->status_aktif && $item->coa)
+            ->map(function ($item) {
+                return (object) [
+                    'id' => $item->id,
+                    'coa' => $item->coa->kode_mak_lengkap,
+                    'description' => $item->coa->nama_akun,
+                ];
+            })
+            ->values();
     }
 }

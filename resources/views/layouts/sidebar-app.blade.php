@@ -160,7 +160,7 @@
 
         <li>
           <a href="javascript:;" class="has-arrow">
-            <div class="parent-icon"><i class="material-icons-outlined">monitoring</i></div>
+            <div class="parent-icon"><i class="material-icons-outlined">article</i></div>
             <div class="menu-title">Monitoring & Laporan</div>
           </a>
           <ul>
@@ -200,6 +200,8 @@
           </a>
           <ul>
             <li><a href="{{ route('verifikasi-kasubag.index') }}"><i class="material-icons-outlined">arrow_right</i>Perjaldin</a></li>
+            <li><a href="{{ route('verifikasi-kasubag.spm.index') }}"><i class="material-icons-outlined">arrow_right</i>SPM</a></li>
+            <li><a href="{{ route('verifikasi-kasubag.npi.index') }}"><i class="material-icons-outlined">arrow_right</i>NPI</a></li>
           </ul>
         </li>
         @endhasrole
@@ -222,6 +224,8 @@
           </a>
           <ul>
             <li><a href="{{ route('spms.index') }}"><i class="material-icons-outlined">arrow_right</i>SPM Perjaldin</a></li>
+            <li><a href="{{ route('spms.index') }}"><i class="material-icons-outlined">arrow_right</i>SPM Honor</a></li>
+            <li><a href="{{ route('spms.index') }}"><i class="material-icons-outlined">arrow_right</i>SPM Kontrak</a></li>
           </ul>
         </li>
         @endhasanyrole

@@ -258,9 +258,9 @@ class DashboardController extends Controller
             $kpi_tagihan_bast = \App\Models\Tagihan::where('status', 'PENDING_REVIEW')->count();
             
             // KPI 3: Pencairan
-            $spp = DB::table('dokumen_spp')->whereNull('disetujui_ppk_id')->count();
-            $npi = DB::table('dokumen_npi')->whereNull('disetujui_ppk_id')->count();
-            $sp2d = DB::table('dokumen_sp2d')->whereNull('disetujui_ppk_id')->count();
+            $spp = DB::table('dokumen_spp')->where('status', 'DRAFT')->count();
+            $npi = DB::table('dokumen_npi')->where('status', 'DRAFT')->count();
+            $sp2d = DB::table('dokumen_sp2d')->where('status', 'DRAFT')->count();
             $kpi_pencairan = $spp + $npi + $sp2d;
 
             // KPI 4: Sisa Pagu DIPA

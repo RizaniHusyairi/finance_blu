@@ -61,4 +61,9 @@ class DetailKontrak extends Model
     {
         return optional($this->arsipDokumen->firstWhere('jenis_dokumen', 'LAMPIRAN_LAINNYA'))->path_file;
     }
+
+    public function getFileFakturPajakAttribute()
+    {
+        return optional($this->arsipDokumen->firstWhere('jenis_dokumen', 'FAKTUR_PAJAK'))->path_file;
+    }
 }

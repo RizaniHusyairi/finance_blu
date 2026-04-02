@@ -17,6 +17,11 @@ class Tagihan extends Model
         return $this->belongsTo(MasterPihak::class, 'pihak_id');
     }
 
+    public function dipa()
+    {
+        return $this->belongsTo(MasterDipa::class, 'master_dipa_id');
+    }
+
     public function detailKontrak()
     {
         return $this->hasOne(DetailKontrak::class, 'tagihan_id');
@@ -50,6 +55,11 @@ class Tagihan extends Model
     public function arsipDokumen()
     {
         return $this->morphMany(ArsipDokumen::class, 'documentable');
+    }
+
+    public function spps()
+    {
+        return $this->hasMany(Spp::class, 'tagihan_id');
     }
 
     public function getWaktuVerifikasiPpkAttribute()

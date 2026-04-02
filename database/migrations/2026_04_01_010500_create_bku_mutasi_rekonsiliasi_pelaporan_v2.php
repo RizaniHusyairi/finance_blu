@@ -107,24 +107,10 @@ return new class extends Migration
         });
         }
 
-        if (!Schema::hasTable('notifikasi_sistem')) {
-        Schema::create('notifikasi_sistem', function (Blueprint $table) {
-            $table->uuid('id')->primary();
-            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
-            $table->string('judul', 150);
-            $table->text('pesan');
-            $table->boolean('is_read')->default(false);
-            $table->string('link_url')->nullable();
-            $table->timestamps();
-
-            $table->index(['user_id', 'is_read']);
-        });
-        }
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('notifikasi_sistem');
         Schema::dropIfExists('laporan_pengesahan_blu');
         Schema::dropIfExists('rekonsiliasi_bank_logs');
         Schema::dropIfExists('rekonsiliasi_bank');

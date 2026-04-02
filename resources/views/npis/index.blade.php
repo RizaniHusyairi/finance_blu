@@ -17,8 +17,8 @@
         <div class="col">
             <div class="card h-100 border-0 shadow-sm bg-warning text-dark">
                 <div class="card-body p-3">
-                    <h6 class="card-title fw-normal mb-1">SPM Terbit (Perlu NPI)</h6>
-                    <h3 class="fw-bold mb-0">{{ \App\Models\Spp::where('status_spp', 'SPM Terbit')->count() }}</h3>
+                    <h6 class="card-title fw-normal mb-1">SPM Final (Perlu NPI)</h6>
+                    <h3 class="fw-bold mb-0">{{ \App\Models\Spp::whereHas('spm', fn($q) => $q->where('status', \App\Models\DokumenSpm::STATUS_APPROVED_KASUBAG))->whereDoesntHave('spm.npi')->count() }}</h3>
                 </div>
             </div>
         </div>
@@ -26,15 +26,15 @@
             <div class="card h-100 border-0 shadow-sm text-white" style="background-color: #0dcaf0;">
                 <div class="card-body p-3">
                     <h6 class="card-title fw-normal mb-1">Menunggu Verifikasi</h6>
-                    <h3 class="fw-bold mb-0 text-white">{{ \App\Models\Spp::whereIn('status_spp', ['Menunggu TTD Bendahara Penerimaan', 'Menunggu Verifikasi PPK NPI'])->count() }}</h3>
+                    <h3 class="fw-bold mb-0 text-white">{{ \App\Models\DokumenNpi::whereIn('status', [\App\Models\DokumenNpi::STATUS_SUBMITTED_BENPEN, \App\Models\DokumenNpi::STATUS_SUBMITTED_PPK, \App\Models\DokumenNpi::STATUS_SUBMITTED_KASUBAG])->count() }}</h3>
                 </div>
             </div>
         </div>
         <div class="col">
             <div class="card h-100 border-0 shadow-sm bg-danger text-white">
                 <div class="card-body p-3">
-                    <h6 class="card-title fw-normal mb-1">Revisi dari PPK</h6>
-                    <h3 class="fw-bold mb-0">{{ \App\Models\Spp::where('status_spp', 'Revisi NPI')->count() }}</h3>
+                    <h6 class="card-title fw-normal mb-1">Dokumen Revisi</h6>
+                    <h3 class="fw-bold mb-0">{{ \App\Models\DokumenNpi::whereIn('status', [\App\Models\DokumenNpi::STATUS_REJECTED_BENPEN, \App\Models\DokumenNpi::STATUS_REJECTED_PPK, \App\Models\DokumenNpi::STATUS_REJECTED_KASUBAG])->count() }}</h3>
                 </div>
             </div>
         </div>
@@ -42,7 +42,7 @@
             <div class="card h-100 border-0 shadow-sm text-white" style="background-color: #20c997;">
                 <div class="card-body p-3">
                     <h6 class="card-title fw-normal mb-1">NPI Terbit</h6>
-                    <h3 class="fw-bold mb-0 text-white">{{ \App\Models\Spp::where('status_spp', 'NPI Terbit')->count() }}</h3>
+                    <h3 class="fw-bold mb-0 text-white">{{ \App\Models\DokumenNpi::where('status', \App\Models\DokumenNpi::STATUS_APPROVED_KASUBAG)->count() }}</h3>
                 </div>
             </div>
         </div>
@@ -65,10 +65,11 @@
                     <tbody>
                         @foreach ($perjaldins as $idx => $perjaldin)
                         @php
-                            $totalPerluNpi   = $perjaldin->spps->whereIn('status_spp', ['SPM Terbit', 'Revisi NPI'])->count();
-                            $totalMenunggu   = $perjaldin->spps->whereIn('status_spp', ['Menunggu TTD Bendahara Penerimaan', 'Menunggu Verifikasi PPK NPI'])->count();
+                            $totalPerluNpi   = $perjaldin->spps->filter(fn($spp) => optional($spp->spm)->status === \App\Models\DokumenSpm::STATUS_APPROVED_KASUBAG && !$spp->spm?->npi)->count()
+                                + $perjaldin->spps->whereIn('status_spp', ['Revisi Bendahara Penerimaan', 'Revisi NPI', 'Revisi Kasubbag'])->count();
+                            $totalMenunggu   = $perjaldin->spps->whereIn('status_spp', ['Menunggu Verifikasi Bendahara Penerimaan', 'Menunggu Verifikasi PPK NPI', 'Menunggu Verifikasi Kasubbag'])->count();
                             $totalNpiTerbit  = $perjaldin->spps->where('status_spp', 'NPI Terbit')->count();
-                            $totalSpm = $perjaldin->spps->whereIn('status_spp', ['SPM Terbit', 'Menunggu TTD Bendahara Penerimaan', 'Menunggu Verifikasi PPK NPI', 'Revisi NPI', 'NPI Terbit'])->count();
+                            $totalSpm = $perjaldin->spps->filter(fn($spp) => optional($spp->spm)->status === \App\Models\DokumenSpm::STATUS_APPROVED_KASUBAG || $spp->spm?->npi)->count();
                         @endphp
                         <tr>
                             <td>{{ $idx + 1 }}</td>

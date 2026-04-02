@@ -2,208 +2,409 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\DokumenNpi;
+use App\Models\LogStatusDokumen;
 use App\Models\Perjaldin;
-use App\Models\Spp;
 use App\Models\User;
+use App\Notifications\WorkflowNotification;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
 
 class NpiController extends Controller
 {
-    /**
-     * Daftar Perjaldin untuk Bendahara Pengeluaran membuat NPI.
-     */
     public function index()
     {
-        $perjaldins = Perjaldin::with(['pejabats', 'spps'])
+        $perjaldins = Perjaldin::with(['pejabats', 'spps.spm.npi'])
             ->whereHas('spps', function ($q) {
-                $q->whereIn('status_spp', [
-                    'SPM Terbit',
-                    'Menunggu TTD Bendahara Penerimaan',
-                    'Menunggu Verifikasi PPK NPI',
-                    'Revisi NPI',
-                    'NPI Terbit',
-                ]);
+                $q->whereHas('spm', function ($spm) {
+                    $spm->where('status', 'APPROVED_KASUBAG')
+                        ->orWhereHas('npi');
+                });
             })
             ->latest()
             ->get();
 
-        return view('npis.index', compact('perjaldins'));
+        $bendaharaPenerimaans = User::role('Bendahara Penerimaan')->get();
+
+        return view('npis.index', compact('perjaldins', 'bendaharaPenerimaans'));
     }
 
-    /**
-     * Detail satu Perjaldin — form buat/edit NPI per SPM.
-     */
     public function detail($perjaldin_id)
     {
-        $perjaldin = Perjaldin::with(['pejabats', 'spps'])->findOrFail($perjaldin_id);
-        return view('npis.detail_perjaldin', compact('perjaldin'));
+        $perjaldin = Perjaldin::with(['pejabats', 'spps.spm.npi.bendaharaPenerimaan'])->findOrFail($perjaldin_id);
+        $bendaharaPenerimaans = User::role('Bendahara Penerimaan')->get();
+
+        return view('npis.detail_perjaldin', compact('perjaldin', 'bendaharaPenerimaans'));
     }
 
-    /**
-     * Bendahara Pengeluaran Simpan NPI → Kirim ke Bendahara Penerimaan untuk TTD.
-     */
-    public function store(Request $request, $spp_id)
+    public function store(Request $request, $spm_id)
     {
-        $spp = Spp::findOrFail($spp_id);
+        $spm = \App\Models\DokumenSpm::with(['spp', 'npi'])->findOrFail($spm_id);
+
         $request->validate([
-            'nomor_npi'   => 'required|string|max:255',
+            'nomor_npi' => 'required|string|max:100',
             'tanggal_npi' => 'required|date',
+            'bendahara_penerimaan_id' => 'required|exists:users,id',
         ]);
 
-        $spp->update([
-            'nomor_npi'      => $request->nomor_npi,
-            'tanggal_npi'    => $request->tanggal_npi,
-            'status_spp'     => 'Menunggu TTD Bendahara Penerimaan',
-            'catatan_revisi' => null,
-        ]);
+        DB::transaction(function () use ($request, $spm) {
+            $npi = $spm->npi()->updateOrCreate(
+                ['spm_id' => $spm->id],
+                [
+                    'nomor_npi' => $request->nomor_npi,
+                    'tanggal_npi' => $request->tanggal_npi,
+                    'bendahara_penerimaan_id' => $request->bendahara_penerimaan_id,
+                    'status' => DokumenNpi::STATUS_SUBMITTED_BENPEN,
+                ]
+            );
 
-        // Notifikasi ke Bendahara Penerimaan
-        $penerima = User::role('Bendahara Penerimaan')->get();
-        \Illuminate\Support\Facades\Notification::send($penerima, new \App\Notifications\WorkflowNotification([
-            'title'   => 'NPI Menunggu TTD Anda',
-            'message' => "NPI {$request->nomor_npi} menunggu tanda tangan Bendahara Penerimaan.",
-            'url'     => route('verifikasi-bendahara-penerimaan.npi.index'),
-            'icon'    => 'how_to_reg',
-            'color'   => 'warning',
-        ]));
+            $this->logStatus(
+                $npi,
+                $npi->wasRecentlyCreated ? null : $npi->getOriginal('status'),
+                DokumenNpi::STATUS_SUBMITTED_BENPEN,
+                $npi->wasRecentlyCreated ? 'CREATE_AND_SUBMIT' : 'UPDATE_AND_RESUBMIT',
+                'Draft NPI diajukan ke Bendahara Penerimaan.'
+            );
 
-        return back()->with('success', "NPI berhasil dibuat dan dikirim ke Bendahara Penerimaan untuk tanda tangan.");
+            $this->notifyRoles(
+                ['Bendahara Penerimaan'],
+                'NPI Menunggu Verifikasi',
+                "NPI {$npi->nomor_npi} menunggu verifikasi Bendahara Penerimaan.",
+                route('verifikasi-bendahara-penerimaan.npi.index')
+            );
+        });
+
+        return back()->with('success', 'NPI berhasil dibuat dan dikirim ke Bendahara Penerimaan.');
     }
 
-    // =========================================================
-    // VERIFIKASI — BENDAHARA PENERIMAAN
-    // =========================================================
-
-    /**
-     * Dashboard verifikasi NPI untuk Bendahara Penerimaan.
-     */
     public function penerimaaIndex()
     {
-        $spms = Spp::with('sppable')
-            ->whereIn('status_spp', ['Menunggu TTD Bendahara Penerimaan', 'Menunggu Verifikasi PPK NPI', 'NPI Terbit'])
-            ->orderByRaw("CASE WHEN status_spp = 'Menunggu TTD Bendahara Penerimaan' THEN 1 ELSE 2 END")
+        $npis = DokumenNpi::with(['spm.spp', 'bendaharaPenerimaan'])
+            ->whereIn('status', [
+                DokumenNpi::STATUS_SUBMITTED_BENPEN,
+                DokumenNpi::STATUS_SUBMITTED_PPK,
+                DokumenNpi::STATUS_SUBMITTED_KASUBAG,
+                DokumenNpi::STATUS_APPROVED_KASUBAG,
+            ])
+            ->orderByRaw(
+                "CASE WHEN status = ? THEN 1 ELSE 2 END",
+                [DokumenNpi::STATUS_SUBMITTED_BENPEN]
+            )
             ->latest()
             ->get();
 
-        return view('verifikasi_bendahara_penerimaan.npi_index', compact('spms'));
+        return view('verifikasi_bendahara_penerimaan.npi_index', [
+            'npis' => $npis,
+            'pageTitle' => 'Verifikasi NPI',
+            'pageSubtitle' => 'Bendahara Penerimaan',
+            'pendingCount' => $npis->where('status', DokumenNpi::STATUS_SUBMITTED_BENPEN)->count(),
+            'approvedCount' => $npis->whereIn('status', [
+                DokumenNpi::STATUS_SUBMITTED_PPK,
+                DokumenNpi::STATUS_SUBMITTED_KASUBAG,
+                DokumenNpi::STATUS_APPROVED_KASUBAG,
+            ])->count(),
+        ]);
     }
 
-    /**
-     * Bendahara Penerimaan Menyetujui (TTD) → lanjut ke PPK.
-     */
-    public function approvePenerimaan($spp_id)
+    public function approvePenerimaan($npi_id)
     {
-        $spp = Spp::findOrFail($spp_id);
-        $spp->update(['status_spp' => 'Menunggu Verifikasi PPK NPI']);
+        $npi = DokumenNpi::findOrFail($npi_id);
+        $statusSebelumnya = $npi->status;
 
-        // Notifikasi ke PPK
-        $ppks = User::role('PPK')->get();
-        \Illuminate\Support\Facades\Notification::send($ppks, new \App\Notifications\WorkflowNotification([
-            'title'   => 'NPI Menunggu Persetujuan PPK',
-            'message' => "NPI {$spp->nomor_npi} sudah di-TTD Bendahara Penerimaan, menunggu persetujuan PPK.",
-            'url'     => route('verifikasi-ppk.npi.index'),
-            'icon'    => 'account_balance',
-            'color'   => 'warning',
-        ]));
-
-        return back()->with('success', "NPI berhasil di-TTD. Dokumen diteruskan ke PPK untuk persetujuan akhir.");
-    }
-
-    // =========================================================
-    // VERIFIKASI — PPK (Final Approval)
-    // =========================================================
-
-    /**
-     * Dashboard verifikasi NPI untuk PPK.
-     */
-    public function verifikasiIndex()
-    {
-        $spms = Spp::with('sppable')
-            ->whereIn('status_spp', ['Menunggu Verifikasi PPK NPI', 'Revisi NPI', 'NPI Terbit', 'SP2D Terbit', 'Lunas'])
-            ->orderByRaw("CASE WHEN status_spp = 'Menunggu Verifikasi PPK NPI' THEN 1 WHEN status_spp = 'Revisi NPI' THEN 2 ELSE 3 END")
-            ->latest()
-            ->get();
-
-        return view('verifikasi_ppk.npi_index', compact('spms'));
-    }
-
-    /**
-     * PPK Menyetujui NPI → NPI Terbit.
-     */
-    public function approve($spp_id)
-    {
-        $spp = Spp::findOrFail($spp_id);
-        $spp->update([
-            'status_spp'     => 'NPI Terbit',
-            'catatan_revisi' => null,
+        $npi->update([
+            'status' => DokumenNpi::STATUS_SUBMITTED_PPK,
         ]);
 
-        // Notifikasi ke Bendahara Pengeluaran
-        $bendaharas = User::role('Bendahara Pengeluaran')->get();
-        \Illuminate\Support\Facades\Notification::send($bendaharas, new \App\Notifications\WorkflowNotification([
-            'title'   => 'NPI Disetujui PPK!',
-            'message' => "NPI {$spp->nomor_npi} telah disetujui PPK. Silakan lanjutkan ke pencatatan SP2D.",
-            'url'     => route('sp2ds.index'),
-            'icon'    => 'task_alt',
-            'color'   => 'success',
-        ]));
+        $this->logStatus(
+            $npi,
+            $statusSebelumnya,
+            DokumenNpi::STATUS_SUBMITTED_PPK,
+            'APPROVE_BENDAHARA_PENERIMAAN',
+            'NPI disetujui Bendahara Penerimaan dan diteruskan ke PPK.'
+        );
 
-        return back()->with('success', "NPI disetujui oleh PPK. Bendahara dapat melanjutkan ke pencatatan SP2D.");
+        $this->notifyRoles(
+            ['PPK'],
+            'NPI Menunggu Persetujuan PPK',
+            "NPI {$npi->nomor_npi} telah diverifikasi Bendahara Penerimaan dan menunggu PPK.",
+            route('verifikasi-ppk.npi.index')
+        );
+
+        return back()->with('success', 'NPI diteruskan ke PPK.');
     }
 
-    /**
-     * PPK Menolak NPI → kembalikan ke Bendahara Pengeluaran.
-     */
-    public function revisi(Request $request, $spp_id)
+    public function revisiPenerimaan(Request $request, $npi_id)
     {
         $request->validate(['catatan_revisi' => 'required|string|max:1000']);
-        $spp = Spp::findOrFail($spp_id);
+        $npi = DokumenNpi::findOrFail($npi_id);
+        $statusSebelumnya = $npi->status;
 
-        $spp->update([
-            'status_spp'     => 'Revisi NPI',
-            'catatan_revisi' => $request->catatan_revisi,
+        $npi->update([
+            'status' => DokumenNpi::STATUS_REJECTED_BENPEN,
         ]);
 
-        $bendaharas = User::role('Bendahara Pengeluaran')->get();
-        \Illuminate\Support\Facades\Notification::send($bendaharas, new \App\Notifications\WorkflowNotification([
-            'title'   => 'NPI Dikembalikan PPK',
-            'message' => "NPI {$spp->nomor_npi} perlu diperbaiki: {$request->catatan_revisi}",
-            'url'     => route('npis.index'),
-            'icon'    => 'error',
-            'color'   => 'danger',
-        ]));
+        $this->logStatus(
+            $npi,
+            $statusSebelumnya,
+            DokumenNpi::STATUS_REJECTED_BENPEN,
+            'REJECT_BENDAHARA_PENERIMAAN',
+            $request->catatan_revisi
+        );
 
-        return back()->with('success', "NPI dikembalikan ke Bendahara Pengeluaran untuk diperbaiki.");
+        $this->notifyRoles(
+            ['Bendahara Pengeluaran'],
+            'NPI Dikembalikan Bendahara Penerimaan',
+            "NPI {$npi->nomor_npi} perlu diperbaiki: {$request->catatan_revisi}",
+            route('npis.index')
+        );
+
+        return back()->with('success', 'NPI dikembalikan ke Bendahara Pengeluaran.');
     }
 
-    /**
-     * Cetak dokumen NPI ke format PDF.
-     */
-    public function cetakPdf($spp_id)
+    public function verifikasiIndex()
     {
-        $spp = Spp::findOrFail($spp_id);
+        $npis = DokumenNpi::with(['spm.spp', 'bendaharaPenerimaan'])
+            ->whereIn('status', [
+                DokumenNpi::STATUS_SUBMITTED_PPK,
+                DokumenNpi::STATUS_SUBMITTED_KASUBAG,
+                DokumenNpi::STATUS_APPROVED_KASUBAG,
+            ])
+            ->orderByRaw(
+                "CASE WHEN status = ? THEN 1 WHEN status = ? THEN 2 ELSE 3 END",
+                [
+                    DokumenNpi::STATUS_SUBMITTED_PPK,
+                    DokumenNpi::STATUS_SUBMITTED_KASUBAG,
+                ]
+            )
+            ->latest()
+            ->get();
 
-        if (!$spp->nomor_npi) $spp->nomor_npi = 'NPI-BLU/APTP-' . date('Y') . '/DRAFT';
-        if (!$spp->tanggal_npi) $spp->tanggal_npi = now()->toDateString();
+        return view('verifikasi_ppk.npi_index', [
+            'npis' => $npis,
+            'stage' => 'ppk',
+            'pageTitle' => 'Verifikasi NPI',
+            'pageSubtitle' => 'Pejabat Pembuat Komitmen',
+            'pendingCount' => $npis->where('status', DokumenNpi::STATUS_SUBMITTED_PPK)->count(),
+            'approvedCount' => $npis->whereIn('status', [
+                DokumenNpi::STATUS_SUBMITTED_KASUBAG,
+                DokumenNpi::STATUS_APPROVED_KASUBAG,
+            ])->count(),
+            'approveRouteName' => 'verifikasi-ppk.npi.approve',
+            'rejectRouteName' => 'verifikasi-ppk.npi.revisi',
+        ]);
+    }
 
-        $jumlahUang = $spp->jumlah_uang;
-        $terbilang  = terbilang_rupiah($jumlahUang);
+    public function approve($npi_id)
+    {
+        $npi = DokumenNpi::findOrFail($npi_id);
+        $statusSebelumnya = $npi->status;
+
+        $npi->update([
+            'status' => DokumenNpi::STATUS_SUBMITTED_KASUBAG,
+        ]);
+
+        $this->logStatus(
+            $npi,
+            $statusSebelumnya,
+            DokumenNpi::STATUS_SUBMITTED_KASUBAG,
+            'APPROVE_PPK',
+            'NPI disetujui PPK dan diteruskan ke Kasubbag.'
+        );
+
+        $this->notifyRoles(
+            ['Kepala Subbagian Keuangan dan Tata Usaha'],
+            'NPI Menunggu Verifikasi Kasubbag',
+            "NPI {$npi->nomor_npi} telah disetujui PPK dan menunggu Kasubbag.",
+            route('verifikasi-kasubag.npi.index')
+        );
+
+        return back()->with('success', 'NPI diteruskan ke Kasubbag.');
+    }
+
+    public function revisi(Request $request, $npi_id)
+    {
+        $request->validate(['catatan_revisi' => 'required|string|max:1000']);
+        $npi = DokumenNpi::findOrFail($npi_id);
+        $statusSebelumnya = $npi->status;
+
+        $npi->update([
+            'status' => DokumenNpi::STATUS_REJECTED_PPK,
+        ]);
+
+        $this->logStatus(
+            $npi,
+            $statusSebelumnya,
+            DokumenNpi::STATUS_REJECTED_PPK,
+            'REJECT_PPK',
+            $request->catatan_revisi
+        );
+
+        $this->notifyRoles(
+            ['Bendahara Pengeluaran'],
+            'NPI Dikembalikan PPK',
+            "NPI {$npi->nomor_npi} perlu diperbaiki: {$request->catatan_revisi}",
+            route('npis.index')
+        );
+
+        return back()->with('success', 'NPI dikembalikan ke Bendahara Pengeluaran.');
+    }
+
+    public function kasubbagIndex()
+    {
+        $npis = DokumenNpi::with(['spm.spp', 'bendaharaPenerimaan'])
+            ->whereIn('status', [
+                DokumenNpi::STATUS_SUBMITTED_KASUBAG,
+                DokumenNpi::STATUS_APPROVED_KASUBAG,
+            ])
+            ->orderByRaw(
+                "CASE WHEN status = ? THEN 1 ELSE 2 END",
+                [DokumenNpi::STATUS_SUBMITTED_KASUBAG]
+            )
+            ->latest()
+            ->get();
+
+        return view('verifikasi_ppk.npi_index', [
+            'npis' => $npis,
+            'stage' => 'kasubbag',
+            'pageTitle' => 'Verifikasi NPI',
+            'pageSubtitle' => 'Kepala Subbagian Keuangan dan Tata Usaha',
+            'pendingCount' => $npis->where('status', DokumenNpi::STATUS_SUBMITTED_KASUBAG)->count(),
+            'approvedCount' => $npis->where('status', DokumenNpi::STATUS_APPROVED_KASUBAG)->count(),
+            'approveRouteName' => 'verifikasi-kasubag.npi.approve',
+            'rejectRouteName' => 'verifikasi-kasubag.npi.revisi',
+        ]);
+    }
+
+    public function approveKasubbag($npi_id)
+    {
+        $npi = DokumenNpi::findOrFail($npi_id);
+        $statusSebelumnya = $npi->status;
+
+        $npi->update([
+            'status' => DokumenNpi::STATUS_APPROVED_KASUBAG,
+        ]);
+
+        $this->logStatus(
+            $npi,
+            $statusSebelumnya,
+            DokumenNpi::STATUS_APPROVED_KASUBAG,
+            'APPROVE_KASUBAG',
+            'NPI disetujui Kasubbag dan siap dilanjutkan ke SP2D.'
+        );
+
+        $this->notifyRoles(
+            ['Bendahara Pengeluaran'],
+            'NPI Final Disetujui',
+            "NPI {$npi->nomor_npi} telah final disetujui dan siap diproses ke SP2D.",
+            route('sp2ds.index')
+        );
+
+        return back()->with('success', 'NPI disetujui Kasubbag.');
+    }
+
+    public function revisiKasubbag(Request $request, $npi_id)
+    {
+        $request->validate(['catatan_revisi' => 'required|string|max:1000']);
+        $npi = DokumenNpi::findOrFail($npi_id);
+        $statusSebelumnya = $npi->status;
+
+        $npi->update([
+            'status' => DokumenNpi::STATUS_REJECTED_KASUBAG,
+        ]);
+
+        $this->logStatus(
+            $npi,
+            $statusSebelumnya,
+            DokumenNpi::STATUS_REJECTED_KASUBAG,
+            'REJECT_KASUBAG',
+            $request->catatan_revisi
+        );
+
+        $this->notifyRoles(
+            ['Bendahara Pengeluaran'],
+            'NPI Dikembalikan Kasubbag',
+            "NPI {$npi->nomor_npi} perlu diperbaiki: {$request->catatan_revisi}",
+            route('npis.index')
+        );
+
+        return back()->with('success', 'NPI dikembalikan oleh Kasubbag.');
+    }
+
+    public function cetakPdf($npi_id)
+    {
+        $npi = DokumenNpi::with(['spm.spp', 'bendaharaPenerimaan'])->findOrFail($npi_id);
+        $spm = $npi->spm;
+        $spp = $spm?->spp;
+
+        if (! $npi->nomor_npi) {
+            $npi->nomor_npi = 'NPI-BLU/APTP-' . date('Y') . '/DRAFT';
+        }
+
+        if (! $npi->tanggal_npi) {
+            $npi->tanggal_npi = now()->toDateString();
+        }
+
+        $jumlahUang = (float) ($spp?->nominal_spp ?? 0);
+        $terbilang = terbilang_rupiah($jumlahUang);
 
         $bendaharaPengeluaran = User::role('Bendahara Pengeluaran')->first();
-        $bendaharaPenerimaan  = User::role('Bendahara Penerimaan')->first();
+        $bendaharaPenerimaan = $npi->bendaharaPenerimaan ?: User::role('Bendahara Penerimaan')->first();
+        $ppk = User::role('PPK')->first();
 
         $penandatanganPengeluaran = $bendaharaPengeluaran->name ?? 'BENDAHARA PENGELUARAN';
-        $nipPengeluaran           = '-';
-        $penandatanganPenerimaan  = $bendaharaPenerimaan->name ?? 'BENDAHARA PENERIMAAN';
-        $nipPenerimaan            = '-';
+        $nipPengeluaran = '-';
+        $penandatanganPenerimaan = $bendaharaPenerimaan->name ?? 'BENDAHARA PENERIMAAN';
+        $nipPenerimaan = '-';
 
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('npis.pdf', compact(
-            'spp', 'jumlahUang', 'terbilang',
-            'penandatanganPengeluaran', 'nipPengeluaran',
-            'penandatanganPenerimaan', 'nipPenerimaan'
+            'spp',
+            'spm',
+            'npi',
+            'jumlahUang',
+            'terbilang',
+            'penandatanganPengeluaran',
+            'nipPengeluaran',
+            'penandatanganPenerimaan',
+            'nipPenerimaan',
+            'ppk'
         ));
         $pdf->setPaper('a4', 'portrait');
 
-        return $pdf->stream('NPI-BLU-' . str_replace('/', '-', $spp->nomor_npi) . '.pdf');
+        return $pdf->stream('NPI-BLU-' . str_replace('/', '-', $npi->nomor_npi) . '.pdf');
+    }
+
+    private function logStatus(
+        DokumenNpi $npi,
+        ?string $statusSebelumnya,
+        string $statusBaru,
+        string $aksi,
+        ?string $catatan = null
+    ): void {
+        $user = Auth::user();
+
+        LogStatusDokumen::create([
+            'dokumen_type' => DokumenNpi::class,
+            'dokumen_id' => $npi->id,
+            'user_id' => $user?->id,
+            'role_saat_itu' => $user?->getRoleNames()->first() ?? 'SYSTEM',
+            'status_sebelumnya' => $statusSebelumnya,
+            'status_baru' => $statusBaru,
+            'aksi' => $aksi,
+            'catatan' => $catatan,
+            'ip_address' => request()->ip(),
+        ]);
+    }
+
+    private function notifyRoles(array $roles, string $judul, string $pesan, ?string $linkUrl = null): void
+    {
+        Notification::send(User::role($roles)->get(), new WorkflowNotification([
+            'title' => $judul,
+            'message' => $pesan,
+            'url' => $linkUrl,
+            'icon' => 'notifications',
+            'color' => 'primary',
+        ]));
     }
 }

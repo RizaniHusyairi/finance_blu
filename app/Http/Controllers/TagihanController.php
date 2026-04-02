@@ -6,47 +6,62 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use App\Models\KontrakPengadaan;
-use App\Models\MasterTarifPajak;
 use App\Models\Tagihan;
 use App\Models\DetailKontrak;
 use App\Models\PotonganTagihan;
 use App\Models\LogStatusDokumen;
+use App\Models\KontrakTermin;
+use App\Models\User;
+use App\Notifications\WorkflowNotification;
+use Illuminate\Support\Facades\Notification;
 
 class TagihanController extends Controller
 {
-    public function createKontrak()
+    public function createKontrak(Request $request)
     {
-        $kontraks = KontrakPengadaan::with('vendor')
+        $kontraks = KontrakPengadaan::with(['vendor', 'termin'])
             ->where('status_kontrak', 'AKTIF')
             ->latest()
             ->get();
 
-        $pajaks = MasterTarifPajak::all();
+        $selectedKontrak = null;
+        $selectedTermin = null;
 
-        return view('tagihan.create_kontrak', compact('kontraks', 'pajaks'));
+        if ($request->filled('kontrak_id') && $request->filled('termin_id')) {
+            $selectedKontrak = KontrakPengadaan::with('vendor')
+                ->where('status_kontrak', 'AKTIF')
+                ->findOrFail($request->integer('kontrak_id'));
+
+            $selectedTermin = KontrakTermin::where('kontrak_pengadaan_id', $selectedKontrak->id)
+                ->where('status_termin', 'READY_TO_BILL')
+                ->findOrFail($request->integer('termin_id'));
+        }
+
+        $selectedPotonganAngsuran = ($selectedKontrak && $selectedTermin)
+            ? $this->resolvePotonganAngsuranUangMuka($selectedKontrak, $selectedTermin)
+            : 0;
+
+        return view('tagihan.create_kontrak', compact('kontraks', 'selectedKontrak', 'selectedTermin', 'selectedPotonganAngsuran'));
     }
 
     public function storeKontrak(Request $request)
     {
         $validated = $request->validate([
             'kontrak_pengadaan_id' => 'required|exists:kontrak_pengadaan,id',
-            'kontrak_termin_id' => 'required|integer',
+            'kontrak_termin_id' => 'required|exists:kontrak_termin,id',
             'nomor_bapp' => 'nullable|string|max:100',
             'tanggal_bapp' => 'nullable|date',
-            'nomor_bast' => 'required|string|max:100',
-            'tanggal_bast' => 'required|date',
+            'nomor_bast' => 'nullable|string|max:100',
+            'tanggal_bast' => 'nullable|date',
             'nomor_bap' => 'required|string|max:100',
             'tanggal_bap' => 'required|date',
             'nomor_invoice' => 'required|string|max:100',
             'total_bruto' => 'required|numeric|min:0',
-            'pajak' => 'nullable|array',
-            'pajak.*.id' => 'required|exists:master_tarif_pajak,id',
-            'pajak.*.dpp' => 'required|numeric|min:0',
-            'pajak.*.nominal' => 'required|numeric|min:0',
             'file_invoice' => 'required|file|mimes:pdf|max:5120',
-            'file_bast' => 'required|file|mimes:pdf|max:5120',
+            'file_bapp' => 'nullable|file|mimes:pdf|max:5120',
+            'file_bap' => 'required|file|mimes:pdf|max:5120',
+            'file_bast' => 'nullable|file|mimes:pdf|max:5120',
             'file_kwitansi' => 'required|file|mimes:pdf|max:5120',
-            'file_pajak' => 'nullable|file|mimes:pdf|max:5120',
             'file_lampiran_lainnya' => 'nullable|file|mimes:pdf,zip|max:5120',
         ]);
 
@@ -54,7 +69,24 @@ class TagihanController extends Controller
             DB::beginTransaction();
 
             $kontrak = KontrakPengadaan::findOrFail($validated['kontrak_pengadaan_id']);
-            $totalPotongan = collect($request->pajak ?? [])->sum('nominal');
+            $termin = KontrakTermin::where('kontrak_pengadaan_id', $kontrak->id)
+                ->findOrFail($validated['kontrak_termin_id']);
+
+            if ($termin->status_termin !== 'READY_TO_BILL') {
+                throw new \Exception('Termin yang dipilih tidak lagi siap ditagih.');
+            }
+
+            if ($termin->jenis_termin === 'PELUNASAN') {
+                $request->validate([
+                    'nomor_bast' => 'required|string|max:100',
+                    'tanggal_bast' => 'required|date',
+                    'file_bast' => 'required|file|mimes:pdf|max:5120',
+                ]);
+            }
+
+            $potonganAngsuranUangMuka = $this->resolvePotonganAngsuranUangMuka($kontrak, $termin);
+            $totalPotonganPajak = 0;
+            $totalPotongan = $potonganAngsuranUangMuka + $totalPotonganPajak;
             $totalNetto = $validated['total_bruto'] - $totalPotongan;
             $nomorTagihan = 'TAG-K/' . date('Ym') . '/' . str_pad(rand(1, 9999), 4, '0', STR_PAD_LEFT);
 
@@ -73,7 +105,7 @@ class TagihanController extends Controller
 
             $detailKontrak = DetailKontrak::create([
                 'tagihan_id' => $tagihan->id,
-                'kontrak_termin_id' => $validated['kontrak_termin_id'],
+                'kontrak_termin_id' => $termin->id,
                 'nomor_bapp' => $validated['nomor_bapp'],
                 'tanggal_bapp' => $validated['tanggal_bapp'],
                 'nomor_bast' => $validated['nomor_bast'],
@@ -90,6 +122,34 @@ class TagihanController extends Controller
                     'disk' => 'public',
                     'mime_type' => $request->file('file_bast')->getMimeType(),
                     'ukuran_file' => $request->file('file_bast')->getSize(),
+                    'uploaded_by' => Auth::id(),
+                    'uploaded_at' => now(),
+                    'is_active' => true,
+                ]);
+            }
+
+            if ($request->hasFile('file_bapp')) {
+                $detailKontrak->arsipDokumen()->create([
+                    'jenis_dokumen' => 'BAPP',
+                    'nama_file_asli' => $request->file('file_bapp')->getClientOriginalName(),
+                    'path_file' => $request->file('file_bapp')->store('tagihan/bapp', 'public'),
+                    'disk' => 'public',
+                    'mime_type' => $request->file('file_bapp')->getMimeType(),
+                    'ukuran_file' => $request->file('file_bapp')->getSize(),
+                    'uploaded_by' => Auth::id(),
+                    'uploaded_at' => now(),
+                    'is_active' => true,
+                ]);
+            }
+
+            if ($request->hasFile('file_bap')) {
+                $detailKontrak->arsipDokumen()->create([
+                    'jenis_dokumen' => 'BAP',
+                    'nama_file_asli' => $request->file('file_bap')->getClientOriginalName(),
+                    'path_file' => $request->file('file_bap')->store('tagihan/bap', 'public'),
+                    'disk' => 'public',
+                    'mime_type' => $request->file('file_bap')->getMimeType(),
+                    'ukuran_file' => $request->file('file_bap')->getSize(),
                     'uploaded_by' => Auth::id(),
                     'uploaded_at' => now(),
                     'is_active' => true,
@@ -138,33 +198,21 @@ class TagihanController extends Controller
                 ]);
             }
 
-            if ($request->has('pajak')) {
-                foreach ($request->pajak as $pj) {
-                    $potongan = PotonganTagihan::create([
-                        'tagihan_id' => $tagihan->id,
-                        'pajak_id' => $pj['id'],
-                        'jenis_potongan' => 'PAJAK',
-                        'deskripsi' => 'Potongan pajak dari tagihan ' . $nomorTagihan,
-                        'dpp' => $pj['dpp'],
-                        'persentase_tarif_snapshot' => optional(MasterTarifPajak::find($pj['id']))->persentase,
-                        'nama_pajak_snapshot' => optional(MasterTarifPajak::find($pj['id']))->jenis_pajak,
-                        'nominal_potongan' => $pj['nominal'],
-                    ]);
+            if ($potonganAngsuranUangMuka > 0) {
+                PotonganTagihan::create([
+                    'tagihan_id' => $tagihan->id,
+                    'pajak_id' => null,
+                    'jenis_potongan' => 'ANGSURAN_UANG_MUKA',
+                    'deskripsi' => 'Potongan angsuran uang muka dari tagihan ' . $nomorTagihan,
+                    'dpp' => $validated['total_bruto'],
+                    'persentase_tarif_snapshot' => null,
+                    'nama_pajak_snapshot' => 'Angsuran Uang Muka',
+                    'nominal_potongan' => $potonganAngsuranUangMuka,
+                ]);
 
-                    if ($request->hasFile('file_pajak')) {
-                        $potongan->arsipDokumen()->create([
-                            'jenis_dokumen' => 'FAKTUR_PAJAK',
-                            'nama_file_asli' => $request->file('file_pajak')->getClientOriginalName(),
-                            'path_file' => $request->file('file_pajak')->store('tagihan/pajak', 'public'),
-                            'disk' => 'public',
-                            'mime_type' => $request->file('file_pajak')->getMimeType(),
-                            'ukuran_file' => $request->file('file_pajak')->getSize(),
-                            'uploaded_by' => Auth::id(),
-                            'uploaded_at' => now(),
-                            'is_active' => true,
-                        ]);
-                    }
-                }
+                $kontrak->update([
+                    'sisa_uang_muka_belum_lunas' => max(0, (float) $kontrak->sisa_uang_muka_belum_lunas - $potonganAngsuranUangMuka),
+                ]);
             }
 
             DB::table('kontrak_termin')
@@ -212,5 +260,144 @@ class TagihanController extends Controller
         }
 
         return view('tagihans.ppk_verify', compact('tagihan'));
+    }
+
+    public function approveKontrak($id)
+    {
+        $tagihan = Tagihan::with(['detailKontrak.kontrakTermin.kontrak'])->findOrFail($id);
+
+        if ($tagihan->status !== 'PENDING_PPK') {
+            return redirect()
+                ->route('ppk.tagihan.kontrak.index')
+                ->with('error', 'Tagihan ini tidak sedang dalam antrean verifikasi Anda.');
+        }
+
+        DB::beginTransaction();
+
+        try {
+            $statusSebelumnya = $tagihan->status;
+
+            $tagihan->update([
+                'status' => 'READY_FOR_SPP',
+            ]);
+
+            LogStatusDokumen::create([
+                'dokumen_type' => Tagihan::class,
+                'dokumen_id' => $tagihan->id,
+                'user_id' => Auth::id(),
+                'role_saat_itu' => Auth::user()->getRoleNames()->first() ?? 'PPK',
+                'status_sebelumnya' => $statusSebelumnya,
+                'status_baru' => 'READY_FOR_SPP',
+                'aksi' => 'APPROVE_PPK',
+                'catatan' => 'Tagihan kontrak disetujui PPK dan diteruskan ke proses SPP.',
+                'ip_address' => request()->ip(),
+            ]);
+
+            $this->notifyRoles(
+                ['Operator BLU'],
+                'Tagihan Kontrak Siap Diproses SPP',
+                "Tagihan {$tagihan->nomor_tagihan} telah disetujui PPK dan siap dibuatkan SPP.",
+                route('spps.kontrak.index')
+            );
+
+            DB::commit();
+
+            return redirect()
+                ->route('ppk.tagihan.kontrak.index')
+                ->with('success', "Tagihan {$tagihan->nomor_tagihan} berhasil disetujui dan diteruskan ke SPP.");
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return back()->with('error', 'Gagal menyetujui tagihan: ' . $e->getMessage());
+        }
+    }
+
+    public function rejectKontrak(Request $request, $id)
+    {
+        $request->validate([
+            'catatan_revisi' => 'required|string|min:10|max:1000',
+        ]);
+
+        $tagihan = Tagihan::with(['detailKontrak.kontrakTermin.kontrak'])->findOrFail($id);
+
+        if ($tagihan->status !== 'PENDING_PPK') {
+            return redirect()
+                ->route('ppk.tagihan.kontrak.index')
+                ->with('error', 'Tagihan ini tidak sedang dalam antrean verifikasi Anda.');
+        }
+
+        DB::beginTransaction();
+
+        try {
+            $statusSebelumnya = $tagihan->status;
+            $contractId = $tagihan->detailKontrak?->kontrakTermin?->kontrak?->id;
+            $linkUrl = $contractId ? route('contracts.show', $contractId) : route('contracts.index');
+
+            $tagihan->update([
+                'status' => 'REVISI_PEJABAT_PENGADAAN',
+            ]);
+
+            if ($tagihan->detailKontrak?->kontrak_termin_id) {
+                DB::table('kontrak_termin')
+                    ->where('id', $tagihan->detailKontrak->kontrak_termin_id)
+                    ->update(['status_termin' => 'READY_TO_BILL']);
+            }
+
+            LogStatusDokumen::create([
+                'dokumen_type' => Tagihan::class,
+                'dokumen_id' => $tagihan->id,
+                'user_id' => Auth::id(),
+                'role_saat_itu' => Auth::user()->getRoleNames()->first() ?? 'PPK',
+                'status_sebelumnya' => $statusSebelumnya,
+                'status_baru' => 'REVISI_PEJABAT_PENGADAAN',
+                'aksi' => 'REJECT_PPK',
+                'catatan' => $request->catatan_revisi,
+                'ip_address' => request()->ip(),
+            ]);
+
+            $this->notifyRoles(
+                ['Pejabat Pengadaan'],
+                'Tagihan Kontrak Perlu Revisi',
+                "Tagihan {$tagihan->nomor_tagihan} dikembalikan PPK: {$request->catatan_revisi}",
+                $linkUrl
+            );
+
+            DB::commit();
+
+            return redirect()
+                ->route('ppk.tagihan.kontrak.index')
+                ->with('success', "Tagihan {$tagihan->nomor_tagihan} berhasil dikembalikan untuk revisi.");
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return back()->withInput()->with('error', 'Gagal mengembalikan tagihan: ' . $e->getMessage());
+        }
+    }
+
+    private function resolvePotonganAngsuranUangMuka(KontrakPengadaan $kontrak, KontrakTermin $termin): float
+    {
+        if (!$kontrak->ada_uang_muka || (float) $kontrak->sisa_uang_muka_belum_lunas <= 0) {
+            return 0;
+        }
+
+        if (!in_array($termin->jenis_termin, ['PROGRESS', 'PELUNASAN'], true)) {
+            return 0;
+        }
+
+        return round(min(
+            (float) $termin->potongan_angsuran_uang_muka,
+            (float) $kontrak->sisa_uang_muka_belum_lunas
+        ), 2);
+    }
+
+    private function notifyRoles(array $roles, string $judul, string $pesan, ?string $linkUrl = null): void
+    {
+        Notification::send(User::role($roles)->get(), new WorkflowNotification([
+            'title' => $judul,
+            'message' => $pesan,
+            'url' => $linkUrl,
+            'icon' => 'notifications',
+            'color' => 'primary',
+        ]));
     }
 }

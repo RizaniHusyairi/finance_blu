@@ -8,6 +8,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use App\Models\ArsipDokumen;
+use App\Models\User;
+use App\Notifications\WorkflowNotification;
+use Illuminate\Support\Facades\Notification;
 
 class ContractController extends Controller
 {
@@ -16,7 +19,7 @@ class ContractController extends Controller
      */
     public function index()
     {
-        $contracts = \App\Models\KontrakPengadaan::with(['vendor', 'addendums'])->latest()->get();
+        $contracts = \App\Models\KontrakPengadaan::with(['vendor', 'addendums', 'termin'])->latest()->get();
         $addendums = \App\Models\KontrakAddendum::with(['kontrakUtama.vendor'])->latest()->get();
 
         $totalAktif = $contracts->where('status_kontrak', 'AKTIF')->count();
@@ -97,7 +100,11 @@ class ContractController extends Controller
      */
     public function create()
     {
-        $vendors = \App\Models\MasterMitraVendor::all();
+        $vendors = \App\Models\MasterPihak::query()
+            ->where('status_aktif', true)
+            ->whereIn('kategori', ['PENGELUARAN', 'KEDUANYA'])
+            ->orderBy('nama_pihak')
+            ->get();
         // Hanya DIPA tahun berjalan
         $dipas = \App\Models\MasterDipa::where('tahun_anggaran', date('Y'))->get();
 
@@ -122,18 +129,21 @@ class ContractController extends Controller
             'nilai_total_kontrak' => 'required|numeric|min:0',
             'metode_pembayaran' => 'required|in:LUMPSUM,TERMIN',
             'ada_uang_muka' => 'nullable|boolean',
-            'nilai_uang_muka' => 'nullable|numeric|min:0',
-            
+            'nilai_uang_muka' => 'nullable|numeric|min:0|lte:nilai_total_kontrak',
+
             // Uploads
             'file_spk' => 'nullable|file|mimes:pdf|max:5120',
             'file_spmk' => 'nullable|file|mimes:pdf|max:5120',
             'file_ringkasan_kontrak' => 'nullable|file|mimes:pdf|max:5120',
+            'file_jaminan_um' => 'nullable|file|mimes:pdf|max:5120',
             
-            // Termin
-            'termin_jenis' => 'nullable|array',
-            'termin_keterangan' => 'nullable|array',
-            'termin_persentase' => 'nullable|array',
-            'termin_nilai' => 'nullable|array',
+            // Termin progress + retensi
+            'progress_keterangan' => 'nullable|array',
+            'progress_keterangan.*' => 'nullable|string|max:255',
+            'progress_persentase' => 'nullable|array',
+            'progress_persentase.*' => 'nullable|numeric|min:0.0001|max:100',
+            'retensi_keterangan' => 'nullable|string|max:255',
+            'retensi_persentase' => 'nullable|numeric|min:0.0001|max:100',
         ]);
 
         try {
@@ -160,6 +170,11 @@ class ContractController extends Controller
             $pathSpk = $request->hasFile('file_spk') ? $request->file('file_spk')->store('kontrak/spk', 'public') : null;
             $pathSpmk = $request->hasFile('file_spmk') ? $request->file('file_spmk')->store('kontrak/spmk', 'public') : null;
             $pathRingkasan = $request->hasFile('file_ringkasan_kontrak') ? $request->file('file_ringkasan_kontrak')->store('kontrak/ringkasan', 'public') : null;
+            $pathJaminanUm = $request->hasFile('file_jaminan_um') ? $request->file('file_jaminan_um')->store('kontrak/jaminan-uang-muka', 'public') : null;
+
+            $adaUangMuka = $request->has('ada_uang_muka');
+            $nilaiUangMuka = $adaUangMuka ? (float) ($validated['nilai_uang_muka'] ?? 0) : 0;
+            $initialSisaUangMuka = $nilaiUangMuka;
 
             $kontrak = \App\Models\KontrakPengadaan::create([
                 'vendor_id' => $validated['vendor_id'],
@@ -169,9 +184,9 @@ class ContractController extends Controller
                 'nama_pekerjaan' => $validated['nama_pekerjaan'],
                 'nilai_total_kontrak' => $validated['nilai_total_kontrak'],
                 'metode_pembayaran' => $validated['metode_pembayaran'],
-                'ada_uang_muka' => $request->has('ada_uang_muka') ? 1 : 0,
-                'nilai_uang_muka' => $request->has('ada_uang_muka') ? ($validated['nilai_uang_muka'] ?? 0) : 0,
-                'sisa_uang_muka_belum_lunas' => $request->has('ada_uang_muka') ? ($validated['nilai_uang_muka'] ?? 0) : 0,
+                'ada_uang_muka' => $adaUangMuka ? 1 : 0,
+                'nilai_uang_muka' => $nilaiUangMuka,
+                'sisa_uang_muka_belum_lunas' => $initialSisaUangMuka,
                 'jangka_waktu' => $validated['jangka_waktu'],
                 'satuan_waktu' => $validated['satuan_waktu'],
                 'tanggal_mulai' => $validated['tanggal_mulai'],
@@ -183,61 +198,25 @@ class ContractController extends Controller
                 'SPK' => $pathSpk,
                 'SPMK' => $pathSpmk,
                 'RINGKASAN_KONTRAK' => $pathRingkasan,
+                'JAMINAN_UANG_MUKA' => $pathJaminanUm,
             ]);
 
-            // Buat Termin Pembayaran
             if ($validated['metode_pembayaran'] === 'TERMIN') {
-                $jns = $request->input('termin_jenis', []);
-                $ket = $request->input('termin_keterangan', []);
-                $prs = $request->input('termin_persentase', []);
-                $nl  = $request->input('termin_nilai', []);
-                
-                $ada_uang_muka = $request->has('ada_uang_muka') ? 1 : 0;
-                $nilai_uang_muka = $ada_uang_muka ? ($validated['nilai_uang_muka'] ?? 0) : 0;
+                $terminPayload = $this->buildTerminScheme($request, (float) $validated['nilai_total_kontrak']);
+                $terminPayload = $this->attachAngsuranUangMuka($terminPayload, $nilaiUangMuka);
 
-                $totalPersenCheck = array_sum($prs);
-                if ($totalPersenCheck != 100) {
-                    throw new \Exception("Total Persentase Termin harus tepat 100% (Saat ini $totalPersenCheck%).");
-                }
-
-                // Hitung rasio uang muka terhadap total kontrak
-                $rasioUangMuka = 0;
-                if ($ada_uang_muka && $validated['nilai_total_kontrak'] > 0) {
-                    $rasioUangMuka = $nilai_uang_muka / $validated['nilai_total_kontrak'];
-                }
-
-                foreach ($jns as $index => $jenis) {
-                    // Hitung potongan angsuran uang muka untuk termin PROGRESS & PELUNASAN
-                    $potonganAngsuran = 0;
-                    if ($ada_uang_muka && in_array($jenis, ['PROGRESS', 'PELUNASAN'])) {
-                        $potonganAngsuran = $nl[$index] * $rasioUangMuka;
-                    }
-
+                foreach ($terminPayload as $index => $termin) {
                     \App\Models\KontrakTermin::create([
                         'kontrak_pengadaan_id' => $kontrak->id,
                         'termin_ke' => $index + 1,
-                        'keterangan_termin' => $ket[$index] ?? '-',
-                        'persentase' => $prs[$index],
-                        'nilai_bruto_termin' => $nl[$index],
-                        'potongan_angsuran_uang_muka' => $potonganAngsuran,
-                        'jenis_termin' => $jenis,
-                        'status_termin' => 'READY_TO_BILL'
+                        'keterangan_termin' => $termin['keterangan_termin'],
+                        'persentase' => $termin['persentase'],
+                        'nilai_bruto_termin' => $termin['nilai_bruto_termin'],
+                        'potongan_angsuran_uang_muka' => $termin['potongan_angsuran_uang_muka'],
+                        'jenis_termin' => $termin['jenis_termin'],
+                        'status_termin' => $index === 0 ? 'READY_TO_BILL' : 'LOCKED',
                     ]);
                 }
-                
-                // Set status uang muka jika ada
-                if ($request->has('ada_uang_muka')) {
-                    $terminUm = \App\Models\KontrakTermin::where('kontrak_pengadaan_id', $kontrak->id)
-                        ->where('jenis_termin', 'UANG_MUKA')->first();
-                    if (!$terminUm) {
-                        throw new \Exception("Anda menyatakan ada uang muka, tetapi tidak ada skema termin berjenis 'Uang Muka'.");
-                    }
-                }
-
-                // Lock termin selanjutnya (termin > 1) sementara
-                \App\Models\KontrakTermin::where('kontrak_pengadaan_id', $kontrak->id)
-                    ->where('termin_ke', '>', 1)
-                    ->update(['status_termin' => 'LOCKED']);
             } else {
                 // LUMPSUM
                 \App\Models\KontrakTermin::create([
@@ -246,6 +225,7 @@ class ContractController extends Controller
                     'keterangan_termin' => 'Pelunasan Sekaligus (LUMPSUM)',
                     'persentase' => 100,
                     'nilai_bruto_termin' => $validated['nilai_total_kontrak'],
+                    'potongan_angsuran_uang_muka' => $nilaiUangMuka,
                     'jenis_termin' => 'PELUNASAN',
                     'status_termin' => 'READY_TO_BILL'
                 ]);
@@ -415,7 +395,16 @@ class ContractController extends Controller
             'ip_address'        => request()->ip(),
         ]);
 
-        return back()->with('success', 'Kontrak berhasil disetujui dan menjadi AKTIF.');
+        $this->notifyRoles(
+            ['Pejabat Pengadaan'],
+            'Kontrak Disetujui PPK',
+            "Kontrak {$contract->nomor_spk} telah disetujui PPK dan berstatus AKTIF.",
+            route('contracts.show', $contract->id)
+        );
+
+        return redirect()
+            ->route('contracts.verifikasi')
+            ->with('success', "Kontrak {$contract->nomor_spk} berhasil disetujui dan diaktifkan.");
     }
 
     /**
@@ -444,7 +433,16 @@ class ContractController extends Controller
             'ip_address'        => request()->ip(),
         ]);
 
-        return back()->with('success', 'Kontrak ditolak / dikembalikan untuk DRAFT.');
+        $this->notifyRoles(
+            ['Pejabat Pengadaan'],
+            'Kontrak Dikembalikan PPK',
+            "Kontrak {$contract->nomor_spk} dikembalikan PPK untuk revisi: {$request->input('notes')}",
+            route('contracts.edit', $contract->id)
+        );
+
+        return redirect()
+            ->route('contracts.verifikasi')
+            ->with('success', "Kontrak {$contract->nomor_spk} berhasil dikembalikan untuk revisi.");
     }
 
     /**
@@ -459,7 +457,11 @@ class ContractController extends Controller
             return redirect()->route('contracts.index')->with('error', 'Kontrak tidak dapat diubah karena sudah diajukan atau aktif.');
         }
 
-        $vendors = \App\Models\MasterMitraVendor::all();
+        $vendors = \App\Models\MasterPihak::query()
+            ->where('status_aktif', true)
+            ->whereIn('kategori', ['PENGELUARAN', 'KEDUANYA'])
+            ->orderBy('nama_pihak')
+            ->get();
         $dipas = \App\Models\MasterDipa::where('tahun_anggaran', date('Y'))->get();
 
         return view('contracts.edit', compact('kontrak', 'vendors', 'dipas'));
@@ -489,18 +491,21 @@ class ContractController extends Controller
             'nilai_total_kontrak' => 'required|numeric|min:0',
             'metode_pembayaran' => 'required|in:LUMPSUM,TERMIN',
             'ada_uang_muka' => 'nullable|boolean',
-            'nilai_uang_muka' => 'nullable|numeric|min:0',
+            'nilai_uang_muka' => 'nullable|numeric|min:0|lte:nilai_total_kontrak',
             
             // Uploads
             'file_spk' => 'nullable|file|mimes:pdf|max:5120',
             'file_spmk' => 'nullable|file|mimes:pdf|max:5120',
             'file_ringkasan_kontrak' => 'nullable|file|mimes:pdf|max:5120',
+            'file_jaminan_um' => 'nullable|file|mimes:pdf|max:5120',
             
-            // Termin
-            'termin_jenis' => 'nullable|array',
-            'termin_keterangan' => 'nullable|array',
-            'termin_persentase' => 'nullable|array',
-            'termin_nilai' => 'nullable|array',
+            // Termin progress + retensi
+            'progress_keterangan' => 'nullable|array',
+            'progress_keterangan.*' => 'nullable|string|max:255',
+            'progress_persentase' => 'nullable|array',
+            'progress_persentase.*' => 'nullable|numeric|min:0.0001|max:100',
+            'retensi_keterangan' => 'nullable|string|max:255',
+            'retensi_persentase' => 'nullable|numeric|min:0.0001|max:100',
         ]);
 
         try {
@@ -544,8 +549,15 @@ class ContractController extends Controller
                 $validated['file_ringkasan_kontrak'] = $kontrak->file_ringkasan_kontrak;
             }
 
+            if ($request->hasFile('file_jaminan_um')) {
+                if ($kontrak->file_jaminan_uang_muka) \Illuminate\Support\Facades\Storage::disk('public')->delete($kontrak->file_jaminan_uang_muka);
+                $validated['file_jaminan_um'] = $request->file('file_jaminan_um')->store('kontrak/jaminan-uang-muka', 'public');
+            } else {
+                $validated['file_jaminan_um'] = $kontrak->file_jaminan_uang_muka;
+            }
+
             $ada_uang_muka = $request->has('ada_uang_muka') ? 1 : 0;
-            $nilai_uang_muka = $ada_uang_muka ? ($validated['nilai_uang_muka'] ?? 0) : 0;
+            $nilai_uang_muka = $ada_uang_muka ? (float) ($validated['nilai_uang_muka'] ?? 0) : 0;
 
             $kontrak->update([
                 'vendor_id' => $validated['vendor_id'],
@@ -564,64 +576,40 @@ class ContractController extends Controller
                 'tanggal_selesai' => $validated['tanggal_selesai'],
             ]);
 
+            if (!$ada_uang_muka) {
+                $existingJaminanUm = $kontrak->arsipDokumen()->where('jenis_dokumen', 'JAMINAN_UANG_MUKA')->first();
+                if ($existingJaminanUm) {
+                    \Illuminate\Support\Facades\Storage::disk($existingJaminanUm->disk ?? 'public')->delete($existingJaminanUm->path_file);
+                    $existingJaminanUm->delete();
+                }
+            }
+
             $this->syncKontrakArsip($kontrak, [
                 'SPK' => $validated['file_spk'],
                 'SPMK' => $validated['file_spmk'],
                 'RINGKASAN_KONTRAK' => $validated['file_ringkasan_kontrak'],
+                'JAMINAN_UANG_MUKA' => $ada_uang_muka ? $validated['file_jaminan_um'] : null,
             ]);
 
             // Hapus Termin Lama
             \App\Models\KontrakTermin::where('kontrak_pengadaan_id', $kontrak->id)->delete();
 
-            // Buat Termin Pembayaran Baru
             if ($validated['metode_pembayaran'] === 'TERMIN') {
-                $jns = $request->input('termin_jenis', []);
-                $ket = $request->input('termin_keterangan', []);
-                $prs = $request->input('termin_persentase', []);
-                $nl  = $request->input('termin_nilai', []);
-                
-                $totalPersenCheck = array_sum($prs);
-                if ($totalPersenCheck != 100) {
-                    throw new \Exception("Total Persentase Termin harus tepat 100% (Saat ini $totalPersenCheck%).");
-                }
+                $terminPayload = $this->buildTerminScheme($request, (float) $validated['nilai_total_kontrak']);
+                $terminPayload = $this->attachAngsuranUangMuka($terminPayload, $nilai_uang_muka);
 
-                // Hitung rasio uang muka terhadap total kontrak
-                $rasioUangMuka = 0;
-                if ($ada_uang_muka && $validated['nilai_total_kontrak'] > 0) {
-                    $rasioUangMuka = $nilai_uang_muka / $validated['nilai_total_kontrak'];
-                }
-
-                foreach ($jns as $index => $jenis) {
-                    // Hitung potongan angsuran uang muka untuk termin PROGRESS & PELUNASAN
-                    $potonganAngsuran = 0;
-                    if ($ada_uang_muka && in_array($jenis, ['PROGRESS', 'PELUNASAN'])) {
-                        $potonganAngsuran = $nl[$index] * $rasioUangMuka;
-                    }
-
+                foreach ($terminPayload as $index => $termin) {
                     \App\Models\KontrakTermin::create([
                         'kontrak_pengadaan_id' => $kontrak->id,
                         'termin_ke' => $index + 1,
-                        'keterangan_termin' => $ket[$index] ?? '-',
-                        'persentase' => $prs[$index],
-                        'nilai_bruto_termin' => $nl[$index],
-                        'potongan_angsuran_uang_muka' => $potonganAngsuran,
-                        'jenis_termin' => $jenis,
-                        'status_termin' => 'READY_TO_BILL'
+                        'keterangan_termin' => $termin['keterangan_termin'],
+                        'persentase' => $termin['persentase'],
+                        'nilai_bruto_termin' => $termin['nilai_bruto_termin'],
+                        'potongan_angsuran_uang_muka' => $termin['potongan_angsuran_uang_muka'],
+                        'jenis_termin' => $termin['jenis_termin'],
+                        'status_termin' => $index === 0 ? 'READY_TO_BILL' : 'LOCKED'
                     ]);
                 }
-                
-                if ($ada_uang_muka) {
-                    $terminUm = \App\Models\KontrakTermin::where('kontrak_pengadaan_id', $kontrak->id)
-                        ->where('jenis_termin', 'UANG_MUKA')->first();
-                    if (!$terminUm) {
-                        throw new \Exception("Anda menyatakan ada uang muka, tetapi tidak ada skema termin berjenis 'Uang Muka'.");
-                    }
-                }
-
-                // Lock termin selanjutnya
-                \App\Models\KontrakTermin::where('kontrak_pengadaan_id', $kontrak->id)
-                    ->where('termin_ke', '>', 1)
-                    ->update(['status_termin' => 'LOCKED']);
             } else {
                 \App\Models\KontrakTermin::create([
                     'kontrak_pengadaan_id' => $kontrak->id,
@@ -629,6 +617,7 @@ class ContractController extends Controller
                     'keterangan_termin' => 'Pelunasan Sekaligus (LUMPSUM)',
                     'persentase' => 100,
                     'nilai_bruto_termin' => $validated['nilai_total_kontrak'],
+                    'potongan_angsuran_uang_muka' => $nilai_uang_muka,
                     'jenis_termin' => 'PELUNASAN',
                     'status_termin' => 'READY_TO_BILL'
                 ]);
@@ -688,6 +677,152 @@ class ContractController extends Controller
                 'is_active' => true,
             ]);
         }
+    }
+
+    private function buildTerminScheme(Request $request, float $nilaiTotalKontrak): array
+    {
+        $tolerance = 0.01;
+        $progressPersentase = collect($request->input('progress_persentase', []))
+            ->map(fn ($value) => (float) $value)
+            ->values();
+        $progressKeterangan = collect($request->input('progress_keterangan', []))->values();
+        $retensiPersentase = (float) $request->input('retensi_persentase', 0);
+        $retensiKeterangan = trim((string) $request->input('retensi_keterangan', ''));
+
+        $progressRows = [];
+        foreach ($progressPersentase as $index => $persentase) {
+            if ($persentase <= 0) {
+                continue;
+            }
+
+            $keterangan = trim((string) ($progressKeterangan[$index] ?? ''));
+            $progressRows[] = [
+                'persentase' => $persentase,
+                'keterangan_termin' => $keterangan !== '' ? $keterangan : 'Termin Progress ' . (count($progressRows) + 1),
+            ];
+        }
+
+        if (count($progressRows) === 0) {
+            throw new \Exception('Minimal harus ada 1 termin progress jika metode pembayaran TERMIN.');
+        }
+
+        if ($retensiPersentase <= 0) {
+            throw new \Exception('Retensi wajib diisi untuk kontrak dengan metode pembayaran TERMIN.');
+        }
+
+        $totalProgressPersentase = collect($progressRows)->sum('persentase');
+        $totalProgressDanRetensi = $totalProgressPersentase + $retensiPersentase;
+
+        if ($totalProgressDanRetensi > (100 + $tolerance)) {
+            throw new \Exception('Total persentase progress dan retensi tidak boleh melebihi 100%.');
+        }
+
+        $persentasePelunasan = round(100 - $totalProgressDanRetensi, 4);
+        if ($persentasePelunasan < -$tolerance) {
+            throw new \Exception('Urutan termin tidak valid. Total progress dan retensi menghasilkan pelunasan negatif.');
+        }
+
+        if (abs($persentasePelunasan) <= $tolerance) {
+            $persentasePelunasan = 0;
+        }
+
+        $rows = [];
+        foreach ($progressRows as $row) {
+            $rows[] = [
+                'jenis_termin' => 'PROGRESS',
+                'keterangan_termin' => $row['keterangan_termin'],
+                'persentase' => round($row['persentase'], 4),
+                'nilai_bruto_termin' => $this->calculateTermValue($nilaiTotalKontrak, $row['persentase']),
+            ];
+        }
+
+        $rows[] = [
+            'jenis_termin' => 'PELUNASAN',
+            'keterangan_termin' => 'Pelunasan',
+            'persentase' => $persentasePelunasan,
+            'nilai_bruto_termin' => $this->calculateTermValue($nilaiTotalKontrak, $persentasePelunasan),
+        ];
+
+        $rows[] = [
+            'jenis_termin' => 'RETENSI',
+            'keterangan_termin' => $retensiKeterangan !== '' ? $retensiKeterangan : 'Retensi',
+            'persentase' => round($retensiPersentase, 4),
+            'nilai_bruto_termin' => $this->calculateTermValue($nilaiTotalKontrak, $retensiPersentase),
+        ];
+
+        $totalPersentase = collect($rows)->sum('persentase');
+        if (abs($totalPersentase - 100) > $tolerance) {
+            throw new \Exception('Total persentase termin harus 100% setelah sistem membentuk progress, pelunasan, dan retensi.');
+        }
+
+        return $rows;
+    }
+
+    private function calculateTermValue(float $nilaiTotalKontrak, float $persentase): float
+    {
+        return round(($persentase / 100) * $nilaiTotalKontrak, 2);
+    }
+
+    private function attachAngsuranUangMuka(array $rows, float $nilaiUangMuka): array
+    {
+        if ($nilaiUangMuka <= 0) {
+            return array_map(function (array $row) {
+                $row['potongan_angsuran_uang_muka'] = 0;
+                return $row;
+            }, $rows);
+        }
+
+        $eligibleIndexes = [];
+        $eligibleTotal = 0;
+
+        foreach ($rows as $index => $row) {
+            if (in_array($row['jenis_termin'], ['PROGRESS', 'PELUNASAN'], true) && (float) $row['nilai_bruto_termin'] > 0) {
+                $eligibleIndexes[] = $index;
+                $eligibleTotal += (float) $row['nilai_bruto_termin'];
+            }
+        }
+
+        if ($eligibleTotal <= 0 || count($eligibleIndexes) === 0) {
+            return array_map(function (array $row) {
+                $row['potongan_angsuran_uang_muka'] = 0;
+                return $row;
+            }, $rows);
+        }
+
+        $remaining = round($nilaiUangMuka, 2);
+
+        foreach ($rows as $index => &$row) {
+            $row['potongan_angsuran_uang_muka'] = 0;
+
+            if (!in_array($index, $eligibleIndexes, true)) {
+                continue;
+            }
+
+            $isLastEligible = $index === end($eligibleIndexes);
+            if ($isLastEligible) {
+                $row['potongan_angsuran_uang_muka'] = max(0, round($remaining, 2));
+                continue;
+            }
+
+            $allocation = round(($row['nilai_bruto_termin'] / $eligibleTotal) * $nilaiUangMuka, 2);
+            $allocation = min($allocation, $remaining);
+            $row['potongan_angsuran_uang_muka'] = $allocation;
+            $remaining = round($remaining - $allocation, 2);
+        }
+        unset($row);
+
+        return $rows;
+    }
+
+    private function notifyRoles(array $roles, string $judul, string $pesan, ?string $linkUrl = null): void
+    {
+        Notification::send(User::role($roles)->get(), new WorkflowNotification([
+            'title' => $judul,
+            'message' => $pesan,
+            'url' => $linkUrl,
+            'icon' => 'notifications',
+            'color' => 'primary',
+        ]));
     }
 }
 

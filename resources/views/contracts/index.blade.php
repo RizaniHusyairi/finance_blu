@@ -109,9 +109,12 @@
                                                     <i class="bi bi-plus-circle"></i> Addm.
                                                 </a>
                                                 @if($kontrak->status_kontrak == 'AKTIF')
-                                                    <a href="{{ route('tagihan.kontrak.create', ['kontrak_id' => $kontrak->id]) }}" class="btn btn-sm btn-white text-success border border-success shadow-sm" title="Buat Tagihan (SPP Termins/BAST)">
+                                                    @php
+                                                        $readyTerms = $kontrak->termin->where('status_termin', 'READY_TO_BILL')->values();
+                                                    @endphp
+                                                    <button type="button" class="btn btn-sm btn-white text-success border border-success shadow-sm" title="Buat Tagihan" data-bs-toggle="modal" data-bs-target="#modalTagihKontrak{{ $kontrak->id }}" {{ $readyTerms->isEmpty() ? 'disabled' : '' }}>
                                                         <i class="bi bi-cash-stack"></i> Tagih
-                                                    </a>
+                                                    </button>
                                                 @endif
                                             </div>
                                         </td>
@@ -179,6 +182,48 @@
         </div>
     </div>
 @endsection
+
+@foreach($contracts as $kontrak)
+    @php
+        $readyTerms = $kontrak->termin->where('status_termin', 'READY_TO_BILL')->values();
+    @endphp
+    <div class="modal fade" id="modalTagihKontrak{{ $kontrak->id }}" tabindex="-1" aria-labelledby="modalTagihKontrakLabel{{ $kontrak->id }}" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content border-0 rounded-4 shadow">
+                <div class="modal-header bg-success text-white border-0">
+                    <div>
+                        <h5 class="modal-title fw-bold" id="modalTagihKontrakLabel{{ $kontrak->id }}">Pilih Termin / Lumpsum untuk Ditagih</h5>
+                        <div class="small opacity-75">{{ $kontrak->nomor_spk }} - {{ Str::limit($kontrak->nama_pekerjaan, 80) }}</div>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    @if($readyTerms->isEmpty())
+                        <div class="alert alert-light border mb-0">Belum ada termin atau lumpsum yang siap ditagih untuk kontrak ini.</div>
+                    @else
+                        <div class="list-group">
+                            @foreach($readyTerms as $termin)
+                                <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center gap-3">
+                                    <div>
+                                        <div class="fw-bold">Termin {{ $termin->termin_ke }} - {{ str_replace('_', ' ', $termin->jenis_termin) }}</div>
+                                        <div class="small text-muted">{{ $termin->keterangan_termin }}</div>
+                                        <div class="small mt-1">
+                                            <span class="badge bg-light text-dark border">{{ $termin->persentase }}%</span>
+                                            <span class="ms-2 fw-semibold text-success">Rp {{ number_format($termin->nilai_bruto_termin, 0, ',', '.') }}</span>
+                                        </div>
+                                    </div>
+                                    <a href="{{ route('tagihan.kontrak.create', ['kontrak_id' => $kontrak->id, 'termin_id' => $termin->id]) }}" class="btn btn-primary btn-sm fw-bold">
+                                        <i class="bi bi-send-plus me-1"></i> Tagih
+                                    </a>
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
+                </div>
+            </div>
+        </div>
+    </div>
+@endforeach
 
 @push('script')
     <script src="{{ URL::asset('build/plugins/datatable/js/jquery.dataTables.min.js') }}"></script>

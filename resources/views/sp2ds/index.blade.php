@@ -17,16 +17,16 @@
         <div class="col">
             <div class="card h-100 border-0 shadow-sm bg-warning text-dark">
                 <div class="card-body p-3">
-                    <h6 class="card-title fw-normal mb-1">NPI Terbit (Perlu SP2D)</h6>
-                    <h3 class="fw-bold mb-0">{{ \App\Models\Spp::where('status_spp', 'NPI Terbit')->count() }}</h3>
+                    <h6 class="card-title fw-normal mb-1">NPI Final (Perlu SP2D)</h6>
+                    <h3 class="fw-bold mb-0">{{ \App\Models\Spp::whereHas('spm.npi', fn($q) => $q->where('status', \App\Models\DokumenNpi::STATUS_APPROVED_KASUBAG))->whereDoesntHave('spm.npi.sp2d')->count() }}</h3>
                 </div>
             </div>
         </div>
         <div class="col">
             <div class="card h-100 border-0 shadow-sm text-white" style="background-color: #0dcaf0;">
                 <div class="card-body p-3">
-                    <h6 class="card-title fw-normal mb-1">SP2D Terbit (Perlu BKU)</h6>
-                    <h3 class="fw-bold mb-0 text-white">{{ \App\Models\Spp::where('status_spp', 'SP2D Terbit')->count() }}</h3>
+                    <h6 class="card-title fw-normal mb-1">SP2D Terbit (Perlu Eksekusi)</h6>
+                    <h3 class="fw-bold mb-0 text-white">{{ \App\Models\DokumenSp2d::whereIn('status', [\App\Models\DokumenSp2d::STATUS_DRAFT, \App\Models\DokumenSp2d::STATUS_APPROVED])->count() }}</h3>
                 </div>
             </div>
         </div>
@@ -34,7 +34,7 @@
             <div class="card h-100 border-0 shadow-sm text-white" style="background-color: #20c997;">
                 <div class="card-body p-3">
                     <h6 class="card-title fw-normal mb-1">Lunas (BKU Tercatat)</h6>
-                    <h3 class="fw-bold mb-0 text-white">{{ \App\Models\Spp::where('status_spp', 'Lunas')->count() }}</h3>
+                    <h3 class="fw-bold mb-0 text-white">{{ \App\Models\DokumenSp2d::where('status', \App\Models\DokumenSp2d::STATUS_EXECUTED)->count() }}</h3>
                 </div>
             </div>
         </div>
@@ -57,9 +57,9 @@
                     <tbody>
                         @foreach ($perjaldins as $idx => $perjaldin)
                         @php
-                            $totalNpiTerbit = $perjaldin->spps->where('status_spp', 'NPI Terbit')->count();
-                            $totalSp2dTerbit = $perjaldin->spps->where('status_spp', 'SP2D Terbit')->count();
-                            $totalLunas = $perjaldin->spps->where('status_spp', 'Lunas')->count();
+                            $totalNpiTerbit = $perjaldin->spps->filter(fn($spp) => optional($spp->spm?->npi)->status === \App\Models\DokumenNpi::STATUS_APPROVED_KASUBAG && !$spp->spm?->npi?->sp2d)->count();
+                            $totalSp2dTerbit = $perjaldin->spps->filter(fn($spp) => in_array(optional($spp->spm?->npi?->sp2d)->status, [\App\Models\DokumenSp2d::STATUS_DRAFT, \App\Models\DokumenSp2d::STATUS_APPROVED], true))->count();
+                            $totalLunas = $perjaldin->spps->filter(fn($spp) => optional($spp->spm?->npi?->sp2d)->status === \App\Models\DokumenSp2d::STATUS_EXECUTED)->count();
                         @endphp
                         <tr>
                             <td>{{ $idx + 1 }}</td>

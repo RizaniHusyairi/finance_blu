@@ -13,4 +13,9 @@ class KontrakAddendum extends Model
     {
         return $this->belongsTo(KontrakPengadaan::class, 'kontrak_pengadaan_id');
     }
+
+    public function arsipDokumen()
+    {
+        return $this->morphMany(ArsipDokumen::class, 'documentable');
+    }
 }

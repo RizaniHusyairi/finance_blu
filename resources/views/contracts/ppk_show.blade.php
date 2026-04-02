@@ -40,6 +40,27 @@
 @endpush
 
 @section('content')
+@if(session('success'))
+    <div class="alert alert-success border-0 shadow-sm d-flex align-items-center mb-4" role="alert">
+        <i class="bi bi-check-circle-fill me-2"></i>
+        <div>{{ session('success') }}</div>
+    </div>
+@endif
+
+@if(session('error'))
+    <div class="alert alert-danger border-0 shadow-sm d-flex align-items-center mb-4" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+        <div>{{ session('error') }}</div>
+    </div>
+@endif
+
+@if($errors->any())
+    <div class="alert alert-danger border-0 shadow-sm mb-4" role="alert">
+        <div class="fw-bold mb-1">Tindakan belum bisa diproses.</div>
+        <div>{{ $errors->first() }}</div>
+    </div>
+@endif
+
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div class="d-flex align-items-center gap-3">
         <a href="{{ route('contracts.verifikasi') }}" class="btn btn-light text-secondary border shadow-sm rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;" title="Kembali">
@@ -113,7 +134,7 @@
         <div class="card border-0 shadow-sm rounded-4 mb-3" style="border-left: 5px solid #0d6efd !important;">
             <div class="card-body p-4">
                 <h6 class="fw-bold text-uppercase text-muted mb-3"><i class="bi bi-building me-2"></i>Identitas Mitra (Vendor)</h6>
-                <h5 class="fw-bold text-dark">{{ $kontrak->vendor->nama_perusahaan ?? '-' }}</h5>
+                <h5 class="fw-bold text-dark">{{ $kontrak->vendor->nama_pihak ?? '-' }}</h5>
                 <div class="row mt-3">
                     <div class="col-6">
                         <small class="text-muted d-block">Nama Direktur</small>

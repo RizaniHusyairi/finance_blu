@@ -2,34 +2,25 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\DokumenSpm;
+use App\Models\LogStatusDokumen;
 use App\Models\Perjaldin;
 use App\Models\Spp;
 use App\Models\User;
+use App\Notifications\WorkflowNotification;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
 
 class SpmController extends Controller
 {
-    /**
-     * Tampilkan daftar Perjaldin yang SPP-nya sudah siap dibuatkan SPM.
-     * (Sama persis seperti perjaldin_index untuk SPP)
-     */
     public function index()
     {
-        // Ambil Perjaldin yang punya setidaknya 1 SPP dengan status relevan untuk SPM
-        $perjaldins = Perjaldin::with(['pejabats', 'spps'])
+        $perjaldins = Perjaldin::with(['pejabats', 'spps.spm'])
             ->whereHas('spps', function ($q) {
-                $q->whereIn('status_spp', [
-                    'Disetujui PPK', 
-                    'Menunggu Verifikasi SPM', 
-                    'Revisi SPM', 
-                    'SPM Terbit',
-                    'Menunggu TTD Bendahara Penerimaan',
-                    'Menunggu Verifikasi PPK NPI',
-                    'Revisi NPI',
-                    'NPI Terbit',
-                    'SP2D Terbit',
-                    'Lunas'
-                ]);
+                $q->where('status', 'Disetujui PPK')
+                    ->orWhereHas('spm');
             })
             ->latest()
             ->get();
@@ -37,75 +28,110 @@ class SpmController extends Controller
         return view('spms.index', compact('perjaldins'));
     }
 
-    /**
-     * Tampilkan detail satu Perjaldin dengan daftar SPP-nya untuk dibuatkan SPM.
-     * (Sama seperti pola SppController@detailPerjaldin)
-     */
     public function detail($perjaldin_id)
     {
-        $perjaldin = Perjaldin::with(['pejabats', 'spps'])->findOrFail($perjaldin_id);
+        $perjaldin = Perjaldin::with(['pejabats', 'spps.spm.ppspm'])->findOrFail($perjaldin_id);
         $ppspms = User::role('PPSPM')->get();
 
         return view('spms.detail_perjaldin', compact('perjaldin', 'ppspms'));
     }
 
-    /**
-     * Simpan/Update SPM ke Database dari halaman detail.
-     */
     public function store(Request $request, $spp_id)
     {
-        $spp = Spp::findOrFail($spp_id);
+        $spp = Spp::with(['spm', 'tagihan'])->findOrFail($spp_id);
 
         $request->validate([
-            'nomor_spm'  => 'required|string|max:255',
+            'nomor_spm' => 'required|string|max:100',
             'tanggal_spm' => 'required|date',
-            'ppspm_id'   => 'required|exists:users,id',
+            'ppspm_id' => 'required|exists:users,id',
         ]);
 
-        $ppspm = User::findOrFail($request->ppspm_id);
+        DB::transaction(function () use ($request, $spp) {
+            $spm = $spp->spm()->updateOrCreate(
+                ['spp_id' => $spp->id],
+                [
+                    'nomor_spm' => $request->nomor_spm,
+                    'tanggal_spm' => $request->tanggal_spm,
+                    'ppspm_id' => $request->ppspm_id,
+                    'status' => DokumenSpm::STATUS_SUBMITTED_PPSPM,
+                ]
+            );
 
-        $spp->update([
-            'nomor_spm'              => $request->nomor_spm,
-            'tanggal_spm'            => $request->tanggal_spm,
-            'penandatangan_spm_nama' => $ppspm->name,
-            'penandatangan_spm_nip'  => '-',
-            'status_spp'             => 'Menunggu Verifikasi SPM'
-        ]);
+            $this->logStatus(
+                $spm,
+                $spm->wasRecentlyCreated ? null : $spm->getOriginal('status'),
+                DokumenSpm::STATUS_SUBMITTED_PPSPM,
+                $spm->wasRecentlyCreated ? 'CREATE_AND_SUBMIT' : 'UPDATE_AND_RESUBMIT',
+                'Draft SPM diajukan ke PPSPM.'
+            );
 
-        $ppspmUsers = User::role('PPSPM')->get();
-        \Illuminate\Support\Facades\Notification::send($ppspmUsers, new \App\Notifications\WorkflowNotification([
-            'title'   => 'Verifikasi SPM Baru',
-            'message' => "Ada SPM {$request->nomor_spm} yang butuh tanda tangan PPSPM.",
-            'url'     => route('verifikasi-ppspm.spm.index'),
-            'icon'    => 'fact_check',
-            'color'   => 'warning'
-        ]));
+            $this->notifyRoles(
+                ['PPSPM'],
+                'Verifikasi SPM Baru',
+                "Ada SPM {$spm->nomor_spm} yang menunggu verifikasi PPSPM.",
+                route('verifikasi-ppspm.spm.index')
+            );
+        });
 
-        return back()->with('success', "SPM berhasil dikirim ke meja PPSPM untuk diverifikasi.");
+        return back()->with('success', 'SPM berhasil dibuat dan dikirim ke meja PPSPM.');
     }
 
-    /**
-     * Cetak dokumen SPM ke format PDF.
-     */
-    public function cetakPdfSpm($spp_id)
+    public function cetakPdfSpm($spm_id)
     {
-        $spp = Spp::findOrFail($spp_id);
-
-        $sppable = $spp->sppable;
-        $jumlahUang = $spp->jumlah_uang;
-        $uraianSupplier = $spp->uraian ?? ($sppable->uraian ?? 'Belanja Perjalanan Dinas');
-
+        $spm = DokumenSpm::with(['spp.tagihan', 'ppspm'])->findOrFail($spm_id);
+        $spp = $spm->spp;
+        $sppable = $spp?->sppable;
+        $jumlahUang = (float) ($spp?->nominal_spp ?? 0);
+        $uraianSupplier = $spp?->uraian ?? ($sppable->uraian ?? 'Belanja Perjalanan Dinas');
         $terbilang = terbilang_rupiah($jumlahUang);
 
-        // Gunakan fallback jika data SPM belum lengkap (data lama)
-        if (!$spp->nomor_spm)           $spp->nomor_spm = 'SPM-BLU/APTP-' . date('Y') . '/DRAFT';
-        if (!$spp->tanggal_spm)         $spp->tanggal_spm = now()->toDateString();
-        if (!$spp->penandatangan_spm_nama) $spp->penandatangan_spm_nama = 'PEJABAT BERWENANG';
-        if (!$spp->penandatangan_spm_nip)  $spp->penandatangan_spm_nip = '-';
+        if (! $spm->nomor_spm) {
+            $spm->nomor_spm = 'SPM-BLU/APTP-' . date('Y') . '/DRAFT';
+        }
 
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('spms.pdf', compact('spp', 'sppable', 'jumlahUang', 'terbilang', 'uraianSupplier'));
+        if (! $spm->tanggal_spm) {
+            $spm->tanggal_spm = now()->toDateString();
+        }
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView(
+            'spms.pdf',
+            compact('spp', 'spm', 'sppable', 'jumlahUang', 'terbilang', 'uraianSupplier')
+        );
         $pdf->setPaper('a4', 'portrait');
 
-        return $pdf->stream('SPM-BLU-' . str_replace('/', '-', $spp->nomor_spm) . '.pdf');
+        return $pdf->stream('SPM-BLU-' . str_replace('/', '-', $spm->nomor_spm) . '.pdf');
+    }
+
+    private function logStatus(
+        DokumenSpm $spm,
+        ?string $statusSebelumnya,
+        string $statusBaru,
+        string $aksi,
+        ?string $catatan = null
+    ): void {
+        $user = Auth::user();
+
+        LogStatusDokumen::create([
+            'dokumen_type' => DokumenSpm::class,
+            'dokumen_id' => $spm->id,
+            'user_id' => $user?->id,
+            'role_saat_itu' => $user?->getRoleNames()->first() ?? 'SYSTEM',
+            'status_sebelumnya' => $statusSebelumnya,
+            'status_baru' => $statusBaru,
+            'aksi' => $aksi,
+            'catatan' => $catatan,
+            'ip_address' => request()->ip(),
+        ]);
+    }
+
+    private function notifyRoles(array $roles, string $judul, string $pesan, ?string $linkUrl = null): void
+    {
+        Notification::send(User::role($roles)->get(), new WorkflowNotification([
+            'title' => $judul,
+            'message' => $pesan,
+            'url' => $linkUrl,
+            'icon' => 'notifications',
+            'color' => 'primary',
+        ]));
     }
 }

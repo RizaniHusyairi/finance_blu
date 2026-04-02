@@ -4,7 +4,7 @@
     <link href="{{ URL::asset('build/plugins/datatable/css/dataTables.bootstrap5.min.css') }}" rel="stylesheet" />
 @endpush
 @section('content')
-    <x-page-title title="Verifikasi NPI" subtitle="Pejabat Pembuat Komitmen" />
+    <x-page-title :title="$pageTitle ?? 'Verifikasi NPI'" :subtitle="$pageSubtitle ?? 'Pejabat Pembuat Komitmen'" />
 
     @if(session('success'))
         <div class="alert alert-success border-0 bg-success alert-dismissible fade show">
@@ -18,15 +18,15 @@
             <div class="card h-100 border-0 shadow-sm bg-danger text-white">
                 <div class="card-body p-3">
                     <h6 class="card-title fw-normal mb-1">Menunggu Anda (NPI)</h6>
-                    <h3 class="fw-bold mb-0">{{ \App\Models\Spp::where('status_spp', 'Menunggu Verifikasi PPK NPI')->count() }}</h3>
+                    <h3 class="fw-bold mb-0">{{ $pendingCount ?? 0 }}</h3>
                 </div>
             </div>
         </div>
         <div class="col">
             <div class="card h-100 border-0 shadow-sm text-white" style="background-color: #20c997;">
                 <div class="card-body p-3">
-                    <h6 class="card-title fw-normal mb-1">NPI yang sudah disetujui</h6>
-                    <h3 class="fw-bold mb-0">{{ \App\Models\Spp::where('status_spp', 'NPI Terbit')->count() }}</h3>
+                    <h6 class="card-title fw-normal mb-1">NPI yang sudah diproses</h6>
+                    <h3 class="fw-bold mb-0">{{ $approvedCount ?? 0 }}</h3>
                 </div>
             </div>
         </div>
@@ -48,42 +48,44 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach ($spms as $idx => $spm)
+                        @foreach ($npis as $idx => $npi)
                         <tr>
                             <td>{{ $idx + 1 }}</td>
                             <td>
-                                <strong>{{ $spm->nomor_npi }}</strong><br>
+                                <strong>{{ $npi->nomor_npi }}</strong><br>
                                 <span class="badge bg-light text-dark border">
-                                    <i class="bi bi-calendar-check"></i> {{ \Carbon\Carbon::parse($spm->tanggal_npi)->isoFormat('D MMM Y') }}
+                                    <i class="bi bi-calendar-check"></i> {{ \Carbon\Carbon::parse($npi->tanggal_npi)->isoFormat('D MMM Y') }}
                                 </span>
                             </td>
                             <td>
                                 <small class="text-muted d-block">SPM Dasar:</small>
-                                <strong>{{ $spm->nomor_spm ?? $spm->nomor_spp }}</strong>
+                                <strong>{{ $npi->nomor_spm ?? $npi->nomor_spp }}</strong>
                             </td>
                             <td class="text-end text-success fw-bold">
-                                Rp {{ number_format($spm->jumlah_uang, 0, ',', '.') }}
+                                Rp {{ number_format($npi->jumlah_uang, 0, ',', '.') }}
                             </td>
                             <td class="text-center">
-                                @if($spm->status_spp == 'Menunggu Verifikasi PPK NPI')
+                                @if(($stage ?? 'ppk') === 'ppk' && $npi->status === \App\Models\DokumenNpi::STATUS_SUBMITTED_PPK)
                                     <span class="badge bg-warning text-dark"><i class="bi bi-hourglass-split"></i> Perlu Persetujuan Anda</span>
-                                @elseif($spm->status_spp == 'Revisi NPI')
+                                @elseif(($stage ?? 'ppk') === 'kasubbag' && $npi->status === \App\Models\DokumenNpi::STATUS_SUBMITTED_KASUBAG)
+                                    <span class="badge bg-warning text-dark"><i class="bi bi-hourglass-split"></i> Menunggu Persetujuan Anda</span>
+                                @elseif(in_array($npi->status, [\App\Models\DokumenNpi::STATUS_REJECTED_BENPEN, \App\Models\DokumenNpi::STATUS_REJECTED_PPK, \App\Models\DokumenNpi::STATUS_REJECTED_KASUBAG]))
                                     <span class="badge bg-danger"><i class="bi bi-x-circle"></i> Direvisi</span>
-                                @elseif($spm->status_spp == 'NPI Terbit')
+                                @elseif($npi->status === \App\Models\DokumenNpi::STATUS_APPROVED_KASUBAG)
                                     <span class="badge bg-success"><i class="bi bi-check2-all"></i> Disetujui</span>
                                 @else
-                                    <span class="badge bg-primary"><i class="bi bi-info-circle"></i> {{ $spm->status_spp }}</span>
+                                    <span class="badge bg-primary"><i class="bi bi-info-circle"></i> {{ $npi->status_spp }}</span>
                                 @endif
                             </td>
                             <td class="text-center">
-                                <a href="{{ route('npis.cetak-pdf', $spm->spp_id) }}" target="_blank" class="btn btn-sm btn-danger mb-1">
+                                <a href="{{ route('npis.cetak-pdf', $npi->id) }}" target="_blank" class="btn btn-sm btn-danger mb-1">
                                     <i class="bi bi-file-pdf"></i> PDF NPI
                                 </a><br>
-                                @if($spm->status_spp == 'Menunggu Verifikasi PPK NPI')
-                                    <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#approveModal{{ $spm->spp_id }}">
+                                @if((($stage ?? 'ppk') === 'ppk' && $npi->status === \App\Models\DokumenNpi::STATUS_SUBMITTED_PPK) || (($stage ?? 'ppk') === 'kasubbag' && $npi->status === \App\Models\DokumenNpi::STATUS_SUBMITTED_KASUBAG))
+                                    <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#approveModal{{ $npi->id }}">
                                         <i class="bi bi-check-lg"></i> Setujui
                                     </button>
-                                    <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#revisiModal{{ $spm->spp_id }}">
+                                    <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#revisiModal{{ $npi->id }}">
                                         <i class="bi bi-x-lg"></i> Tolak
                                     </button>
                                 @else
@@ -91,7 +93,7 @@
                                 @endif
 
                                 {{-- Approve Modal --}}
-                                <div class="modal fade" id="approveModal{{ $spm->spp_id }}" tabindex="-1" aria-hidden="true">
+                                <div class="modal fade" id="approveModal{{ $npi->id }}" tabindex="-1" aria-hidden="true">
                                     <div class="modal-dialog modal-dialog-centered">
                                         <div class="modal-content">
                                             <div class="modal-header bg-success text-white">
@@ -101,13 +103,13 @@
                                             <div class="modal-body text-start">
                                                 <p>Setujui NPI berikut sebagai PPK?</p>
                                                 <ul>
-                                                    <li>Nomor NPI: <strong>{{ $spm->nomor_npi }}</strong></li>
-                                                    <li>Nominal: <strong>Rp {{ number_format($spm->jumlah_uang, 0, ',', '.') }}</strong></li>
+                                                    <li>Nomor NPI: <strong>{{ $npi->nomor_npi }}</strong></li>
+                                                    <li>Nominal: <strong>Rp {{ number_format($npi->jumlah_uang, 0, ',', '.') }}</strong></li>
                                                 </ul>
                                             </div>
                                             <div class="modal-footer">
                                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-                                                <form action="{{ route('verifikasi-ppk.npi.approve', $spm->spp_id) }}" method="POST">
+                                                <form action="{{ route($approveRouteName ?? 'verifikasi-ppk.npi.approve', $npi->id) }}" method="POST">
                                                     @csrf
                                                     <button type="submit" class="btn btn-success">Ya, Terbitkan NPI</button>
                                                 </form>
@@ -117,14 +119,14 @@
                                 </div>
 
                                 {{-- Revisi Modal --}}
-                                <div class="modal fade" id="revisiModal{{ $spm->spp_id }}" tabindex="-1" aria-hidden="true">
+                                <div class="modal fade" id="revisiModal{{ $npi->id }}" tabindex="-1" aria-hidden="true">
                                     <div class="modal-dialog modal-dialog-centered">
                                         <div class="modal-content">
                                             <div class="modal-header bg-danger text-white">
                                                 <h5 class="modal-title text-white">Kembalikan NPI ke Bendahara</h5>
                                                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                                             </div>
-                                            <form action="{{ route('verifikasi-ppk.npi.revisi', $spm->spp_id) }}" method="POST">
+                                            <form action="{{ route($rejectRouteName ?? 'verifikasi-ppk.npi.revisi', $npi->id) }}" method="POST">
                                                 @csrf
                                                 <div class="modal-body text-start">
                                                     <label class="form-label fw-bold">Alasan Penolakan <span class="text-danger">*</span></label>

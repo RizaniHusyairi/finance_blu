@@ -26,4 +26,14 @@ class DokumenSpp extends Model
     {
         return $this->belongsTo(DetailDipa::class, 'dipa_revision_item_id');
     }
+
+    public function spm()
+    {
+        return $this->hasOne(DokumenSpm::class, 'spp_id');
+    }
+
+    public function arsipDokumen()
+    {
+        return $this->morphMany(ArsipDokumen::class, 'documentable');
+    }
 }

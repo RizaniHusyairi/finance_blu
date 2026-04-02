@@ -4,7 +4,7 @@
     <link href="{{ URL::asset('build/plugins/datatable/css/dataTables.bootstrap5.min.css') }}" rel="stylesheet" />
 @endpush
 @section('content')
-    <x-page-title title="Tanda Tangan NPI" subtitle="Bendahara Penerimaan" />
+    <x-page-title :title="$pageTitle ?? 'Verifikasi NPI'" :subtitle="$pageSubtitle ?? 'Bendahara Penerimaan'" />
 
     @if(session('success'))
         <div class="alert alert-success border-0 bg-success alert-dismissible fade show">
@@ -18,15 +18,15 @@
             <div class="card h-100 border-0 shadow-sm bg-danger text-white">
                 <div class="card-body p-3">
                     <h6 class="card-title fw-normal mb-1">NPI Menunggu TTD Anda</h6>
-                    <h3 class="fw-bold mb-0">{{ \App\Models\Spp::where('status_spp', 'Menunggu TTD Bendahara Penerimaan')->count() }}</h3>
+                    <h3 class="fw-bold mb-0">{{ $pendingCount ?? 0 }}</h3>
                 </div>
             </div>
         </div>
         <div class="col">
             <div class="card h-100 border-0 shadow-sm text-white" style="background-color: #20c997;">
                 <div class="card-body p-3">
-                    <h6 class="card-title fw-normal mb-1">NPI Yang Sudah Di-TTD</h6>
-                    <h3 class="fw-bold mb-0">{{ \App\Models\Spp::where('status_spp', 'NPI Terbit')->count() }}</h3>
+                    <h6 class="card-title fw-normal mb-1">NPI Yang Sudah Diproses</h6>
+                    <h3 class="fw-bold mb-0">{{ $approvedCount ?? 0 }}</h3>
                 </div>
             </div>
         </div>
@@ -48,49 +48,52 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach ($spms as $idx => $spm)
+                        @foreach ($npis as $idx => $npi)
                         <tr>
                             <td>{{ $idx + 1 }}</td>
                             <td>
-                                <strong>{{ $spm->nomor_npi }}</strong><br>
+                                <strong>{{ $npi->nomor_npi }}</strong><br>
                                 <span class="badge bg-light text-dark border">
                                     <i class="bi bi-calendar-check"></i>
-                                    {{ \Carbon\Carbon::parse($spm->tanggal_npi)->isoFormat('D MMM Y') }}
+                                    {{ \Carbon\Carbon::parse($npi->tanggal_npi)->isoFormat('D MMM Y') }}
                                 </span>
                             </td>
                             <td>
                                 <small class="text-muted d-block">SPM Dasar:</small>
-                                <strong>{{ $spm->nomor_spm ?? $spm->nomor_spp }}</strong>
+                                <strong>{{ $npi->nomor_spm ?? $npi->nomor_spp }}</strong>
                             </td>
                             <td class="text-end text-success fw-bold">
-                                Rp {{ number_format($spm->jumlah_uang, 0, ',', '.') }}
+                                Rp {{ number_format($npi->jumlah_uang, 0, ',', '.') }}
                             </td>
                             <td class="text-center">
-                                @if($spm->status_spp == 'Menunggu TTD Bendahara Penerimaan')
+                                @if($npi->status === \App\Models\DokumenNpi::STATUS_SUBMITTED_BENPEN)
                                     <span class="badge bg-warning text-dark">
                                         <i class="bi bi-pen"></i> Perlu TTD Anda
                                     </span>
-                                @elseif($spm->status_spp == 'NPI Terbit')
+                                @elseif($npi->status === \App\Models\DokumenNpi::STATUS_APPROVED_KASUBAG)
                                     <span class="badge bg-success"><i class="bi bi-check2-all"></i> Selesai</span>
                                 @else
-                                    <span class="badge bg-info text-dark">{{ $spm->status_spp }}</span>
+                                    <span class="badge bg-info text-dark">{{ $npi->status_spp }}</span>
                                 @endif
                             </td>
                             <td class="text-center">
                                 {{-- Tombol PDF selalu tersedia --}}
-                                <a href="{{ route('npis.cetak-pdf', $spm->spp_id) }}" target="_blank" class="btn btn-sm btn-danger mb-1">
+                                <a href="{{ route('npis.cetak-pdf', $npi->id) }}" target="_blank" class="btn btn-sm btn-danger mb-1">
                                     <i class="bi bi-file-pdf"></i> PDF NPI
                                 </a>
 
                                 {{-- Tombol TTD hanya jika status menunggu --}}
-                                @if($spm->status_spp == 'Menunggu TTD Bendahara Penerimaan')
-                                    <button type="button" class="btn btn-sm btn-success mb-1" data-bs-toggle="modal" data-bs-target="#ttdModal{{ $spm->spp_id }}">
+                                @if($npi->status === \App\Models\DokumenNpi::STATUS_SUBMITTED_BENPEN)
+                                    <button type="button" class="btn btn-sm btn-success mb-1" data-bs-toggle="modal" data-bs-target="#ttdModal{{ $npi->id }}">
                                         <i class="bi bi-pen-fill"></i> TTD & Setujui
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-danger mb-1" data-bs-toggle="modal" data-bs-target="#revisiModal{{ $npi->id }}">
+                                        <i class="bi bi-x-lg"></i> Kembalikan
                                     </button>
                                 @endif
 
                                 {{-- Modal Konfirmasi TTD --}}
-                                <div class="modal fade" id="ttdModal{{ $spm->spp_id }}" tabindex="-1" aria-hidden="true">
+                                <div class="modal fade" id="ttdModal{{ $npi->id }}" tabindex="-1" aria-hidden="true">
                                     <div class="modal-dialog modal-dialog-centered">
                                         <div class="modal-content">
                                             <div class="modal-header bg-success text-white">
@@ -100,9 +103,9 @@
                                             <div class="modal-body text-start">
                                                 <p>Anda akan menandatangani NPI berikut sebagai <strong>Bendahara Penerimaan</strong>:</p>
                                                 <ul>
-                                                    <li>Nomor NPI: <strong>{{ $spm->nomor_npi }}</strong></li>
-                                                    <li>Tanggal: <strong>{{ \Carbon\Carbon::parse($spm->tanggal_npi)->locale('id')->isoFormat('D MMMM Y') }}</strong></li>
-                                                    <li>Nominal: <strong>Rp {{ number_format($spm->jumlah_uang, 0, ',', '.') }}</strong></li>
+                                                    <li>Nomor NPI: <strong>{{ $npi->nomor_npi }}</strong></li>
+                                                    <li>Tanggal: <strong>{{ \Carbon\Carbon::parse($npi->tanggal_npi)->locale('id')->isoFormat('D MMMM Y') }}</strong></li>
+                                                    <li>Nominal: <strong>Rp {{ number_format($npi->jumlah_uang, 0, ',', '.') }}</strong></li>
                                                 </ul>
                                                 <div class="alert alert-info py-2">
                                                     Setelah disetujui, NPI akan diteruskan ke <strong>PPK</strong> untuk persetujuan akhir.
@@ -110,13 +113,35 @@
                                             </div>
                                             <div class="modal-footer">
                                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-                                                <form action="{{ route('verifikasi-bendahara-penerimaan.npi.approve', $spm->spp_id) }}" method="POST">
+                                                <form action="{{ route('verifikasi-bendahara-penerimaan.npi.approve', $npi->id) }}" method="POST">
                                                     @csrf
                                                     <button type="submit" class="btn btn-success">
                                                         <i class="bi bi-check-circle-fill"></i> Ya, Tandatangani NPI
                                                     </button>
                                                 </form>
                                             </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="modal fade" id="revisiModal{{ $npi->id }}" tabindex="-1" aria-hidden="true">
+                                    <div class="modal-dialog modal-dialog-centered">
+                                        <div class="modal-content">
+                                            <div class="modal-header bg-danger text-white">
+                                                <h5 class="modal-title text-white">Kembalikan NPI</h5>
+                                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                            </div>
+                                            <form action="{{ route('verifikasi-bendahara-penerimaan.npi.revisi', $npi->id) }}" method="POST">
+                                                @csrf
+                                                <div class="modal-body text-start">
+                                                    <label class="form-label fw-bold">Catatan Revisi <span class="text-danger">*</span></label>
+                                                    <textarea name="catatan_revisi" class="form-control" rows="3" required placeholder="Jelaskan bagian yang perlu diperbaiki..."></textarea>
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                                                    <button type="submit" class="btn btn-danger">Kembalikan ke Bendahara Pengeluaran</button>
+                                                </div>
+                                            </form>
                                         </div>
                                     </div>
                                 </div>

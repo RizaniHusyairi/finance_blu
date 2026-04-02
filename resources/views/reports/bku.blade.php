@@ -71,6 +71,26 @@
         </div>
     </div>
 
+    <div class="card rounded-4">
+        <div class="card-body">
+            <h6 class="fw-bold mb-3">Ringkasan Sumber Data V2</h6>
+            <div class="row g-3">
+                @foreach($sourceSummary as $label => $summary)
+                    <div class="col-md-4">
+                        <div class="border rounded-3 p-3 h-100 bg-light">
+                            <div class="text-muted small text-uppercase">{{ str_replace('_', ' ', $label) }}</div>
+                            <div class="fw-bold fs-5">{{ number_format($summary['count'] ?? 0, 0, ',', '.') }} data</div>
+                            <div class="small">
+                                Nilai:
+                                Rp {{ number_format(($summary['total'] ?? $summary['total_selisih'] ?? 0), 0, ',', '.') }}
+                            </div>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+    </div>
+
     {{-- BKU Table --}}
     <div class="card rounded-4">
         <div class="card-header bg-light d-flex justify-content-between align-items-center">

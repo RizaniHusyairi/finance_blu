@@ -44,7 +44,7 @@
                     </thead>
                     <tbody>
                         @php $no = 1; @endphp
-                        @foreach($perjaldin->spps->whereIn('status_spp', ['NPI Terbit', 'SP2D Terbit', 'Lunas']) as $spp)
+                        @foreach($perjaldin->spps->filter(fn($spp) => optional($spp->spm?->npi)->status === \App\Models\DokumenNpi::STATUS_APPROVED_KASUBAG || $spp->spm?->npi?->sp2d) as $spp)
                         @php $slug = 'sp2d' . $spp->spp_id; @endphp
                         <tr>
                             <td>{{ $no++ }}</td>
@@ -60,11 +60,13 @@
                             <td class="fw-bold text-primary">{{ $spp->kategori_biaya }}</td>
                             <td class="text-end fw-bold">Rp {{ number_format($spp->jumlah_uang, 0, ',', '.') }}</td>
                             <td class="text-center">
-                                @if($spp->status_spp == 'NPI Terbit')
+                                @if(optional($spp->spm?->npi)->status === \App\Models\DokumenNpi::STATUS_APPROVED_KASUBAG && !$spp->spm?->npi?->sp2d)
                                     <span class="badge bg-warning text-dark"><i class="bi bi-bank"></i> Perlu Catat SP2D</span>
-                                @elseif($spp->status_spp == 'SP2D Terbit')
-                                    <span class="badge bg-info text-dark"><i class="bi bi-book"></i> Perlu Dicatat ke BKU</span>
-                                @elseif($spp->status_spp == 'Lunas')
+                                @elseif(optional($spp->spm?->npi?->sp2d)->status === \App\Models\DokumenSp2d::STATUS_DRAFT)
+                                    <span class="badge bg-secondary"><i class="bi bi-file-earmark-text"></i> Draft SP2D</span>
+                                @elseif(optional($spp->spm?->npi?->sp2d)->status === \App\Models\DokumenSp2d::STATUS_APPROVED)
+                                    <span class="badge bg-info text-dark"><i class="bi bi-book"></i> Perlu Dieksekusi</span>
+                                @elseif(optional($spp->spm?->npi?->sp2d)->status === \App\Models\DokumenSp2d::STATUS_EXECUTED)
                                     <span class="badge bg-success"><i class="bi bi-check2-all"></i> LUNAS</span>
                                     @if($spp->catatan_bku)
                                         <br><small class="text-muted">{{ $spp->catatan_bku }}</small>
@@ -73,20 +75,29 @@
                             </td>
                             <td class="text-center">
                                 {{-- Tombol Catat SP2D --}}
-                                @if($spp->status_spp == 'NPI Terbit')
+                                @if(optional($spp->spm?->npi)->status === \App\Models\DokumenNpi::STATUS_APPROVED_KASUBAG && !$spp->spm?->npi?->sp2d)
                                     <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#sp2dModal{{ $slug }}">
-                                        <i class="bi bi-pen"></i> Catat SP2D
+                                        <i class="bi bi-pen"></i> Generate SP2D
                                     </button>
                                 @endif
 
-                                {{-- Tombol Catat BKU --}}
-                                @if($spp->status_spp == 'SP2D Terbit')
+                                @if(optional($spp->spm?->npi?->sp2d)->status === \App\Models\DokumenSp2d::STATUS_DRAFT)
+                                    <form action="{{ route('sp2ds.approve', $spp->spm->npi->sp2d->id) }}" method="POST" class="d-inline-block">
+                                        @csrf
+                                        <button type="submit" class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-check2-square"></i> Approve SP2D
+                                        </button>
+                                    </form>
+                                @endif
+
+                                {{-- Tombol Eksekusi --}}
+                                @if(in_array(optional($spp->spm?->npi?->sp2d)->status, [\App\Models\DokumenSp2d::STATUS_DRAFT, \App\Models\DokumenSp2d::STATUS_APPROVED], true))
                                     <button class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#bkuModal{{ $slug }}">
-                                        <i class="bi bi-book-half"></i> Catat ke BKU
+                                        <i class="bi bi-book-half"></i> Eksekusi & BKU
                                     </button>
                                 @endif
 
-                                @if($spp->status_spp == 'Lunas')
+                                @if(optional($spp->spm?->npi?->sp2d)->status === \App\Models\DokumenSp2d::STATUS_EXECUTED)
                                     <span class="text-success fw-bold"><i class="bi bi-check-circle-fill"></i> Selesai</span>
                                 @endif
 
@@ -94,7 +105,7 @@
                                 <div class="modal fade" id="sp2dModal{{ $slug }}" tabindex="-1" aria-hidden="true">
                                     <div class="modal-dialog modal-lg text-start">
                                         <div class="modal-content">
-                                            <form action="{{ route('sp2ds.store', $spp->spp_id) }}" method="POST">
+                                            <form action="{{ route('sp2ds.store', $spp->spm->npi->id) }}" method="POST">
                                                 @csrf
                                                 <div class="modal-header bg-primary text-white">
                                                     <h5 class="modal-title text-white"><i class="bi bi-cash"></i> Catat Nomor SP2D</h5>
@@ -115,7 +126,7 @@
                                                         <div class="col-md-6">
                                                             <label class="form-label fw-bold">Tanggal SP2D <span class="text-danger">*</span></label>
                                                             <input type="date" name="tanggal_sp2d" class="form-control" required
-                                                                   value="{{ $spp->tanggal_sp2d ?? date('Y-m-d') }}">
+                                                                   value="{{ optional($spp->tanggal_sp2d)->format('Y-m-d') ?? date('Y-m-d') }}">
                                                         </div>
                                                     </div>
                                                 </div>
@@ -134,7 +145,7 @@
                                 <div class="modal fade" id="bkuModal{{ $slug }}" tabindex="-1" aria-hidden="true">
                                     <div class="modal-dialog modal-dialog-centered text-start">
                                         <div class="modal-content">
-                                            <form action="{{ route('sp2ds.catat-bku', $spp->spp_id) }}" method="POST">
+                                            <form action="{{ route('sp2ds.catat-bku', $spp->spm->npi->sp2d->id) }}" method="POST" enctype="multipart/form-data">
                                                 @csrf
                                                 <div class="modal-header bg-success text-white">
                                                     <h5 class="modal-title text-white"><i class="bi bi-book-half"></i> Catat Realisasi ke BKU</h5>
@@ -149,6 +160,13 @@
                                                         <label class="form-label fw-bold">Keterangan BKU (Opsional)</label>
                                                         <textarea name="catatan_bku" class="form-control" rows="3"
                                                                   placeholder="Mis: Realisasi belanja perjalanan dinas pegawai - {{ $spp->kategori_biaya }}...">Realisasi belanja perjalanan dinas - {{ $spp->kategori_biaya }}</textarea>
+                                                    </div>
+                                                    <div class="mb-3">
+                                                        <label class="form-label fw-bold">Bukti Transfer <span class="text-danger">*</span></label>
+                                                        <input type="file" name="bukti_transfer" class="form-control" accept=".pdf,.jpg,.jpeg,.png" required>
+                                                        @if($spp->spm?->npi?->sp2d?->bukti_transfer)
+                                                            <small class="text-muted d-block mt-2">Bukti aktif: {{ $spp->spm->npi->sp2d->bukti_transfer->nama_file_asli }}</small>
+                                                        @endif
                                                     </div>
                                                     <div class="alert alert-warning py-2">
                                                         <i class="bi bi-exclamation-triangle"></i> <strong>Perhatian:</strong> Setelah ini status akan menjadi <strong>LUNAS</strong> dan tidak bisa diubah.

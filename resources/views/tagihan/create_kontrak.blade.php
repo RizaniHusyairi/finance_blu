@@ -19,6 +19,43 @@
     </style>
 @endpush
 @section('content')
+    @php
+        $isPresetTagihan = isset($selectedKontrak, $selectedTermin) && $selectedKontrak && $selectedTermin;
+        $initialPotonganAngsuran = old('potongan_angsuran_uang_muka', $selectedPotonganAngsuran ?? 0);
+        $kontrakTerminMap = [];
+
+        foreach (($kontraks ?? collect()) as $kontrakItem) {
+            $terms = [];
+
+            foreach ($kontrakItem->termin->where('status_termin', 'READY_TO_BILL') as $terminItem) {
+                $potongan = 0;
+
+                if (
+                    $kontrakItem->ada_uang_muka &&
+                    (float) $kontrakItem->sisa_uang_muka_belum_lunas > 0 &&
+                    in_array($terminItem->jenis_termin, ['PROGRESS', 'PELUNASAN'], true)
+                ) {
+                    $potongan = min((float) $terminItem->potongan_angsuran_uang_muka, (float) $kontrakItem->sisa_uang_muka_belum_lunas);
+                }
+
+                $terms[] = [
+                    'id' => $terminItem->id,
+                    'keterangan_termin' => $terminItem->keterangan_termin,
+                    'persentase' => $terminItem->persentase,
+                    'nilai_bruto_termin' => $terminItem->nilai_bruto_termin,
+                    'jenis_termin' => $terminItem->jenis_termin,
+                    'potongan_angsuran_uang_muka' => round($potongan, 2),
+                ];
+            }
+
+            $kontrakTerminMap[$kontrakItem->id] = [
+                'vendor' => optional($kontrakItem->vendor)->nama_perusahaan ?? 'N/A',
+                'nama' => $kontrakItem->nama_pekerjaan,
+                'nilai' => $kontrakItem->nilai_total_kontrak,
+                'terms' => $terms,
+            ];
+        }
+    @endphp
     <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
         <div>
             <h4 class="mb-0 fw-bold">Penagihan Termin / BAST</h4>
@@ -53,34 +90,60 @@
                     <div class="card-body p-4">
                         <div class="row g-4">
                             <div class="col-md-6">
-                                <label class="form-label fw-bold">Pilih Kontrak (Nomor SPK) <span class="text-danger">*</span></label>
-                                <select class="form-select select2" name="kontrak_pengadaan_id" id="kontrak_pengadaan_id" required onchange="getDetailKontrak(this.value)">
-                                    <option value="">-- Cari atau ketik Nomor SPK --</option>
-                                    @foreach($kontraks ?? [] as $k)
-                                        <option value="{{ $k->id }}" data-vendor="{{ $k->vendor->nama_perusahaan ?? 'N/A' }}" data-nama="{{ $k->nama_pekerjaan }}" data-nilai="{{ $k->nilai_total_kontrak }}">
-                                            {{ $k->nomor_spk }} - {{ Str::limit($k->nama_pekerjaan, 40) }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                                
-                                {{-- Panel Informasi Read-Only (Akan muncul saat SPK dipilih) --}}
-                                <div id="panel_info_kontrak" class="mt-3 p-3 bg-light rounded border border-info" style="display: none;">
-                                    <small class="text-muted d-block mb-1">Nama Vendor:</small>
-                                    <div class="fw-bold mb-2" id="info_vendor">-</div>
-                                    <small class="text-muted d-block mb-1">Nama Pekerjaan:</small>
-                                    <div class="fw-medium mb-2" id="info_pekerjaan">-</div>
-                                    <small class="text-muted d-block mb-1">Nilai Total Kontrak:</small>
-                                    <div class="fw-bold text-success fs-5" id="info_nilai">-</div>
-                                </div>
+                                @if($isPresetTagihan)
+                                    <label class="form-label fw-bold">Kontrak Terpilih</label>
+                                    <input type="hidden" name="kontrak_pengadaan_id" id="kontrak_pengadaan_id" value="{{ $selectedKontrak->id }}">
+                                    <div class="p-3 bg-light rounded border border-info h-100">
+                                        <div class="small text-muted mb-1">Nomor SPK</div>
+                                        <div class="fw-bold mb-2">{{ $selectedKontrak->nomor_spk }}</div>
+                                        <div class="small text-muted mb-1">Vendor</div>
+                                        <div class="fw-semibold mb-2">{{ $selectedKontrak->vendor->nama_perusahaan ?? '-' }}</div>
+                                        <div class="small text-muted mb-1">Nama Pekerjaan</div>
+                                        <div class="mb-2">{{ $selectedKontrak->nama_pekerjaan }}</div>
+                                        <div class="small text-muted mb-1">Nilai Total Kontrak</div>
+                                        <div class="fw-bold text-success fs-5">Rp {{ number_format($selectedKontrak->nilai_total_kontrak, 0, ',', '.') }}</div>
+                                    </div>
+                                @else
+                                    <label class="form-label fw-bold">Pilih Kontrak (Nomor SPK) <span class="text-danger">*</span></label>
+                                    <select class="form-select select2" name="kontrak_pengadaan_id" id="kontrak_pengadaan_id" required onchange="getDetailKontrak(this.value)">
+                                        <option value="">-- Cari atau ketik Nomor SPK --</option>
+                                        @foreach($kontraks ?? [] as $k)
+                                            <option value="{{ $k->id }}" data-vendor="{{ $k->vendor->nama_perusahaan ?? 'N/A' }}" data-nama="{{ $k->nama_pekerjaan }}" data-nilai="{{ $k->nilai_total_kontrak }}">
+                                                {{ $k->nomor_spk }} - {{ Str::limit($k->nama_pekerjaan, 40) }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    
+                                    <div id="panel_info_kontrak" class="mt-3 p-3 bg-light rounded border border-info" style="display: none;">
+                                        <small class="text-muted d-block mb-1">Nama Vendor:</small>
+                                        <div class="fw-bold mb-2" id="info_vendor">-</div>
+                                        <small class="text-muted d-block mb-1">Nama Pekerjaan:</small>
+                                        <div class="fw-medium mb-2" id="info_pekerjaan">-</div>
+                                        <small class="text-muted d-block mb-1">Nilai Total Kontrak:</small>
+                                        <div class="fw-bold text-success fs-5" id="info_nilai">-</div>
+                                    </div>
+                                @endif
                             </div>
 
                             <div class="col-md-6">
-                                <label class="form-label fw-bold">Pilih Termin Tagihan <span class="text-danger">*</span></label>
-                                <select class="form-select" name="kontrak_termin_id" id="kontrak_termin_id" required disabled onchange="setBrutoFromTermin()">
-                                    <option value="">-- Pilih Kontrak Terlebih Dahulu --</option>
-                                    {{-- Opsi Termin akan di-load via AJAX atau JS --}}
-                                </select>
-                                <div class="form-text mt-2">Hanya termin dengan status <strong>LOCKED</strong> (belum ditagihkan) yang akan tampil.</div>
+                                @if($isPresetTagihan)
+                                    <label class="form-label fw-bold">Termin yang Akan Ditagih</label>
+                                    <input type="hidden" name="kontrak_termin_id" id="kontrak_termin_id" value="{{ $selectedTermin->id }}">
+                                    <div class="p-3 bg-light rounded border border-success h-100">
+                                        <div class="small text-muted mb-1">Termin</div>
+                                        <div class="fw-bold mb-2">Termin {{ $selectedTermin->termin_ke }} - {{ str_replace('_', ' ', $selectedTermin->jenis_termin) }}</div>
+                                        <div class="small text-muted mb-1">Keterangan</div>
+                                        <div class="mb-2">{{ $selectedTermin->keterangan_termin }}</div>
+                                        <div class="small text-muted mb-1">Nilai Bruto Termin</div>
+                                        <div class="fw-bold text-success fs-5">Rp {{ number_format($selectedTermin->nilai_bruto_termin, 0, ',', '.') }}</div>
+                                    </div>
+                                @else
+                                    <label class="form-label fw-bold">Pilih Termin Tagihan <span class="text-danger">*</span></label>
+                                    <select class="form-select" name="kontrak_termin_id" id="kontrak_termin_id" required disabled onchange="setBrutoFromTermin()">
+                                        <option value="">-- Pilih Kontrak Terlebih Dahulu --</option>
+                                    </select>
+                                    <div class="form-text mt-2">Hanya termin dengan status <strong>READY_TO_BILL</strong> yang akan tampil.</div>
+                                @endif
                             </div>
                         </div>
                     </div>
@@ -100,12 +163,12 @@
                                 <input type="text" class="form-control mb-2" name="nomor_bapp" placeholder="No. BAPP">
                                 <input type="date" class="form-control" name="tanggal_bapp">
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md-4" id="wrapper_bast_fields" style="display: none;">
                                 <label class="form-label fw-bold">Nomor BAST <small class="text-danger">*</small> <small class="text-muted">(Serah Terima)</small></label>
-                                <input type="text" class="form-control mb-2" name="nomor_bast" placeholder="No. BAST" required>
-                                <input type="date" class="form-control" name="tanggal_bast" required>
+                                <input type="text" class="form-control mb-2" name="nomor_bast" id="nomor_bast" placeholder="No. BAST">
+                                <input type="date" class="form-control" name="tanggal_bast" id="tanggal_bast">
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md-4" id="wrapper_bap_fields">
                                 <label class="form-label fw-bold">Nomor BAP <small class="text-danger">*</small> <small class="text-muted">(Pembayaran)</small></label>
                                 <input type="text" class="form-control mb-2" name="nomor_bap" placeholder="No. BAP" required>
                                 <input type="date" class="form-control" name="tanggal_bap" required>
@@ -115,11 +178,11 @@
                 </div>
             </div>
 
-            {{-- Bagian 3: Dokumen Vendor & Kalkulasi Pajak --}}
+            {{-- Bagian 3: Dokumen Vendor --}}
             <div class="col-12 mb-4">
                 <div class="card shadow-sm border-0 rounded-4 h-100 border-warning">
                     <div class="card-header bg-warning text-dark py-3 rounded-top-4">
-                        <h6 class="mb-0 fw-bold"><i class="bi bi-calculator me-2"></i>3. Dokumen Vendor & Kalkulasi Pajak</h6>
+                        <h6 class="mb-0 fw-bold"><i class="bi bi-calculator me-2"></i>3. Dokumen Vendor & Ringkasan Nilai</h6>
                     </div>
                     <div class="card-body p-4">
                         <div class="row g-4 mb-4 pb-4 border-bottom">
@@ -129,31 +192,32 @@
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-bold text-success">Nilai Bruto Tagihan (DPP + PPN) <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control fw-bold bg-light fs-5" id="total_bruto_display" value="Rp 0" readonly>
-                                <input type="hidden" name="total_bruto" id="total_bruto" value="0">
+                                <input type="text" class="form-control fw-bold bg-light fs-5" id="total_bruto_display" value="{{ $isPresetTagihan ? 'Rp ' . number_format($selectedTermin->nilai_bruto_termin, 0, ',', '.') : 'Rp 0' }}" readonly>
+                                <input type="hidden" name="total_bruto" id="total_bruto" value="{{ $isPresetTagihan ? $selectedTermin->nilai_bruto_termin : 0 }}">
                                 <small class="text-muted">Akan terisi otomatis berdasarkan Termin yang dipilih.</small>
                             </div>
                         </div>
 
-                        {{-- Dynamic Form Pajak --}}
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="fw-bold mb-0">Rincian Potongan Pajak <small class="text-muted fw-normal">(Opsional)</small></h6>
-                            <button type="button" class="btn btn-sm btn-outline-primary" id="btnTambahPajak">
-                                <i class="bi bi-plus"></i> Tambah Potongan
-                            </button>
+                        <div class="alert alert-info border-0 shadow-sm d-none" id="info_potongan_um">
+                            <i class="bi bi-info-circle me-2"></i>
+                            Kontrak ini masih memiliki sisa uang muka. Potongan angsuran uang muka akan otomatis diperhitungkan pada termin ini.
                         </div>
 
-                        <div id="containerPajak">
-                            {{-- Row pajak diisi js secara dinamis --}}
-                            <div class="text-center text-muted p-3 bg-light rounded" id="pajakKosong">
-                                Tidak ada potongan pajak. Nilai Bruto = Nilai Netto.
+                        <div class="row g-3 mt-4 pt-3 border-top">
+                            <div class="col-md-4">
+                                <div class="small text-muted mb-1">Nilai Bruto</div>
+                                <div class="fw-bold text-dark fs-5" id="summary_bruto_display">{{ $isPresetTagihan ? 'Rp ' . number_format($selectedTermin->nilai_bruto_termin, 0, ',', '.') : 'Rp 0' }}</div>
                             </div>
-                        </div>
-
-                        <div class="mt-4 pt-3 border-top text-end">
-                            <h5 class="text-muted mb-1">Nilai Netto (Akan Diterima Vendor):</h5>
-                            <h2 class="fw-bold text-success mb-0" id="total_netto_display">Rp 0</h2>
-                            <input type="hidden" name="total_netto" id="total_netto" value="0">
+                            <div class="col-md-4">
+                                <div class="small text-muted mb-1">Potongan Angsuran Uang Muka</div>
+                                <div class="fw-bold text-warning fs-5" id="potongan_um_display">Rp {{ number_format($initialPotonganAngsuran, 0, ',', '.') }}</div>
+                                <input type="hidden" name="potongan_angsuran_uang_muka" id="potongan_angsuran_uang_muka" value="{{ $initialPotonganAngsuran }}">
+                            </div>
+                            <div class="col-md-4 text-md-end">
+                                <div class="small text-muted mb-1">Nilai Netto</div>
+                                <div class="fw-bold text-success fs-3 mb-0" id="total_netto_display">Rp 0</div>
+                                <input type="hidden" name="total_netto" id="total_netto" value="0">
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -168,24 +232,28 @@
                     <div class="card-body p-4">
                         <div class="row g-4">
                             <div class="col-md-4">
-                                <label class="form-label fw-bold">1. Surat Permohonan / Invoice <span class="text-danger">*</span></label>
+                                <label class="form-label fw-bold">1. Surat Permohonan / Invoice / Kwitansi <span class="text-danger">*</span></label>
                                 <input type="file" class="form-control" name="file_invoice" accept=".pdf" required>
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label fw-bold">2. BAST / BAP / BAPP Ber-TTD <span class="text-danger">*</span></label>
-                                <input type="file" class="form-control" name="file_bast" accept=".pdf" required>
-                                <small class="text-muted d-block mt-1">Jika terpisah, gabungkan dalam 1 file PDF.</small>
+                                <label class="form-label fw-bold">2. BAPP <small>(Opsional)</small></label>
+                                <input type="file" class="form-control" name="file_bapp" accept=".pdf">
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label fw-bold">3. Kwitansi Bermaterai <span class="text-danger">*</span></label>
+                                <label class="form-label fw-bold">3. BAP <span>*</span></label>
+                                <input type="file" class="form-control" name="file_bap" accept=".pdf"   required>
+                            </div>
+                            <div class="col-md-4" id="wrapper_file_bast" style="display: none;">
+                                <label class="form-label fw-bold">4. BAST <span class="text-danger">*</span></label>
+                                <input type="file" class="form-control" name="file_bast" id="file_bast" accept=".pdf">
+                                <small class="text-muted d-block mt-1">Dokumen ini hanya diperlukan saat termin pelunasan.</small>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold">5. Kwitansi <span class="text-danger">*</span></label>
                                 <input type="file" class="form-control" name="file_kwitansi" accept=".pdf" required>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label fw-bold">4. Faktur Pajak & E-Billing <small class="text-muted">(Jika ada pemotongan)</small></label>
-                                <input type="file" class="form-control" name="file_pajak" accept=".pdf">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label fw-bold">5. Lampiran Laporan (Foto/Dokumentasi) <small class="text-muted">(Opsional)</small></label>
+                                <label class="form-label fw-bold">6. Lampiran Laporan (Foto/Dokumentasi) <small class="text-muted">(Opsional)</small></label>
                                 <input type="file" class="form-control" name="file_lampiran_lainnya" accept=".pdf,.zip">
                             </div>
                         </div>
@@ -208,77 +276,98 @@
 @push('script')
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
-    // Data dummy simulasi (jengkelan Backend belum siap, kita simulasikan untuk UI demo)
-    // Di produksi asli, ini diganti endpoint AJAX route('termins.get_by_kontrak')
-    const terminDataSimulator = {
-        // Akan diisi saat AJAX.
-    };
+    const isPresetTagihan = @json($isPresetTagihan);
+    const kontrakTerminMap = @json($kontrakTerminMap);
+    const selectedTerminMeta = @json($selectedTermin ? [
+        'jenis_termin' => $selectedTermin->jenis_termin,
+        'potongan_angsuran_uang_muka' => (float) $initialPotonganAngsuran,
+    ] : null);
     
-    // Master Tarif Pajak (disiapkan saat page load dari controller)
-    const pajakOptions = [
-        @foreach($pajaks ?? [] as $pj)
-            { id: "{{$pj->id}}", text: "{{$pj->nama_pajak}} ({{$pj->persentase}}%)", tarif: {{$pj->persentase}} },
-        @endforeach
-    ];
-
-    let pajakCounter = 0;
-
     $(document).ready(function() {
         $('.select2').select2({ theme: 'classic' });
 
-        $('#btnTambahPajak').click(function() {
-            tambahRowPajak();
-        });
+        if (isPresetTagihan) {
+            toggleBastFields(selectedTerminMeta?.jenis_termin ?? null);
+            updatePotonganAngsuranDisplay(selectedTerminMeta?.potongan_angsuran_uang_muka ?? 0);
+            hitungTotalNetto();
+        }
     });
 
     function getDetailKontrak(idKontrak) {
         if(!idKontrak) {
             $('#panel_info_kontrak').hide();
             $('#kontrak_termin_id').html('<option value="">-- Pilih Kontrak Terlebih Dahulu --</option>').prop('disabled', true);
+            toggleBastFields(null);
+            updatePotonganAngsuranDisplay(0);
+            $('#total_bruto').val(0);
+            $('#total_bruto_display').val('Rp 0');
+            $('#summary_bruto_display').text('Rp 0');
+            hitungTotalNetto();
             return;
         }
 
-        // Tampilkan info ReadOnly
-        let optionSel = $('#kontrak_pengadaan_id').find(':selected');
-        $('#info_vendor').text(optionSel.data('vendor'));
-        $('#info_pekerjaan').text(optionSel.data('nama'));
-        $('#info_nilai').text(formatRupiah(optionSel.data('nilai').toString()));
+        let kontrakData = kontrakTerminMap[idKontrak];
+        if (!kontrakData) {
+            return;
+        }
+
+        $('#info_vendor').text(kontrakData.vendor);
+        $('#info_pekerjaan').text(kontrakData.nama);
+        $('#info_nilai').text(formatRupiah(kontrakData.nilai.toString()));
         $('#panel_info_kontrak').fadeIn();
 
-        // Panggil Termin (Simulasi AJAX untuk demo cepat)
-        $('#kontrak_termin_id').html('<option value="">Sedang memuat termin...</option>').prop('disabled', false);
-        
-        // Asumsikan kita punya fetch dari API, untuk dummy saat ini:
-        $.ajax({
-            url: "{{ url('/api/kontrak') }}/" + idKontrak + "/termins",
-            type: "GET",
-            success: function(res) {
-                let html = '<option value="">-- Pilih Termin / Tagihan --</option>';
-                res.data.forEach(t => {
-                    html += `<option value="${t.id}" data-bruto="${t.nilai_bruto_termin}">${t.keterangan_termin} - ${t.persentase}% (Rp ${formatRupiahCustom(t.nilai_bruto_termin)})</option>`;
-                });
-                if(res.data.length === 0) {
-                    html = '<option value="">Tidak ada Termin berstatus LOCKED</option>';
-                }
-                $('#kontrak_termin_id').html(html);
-            },
-            error: function() {
-                // Dummy fallback saat API belum connect
-                let dummyHtml = `<option value="">-- Pilih Termin / Tagihan --</option>
-                                <option value="99" data-bruto="50000000">Termin 1 - 50% (Rp 50.000.000)</option>`;
-                $('#kontrak_termin_id').html(dummyHtml);
-            }
+        let html = '<option value="">-- Pilih Termin / Tagihan --</option>';
+        kontrakData.terms.forEach(t => {
+            html += `<option value="${t.id}" data-bruto="${t.nilai_bruto_termin}" data-jenis="${t.jenis_termin}" data-potongan-um="${t.potongan_angsuran_uang_muka}">${t.keterangan_termin} - ${t.persentase}% (Rp ${formatRupiahCustom(t.nilai_bruto_termin)})</option>`;
         });
+        if (kontrakData.terms.length === 0) {
+            html = '<option value="">Tidak ada Termin berstatus READY_TO_BILL</option>';
+        }
+        $('#kontrak_termin_id').html(html).prop('disabled', false);
+        toggleBastFields(null);
+        updatePotonganAngsuranDisplay(0);
     }
 
     function setBrutoFromTermin() {
         let opt = $('#kontrak_termin_id').find(':selected');
         let brutoVal = opt.data('bruto') || 0;
+        let jenisTermin = opt.data('jenis') || null;
+        let potonganUm = parseFloat(opt.data('potongan-um')) || 0;
         
         $('#total_bruto').val(brutoVal);
         $('#total_bruto_display').val('Rp ' + formatRupiahCustom(brutoVal));
-        
+        $('#summary_bruto_display').text('Rp ' + formatRupiahCustom(brutoVal));
+        toggleBastFields(jenisTermin);
+        updatePotonganAngsuranDisplay(potonganUm);
         hitungTotalNetto();
+    }
+
+    function toggleBastFields(jenisTermin) {
+        const isPelunasan = jenisTermin === 'PELUNASAN';
+        const bastWrapper = document.getElementById('wrapper_bast_fields');
+        const bastFileWrapper = document.getElementById('wrapper_file_bast');
+        const nomorBast = document.getElementById('nomor_bast');
+        const tanggalBast = document.getElementById('tanggal_bast');
+        const fileBast = document.getElementById('file_bast');
+
+        bastWrapper.style.display = isPelunasan ? 'block' : 'none';
+        bastFileWrapper.style.display = isPelunasan ? 'block' : 'none';
+        nomorBast.required = isPelunasan;
+        tanggalBast.required = isPelunasan;
+        fileBast.required = isPelunasan;
+
+        if (!isPelunasan) {
+            nomorBast.value = '';
+            tanggalBast.value = '';
+            fileBast.value = '';
+        }
+    }
+
+    function updatePotonganAngsuranDisplay(nominal) {
+        const normalized = parseFloat(nominal) || 0;
+        document.getElementById('potongan_angsuran_uang_muka').value = normalized;
+        document.getElementById('potongan_um_display').textContent = 'Rp ' + formatRupiahCustom(Math.round(normalized));
+        document.getElementById('info_potongan_um').classList.toggle('d-none', normalized <= 0);
     }
 
     function formatRupiah(numberStr) {
@@ -310,79 +399,11 @@
         return rupiah;
     }
 
-    function tambahRowPajak() {
-        $('#pajakKosong').hide();
-        pajakCounter++;
-        let pId = pajakCounter;
-
-        let optionsHtml = '<option value="">-- Pilih Jenis Pajak --</option>';
-        pajakOptions.forEach(p => {
-            optionsHtml += `<option value="${p.id}" data-tarif="${p.tarif}">${p.text}</option>`;
-        });
-        
-        let rowHtml = `
-            <div class="row g-3 mb-3 border p-3 rounded bg-white shadow-sm align-items-end pajak-row" id="pajak_row_${pId}">
-                <div class="col-md-3">
-                    <label class="form-label small fw-bold">Jenis Pajak</label>
-                    <select class="form-select pajak-select" name="pajak[${pId}][id]" id="pajak_sel_${pId}" required onchange="hitungPajakRow(${pId})">
-                        ${optionsHtml}
-                    </select>
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label small fw-bold">Nilai DPP (Dasar Pengenaan) Rp</label>
-                    <input type="text" class="form-control dpp-input" id="dpp_display_${pId}" value="0" onkeyup="formatInputDpp(this, ${pId})">
-                    <input type="hidden" name="pajak[${pId}][dpp]" id="dpp_val_${pId}" value="0">
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label small fw-bold text-danger">Potongan Terhitung Rp</label>
-                    <input type="text" class="form-control bg-light fw-bold text-danger potongan-hasil" id="potongan_display_${pId}" value="0" readonly>
-                    <input type="hidden" name="pajak[${pId}][nominal]" id="potongan_val_${pId}" value="0" class="potongan-val-class">
-                </div>
-                <div class="col-md-1 text-end">
-                    <button type="button" class="btn btn-outline-danger w-100" onclick="hapusPajakRow(${pId})"><i class="bi bi-trash"></i></button>
-                </div>
-            </div>
-        `;
-
-        $('#containerPajak').append(rowHtml);
-    }
-
-    function hapusPajakRow(id) {
-        $(`#pajak_row_${id}`).remove();
-        if($('.pajak-row').length === 0) {
-            $('#pajakKosong').show();
-        }
-        hitungTotalNetto();
-    }
-
-    function formatInputDpp(inputEl, id) {
-        let clean = inputEl.value.replace(/[^,\d]/g, '');
-        $(`#dpp_val_${id}`).val(clean);
-        inputEl.value = formatRupiahCustom(clean);
-        hitungPajakRow(id);
-    }
-
-    function hitungPajakRow(id) {
-        let tarif = $(`#pajak_sel_${id}`).find(':selected').data('tarif') || 0;
-        let dpp = parseFloat($(`#dpp_val_${id}`).val()) || 0;
-        
-        let hasil = (dpp * (parseFloat(tarif) / 100));
-        
-        $(`#potongan_val_${id}`).val(hasil);
-        $(`#potongan_display_${id}`).val('- Rp ' + formatRupiahCustom(Math.round(hasil)));
-        
-        hitungTotalNetto();
-    }
-
     function hitungTotalNetto() {
         let bruto = parseFloat($('#total_bruto').val()) || 0;
-        let totalPotongan = 0;
-        
-        $('.potongan-val-class').each(function() {
-            totalPotongan += parseFloat($(this).val()) || 0;
-        });
+        let potonganAngsuranUangMuka = parseFloat($('#potongan_angsuran_uang_muka').val()) || 0;
 
-        let netto = bruto - totalPotongan;
+        let netto = bruto - potonganAngsuranUangMuka;
         
         $('#total_netto').val(netto);
         $('#total_netto_display').text('Rp ' + formatRupiahCustom(Math.round(netto)));

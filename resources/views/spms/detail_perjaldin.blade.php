@@ -53,7 +53,7 @@
                     </thead>
                     <tbody>
                         @php $no = 1; @endphp
-                        @foreach($perjaldin->spps->whereIn('status_spp', ['Disetujui PPK', 'Menunggu Verifikasi SPM', 'Revisi SPM', 'SPM Terbit']) as $spp)
+                        @foreach($perjaldin->spps->filter(fn($spp) => $spp->status === 'Disetujui PPK' || $spp->spm) as $spp)
                         @php $slug = 'spm' . $spp->spp_id; @endphp
                         <tr>
                             <td>{{ $no++ }}</td>
@@ -71,10 +71,15 @@
                                     @if($spp->nomor_spm)
                                         <br><small class="text-muted">{{ $spp->nomor_spm }}</small>
                                     @endif
-                                @elseif($spp->status_spp == 'Revisi SPM')
-                                    <span class="badge bg-danger"><i class="bi bi-x-circle"></i> Revisi dari PPSPM</span>
+                                @elseif(in_array($spp->status_spp, ['Revisi SPM', 'Revisi Kasubbag']))
+                                    <span class="badge bg-danger"><i class="bi bi-x-circle"></i> {{ $spp->status_spp }}</span>
                                     @if($spp->catatan_revisi)
                                         <div class="text-danger small mt-1 fw-bold">"{{ $spp->catatan_revisi }}"</div>
+                                    @endif
+                                @elseif($spp->status_spp == 'Menunggu Verifikasi Kasubbag')
+                                    <span class="badge bg-primary"><i class="bi bi-person-check"></i> Menunggu Kasubbag</span>
+                                    @if($spp->nomor_spm)
+                                        <br><small class="text-muted">{{ $spp->nomor_spm }}</small>
                                     @endif
                                 @elseif($spp->status_spp == 'SPM Terbit')
                                     <span class="badge bg-success"><i class="bi bi-check2-all"></i> SPM Terbit</span>
@@ -85,15 +90,15 @@
                             </td>
                             <td class="text-center">
                                 {{-- Tombol Buat / Edit SPM --}}
-                                @if(in_array($spp->status_spp, ['Disetujui PPK', 'Revisi SPM']))
+                                @if(in_array($spp->status_spp, ['Disetujui PPK', 'Revisi SPM', 'Revisi Kasubbag']))
                                     <button class="btn btn-sm btn-primary mb-1" data-bs-toggle="modal" data-bs-target="#modalSpm{{ $slug }}">
-                                        <i class="bi bi-pen"></i> {{ $spp->status_spp == 'Revisi SPM' ? 'Perbaiki SPM' : 'Buat SPM' }}
+                                        <i class="bi bi-pen"></i> {{ in_array($spp->status_spp, ['Revisi SPM', 'Revisi Kasubbag']) ? 'Perbaiki SPM' : 'Buat SPM' }}
                                     </button>
                                 @endif
 
                                 {{-- Tombol PDF --}}
-                                @if(in_array($spp->status_spp, ['Menunggu Verifikasi SPM', 'SPM Terbit']))
-                                    <a href="{{ route('spms.cetak-pdf', $spp->spp_id) }}" target="_blank" class="btn btn-sm btn-danger mb-1">
+                                @if($spp->spm && in_array($spp->status_spp, ['Menunggu Verifikasi SPM', 'Menunggu Verifikasi Kasubbag', 'SPM Terbit']))
+                                    <a href="{{ route('spms.cetak-pdf', $spp->spm->id) }}" target="_blank" class="btn btn-sm btn-danger mb-1">
                                         <i class="bi bi-file-pdf"></i> PDF SPM
                                     </a>
                                 @endif
@@ -107,15 +112,15 @@
                                                 <div class="modal-header bg-primary text-white">
                                                     <h5 class="modal-title text-white">
                                                         <i class="bi bi-pen"></i>
-                                                        {{ $spp->status_spp == 'Revisi SPM' ? 'Perbaiki SPM' : 'Terbitkan SPM' }}: {{ $spp->kategori_biaya }}
+                                                        {{ in_array($spp->status_spp, ['Revisi SPM', 'Revisi Kasubbag']) ? 'Perbaiki SPM' : 'Terbitkan SPM' }}: {{ $spp->kategori_biaya }}
                                                     </h5>
                                                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                                                 </div>
                                                 <div class="modal-body">
 
-                                                    @if($spp->status_spp == 'Revisi SPM' && $spp->catatan_revisi)
+                                                    @if(in_array($spp->status_spp, ['Revisi SPM', 'Revisi Kasubbag']) && $spp->catatan_revisi)
                                                         <div class="alert alert-danger border-start border-4 border-danger px-3 py-2 mb-3">
-                                                            <strong><i class="bi bi-exclamation-triangle-fill"></i> Catatan Revisi PPSPM:</strong>
+                                                            <strong><i class="bi bi-exclamation-triangle-fill"></i> Catatan Revisi:</strong>
                                                             <p class="mb-0 mt-1 fst-italic">{{ $spp->catatan_revisi }}</p>
                                                         </div>
                                                     @endif
@@ -135,7 +140,7 @@
                                                         <div class="col-md-6">
                                                             <label class="form-label fw-bold">Tanggal SPM <span class="text-danger">*</span></label>
                                                             <input type="date" name="tanggal_spm" class="form-control" required
-                                                                   value="{{ $spp->tanggal_spm ?? date('Y-m-d') }}">
+                                                                   value="{{ optional($spp->tanggal_spm)->format('Y-m-d') ?? date('Y-m-d') }}">
                                                         </div>
                                                     </div>
 
