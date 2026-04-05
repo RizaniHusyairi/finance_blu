@@ -42,15 +42,15 @@
                         <input type="text" name="no_bast" class="form-control" value="{{ old('no_bast', $noBast) }}">
                     </div>
                     <div class="col-md-4 mb-3">
-                        <label class="form-label">Sumber Anggaran (DIPA) <span class="text-danger">*</span></label>
-                        <select name="master_dipa_id" class="form-select" required>
-                            <option value="">-- Pilih DIPA --</option>
-                            @foreach($dipas as $dipa)
-                                <option value="{{ $dipa->id }}" {{ old('master_dipa_id', $tagihan->master_dipa_id) == $dipa->id ? 'selected' : '' }}>
-                                    {{ $dipa->tahun_anggaran }} — {{ $dipa->nomor_dipa ?? 'DIPA #'.$dipa->id }}
-                                </option>
-                            @endforeach
-                        </select>
+                        @include('partials.dipa-item-grouped-select', [
+                            'budgetGroups' => $budgetGroups,
+                            'fieldName' => 'dipa_revision_item_id',
+                            'fieldId' => 'dipa_revision_item_id',
+                            'fieldClass' => 'form-select select2',
+                            'fieldLabel' => 'Sumber Anggaran (Item DIPA / COA)',
+                            'placeholder' => '-- Pilih Item Anggaran DIPA Aktif --',
+                            'selectedValue' => old('dipa_revision_item_id', $tagihan->dipa_revision_item_id),
+                        ])
                     </div>
                 </div>
 
@@ -263,6 +263,11 @@
 
         $(document).ready(function () {
             calculateGrandTotal();
+            $('.select2').select2({
+                theme: 'bootstrap-5',
+                width: '100%',
+                placeholder: '-- Pilih Item Anggaran DIPA Aktif --'
+            });
 
             // Add Row
             $('#btnAddRow').click(function () {

@@ -40,6 +40,9 @@
 @endpush
 
 @section('content')
+@php
+    $ringkasanFinalArsip = $kontrak->ringkasan_kontrak_final_ttd_arsip;
+@endphp
 @if(session('success'))
     <div class="alert alert-success border-0 shadow-sm d-flex align-items-center mb-4" role="alert">
         <i class="bi bi-check-circle-fill me-2"></i>
@@ -82,7 +85,7 @@
             <ul class="nav nav-pills nav-fill" id="pdfTabs" role="tablist">
                 <li class="nav-item" role="presentation">
                     <button class="nav-link active fw-bold border" id="spk-tab" data-bs-toggle="tab" data-bs-target="#spk-pdf" type="button" role="tab">
-                        <i class="bi bi-file-earmark-pdf text-danger me-1"></i> SPK
+                        <i class="bi bi-file-earmark-pdf text-danger me-1"></i> SPK Final
                     </button>
                 </li>
                 @if($kontrak->file_spmk)
@@ -92,7 +95,7 @@
                     </button>
                 </li>
                 @endif
-                @if($kontrak->file_ringkasan_kontrak)
+                @if($kontrak->file_ringkasan_kontrak_final_ttd)
                 <li class="nav-item ms-2" role="presentation">
                     <button class="nav-link fw-bold border" id="ringkasan-tab" data-bs-toggle="tab" data-bs-target="#ringkasan-pdf" type="button" role="tab">
                         <i class="bi bi-file-earmark-pdf text-danger me-1"></i> Ringkasan
@@ -103,13 +106,13 @@
         </div>
         <div class="tab-content flex-grow-1" id="pdfTabsContent">
             <div class="tab-pane fade show active h-100" id="spk-pdf" role="tabpanel">
-                @if($kontrak->file_spk)
-                    <iframe src="{{ Storage::url($kontrak->file_spk) }}"></iframe>
+                @if($kontrak->file_spk_final_ttd)
+                    <iframe src="{{ Storage::url($kontrak->file_spk_final_ttd) }}"></iframe>
                 @else
                     <div class="d-flex justify-content-center align-items-center h-100 text-muted bg-light">
                         <div class="text-center">
                             <i class="bi bi-file-x display-1 d-block mb-3 text-secondary"></i> 
-                            <h5 class="fw-bold">File SPK Belum Diunggah</h5>
+                            <h5 class="fw-bold">SPK Final Bertandatangan Belum Diunggah</h5>
                         </div>
                     </div>
                 @endif
@@ -119,9 +122,9 @@
                 <iframe src="{{ Storage::url($kontrak->file_spmk) }}"></iframe>
             </div>
             @endif
-            @if($kontrak->file_ringkasan_kontrak)
+            @if($kontrak->file_ringkasan_kontrak_final_ttd)
             <div class="tab-pane fade h-100" id="ringkasan-pdf" role="tabpanel">
-                <iframe src="{{ Storage::url($kontrak->file_ringkasan_kontrak) }}"></iframe>
+                <iframe src="{{ Storage::url($kontrak->file_ringkasan_kontrak_final_ttd) }}"></iframe>
             </div>
             @endif
         </div>

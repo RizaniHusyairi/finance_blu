@@ -19,6 +19,7 @@ class MasterPihak extends Model
         'npwp',
         'nama_pihak',
         'nama_penanggung_jawab',
+        'jabatan_penandatangan',
         'tipe_supplier',
         'alamat',
         'email',

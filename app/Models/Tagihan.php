@@ -22,6 +22,11 @@ class Tagihan extends Model
         return $this->belongsTo(MasterDipa::class, 'master_dipa_id');
     }
 
+    public function dipaRevisionItem()
+    {
+        return $this->belongsTo(DetailDipa::class, 'dipa_revision_item_id');
+    }
+
     public function detailKontrak()
     {
         return $this->hasOne(DetailKontrak::class, 'tagihan_id');

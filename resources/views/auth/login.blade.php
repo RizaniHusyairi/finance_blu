@@ -7,11 +7,11 @@
         <div class="">
             <div class="row g-0">
                 <div
-                    class="col-12 col-xl-7 col-xxl-6 auth-cover-left align-items-center justify-content-center d-none d-xl-flex border-end">
+                    class="col-12 col-xl-8 col-xxl-8 auth-cover-left align-items-center justify-content-center d-none d-xl-flex border-end">
 
-                    <div class="card rounded-0 mb-0 border-0 shadow-none bg-transparent bg-none">
+                    <div class="card rounded-0 mb-0 border-0 shadow-none bg-transparent bg-none text-center">
                         <div>
-                            <video autoplay muted playsinline  style="width:100%;
+                            <video autoplay muted playsinline  style="width:50%;
     height:100%;
     object-fit:cover;">
                                 <source src="{{ URL::asset('logo/logo_apt_vid.mp4') }}" type="video/mp4"  style="object-fit: cover; width:100%;">
@@ -22,7 +22,7 @@
                 </div>
 
                 <div
-                    class="col-12 col-xl-5 col-xxl-6 auth-cover-right align-items-center justify-content-center border-top border-4 border-primary border-gradient-1">
+                    class="col-12 col-xl-4 col-xxl-4 auth-cover-right align-items-center justify-content-center border-top border-4 border-primary border-gradient-1">
                     <div class="card rounded-0 m-3 mb-0 border-0 shadow-none bg-none">
                         <div class="card-body p-sm-5">
                             <img src="{{ URL::asset('logo/logo-apt.svg') }}" class="mb-4" width="145"
@@ -38,7 +38,7 @@
                                         <label for="email" class="form-label">Email <span
                                                 class="text-danger">*</span></label>
                                         <input type="email" class="form-control @error('email') is-invalid @enderror"
-                                            id="email" name="email" placeholder="jhon@example.com"
+                                            id="email" name="email" placeholder="Enter your email"
                                             value="{{ old('email') }}" required autocomplete="email" autofocus>
 
                                         @error('email')
@@ -66,11 +66,7 @@
                                     </div>
 
                                     <div class="col-md-6">
-                                        <div class="form-check form-switch">
-                                            <input class="form-check-input" type="checkbox" id="remember" name="remember"
-                                                value="1" {{ old('remember') ? 'checked' : '' }}>
-                                            <label class="form-check-label" for="remember">Remember Me</label>
-                                        </div>
+                                        
                                     </div>
 
                                     @if (Route::has('password.request'))

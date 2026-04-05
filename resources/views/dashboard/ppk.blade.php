@@ -197,7 +197,7 @@
                                             data-title="Review Kontrak: {{ $k->nomor_spk }}"
                                             data-url-approve="{{ route('contracts.approve', $k->id) }}"
                                             data-url-reject="{{ route('contracts.reject', $k->id) }}"
-                                            data-file="{{ asset('storage/' . $k->file_spk) }}"
+                                            data-file="{{ $k->file_spk_final_ttd ? asset('storage/' . $k->file_spk_final_ttd) : '' }}"
                                             data-nominal="Rp {{ number_format($k->nilai_total_kontrak, 0, ',', '.') }}">
                                             <i class="bi bi-eye"></i> Review & TTD
                                         </button>

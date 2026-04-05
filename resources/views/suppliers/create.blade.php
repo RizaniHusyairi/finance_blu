@@ -59,6 +59,11 @@
                                 <input type="text" class="form-control" name="nama_direktur" value="{{ old('nama_direktur') }}" placeholder="Contoh: Arifin">
                             </div>
                             <div class="col-md-6">
+                                <label class="form-label fw-bold">Jabatan Penandatangan</label>
+                                <input type="text" class="form-control" name="jabatan_penandatangan" value="{{ old('jabatan_penandatangan') }}" placeholder="Contoh: Direktur Utama">
+                                <div class="form-text">Digunakan untuk dokumen kontrak dan SPMK pada sisi penandatangan vendor.</div>
+                            </div>
+                            <div class="col-md-6">
                                 <label class="form-label fw-bold">NPWP <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control" name="npwp" id="npwp" value="{{ old('npwp') }}" placeholder="00.000.000.0-000.000" required>
                                 <div class="form-text">Format otomatis, ketik angka saja.</div>
@@ -154,4 +159,3 @@
     });
 </script>
 @endpush
-

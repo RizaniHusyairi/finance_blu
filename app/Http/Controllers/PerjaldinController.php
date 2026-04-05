@@ -7,8 +7,8 @@ use Illuminate\Support\Facades\DB;
 use App\Models\Tagihan;
 use App\Models\DetailPerjaldin;
 use App\Models\MasterPegawai;
-use App\Models\MasterDipa;
 use App\Models\LogStatusDokumen;
+use App\Support\DipaBudgetOptionService;
 
 class PerjaldinController extends Controller
 {
@@ -31,8 +31,8 @@ class PerjaldinController extends Controller
     public function create()
     {
         $pegawais = MasterPegawai::where('status_aktif', true)->orderBy('nama_lengkap')->get();
-        $dipas = MasterDipa::orderByDesc('tahun_anggaran')->get();
-        return view('perjaldins.create', compact('pegawais', 'dipas'));
+        $budgetGroups = DipaBudgetOptionService::groupedOptions();
+        return view('perjaldins.create', compact('pegawais', 'budgetGroups'));
     }
 
     /**
@@ -54,7 +54,7 @@ class PerjaldinController extends Controller
         $request->validate([
             'deskripsi' => 'required|string|max:255',
             'no_bast' => 'nullable|string|max:100',
-            'master_dipa_id' => 'required|exists:master_dipas,id',
+            'dipa_revision_item_id' => 'required|exists:dipa_revision_items,id',
             'peserta' => 'required|array|min:1',
             'peserta.*.pegawai_id' => 'required|exists:master_pegawai,id',
             'peserta.*.no_spt' => 'required|string|max:100',
@@ -71,6 +71,7 @@ class PerjaldinController extends Controller
 
         try {
             DB::beginTransaction();
+            $selectedItem = DipaBudgetOptionService::resolveActiveItem($request->dipa_revision_item_id);
 
             // Hitung total bruto dari semua peserta
             $totalBruto = 0;
@@ -88,7 +89,8 @@ class PerjaldinController extends Controller
             $tagihan = Tagihan::create([
                 'nomor_tagihan' => $nomorTagihan,
                 'tipe_tagihan' => 'PERJALDIN',
-                'master_dipa_id' => $request->master_dipa_id,
+                'master_dipa_id' => $selectedItem->dipaRevision->master_dipa_id,
+                'dipa_revision_item_id' => $selectedItem->id,
                 'deskripsi' => $request->deskripsi . ($request->no_bast ? ' | BAST: ' . $request->no_bast : ''),
                 'total_bruto' => $totalBruto,
                 'total_potongan' => 0,
@@ -206,8 +208,8 @@ class PerjaldinController extends Controller
         }
 
         $pegawais = MasterPegawai::where('status_aktif', true)->orderBy('nama_lengkap')->get();
-        $dipas = MasterDipa::orderByDesc('tahun_anggaran')->get();
-        return view('perjaldins.edit-perjaldin', compact('tagihan', 'pegawais', 'dipas'));
+        $budgetGroups = DipaBudgetOptionService::groupedOptions();
+        return view('perjaldins.edit-perjaldin', compact('tagihan', 'pegawais', 'budgetGroups'));
     }
 
     /**
@@ -236,7 +238,7 @@ class PerjaldinController extends Controller
         $request->validate([
             'deskripsi' => 'required|string|max:255',
             'no_bast' => 'nullable|string|max:100',
-            'master_dipa_id' => 'required|exists:master_dipas,id',
+            'dipa_revision_item_id' => 'required|exists:dipa_revision_items,id',
             'peserta' => 'required|array|min:1',
             'peserta.*.detail_id' => 'nullable|exists:detail_perjaldin,id',
             'peserta.*.pegawai_id' => 'required|exists:master_pegawai,id',
@@ -254,6 +256,7 @@ class PerjaldinController extends Controller
 
         try {
             DB::beginTransaction();
+            $selectedItem = DipaBudgetOptionService::resolveActiveItem($request->dipa_revision_item_id);
 
             // Hitung total bruto
             $totalBruto = 0;
@@ -264,7 +267,8 @@ class PerjaldinController extends Controller
             }
 
             $tagihan->update([
-                'master_dipa_id' => $request->master_dipa_id,
+                'master_dipa_id' => $selectedItem->dipaRevision->master_dipa_id,
+                'dipa_revision_item_id' => $selectedItem->id,
                 'deskripsi' => $request->deskripsi . ($request->no_bast ? ' | BAST: ' . $request->no_bast : ''),
                 'total_bruto' => $totalBruto,
                 'total_netto' => $totalBruto - $tagihan->total_potongan,

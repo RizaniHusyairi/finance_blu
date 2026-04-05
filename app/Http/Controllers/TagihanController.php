@@ -231,6 +231,13 @@ class TagihanController extends Controller
                 'ip_address' => request()->ip(),
             ]);
 
+            $this->notifyRoles(
+                ['PPK'],
+                'Tagihan Kontrak Baru',
+                "Tagihan {$tagihan->nomor_tagihan} baru diajukan dan menunggu verifikasi Anda.",
+                route('ppk.tagihan.kontrak.verify', $tagihan->id)
+            );
+
             DB::commit();
 
             return redirect()->route('contracts.index')->with('success', 'Tagihan Termin/BAST berhasil diajukan dan sedang menunggu verifikasi.');

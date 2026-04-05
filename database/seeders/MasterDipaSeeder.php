@@ -7,101 +7,125 @@ use App\Models\MasterCoa;
 use App\Models\MasterDipa;
 use App\Models\RiwayatRevisiDipa;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 
 class MasterDipaSeeder extends Seeder
 {
     public function run(): void
     {
-        $coas = [
-            [
-                'kode_mak_lengkap' => '524111.001',
-                'kd_akun' => '524111',
-                'kd_item' => '001',
-                'nama_akun' => 'Belanja Perjalanan Dinas Biasa',
-                'jenis_akun' => 'BELANJA',
-            ],
-            [
-                'kode_mak_lengkap' => '521219.001',
-                'kd_akun' => '521219',
-                'kd_item' => '001',
-                'nama_akun' => 'Belanja Barang Non Operasional Lainnya',
-                'jenis_akun' => 'BELANJA',
-            ],
-            [
-                'kode_mak_lengkap' => '522151.001',
-                'kd_akun' => '522151',
-                'kd_item' => '001',
-                'nama_akun' => 'Belanja Jasa Profesi',
-                'jenis_akun' => 'BELANJA',
-            ],
+        DB::transaction(function () {
+            $coaMap = $this->resolveCoaMap();
+
+            $this->seedDipaWithActiveRevision(
+                nomorDipa: 'DIPA-025.01.2.400001/2025',
+                tahunAnggaran: 2025,
+                tanggalDisahkan: '2025-01-02',
+                totalPagu: 3150000000,
+                keterangan: 'DIPA tahun anggaran 2025 untuk operasional BLU.',
+                revisionDate: '2025-01-02',
+                items: [
+                    ['kode' => 'GA.4645.CBE.001.054.A.537113.00001', 'nilai_pagu' => 850000000, 'status_aktif' => true],
+                    ['kode' => 'GA.4645.CBE.001.054.A.537113.00002', 'nilai_pagu' => 1200000000, 'status_aktif' => true],
+                    ['kode' => 'GA.4646.CAD.001.051.A.537112.00001', 'nilai_pagu' => 600000000, 'status_aktif' => true],
+                    ['kode' => 'GA.4646.CBE.002.052.A.525112.00001', 'nilai_pagu' => 500000000, 'status_aktif' => true],
+                ],
+                coaMap: $coaMap,
+            );
+
+            $this->seedDipaWithActiveRevision(
+                nomorDipa: 'DIPA-025.01.2.400001/2026',
+                tahunAnggaran: 2026,
+                tanggalDisahkan: '2026-01-03',
+                totalPagu: 3825000000,
+                keterangan: 'DIPA tahun anggaran 2026 untuk layanan dan dukungan operasional BLU.',
+                revisionDate: '2026-01-03',
+                items: [
+                    ['kode' => 'WA.4611.EBA.962.052.E.525112.00005', 'nilai_pagu' => 950000000, 'status_aktif' => true],
+                    ['kode' => 'WA.4611.EBA.994.002.N.525111.00001', 'nilai_pagu' => 1450000000, 'status_aktif' => true],
+                    ['kode' => 'WA.4611.EBD.001.056.A.525112.00001', 'nilai_pagu' => 725000000, 'status_aktif' => true],
+                    ['kode' => 'WA.4611.EBD.001.056.B.525112.00002', 'nilai_pagu' => 450000000, 'status_aktif' => true],
+                    ['kode' => 'WA.4613.EBA.960.053.A.525115.00003', 'nilai_pagu' => 250000000, 'status_aktif' => true],
+                ],
+                coaMap: $coaMap,
+            );
+        });
+    }
+
+    private function resolveCoaMap(): array
+    {
+        $requiredCodes = [
+            'GA.4645.CBE.001.054.A.537113.00001',
+            'GA.4645.CBE.001.054.A.537113.00002',
+            'GA.4646.CAD.001.051.A.537112.00001',
+            'GA.4646.CBE.002.052.A.525112.00001',
+            'WA.4611.EBA.962.052.E.525112.00005',
+            'WA.4611.EBA.994.002.N.525111.00001',
+            'WA.4611.EBD.001.056.A.525112.00001',
+            'WA.4611.EBD.001.056.B.525112.00002',
+            'WA.4613.EBA.960.053.A.525115.00003',
         ];
 
-        $coaModels = collect($coas)->map(function (array $coa) {
-            return MasterCoa::updateOrCreate(
-                ['kode_mak_lengkap' => $coa['kode_mak_lengkap']],
-                array_merge([
-                    'kd_program' => 'WA',
-                    'kd_giat' => '001',
-                    'kd_output' => '001',
-                    'kd_suboutput' => '001',
-                    'kd_komponen' => '051',
-                    'kd_subkomponen' => 'A',
-                    'status_aktif' => true,
-                ], $coa)
-            );
-        })->keyBy('kode_mak_lengkap');
+        $coas = MasterCoa::query()
+            ->whereIn('kode_mak_lengkap', $requiredCodes)
+            ->get()
+            ->keyBy('kode_mak_lengkap');
 
+        foreach ($requiredCodes as $code) {
+            if (! $coas->has($code)) {
+                throw new \RuntimeException('COA wajib untuk MasterDipaSeeder tidak ditemukan: ' . $code);
+            }
+        }
+
+        return $coas->map(fn ($coa) => $coa->id)->all();
+    }
+
+    private function seedDipaWithActiveRevision(
+        string $nomorDipa,
+        int $tahunAnggaran,
+        string $tanggalDisahkan,
+        float $totalPagu,
+        string $keterangan,
+        string $revisionDate,
+        array $items,
+        array $coaMap
+    ): void {
         $dipa = MasterDipa::updateOrCreate(
-            ['nomor_dipa' => 'DIPA-018.01.2.123456/2026'],
+            ['nomor_dipa' => $nomorDipa],
             [
-                'tahun_anggaran' => 2026,
-                'tanggal_disahkan' => '2026-01-02',
-                'revisi_aktif_ke' => 1,
+                'tahun_anggaran' => $tahunAnggaran,
+                'tanggal_disahkan' => $tanggalDisahkan,
+                'revisi_aktif_ke' => 0,
                 'status_aktif' => true,
             ]
         );
 
+        RiwayatRevisiDipa::where('master_dipa_id', $dipa->id)->update(['is_active' => false]);
+
         $revision = RiwayatRevisiDipa::updateOrCreate(
             [
                 'master_dipa_id' => $dipa->id,
-                'nomor_revisi' => 1,
+                'nomor_revisi' => 0,
             ],
             [
-                'tanggal_revisi' => '2026-01-15',
-                'total_pagu' => 650000000,
-                'file_dokumen_dipa' => 'seeders/dipa/dipa-2026-revisi-1.pdf',
-                'keterangan' => 'Data awal DIPA revisi aktif untuk pengujian modul tagihan.',
+                'tanggal_revisi' => $revisionDate,
+                'total_pagu' => $totalPagu,
+                'file_dokumen_dipa' => null,
+                'keterangan' => $keterangan,
                 'is_active' => true,
             ]
         );
 
-        $items = [
-            ['kode_mak_lengkap' => '524111.001', 'nilai_pagu' => 150000000],
-            ['kode_mak_lengkap' => '521219.001', 'nilai_pagu' => 200000000],
-            ['kode_mak_lengkap' => '522151.001', 'nilai_pagu' => 300000000],
-        ];
+        $dipa->update(['revisi_aktif_ke' => 0]);
+
+        DetailDipa::where('dipa_revision_id', $revision->id)->delete();
 
         foreach ($items as $item) {
-            $coa = $coaModels->get($item['kode_mak_lengkap']);
-
-            if (! $coa) {
-                continue;
-            }
-
-            DetailDipa::updateOrCreate(
-                [
-                    'dipa_revision_id' => $revision->id,
-                    'coa_id' => $coa->id,
-                ],
-                [
-                    'nilai_pagu' => $item['nilai_pagu'],
-                    'status_aktif' => true,
-                ]
-            );
+            DetailDipa::create([
+                'dipa_revision_id' => $revision->id,
+                'coa_id' => $coaMap[$item['kode']],
+                'nilai_pagu' => $item['nilai_pagu'],
+                'status_aktif' => $item['status_aktif'],
+            ]);
         }
-
-        $revision->update([
-            'total_pagu' => DetailDipa::where('dipa_revision_id', $revision->id)->sum('nilai_pagu'),
-        ]);
     }
 }

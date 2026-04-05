@@ -32,6 +32,7 @@ return new class extends Migration
             $table->string('nomor_tagihan', 100)->unique();
             $table->enum('tipe_tagihan', ['PERJALDIN', 'KONTRAK', 'HONORARIUM']);
             $table->foreignId('master_dipa_id')->constrained('master_dipas')->restrictOnDelete();
+            $table->foreignId('dipa_revision_item_id')->nullable()->constrained('dipa_revision_items')->restrictOnDelete();
             $table->foreignId('pihak_id')->nullable()->constrained('master_pihak')->nullOnDelete();
             $table->text('deskripsi');
             $table->decimal('total_bruto', 18, 2);

@@ -54,7 +54,9 @@
             </li>
             @endhasanyrole
             @hasanyrole('Super Admin|KPA|Operator BLU|Kepala Subbagian Keuangan dan Tata Usaha|Kepala Seksi Pelayanan dan Kerjasama')
-            <li><a href="{{ route('budgets.index') }}"><i class="material-icons-outlined">arrow_right</i>Pagu Anggaran</a>
+            <li><a href="{{ route('dipas.index') }}"><i class="material-icons-outlined">arrow_right</i>DIPA</a>
+            </li>
+            <li><a href="{{ route('coas.index') }}"><i class="material-icons-outlined">arrow_right</i>COA</a>
             </li>
             @endhasanyrole
           </ul>

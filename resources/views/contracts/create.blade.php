@@ -48,15 +48,14 @@
                                 </select>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label fw-bold">Pilih Tahun & Nomor DIPA <span class="text-danger">*</span></label>
-                                <select class="form-select select2" name="master_dipa_id" required>
-                                    <option value="">-- Pilih DIPA --</option>
-                                    @foreach($dipas as $dipa)
-                                        <option value="{{ $dipa->id }}" {{ old('master_dipa_id') == $dipa->id ? 'selected' : '' }}>
-                                            Tahun {{ $dipa->tahun_anggaran }} - {{ $dipa->nomor_dipa }} (Pagu: Rp {{ number_format($dipa->total_pagu, 0, ',', '.') }})
-                                        </option>
-                                    @endforeach
-                                </select>
+                                @include('partials.dipa-item-grouped-select', [
+                                    'budgetGroups' => $budgetGroups,
+                                    'fieldName' => 'dipa_revision_item_id',
+                                    'fieldId' => 'dipa_revision_item_id',
+                                    'fieldClass' => 'form-select select2',
+                                    'fieldLabel' => 'Pilih Item Anggaran (COA)',
+                                    'placeholder' => '-- Cari Item Anggaran DIPA Aktif --',
+                                ])
                             </div>
                             <div class="col-12">
                                 <label class="form-label fw-bold">Nama Pekerjaan <span class="text-danger">*</span></label>
@@ -76,44 +75,102 @@
                     <div class="card-body p-4">
                         <div class="row g-4">
                             <div class="col-md-6">
-                                <label class="form-label fw-bold">Nomor SPK (Surat Perintah Kerja) <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" name="nomor_spk" value="{{ old('nomor_spk') }}" required>
+                                <label class="form-label fw-bold">Nomor SPK (Surat Perintah Kerja)</label>
+                                <input type="text" class="form-control bg-light fw-semibold" value="{{ $nomorSpkPreview }}" readonly>
+                                <small class="text-muted d-block mt-1">Preview nomor SPK otomatis. Nomor final akan digenerate ulang saat kontrak disimpan.</small>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-bold">Tanggal SPK <span class="text-danger">*</span></label>
                                 <input type="date" class="form-control" name="tanggal_spk" value="{{ old('tanggal_spk') }}" required>
                             </div>
-
-                            <div class="col-md-3">
-                                <label class="form-label fw-bold">Tanggal Mulai Pekerjaan <span class="text-danger">*</span></label>
-                                <input type="date" class="form-control" id="tanggal_mulai" name="tanggal_mulai" value="{{ old('tanggal_mulai') }}" required onchange="hitungTanggalSelesai()">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Nomor SPMK</label>
+                                <input type="text" class="form-control bg-light fw-semibold" value="{{ $nomorSpmkPreview }}" readonly>
+                                <small class="text-muted d-block mt-1">Preview nomor SPMK otomatis. Nomor final akan digenerate ulang saat kontrak disimpan.</small>
                             </div>
-                            <div class="col-md-3">
-                                <label class="form-label fw-bold">Satuan Waktu <span class="text-danger">*</span></label>
-                                <select class="form-select" id="satuan_waktu" name="satuan_waktu" required onchange="hitungTanggalSelesai()">
-                                    <option value="HARI" {{ old('satuan_waktu') == 'HARI' ? 'selected' : '' }}>Hari</option>
-                                    <option value="MINGGU" {{ old('satuan_waktu') == 'MINGGU' ? 'selected' : '' }}>Minggu</option>
-                                    <option value="BULAN" {{ old('satuan_waktu') == 'BULAN' ? 'selected' : '' }}>Bulan</option>
-                                </select>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Tanggal SPMK <span class="text-danger">*</span></label>
+                                <input type="date" class="form-control" name="tanggal_spmk" value="{{ old('tanggal_spmk') }}" required>
                             </div>
-                            <div class="col-md-3">
-                                <label class="form-label fw-bold">Jangka Waktu <span class="text-danger">*</span></label>
-                                <input type="number" class="form-control" id="jangka_waktu" name="jangka_waktu" value="{{ old('jangka_waktu') }}" min="1" required oninput="hitungTanggalSelesai()">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Nomor Surat Undangan Pengadaan Langsung <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" name="nomor_surat_undangan_pengadaan" value="{{ old('nomor_surat_undangan_pengadaan') }}" placeholder="Contoh: B/123/PL.04.01/2026" required>
                             </div>
-                            <div class="col-md-3">
-                                <label class="form-label fw-bold">Tanggal Selesai Pekerjaan <span class="text-danger">*</span></label>
-                                <input type="date" class="form-control bg-light" id="tanggal_selesai" name="tanggal_selesai" value="{{ old('tanggal_selesai') }}" readonly required>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Nomor Berita Acara Hasil Pengadaan Langsung <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" name="nomor_ba_hasil_pengadaan" value="{{ old('nomor_ba_hasil_pengadaan') }}" placeholder="Contoh: BA/045/PL/2026" required>
+                            </div>
+                            <div class="col-md-12 row mt-2">
+                                <div class="col-md-3">
+                                    <label class="form-label fw-bold">Tanggal Mulai Pekerjaan <span class="text-danger">*</span></label>
+                                    <input type="date" class="form-control" id="tanggal_mulai" name="tanggal_mulai" value="{{ old('tanggal_mulai') }}" required onchange="hitungTanggalSelesai()">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-bold">Satuan Waktu <span class="text-danger">*</span></label>
+                                    <select class="form-select" id="satuan_waktu" name="satuan_waktu" required onchange="hitungTanggalSelesai()">
+                                        <option value="HARI" {{ old('satuan_waktu') == 'HARI' ? 'selected' : '' }}>Hari</option>
+                                        <option value="MINGGU" {{ old('satuan_waktu') == 'MINGGU' ? 'selected' : '' }}>Minggu</option>
+                                        <option value="BULAN" {{ old('satuan_waktu') == 'BULAN' ? 'selected' : '' }}>Bulan</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-bold">Jangka Waktu <span class="text-danger">*</span></label>
+                                    <input type="number" class="form-control" id="jangka_waktu" name="jangka_waktu" value="{{ old('jangka_waktu') }}" min="1" required oninput="hitungTanggalSelesai()">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-bold">Tanggal Selesai Pekerjaan <span class="text-danger">*</span></label>
+                                    <input type="date" class="form-control bg-light" id="tanggal_selesai" name="tanggal_selesai" value="{{ old('tanggal_selesai') }}" readonly required>
+                                </div>
+                            
+                            </div>
+                            <div class="col-md-12">
+                                <label class="form-label fw-bold">Ketentuan Denda</label>
+                                <textarea class="form-control" rows="2" name="ketentuan_denda" placeholder="Contoh: Denda keterlambatan dikenakan 1/1000 dari nilai kontrak per hari kalender.">{{ old('ketentuan_denda') }}</textarea>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            {{-- Bagian 3: Nilai & Skema Pembayaran --}}
+            
+
+            {{-- Bagian 4: Waktu Pemeliharaan --}}
+            <div class="col-12 mb-4">
+                <div class="card shadow-sm border-0 rounded-4 h-100">
+                    <div class="card-header bg-warning text-dark py-3 rounded-top-4">
+                        <h6 class="mb-0 fw-bold"><i class="bi bi-tools me-2"></i>3. Waktu Pemeliharaan</h6>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="row g-4 align-items-end">
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold">Tanggal Mulai Pemeliharaan <span class="text-danger">*</span></label>
+                                <input type="date" class="form-control" id="tanggal_mulai_pemeliharaan" name="tanggal_mulai_pemeliharaan" value="{{ old('tanggal_mulai_pemeliharaan') }}" required onchange="hitungTanggalSelesaiPemeliharaan()">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold">Masa Pemeliharaan (hari kalender) <span class="text-danger">*</span></label>
+                                <input type="number" class="form-control" id="masa_pemeliharaan_hari" name="masa_pemeliharaan_hari" value="{{ old('masa_pemeliharaan_hari', 0) }}" min="0" placeholder="Contoh: 180" required oninput="hitungTanggalSelesaiPemeliharaan()">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold">Tanggal Selesai Pemeliharaan <span class="text-danger">*</span></label>
+                                <input type="date" class="form-control bg-light" id="tanggal_selesai_pemeliharaan" name="tanggal_selesai_pemeliharaan" value="{{ old('tanggal_selesai_pemeliharaan') }}" readonly required>
+                            </div>
+                            <div class="col-12">
+                                <div class="alert alert-warning border-0 mb-0">
+                                    <small class="mb-0 d-block">
+                                        Tanggal selesai pemeliharaan akan dihitung otomatis berdasarkan tanggal mulai pemeliharaan dan masa pemeliharaan yang diinput.
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Bagian 5: Nilai & Skema Pembayaran --}}
             <div class="col-12 mb-4">
                 <div class="card shadow-sm border-0 rounded-4 h-100">
                     <div class="card-header bg-success text-white py-3 rounded-top-4">
-                        <h6 class="mb-0 fw-bold"><i class="bi bi-cash-stack me-2"></i>3. Nilai & Skema Pembayaran</h6>
+                        <h6 class="mb-0 fw-bold"><i class="bi bi-cash-stack me-2"></i>4. Nilai & Skema Pembayaran</h6>
                     </div>
                     <div class="card-body p-4">
                         <div class="row g-4 align-items-center">
@@ -134,7 +191,7 @@
                                 </div>
                             </div>
                             
-                            <div class="col-12 mt-4 pt-3 border-top">
+                            <div class="col-12 mt-4 pt-3 border-top" id="wrapper_toggle_uang_muka">
                                 <div class="form-check form-switch mb-3">
                                     <input class="form-check-input" type="checkbox" id="ada_uang_muka" name="ada_uang_muka" value="1" {{ old('ada_uang_muka') ? 'checked' : '' }} onchange="toggleUangMuka()">
                                     <label class="form-check-label fw-bold" for="ada_uang_muka">Kontrak ini menerapkan Uang Muka (DP)?</label>
@@ -147,6 +204,11 @@
                                     <input type="hidden" name="nilai_uang_muka" id="nilai_uang_muka_value" value="{{ old('nilai_uang_muka', 0) }}">
                                     <small class="text-danger mt-1 d-none" id="uang_muka_error">Peringatan: Nilai Uang Muka terindikasi melebihi batas batas wajar (30%) dari Total Kontrak!</small>
                                 </div>
+                                <div class="col-md-6" id="wrapper_file_jaminan_um" style="display: none;">
+                                    <label class="form-label fw-bold">Jaminan Uang Muka <small class="">(PDF)</small></label>
+                                    <input type="file" class="form-control" name="file_jaminan_um" id="file_jaminan_um" accept=".pdf">
+                                    <small class="text-muted d-block mt-1">Unggah dokumen jaminan uang muka bersamaan dengan pengisian nilai uang muka.</small>
+                                </div>
 
                                 {{-- SKEMA TERMIN DINAMIS --}}
                                 <div class="col-12 mt-4" id="wrapper_termin" style="display: none;">
@@ -154,7 +216,7 @@
                                         <div class="d-flex justify-content-between align-items-center mb-3">
                                             <div>
                                                 <h6 class="fw-bold mb-1 text-primary"><i class="bi bi-list-columns-reverse me-2"></i>Rincian Termin Progress</h6>
-                                                <small class="text-muted">Jenis termin dibentuk otomatis oleh sistem: semua baris di bawah adalah progress, lalu sistem akan menambahkan 1 pelunasan dan 1 retensi.</small>
+                                                <small class="text-muted">Jenis termin dibentuk otomatis oleh sistem: semua baris di bawah adalah progress, lalu sistem akan menambahkan 1 pelunasan dan retensi hanya jika diaktifkan.</small>
                                             </div>
                                             <button type="button" class="btn btn-sm btn-outline-primary" id="btnTambahTermin" onclick="tambahRowProgress()">
                                                 <i class="bi bi-plus-circle me-1"></i> Tambah Progress
@@ -167,7 +229,8 @@
                                                         <th class="text-center" width="5%">Ke</th>
                                                         <th width="40%">Keterangan Progress</th>
                                                         <th class="text-center" width="15%">Persentase (%)</th>
-                                                        <th width="25%">Nilai Bruto (Rp)</th>
+                                                        <th width="20%">Nilai Bruto (Rp)</th>
+                                                        <th width="20%">Preview Angsuran UM (Rp)</th>
                                                         <th class="text-center" width="5%">Aksi</th>
                                                     </tr>
                                                 </thead>
@@ -187,6 +250,9 @@
                                                             <td>
                                                                 <input type="text" class="form-control bg-light termin-nilai-display fw-bold text-success" placeholder="Rp 0" readonly>
                                                             </td>
+                                                            <td>
+                                                                <input type="text" class="form-control bg-light termin-potongan-um-display fw-bold text-warning" placeholder="Rp 0" readonly>
+                                                            </td>
                                                             <td class="text-center align-middle">
                                                                 <button type="button" class="btn btn-sm btn-outline-danger btn-hapus-termin" onclick="hapusRowProgress(this)" {{ $progressRowCount === 1 ? 'disabled' : '' }}><i class="bi bi-trash"></i></button>
                                                             </td>
@@ -196,6 +262,14 @@
                                             </table>
                                         </div>
                                         <div class="row g-3 mt-1">
+                                            <div class="col-12" id="wrapper_toggle_retensi">
+                                                <div class="form-check form-switch">
+                                                    <input class="form-check-input" type="checkbox" id="gunakan_retensi" name="gunakan_retensi" value="1" {{ old('gunakan_retensi', '1') ? 'checked' : '' }} onchange="toggleRetensiFields()">
+                                                    <label class="form-check-label fw-bold" for="gunakan_retensi">Kontrak ini menggunakan retensi?</label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="row g-3 mt-1" id="wrapper_retensi_fields">
                                             <div class="col-lg-4">
                                                 <label class="form-label fw-bold">Keterangan Retensi <span class="text-danger">*</span></label>
                                                 <input type="text" class="form-control" id="retensi_keterangan" name="retensi_keterangan" value="{{ old('retensi_keterangan', 'Retensi') }}" placeholder="Contoh: Retensi masa pemeliharaan">
@@ -230,13 +304,36 @@
                                                             <td class="text-center"><span id="pelunasan_persen_display">0%</span></td>
                                                             <td class="text-end fw-bold text-success" id="pelunasan_nilai_display">Rp 0</td>
                                                         </tr>
-                                                        <tr>
+                                                        <tr id="retensi_preview_row">
                                                             <td class="fw-semibold text-danger">Retensi</td>
                                                             <td class="text-center"><span id="retensi_persen_display">0%</span></td>
                                                             <td class="text-end fw-bold text-danger" id="retensi_preview_display">Rp 0</td>
                                                         </tr>
                                                     </tbody>
                                                 </table>
+                                            </div>
+                                        </div>
+                                        <div class="border rounded-4 bg-warning bg-opacity-10 p-3 mt-4 d-none" id="wrapper_preview_angsuran_um">
+                                            <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
+                                                <div>
+                                                    <h6 class="fw-bold text-dark mb-1">Preview Estimasi Potongan Angsuran Uang Muka</h6>
+                                                    <small class="text-muted">Informasi ini hanya preview estimasi. Nilai final akan dihitung saat penagihan termin dibuat.</small>
+                                                </div>
+                                                <span class="badge bg-warning-subtle text-dark border">Preview Estimasi</span>
+                                            </div>
+                                            <div class="row g-3 mt-1">
+                                                <div class="col-md-4">
+                                                    <div class="small text-muted">Rasio Uang Muka</div>
+                                                    <div class="fw-bold fs-5" id="rasio_uang_muka_display">0%</div>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <div class="small text-muted">Total Estimasi Potongan pada Progress</div>
+                                                    <div class="fw-bold fs-5 text-warning" id="total_estimasi_um_progress_display">Rp 0</div>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <div class="small text-muted">Sisa Estimasi yang Tertutup di Pelunasan</div>
+                                                    <div class="fw-bold fs-5 text-success" id="sisa_estimasi_um_pelunasan_display">Rp 0</div>
+                                                </div>
                                             </div>
                                         </div>
                                         <div class="d-flex justify-content-between px-2 pt-3 border-top mt-3">
@@ -251,38 +348,43 @@
                 </div>
             </div>
 
-            {{-- Bagian 4: Unggah Dokumen Perikatan --}}
+            {{-- Bagian 3: Penandatangan Kontrak --}}
             <div class="col-12 mb-4">
                 <div class="card shadow-sm border-0 rounded-4 h-100">
                     <div class="card-header bg-secondary text-white py-3 rounded-top-4">
-                        <h6 class="mb-0 fw-bold"><i class="bi bi-paperclip me-2"></i>4. Unggah Dokumen (.PDF)</h6>
+                        <h6 class="mb-0 fw-bold"><i class="bi bi-person-badge me-2"></i>5. Penandatangan Kontrak</h6>
                     </div>
                     <div class="card-body p-4">
-                        <div class="alert alert-light border shadow-sm mb-4">
-                            <i class="bi bi-info-circle-fill text-primary me-2"></i>Format didukung hanya <strong>.PDF</strong> dengan ukuran maksimal <strong>5 MB</strong> per file.
-                        </div>
                         <div class="row g-4">
-                            <div class="col-md-4">
-                                <label class="form-label fw-bold">Dokumen SPK <small class="">(Opsional saat ini)</small></label>
-                                <input type="file" class="form-control" name="file_spk" accept=".pdf">
+                            <div class="col-md-8">
+                                <label class="form-label fw-bold">Pilih PPK <span class="text-danger">*</span></label>
+                                <select class="form-select select2" id="ppk_user_id" name="ppk_user_id" required>
+                                    <option value="">-- Cari PPK --</option>
+                                    @foreach($ppkUsers as $ppkUser)
+                                        <option
+                                            value="{{ $ppkUser->id }}"
+                                            data-nama="{{ $ppkUser->pegawai->nama_lengkap ?? $ppkUser->name }}"
+                                            data-nip="{{ $ppkUser->pegawai->nip ?? '' }}"
+                                            {{ old('ppk_user_id') == $ppkUser->id ? 'selected' : '' }}
+                                        >
+                                            {{ $ppkUser->pegawai->nama_lengkap ?? $ppkUser->name }} - {{ $ppkUser->pegawai->nip ?? 'NIP belum diisi' }}
+                                        </option>
+                                    @endforeach
+                                </select>
                             </div>
-                            <div class="col-md-4">
-                                <label class="form-label fw-bold">Dokumen SPMK <small class="">(Opsional)</small></label>
-                                <input type="file" class="form-control" name="file_spmk" accept=".pdf">
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label fw-bold">Ringkasan Kontrak <small class="">(Opsional)</small></label>
-                                <input type="file" class="form-control" name="file_ringkasan_kontrak" accept=".pdf">
-                            </div>
-                            <div class="col-md-4" id="wrapper_file_jaminan_um" style="display: none;">
-                                <label class="form-label fw-bold">Jaminan Uang Muka <small class="">(PDF)</small></label>
-                                <input type="file" class="form-control" name="file_jaminan_um" id="file_jaminan_um" accept=".pdf">
-                                <small class="text-muted d-block mt-1">Field ini hanya tampil jika kontrak menggunakan uang muka.</small>
+                            <div class="col-12">
+                                <div class="alert alert-secondary border-0 mb-0">
+                                    <small class="mb-0 d-block">
+                                        PPK yang dipilih akan menjadi penandatangan dokumen kontrak sekaligus verifikator kontrak saat dokumen diajukan.
+                                    </small>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
+
+            
 
             {{-- Tombol Aksi --}}
             <div class="col-12 mb-5">
@@ -361,12 +463,24 @@
     }
 
     function toggleUangMuka() {
+        let metodeDipilih = document.querySelector('input[name="metode_pembayaran"]:checked')?.value;
+        let wrapperToggle = document.getElementById('wrapper_toggle_uang_muka');
+        let checkbox = document.getElementById('ada_uang_muka');
         let isChecked = document.getElementById('ada_uang_muka').checked;
         let wrapper = document.getElementById('wrapper_uang_muka');
         let wrapperFileJaminan = document.getElementById('wrapper_file_jaminan_um');
+        let wrapperPreview = document.getElementById('wrapper_preview_angsuran_um');
         let inputDisplay = document.getElementById('nilai_uang_muka_display');
         let inputValue = document.getElementById('nilai_uang_muka_value');
         let inputFileJaminan = document.getElementById('file_jaminan_um');
+
+        if (metodeDipilih !== 'TERMIN') {
+            wrapperToggle.style.display = 'none';
+            checkbox.checked = false;
+            isChecked = false;
+        } else {
+            wrapperToggle.style.display = 'block';
+        }
 
         if (isChecked) {
             wrapper.style.display = 'block';
@@ -379,8 +493,10 @@
             inputDisplay.value = '';
             inputValue.value = 0;
             inputFileJaminan.value = '';
+            wrapperPreview.classList.add('d-none');
             document.getElementById('uang_muka_error').classList.add('d-none');
         }
+        kalkulasiTotalTermin();
     }
 
     function validasiUangMuka() {
@@ -421,6 +537,23 @@
         }
     }
 
+    function hitungTanggalSelesaiPemeliharaan() {
+        let tglMulai = document.getElementById('tanggal_mulai_pemeliharaan').value;
+        let lamaHari = parseInt(document.getElementById('masa_pemeliharaan_hari').value);
+
+        if (tglMulai && !isNaN(lamaHari) && lamaHari >= 0) {
+            let nDate = new Date(tglMulai);
+            nDate.setDate(nDate.getDate() + lamaHari);
+
+            let dd = String(nDate.getDate()).padStart(2, '0');
+            let mm = String(nDate.getMonth() + 1).padStart(2, '0');
+            let yyyy = nDate.getFullYear();
+            document.getElementById('tanggal_selesai_pemeliharaan').value = yyyy + '-' + mm + '-' + dd;
+        } else {
+            document.getElementById('tanggal_selesai_pemeliharaan').value = '';
+        }
+    }
+
     // --- LOGIKA SKEMA TERMIN DINAMIS ---
     document.querySelectorAll('input[name="metode_pembayaran"]').forEach(radio => {
         radio.addEventListener('change', toggleTerminWrapper);
@@ -452,7 +585,34 @@
             input.required = isTermin;
         });
 
+        toggleUangMuka();
+        toggleRetensiFields();
         kalkulasiTotalTermin();
+    }
+
+    function toggleRetensiFields() {
+        let isTermin = document.querySelector('input[name="metode_pembayaran"]:checked').value === 'TERMIN';
+        let gunakanRetensi = document.getElementById('gunakan_retensi').checked;
+        let wrapperToggleRetensi = document.getElementById('wrapper_toggle_retensi');
+        let wrapperRetensiFields = document.getElementById('wrapper_retensi_fields');
+        let retensiInput = document.getElementById('retensi_persentase');
+        let retensiKeterangan = document.getElementById('retensi_keterangan');
+        let retensiPreviewRow = document.getElementById('retensi_preview_row');
+
+        wrapperToggleRetensi.style.display = isTermin ? 'block' : 'none';
+
+        if (isTermin && gunakanRetensi) {
+            wrapperRetensiFields.style.display = 'flex';
+            retensiInput.required = true;
+            retensiKeterangan.required = true;
+            retensiPreviewRow.classList.remove('d-none');
+        } else {
+            wrapperRetensiFields.style.display = 'none';
+            retensiInput.required = false;
+            retensiKeterangan.required = false;
+            retensiInput.value = '';
+            retensiPreviewRow.classList.add('d-none');
+        }
     }
 
     function tambahRowProgress() {
@@ -474,6 +634,9 @@
             </td>
             <td>
                 <input type="text" class="form-control bg-light termin-nilai-display fw-bold text-success" placeholder="Rp 0" readonly>
+            </td>
+            <td>
+                <input type="text" class="form-control bg-light termin-potongan-um-display fw-bold text-warning" placeholder="Rp 0" readonly>
             </td>
             <td class="text-center align-middle">
                 <button type="button" class="btn btn-sm btn-outline-danger btn-hapus-termin" onclick="hapusRowProgress(this)"><i class="bi bi-trash"></i></button>
@@ -498,6 +661,7 @@
 
     function kalkulasiTotalTermin() {
         let methodIsTermin = document.querySelector('input[name="metode_pembayaran"]:checked').value === 'TERMIN';
+        let gunakanRetensi = document.getElementById('gunakan_retensi').checked;
         if (!methodIsTermin) {
             document.getElementById('total_persen_display').innerText = '0%';
             document.getElementById('total_nilai_termin_display').innerText = 'Rp 0';
@@ -506,31 +670,47 @@
             document.getElementById('retensi_persen_display').innerText = '0%';
             document.getElementById('retensi_preview_display').innerText = 'Rp 0';
             document.getElementById('retensi_nilai_display').value = '';
+            document.querySelectorAll('.termin-potongan-um-display').forEach(input => input.value = '');
+            document.getElementById('wrapper_preview_angsuran_um').classList.add('d-none');
+            document.getElementById('rasio_uang_muka_display').innerText = '0%';
+            document.getElementById('total_estimasi_um_progress_display').innerText = 'Rp 0';
+            document.getElementById('sisa_estimasi_um_pelunasan_display').innerText = 'Rp 0';
             return;
         }
 
         let totalKontrakStr = document.getElementById('nilai_total_kontrak_value').value || 0;
         let totalKontrak = parseFloat(totalKontrakStr);
+        let nilaiUangMuka = parseFloat(document.getElementById('nilai_uang_muka_value').value || 0);
+        let rasioUangMuka = totalKontrak > 0 ? (nilaiUangMuka / totalKontrak) : 0;
+        let shouldShowPreviewUm = methodIsTermin && document.getElementById('ada_uang_muka').checked && nilaiUangMuka > 0;
         let totalProgressPersen = 0;
         let totalProgressNilai = 0;
+        let totalEstimasiPotonganUmProgress = 0;
         let rows = document.querySelectorAll('.termin-row');
 
         rows.forEach(row => {
             let persenInput = row.querySelector('.termin-persen');
             let dispVal = row.querySelector('.termin-nilai-display');
+            let dispPotonganUm = row.querySelector('.termin-potongan-um-display');
             let p = parseFloat(persenInput.value) || 0;
             let n = totalKontrak > 0 && p > 0 ? ((p / 100) * totalKontrak) : 0;
+            let estimasiPotongan = shouldShowPreviewUm ? (n * rasioUangMuka) : 0;
 
             dispVal.value = formatRupiah(Math.round(n).toString(), 'Rp ');
+            dispPotonganUm.value = shouldShowPreviewUm ? formatRupiah(Math.round(estimasiPotongan).toString(), 'Rp ') : '';
             totalProgressPersen += p;
             totalProgressNilai += n;
+            totalEstimasiPotonganUmProgress += estimasiPotongan;
         });
 
-        let retensiPersen = parseFloat(document.getElementById('retensi_persentase').value) || 0;
+        let retensiPersen = gunakanRetensi ? (parseFloat(document.getElementById('retensi_persentase').value) || 0) : 0;
         let retensiNilai = totalKontrak > 0 && retensiPersen > 0 ? ((retensiPersen / 100) * totalKontrak) : 0;
         let pelunasanPersen = 100 - totalProgressPersen - retensiPersen;
         let pelunasanNilai = totalKontrak > 0 ? ((pelunasanPersen / 100) * totalKontrak) : 0;
         let totalPersen = totalProgressPersen + retensiPersen;
+        document.getElementById('termin_peringatan').innerHTML = gunakanRetensi
+            ? 'Total Progress + Retensi: <strong id="total_persen_display">' + totalPersen + '%</strong>'
+            : 'Total Progress: <strong id="total_persen_display">' + totalPersen + '%</strong>';
 
         let dispPersen = document.getElementById('total_persen_display');
         dispPersen.innerText = totalPersen + '%';
@@ -543,19 +723,43 @@
         }
 
         document.getElementById('total_nilai_termin_display').innerText = formatRupiah(Math.round(totalProgressNilai).toString(), 'Rp ');
-        document.getElementById('retensi_nilai_display').value = formatRupiah(Math.round(retensiNilai).toString(), 'Rp ');
-        document.getElementById('retensi_persen_display').innerText = retensiPersen + '%';
-        document.getElementById('retensi_preview_display').innerText = formatRupiah(Math.round(retensiNilai).toString(), 'Rp ');
+        document.getElementById('retensi_nilai_display').value = gunakanRetensi ? formatRupiah(Math.round(retensiNilai).toString(), 'Rp ') : '';
+        document.getElementById('retensi_persen_display').innerText = gunakanRetensi ? (retensiPersen + '%') : '0%';
+        document.getElementById('retensi_preview_display').innerText = gunakanRetensi ? formatRupiah(Math.round(retensiNilai).toString(), 'Rp ') : 'Rp 0';
         document.getElementById('pelunasan_persen_display').innerText = pelunasanPersen.toFixed(4).replace(/\.?0+$/, '') + '%';
         document.getElementById('pelunasan_nilai_display').innerText = formatRupiah(Math.round(Math.max(pelunasanNilai, 0)).toString(), 'Rp ');
+
+        let wrapperPreview = document.getElementById('wrapper_preview_angsuran_um');
+        let sisaEstimasiPelunasan = Math.max(nilaiUangMuka - totalEstimasiPotonganUmProgress, 0);
+
+        if (shouldShowPreviewUm) {
+            wrapperPreview.classList.remove('d-none');
+            document.getElementById('rasio_uang_muka_display').innerText = (rasioUangMuka * 100).toFixed(2).replace(/\.?0+$/, '') + '%';
+            document.getElementById('total_estimasi_um_progress_display').innerText = formatRupiah(Math.round(totalEstimasiPotonganUmProgress).toString(), 'Rp ');
+            document.getElementById('sisa_estimasi_um_pelunasan_display').innerText = formatRupiah(Math.round(sisaEstimasiPelunasan).toString(), 'Rp ');
+        } else {
+            wrapperPreview.classList.add('d-none');
+            document.getElementById('rasio_uang_muka_display').innerText = '0%';
+            document.getElementById('total_estimasi_um_progress_display').innerText = 'Rp 0';
+            document.getElementById('sisa_estimasi_um_pelunasan_display').innerText = 'Rp 0';
+        }
     }
 
     document.getElementById('nilai_total_kontrak_display').addEventListener('keyup', function() {
         kalkulasiTotalTermin();
     });
+    document.getElementById('nilai_uang_muka_display').addEventListener('keyup', function() {
+        kalkulasiTotalTermin();
+    });
+    document.getElementById('gunakan_retensi').addEventListener('change', function() {
+        toggleRetensiFields();
+        kalkulasiTotalTermin();
+    });
 
     toggleTerminWrapper();
+    toggleRetensiFields();
     updateNomorTermin();
+    hitungTanggalSelesaiPemeliharaan();
     kalkulasiTotalTermin();
 </script>
 @endpush

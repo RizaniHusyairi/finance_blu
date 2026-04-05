@@ -47,23 +47,11 @@
                 
                 {{-- TAB 1: KONTRAK UTAMA --}}
                 <div class="tab-pane fade show active" id="kontrak" role="tabpanel" aria-labelledby="kontrak-tab">
-                    
-                    <form action="{{ route('contracts.submit_bulk') }}" method="POST" id="formBulkSubmit">
-                        @csrf
-                        <div class="d-flex justify-content-end mb-3">
-                            <button type="submit" class="btn btn-warning fw-bold shadow-sm" id="btnAjukanBulk" disabled>
-                                <i class="bi bi-send-check me-1"></i> Ajukan yang Dipilih ke PPK
-                            </button>
-                        </div>
-
-                        <div class="table-responsive">
-                            <table id="tableKontrak" class="table table-hover align-middle w-100">
-                                <thead>
-                                    <tr>
-                                        <th width="5%" class="text-center">
-                                            <input class="form-check-input" type="checkbox" id="checkAll">
-                                        </th>
-                                        <th width="5%" class="text-center">No</th>
+                    <div class="table-responsive">
+                        <table id="tableKontrak" class="table table-hover align-middle w-100">
+                            <thead>
+                                <tr>
+                                    <th width="5%" class="text-center">No</th>
                                     <th width="30%">Nomor SPK & Pekerjaan</th>
                                     <th width="15%">Vendor</th>
                                     <th width="20%">Nilai & Timeline</th>
@@ -74,11 +62,6 @@
                             <tbody>
                                 @foreach($contracts as $kontrak)
                                     <tr>
-                                        <td class="text-center">
-                                            @if(in_array($kontrak->status_kontrak, ['DRAFT', 'REVISI']))
-                                                <input class="form-check-input checkItem" type="checkbox" name="contract_ids[]" value="{{ $kontrak->id }}">
-                                            @endif
-                                        </td>
                                         <td class="text-center">{{ $loop->iteration }}</td>
                                         <td>
                                             <span class="fw-bold">{{ $kontrak->nomor_spk }}</span><br>
@@ -123,7 +106,6 @@
                             </tbody>
                         </table>
                     </div>
-                </form>
                 </div>
 
                 {{-- TAB 2: ADDENDUM --}}
@@ -242,60 +224,6 @@
             // Adjust column sizings on tab show, standard fix for DataTables inside un-active bootstrap tabs
             $('button[data-bs-toggle="tab"]').on('shown.bs.tab', function (e) {
                 $.fn.dataTable.tables({ visible: true, api: true }).columns.adjust();
-            });
-
-            // --- PERBAIKAN BUG DATATABLES PAGINATION FORM SUBMIT ---
-            
-            // 1. Check All listener using DataTables API
-            $('#checkAll').on('change', function() {
-                let rows = tableKontrak.rows({ 'search': 'applied' }).nodes();
-                $('input.checkItem', rows).prop('checked', this.checked);
-                toggleSubmitBtn();
-            });
-
-            // 2. Individual check listener using event delegation on tbody (for pages out of sight)
-            $('#tableKontrak tbody').on('change', '.checkItem', function() {
-                if (!this.checked) {
-                    $('#checkAll').prop('checked', false);
-                }
-                toggleSubmitBtn();
-            });
-
-            function toggleSubmitBtn() {
-                let checkedCount = tableKontrak.$('input.checkItem:checked').length;
-                if (checkedCount > 0) {
-                    $('#btnAjukanBulk').removeAttr('disabled');
-                } else {
-                    $('#btnAjukanBulk').attr('disabled', 'disabled');
-                }
-            }
-
-            // 3. Form Submit handling to gather ALL checked inputs across all pages
-            $('#formBulkSubmit').on('submit', function(e) {
-                e.preventDefault();
-                
-                let checkedInputs = tableKontrak.$('input.checkItem:checked');
-                
-                if (checkedInputs.length === 0) {
-                    alert('Tidak ada kontrak yang dipilih!');
-                    return false;
-                }
-
-                // Hapus hidden inputs sebelumnya agar tidak ganda
-                $('.dynamic-hidden-ids').remove();
-
-                // Append hidden inputs ke form untuk di-submit
-                checkedInputs.each(function() {
-                    $('#formBulkSubmit').append(
-                        $('<input>')
-                            .attr('type', 'hidden')
-                            .attr('name', 'contract_ids[]')
-                            .addClass('dynamic-hidden-ids')
-                            .val($(this).val())
-                    );
-                });
-
-                this.submit();
             });
         });
     </script>

@@ -8,10 +8,11 @@ use Illuminate\Support\Facades\Auth;
 use App\Models\Tagihan;
 use App\Models\DetailHonorarium;
 use App\Models\MasterPersonelEksternal;
-use App\Models\MasterDipa;
 use App\Models\LogStatusDokumen;
 use App\Models\User;
 use Illuminate\Support\Facades\Notification;
+use App\Support\DipaBudgetOptionService;
+use App\Notifications\WorkflowNotification;
 
 class HonorariumController extends Controller
 {
@@ -54,10 +55,10 @@ class HonorariumController extends Controller
 
     public function create()
     {
-        $dipas = MasterDipa::orderByDesc('tahun_anggaran')->get();
+        $budgetGroups = DipaBudgetOptionService::groupedOptions();
         $nextNumber = $this->generateNextNumber();
 
-        return view('honorarium.create', compact('dipas', 'nextNumber'));
+        return view('honorarium.create', compact('budgetGroups', 'nextNumber'));
     }
 
     public function store(Request $request)
@@ -75,7 +76,7 @@ class HonorariumController extends Controller
 
         $request->validate([
             'deskripsi' => 'required|string|max:255',
-            'master_dipa_id' => 'required|exists:master_dipas,id',
+            'dipa_revision_item_id' => 'required|exists:dipa_revision_items,id',
             'submit_type' => 'required|in:draft,submit_ppk',
             'items' => 'required|array|min:1',
             'items.*.nama_personel' => 'required|string|max:255',
@@ -91,6 +92,7 @@ class HonorariumController extends Controller
 
         try {
             DB::beginTransaction();
+            $selectedItem = DipaBudgetOptionService::resolveActiveItem($request->dipa_revision_item_id);
 
             $totalBruto = collect($request->items)->sum(fn($i) => (float)($i['nilai_honor'] ?? 0));
             $totalPph = collect($request->items)->sum(fn($i) => (float)($i['pph'] ?? 0));
@@ -105,7 +107,8 @@ class HonorariumController extends Controller
             $tagihan = Tagihan::create([
                 'nomor_tagihan' => $nomorTagihan,
                 'tipe_tagihan' => 'HONORARIUM',
-                'master_dipa_id' => $request->master_dipa_id,
+                'master_dipa_id' => $selectedItem->dipaRevision->master_dipa_id,
+                'dipa_revision_item_id' => $selectedItem->id,
                 'deskripsi' => $request->deskripsi,
                 'total_bruto' => $totalBruto,
                 'total_potongan' => $totalPph,
@@ -143,6 +146,15 @@ class HonorariumController extends Controller
                 'ip_address' => $request->ip(),
             ]);
 
+            if ($status === 'PENDING_PPK') {
+                $this->notifyRoles(
+                    ['PPK'],
+                    'Tagihan Honorarium Baru',
+                    "Tagihan {$tagihan->nomor_tagihan} baru diajukan dan menunggu verifikasi Anda.",
+                    route('ppk.tagihan.honorarium.verify', $tagihan->id)
+                );
+            }
+
             DB::commit();
             return redirect()->route('honorarium.index')->with('success', 'Data honorarium berhasil disimpan.');
         } catch (\Exception $e) {
@@ -171,9 +183,9 @@ class HonorariumController extends Controller
                 ->with('error', 'Data dengan status ' . $tagihan->status . ' tidak bisa diedit.');
         }
 
-        $dipas = MasterDipa::orderByDesc('tahun_anggaran')->get();
+        $budgetGroups = DipaBudgetOptionService::groupedOptions();
 
-        return view('honorarium.edit', compact('tagihan', 'dipas'));
+        return view('honorarium.edit', compact('tagihan', 'budgetGroups'));
     }
 
     public function update(Request $request, $id)
@@ -197,7 +209,7 @@ class HonorariumController extends Controller
 
         $request->validate([
             'deskripsi' => 'required|string|max:255',
-            'master_dipa_id' => 'required|exists:master_dipas,id',
+            'dipa_revision_item_id' => 'required|exists:dipa_revision_items,id',
             'submit_type' => 'required|in:draft,submit_ppk',
             'items' => 'required|array|min:1',
             'items.*.nama_personel' => 'required|string|max:255',
@@ -213,6 +225,7 @@ class HonorariumController extends Controller
 
         try {
             DB::beginTransaction();
+            $selectedItem = DipaBudgetOptionService::resolveActiveItem($request->dipa_revision_item_id);
 
             $totalBruto = collect($request->items)->sum(fn($i) => (float)($i['nilai_honor'] ?? 0));
             $totalPph = collect($request->items)->sum(fn($i) => (float)($i['pph'] ?? 0));
@@ -222,7 +235,8 @@ class HonorariumController extends Controller
             $statusBaru = $request->submit_type === 'submit_ppk' ? 'PENDING_PPK' : 'DRAFT';
 
             $tagihan->update([
-                'master_dipa_id' => $request->master_dipa_id,
+                'master_dipa_id' => $selectedItem->dipaRevision->master_dipa_id,
+                'dipa_revision_item_id' => $selectedItem->id,
                 'deskripsi' => $request->deskripsi,
                 'total_bruto' => $totalBruto,
                 'total_potongan' => $totalPph,
@@ -259,6 +273,15 @@ class HonorariumController extends Controller
                 'catatan' => 'Data honorarium diperbarui oleh PPABP.',
                 'ip_address' => $request->ip(),
             ]);
+
+            if ($statusBaru === 'PENDING_PPK') {
+                $this->notifyRoles(
+                    ['PPK'],
+                    'Tagihan Honorarium Masuk Verifikasi',
+                    "Tagihan {$tagihan->nomor_tagihan} diajukan ulang dan menunggu verifikasi Anda.",
+                    route('ppk.tagihan.honorarium.verify', $tagihan->id)
+                );
+            }
 
             DB::commit();
             return redirect()->route('honorarium.index')->with('success', 'Data honorarium berhasil diupdate.');
@@ -399,6 +422,17 @@ class HonorariumController extends Controller
             ->where('tipe_tagihan', 'HONORARIUM')
             ->count();
         return 'HON-' . $year . '-' . str_pad($count + 1, 4, '0', STR_PAD_LEFT);
+    }
+
+    private function notifyRoles(array $roles, string $judul, string $pesan, ?string $linkUrl = null): void
+    {
+        Notification::send(User::role($roles)->get(), new WorkflowNotification([
+            'title' => $judul,
+            'message' => $pesan,
+            'url' => $linkUrl,
+            'icon' => 'notifications',
+            'color' => 'primary',
+        ]));
     }
 }
 

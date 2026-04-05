@@ -38,15 +38,14 @@
                         <input type="text" class="form-control bg-light" value="{{ $nextNumber }}" readonly>
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label">Sumber Anggaran (DIPA) <span class="text-danger">*</span></label>
-                        <select name="master_dipa_id" class="form-select" required>
-                            <option value="">-- Pilih DIPA --</option>
-                            @foreach ($dipas as $dipa)
-                                <option value="{{ $dipa->id }}" {{ old('master_dipa_id') == $dipa->id ? 'selected' : '' }}>
-                                    {{ $dipa->tahun_anggaran }} — {{ $dipa->nomor_dipa ?? 'DIPA #'.$dipa->id }}
-                                </option>
-                            @endforeach
-                        </select>
+                        @include('partials.dipa-item-grouped-select', [
+                            'budgetGroups' => $budgetGroups,
+                            'fieldName' => 'dipa_revision_item_id',
+                            'fieldId' => 'dipa_revision_item_id',
+                            'fieldClass' => 'form-select select2',
+                            'fieldLabel' => 'Sumber Anggaran (Item DIPA / COA)',
+                            'placeholder' => '-- Pilih Item Anggaran DIPA Aktif --',
+                        ])
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Uraian / Deskripsi Kegiatan <span class="text-danger">*</span></label>
@@ -221,6 +220,14 @@
             recalcAll();
         }
     });
+
+    if (window.jQuery && typeof window.jQuery.fn.select2 === 'function') {
+        window.jQuery('.select2').select2({
+            theme: 'bootstrap-5',
+            width: '100%',
+            placeholder: '-- Pilih Item Anggaran DIPA Aktif --'
+        });
+    }
 
     // Start with 1 row
     addRow();

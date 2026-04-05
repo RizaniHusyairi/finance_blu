@@ -29,4 +29,9 @@ class MasterCoa extends Model
     protected $casts = [
         'status_aktif' => 'boolean',
     ];
+
+    public function dipaRevisionItems()
+    {
+        return $this->hasMany(DetailDipa::class, 'coa_id');
+    }
 }

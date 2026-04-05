@@ -58,7 +58,6 @@ return new class extends Migration
             $table->foreignId('coa_id')->constrained('master_coas')->restrictOnDelete();
             $table->decimal('nilai_pagu', 18, 2)->default(0);
             $table->boolean('status_aktif')->default(true);
-            $table->softDeletes();
             $table->timestamps();
 
             $table->unique(['dipa_revision_id', 'coa_id'], 'dipa_rev_items_revision_coa_unq');

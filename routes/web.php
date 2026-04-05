@@ -2,11 +2,12 @@
 
 use App\Http\Controllers\HomeController;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\BudgetController;
 use App\Http\Controllers\ContractController;
 use App\Http\Controllers\ContractAddendumController;
 use App\Http\Controllers\ContractTermController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\CoaController;
+use App\Http\Controllers\DipaController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\SupplierController;
 use Illuminate\Support\Facades\Auth;
@@ -56,9 +57,29 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
         Route::resource('suppliers', SupplierController::class);
     });
 
-    // Master Data — Pagu Anggaran
+    // Master Data — DIPA
     Route::middleware('role:Super Admin|KPA|Operator BLU|Kepala Subbagian Keuangan dan Tata Usaha|Kepala Seksi Pelayanan dan Kerjasama')->group(function () {
-        Route::resource('budgets', BudgetController::class);
+        Route::get('/dipas', [DipaController::class, 'index'])->name('dipas.index');
+        Route::get('/dipas/create', [DipaController::class, 'create'])->name('dipas.create');
+        Route::post('/dipas', [DipaController::class, 'store'])->name('dipas.store');
+        Route::get('/coas/create', [CoaController::class, 'create'])->name('coas.create');
+        Route::post('/coas', [CoaController::class, 'store'])->name('coas.store');
+        Route::get('/coas', [CoaController::class, 'index'])->name('coas.index');
+        Route::get('/coas/{coa}', [CoaController::class, 'show'])->name('coas.show');
+        Route::get('/coas/{coa}/edit', [CoaController::class, 'edit'])->name('coas.edit');
+        Route::put('/coas/{coa}', [CoaController::class, 'update'])->name('coas.update');
+        Route::post('/coas/{coa}/toggle', [CoaController::class, 'toggle'])->name('coas.toggle');
+        Route::delete('/coas/{coa}', [CoaController::class, 'destroy'])->name('coas.destroy');
+        Route::get('/dipas/{dipa}', [DipaController::class, 'show'])->name('dipas.show');
+        Route::get('/dipas/{dipa}/edit', [DipaController::class, 'edit'])->name('dipas.edit');
+        Route::get('/dipas/{dipa}/revisions', [DipaController::class, 'revisions'])->name('dipas.revisions');
+        Route::get('/dipas/{dipa}/revisions/create', [DipaController::class, 'createRevision'])->name('dipas.revisions.create');
+        Route::post('/dipas/{dipa}/revisions', [DipaController::class, 'storeRevision'])->name('dipas.revisions.store');
+        Route::post('/dipas/{dipa}/toggle', [DipaController::class, 'toggle'])->name('dipas.toggle');
+        Route::post('/dipas/{dipa}/items', [DipaController::class, 'storeItem'])->name('dipas.items.store');
+        Route::post('/dipas/{dipa}/items/{item}/toggle', [DipaController::class, 'toggleItem'])->name('dipas.items.toggle');
+        Route::delete('/dipas/{dipa}/items/{item}', [DipaController::class, 'destroyItem'])->name('dipas.items.destroy');
+        Route::post('/dipas/{dipa}/revisions/{revision}/activate', [DipaController::class, 'activateRevision'])->name('dipas.revisions.activate');
     });
 
     // Manajemen Kontrak (Kontrak, Addendum, Termin)
@@ -68,6 +89,12 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
 
         Route::get('/contracts/verifikasi', [ContractController::class, 'verifikasiIndex'])->name('contracts.verifikasi');
         Route::get('/contracts/verifikasi/{id}', [ContractController::class, 'verifikasiShow'])->name('contracts.verifikasi.show');
+        Route::get('/contracts/{contract}/ringkasan-kontrak/export-pdf', [ContractController::class, 'exportRingkasanKontrakPdf'])->name('contracts.ringkasan.export-pdf');
+        Route::post('/contracts/{contract}/ringkasan-kontrak/upload-final', [ContractController::class, 'uploadRingkasanKontrakFinal'])->name('contracts.ringkasan.upload-final');
+        Route::get('/contracts/{contract}/spk/export-pdf', [ContractController::class, 'exportSpkPdf'])->name('contracts.spk.export-pdf');
+        Route::post('/contracts/{contract}/spk/upload-final', [ContractController::class, 'uploadSpkFinal'])->name('contracts.spk.upload-final');
+        Route::get('/contracts/{contract}/spmk/export-pdf', [ContractController::class, 'exportSpmkPdf'])->name('contracts.spmk.export-pdf');
+        Route::post('/contracts/{contract}/spmk/upload-final', [ContractController::class, 'uploadSpmkFinal'])->name('contracts.spmk.upload-final');
         Route::resource('contracts', ContractController::class);
         Route::post('/contracts/submit-bulk', [ContractController::class, 'submitBulk'])->name('contracts.submit_bulk');
         Route::post('/contracts/{contract}/submit', [ContractController::class, 'submit'])->name('contracts.submit');
