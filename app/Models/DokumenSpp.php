@@ -36,4 +36,19 @@ class DokumenSpp extends Model
     {
         return $this->morphMany(ArsipDokumen::class, 'documentable');
     }
+
+    public function ppkVerifikator()
+    {
+        return $this->belongsTo(User::class, 'ppk_verifikator_id');
+    }
+
+    public function workflowInstances()
+    {
+        return $this->morphMany(WorkflowInstance::class, 'workflowable');
+    }
+
+    public function logs()
+    {
+        return $this->morphMany(LogStatusDokumen::class, 'dokumen');
+    }
 }

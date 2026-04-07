@@ -14,6 +14,7 @@ use App\Models\KontrakTermin;
 use App\Models\User;
 use App\Notifications\WorkflowNotification;
 use Illuminate\Support\Facades\Notification;
+use App\Services\WorkflowService;
 
 class TagihanController extends Controller
 {
@@ -294,6 +295,10 @@ class TagihanController extends Controller
                 $tagihan->detailKontrak->termin->update(['status_termin' => 'SUDAH_DITAGIH']);
             }
 
+            // --- Workflow Engine: mulai workflow TAGIHAN_KONTRAK_PPK ---
+            $ppkUserId = optional($tagihan->detailKontrak?->termin?->kontrak)->ppk_user_id;
+            app(WorkflowService::class)->startWorkflow('TAGIHAN_KONTRAK_PPK', $tagihan, $ppkUserId);
+
             LogStatusDokumen::create([
                 'dokumen_type' => Tagihan::class,
                 'dokumen_id' => $tagihan->id,
@@ -306,12 +311,26 @@ class TagihanController extends Controller
                 'ip_address' => request()->ip(),
             ]);
 
-            $this->notifyRoles(
-                ['PPK'],
-                'Tagihan Kontrak Baru',
-                "Tagihan {$tagihan->nomor_tagihan} siap untuk diverifikasi.",
-                route('ppk.tagihan.kontrak.verify', $tagihan->id)
-            );
+            // Notifikasi ke PPK assigned, fallback ke semua PPK
+            if ($ppkUserId) {
+                $ppkUser = User::find($ppkUserId);
+                if ($ppkUser) {
+                    Notification::send($ppkUser, new WorkflowNotification([
+                        'title' => 'Tagihan Kontrak Baru',
+                        'message' => "Tagihan {$tagihan->nomor_tagihan} siap untuk diverifikasi.",
+                        'url' => route('ppk.tagihan.kontrak.verify', $tagihan->id),
+                        'icon' => 'receipt_long',
+                        'color' => 'primary',
+                    ]));
+                }
+            } else {
+                $this->notifyRoles(
+                    ['PPK'],
+                    'Tagihan Kontrak Baru',
+                    "Tagihan {$tagihan->nomor_tagihan} siap untuk diverifikasi.",
+                    route('ppk.tagihan.kontrak.verify', $tagihan->id)
+                );
+            }
 
             DB::commit();
             return redirect()->route('contracts.index')->with('success', 'Tagihan berhasil diajukan ke PPK.');
@@ -396,6 +415,9 @@ class TagihanController extends Controller
                 'status' => 'READY_FOR_SPP',
             ]);
 
+            // --- Workflow Engine: approve step aktif ---
+            app(WorkflowService::class)->approveCurrentStep($tagihan, Auth::id(), 'Tagihan kontrak disetujui PPK.');
+
             LogStatusDokumen::create([
                 'dokumen_type' => Tagihan::class,
                 'dokumen_id' => $tagihan->id,
@@ -451,6 +473,9 @@ class TagihanController extends Controller
             $tagihan->update([
                 'status' => 'REVISI_PEJABAT_PENGADAAN',
             ]);
+
+            // --- Workflow Engine: request revision ---
+            app(WorkflowService::class)->requestRevision($tagihan, Auth::id(), $request->catatan_revisi);
 
             if ($tagihan->detailKontrak?->kontrak_termin_id) {
                 DB::table('kontrak_termin')

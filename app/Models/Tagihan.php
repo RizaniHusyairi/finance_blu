@@ -67,6 +67,11 @@ class Tagihan extends Model
         return $this->hasMany(Spp::class, 'tagihan_id');
     }
 
+    public function workflowInstances()
+    {
+        return $this->morphMany(WorkflowInstance::class, 'workflowable');
+    }
+
     public function getWaktuVerifikasiPpkAttribute()
     {
         $log = $this->relationLoaded('logs')

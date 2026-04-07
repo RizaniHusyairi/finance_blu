@@ -18,6 +18,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Notification;
+use App\Services\WorkflowService;
 
 class SppController extends Controller
 {
@@ -346,6 +347,7 @@ class SppController extends Controller
                     'tanggal_spp' => $request->tanggal_spp,
                     'status' => 'Menunggu Verifikasi',
                     'dibuat_oleh_id' => auth()->id(),
+                    'ppk_verifikator_id' => $request->ppk_verifikator_id,
                 ]
             );
 
@@ -401,6 +403,12 @@ class SppController extends Controller
                 'catatan' => 'Dokumen SPP kontrak dibuat/diperbarui oleh Operator BLU. Verifikator PPK dipilih: ' . optional(User::find($request->ppk_verifikator_id))->name,
                 'ip_address' => request()->ip(),
             ]);
+
+            // --- Workflow Engine: mulai workflow SPP_KONTRAK_PPK ---
+            $spp = $tagihan->spps()->latest()->first();
+            if ($spp) {
+                app(WorkflowService::class)->startWorkflow('SPP_KONTRAK_PPK', $spp, (int) $request->ppk_verifikator_id);
+            }
         });
 
         $selectedPpk = User::role('PPK')->find($request->ppk_verifikator_id);

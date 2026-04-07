@@ -11,6 +11,7 @@ use App\Notifications\WorkflowNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Notification;
+use App\Services\WorkflowService;
 
 class SppVerifikasiController extends Controller
 {
@@ -48,6 +49,13 @@ class SppVerifikasiController extends Controller
         $spp->update([
             'status' => 'Disetujui PPK',
         ]);
+
+        // --- Workflow Engine: approve step aktif ---
+        try {
+            app(WorkflowService::class)->approveCurrentStep($spp, Auth::id(), 'Dokumen SPP disetujui oleh PPK.');
+        } catch (\RuntimeException $e) {
+            // Workflow instance mungkin belum ada untuk SPP lama, lanjutkan tanpa error
+        }
 
         LogStatusDokumen::create([
             'dokumen_type' => DokumenSpp::class,
@@ -91,6 +99,13 @@ class SppVerifikasiController extends Controller
         $spp->update([
             'status' => 'Revisi',
         ]);
+
+        // --- Workflow Engine: request revision ---
+        try {
+            app(WorkflowService::class)->requestRevision($spp, Auth::id(), $request->catatan_revisi);
+        } catch (\RuntimeException $e) {
+            // Workflow instance mungkin belum ada untuk SPP lama, lanjutkan tanpa error
+        }
 
         LogStatusDokumen::create([
             'dokumen_type' => DokumenSpp::class,
