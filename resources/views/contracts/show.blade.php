@@ -57,33 +57,39 @@
                     <span class="badge bg-warning text-dark px-3 py-2 rounded-pill shadow-sm fs-6">{{ str_replace('_', ' ', $kontrak->status_kontrak) }}</span>
                 @endif
 
-                {{-- Aksi Pejabat Pengadaan --}}
-                @if(Auth::user()->hasRole('Pejabat Pengadaan') && in_array($kontrak->status_kontrak, ['DRAFT', 'REVISI']))
-                    <form action="{{ route('contracts.submit', $kontrak->id) }}" method="POST" class="m-0" onsubmit="return confirm('Ajukan kontrak ini ke PPK?')">
-                        @csrf
-                        <button type="submit" class="btn btn-warning btn-sm shadow-sm fw-bold">
-                            <i class="bi bi-send-check me-1"></i> Ajukan ke PPK
-                        </button>
-                    </form>
-                @endif
-                
-                {{-- Aksi PPK --}}
-                @if(Auth::user()->hasRole('PPK') && $kontrak->status_kontrak === 'PENDING_PPK')
-                    <button type="button" class="btn btn-danger btn-sm shadow-sm fw-bold" data-bs-toggle="modal" data-bs-target="#modalTolak">
-                        <i class="bi bi-arrow-return-left me-1"></i> Kembalikan (Revisi)
-                    </button>
-                    <form action="{{ route('contracts.approve', $kontrak->id) }}" method="POST" class="m-0" onsubmit="return confirm('Apakah Anda yakin menyetujui Kontrak ini?')">
-                        @csrf
-                        <button type="submit" class="btn btn-primary btn-sm shadow-sm fw-bold">
-                            <i class="bi bi-check-circle me-1"></i> Setujui Kontrak
-                        </button>
-                    </form>
-                @endif
+
 
                 @if($kontrak->status_kontrak === 'AKTIF')
                     <button type="button" class="btn btn-success btn-sm shadow-sm fw-bold" data-bs-toggle="modal" data-bs-target="#modalTagihKontrakDetail" {{ $readyTerms->isEmpty() ? 'disabled' : '' }}>
                         <i class="bi bi-cash-stack me-1"></i> Buat Tagihan
                     </button>
+                @endif
+            </div>
+        </div>
+
+        {{-- Kelengkapan Dokumen Final --}}
+        <div class="card border-0 shadow-sm rounded-4 mb-4 border-2 {{ $kontrak->status_kontrak === 'AKTIF' ? 'border-success' : 'border-warning' }}">
+            <div class="card-body p-4">
+                <h6 class="fw-bold mb-3">Status Aktivasi & Kelengkapan Dokumen Final</h6>
+                <div class="d-flex flex-wrap gap-3 mb-3">
+                    <div class="border rounded px-3 py-2 bg-light {{ $ringkasanFinalArsip ? 'border-success text-success border-2' : 'border-danger text-danger' }}">
+                        <i class="bi {{ $ringkasanFinalArsip ? 'bi-check-circle-fill' : 'bi-x-circle-fill' }} me-2"></i> Ringkasan Kontrak Final
+                    </div>
+                    <div class="border rounded px-3 py-2 bg-light {{ $spkFinalArsip ? 'border-success text-success border-2' : 'border-danger text-danger' }}">
+                        <i class="bi {{ $spkFinalArsip ? 'bi-check-circle-fill' : 'bi-x-circle-fill' }} me-2"></i> SPK Final
+                    </div>
+                    <div class="border rounded px-3 py-2 bg-light {{ $spmkFinalArsip ? 'border-success text-success border-2' : 'border-danger text-danger' }}">
+                        <i class="bi {{ $spmkFinalArsip ? 'bi-check-circle-fill' : 'bi-x-circle-fill' }} me-2"></i> SPMK Final
+                    </div>
+                </div>
+                @if($kontrak->status_kontrak === 'AKTIF')
+                    <div class="alert alert-success border-0 py-2 px-3 mb-0 small">
+                        <i class="bi bi-check-circle-fill me-2"></i> <strong>Siap Aktif:</strong> Kontrak telah otomatis AKTIF karena seluruh dokumen final bertandatangan lengkap.
+                    </div>
+                @else
+                    <div class="alert alert-warning border-0 py-2 px-3 mb-0 text-dark small">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i> <strong>Belum Siap Aktif:</strong> Kontrak berstatus <strong>{{ $kontrak->status_kontrak }}</strong>. Unggah kelengkapan dokumen final di bawah ini agar kontrak menjadi otomatis aktif.
+                    </div>
                 @endif
             </div>
         </div>
@@ -124,7 +130,7 @@
                 <div class="card border-0 shadow-sm rounded-4 h-100 border-start border-info border-4">
                     <div class="card-body p-3">
                         <small class="text-muted text-uppercase fw-bold"><i class="bi bi-building me-1"></i> Vendor & Rekening</small>
-                        <div class="mt-2 fw-bold text-dark text-truncate" title="{{ $kontrak->vendor->nama_perusahaan ?? '-' }}">{{ $kontrak->vendor->nama_perusahaan ?? '-' }}</div>
+                        <div class="mt-2 fw-bold text-dark text-truncate" title="{{ $kontrak->vendor->nama_pihak ?? $kontrak->vendor->nama_perusahaan ?? '-' }}">{{ $kontrak->vendor->nama_pihak ?? $kontrak->vendor->nama_perusahaan ?? '-' }}</div>
                         <div class="small text-muted mb-1">NPWP: {{ $kontrak->vendor->npwp ?? '-' }}</div>
                         @php
                             $rek = $kontrak->vendor->rekening->first();
@@ -166,9 +172,23 @@
         <div class="card border-0 shadow-sm rounded-4 mb-4">
             <div class="card-body p-4">
                 <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h6 class="fw-bold mb-0"><i class="bi bi-file-earmark-medical me-2 text-primary"></i>Data Pendukung Dokumen SPK</h6>
-                    <span class="badge bg-light text-dark border">Siap untuk Preview / Export</span>
+                    <h6 class="fw-bold mb-0"><i class="bi bi-file-earmark-medical me-2 text-primary"></i>Metadata Dokumen Kontrak</h6>
+                    <span class="badge bg-light text-dark border">Data Sumber Dokumen</span>
                 </div>
+                
+                <div class="row g-3 mb-4 bg-light p-3 rounded-4 border">
+                    <div class="col-md-6">
+                        <div class="small text-muted text-uppercase fw-bold"><i class="bi bi-file-text me-1"></i> Identitas SPK</div>
+                        <div class="fw-bold text-primary mt-1">{{ $kontrak->nomor_spk ?: '-' }}</div>
+                        <div class="small text-muted">Tgl: {{ $kontrak->tanggal_spk ? \Carbon\Carbon::parse($kontrak->tanggal_spk)->translatedFormat('d M Y') : '-' }}</div>
+                    </div>
+                    <div class="col-md-6 border-start-md">
+                        <div class="small text-muted text-uppercase fw-bold"><i class="bi bi-file-text me-1"></i> Identitas SPMK</div>
+                        <div class="fw-bold text-info mt-1">{{ $kontrak->nomor_spmk ?: '-' }}</div>
+                        <div class="small text-muted">Tgl: {{ $kontrak->tanggal_spmk ? \Carbon\Carbon::parse($kontrak->tanggal_spmk)->translatedFormat('d M Y') : '-' }}</div>
+                    </div>
+                </div>
+
                 <div class="row g-3">
                     <div class="col-md-6">
                         <div class="small text-muted">Nama PPK</div>
@@ -183,16 +203,8 @@
                         <div class="fw-bold">{{ $kontrak->nomor_surat_undangan_pengadaan ?: '-' }}</div>
                     </div>
                     <div class="col-md-6">
-                        <div class="small text-muted">Nomor Berita Acara Hasil Pengadaan Langsung</div>
+                        <div class="small text-muted">Nomor BA Hasil Pengadaan Langsung</div>
                         <div class="fw-bold">{{ $kontrak->nomor_ba_hasil_pengadaan ?: '-' }}</div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="small text-muted">Nomor SPMK</div>
-                        <div class="fw-bold">{{ $kontrak->nomor_spmk ?: '-' }}</div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="small text-muted">Tanggal SPMK</div>
-                        <div class="fw-bold">{{ $kontrak->tanggal_spmk ? \Carbon\Carbon::parse($kontrak->tanggal_spmk)->translatedFormat('d M Y') : '-' }}</div>
                     </div>
                     <div class="col-md-6">
                         <div class="small text-muted">Nama Penandatangan Vendor</div>
@@ -237,18 +249,20 @@
                 <div class="d-flex flex-column flex-lg-row justify-content-between gap-3 align-items-lg-center mb-3">
                     <div>
                         <h6 class="fw-bold mb-1"><i class="bi bi-journal-richtext me-2 text-secondary"></i>Dokumen Ringkasan Kontrak</h6>
-                        <div class="small text-muted">Ringkasan Kontrak final bertandatangan dikelola terpisah setelah kontrak dibuat.</div>
+                        <div class="small text-muted">Ringkasan Kontrak final bertandatangan wajib diunggah sebagai syarat aktivasi otomatis kontrak.</div>
                     </div>
                     <div class="d-flex flex-wrap gap-2">
+                        @if(!in_array($kontrak->status_kontrak, ['AKTIF', 'SELESAI']))
                         <a href="{{ route('contracts.ringkasan.export-pdf', $kontrak->id) }}" target="_blank" class="btn btn-outline-danger btn-sm fw-bold">
-                            <i class="bi bi-filetype-pdf me-1"></i> Export PDF Ringkasan Kontrak
+                            <i class="bi bi-filetype-pdf me-1"></i> Export PDF Draft
                         </a>
-                        <button type="button" class="btn btn-secondary btn-sm fw-bold" data-bs-toggle="modal" data-bs-target="#modalUploadRingkasanKontrakFinal">
-                            <i class="bi bi-upload me-1"></i> Upload Ringkasan Kontrak Bertandatangan
+                        <button type="button" class="btn btn-primary btn-sm fw-bold" data-bs-toggle="modal" data-bs-target="#modalUploadRingkasanKontrakFinal">
+                            <i class="bi bi-upload me-1"></i> Upload Final Bertandatangan
                         </button>
+                        @endif
                         @if($ringkasanFinalArsip)
-                            <a href="{{ Storage::url($ringkasanFinalArsip->path_file) }}" target="_blank" class="btn btn-outline-success btn-sm fw-bold">
-                                <i class="bi bi-eye me-1"></i> Lihat Ringkasan Kontrak Final
+                            <a href="{{ Storage::url($ringkasanFinalArsip->path_file) }}" target="_blank" class="btn btn-success btn-sm fw-bold text-white">
+                                <i class="bi bi-eye me-1"></i> Lihat Dokumen Final
                             </a>
                         @endif
                     </div>
@@ -259,11 +273,11 @@
                         <div class="border rounded-4 p-3 h-100 bg-light">
                             <div class="small text-muted mb-1">Status Dokumen Final</div>
                             @if($ringkasanFinalArsip)
-                                <div class="badge bg-success fs-6">Sudah Diunggah</div>
-                                <div class="small text-muted mt-2">Diunggah {{ optional($ringkasanFinalArsip->uploaded_at)->translatedFormat('d M Y H:i') ?? optional($ringkasanFinalArsip->created_at)->translatedFormat('d M Y H:i') }}</div>
+                                <div class="badge bg-success fs-6"><i class="bi bi-check-circle me-1"></i> Sudah Diunggah</div>
+                                <div class="small text-muted mt-2">Waktu: {{ optional($ringkasanFinalArsip->uploaded_at)->translatedFormat('d M Y H:i') ?? optional($ringkasanFinalArsip->created_at)->translatedFormat('d M Y H:i') }}</div>
                             @else
-                                <div class="badge bg-danger fs-6">Belum Diunggah</div>
-                                <div class="small text-muted mt-2">Upload Ringkasan Kontrak final bertandatangan setelah dokumen ditandatangani.</div>
+                                <div class="badge bg-danger fs-6"><i class="bi bi-x-circle me-1"></i> Belum Diunggah</div>
+                                <div class="small text-muted mt-2">Upload Ringkasan Kontrak final bertandatangan setelah ditandatangani.</div>
                             @endif
                         </div>
                     </div>
@@ -290,18 +304,20 @@
                 <div class="d-flex flex-column flex-lg-row justify-content-between gap-3 align-items-lg-center mb-3">
                     <div>
                         <h6 class="fw-bold mb-1"><i class="bi bi-file-earmark-check me-2 text-success"></i>Dokumen SPK</h6>
-                        <div class="small text-muted">SPK final bertandatangan wajib tersedia sebelum kontrak diajukan ke PPK.</div>
+                        <div class="small text-muted">SPK final bertandatangan wajib diunggah sebagai syarat aktivasi otomatis kontrak.</div>
                     </div>
                     <div class="d-flex flex-wrap gap-2">
+                        @if(!in_array($kontrak->status_kontrak, ['AKTIF', 'SELESAI']))
                         <a href="{{ route('contracts.spk.export-pdf', $kontrak->id) }}" target="_blank" class="btn btn-outline-danger btn-sm fw-bold">
-                            <i class="bi bi-filetype-pdf me-1"></i> Export PDF SPK
+                            <i class="bi bi-filetype-pdf me-1"></i> Export PDF Draft
                         </a>
                         <button type="button" class="btn btn-primary btn-sm fw-bold" data-bs-toggle="modal" data-bs-target="#modalUploadSpkFinal">
-                            <i class="bi bi-upload me-1"></i> Upload SPK Bertandatangan
+                            <i class="bi bi-upload me-1"></i> Upload Final Bertandatangan
                         </button>
+                        @endif
                         @if($spkFinalArsip)
-                            <a href="{{ Storage::url($spkFinalArsip->path_file) }}" target="_blank" class="btn btn-outline-success btn-sm fw-bold">
-                                <i class="bi bi-eye me-1"></i> Lihat SPK Final
+                            <a href="{{ Storage::url($spkFinalArsip->path_file) }}" target="_blank" class="btn btn-success btn-sm fw-bold text-white">
+                                <i class="bi bi-eye me-1"></i> Lihat Dokumen Final
                             </a>
                         @endif
                     </div>
@@ -312,11 +328,11 @@
                         <div class="border rounded-4 p-3 h-100 bg-light">
                             <div class="small text-muted mb-1">Status SPK Final</div>
                             @if($spkFinalArsip)
-                                <div class="badge bg-success fs-6">Sudah Diunggah</div>
-                                <div class="small text-muted mt-2">Diunggah {{ optional($spkFinalArsip->uploaded_at)->translatedFormat('d M Y H:i') ?? optional($spkFinalArsip->created_at)->translatedFormat('d M Y H:i') }}</div>
+                                <div class="badge bg-success fs-6"><i class="bi bi-check-circle me-1"></i> Sudah Diunggah</div>
+                                <div class="small text-muted mt-2">Waktu: {{ optional($spkFinalArsip->uploaded_at)->translatedFormat('d M Y H:i') ?? optional($spkFinalArsip->created_at)->translatedFormat('d M Y H:i') }}</div>
                             @else
-                                <div class="badge bg-danger fs-6">Belum Diunggah</div>
-                                <div class="small text-muted mt-2">Upload SPK final bertandatangan sebelum ajukan ke PPK.</div>
+                                <div class="badge bg-danger fs-6"><i class="bi bi-x-circle me-1"></i> Belum Diunggah</div>
+                                <div class="small text-muted mt-2">Upload SPK final bertandatangan untuk mengaktifkan kontrak.</div>
                             @endif
                         </div>
                     </div>
@@ -343,18 +359,20 @@
                 <div class="d-flex flex-column flex-lg-row justify-content-between gap-3 align-items-lg-center mb-3">
                     <div>
                         <h6 class="fw-bold mb-1"><i class="bi bi-file-earmark-text me-2 text-info"></i>Dokumen SPMK</h6>
-                        <div class="small text-muted">SPMK final bertandatangan dikelola terpisah setelah kontrak dibuat.</div>
+                        <div class="small text-muted">SPMK final bertandatangan wajib diunggah sebagai syarat aktivasi otomatis kontrak.</div>
                     </div>
                     <div class="d-flex flex-wrap gap-2">
+                        @if(!in_array($kontrak->status_kontrak, ['AKTIF', 'SELESAI']))
                         <a href="{{ route('contracts.spmk.export-pdf', $kontrak->id) }}" target="_blank" class="btn btn-outline-danger btn-sm fw-bold">
-                            <i class="bi bi-filetype-pdf me-1"></i> Export PDF SPMK
+                            <i class="bi bi-filetype-pdf me-1"></i> Export PDF Draft
                         </a>
-                        <button type="button" class="btn btn-info btn-sm fw-bold text-white" data-bs-toggle="modal" data-bs-target="#modalUploadSpmkFinal">
-                            <i class="bi bi-upload me-1"></i> Upload SPMK Bertandatangan
+                        <button type="button" class="btn btn-primary btn-sm fw-bold text-white" data-bs-toggle="modal" data-bs-target="#modalUploadSpmkFinal">
+                            <i class="bi bi-upload me-1"></i> Upload Final Bertandatangan
                         </button>
+                        @endif
                         @if($spmkFinalArsip)
-                            <a href="{{ Storage::url($spmkFinalArsip->path_file) }}" target="_blank" class="btn btn-outline-success btn-sm fw-bold">
-                                <i class="bi bi-eye me-1"></i> Lihat SPMK Final
+                            <a href="{{ Storage::url($spmkFinalArsip->path_file) }}" target="_blank" class="btn btn-success btn-sm fw-bold text-white">
+                                <i class="bi bi-eye me-1"></i> Lihat Dokumen Final
                             </a>
                         @endif
                     </div>
@@ -365,11 +383,11 @@
                         <div class="border rounded-4 p-3 h-100 bg-light">
                             <div class="small text-muted mb-1">Status SPMK Final</div>
                             @if($spmkFinalArsip)
-                                <div class="badge bg-success fs-6">Sudah Diunggah</div>
-                                <div class="small text-muted mt-2">Diunggah {{ optional($spmkFinalArsip->uploaded_at)->translatedFormat('d M Y H:i') ?? optional($spmkFinalArsip->created_at)->translatedFormat('d M Y H:i') }}</div>
+                                <div class="badge bg-success fs-6"><i class="bi bi-check-circle me-1"></i> Sudah Diunggah</div>
+                                <div class="small text-muted mt-2">Waktu: {{ optional($spmkFinalArsip->uploaded_at)->translatedFormat('d M Y H:i') ?? optional($spmkFinalArsip->created_at)->translatedFormat('d M Y H:i') }}</div>
                             @else
-                                <div class="badge bg-danger fs-6">Belum Diunggah</div>
-                                <div class="small text-muted mt-2">Upload SPMK final bertandatangan setelah dokumen ditandatangani.</div>
+                                <div class="badge bg-danger fs-6"><i class="bi bi-x-circle me-1"></i> Belum Diunggah</div>
+                                <div class="small text-muted mt-2">Upload SPMK final bertandatangan setelah ditandatangani.</div>
                             @endif
                         </div>
                     </div>
@@ -417,34 +435,32 @@
                     
                     {{-- TAB DOKUMEN AWAL --}}
                     <div class="tab-pane fade" id="dokumen" role="tabpanel" aria-labelledby="dokumen-tab">
-                        <h6 class="fw-bold mb-3">Arsip Dokumen Kontrak</h6>
+                        <div class="alert alert-info border-0 py-2 px-3 mb-3 small d-flex align-items-center">
+                            <i class="bi bi-info-circle-fill fs-5 me-2"></i>
+                            <div>Tab ini berisi salinan dokumen jaminan atau dokumen awal pendukung lainnya (sebelum kontrak aktif). Untuk Ringkasan Kontrak, SPK dan SPMK dikelola di area kartu atas.</div>
+                        </div>
+                        <h6 class="fw-bold mb-3">Arsip Dokumen Pendukung & Jaminan</h6>
                         <div class="list-group mb-4">
-                            @if($kontrak->file_ringkasan_kontrak_final_ttd)
-                            <a href="{{ Storage::url($kontrak->file_ringkasan_kontrak_final_ttd) }}" target="_blank" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
-                                <div><i class="bi bi-file-pdf text-danger me-2"></i> Ringkasan Kontrak Final Bertandatangan</div>
-                                <span class="badge bg-light text-primary border"><i class="bi bi-download"></i> Unduh</span>
-                            </a>
-                            @endif
-
                             @if($kontrak->file_jaminan_uang_muka)
-                            <a href="{{ Storage::url($kontrak->file_jaminan_uang_muka) }}" target="_blank" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
-                                <div><i class="bi bi-file-pdf text-danger me-2"></i> Jaminan Uang Muka</div>
-                                <span class="badge bg-light text-primary border"><i class="bi bi-download"></i> Unduh</span>
+                            <a href="{{ Storage::url($kontrak->file_jaminan_uang_muka) }}" target="_blank" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center border-0 shadow-sm rounded mb-2">
+                                <div><i class="bi bi-file-earmark-pdf text-danger fs-5 me-2 align-middle"></i> <span class="fw-bold">Jaminan Uang Muka</span></div>
+                                <span class="badge bg-primary rounded-pill px-3 py-2"><i class="bi bi-download"></i> Unduh</span>
                             </a>
-                            @endif
-
-                            @if(!$kontrak->file_ringkasan_kontrak_final_ttd && !$kontrak->file_jaminan_uang_muka)
-                            <div class="text-center p-3 text-muted bg-light rounded">
-                                Belum ada dokumen kontrak lain yang diunggah.
+                            @else
+                            <div class="text-center p-4 text-muted bg-light rounded-3 border border-dashed">
+                                <i class="bi bi-folder-x fs-1 text-secondary mb-2 opacity-50"></i>
+                                <p class="mb-0">Belum ada dokumen jaminan/awal yang diunggah.</p>
                             </div>
                             @endif
                         </div>
-
-                        {{-- Disini bisa ditambahkan tabel jaminan_kontrak jika relasinya ada --}}
                     </div>
 
                     {{-- TAB TERMIN & TAGIHAN --}}
                     <div class="tab-pane fade show active" id="termin" role="tabpanel" aria-labelledby="termin-tab">
+                        <div class="alert bg-light border-0 py-2 px-3 mb-3 small text-muted d-flex align-items-center rounded-3">
+                            <i class="bi bi-lightbulb-fill text-warning fs-5 me-2"></i>
+                            <div><strong>Catatan Skema Termin:</strong> Hanya termin berstatus <span class="badge bg-success ms-1">READY_TO_BILL</span> yang dapat dibuat menjadi tagihan. Termin berstatus <span class="badge bg-secondary">LOCKED</span> belum bisa diproses, dan termin berstatus <span class="badge bg-secondary">DRAFT</span> atau <span class="badge bg-primary">SUDAH_DITAGIH</span> telah terikat pada pengajuan tagihan di sistem.</div>
+                        </div>
                         <div class="table-responsive">
                             <table class="table table-hover align-middle">
                                 <thead class="table-light">
@@ -469,6 +485,8 @@
                                                 <span class="badge bg-light text-dark border"><i class="bi bi-lock-fill"></i> LOCKED</span>
                                             @elseif($termin->status_termin == 'READY_TO_BILL')
                                                 <span class="badge bg-warning text-dark"><i class="bi bi-bell-fill"></i> READY</span>
+                                            @elseif($termin->status_termin == 'DRAFT')
+                                                <span class="badge bg-secondary"><i class="bi bi-file-earmark-text"></i> DRAFT</span>
                                             @elseif($termin->status_termin == 'SUDAH_DITAGIH')
                                                 <span class="badge bg-success"><i class="bi bi-check-circle-fill"></i> DITAGIH</span>
                                             @endif
@@ -482,10 +500,64 @@
                                                 <button disabled class="btn btn-sm btn-outline-secondary" title="Termin Masih Terkunci">
                                                     <i class="bi bi-lock-fill"></i> Terkunci
                                                 </button>
-                                            @elseif($termin->status_termin === 'SUDAH_DITAGIH')
-                                                <button class="btn btn-sm btn-light text-success border border-success" title="Lihat SP2D / Tagihan" disabled>
-                                                    <i class="bi bi-search"></i> Lihat
-                                                </button>
+                                            @elseif(in_array($termin->status_termin, ['DRAFT', 'SUDAH_DITAGIH']))
+                                                @php $tagihanLinked = $termin->detailKontrak->tagihan ?? null; @endphp
+                                                @if($tagihanLinked)
+                                                    <div class="btn-group shadow-sm">
+                                                        <a href="{{ route('tagihan.kontrak.show', $tagihanLinked->id) }}" class="btn btn-sm btn-outline-primary" title="Detail Tagihan/Working Hub">
+                                                            <i class="bi bi-file-text"></i> Detail
+                                                        </a>
+                                                        <button type="button" class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#modalAktivitasTagihan{{ $tagihanLinked->id }}" title="Riwayat Aktivitas">
+                                                            <i class="bi bi-clock-history"></i> Aktivitas
+                                                        </button>
+                                                        @if(in_array($tagihanLinked->status, ['DRAFT', 'REVISI']))
+                                                            <a href="#" class="btn btn-sm btn-outline-secondary" title="Edit Tagihan (Fitur Menyusul)" onclick="alert('Fitur edit draft tagihan sedang dalam pengembangan.')">
+                                                                <i class="bi bi-pencil"></i> Edit
+                                                            </a>
+                                                        @else
+                                                            <button type="button" class="btn btn-sm btn-outline-secondary" disabled title="Terkunci: Status {{ $tagihanLinked->status }}">
+                                                                <i class="bi bi-pencil"></i> Edit
+                                                            </button>
+                                                        @endif
+                                                    </div>
+
+                                                    <!-- Modal Riwayat Aktivitas -->
+                                                    <div class="modal fade text-start" id="modalAktivitasTagihan{{ $tagihanLinked->id }}" tabindex="-1" aria-hidden="true">
+                                                        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+                                                            <div class="modal-content">
+                                                                <div class="modal-header bg-light">
+                                                                    <h6 class="modal-title fw-bold">Riwayat Aktivitas Termin {{ $termin->termin_ke }}</h6>
+                                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                                </div>
+                                                                <div class="modal-body p-4">
+                                                                    <div class="timeline">
+                                                                    @forelse($tagihanLinked->logs as $log)
+                                                                        <div class="d-flex mb-3">
+                                                                            <div class="me-3 mt-1">
+                                                                                <i class="bi bi-circle-fill text-primary" style="font-size: 0.6rem;"></i>
+                                                                            </div>
+                                                                            <div>
+                                                                                <div class="fw-bold">{{ $log->status_baru }}</div>
+                                                                                <div class="small text-muted">{{ \Carbon\Carbon::parse($log->created_at)->translatedFormat('d M Y H:i') }} • {{ $log->user ? $log->user->name : 'Sistem' }}</div>
+                                                                                @if($log->catatan)
+                                                                                    <div class="small fst-italic mt-1 bg-light p-2 rounded">"{{ $log->catatan }}"</div>
+                                                                                @endif
+                                                                            </div>
+                                                                        </div>
+                                                                    @empty
+                                                                        <div class="text-center text-muted py-3">Belum ada riwayat aktivitas.</div>
+                                                                    @endforelse
+                                                                    </div>
+                                                                </div>
+                                                                <div class="modal-footer border-top-0 pt-0">
+                                                                    <button type="button" class="btn btn-secondary btn-sm fw-bold" data-bs-dismiss="modal">Tutup</button>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                @else
+                                                    <span class="text-danger small"><i class="bi bi-exclamation-triangle"></i> Data Tagihan Hilang</span>
+                                                @endif
                                             @endif
                                         </td>
                                     </tr>
@@ -592,31 +664,7 @@
 </div>
 </div>
 
-{{-- MODAL TOLAK KONTRAK UNTUK PPK --}}
-@if(Auth::user()->hasRole('PPK') && $kontrak->status_kontrak === 'PENDING_PPK')
-<div class="modal fade" id="modalTolak" tabindex="-1" aria-labelledby="modalTolakLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <form method="POST" action="{{ route('contracts.reject', $kontrak->id) }}" class="modal-content border-0 rounded-4 shadow">
-            @csrf
-            <div class="modal-header bg-danger text-white border-bottom-0">
-                <h5 class="modal-title fw-bold" id="modalTolakLabel"><i class="bi bi-exclamation-triangle me-2"></i> Kembalikan Kontrak (Revisi)</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body p-4">
-                <p class="mb-3 text-muted">Silakan sebutkan alasan mengapa draf kontrak ini dikembalikan ke Pejabat Pengadaan untuk direvisi.</p>
-                <div class="mb-3">
-                    <label class="form-label fw-bold small text-danger">Catatan Revisi / Penolakan <span class="text-danger">*</span></label>
-                    <textarea name="notes" class="form-control" rows="4" placeholder="Contoh: Lampiran jaminan pelaksanaan nilai tidak sesuai..." required></textarea>
-                </div>
-            </div>
-            <div class="modal-footer bg-light border-top-0">
-                <button type="button" class="btn btn-outline-secondary fw-bold" data-bs-dismiss="modal">Batal</button>
-                <button type="submit" class="btn btn-danger fw-bold"><i class="bi bi-arrow-return-left me-1"></i> Simpan & Kirim Kembali</button>
-            </div>
-        </form>
-    </div>
-</div>
-@endif
+
 
 @if($kontrak->status_kontrak === 'AKTIF')
 <div class="modal fade" id="modalTagihKontrakDetail" tabindex="-1" aria-labelledby="modalTagihKontrakDetailLabel" aria-hidden="true">

@@ -160,18 +160,36 @@
                         <div class="row g-4">
                             <div class="col-md-4">
                                 <label class="form-label fw-bold">Nomor BAPP <small class="text-muted">(Pemeriksaan)</small></label>
-                                <input type="text" class="form-control mb-2" name="nomor_bapp" placeholder="No. BAPP">
+                                <div class="form-control-plaintext mb-2 text-muted fst-italic small"><i class="bi bi-magic me-1"></i>Akan digenerate: <strong class="text-primary">{{ $previewBapp }}</strong></div>
                                 <input type="date" class="form-control" name="tanggal_bapp">
                             </div>
                             <div class="col-md-4" id="wrapper_bast_fields" style="display: none;">
                                 <label class="form-label fw-bold">Nomor BAST <small class="text-danger">*</small> <small class="text-muted">(Serah Terima)</small></label>
-                                <input type="text" class="form-control mb-2" name="nomor_bast" id="nomor_bast" placeholder="No. BAST">
+                                <div class="form-control-plaintext mb-2 text-muted fst-italic small"><i class="bi bi-magic me-1"></i>Akan digenerate: <strong class="text-primary">{{ $previewBast }}</strong></div>
                                 <input type="date" class="form-control" name="tanggal_bast" id="tanggal_bast">
                             </div>
                             <div class="col-md-4" id="wrapper_bap_fields">
                                 <label class="form-label fw-bold">Nomor BAP <small class="text-danger">*</small> <small class="text-muted">(Pembayaran)</small></label>
-                                <input type="text" class="form-control mb-2" name="nomor_bap" placeholder="No. BAP" required>
+                                <div class="form-control-plaintext mb-2 text-muted fst-italic small"><i class="bi bi-magic me-1"></i>Akan digenerate: <strong class="text-primary">{{ $previewBap }}</strong></div>
                                 <input type="date" class="form-control" name="tanggal_bap" required>
+                            </div>
+                            
+                            <div class="col-12 mt-4 pt-3 border-top">
+                                <h6 class="fw-bold mb-3 text-secondary">Data Pemeriksa Hasil Pekerjaan (Untuk BAPP)</h6>
+                                <div class="row g-3">
+                                    <div class="col-md-4">
+                                        <label class="form-label fw-bold small">Nama Pemeriksa <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control" name="nama_pemeriksa" placeholder="Nama Lengkap" required>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label fw-bold small">NIP Pemeriksa <small class="text-muted">(Opsional)</small></label>
+                                        <input type="text" class="form-control" name="nip_pemeriksa" placeholder="NIP / NRK">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label fw-bold small">Jabatan Pemeriksa <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control" name="jabatan_pemeriksa" placeholder="Contoh: Pejabat Penerima Hasil Pekerjaan" required>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -186,15 +204,19 @@
                     </div>
                     <div class="card-body p-4">
                         <div class="row g-4 mb-4 pb-4 border-bottom">
-                            <div class="col-md-6">
+                            <div class="col-md-4">
                                 <label class="form-label fw-bold">Nomor Invoice/Permohonan <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control" name="nomor_invoice" placeholder="Contoh: INV/2026/001" required>
                             </div>
-                            <div class="col-md-6">
-                                <label class="form-label fw-bold text-success">Nilai Bruto Tagihan (DPP + PPN) <span class="text-danger">*</span></label>
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold">Tanggal Invoice <span class="text-danger">*</span></label>
+                                <input type="date" class="form-control" name="tanggal_invoice" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold text-success">Nilai Bruto (DPP + PPN) <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control fw-bold bg-light fs-5" id="total_bruto_display" value="{{ $isPresetTagihan ? 'Rp ' . number_format($selectedTermin->nilai_bruto_termin, 0, ',', '.') : 'Rp 0' }}" readonly>
                                 <input type="hidden" name="total_bruto" id="total_bruto" value="{{ $isPresetTagihan ? $selectedTermin->nilai_bruto_termin : 0 }}">
-                                <small class="text-muted">Akan terisi otomatis berdasarkan Termin yang dipilih.</small>
+                                <small class="text-muted">Terisi otomatis dari Termin.</small>
                             </div>
                         </div>
 
@@ -230,31 +252,20 @@
                         <h6 class="mb-0 fw-bold"><i class="bi bi-cloud-upload me-2"></i>4. Arsip Digital Pekerjaan (Format .PDF Maks 5MB)</h6>
                     </div>
                     <div class="card-body p-4">
+                        <div class="alert alert-info border-0 shadow-sm small mb-4">
+                            <i class="bi bi-info-circle-fill me-2"></i>
+                            <strong>Pemberitahuan:</strong> Dokumen final bertandatangan untuk BAPP, BAST, dan BAP dikelola nanti melalui halaman <strong>Detail Tagihan (Working Hub)</strong> setelah draft ini tersimpan.
+                        </div>
                         <div class="row g-4">
-                            <div class="col-md-4">
-                                <label class="form-label fw-bold">1. Surat Permohonan / Invoice / Kwitansi <span class="text-danger">*</span></label>
-                                <input type="file" class="form-control" name="file_invoice" accept=".pdf" required>
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label fw-bold">2. BAPP <small>(Opsional)</small></label>
-                                <input type="file" class="form-control" name="file_bapp" accept=".pdf">
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label fw-bold">3. BAP <span>*</span></label>
-                                <input type="file" class="form-control" name="file_bap" accept=".pdf"   required>
-                            </div>
-                            <div class="col-md-4" id="wrapper_file_bast" style="display: none;">
-                                <label class="form-label fw-bold">4. BAST <span class="text-danger">*</span></label>
-                                <input type="file" class="form-control" name="file_bast" id="file_bast" accept=".pdf">
-                                <small class="text-muted d-block mt-1">Dokumen ini hanya diperlukan saat termin pelunasan.</small>
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label fw-bold">5. Kwitansi <span class="text-danger">*</span></label>
-                                <input type="file" class="form-control" name="file_kwitansi" accept=".pdf" required>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">1. Surat Permohonan / Invoice <span class="text-danger">*</span></label>
+                                <input type="file" class="form-control form-control-lg" name="file_invoice" accept=".pdf" required>
+                                <small class="text-muted mt-1 d-block">Surat Permohonan pembayaran resmi (Format .PDF Maks 5MB).</small>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label fw-bold">6. Lampiran Laporan (Foto/Dokumentasi) <small class="text-muted">(Opsional)</small></label>
-                                <input type="file" class="form-control" name="file_lampiran_lainnya" accept=".pdf,.zip">
+                                <label class="form-label fw-bold">2. Lampiran Laporan (Foto/Dokumentasi) <small class="text-muted">(Opsional)</small></label>
+                                <input type="file" class="form-control form-control-lg" name="file_lampiran_lainnya" accept=".pdf,.zip">
+                                <small class="text-muted mt-1 d-block">Laporan progres atau backup (.PDF atau .ZIP Maks 5MB).</small>
                             </div>
                         </div>
                     </div>
@@ -265,7 +276,7 @@
             <div class="col-12 mb-5">
                 <div class="d-flex justify-content-end gap-3 p-3 bg-light rounded-4 shadow-sm">
                     <button type="reset" class="btn btn-outline-secondary px-4">Reset Ulang</button>
-                    <button type="submit" class="btn btn-primary px-5 fw-bold"><i class="bi bi-send-check me-2"></i>Ajukan Tagihan ke PPK</button>
+                    <button type="submit" class="btn btn-primary px-5 fw-bold"><i class="bi bi-save me-2"></i>Buat Draft Tagihan</button>
                 </div>
             </div>
 
@@ -346,18 +357,15 @@
         const isPelunasan = jenisTermin === 'PELUNASAN';
         const bastWrapper = document.getElementById('wrapper_bast_fields');
         const bastFileWrapper = document.getElementById('wrapper_file_bast');
-        const nomorBast = document.getElementById('nomor_bast');
         const tanggalBast = document.getElementById('tanggal_bast');
         const fileBast = document.getElementById('file_bast');
 
         bastWrapper.style.display = isPelunasan ? 'block' : 'none';
         bastFileWrapper.style.display = isPelunasan ? 'block' : 'none';
-        nomorBast.required = isPelunasan;
         tanggalBast.required = isPelunasan;
         fileBast.required = isPelunasan;
 
         if (!isPelunasan) {
-            nomorBast.value = '';
             tanggalBast.value = '';
             fileBast.value = '';
         }

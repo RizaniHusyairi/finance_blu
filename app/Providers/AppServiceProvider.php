@@ -6,6 +6,7 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Pagination\Paginator;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -28,5 +29,7 @@ class AppServiceProvider extends ServiceProvider
         Carbon::setLocale(config('app.locale', 'id'));
 
         setlocale(LC_TIME, 'id_ID.UTF-8', 'id_ID', 'Indonesian_indonesia.1252', 'Indonesian');
+
+        Paginator::useBootstrapFive();
     }
 }

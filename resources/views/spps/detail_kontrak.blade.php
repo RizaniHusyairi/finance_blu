@@ -328,11 +328,18 @@
                                     </div>
                                 </div>
                                 @if(!empty($tagihan->detailKontrak->nomor_bapp))
-                                    <div class="col-12">
-                                        <div class="border rounded-4 p-3">
+                                    <div class="col-md-6">
+                                        <div class="border rounded-4 p-3 h-100">
                                             <div class="text-muted small mb-1">Nomor BAPP</div>
                                             <div class="fw-bold">{{ $tagihan->detailKontrak->nomor_bapp }}</div>
                                             <div class="small text-muted mt-1">Tanggal: {{ optional($tagihan->detailKontrak->tanggal_bapp)->format('d M Y') ?? '-' }}</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="border rounded-4 p-3 h-100">
+                                            <div class="text-muted small mb-1">Pemeriksa Hasil Pekerjaan</div>
+                                            <div class="fw-bold">{{ $tagihan->detailKontrak->nama_pemeriksa ?? '-' }}</div>
+                                            <div class="small text-muted mt-1">{{ $tagihan->detailKontrak->jabatan_pemeriksa ?? '-' }} (NIP: {{ $tagihan->detailKontrak->nip_pemeriksa ?? '-' }})</div>
                                         </div>
                                     </div>
                                 @endif

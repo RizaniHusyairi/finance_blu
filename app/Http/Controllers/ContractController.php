@@ -330,196 +330,8 @@ class ContractController extends Controller
         return view('contracts.show', compact('kontrak', 'semuaAktivitas'));
     }
 
-    /**
-     * Submit Multiple Draft contracts for PPK approval.
-     */
-    public function submitBulk(Request $request)
-    {
-        $request->validate([
-            'contract_ids' => 'required|array',
-            'contract_ids.*' => 'exists:kontrak_pengadaan,id',
-        ]);
 
-        $contracts = \App\Models\KontrakPengadaan::whereIn('id', $request->contract_ids)->where('status_kontrak', 'DRAFT')->get();
 
-        if ($contracts->isEmpty()) {
-            return back()->with('error', 'Tidak ada kontrak dengan status DRAFT yang diplih.');
-        }
-
-        $missingSpkFinal = $contracts->filter(fn ($contract) => !$this->hasSpkFinalTtd($contract));
-        if ($missingSpkFinal->isNotEmpty()) {
-            $nomorSpk = $missingSpkFinal->pluck('nomor_spk')->take(3)->implode(', ');
-            $suffix = $missingSpkFinal->count() > 3 ? ' dan lainnya' : '';
-
-            return back()->with(
-                'error',
-                'Pengajuan dibatalkan. Kontrak berikut belum memiliki SPK final bertandatangan: ' . $nomorSpk . $suffix . '.'
-            );
-        }
-
-        DB::beginTransaction();
-        try {
-            foreach ($contracts as $contract) {
-                $contract->update([
-                    'status_kontrak' => 'PENDING_REVIEW',
-                ]);
-
-                \App\Models\LogStatusDokumen::create([
-                    'dokumen_type'      => \App\Models\KontrakPengadaan::class,
-                    'dokumen_id'        => $contract->id,
-                    'user_id'           => Auth::id(),
-                    'role_saat_itu'     => Auth::user()->getRoleNames()->first() ?? '-',
-                    'status_sebelumnya' => 'DRAFT',
-                    'status_baru'       => 'PENDING_REVIEW',
-                    'aksi'              => 'SUBMIT_BULK',
-                    'catatan'           => 'Kontrak diajukan untuk persetujuan PPK (Bulk).',
-                    'ip_address'        => request()->ip(),
-                ]);
-            }
-
-            $contracts->loadMissing('ppkUser');
-
-            foreach ($contracts as $contract) {
-                if ($contract->ppkUser) {
-                    Notification::send($contract->ppkUser, new WorkflowNotification([
-                        'title' => 'Pengajuan Kontrak Baru',
-                        'message' => "Kontrak {$contract->nomor_spk} diajukan dan menunggu verifikasi Anda.",
-                        'url' => route('contracts.verifikasi.show', $contract->id),
-                        'icon' => 'notifications',
-                        'color' => 'primary',
-                    ]));
-                }
-            }
-
-            DB::commit();
-            return back()->with('success', $contracts->count() . ' Kontrak berhasil diajukan ke PPK.');
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return back()->with('error', 'Gagal mengajukan kontrak: ' . $e->getMessage());
-        }
-    }
-
-    /**
-     * Submit a Draft contract for PPK approval.
-     */
-    public function submit($id)
-    {
-        $contract = \App\Models\KontrakPengadaan::with('ppkUser')->findOrFail($id);
-
-        if ($contract->status_kontrak !== 'DRAFT' && $contract->status_kontrak !== 'DRAFT') {
-            return back()->with('error', 'Kontrak tidak dapat diajukan dari status saat ini.');
-        }
-
-        if (!$this->hasSpkFinalTtd($contract)) {
-            return back()->with('error', 'Kontrak belum dapat diajukan ke PPK karena SPK final bertandatangan belum diunggah.');
-        }
-
-        $oldStatus = $contract->status_kontrak;
-        $contract->update([
-            'status_kontrak' => 'PENDING_REVIEW',
-        ]);
-
-        \App\Models\LogStatusDokumen::create([
-            'dokumen_type'      => \App\Models\KontrakPengadaan::class,
-            'dokumen_id'        => $contract->id,
-            'user_id'           => Auth::id(),
-            'role_saat_itu'     => Auth::user()->getRoleNames()->first() ?? '-',
-            'status_sebelumnya' => $oldStatus,
-            'status_baru'       => 'PENDING_REVIEW',
-            'aksi'              => 'SUBMIT',
-            'catatan'           => 'Kontrak diajukan untuk persetujuan PPK.',
-            'ip_address'        => request()->ip(),
-        ]);
-
-        if ($contract->ppkUser) {
-            Notification::send($contract->ppkUser, new WorkflowNotification([
-                'title' => 'Pengajuan Kontrak Baru',
-                'message' => "Kontrak {$contract->nomor_spk} diajukan dan menunggu verifikasi Anda.",
-                'url' => route('contracts.verifikasi.show', $contract->id),
-                'icon' => 'notifications',
-                'color' => 'primary',
-            ]));
-        }
-
-        return back()->with('success', 'Kontrak berhasil diajukan ke PPK untuk persetujuan.');
-    }
-
-    /**
-     * PPK approves a contract.
-     */
-    public function approve(Request $request, $id)
-    {
-        $contract = \App\Models\KontrakPengadaan::findOrFail($id);
-        $this->ensureAssignedPpk($contract);
-
-        if ($contract->status_kontrak !== 'PENDING_REVIEW') {
-            return back()->with('error', 'Kontrak tidak dalam status menunggu persetujuan.');
-        }
-
-        $contract->update(['status_kontrak' => 'AKTIF']);
-
-        \App\Models\LogStatusDokumen::create([
-            'dokumen_type'      => \App\Models\KontrakPengadaan::class,
-            'dokumen_id'        => $contract->id,
-            'user_id'           => Auth::id(),
-            'role_saat_itu'     => 'PPK',
-            'status_sebelumnya' => 'PENDING_REVIEW',
-            'status_baru'       => 'AKTIF',
-            'aksi'              => 'APPROVE',
-            'catatan'           => $request->input('notes', 'Kontrak disetujui oleh PPK.'),
-            'ip_address'        => request()->ip(),
-        ]);
-
-        $this->notifyRoles(
-            ['Pejabat Pengadaan'],
-            'Kontrak Disetujui PPK',
-            "Kontrak {$contract->nomor_spk} telah disetujui PPK dan berstatus AKTIF.",
-            route('contracts.show', $contract->id)
-        );
-
-        return redirect()
-            ->route('contracts.verifikasi')
-            ->with('success', "Kontrak {$contract->nomor_spk} berhasil disetujui dan diaktifkan.");
-    }
-
-    /**
-     * PPK rejects a contract.
-     */
-    public function reject(Request $request, $id)
-    {
-        $request->validate(['notes' => 'required|string|max:500']);
-        $contract = \App\Models\KontrakPengadaan::findOrFail($id);
-        $this->ensureAssignedPpk($contract);
-
-        if ($contract->status_kontrak !== 'PENDING_REVIEW') {
-            return back()->with('error', 'Kontrak tidak dalam status menunggu persetujuan.');
-        }
-
-        $contract->update(['status_kontrak' => 'DRAFT']);
-
-        \App\Models\LogStatusDokumen::create([
-            'dokumen_type'      => \App\Models\KontrakPengadaan::class,
-            'dokumen_id'        => $contract->id,
-            'user_id'           => Auth::id(),
-            'role_saat_itu'     => 'PPK',
-            'status_sebelumnya' => 'PENDING_REVIEW',
-            'status_baru'       => 'DRAFT',
-            'aksi'              => 'REJECT',
-            'catatan'           => $request->input('notes'),
-            'ip_address'        => request()->ip(),
-        ]);
-
-        $this->notifyRoles(
-            ['Pejabat Pengadaan'],
-            'Kontrak Dikembalikan PPK',
-            "Kontrak {$contract->nomor_spk} dikembalikan PPK untuk revisi: {$request->input('notes')}",
-            route('contracts.edit', $contract->id)
-        );
-
-        return redirect()
-            ->route('contracts.verifikasi')
-            ->with('success', "Kontrak {$contract->nomor_spk} berhasil dikembalikan untuk revisi.");
-    }
 
     /**
      * Show the form for editing the specified resource.
@@ -737,7 +549,11 @@ class ContractController extends Controller
             $request->file('file_spk_final_ttd')->getClientOriginalName()
         );
 
-        return back()->with('success', 'SPK final bertandatangan berhasil diunggah.');
+        $activated = $kontrak->activateIfDocumentsComplete();
+        $msg = 'SPK final bertandatangan berhasil diunggah.';
+        if ($activated) $msg .= ' Kontrak kini telah AKTIF secara otomatis.';
+        
+        return back()->with('success', $msg);
     }
 
     public function exportSpkPdf($id)
@@ -782,7 +598,11 @@ class ContractController extends Controller
             $request->file('file_spmk_final_ttd')->getClientOriginalName()
         );
 
-        return back()->with('success', 'SPMK final bertandatangan berhasil diunggah.');
+        $activated = $kontrak->activateIfDocumentsComplete();
+        $msg = 'SPMK final bertandatangan berhasil diunggah.';
+        if ($activated) $msg .= ' Kontrak kini telah AKTIF secara otomatis.';
+        
+        return back()->with('success', $msg);
     }
 
     public function uploadRingkasanKontrakFinal(Request $request, $id)
@@ -800,7 +620,11 @@ class ContractController extends Controller
             $request->file('file_ringkasan_kontrak_final_ttd')->getClientOriginalName()
         );
 
-        return back()->with('success', 'Ringkasan Kontrak final bertandatangan berhasil diunggah.');
+        $activated = $kontrak->activateIfDocumentsComplete();
+        $msg = 'Ringkasan Kontrak final bertandatangan berhasil diunggah.';
+        if ($activated) $msg .= ' Kontrak kini telah AKTIF secara otomatis.';
+
+        return back()->with('success', $msg);
     }
 
     public function exportSpmkPdf($id)

@@ -12,6 +12,13 @@ class DetailKontrak extends Model
     protected $table = 'detail_kontrak';
     protected $guarded = ['id'];
 
+    protected $casts = [
+        'tanggal_bapp' => 'date',
+        'tanggal_bast' => 'date',
+        'tanggal_bap' => 'date',
+        'tanggal_invoice' => 'date',
+    ];
+
     public function tagihan()
     {
         return $this->belongsTo(Tagihan::class, 'tagihan_id');

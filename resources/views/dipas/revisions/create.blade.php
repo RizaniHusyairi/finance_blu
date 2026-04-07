@@ -119,10 +119,10 @@
                     <div class="col-md-6">
                         <label class="form-label fw-semibold d-block">Salin Item Anggaran</label>
                         <div class="form-check form-switch border rounded-4 px-3 py-3 mt-1">
-                            <input class="form-check-input" type="checkbox" role="switch" id="salin_item_anggaran" name="salin_item_anggaran" value="1" {{ old('salin_item_anggaran', '1') ? 'checked' : '' }}>
-                            <label class="form-check-label ms-2" for="salin_item_anggaran">
+                            <label class="form-check-label" for="salin_item_anggaran">
                                 Salin item anggaran dari revisi aktif sebelumnya
                             </label>
+                            <input class="form-check-input" type="checkbox" role="switch" id="salin_item_anggaran" name="salin_item_anggaran" value="1" {{ old('salin_item_anggaran', '1') ? 'checked' : '' }} style="float:right;">
                             <div class="small text-muted mt-1">Jika dicentang, semua item anggaran dari revisi aktif saat ini akan dikloning ke revisi baru.</div>
                         </div>
                     </div>

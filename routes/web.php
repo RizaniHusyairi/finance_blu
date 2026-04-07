@@ -86,6 +86,10 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
     Route::middleware('role:Super Admin|Pejabat Pengadaan|PPK')->group(function () {
         Route::get('/tagihan/kontrak/create', [\App\Http\Controllers\TagihanController::class, 'createKontrak'])->name('tagihan.kontrak.create');
         Route::post('/tagihan/kontrak/store', [\App\Http\Controllers\TagihanController::class, 'storeKontrak'])->name('tagihan.kontrak.store');
+        Route::get('/tagihan/kontrak/{id}', [\App\Http\Controllers\TagihanController::class, 'showKontrak'])->name('tagihan.kontrak.show');
+        Route::post('/tagihan/kontrak/{id}/submit', [\App\Http\Controllers\TagihanController::class, 'submitKontrak'])->name('tagihan.kontrak.submit');
+        Route::post('/tagihan/kontrak/{id}/arsip', [\App\Http\Controllers\TagihanController::class, 'uploadArsipKontrak'])->name('tagihan.kontrak.upload-arsip');
+        Route::get('/tagihan/kontrak/{id}/export/{type}', [\App\Http\Controllers\TagihanController::class, 'exportPdfKontrak'])->name('tagihan.kontrak.export-pdf');
 
         Route::get('/contracts/verifikasi', [ContractController::class, 'verifikasiIndex'])->name('contracts.verifikasi');
         Route::get('/contracts/verifikasi/{id}', [ContractController::class, 'verifikasiShow'])->name('contracts.verifikasi.show');
@@ -96,7 +100,7 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
         Route::get('/contracts/{contract}/spmk/export-pdf', [ContractController::class, 'exportSpmkPdf'])->name('contracts.spmk.export-pdf');
         Route::post('/contracts/{contract}/spmk/upload-final', [ContractController::class, 'uploadSpmkFinal'])->name('contracts.spmk.upload-final');
         Route::resource('contracts', ContractController::class);
-        Route::post('/contracts/submit-bulk', [ContractController::class, 'submitBulk'])->name('contracts.submit_bulk');
+
         Route::post('/contracts/{contract}/submit', [ContractController::class, 'submit'])->name('contracts.submit');
         Route::post('/contracts/{contract}/approve', [ContractController::class, 'approve'])->name('contracts.approve');
         Route::post('/contracts/{contract}/reject', [ContractController::class, 'reject'])->name('contracts.reject');

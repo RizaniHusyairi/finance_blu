@@ -197,7 +197,7 @@
 
             @if($coas->hasPages())
                 <div class="mt-4 d-flex justify-content-end">
-                    {{ $coas->links() }}
+                    {{ $coas->withQueryString()->links() }}
                 </div>
             @endif
         </div>

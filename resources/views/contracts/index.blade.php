@@ -91,6 +91,15 @@
                                                 <a href="#" class="btn btn-sm btn-light text-warning border shadow-sm" title="Buat Addendum">
                                                     <i class="bi bi-plus-circle"></i> Addm.
                                                 </a>
+                                                @if(Auth::user()->hasRole('Pejabat Pengadaan') && $kontrak->status_kontrak === 'DRAFT')
+                                                    <form action="{{ route('contracts.destroy', $kontrak->id) }}" method="POST" class="d-inline m-0" onsubmit="return confirm('Apakah Anda yakin ingin menghapus Draf Kontrak ini? Segala arsip file terkait akan ikut terhapus permanen.')">
+                                                        @csrf
+                                                        @method('DELETE')
+                                                        <button type="submit" class="btn btn-sm btn-light text-danger border shadow-sm" title="Hapus Draf Kontrak">
+                                                            <i class="bi bi-trash"></i>
+                                                        </button>
+                                                    </form>
+                                                @endif
                                                 @if($kontrak->status_kontrak == 'AKTIF')
                                                     @php
                                                         $readyTerms = $kontrak->termin->where('status_termin', 'READY_TO_BILL')->values();

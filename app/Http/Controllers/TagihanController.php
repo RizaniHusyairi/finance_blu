@@ -41,7 +41,12 @@ class TagihanController extends Controller
             ? $this->resolvePotonganAngsuranUangMuka($selectedKontrak, $selectedTermin)
             : 0;
 
-        return view('tagihan.create_kontrak', compact('kontraks', 'selectedKontrak', 'selectedTermin', 'selectedPotonganAngsuran'));
+        $docService = app(\App\Services\DocumentNumberService::class);
+        $previewBapp = $docService->previewByKey('BAPP');
+        $previewBast = $docService->previewByKey('BAST');
+        $previewBap = $docService->previewByKey('BAP');
+
+        return view('tagihan.create_kontrak', compact('kontraks', 'selectedKontrak', 'selectedTermin', 'selectedPotonganAngsuran', 'previewBapp', 'previewBast', 'previewBap'));
     }
 
     public function storeKontrak(Request $request)
@@ -49,19 +54,16 @@ class TagihanController extends Controller
         $validated = $request->validate([
             'kontrak_pengadaan_id' => 'required|exists:kontrak_pengadaan,id',
             'kontrak_termin_id' => 'required|exists:kontrak_termin,id',
-            'nomor_bapp' => 'nullable|string|max:100',
             'tanggal_bapp' => 'nullable|date',
-            'nomor_bast' => 'nullable|string|max:100',
             'tanggal_bast' => 'nullable|date',
-            'nomor_bap' => 'required|string|max:100',
             'tanggal_bap' => 'required|date',
             'nomor_invoice' => 'required|string|max:100',
+            'tanggal_invoice' => 'required|date',
+            'nama_pemeriksa' => 'required|string|max:150',
+            'nip_pemeriksa' => 'nullable|string|max:50',
+            'jabatan_pemeriksa' => 'required|string|max:150',
             'total_bruto' => 'required|numeric|min:0',
             'file_invoice' => 'required|file|mimes:pdf|max:5120',
-            'file_bapp' => 'nullable|file|mimes:pdf|max:5120',
-            'file_bap' => 'required|file|mimes:pdf|max:5120',
-            'file_bast' => 'nullable|file|mimes:pdf|max:5120',
-            'file_kwitansi' => 'required|file|mimes:pdf|max:5120',
             'file_lampiran_lainnya' => 'nullable|file|mimes:pdf,zip|max:5120',
         ]);
 
@@ -76,85 +78,63 @@ class TagihanController extends Controller
                 throw new \Exception('Termin yang dipilih tidak lagi siap ditagih.');
             }
 
+            // Mencegah duplikasi pembuatan draft tagihan dari termin yang sama
+            if (DetailKontrak::where('kontrak_termin_id', $termin->id)->exists()) {
+                throw new \Exception('Draft tagihan untuk termin ini sudah pernah dibuat.');
+            }
+
             if ($termin->jenis_termin === 'PELUNASAN') {
                 $request->validate([
-                    'nomor_bast' => 'required|string|max:100',
                     'tanggal_bast' => 'required|date',
-                    'file_bast' => 'required|file|mimes:pdf|max:5120',
                 ]);
+            }
+
+            // Prioritas backend: sumber utama nilai adalah backend/data termin
+            $totalBruto = $termin->nilai_bruto_termin;
+            if (abs((float)$validated['total_bruto'] - (float)$totalBruto) > 1.0) {
+                throw new \Exception("Nilai bruto yang dikirimkan tidak sesuai dengan data termin ({$totalBruto}).");
             }
 
             $potonganAngsuranUangMuka = $this->resolvePotonganAngsuranUangMuka($kontrak, $termin);
             $totalPotonganPajak = 0;
             $totalPotongan = $potonganAngsuranUangMuka + $totalPotonganPajak;
-            $totalNetto = $validated['total_bruto'] - $totalPotongan;
+            $totalNetto = $totalBruto - $totalPotongan;
             $nomorTagihan = 'TAG-K/' . date('Ym') . '/' . str_pad(rand(1, 9999), 4, '0', STR_PAD_LEFT);
 
             $tagihan = Tagihan::create([
                 'nomor_tagihan' => $nomorTagihan,
                 'tipe_tagihan' => 'KONTRAK',
                 'master_dipa_id' => $kontrak->master_dipa_id,
+                'dipa_revision_item_id' => $kontrak->dipa_revision_item_id ?? null,
                 'pihak_id' => $kontrak->vendor_id,
                 'deskripsi' => 'Pengajuan pembayaran untuk SPK/Kontrak ID: ' . $validated['kontrak_pengadaan_id'] . ' (Termin/BAST)',
-                'total_bruto' => $validated['total_bruto'],
+                'total_bruto' => $totalBruto,
                 'total_potongan' => $totalPotongan,
                 'total_netto' => $totalNetto,
-                'status' => 'PENDING_PPK',
+                'status' => 'DRAFT',
                 'created_by' => Auth::id(),
             ]);
+
+            $docService = app(\App\Services\DocumentNumberService::class);
+            $nomorBapp = $docService->generateByKey('BAPP');
+            $nomorBap = $docService->generateByKey('BAP');
+            $nomorBast = $termin->jenis_termin === 'PELUNASAN' ? $docService->generateByKey('BAST') : null;
 
             $detailKontrak = DetailKontrak::create([
                 'tagihan_id' => $tagihan->id,
                 'kontrak_termin_id' => $termin->id,
-                'nomor_bapp' => $validated['nomor_bapp'],
-                'tanggal_bapp' => $validated['tanggal_bapp'],
-                'nomor_bast' => $validated['nomor_bast'],
-                'tanggal_bast' => $validated['tanggal_bast'],
-                'nomor_bap' => $validated['nomor_bap'],
+                'nomor_bapp' => $nomorBapp,
+                'tanggal_bapp' => $validated['tanggal_bapp'] ?? null,
+                'nomor_bast' => $nomorBast,
+                'tanggal_bast' => $validated['tanggal_bast'] ?? null,
+                'nomor_bap' => $nomorBap,
                 'tanggal_bap' => $validated['tanggal_bap'],
+                'tanggal_invoice' => $validated['tanggal_invoice'],
+                'nomor_invoice' => $validated['nomor_invoice'],
+                'nama_pemeriksa' => $validated['nama_pemeriksa'],
+                'nip_pemeriksa' => $validated['nip_pemeriksa'] ?? null,
+                'jabatan_pemeriksa' => $validated['jabatan_pemeriksa'],
             ]);
-
-            if ($request->hasFile('file_bast')) {
-                $detailKontrak->arsipDokumen()->create([
-                    'jenis_dokumen' => 'BAST',
-                    'nama_file_asli' => $request->file('file_bast')->getClientOriginalName(),
-                    'path_file' => $request->file('file_bast')->store('tagihan/bast', 'public'),
-                    'disk' => 'public',
-                    'mime_type' => $request->file('file_bast')->getMimeType(),
-                    'ukuran_file' => $request->file('file_bast')->getSize(),
-                    'uploaded_by' => Auth::id(),
-                    'uploaded_at' => now(),
-                    'is_active' => true,
-                ]);
-            }
-
-            if ($request->hasFile('file_bapp')) {
-                $detailKontrak->arsipDokumen()->create([
-                    'jenis_dokumen' => 'BAPP',
-                    'nama_file_asli' => $request->file('file_bapp')->getClientOriginalName(),
-                    'path_file' => $request->file('file_bapp')->store('tagihan/bapp', 'public'),
-                    'disk' => 'public',
-                    'mime_type' => $request->file('file_bapp')->getMimeType(),
-                    'ukuran_file' => $request->file('file_bapp')->getSize(),
-                    'uploaded_by' => Auth::id(),
-                    'uploaded_at' => now(),
-                    'is_active' => true,
-                ]);
-            }
-
-            if ($request->hasFile('file_bap')) {
-                $detailKontrak->arsipDokumen()->create([
-                    'jenis_dokumen' => 'BAP',
-                    'nama_file_asli' => $request->file('file_bap')->getClientOriginalName(),
-                    'path_file' => $request->file('file_bap')->store('tagihan/bap', 'public'),
-                    'disk' => 'public',
-                    'mime_type' => $request->file('file_bap')->getMimeType(),
-                    'ukuran_file' => $request->file('file_bap')->getSize(),
-                    'uploaded_by' => Auth::id(),
-                    'uploaded_at' => now(),
-                    'is_active' => true,
-                ]);
-            }
 
             if ($request->hasFile('file_invoice')) {
                 $detailKontrak->arsipDokumen()->create([
@@ -164,20 +144,6 @@ class TagihanController extends Controller
                     'disk' => 'public',
                     'mime_type' => $request->file('file_invoice')->getMimeType(),
                     'ukuran_file' => $request->file('file_invoice')->getSize(),
-                    'uploaded_by' => Auth::id(),
-                    'uploaded_at' => now(),
-                    'is_active' => true,
-                ]);
-            }
-
-            if ($request->hasFile('file_kwitansi')) {
-                $detailKontrak->arsipDokumen()->create([
-                    'jenis_dokumen' => 'KWITANSI',
-                    'nama_file_asli' => $request->file('file_kwitansi')->getClientOriginalName(),
-                    'path_file' => $request->file('file_kwitansi')->store('tagihan/kwitansi', 'public'),
-                    'disk' => 'public',
-                    'mime_type' => $request->file('file_kwitansi')->getMimeType(),
-                    'ukuran_file' => $request->file('file_kwitansi')->getSize(),
                     'uploaded_by' => Auth::id(),
                     'uploaded_at' => now(),
                     'is_active' => true,
@@ -204,20 +170,20 @@ class TagihanController extends Controller
                     'pajak_id' => null,
                     'jenis_potongan' => 'ANGSURAN_UANG_MUKA',
                     'deskripsi' => 'Potongan angsuran uang muka dari tagihan ' . $nomorTagihan,
-                    'dpp' => $validated['total_bruto'],
+                    'dpp' => $totalBruto,
                     'persentase_tarif_snapshot' => null,
                     'nama_pajak_snapshot' => 'Angsuran Uang Muka',
                     'nominal_potongan' => $potonganAngsuranUangMuka,
                 ]);
 
-                $kontrak->update([
-                    'sisa_uang_muka_belum_lunas' => max(0, (float) $kontrak->sisa_uang_muka_belum_lunas - $potonganAngsuranUangMuka),
-                ]);
+                // TODO: Pengurangan $kontrak->sisa_uang_muka_belum_lunas JANGAN dilakukan prematur di tahap DRAFT.
+                // Lakukan ini nanti saat verifikasi/pencairan mutakhir.
             }
 
+            // Update termin status menjadi DRAFT agar UI mengunci pembuatan tombol tagihan ganda
             DB::table('kontrak_termin')
                 ->where('id', $validated['kontrak_termin_id'])
-                ->update(['status_termin' => 'SUDAH_DITAGIH']);
+                ->update(['status_termin' => 'DRAFT']);
 
             LogStatusDokumen::create([
                 'dokumen_type' => Tagihan::class,
@@ -225,31 +191,173 @@ class TagihanController extends Controller
                 'user_id' => Auth::id(),
                 'role_saat_itu' => Auth::user()->getRoleNames()->first() ?? 'Pejabat Pengadaan',
                 'status_sebelumnya' => null,
-                'status_baru' => 'PENDING_PPK',
-                'aksi' => 'DIAJUKAN',
-                'catatan' => 'Tagihan termin baru dibuat. Menunggu verifikasi lanjutan.',
+                'status_baru' => 'DRAFT',
+                'aksi' => 'DIBUAT',
+                'catatan' => 'Draft tagihan termin baru dibuat. Menunggu kelengkapan dokumen BAPP/BAST/BAP.',
                 'ip_address' => request()->ip(),
             ]);
 
-            $this->notifyRoles(
-                ['PPK'],
-                'Tagihan Kontrak Baru',
-                "Tagihan {$tagihan->nomor_tagihan} baru diajukan dan menunggu verifikasi Anda.",
-                route('ppk.tagihan.kontrak.verify', $tagihan->id)
-            );
-
             DB::commit();
 
-            return redirect()->route('contracts.index')->with('success', 'Tagihan Termin/BAST berhasil diajukan dan sedang menunggu verifikasi.');
+            return redirect()->route('tagihan.kontrak.show', $tagihan->id)->with('success', 'Draft Tagihan Termin berhasil dibuat. Silakan lengkapi dokumen final.');
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->withInput()->withErrors(['error' => 'Gagal membuat tagihan: ' . $e->getMessage()]);
         }
     }
 
+    public function showKontrak($id)
+    {
+        $tagihan = Tagihan::with([
+            'detailKontrak.arsipDokumen',
+            'detailKontrak.termin.kontrak.vendor',
+            'detailKontrak.termin.kontrak.ppkUser.pegawai',
+            'potonganTagihan'
+        ])->findOrFail($id);
+
+        if ($tagihan->tipe_tagihan !== 'KONTRAK') {
+            abort(404);
+        }
+
+        $detailKontrak = $tagihan->detailKontrak;
+        $termin = $detailKontrak->termin;
+        $kontrak = $termin->kontrak;
+        
+        $arsip = $detailKontrak->arsipDokumen->where('is_active', true);
+        
+        $hasBappFinal = $arsip->contains('jenis_dokumen', 'BAPP_FINAL_TTD');
+        $hasBapFinal = $arsip->contains('jenis_dokumen', 'BAP_FINAL_TTD');
+        
+        $wajibBast = ($termin->jenis_termin === 'PELUNASAN');
+        $hasBastFinal = $arsip->contains('jenis_dokumen', 'BAST_FINAL_TTD');
+        
+        $isReadyToSubmit = $this->isTagihanReadyToSubmit($tagihan);
+
+        return view('tagihan.show_kontrak', compact(
+            'tagihan', 'detailKontrak', 'termin', 'kontrak', 
+            'hasBappFinal', 'hasBapFinal', 'hasBastFinal', 'wajibBast', 'isReadyToSubmit'
+        ));
+    }
+
+    public function uploadArsipKontrak(Request $request, $id)
+    {
+        $request->validate([
+            'jenis_dokumen' => 'required|in:BAPP_FINAL_TTD,BAST_FINAL_TTD,BAP_FINAL_TTD',
+            'file' => 'required|file|mimes:pdf|max:10240',
+        ]);
+
+        $tagihan = Tagihan::findOrFail($id);
+        $detailKontrak = $tagihan->detailKontrak;
+
+        $jenis = $request->jenis_dokumen;
+
+        // Nonaktifkan dokumen lama jika ada
+        $detailKontrak->arsipDokumen()->where('jenis_dokumen', $jenis)->update(['is_active' => false]);
+
+        // Simpan dokumen baru
+        $path = $request->file('file')->store('tagihan/final_docs', 'public');
+
+        $detailKontrak->arsipDokumen()->create([
+            'jenis_dokumen' => $jenis,
+            'nama_file_asli' => $request->file('file')->getClientOriginalName(),
+            'path_file' => $path,
+            'disk' => 'public',
+            'mime_type' => $request->file('file')->getMimeType(),
+            'ukuran_file' => $request->file('file')->getSize(),
+            'uploaded_by' => Auth::id(),
+            'uploaded_at' => now(),
+            'is_active' => true,
+        ]);
+
+        return back()->with('success', str_replace('_FINAL_TTD', '', $jenis) . ' Final berhasil diunggah.');
+    }
+
+    public function submitKontrak(Request $request, $id)
+    {
+        $tagihan = Tagihan::findOrFail($id);
+        
+        if ($tagihan->status !== 'DRAFT') {
+            return back()->withErrors(['error' => 'Tagihan tidak dalam status DRAFT.']);
+        }
+
+        if (!$this->isTagihanReadyToSubmit($tagihan)) {
+            return back()->withErrors(['error' => 'Dokumen BAPP dan BAP (serta BAST untuk Pelunasan) Final bertandatangan wajib diunggah secara lengkap.']);
+        }
+
+        try {
+            DB::beginTransaction();
+
+            $tagihan->update(['status' => 'PENDING_PPK']);
+
+            // Mengikat/memfinalisasi status termin menjadi SUDAH_DITAGIH agar statusnya maju ketika tagihan beneran disubmit
+            if ($tagihan->detailKontrak && $tagihan->detailKontrak->termin) {
+                $tagihan->detailKontrak->termin->update(['status_termin' => 'SUDAH_DITAGIH']);
+            }
+
+            LogStatusDokumen::create([
+                'dokumen_type' => Tagihan::class,
+                'dokumen_id' => $tagihan->id,
+                'user_id' => Auth::id(),
+                'role_saat_itu' => Auth::user()->getRoleNames()->first() ?? 'Pejabat Pengadaan',
+                'status_sebelumnya' => 'DRAFT',
+                'status_baru' => 'PENDING_PPK',
+                'aksi' => 'DIAJUKAN',
+                'catatan' => 'Tagihan termin dan dokumen berita acara ttd diajukan ke PPK.',
+                'ip_address' => request()->ip(),
+            ]);
+
+            $this->notifyRoles(
+                ['PPK'],
+                'Tagihan Kontrak Baru',
+                "Tagihan {$tagihan->nomor_tagihan} siap untuk diverifikasi.",
+                route('ppk.tagihan.kontrak.verify', $tagihan->id)
+            );
+
+            DB::commit();
+            return redirect()->route('contracts.index')->with('success', 'Tagihan berhasil diajukan ke PPK.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withErrors(['error' => 'Gagal mengajukan ke PPK: ' . $e->getMessage()]);
+        }
+    }
+
+    public function exportPdfKontrak($id, $type)
+    {
+        $tagihan = Tagihan::with(['detailKontrak.termin.kontrak.vendor', 'detailKontrak.termin.kontrak.ppkUser.pegawai', 'potonganTagihan'])->findOrFail($id);
+        $detailKontrak = $tagihan->detailKontrak;
+        $termin = $detailKontrak->termin;
+        $kontrak = $termin->kontrak;
+        
+        $terbilang = ucwords(terbilang($kontrak->nilai_total_kontrak)) . ' Rupiah';
+        $terbilangTagihan = ucwords(terbilang($tagihan->total_bruto)) . ' Rupiah';
+
+        $data = [
+            'tagihan' => $tagihan,
+            'detail' => $detailKontrak,
+            'termin' => $detailKontrak->termin,
+            'kontrak' => $kontrak,
+            'vendor' => $kontrak->vendor,
+            'terbilang' => $terbilang,
+            'terbilangTagihan' => $terbilangTagihan
+        ];
+
+        if ($type === 'BAPP') {
+            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.kontrak.bapp', $data)->setPaper('a4', 'portrait');
+            return $pdf->stream('BAPP_' . str_replace('/', '_', $detailKontrak->nomor_bapp ?? 'draft') . '.pdf');
+        } elseif ($type === 'BAST') {
+            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.kontrak.bast', $data)->setPaper('a4', 'portrait');
+            return $pdf->stream('BAST_' . str_replace('/', '_', $detailKontrak->nomor_bast ?? 'draft') . '.pdf');
+        } elseif ($type === 'BAP') {
+            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.kontrak.bap', $data)->setPaper('a4', 'portrait');
+            return $pdf->stream('BAP_' . str_replace('/', '_', $detailKontrak->nomor_bap ?? 'draft') . '.pdf');
+        }
+
+        abort(404);
+    }
+
     public function ppkIndex()
     {
-        $tagihans = Tagihan::with(['detailKontrak.kontrakTermin.kontrak.vendor', 'potongans', 'logs'])
+        $tagihans = Tagihan::with(['detailKontrak.termin.kontrak.vendor', 'potonganTagihan', 'logs'])
             ->where('tipe_tagihan', 'KONTRAK')
             ->where('status', 'PENDING_PPK')
             ->latest()
@@ -260,7 +368,7 @@ class TagihanController extends Controller
 
     public function verifyKontrak($id)
     {
-        $tagihan = Tagihan::with(['detailKontrak.kontrakTermin.kontrak.vendor', 'potongans', 'logs'])->findOrFail($id);
+        $tagihan = Tagihan::with(['detailKontrak.termin.kontrak.vendor', 'potonganTagihan', 'logs'])->findOrFail($id);
 
         if ($tagihan->status !== 'PENDING_PPK') {
             return redirect()->route('ppk.tagihan.kontrak.index')->with('error', 'Tagihan ini tidak sedang dalam antrean verifikasi Anda.');
@@ -271,7 +379,7 @@ class TagihanController extends Controller
 
     public function approveKontrak($id)
     {
-        $tagihan = Tagihan::with(['detailKontrak.kontrakTermin.kontrak'])->findOrFail($id);
+        $tagihan = Tagihan::with(['detailKontrak.termin.kontrak'])->findOrFail($id);
 
         if ($tagihan->status !== 'PENDING_PPK') {
             return redirect()
@@ -325,7 +433,7 @@ class TagihanController extends Controller
             'catatan_revisi' => 'required|string|min:10|max:1000',
         ]);
 
-        $tagihan = Tagihan::with(['detailKontrak.kontrakTermin.kontrak'])->findOrFail($id);
+        $tagihan = Tagihan::with(['detailKontrak.termin.kontrak'])->findOrFail($id);
 
         if ($tagihan->status !== 'PENDING_PPK') {
             return redirect()
@@ -337,7 +445,7 @@ class TagihanController extends Controller
 
         try {
             $statusSebelumnya = $tagihan->status;
-            $contractId = $tagihan->detailKontrak?->kontrakTermin?->kontrak?->id;
+            $contractId = $tagihan->detailKontrak?->termin?->kontrak?->id;
             $linkUrl = $contractId ? route('contracts.show', $contractId) : route('contracts.index');
 
             $tagihan->update([
@@ -395,6 +503,28 @@ class TagihanController extends Controller
             (float) $termin->potongan_angsuran_uang_muka,
             (float) $kontrak->sisa_uang_muka_belum_lunas
         ), 2);
+    }
+
+    private function isTagihanReadyToSubmit(Tagihan $tagihan): bool
+    {
+        $arsip = optional($tagihan->detailKontrak)->arsipDokumen;
+        if (!$arsip) return false;
+
+        $arsipAktif = $arsip->where('is_active', true);
+        
+        $hasBappFinal = $arsipAktif->contains('jenis_dokumen', 'BAPP_FINAL_TTD');
+        $hasBapFinal = $arsipAktif->contains('jenis_dokumen', 'BAP_FINAL_TTD');
+        
+        if (!$hasBappFinal || !$hasBapFinal) {
+            return false;
+        }
+
+        $jenisTermin = optional(optional($tagihan->detailKontrak)->termin)->jenis_termin;
+        if ($jenisTermin === 'PELUNASAN' && !$arsipAktif->contains('jenis_dokumen', 'BAST_FINAL_TTD')) {
+            return false;
+        }
+
+        return true;
     }
 
     private function notifyRoles(array $roles, string $judul, string $pesan, ?string $linkUrl = null): void

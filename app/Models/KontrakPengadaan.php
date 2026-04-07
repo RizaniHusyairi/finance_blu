@@ -182,4 +182,33 @@ class KontrakPengadaan extends Model
 
         return round(($totalTerserap / $this->nilai_total_kontrak) * 100, 2);
     }
+
+    public function canActivateContract()
+    {
+        // Must reload the relationship to verify fresh data if just written
+        return $this->has_spk_final_ttd && $this->has_spmk_final_ttd && $this->has_ringkasan_kontrak_final_ttd;
+    }
+
+    public function activateIfDocumentsComplete()
+    {
+        // Must explicitly refresh in case relations were cached before the new doc was inserted
+        $this->refresh();
+        if ($this->status_kontrak === 'DRAFT' && $this->canActivateContract()) {
+            $this->update(['status_kontrak' => 'AKTIF']);
+            
+            \App\Models\LogStatusDokumen::create([
+                'dokumen_type'      => self::class,
+                'dokumen_id'        => $this->id,
+                'user_id'           => \Illuminate\Support\Facades\Auth::id(),
+                'role_saat_itu'     => \Illuminate\Support\Facades\Auth::user()?->getRoleNames()->first() ?? 'Sistem',
+                'status_sebelumnya' => 'DRAFT',
+                'status_baru'       => 'AKTIF',
+                'aksi'              => 'AUTO_ACTIVATE',
+                'catatan'           => 'Kontrak aktif otomatis setelah seluruh dokumen final bertandatangan lengkap.',
+                'ip_address'        => request()->ip(),
+            ]);
+            return true;
+        }
+        return false;
+    }
 }
