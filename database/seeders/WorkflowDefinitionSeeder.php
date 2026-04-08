@@ -28,13 +28,21 @@ class WorkflowDefinitionSeeder extends Seeder
             ],
             [
                 'kode' => 'SPP_KONTRAK_PPK',
-                'nama' => 'Verifikasi SPP Kontrak oleh PPK',
+                'nama' => 'Verifikasi SPP Kontrak',
                 'target_type' => 'App\\Models\\DokumenSpp',
                 'steps' => [
                     [
                         'urutan_step' => 1,
                         'nama_step' => 'Verifikasi PPK',
                         'role_code' => 'PPK',
+                        'is_required' => true,
+                        'can_reject' => true,
+                        'can_request_revision' => true,
+                    ],
+                    [
+                        'urutan_step' => 1,
+                        'nama_step' => 'Verifikasi Kasubbag',
+                        'role_code' => 'Kepala Subbagian Keuangan dan Tata Usaha',
                         'is_required' => true,
                         'can_reject' => true,
                         'can_request_revision' => true,

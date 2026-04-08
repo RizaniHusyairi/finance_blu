@@ -17,6 +17,7 @@ class DatabaseSeeder extends Seeder
             MasterCoaSeeder::class,
             MasterDipaSeeder::class,
             MasterPegawaiSeeder::class,
+            WorkflowDefinitionSeeder::class,
         ]);
     }
 }

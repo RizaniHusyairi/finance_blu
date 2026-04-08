@@ -956,6 +956,11 @@ $dropdownAnimation: .6s cubic-bezier(.25, .8, .25, 1) 0s normal forwards 1 animd
   }
 }
 
+.topbar-safe-sticky {
+  top: calc(70px + 1.5rem);
+  z-index: 1;
+}
+
 .separator {
   display: flex;
   align-items: center;

@@ -37,6 +37,7 @@
         $tanggal = $bappDate->format('d');
         $bulan = $bappDate->translatedFormat('F');
         $tahun = $bappDate->format('Y');
+    @endphp
         
     <p>Pada hari ini <strong>{{ $hari }}</strong> tanggal <strong>{{ ucwords(terbilang($tanggal)) }}</strong> bulan <strong>{{ $bulan }}</strong> tahun <strong>{{ ucwords(terbilang($tahun)) }}</strong>, yang bertanda tangan di bawah ini:</p>
 

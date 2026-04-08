@@ -246,7 +246,7 @@
 
         {{-- Area Kanan: Status Kelengkapan --}}
         <div class="col-lg-4">
-            <div class="card border-0 shadow-sm rounded-4 sticky-top" style="top: 2rem;">
+            <div class="card border-0 shadow-sm rounded-4 sticky-top topbar-safe-sticky">
                 <div class="card-body p-4">
                     @if($tagihan->status === 'DRAFT')
                         <h5 class="fw-bold mb-3">Syarat Pengajuan (PPK)</h5>

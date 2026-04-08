@@ -306,7 +306,7 @@
             </div>
 
             {{-- Card D: Panel Keputusan PPK --}}
-            <div class="card border-0 shadow-sm rounded-4 bg-dark text-white sticky-top" style="top: 2rem;">
+            <div class="card border-0 shadow-sm rounded-4 bg-dark text-white sticky-top topbar-safe-sticky">
                 <div class="card-body p-4 p-xl-5">
                     <h5 class="fw-bold mb-2 text-center"><i class="bi bi-shield-lock me-2"></i> Keputusan Final</h5>
                     <p class="text-white-50 small text-center mb-4">Pastikan Anda telah melakukan reviu mendalam terhadap Berita Acara dan total pembayaran netto.</p>

@@ -240,23 +240,287 @@ class SppController extends Controller
     {
         $tagihan = Tagihan::where('tipe_tagihan', 'KONTRAK')
             ->with([
+                'detailKontrak.arsipDokumen',
                 'detailKontrak.kontrakTermin.kontrak.vendor.rekening',
                 'detailKontrak.kontrakTermin.kontrak.dipa.activeRevision.items.coa',
+                'potonganTagihan',
+                'logs.user',
                 'spps.dipaRevisionItem.coa',
+                'spps.ppkVerifikator',
+                'spps.dibuatOleh',
+                'spps.arsipDokumen',
+                'spps.logs.user',
+                'spps.workflowInstances.approvals.assignedUser',
+                'spps.workflowInstances.approvals.actedByUser',
             ])
             ->findOrFail($contract_id);
 
-        $termin = $tagihan->detailKontrak?->kontrakTermin;
+        $detailKontrak = $tagihan->detailKontrak;
+        $termin = $detailKontrak?->kontrakTermin;
         $kontrak = $termin?->kontrak;
+        $vendor = $kontrak?->vendor;
+        $rekening = $vendor?->rekening?->first();
         $budgetItems = collect(optional(optional($kontrak?->dipa)->activeRevision)->items)
             ->filter(fn ($item) => $item->status_aktif)
             ->values();
         $sppModel = $tagihan->spps->sortByDesc('created_at')->first();
+        $selectedBudgetItem = $sppModel?->dipaRevisionItem ?? $budgetItems->first();
         $ppkUsers = User::role('PPK')->orderBy('name')->get();
         $kasubbagUser = User::role('Kepala Subbagian Keuangan dan Tata Usaha')->orderBy('name')->first();
         $pajaks = MasterTarifPajak::orderBy('jenis_pajak')->get();
+        $potonganTagihans = collect($tagihan->potonganTagihan);
+        $potonganPajak = $potonganTagihans->filter(fn ($item) => $item->jenis_potongan !== 'ANGSURAN_UANG_MUKA');
+        $isPelunasan = ($termin?->jenis_termin ?? null) === 'PELUNASAN';
+        $ebillingDocument = $sppModel?->arsipDokumen?->firstWhere('jenis_dokumen', 'E_BILLING');
+        $requiresTaxDocuments = $potonganPajak->isNotEmpty();
 
-        return view('spps.detail_kontrak', compact('tagihan', 'termin', 'kontrak', 'budgetItems', 'sppModel', 'ppkUsers', 'kasubbagUser', 'pajaks'));
+        $documentStatuses = collect([
+            [
+                'key' => 'bapp',
+                'label' => 'BAPP',
+                'path' => $detailKontrak?->file_bapp,
+                'required' => true,
+            ],
+            [
+                'key' => 'bast',
+                'label' => 'BAST',
+                'path' => $detailKontrak?->file_bast,
+                'required' => $isPelunasan,
+            ],
+            [
+                'key' => 'bap',
+                'label' => 'BAP',
+                'path' => $detailKontrak?->file_bap,
+                'required' => true,
+            ],
+            [
+                'key' => 'invoice',
+                'label' => 'Invoice',
+                'path' => $detailKontrak?->file_invoice,
+                'required' => true,
+            ],
+            [
+                'key' => 'faktur_pajak',
+                'label' => 'Faktur Pajak',
+                'path' => $detailKontrak?->file_faktur_pajak,
+                'required' => $requiresTaxDocuments,
+            ],
+            [
+                'key' => 'ebilling',
+                'label' => 'E-Billing',
+                'path' => $ebillingDocument?->path_file,
+                'required' => $requiresTaxDocuments,
+            ],
+            [
+                'key' => 'lampiran_lainnya',
+                'label' => 'Lampiran Lainnya',
+                'path' => $detailKontrak?->file_lampiran_lainnya,
+                'required' => false,
+            ],
+        ])->map(function ($item) {
+            $isAvailable = !empty($item['path']);
+            $status = !$item['required']
+                ? 'not_required'
+                : ($isAvailable ? 'ready' : 'missing');
+
+            return array_merge($item, [
+                'status' => $status,
+                'is_available' => $isAvailable,
+            ]);
+        })->values();
+
+        $rekeningReady = filled($rekening?->nama_bank)
+            && filled($rekening?->nomor_rekening)
+            && filled($rekening?->nama_rekening);
+        $mainDocumentsReady = $documentStatuses
+            ->whereIn('key', ['bapp', 'bast', 'bap', 'invoice'])
+            ->every(fn ($item) => in_array($item['status'], ['ready', 'not_required']));
+        $taxDocumentsReady = !$requiresTaxDocuments || $documentStatuses
+            ->whereIn('key', ['faktur_pajak', 'ebilling'])
+            ->every(fn ($item) => in_array($item['status'], ['ready', 'not_required']));
+        $draftReady = $sppModel
+            && filled($sppModel->nomor_spp)
+            && filled($sppModel->tanggal_spp)
+            && (float) $sppModel->nominal_spp > 0
+            && filled($selectedBudgetItem?->coa)
+            && filled($sppModel->ppk_verifikator_id);
+
+        $readinessChecklist = collect([
+            [
+                'label' => 'Item DIPA / COA tersedia',
+                'status' => filled($selectedBudgetItem?->coa) ? 'ready' : 'missing',
+                'hint' => filled($selectedBudgetItem?->coa)
+                    ? 'Item anggaran aktif sudah terpilih untuk SPP.'
+                    : 'Kontrak belum memiliki item DIPA / COA aktif.',
+            ],
+            [
+                'label' => 'Rekening vendor tersedia',
+                'status' => $rekeningReady ? 'ready' : 'missing',
+                'hint' => $rekeningReady
+                    ? 'Rekening vendor siap dipakai untuk pembayaran.'
+                    : 'Data rekening vendor belum lengkap.',
+            ],
+            [
+                'label' => 'Dokumen pendukung utama tersedia',
+                'status' => $mainDocumentsReady ? 'ready' : 'missing',
+                'hint' => $mainDocumentsReady
+                    ? 'BAPP, BAP, BAST/Invoice utama sudah tersedia.'
+                    : 'Masih ada dokumen utama tagihan yang belum terlampir.',
+            ],
+            [
+                'label' => 'Verifikator PPK dipilih',
+                'status' => filled($sppModel?->ppk_verifikator_id) ? 'ready' : 'missing',
+                'hint' => filled($sppModel?->ppk_verifikator_id)
+                    ? 'Verifikator PPK sudah ditentukan.'
+                    : 'Pilih verifikator PPK pada draft SPP.',
+            ],
+            [
+                'label' => 'Draft SPP sudah lengkap',
+                'status' => $draftReady ? 'ready' : 'missing',
+                'hint' => $draftReady
+                    ? 'Nomor, tanggal, nilai, dan data draft SPP sudah lengkap.'
+                    : 'Draft SPP belum lengkap atau belum disimpan.',
+            ],
+            [
+                'label' => 'Faktur pajak / e-billing tersedia jika relevan',
+                'status' => $taxDocumentsReady ? 'ready' : 'missing',
+                'hint' => $taxDocumentsReady
+                    ? ($requiresTaxDocuments ? 'Dokumen pajak pendukung sudah tersedia.' : 'Dokumen pajak tidak wajib untuk kasus ini.')
+                    : 'Potongan pajak ada, tetapi faktur pajak atau e-billing belum lengkap.',
+            ],
+        ])->values();
+
+        $sppStatus = $sppModel?->status ?? 'Belum Dibuat';
+        $workflowSummary = match ($sppStatus) {
+            'DRAFT' => [
+                'label' => 'Draft tersimpan',
+                'tone' => 'warning',
+                'description' => 'Draft masih bisa diubah oleh Operator BLU dan belum dikirim ke PPK.',
+                'edit_state' => 'editable',
+            ],
+            'Revisi' => [
+                'label' => 'Perlu revisi',
+                'tone' => 'danger',
+                'description' => 'PPK mengembalikan dokumen. Draft bisa disunting lalu diajukan ulang.',
+                'edit_state' => 'editable',
+            ],
+            'Menunggu Verifikasi' => [
+                'label' => 'Menunggu verifikasi PPK',
+                'tone' => 'info',
+                'description' => 'Dokumen sudah diajukan dan sementara terkunci sampai PPK memberi keputusan.',
+                'edit_state' => 'locked',
+            ],
+            'Disetujui PPK' => [
+                'label' => 'Disetujui PPK',
+                'tone' => 'success',
+                'description' => 'SPP telah lolos verifikasi PPK dan siap diproses ke tahap berikutnya.',
+                'edit_state' => 'locked',
+            ],
+            default => [
+                'label' => 'Belum dibuat',
+                'tone' => 'secondary',
+                'description' => 'Draft SPP belum disimpan. Operator BLU masih perlu menyiapkan dokumen.',
+                'edit_state' => 'editable',
+            ],
+        };
+
+        $readinessIssues = $readinessChecklist
+            ->where('status', 'missing')
+            ->pluck('hint')
+            ->filter()
+            ->values();
+
+        $canSubmitToPpk = $sppModel && in_array($sppModel->status, ['DRAFT', 'Revisi']);
+        $isReadyToSubmit = $canSubmitToPpk && $readinessIssues->isEmpty();
+
+        $latestWorkflowInstance = collect($sppModel?->workflowInstances ?? [])
+            ->sortByDesc('created_at')
+            ->first();
+        
+        $ppkApproval = collect($latestWorkflowInstance?->approvals ?? [])
+            ->firstWhere('role_code', 'PPK');
+        $kasubbagApproval = collect($latestWorkflowInstance?->approvals ?? [])
+            ->firstWhere('role_code', 'Kepala Subbagian Keuangan dan Tata Usaha');
+
+
+        $submittedLog = collect($sppModel?->logs ?? [])
+            ->sortByDesc('created_at')
+            ->firstWhere('aksi', 'SUBMIT_PPK');
+
+        $activitySummary = [
+            [
+                'label' => 'Dibuat oleh',
+                'value' => $sppModel?->dibuatOleh?->name ?? '-',
+                'meta' => optional($sppModel?->created_at)->format('d M Y H:i') ?? '-',
+            ],
+            [
+                'label' => 'Terakhir diperbarui',
+                'value' => optional($sppModel?->updated_at)->format('d M Y H:i') ?? '-',
+                'meta' => $sppModel ? 'Draft terakhir disimpan / diperbarui.' : 'Belum ada draft SPP.',
+            ],
+            [
+                'label' => 'Diajukan ke PPK',
+                'value' => optional($submittedLog?->created_at)->format('d M Y H:i') ?? 'Belum diajukan',
+                'meta' => $submittedLog?->user?->name ? 'Oleh ' . $submittedLog->user->name : null,
+            ],
+            [
+                'label' => 'Verifikator PPK',
+                'value' => $sppModel?->ppkVerifikator?->name ?? '-',
+                'meta' => $ppkApproval?->status ? 'Status: ' . $ppkApproval->status : null,
+            ],
+            [
+                'label' => 'Verifikator Kasubbag',
+                'value' => $kasubbagUser?->name ?? '-',
+                'meta' => $kasubbagApproval?->status ? 'Status: ' . $kasubbagApproval->status : null,
+            ],
+            [
+                'label' => 'Status workflow',
+                'value' => $workflowSummary['label'],
+                'meta' => $workflowSummary['description'],
+            ],
+        ];
+
+        $recentActivities = collect($sppModel?->logs ?? [])
+            ->sortByDesc('created_at')
+            ->take(4)
+            ->map(function ($log) {
+                $title = match ($log->aksi) {
+                    'CREATE_DRAFT_SPP' => 'Draft SPP dibuat',
+                    'UPDATE_DRAFT_SPP' => 'Draft SPP diperbarui',
+                    'SUBMIT_PPK' => 'SPP diajukan ke PPK',
+                    default => str_replace('_', ' ', $log->aksi ?? 'Aktivitas'),
+                };
+
+                return [
+                    'title' => $title,
+                    'time' => optional($log->created_at)->format('d M Y H:i'),
+                    'actor' => $log->user?->name,
+                    'note' => $log->catatan,
+                ];
+            })
+            ->values();
+
+        return view('spps.detail_kontrak', compact(
+            'tagihan',
+            'detailKontrak',
+            'termin',
+            'kontrak',
+            'budgetItems',
+            'selectedBudgetItem',
+            'sppModel',
+            'ppkUsers',
+            'kasubbagUser',
+            'pajaks',
+            'documentStatuses',
+            'readinessChecklist',
+            'readinessIssues',
+            'workflowSummary',
+            'activitySummary',
+            'recentActivities',
+            'isReadyToSubmit',
+            'ppkApproval',
+            'kasubbagApproval',
+        ));
     }
 
     public function storeKontrak(Request $request, $contract_id)
@@ -269,7 +533,11 @@ class SppController extends Controller
 
         $request->validate([
             'jumlah_uang' => 'required|numeric',
-            'nomor_spp' => 'required|string',
+            'nomor_spp' => [
+                'required',
+                'string',
+                Rule::unique('dokumen_spp', 'nomor_spp')->ignore($existingSpp?->id),
+            ],
             'tanggal_spp' => 'required|date',
             'ppk_verifikator_id' => 'required|exists:users,id',
             'pajak' => 'nullable|array',
@@ -278,11 +546,6 @@ class SppController extends Controller
             'pajak.*.nominal' => 'required|numeric|min:0',
             'file_faktur_pajak' => 'nullable|file|mimes:pdf|max:5120',
             'file_ebilling' => 'nullable|file|mimes:pdf|max:5120',
-            'nomor_spp' => [
-                'required',
-                'string',
-                Rule::unique('dokumen_spp', 'nomor_spp')->ignore($existingSpp?->id),
-            ],
         ]);
 
         $kontrak = $tagihan->detailKontrak?->kontrakTermin?->kontrak;
@@ -345,7 +608,7 @@ class SppController extends Controller
                     'nominal_spp' => $totalNetto,
                     'nomor_spp' => $request->nomor_spp,
                     'tanggal_spp' => $request->tanggal_spp,
-                    'status' => 'Menunggu Verifikasi',
+                    'status' => $existingSpp && $existingSpp->status === 'Revisi' ? 'Revisi' : 'DRAFT',
                     'dibuat_oleh_id' => auth()->id(),
                     'ppk_verifikator_id' => $request->ppk_verifikator_id,
                 ]
@@ -390,7 +653,9 @@ class SppController extends Controller
             }
 
             $statusSebelumnya = $tagihan->status;
-            $tagihan->update(['status' => 'PROSES_SPP']);
+
+            // Jangan ubah status tagihan saat hanya simpan draft SPP
+            // Status PROSES_SPP hanya diset saat benar-benar submit ke PPK via submitKontrakToPpk()
 
             LogStatusDokumen::create([
                 'dokumen_type' => Tagihan::class,
@@ -398,31 +663,78 @@ class SppController extends Controller
                 'user_id' => auth()->id(),
                 'role_saat_itu' => auth()->user()?->getRoleNames()->first() ?? 'Operator BLU',
                 'status_sebelumnya' => $statusSebelumnya,
-                'status_baru' => 'PROSES_SPP',
-                'aksi' => $existingSpp ? 'UPDATE_SPP' : 'CREATE_SPP',
-                'catatan' => 'Dokumen SPP kontrak dibuat/diperbarui oleh Operator BLU. Verifikator PPK dipilih: ' . optional(User::find($request->ppk_verifikator_id))->name,
+                'status_baru' => $statusSebelumnya,
+                'aksi' => $existingSpp ? 'UPDATE_DRAFT_SPP' : 'CREATE_DRAFT_SPP',
+                'catatan' => 'Draft dokumen SPP kontrak disimpan oleh Operator BLU. Verifikator PPK dipilih: ' . optional(User::find($request->ppk_verifikator_id))->name,
                 'ip_address' => request()->ip(),
             ]);
-
-            // --- Workflow Engine: mulai workflow SPP_KONTRAK_PPK ---
-            $spp = $tagihan->spps()->latest()->first();
-            if ($spp) {
-                app(WorkflowService::class)->startWorkflow('SPP_KONTRAK_PPK', $spp, (int) $request->ppk_verifikator_id);
-            }
         });
 
-        $selectedPpk = User::role('PPK')->find($request->ppk_verifikator_id);
+        return redirect()->route('spps.kontrak.detail', $tagihan->id)->with('success', 'Draft SPP kontrak berhasil disimpan.');
+    }
+
+    /**
+     * Submit SPP Kontrak ke PPK — memulai workflow approval.
+     */
+    public function submitKontrakToPpk($contract_id)
+    {
+        $tagihan = Tagihan::where('tipe_tagihan', 'KONTRAK')
+            ->with(['spps'])
+            ->findOrFail($contract_id);
+
+        $spp = $tagihan->spps()->latest()->first();
+
+        if (!$spp) {
+            return back()->withErrors(['error' => 'Dokumen SPP belum dibuat. Silakan simpan draft terlebih dahulu.']);
+        }
+
+        if (!in_array($spp->status, ['DRAFT', 'Revisi'])) {
+            return back()->withErrors(['error' => 'SPP tidak dalam status yang bisa diajukan (harus DRAFT atau Revisi).']);
+        }
+
+        if (!$spp->ppk_verifikator_id) {
+            return back()->withErrors(['error' => 'Verifikator PPK belum dipilih. Silakan edit draft dan pilih verifikator.']);
+        }
+
+        DB::transaction(function () use ($tagihan, $spp) {
+            $statusSebelumnya = $spp->status;
+
+            $spp->update(['status' => 'Menunggu Verifikasi']);
+
+            // Start workflow
+            app(WorkflowService::class)->startWorkflow('SPP_KONTRAK_PPK', $spp, $spp->ppk_verifikator_id);
+
+            // Update parent tagihan status if needed
+            if (!in_array($tagihan->status, ['PROSES_SPP', 'SPP_TERBIT'])) {
+                $tagihan->update(['status' => 'PROSES_SPP']);
+            }
+
+            LogStatusDokumen::create([
+                'dokumen_type' => DokumenSpp::class,
+                'dokumen_id' => $spp->id,
+                'user_id' => auth()->id(),
+                'role_saat_itu' => auth()->user()?->getRoleNames()->first() ?? 'Operator BLU',
+                'status_sebelumnya' => $statusSebelumnya,
+                'status_baru' => 'Menunggu Verifikasi',
+                'aksi' => 'SUBMIT_PPK',
+                'catatan' => 'Dokumen SPP kontrak diajukan ke PPK untuk verifikasi.',
+                'ip_address' => request()->ip(),
+            ]);
+        });
+
+        // Notifikasi ke PPK assigned
+        $selectedPpk = User::find($spp->ppk_verifikator_id);
         if ($selectedPpk) {
             Notification::send($selectedPpk, new WorkflowNotification([
-                'title' => 'SPP Kontrak Baru',
-                'message' => "SPP Kontrak ({$tagihan->nomor_tagihan}) menunggu verifikasi Anda.",
+                'title' => 'SPP Kontrak Diajukan',
+                'message' => "SPP Kontrak ({$spp->nomor_spp}) menunggu verifikasi Anda.",
                 'url' => route('verifikasi-ppk.spp.index'),
                 'icon' => 'receipt_long',
                 'color' => 'primary',
             ]));
         }
 
-        return redirect()->route('spps.kontrak.detail', $tagihan->id)->with('success', 'SPP kontrak berhasil diterbitkan.');
+        return redirect()->route('spps.kontrak.detail', $tagihan->id)->with('success', 'SPP kontrak berhasil diajukan ke PPK untuk verifikasi.');
     }
 
     // ===================================================================

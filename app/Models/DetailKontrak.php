@@ -39,38 +39,53 @@ class DetailKontrak extends Model
         return $this->morphMany(ArsipDokumen::class, 'documentable');
     }
 
+    protected function resolveDocumentPath(array $jenisDokumen): ?string
+    {
+        $arsip = $this->relationLoaded('arsipDokumen')
+            ? $this->arsipDokumen
+            : $this->arsipDokumen()->get();
+
+        $dokumen = $arsip->first(function ($item) use ($jenisDokumen) {
+            return $item->is_active && in_array($item->jenis_dokumen, $jenisDokumen, true);
+        }) ?? $arsip->first(function ($item) use ($jenisDokumen) {
+            return in_array($item->jenis_dokumen, $jenisDokumen, true);
+        });
+
+        return optional($dokumen)->path_file;
+    }
+
     public function getFileBappAttribute()
     {
-        return optional($this->arsipDokumen->firstWhere('jenis_dokumen', 'BAPP'))->path_file;
+        return $this->resolveDocumentPath(['BAPP_FINAL_TTD', 'BAPP']);
     }
 
     public function getFileBastAttribute()
     {
-        return optional($this->arsipDokumen->firstWhere('jenis_dokumen', 'BAST'))->path_file;
+        return $this->resolveDocumentPath(['BAST_FINAL_TTD', 'BAST']);
     }
 
     public function getFileBapAttribute()
     {
-        return optional($this->arsipDokumen->firstWhere('jenis_dokumen', 'BAP'))->path_file;
+        return $this->resolveDocumentPath(['BAP_FINAL_TTD', 'BAP']);
     }
 
     public function getFileInvoiceAttribute()
     {
-        return optional($this->arsipDokumen->firstWhere('jenis_dokumen', 'INVOICE'))->path_file;
+        return $this->resolveDocumentPath(['INVOICE']);
     }
 
     public function getFileKwitansiAttribute()
     {
-        return optional($this->arsipDokumen->firstWhere('jenis_dokumen', 'KWITANSI'))->path_file;
+        return $this->resolveDocumentPath(['KWITANSI']);
     }
 
     public function getFileLampiranLainnyaAttribute()
     {
-        return optional($this->arsipDokumen->firstWhere('jenis_dokumen', 'LAMPIRAN_LAINNYA'))->path_file;
+        return $this->resolveDocumentPath(['LAMPIRAN_LAINNYA']);
     }
 
     public function getFileFakturPajakAttribute()
     {
-        return optional($this->arsipDokumen->firstWhere('jenis_dokumen', 'FAKTUR_PAJAK'))->path_file;
+        return $this->resolveDocumentPath(['FAKTUR_PAJAK']);
     }
 }

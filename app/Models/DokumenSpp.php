@@ -42,6 +42,11 @@ class DokumenSpp extends Model
         return $this->belongsTo(User::class, 'ppk_verifikator_id');
     }
 
+    public function dibuatOleh()
+    {
+        return $this->belongsTo(User::class, 'dibuat_oleh_id');
+    }
+
     public function workflowInstances()
     {
         return $this->morphMany(WorkflowInstance::class, 'workflowable');

@@ -34,13 +34,22 @@ class WorkflowService
         ]);
 
         foreach ($definition->steps as $step) {
+            $assignee = null;
+            if ($step->urutan_step === 1) {
+                if ($step->role_code === 'PPK') {
+                    $assignee = $assignedUserId;
+                } elseif ($step->role_code === 'Kepala Subbagian Keuangan dan Tata Usaha') {
+                    $assignee = \App\Models\User::role('Kepala Subbagian Keuangan dan Tata Usaha')->first()?->id;
+                }
+            }
+
             WorkflowApproval::create([
                 'workflow_instance_id' => $instance->id,
                 'urutan_step' => $step->urutan_step,
                 'nama_step' => $step->nama_step,
                 'role_code' => $step->role_code,
-                'assigned_user_id' => ($step->urutan_step === 1) ? $assignedUserId : null,
-                'status' => ($step->urutan_step === 1) ? 'PENDING' : 'PENDING',
+                'assigned_user_id' => $assignee,
+                'status' => ($step->urutan_step === 1) ? 'PENDING' : 'WAITING',
             ]);
         }
 
@@ -59,10 +68,10 @@ class WorkflowService
             throw new \RuntimeException('Tidak ada workflow aktif untuk dokumen ini.');
         }
 
-        $approval = $this->getPendingApprovalForStep($instance, $instance->step_saat_ini);
+        $approval = $this->getPendingApprovalForUser($instance, $instance->step_saat_ini, $actedByUserId);
 
         if (!$approval) {
-            throw new \RuntimeException('Tidak ada approval step yang pending.');
+            throw new \RuntimeException('Tidak ada approval step yang pending untuk Anda.');
         }
 
         $approval->update([
@@ -73,17 +82,27 @@ class WorkflowService
             'ip_address' => request()->ip(),
         ]);
 
-        // Cek apakah ada step berikutnya
-        $nextApproval = $instance->approvals()
-            ->where('urutan_step', '>', $instance->step_saat_ini)
-            ->orderBy('urutan_step')
-            ->first();
+        // Cek apakah masih ada step pending di urutan_step yang SAAT INI
+        $remainingInCurrentStep = $instance->approvals()
+            ->where('urutan_step', $instance->step_saat_ini)
+            ->where('status', 'PENDING')
+            ->exists();
 
-        if ($nextApproval) {
-            $instance->update(['step_saat_ini' => $nextApproval->urutan_step]);
-            $nextApproval->update(['status' => 'PENDING']);
-        } else {
-            $instance->update(['status' => 'APPROVED']);
+        if (!$remainingInCurrentStep) {
+            // Cek apakah ada step berikutnya
+            $nextApproval = $instance->approvals()
+                ->where('urutan_step', '>', $instance->step_saat_ini)
+                ->orderBy('urutan_step')
+                ->first();
+
+            if ($nextApproval) {
+                $instance->update(['step_saat_ini' => $nextApproval->urutan_step]);
+                $instance->approvals()
+                    ->where('urutan_step', $nextApproval->urutan_step)
+                    ->update(['status' => 'PENDING']);
+            } else {
+                $instance->update(['status' => 'APPROVED']);
+            }
         }
 
         return $instance->fresh();
@@ -100,10 +119,10 @@ class WorkflowService
             throw new \RuntimeException('Tidak ada workflow aktif untuk dokumen ini.');
         }
 
-        $approval = $this->getPendingApprovalForStep($instance, $instance->step_saat_ini);
+        $approval = $this->getPendingApprovalForUser($instance, $instance->step_saat_ini, $actedByUserId);
 
         if (!$approval) {
-            throw new \RuntimeException('Tidak ada approval step yang pending.');
+            throw new \RuntimeException('Tidak ada approval step yang pending untuk Anda.');
         }
 
         $approval->update([
@@ -130,10 +149,10 @@ class WorkflowService
             throw new \RuntimeException('Tidak ada workflow aktif untuk dokumen ini.');
         }
 
-        $approval = $this->getPendingApprovalForStep($instance, $instance->step_saat_ini);
+        $approval = $this->getPendingApprovalForUser($instance, $instance->step_saat_ini, $actedByUserId);
 
         if (!$approval) {
-            throw new \RuntimeException('Tidak ada approval step yang pending.');
+            throw new \RuntimeException('Tidak ada approval step yang pending untuk Anda.');
         }
 
         $approval->update([
@@ -172,7 +191,7 @@ class WorkflowService
             return null;
         }
 
-        return $this->getPendingApprovalForStep($instance, $instance->step_saat_ini);
+        return $this->getPendingApprovalForUser($instance, $instance->step_saat_ini, auth()->id());
     }
 
     /**
@@ -186,21 +205,27 @@ class WorkflowService
             return false;
         }
 
-        return $instance->approvals()
-            ->where('urutan_step', $instance->step_saat_ini)
-            ->where('status', 'PENDING')
-            ->where('assigned_user_id', $userId)
-            ->exists();
+        return $this->getPendingApprovalForUser($instance, $instance->step_saat_ini, $userId) !== null;
     }
 
     /**
-     * Helper: ambil approval PENDING untuk step tertentu.
+     * Helper: ambil approval PENDING untuk step tertentu berdasarkan user.
      */
-    private function getPendingApprovalForStep(WorkflowInstance $instance, int $step): ?WorkflowApproval
+    public function getPendingApprovalForUser(WorkflowInstance $instance, int $step, int $userId): ?WorkflowApproval
     {
+        $user = \App\Models\User::find($userId);
+        $roles = $user ? $user->getRoleNames()->toArray() : [];
+
         return $instance->approvals()
             ->where('urutan_step', $step)
             ->where('status', 'PENDING')
+            ->where(function ($q) use ($userId, $roles) {
+                $q->where('assigned_user_id', $userId)
+                  ->orWhere(function ($query) use ($roles) {
+                      $query->whereNull('assigned_user_id')
+                            ->whereIn('role_code', $roles);
+                  });
+            })
             ->first();
     }
 }
