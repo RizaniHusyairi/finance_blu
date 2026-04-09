@@ -12,6 +12,10 @@ class PotonganTagihan extends Model
     protected $table = 'potongan_tagihan';
     protected $guarded = ['id'];
 
+    protected $casts = [
+        'persentase_tarif_snapshot' => 'float',
+    ];
+
     public function tagihan()
     {
         return $this->belongsTo(Tagihan::class, 'tagihan_id');

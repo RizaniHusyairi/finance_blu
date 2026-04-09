@@ -11,4 +11,8 @@ class MasterTarifPajak extends Model
 
     protected $table = 'master_tarif_pajak';
     protected $guarded = ['id'];
+
+    protected $casts = [
+        'persentase' => 'float',
+    ];
 }

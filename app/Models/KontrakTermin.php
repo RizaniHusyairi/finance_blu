@@ -12,6 +12,10 @@ class KontrakTermin extends Model
     protected $table = 'kontrak_termin';
     protected $guarded = ['id'];
 
+    protected $casts = [
+        'persentase' => 'float',
+    ];
+
     public function detailKontrak()
     {
         return $this->hasOne(DetailKontrak::class, 'kontrak_termin_id');
