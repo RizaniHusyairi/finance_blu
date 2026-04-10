@@ -382,11 +382,11 @@ class SppController extends Controller
                     : 'Draft SPP belum lengkap atau belum disimpan.',
             ],
             [
-                'label' => 'Faktur pajak / e-billing tersedia jika relevan',
+                'label' => 'Faktur pajak tersedia jika relevan',
                 'status' => $taxDocumentsReady ? 'ready' : 'missing',
                 'hint' => $taxDocumentsReady
                     ? ($requiresTaxDocuments ? 'Dokumen pajak pendukung sudah tersedia.' : 'Dokumen pajak tidak wajib untuk kasus ini.')
-                    : 'Potongan pajak ada, tetapi faktur pajak atau e-billing belum lengkap.',
+                    : 'Potongan pajak ada, tetapi faktur pajak belum lengkap.',
             ],
         ])->values();
 
@@ -432,6 +432,30 @@ class SppController extends Controller
 
         $canSubmitToPpk = $sppModel && in_array($sppModel->status, ['DRAFT', 'Revisi']);
         $isReadyToSubmit = $canSubmitToPpk && $readinessIssues->isEmpty();
+        $readinessStatus = match ($sppStatus) {
+            'Menunggu Verifikasi' => [
+                'label' => 'Dalam Verifikasi',
+                'class' => 'bg-info',
+                'message' => 'SPP sudah diajukan dan sedang menunggu proses verifikasi.',
+            ],
+            'Disetujui PPK', 'APPROVED' => [
+                'label' => 'Terverifikasi',
+                'class' => 'bg-success',
+                'message' => 'SPP sudah lolos verifikasi dan tidak lagi berada pada tahap pengecekan draft.',
+            ],
+            'Revisi' => [
+                'label' => 'Perlu Revisi',
+                'class' => 'bg-danger',
+                'message' => 'SPP dikembalikan untuk diperbaiki. Lengkapi catatan revisi sebelum diajukan ulang.',
+            ],
+            default => [
+                'label' => $isReadyToSubmit ? 'Siap Diajukan' : 'Belum Lengkap',
+                'class' => $isReadyToSubmit ? 'bg-success' : 'bg-warning text-dark',
+                'message' => $isReadyToSubmit
+                    ? 'Checklist draft sudah terpenuhi dan SPP siap diajukan ke PPK.'
+                    : 'Masih ada item draft yang perlu dilengkapi sebelum diajukan ke PPK.',
+            ],
+        };
 
         $latestWorkflowInstance = collect($sppModel?->workflowInstances ?? [])
             ->sortByDesc('created_at')
@@ -518,6 +542,7 @@ class SppController extends Controller
             'activitySummary',
             'recentActivities',
             'isReadyToSubmit',
+            'readinessStatus',
             'ppkApproval',
             'kasubbagApproval',
         ));

@@ -195,13 +195,15 @@
                     <i class="bi bi-pencil-square me-1"></i> {{ $sppModel ? 'Edit Draft SPP' : 'Buat Draft Baru' }}
                 </button>
 
-                @if($canSubmitToPpk && $isReadyToSubmit)
-                    <form action="{{ route('spps.kontrak.submit', $tagihan->id) }}" method="POST" onsubmit="return confirm('Ajukan SPP ini untuk verifikasi PPK dan Kasubbag secara paralel?')">
-                        @csrf
-                        <button type="submit" class="btn btn-success shadow-sm w-100"><i class="bi bi-send me-1"></i> Ajukan Verifikasi</button>
-                    </form>
-                @else
-                    <button type="button" class="btn btn-success shadow-sm w-100" disabled><i class="bi bi-send me-1"></i> Ajukan Verifikasi</button>
+                @if($sppModel)
+                    @if($canSubmitToPpk && $isReadyToSubmit)
+                        <form action="{{ route('spps.kontrak.submit', $tagihan->id) }}" method="POST" onsubmit="return confirm('Ajukan SPP ini untuk verifikasi PPK dan Kasubbag secara paralel?')">
+                            @csrf
+                            <button type="submit" class="btn btn-success shadow-sm w-100"><i class="bi bi-send me-1"></i> Ajukan Verifikasi</button>
+                        </form>
+                    @else
+                        <button type="button" class="btn btn-success shadow-sm w-100" disabled><i class="bi bi-send me-1"></i> Ajukan Verifikasi</button>
+                    @endif
                 @endif
             </div>
         </div>
@@ -217,7 +219,7 @@
                     <div class="bg-white p-3 rounded-3 border shadow-sm h-100">
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <h6 class="fw-bold mb-0">Checklist Operator</h6>
-                            <span class="badge {{ $isReadyToSubmit ? 'bg-success' : 'bg-warning text-dark' }}">{{ $isReadyToSubmit ? 'Siap Diajukan' : 'Belum Lengkap' }}</span>
+                            <span class="badge {{ $readinessStatus['class'] ?? 'bg-secondary' }}">{{ $readinessStatus['label'] ?? 'Status Tidak Tersedia' }}</span>
                         </div>
                         
                         <div style="font-size: 0.9rem;">
@@ -229,12 +231,16 @@
                             @endforeach
                         </div>
 
-                        @if(!$isReadyToSubmit && $readinessIssues->isNotEmpty())
+                        @if(($readinessStatus['label'] ?? null) === 'Belum Lengkap' && $readinessIssues->isNotEmpty())
                             <div class="alert alert-warning mt-3 mb-0 p-2 py-1 small border-0">
                                 <ul class="mb-0 ps-3">
                                     @foreach($readinessIssues as $issue)<li>{{ $issue }}</li>@endforeach
                                 </ul>
                             </div>
+                        @endif
+
+                        @if(!empty($readinessStatus['message']))
+                            <div class="small text-muted mt-3">{{ $readinessStatus['message'] }}</div>
                         @endif
                     </div>
                 </div>

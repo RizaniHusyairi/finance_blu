@@ -517,6 +517,11 @@
         let progressInputs = document.querySelectorAll('input[name="progress_keterangan[]"], input[name="progress_persentase[]"]');
 
         wp.style.display = isTermin ? 'block' : 'none';
+
+        if (!isTermin) {
+            document.getElementById('gunakan_retensi').checked = false;
+        }
+
         retensiInput.required = isTermin;
         retensiKeterangan.required = isTermin;
         progressInputs.forEach(input => {

@@ -14,14 +14,21 @@ class DokumenSpm extends Model
 
     protected $casts = [
         'tanggal_spm' => 'date',
+        'nominal_spm' => 'decimal:2',
     ];
 
+    // Status constants — legacy (perjaldin)
     public const STATUS_DRAFT = 'DRAFT';
     public const STATUS_SUBMITTED_PPSPM = 'SUBMITTED_PPSPM';
     public const STATUS_REJECTED_PPSPM = 'REJECTED_PPSPM';
     public const STATUS_SUBMITTED_KASUBAG = 'SUBMITTED_KASUBAG';
     public const STATUS_REJECTED_KASUBAG = 'REJECTED_KASUBAG';
     public const STATUS_APPROVED_KASUBAG = 'APPROVED_KASUBAG';
+
+    // Status constants — kontrak (new workflow-oriented)
+    public const STATUS_MENUNGGU_VERIFIKASI = 'Menunggu Verifikasi';
+    public const STATUS_REVISI = 'Revisi';
+    public const STATUS_DISETUJUI_FINAL = 'Disetujui Final';
 
     public function spp()
     {
@@ -31,6 +38,16 @@ class DokumenSpm extends Model
     public function ppspm()
     {
         return $this->belongsTo(User::class, 'ppspm_id');
+    }
+
+    public function dibuatOleh()
+    {
+        return $this->belongsTo(User::class, 'dibuat_oleh_id');
+    }
+
+    public function dipaRevisionItem()
+    {
+        return $this->belongsTo(DetailDipa::class, 'dipa_revision_item_id');
     }
 
     public function logs()
@@ -43,9 +60,14 @@ class DokumenSpm extends Model
         return $this->hasOne(DokumenNpi::class, 'spm_id');
     }
 
-    public function getSppIdAttribute()
+    public function workflowInstances()
     {
-        return $this->spp_id;
+        return $this->morphMany(WorkflowInstance::class, 'workflowable');
+    }
+
+    public function arsipDokumen()
+    {
+        return $this->morphMany(ArsipDokumen::class, 'documentable');
     }
 
     public function getTagihanAttribute()
@@ -71,6 +93,9 @@ class DokumenSpm extends Model
             self::STATUS_SUBMITTED_KASUBAG => 'Menunggu Verifikasi Kasubag',
             self::STATUS_REJECTED_KASUBAG => 'Revisi Kasubbag',
             self::STATUS_APPROVED_KASUBAG => 'SPM Terbit',
+            self::STATUS_MENUNGGU_VERIFIKASI => 'Menunggu Verifikasi',
+            self::STATUS_REVISI => 'Revisi',
+            self::STATUS_DISETUJUI_FINAL => 'Disetujui Final',
             default => 'Draft SPM',
         };
     }
@@ -79,7 +104,11 @@ class DokumenSpm extends Model
     {
         return optional(
             $this->logs()
-                ->whereIn('status_baru', [self::STATUS_REJECTED_PPSPM, self::STATUS_REJECTED_KASUBAG])
+                ->whereIn('status_baru', [
+                    self::STATUS_REJECTED_PPSPM,
+                    self::STATUS_REJECTED_KASUBAG,
+                    self::STATUS_REVISI,
+                ])
                 ->latest()
                 ->first()
         )->catatan;

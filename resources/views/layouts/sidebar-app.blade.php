@@ -197,13 +197,70 @@
         @hasrole('Kepala Subbagian Keuangan dan Tata Usaha')
         <li>
           <a href="javascript:;" class="has-arrow">
-            <div class="parent-icon"><i class="material-icons-outlined">verified</i></div>
-            <div class="menu-title">Verifikasi</div>
+            <div class="parent-icon"><i class="material-icons-outlined">history_edu</i></div>
+            <div class="menu-title">Verifikasi SPP</div>
           </a>
           <ul>
-            <li><a href="{{ route('verifikasi-kasubag.index') }}"><i class="material-icons-outlined">arrow_right</i>Perjaldin</a></li>
-            <li><a href="{{ route('verifikasi-kasubag.spm.index') }}"><i class="material-icons-outlined">arrow_right</i>SPM</a></li>
-            <li><a href="{{ route('verifikasi-kasubag.npi.index') }}"><i class="material-icons-outlined">arrow_right</i>NPI</a></li>
+            <li>
+              <a href="{{ route('verifikasi-kasubag.spp.index') }}"><i class="material-icons-outlined">arrow_right</i>Kontrak</a>
+            </li>
+            <li>
+              <a href="{{ route('verifikasi-kasubag.spp.index') }}"><i class="material-icons-outlined">arrow_right</i>Perjaldin</a>
+            </li>
+            <li>
+              <a href="{{ route('verifikasi-kasubag.spp.index') }}"><i class="material-icons-outlined">arrow_right</i>Honor</a>
+            </li>
+          </ul>
+        </li>
+        <li>
+          <a href="javascript:;" class="has-arrow">
+            <div class="parent-icon"><i class="material-icons-outlined">fact_check</i></div>
+            <div class="menu-title">Verifikasi SPM</div>
+          </a>
+          <ul>
+            <li>
+              <a href="{{ route('verifikasi-kasubag.spm.kontrak.index') }}"><i class="material-icons-outlined">arrow_right</i>Kontrak</a>
+            </li>
+            <li>
+              <a href="{{ route('verifikasi-kasubag.spm.index') }}"><i class="material-icons-outlined">arrow_right</i>Perjaldin</a>
+            </li>
+            <li>
+              <a href="#"><i class="material-icons-outlined">arrow_right</i>Honor</a>
+            </li>
+          </ul>
+        </li>
+        <li>
+          <a href="javascript:;" class="has-arrow">
+            <div class="parent-icon"><i class="material-icons-outlined">receipt_long</i></div>
+            <div class="menu-title">Verifikasi NPI</div>
+          </a>
+          <ul>
+            <li>
+              <a href="{{ route('verifikasi-kasubag.npi.index') }}"><i class="material-icons-outlined">arrow_right</i>Kontrak</a>
+            </li>
+            <li>
+              <a href="{{ route('verifikasi-kasubag.npi.index') }}"><i class="material-icons-outlined">arrow_right</i>Perjaldin</a>
+            </li>
+            <li>
+              <a href="{{ route('verifikasi-kasubag.npi.index') }}"><i class="material-icons-outlined">arrow_right</i>Honor</a>
+            </li>
+          </ul>
+        </li>
+        <li>
+          <a href="javascript:;" class="has-arrow">
+            <div class="parent-icon"><i class="material-icons-outlined">account_balance</i></div>
+            <div class="menu-title">Verifikasi SP2D</div>
+          </a>
+          <ul>
+            <li>
+              <a href="#"><i class="material-icons-outlined">arrow_right</i>Kontrak</a>
+            </li>
+            <li>
+              <a href="#"><i class="material-icons-outlined">arrow_right</i>Perjaldin</a>
+            </li>
+            <li>
+              <a href="#"><i class="material-icons-outlined">arrow_right</i>Honor</a>
+            </li>
           </ul>
         </li>
         @endhasrole
@@ -227,7 +284,7 @@
           <ul>
             <li><a href="{{ route('spms.index') }}"><i class="material-icons-outlined">arrow_right</i>SPM Perjaldin</a></li>
             <li><a href="{{ route('spms.index') }}"><i class="material-icons-outlined">arrow_right</i>SPM Honor</a></li>
-            <li><a href="{{ route('spms.index') }}"><i class="material-icons-outlined">arrow_right</i>SPM Kontrak</a></li>
+            <li><a href="{{ route('spms.kontrak.index') }}"><i class="material-icons-outlined">arrow_right</i>SPM Kontrak</a></li>
           </ul>
         </li>
         @endhasanyrole
@@ -239,6 +296,8 @@
           </a>
           <ul>
             <li><a href="{{ route('verifikasi-ppspm.spm.index') }}"><i class="material-icons-outlined">arrow_right</i>SPM Perjaldin</a></li>
+            <li><a href="#"><i class="material-icons-outlined">arrow_right</i>SPM Honor</a></li>
+            <li><a href="{{ route('verifikasi-ppspm.spm.kontrak.index') }}"><i class="material-icons-outlined">arrow_right</i>SPM Kontrak</a></li>
           </ul>
         </li>
         @endhasrole

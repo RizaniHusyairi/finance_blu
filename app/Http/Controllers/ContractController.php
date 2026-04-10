@@ -128,6 +128,16 @@ class ContractController extends Controller
      */
     public function store(Request $request)
     {
+        if ($request->metode_pembayaran === 'LUMPSUM') {
+            $request->merge([
+                'progress_keterangan' => null,
+                'progress_persentase' => null,
+                'gunakan_retensi' => 0,
+                'retensi_keterangan' => null,
+                'retensi_persentase' => null,
+            ]);
+        }
+
         $validated = $request->validate([
             'vendor_id' => 'required|exists:master_pihak,id',
             'dipa_revision_item_id' => 'required|exists:dipa_revision_items,id',
@@ -366,6 +376,16 @@ class ContractController extends Controller
         
         if (!in_array($kontrak->status_kontrak, ['DRAFT', 'DRAFT'])) {
             return redirect()->route('contracts.index')->with('error', 'Kontrak tidak dapat diubah karena statusnya saat ini.');
+        }
+
+        if ($request->metode_pembayaran === 'LUMPSUM') {
+            $request->merge([
+                'progress_keterangan' => null,
+                'progress_persentase' => null,
+                'gunakan_retensi' => 0,
+                'retensi_keterangan' => null,
+                'retensi_persentase' => null,
+            ]);
         }
 
         $validated = $request->validate([

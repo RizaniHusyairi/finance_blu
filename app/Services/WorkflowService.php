@@ -38,6 +38,8 @@ class WorkflowService
             if ($step->urutan_step === 1) {
                 if ($step->role_code === 'PPK') {
                     $assignee = $assignedUserId;
+                } elseif ($step->role_code === 'PPSPM') {
+                    $assignee = $assignedUserId;
                 } elseif ($step->role_code === 'Kepala Subbagian Keuangan dan Tata Usaha') {
                     $assignee = \App\Models\User::role('Kepala Subbagian Keuangan dan Tata Usaha')->first()?->id;
                 }

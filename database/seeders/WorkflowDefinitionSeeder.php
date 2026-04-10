@@ -49,6 +49,29 @@ class WorkflowDefinitionSeeder extends Seeder
                     ],
                 ],
             ],
+            [
+                'kode' => 'SPM_KONTRAK_PPSPM',
+                'nama' => 'Verifikasi SPM Kontrak',
+                'target_type' => 'App\\Models\\DokumenSpm',
+                'steps' => [
+                    [
+                        'urutan_step' => 1,
+                        'nama_step' => 'Verifikasi PPSPM',
+                        'role_code' => 'PPSPM',
+                        'is_required' => true,
+                        'can_reject' => true,
+                        'can_request_revision' => true,
+                    ],
+                    [
+                        'urutan_step' => 1,
+                        'nama_step' => 'Verifikasi Kasubbag',
+                        'role_code' => 'Kepala Subbagian Keuangan dan Tata Usaha',
+                        'is_required' => true,
+                        'can_reject' => true,
+                        'can_request_revision' => true,
+                    ],
+                ],
+            ],
         ];
 
         foreach ($workflows as $wfData) {
@@ -69,6 +92,7 @@ class WorkflowDefinitionSeeder extends Seeder
                     [
                         'workflow_definition_id' => $definition->id,
                         'urutan_step' => $stepData['urutan_step'],
+                        'role_code' => $stepData['role_code'],
                     ],
                     $stepData
                 );
