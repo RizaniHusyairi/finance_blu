@@ -72,6 +72,37 @@ class WorkflowDefinitionSeeder extends Seeder
                     ],
                 ],
             ],
+            [
+                'kode' => 'NPI_KONTRAK',
+                'nama' => 'Verifikasi NPI Kontrak',
+                'target_type' => 'App\\Models\\DokumenNpi',
+                'steps' => [
+                    [
+                        'urutan_step' => 1,
+                        'nama_step' => 'Verifikasi Bendahara Penerimaan',
+                        'role_code' => 'Bendahara Penerimaan',
+                        'is_required' => true,
+                        'can_reject' => true,
+                        'can_request_revision' => true,
+                    ],
+                    [
+                        'urutan_step' => 1,
+                        'nama_step' => 'Verifikasi PPK',
+                        'role_code' => 'PPK',
+                        'is_required' => true,
+                        'can_reject' => true,
+                        'can_request_revision' => true,
+                    ],
+                    [
+                        'urutan_step' => 1,
+                        'nama_step' => 'Verifikasi Kasubbag',
+                        'role_code' => 'Kepala Subbagian Keuangan dan Tata Usaha',
+                        'is_required' => true,
+                        'can_reject' => true,
+                        'can_request_revision' => true,
+                    ],
+                ],
+            ],
         ];
 
         foreach ($workflows as $wfData) {

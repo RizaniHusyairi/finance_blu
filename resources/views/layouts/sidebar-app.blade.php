@@ -304,12 +304,35 @@
         @hasrole('Bendahara Pengeluaran')
         <li>
           <a href="javascript:;" class="has-arrow">
-            <div class="parent-icon"><i class="material-icons-outlined">account_balance</i></div>
-            <div class="menu-title">Bendahara Pengeluaran</div>
+            <div class="parent-icon"><i class="material-icons-outlined">receipt_long</i></div>
+            <div class="menu-title">Pembuatan NPI</div>
           </a>
           <ul>
-            <li><a href="{{ route('npis.index') }}"><i class="material-icons-outlined">arrow_right</i>Pembuatan NPI</a></li>
-            <li><a href="{{ route('sp2ds.index') }}"><i class="material-icons-outlined">arrow_right</i>Pencatatan SP2D & BKU</a></li>
+            <!-- TODO: Sementara menggunakan route yang sama (npis.index), perlu dipisah per jenis dokumen jika controller sudah siap -->
+            <li><a href="{{ route('npis.kontrak.index') }}"><i class="material-icons-outlined">arrow_right</i>Kontrak</a></li>
+            <li><a href="{{ route('npis.index') }}"><i class="material-icons-outlined">arrow_right</i>Perjaldin</a></li>
+            <li><a href="{{ route('npis.index') }}"><i class="material-icons-outlined">arrow_right</i>Honor</a></li>
+          </ul>
+        </li>
+        <li>
+          <a href="javascript:;" class="has-arrow">
+            <div class="parent-icon"><i class="material-icons-outlined">account_balance</i></div>
+            <div class="menu-title">Pencatatan SP2D</div>
+          </a>
+          <ul>
+            <!-- TODO: Sementara menggunakan route yang sama (sp2ds.index), perlu dipisah per jenis dokumen jika controller sudah siap -->
+            <li><a href="{{ route('sp2ds.index') }}"><i class="material-icons-outlined">arrow_right</i>Kontrak</a></li>
+            <li><a href="{{ route('sp2ds.index') }}"><i class="material-icons-outlined">arrow_right</i>Perjaldin</a></li>
+            <li><a href="{{ route('sp2ds.index') }}"><i class="material-icons-outlined">arrow_right</i>Honor</a></li>
+          </ul>
+        </li>
+        <li>
+          <a href="javascript:;" class="has-arrow">
+            <div class="parent-icon"><i class="material-icons-outlined">summarize</i></div>
+            <div class="menu-title">Laporan</div>
+          </a>
+          <ul>
+            <li><a href="{{ route('reports.bku') }}"><i class="material-icons-outlined">arrow_right</i>Laporan BKU</a></li>
           </ul>
         </li>
         @endhasrole
@@ -324,7 +347,7 @@
           </ul>
         </li>
         @endhasrole
-        @hasanyrole('Super Admin|KPA|Kepala Subbagian Keuangan dan Tata Usaha|Kepala Seksi Pelayanan dan Kerjasama|PPK|Bendahara Pengeluaran|Bendahara Penerimaan')
+        @hasanyrole('Super Admin|KPA|Kepala Subbagian Keuangan dan Tata Usaha|Kepala Seksi Pelayanan dan Kerjasama|PPK|Bendahara Penerimaan')
         <li>
           <a href="{{ route('reports.bku') }}">
             <div class="parent-icon"><i class="material-icons-outlined">summarize</i>
@@ -338,3 +361,4 @@
   </div>
 </aside>
 <!--end sidebar-->
+

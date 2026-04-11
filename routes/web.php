@@ -257,6 +257,12 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
         Route::get('/npis', [\App\Http\Controllers\NpiController::class, 'index'])->name('npis.index');
         Route::get('/npis/perjaldin/{perjaldin_id}/detail', [\App\Http\Controllers\NpiController::class, 'detail'])->name('npis.perjaldin.detail');
         Route::post('/npis/spm/{spm_id}/store', [\App\Http\Controllers\NpiController::class, 'store'])->name('npis.store');
+        
+        // NPI Kontrak
+        Route::get('/npis/kontrak', [\App\Http\Controllers\NpiKontrakController::class, 'index'])->name('npis.kontrak.index');
+        Route::get('/npis/kontrak/{spm}/detail', [\App\Http\Controllers\NpiKontrakController::class, 'show'])->name('npis.kontrak.detail');
+        Route::post('/npis/kontrak/{spm}/store', [\App\Http\Controllers\NpiKontrakController::class, 'store'])->name('npis.kontrak.store');
+        Route::post('/npis/kontrak/{spm}/submit', [\App\Http\Controllers\NpiKontrakController::class, 'submit'])->name('npis.kontrak.submit');
     });
 
     // ==== MODUL SP2D & BKU — Bendahara Pengeluaran ====

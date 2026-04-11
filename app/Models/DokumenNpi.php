@@ -17,6 +17,11 @@ class DokumenNpi extends Model
     ];
 
     public const STATUS_DRAFT = 'DRAFT';
+    public const STATUS_MENUNGGU_VERIFIKASI = 'MENUNGGU_VERIFIKASI';
+    public const STATUS_DISETUJUI_FINAL = 'DISETUJUI_FINAL';
+    public const STATUS_REVISI = 'REVISI';
+    
+    // Legacy constants (sequential)
     public const STATUS_SUBMITTED_BENPEN = 'SUBMITTED_BENPEN';
     public const STATUS_REJECTED_BENPEN = 'REJECTED_BENPEN';
     public const STATUS_SUBMITTED_PPK = 'SUBMITTED_PPK';
@@ -50,10 +55,12 @@ class DokumenNpi extends Model
         return $this->morphMany(ArsipDokumen::class, 'documentable');
     }
 
-    public function getSpmIdAttribute()
+    public function workflowInstances()
     {
-        return $this->spm_id;
+        return $this->morphMany(WorkflowInstance::class, 'workflowable');
     }
+
+
 
     public function getSppIdAttribute()
     {
@@ -78,6 +85,9 @@ class DokumenNpi extends Model
     public function getStatusSppAttribute()
     {
         return match ($this->status) {
+            self::STATUS_MENUNGGU_VERIFIKASI => 'Menunggu Verifikasi',
+            self::STATUS_DISETUJUI_FINAL => 'Selesai',
+            self::STATUS_REVISI => 'Revisi',
             self::STATUS_SUBMITTED_BENPEN => 'Menunggu Verifikasi Bendahara Penerimaan',
             self::STATUS_REJECTED_BENPEN => 'Revisi Bendahara Penerimaan',
             self::STATUS_SUBMITTED_PPK => 'Menunggu Verifikasi PPK NPI',
