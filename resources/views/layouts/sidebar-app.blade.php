@@ -43,11 +43,8 @@
             <div class="menu-title">Master Data</div>
           </a>
           <ul>
-            @hasanyrole('Super Admin|Operator BLU')
-            <li><a href="{{ route('employees.index') }}"><i class="material-icons-outlined">arrow_right</i>Pegawai &
-                Pejabat</a>
-            </li>
-            @endhasanyrole
+            
+           
             @hasanyrole('Super Admin|Pejabat Pengadaan')
             <li><a href="{{ route('suppliers.index') }}"><i class="material-icons-outlined">arrow_right</i>Supplier /
                 Mitra</a>
@@ -57,6 +54,8 @@
             <li><a href="{{ route('dipas.index') }}"><i class="material-icons-outlined">arrow_right</i>DIPA</a>
             </li>
             <li><a href="{{ route('coas.index') }}"><i class="material-icons-outlined">arrow_right</i>COA</a>
+            </li>
+            <li><a href="{{ route('master-pajak.index') }}"><i class="material-icons-outlined">arrow_right</i>Pajak</a>
             </li>
             @endhasanyrole
           </ul>
@@ -98,99 +97,84 @@
           </li>
           @endhasanyrole
         @hasrole('PPK')
+        {{-- 1. Verifikasi SPMK --}}
         <li>
           <a href="javascript:;" class="has-arrow">
             <div class="parent-icon"><i class="material-icons-outlined">draw</i></div>
             <div class="menu-title">Verifikasi SPMK</div>
           </a>
           <ul>
-            <li>
-                <a href="{{ route('contracts.verifikasi') }}">
-                  <i class="material-icons-outlined">arrow_right</i>Draft Kontrak & SPMK
-                </a>
-            </li>
+            <li><a href="{{ route('contracts.verifikasi') }}"><i class="material-icons-outlined">arrow_right</i>Draft Kontrak & SPMK</a></li>
           </ul>
         </li>
 
+        {{-- 2. Verifikasi Tagihan --}}
         <li>
           <a href="javascript:;" class="has-arrow">
             <div class="parent-icon"><i class="material-icons-outlined">fact_check</i></div>
             <div class="menu-title">Verifikasi Tagihan</div>
           </a>
           <ul>
-            <li>
-                <a href="{{ route('ppk.tagihan.kontrak.index') }}">
-                  <i class="material-icons-outlined">arrow_right</i>Kontrak (BAST)
-                </a>
-            </li>
-            <li>
-                <a href="{{ route('verifikasi-ppk.index') }}">
-                  <i class="material-icons-outlined">arrow_right</i>Perjaldin
-                </a>
-            </li>
-            <li>
-                <a href="{{ route('honorarium.ppk.pending') }}">
-                  <i class="material-icons-outlined">arrow_right</i>Honorarium
-                </a>
-            </li>
+            <li><a href="{{ route('ppk.tagihan.kontrak.index') }}"><i class="material-icons-outlined">arrow_right</i>Kontrak</a></li>
+            <li><a href="{{ route('verifikasi-ppk.index') }}"><i class="material-icons-outlined">arrow_right</i>Perjaldin</a></li>
+            <li><a href="{{ route('honorarium.ppk.pending') }}"><i class="material-icons-outlined">arrow_right</i>Honorarium</a></li>
           </ul>
         </li>
 
+        {{-- 3. Verifikasi SPP --}}
         <li>
           <a href="javascript:;" class="has-arrow">
             <div class="parent-icon"><i class="material-icons-outlined">history_edu</i></div>
-            <div class="menu-title">Verifikasi Pencairan</div>
+            <div class="menu-title">Verifikasi SPP</div>
           </a>
           <ul>
-            <li>
-                <a href="{{ route('verifikasi-ppk.spp.index') }}">
-                  <i class="material-icons-outlined">arrow_right</i>SPP
-                </a>
-            </li>
-            <li>
-                <a href="{{ route('verifikasi-ppk.npi.index') }}">
-                  <i class="material-icons-outlined">arrow_right</i>NPI
-                </a>
-            </li>
-            <li>
-                <a href="#">
-                  <i class="material-icons-outlined">arrow_right</i>SP2D
-                </a>
-            </li>
+            <li><a href="{{ route('verifikasi-ppk.spp.index') }}"><i class="material-icons-outlined">arrow_right</i>Kontrak</a></li>
+            {{-- TODO: Pisahkan route SPP Perjaldin & Honor jika controller sudah siap --}}
+            <li><a href="{{ route('verifikasi-ppk.spp.index') }}"><i class="material-icons-outlined">arrow_right</i>Perjaldin</a></li>
+            <li><a href="{{ route('verifikasi-ppk.spp.index') }}"><i class="material-icons-outlined">arrow_right</i>Honor</a></li>
           </ul>
         </li>
 
+        {{-- 4. Verifikasi NPI --}}
+        <li>
+          <a href="javascript:;" class="has-arrow">
+            <div class="parent-icon"><i class="material-icons-outlined">receipt_long</i></div>
+            <div class="menu-title">Verifikasi NPI</div>
+          </a>
+          <ul>
+            <li><a href="{{ route('verifikasi-ppk.npi.kontrak.index') }}"><i class="material-icons-outlined">arrow_right</i>Kontrak</a></li>
+            {{-- TODO: Buat route NPI Perjaldin & Honor khusus PPK jika controller sudah siap --}}
+            <li><a href="#"><i class="material-icons-outlined">arrow_right</i>Perjaldin</a></li>
+            <li><a href="#"><i class="material-icons-outlined">arrow_right</i>Honor</a></li>
+          </ul>
+        </li>
+
+        {{-- 5. Verifikasi SP2D --}}
+        <li>
+          <a href="javascript:;" class="has-arrow">
+            <div class="parent-icon"><i class="material-icons-outlined">account_balance</i></div>
+            <div class="menu-title">Verifikasi SP2D</div>
+          </a>
+          <ul>
+            {{-- TODO: Buat route SP2D Kontrak/Perjaldin/Honor khusus PPK jika controller sudah siap --}}
+            <li><a href="{{ route('verifikasi-ppk.sp2d.kontrak.index') }}"><i class="material-icons-outlined">arrow_right</i>Kontrak</a></li>
+            <li><a href="#"><i class="material-icons-outlined">arrow_right</i>Perjaldin</a></li>
+            <li><a href="#"><i class="material-icons-outlined">arrow_right</i>Honor</a></li>
+          </ul>
+        </li>
+
+        {{-- 6. Monitoring & Laporan --}}
         <li>
           <a href="javascript:;" class="has-arrow">
             <div class="parent-icon"><i class="material-icons-outlined">article</i></div>
             <div class="menu-title">Monitoring & Laporan</div>
           </a>
           <ul>
-            <li>
-                <a href="#">
-                  <i class="material-icons-outlined">arrow_right</i>Pengawasan DIPA
-                </a>
-            </li>
-            <li>
-                <a href="#">
-                  <i class="material-icons-outlined">arrow_right</i>Arsip Kontrak
-                </a>
-            </li>
-            <li>
-                <a href="{{ route('perjaldin-blu.history') }}">
-                  <i class="material-icons-outlined">arrow_right</i>Arsip Perjaldin
-                </a>
-            </li>
-            <li>
-                <a href="#">
-                  <i class="material-icons-outlined">arrow_right</i>Arsip Honorarium
-                </a>
-            </li>
-            <li>
-                <a href="#">
-                  <i class="material-icons-outlined">arrow_right</i>Pelacakan SP2D
-                </a>
-            </li>
+            <li><a href="#"><i class="material-icons-outlined">arrow_right</i>Pengawasan DIPA</a></li>
+            <li><a href="#"><i class="material-icons-outlined">arrow_right</i>Arsip Kontrak</a></li>
+            <li><a href="{{ route('perjaldin-blu.history') }}"><i class="material-icons-outlined">arrow_right</i>Arsip Perjaldin</a></li>
+            <li><a href="#"><i class="material-icons-outlined">arrow_right</i>Arsip Honorarium</a></li>
+            <li><a href="#"><i class="material-icons-outlined">arrow_right</i>Pelacakan SP2D</a></li>
           </ul>
         </li>
         @endhasrole
@@ -236,7 +220,7 @@
           </a>
           <ul>
             <li>
-              <a href="{{ route('verifikasi-kasubag.npi.index') }}"><i class="material-icons-outlined">arrow_right</i>Kontrak</a>
+              <a href="{{ route('verifikasi-kasubag.npi.kontrak.index') }}"><i class="material-icons-outlined">arrow_right</i>Kontrak</a>
             </li>
             <li>
               <a href="{{ route('verifikasi-kasubag.npi.index') }}"><i class="material-icons-outlined">arrow_right</i>Perjaldin</a>
@@ -253,7 +237,7 @@
           </a>
           <ul>
             <li>
-              <a href="#"><i class="material-icons-outlined">arrow_right</i>Kontrak</a>
+              <a href="{{ route('verifikasi-kasubag.sp2d.kontrak.index') }}"><i class="material-icons-outlined">arrow_right</i>Kontrak</a>
             </li>
             <li>
               <a href="#"><i class="material-icons-outlined">arrow_right</i>Perjaldin</a>
@@ -285,6 +269,29 @@
             <li><a href="{{ route('spms.index') }}"><i class="material-icons-outlined">arrow_right</i>SPM Perjaldin</a></li>
             <li><a href="{{ route('spms.index') }}"><i class="material-icons-outlined">arrow_right</i>SPM Honor</a></li>
             <li><a href="{{ route('spms.kontrak.index') }}"><i class="material-icons-outlined">arrow_right</i>SPM Kontrak</a></li>
+          </ul>
+        </li>
+        <li>
+          <a href="javascript:;" class="has-arrow">
+            <div class="parent-icon"><i class="material-icons-outlined">article</i></div>
+            <div class="menu-title">Monitoring Pencairan</div>
+          </a>
+          <ul>
+            {{-- TODO: Buat route monitoring jika controller sudah siap --}}
+            <li><a href="#"><i class="material-icons-outlined">arrow_right</i>Kontrak</a></li>
+            <li><a href="#"><i class="material-icons-outlined">arrow_right</i>Perjaldin</a></li>
+            <li><a href="#"><i class="material-icons-outlined">arrow_right</i>Honor</a></li>
+          </ul>
+        </li>
+        <li>
+          <a href="javascript:;" class="has-arrow">
+            <div class="parent-icon"><i class="material-icons-outlined">history</i></div>
+            <div class="menu-title">Riwayat Dokumen</div>
+          </a>
+          <ul>
+            {{-- TODO: Buat route riwayat dokumen jika controller sudah siap --}}
+            <li><a href="#"><i class="material-icons-outlined">arrow_right</i>SPP</a></li>
+            <li><a href="#"><i class="material-icons-outlined">arrow_right</i>SPM</a></li>
           </ul>
         </li>
         @endhasanyrole
@@ -320,8 +327,7 @@
             <div class="menu-title">Pencatatan SP2D</div>
           </a>
           <ul>
-            <!-- TODO: Sementara menggunakan route yang sama (sp2ds.index), perlu dipisah per jenis dokumen jika controller sudah siap -->
-            <li><a href="{{ route('sp2ds.index') }}"><i class="material-icons-outlined">arrow_right</i>Kontrak</a></li>
+            <li><a href="{{ route('sp2ds.kontrak.index') }}"><i class="material-icons-outlined">arrow_right</i>Kontrak</a></li>
             <li><a href="{{ route('sp2ds.index') }}"><i class="material-icons-outlined">arrow_right</i>Perjaldin</a></li>
             <li><a href="{{ route('sp2ds.index') }}"><i class="material-icons-outlined">arrow_right</i>Honor</a></li>
           </ul>
@@ -340,10 +346,12 @@
         <li>
           <a href="javascript:;" class="has-arrow">
             <div class="parent-icon"><i class="material-icons-outlined">how_to_reg</i></div>
-            <div class="menu-title">Bendahara Penerimaan</div>
+            <div class="menu-title">Verifikasi NPI</div>
           </a>
           <ul>
-            <li><a href="{{ route('verifikasi-bendahara-penerimaan.npi.index') }}"><i class="material-icons-outlined">arrow_right</i>TTD NPI</a></li>
+            <li><a href="{{ route('verifikasi-bendahara-penerimaan.npi.kontrak.index') }}"><i class="material-icons-outlined">arrow_right</i>Kontrak</a></li>
+            <li><a href="#"><i class="material-icons-outlined">arrow_right</i>Perjaldin</a></li>
+            <li><a href="#"><i class="material-icons-outlined">arrow_right</i>Honor</a></li>
           </ul>
         </li>
         @endhasrole
@@ -361,4 +369,3 @@
   </div>
 </aside>
 <!--end sidebar-->
-

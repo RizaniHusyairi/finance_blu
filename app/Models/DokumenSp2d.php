@@ -17,7 +17,10 @@ class DokumenSp2d extends Model
     ];
 
     public const STATUS_DRAFT = 'DRAFT';
-    public const STATUS_APPROVED = 'APPROVED';
+    public const STATUS_MENUNGGU_VERIFIKASI = 'MENUNGGU_VERIFIKASI';
+    public const STATUS_DISETUJUI_FINAL = 'DISETUJUI_FINAL';
+    public const STATUS_REVISI = 'REVISI';
+    public const STATUS_APPROVED = 'APPROVED'; // Legacy
     public const STATUS_EXECUTED = 'EXECUTED';
 
     public function npi()
@@ -40,10 +43,11 @@ class DokumenSp2d extends Model
         return $this->morphMany(ArsipDokumen::class, 'documentable');
     }
 
-    public function getNpiIdAttribute()
+    public function workflowInstances()
     {
-        return $this->npi_id;
+        return $this->morphMany(WorkflowInstance::class, 'workflowable');
     }
+
 
     public function getSppIdAttribute()
     {

@@ -12,6 +12,7 @@ use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\SupplierController;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\HonorariumController;
+use App\Http\Controllers\MasterTarifPajakController;
 
 Auth::routes();
 
@@ -80,6 +81,17 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
         Route::post('/dipas/{dipa}/items/{item}/toggle', [DipaController::class, 'toggleItem'])->name('dipas.items.toggle');
         Route::delete('/dipas/{dipa}/items/{item}', [DipaController::class, 'destroyItem'])->name('dipas.items.destroy');
         Route::post('/dipas/{dipa}/revisions/{revision}/activate', [DipaController::class, 'activateRevision'])->name('dipas.revisions.activate');
+    });
+
+    // Master Data — Pajak
+    Route::middleware('role:Super Admin|Operator BLU')->group(function () {
+        Route::get('/master/pajak', [MasterTarifPajakController::class, 'index'])->name('master-pajak.index');
+        Route::get('/master/pajak/create', [MasterTarifPajakController::class, 'create'])->name('master-pajak.create');
+        Route::post('/master/pajak', [MasterTarifPajakController::class, 'store'])->name('master-pajak.store');
+        Route::get('/master/pajak/{pajak}', [MasterTarifPajakController::class, 'show'])->name('master-pajak.show');
+        Route::get('/master/pajak/{pajak}/edit', [MasterTarifPajakController::class, 'edit'])->name('master-pajak.edit');
+        Route::put('/master/pajak/{pajak}', [MasterTarifPajakController::class, 'update'])->name('master-pajak.update');
+        Route::post('/master/pajak/{pajak}/toggle', [MasterTarifPajakController::class, 'toggle'])->name('master-pajak.toggle');
     });
 
     // Manajemen Kontrak (Kontrak, Addendum, Termin)
@@ -162,6 +174,18 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
         Route::get('/verifikasi-ppk/npi', [\App\Http\Controllers\NpiController::class, 'verifikasiIndex'])->name('verifikasi-ppk.npi.index');
         Route::post('/verifikasi-ppk/npi/{npi_id}/approve', [\App\Http\Controllers\NpiController::class, 'approve'])->name('verifikasi-ppk.npi.approve');
         Route::post('/verifikasi-ppk/npi/{npi_id}/revisi', [\App\Http\Controllers\NpiController::class, 'revisi'])->name('verifikasi-ppk.npi.revisi');
+
+        // NPI Kontrak — Verifikasi PPK (Parallel Workflow)
+        Route::get('/verifikasi-ppk/npi/kontrak', [\App\Http\Controllers\PpkNpiKontrakVerifikasiController::class, 'index'])->name('verifikasi-ppk.npi.kontrak.index');
+        Route::get('/verifikasi-ppk/npi/kontrak/{id}', [\App\Http\Controllers\PpkNpiKontrakVerifikasiController::class, 'show'])->name('verifikasi-ppk.npi.kontrak.show');
+        Route::post('/verifikasi-ppk/npi/kontrak/{id}/approve', [\App\Http\Controllers\PpkNpiKontrakVerifikasiController::class, 'approve'])->name('verifikasi-ppk.npi.kontrak.approve');
+        Route::post('/verifikasi-ppk/npi/kontrak/{id}/revisi', [\App\Http\Controllers\PpkNpiKontrakVerifikasiController::class, 'revisi'])->name('verifikasi-ppk.npi.kontrak.revisi');
+
+        // SP2D Kontrak — Verifikasi PPK (Parallel Workflow)
+        Route::get('/verifikasi-ppk/sp2d/kontrak', [\App\Http\Controllers\PpkSp2dKontrakVerifikasiController::class, 'index'])->name('verifikasi-ppk.sp2d.kontrak.index');
+        Route::get('/verifikasi-ppk/sp2d/kontrak/{id}', [\App\Http\Controllers\PpkSp2dKontrakVerifikasiController::class, 'show'])->name('verifikasi-ppk.sp2d.kontrak.show');
+        Route::post('/verifikasi-ppk/sp2d/kontrak/{id}/approve', [\App\Http\Controllers\PpkSp2dKontrakVerifikasiController::class, 'approve'])->name('verifikasi-ppk.sp2d.kontrak.approve');
+        Route::post('/verifikasi-ppk/sp2d/kontrak/{id}/revisi', [\App\Http\Controllers\PpkSp2dKontrakVerifikasiController::class, 'revisi'])->name('verifikasi-ppk.sp2d.kontrak.revisi');
     });
 
     // Verifikasi Perjaldin & SPP — Kasubag
@@ -178,6 +202,18 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
         Route::get('/verifikasi-kasubag/spp/{id}', [\App\Http\Controllers\SppVerifikasiController::class, 'kasubbagShow'])->name('verifikasi-kasubag.spp.show');
         Route::post('/verifikasi-kasubag/spp/{id}/approve', [\App\Http\Controllers\SppVerifikasiController::class, 'approveKasubbag'])->name('verifikasi-kasubag.spp.approve');
         Route::post('/verifikasi-kasubag/spp/{id}/revisi', [\App\Http\Controllers\SppVerifikasiController::class, 'revisiKasubbag'])->name('verifikasi-kasubag.spp.revisi');
+
+        // NPI Kontrak — Verifikasi Kasubbag (Parallel Workflow)
+        Route::get('/verifikasi-kasubag/npi/kontrak', [\App\Http\Controllers\KasubbagNpiKontrakVerifikasiController::class, 'index'])->name('verifikasi-kasubag.npi.kontrak.index');
+        Route::get('/verifikasi-kasubag/npi/kontrak/{id}', [\App\Http\Controllers\KasubbagNpiKontrakVerifikasiController::class, 'show'])->name('verifikasi-kasubag.npi.kontrak.show');
+        Route::post('/verifikasi-kasubag/npi/kontrak/{id}/approve', [\App\Http\Controllers\KasubbagNpiKontrakVerifikasiController::class, 'approve'])->name('verifikasi-kasubag.npi.kontrak.approve');
+        Route::post('/verifikasi-kasubag/npi/kontrak/{id}/revisi', [\App\Http\Controllers\KasubbagNpiKontrakVerifikasiController::class, 'revisi'])->name('verifikasi-kasubag.npi.kontrak.revisi');
+
+        // SP2D Kontrak — Verifikasi Kasubbag (Parallel Workflow)
+        Route::get('/verifikasi-kasubag/sp2d/kontrak', [\App\Http\Controllers\KasubbagSp2dKontrakVerifikasiController::class, 'index'])->name('verifikasi-kasubag.sp2d.kontrak.index');
+        Route::get('/verifikasi-kasubag/sp2d/kontrak/{id}', [\App\Http\Controllers\KasubbagSp2dKontrakVerifikasiController::class, 'show'])->name('verifikasi-kasubag.sp2d.kontrak.show');
+        Route::post('/verifikasi-kasubag/sp2d/kontrak/{id}/approve', [\App\Http\Controllers\KasubbagSp2dKontrakVerifikasiController::class, 'approve'])->name('verifikasi-kasubag.sp2d.kontrak.approve');
+        Route::post('/verifikasi-kasubag/sp2d/kontrak/{id}/revisi', [\App\Http\Controllers\KasubbagSp2dKontrakVerifikasiController::class, 'revisi'])->name('verifikasi-kasubag.sp2d.kontrak.revisi');
     });
 
     // ==== VERIFIKASI NPI — Bendahara Penerimaan (TTD) ====
@@ -185,6 +221,12 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
         Route::get('/verifikasi-bendahara-penerimaan/npi', [\App\Http\Controllers\NpiController::class, 'penerimaaIndex'])->name('verifikasi-bendahara-penerimaan.npi.index');
         Route::post('/verifikasi-bendahara-penerimaan/npi/{npi_id}/approve', [\App\Http\Controllers\NpiController::class, 'approvePenerimaan'])->name('verifikasi-bendahara-penerimaan.npi.approve');
         Route::post('/verifikasi-bendahara-penerimaan/npi/{npi_id}/revisi', [\App\Http\Controllers\NpiController::class, 'revisiPenerimaan'])->name('verifikasi-bendahara-penerimaan.npi.revisi');
+        
+        // NPI Kontrak — Verifikasi Bendahara Penerimaan (Parallel Workflow)
+        Route::get('/verifikasi-bendahara-penerimaan/npi/kontrak', [\App\Http\Controllers\BenpenNpiKontrakVerifikasiController::class, 'index'])->name('verifikasi-bendahara-penerimaan.npi.kontrak.index');
+        Route::get('/verifikasi-bendahara-penerimaan/npi/kontrak/{id}', [\App\Http\Controllers\BenpenNpiKontrakVerifikasiController::class, 'show'])->name('verifikasi-bendahara-penerimaan.npi.kontrak.show');
+        Route::post('/verifikasi-bendahara-penerimaan/npi/kontrak/{id}/approve', [\App\Http\Controllers\BenpenNpiKontrakVerifikasiController::class, 'approve'])->name('verifikasi-bendahara-penerimaan.npi.kontrak.approve');
+        Route::post('/verifikasi-bendahara-penerimaan/npi/kontrak/{id}/revisi', [\App\Http\Controllers\BenpenNpiKontrakVerifikasiController::class, 'revisi'])->name('verifikasi-bendahara-penerimaan.npi.kontrak.revisi');
     });
 
     // ==== MODUL PEMBUATAN SPP (BLU) ====
@@ -211,6 +253,7 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
         Route::get('/spps/{spp}/pdf', [\App\Http\Controllers\SppController::class, 'cetakPdf'])->name('spps.cetak-pdf');
         Route::get('/spms/{spm_id}/pdf', [\App\Http\Controllers\SpmController::class, 'cetakPdfSpm'])->name('spms.cetak-pdf');
         Route::get('/npis/{npi_id}/pdf', [\App\Http\Controllers\NpiController::class, 'cetakPdf'])->name('npis.cetak-pdf');
+        Route::get('/sp2ds/{sp2d}/pdf', [\App\Http\Controllers\DocumentController::class, 'printSp2d'])->name('sp2ds.cetak-pdf');
     });
 
     // ==== MODUL PEMBUATAN SPM (BLU) ====
@@ -267,6 +310,10 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
 
     // ==== MODUL SP2D & BKU — Bendahara Pengeluaran ====
     Route::middleware('role:Super Admin|Bendahara Pengeluaran')->group(function () {
+        Route::get('/sp2ds/kontrak', [\App\Http\Controllers\Sp2dKontrakController::class, 'index'])->name('sp2ds.kontrak.index');
+        Route::get('/sp2ds/kontrak/{npi_id}/detail', [\App\Http\Controllers\Sp2dKontrakController::class, 'show'])->name('sp2ds.kontrak.detail');
+        Route::post('/sp2ds/kontrak/npi/{npi_id}/draft', [\App\Http\Controllers\Sp2dKontrakController::class, 'storeDraft'])->name('sp2ds.kontrak.store');
+        Route::post('/sp2ds/kontrak/npi/{npi_id}/submit', [\App\Http\Controllers\Sp2dKontrakController::class, 'submitVerification'])->name('sp2ds.kontrak.submit');
         Route::get('/sp2ds', [\App\Http\Controllers\Sp2dController::class, 'index'])->name('sp2ds.index');
         Route::get('/sp2ds/perjaldin/{perjaldin_id}/detail', [\App\Http\Controllers\Sp2dController::class, 'detail'])->name('sp2ds.perjaldin.detail');
         Route::post('/sp2ds/npi/{npi_id}/store', [\App\Http\Controllers\Sp2dController::class, 'store'])->name('sp2ds.store');

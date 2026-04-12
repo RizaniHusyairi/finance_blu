@@ -270,7 +270,7 @@ class NpiKontrakController extends Controller
             return back()->withErrors(['error' => 'NPI tidak dapat diajukan (bukan status draft atau revisi).']);
         }
 
-        DB::transaction(function () use ($npi) {
+        DB::transaction(function () use ($npi, $spm) {
             $statusSebelumnya = $npi->status;
 
             // Updated status

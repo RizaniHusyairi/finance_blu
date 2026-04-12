@@ -139,17 +139,36 @@ class DocumentController extends Controller
 
     public function printSp2d(DokumenSp2d $sp2d)
     {
-        $sp2d->load(['npi.spm.spp', 'bendaharaPengeluaran']);
-
-        return response()->json([
-            'message' => 'Template PDF SP2D belum tersedia. Gunakan arsip_dokumen untuk bukti transfer dan data SP2D final.',
-            'sp2d' => [
-                'id' => $sp2d->id,
-                'nomor_sp2d' => $sp2d->nomor_sp2d,
-                'tanggal_sp2d' => optional($sp2d->tanggal_sp2d)->format('Y-m-d'),
-                'status' => $sp2d->status,
-            ],
+        $sp2d->load([
+            'npi.spm.spp.tagihan.detailKontrak.kontrakTermin.kontrak.vendor.rekening',
+            'npi.spm.spp.tagihan.potonganTagihan.pajak',
+            'bendaharaPengeluaran',
+            'workflowInstances.approvals.actedByUser'
         ]);
+
+        $npi = $sp2d->npi;
+        $spm = $npi?->spm;
+        $spp = $spm?->spp;
+        $tagihan = $spp?->tagihan;
+        $kontrak = $tagihan?->detailKontrak?->kontrakTermin?->kontrak;
+        $vendor = $kontrak?->vendor;
+        $rekening = $vendor?->rekening?->first();
+        
+        $nominalSp2d = (float) ($spp?->nominal_spp ?? $tagihan?->total_netto ?? 0);
+        $terbilang = terbilang_rupiah($nominalSp2d) . ' Rupiah';
+
+        $approvals = collect($sp2d->workflowInstances->sortByDesc('created_at')->first()?->approvals ?? []);
+        $ppkApproval = $approvals->firstWhere('role_code', 'PPK');
+        $ppk = $ppkApproval?->actedByUser;
+
+        $pdf = Pdf::loadView('sp2ds.pdf', compact(
+            'sp2d', 'npi', 'spm', 'spp', 'tagihan', 'kontrak', 'vendor', 
+            'rekening', 'nominalSp2d', 'terbilang', 'ppk'
+        ));
+
+        $pdf->setPaper('a4', 'portrait');
+
+        return $pdf->stream('SP2D-BLU-' . str_replace('/', '-', $sp2d->nomor_sp2d) . '.pdf');
     }
 
     private function resolveDocumentable(string $type, int $id): Model

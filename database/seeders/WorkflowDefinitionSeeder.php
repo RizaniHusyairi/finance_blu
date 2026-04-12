@@ -103,6 +103,29 @@ class WorkflowDefinitionSeeder extends Seeder
                     ],
                 ],
             ],
+            [
+                'kode' => 'SP2D_KONTRAK',
+                'nama' => 'Verifikasi SP2D Kontrak',
+                'target_type' => 'App\Models\DokumenSp2d',
+                'steps' => [
+                    [
+                        'urutan_step' => 1,
+                        'nama_step' => 'Verifikasi PPK',
+                        'role_code' => 'PPK',
+                        'is_required' => true,
+                        'can_reject' => true,
+                        'can_request_revision' => true,
+                    ],
+                    [
+                        'urutan_step' => 1,
+                        'nama_step' => 'Verifikasi Kasubbag',
+                        'role_code' => 'Kepala Subbagian Keuangan dan Tata Usaha',
+                        'is_required' => true,
+                        'can_reject' => true,
+                        'can_request_revision' => true,
+                    ],
+                ],
+            ],
         ];
 
         foreach ($workflows as $wfData) {
