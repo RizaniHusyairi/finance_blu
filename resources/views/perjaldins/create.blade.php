@@ -53,7 +53,7 @@
                                 <th>#</th>
                                 <th>Pegawai</th>
                                 <th>No SPT</th>
-                                <th>Tujuan</th>
+                                <th>Provinsi & Tipe</th>
                                 <th>Tanggal & Lama</th>
                                 <th>Rincian Biaya (Tiket, Transport, Penginapan, UH, Representasi)</th>
                                 <th>Jumlah</th>
@@ -66,26 +66,31 @@
                             <tr class="item-row">
                                 <td class="text-center row-number">1</td>
                                 <td>
-                                    <select class="form-select pegawai-select" name="peserta[0][pegawai_id]" required>
-                                        <option value="">-- Pilih Pegawai --</option>
-                                        @foreach($pegawais as $peg)
-                                            <option value="{{ $peg->id }}" data-nip="{{ $peg->nip }}">{{ $peg->nama_lengkap }} {{ $peg->nip ? '('.$peg->nip.')' : '' }}</option>
-                                        @endforeach
-                                    </select>
+                                    <input type="text" class="form-control mb-1" name="peserta[0][nama_pegawai]" placeholder="Nama Pegawai" required>
+                                    <input type="text" class="form-control form-control-sm" name="peserta[0][nip]" placeholder="NIP (Opsional)">
                                 </td>
                                 <td>
                                     <input type="text" class="form-control" name="peserta[0][no_spt]"
                                         placeholder="No SPT" required>
                                 </td>
                                 <td>
-                                    <textarea class="form-control" name="peserta[0][tujuan]" rows="2"
-                                        placeholder="Tujuan..." required></textarea>
+                                    <select class="form-select mb-1 provinsi-select" name="peserta[0][provinsi_id]" style="min-width: 150px;">
+                                        <option value="">-- Provinsi --</option>
+                                        @foreach($masterProvinsi as $prov)
+                                            <option value="{{ $prov->id }}">{{ $prov->provinsi }}</option>
+                                        @endforeach
+                                    </select>
+                                    <select class="form-select mb-1 tipe-perjalanan-select" name="peserta[0][tipe_perjalanan]" style="min-width: 150px;">
+                                        <option value="Luar Kota">Luar Kota</option>
+                                        <option value="Dalam Kota Lebih Dari 8 Jam">Dalam Kota &gt; 8 Jam</option>
+                                        <option value="Diklat">Diklat</option>
+                                    </select>
                                 </td>
                                 <td>
                                     <input type="date" class="form-control mb-1" name="peserta[0][tgl_berangkat]"
                                         required>
                                     <div class="input-group">
-                                        <input type="number" class="form-control" name="peserta[0][lama_hari]"
+                                        <input type="number" class="form-control lama-hari-input" name="peserta[0][lama_hari]"
                                             placeholder="Lama" required min="1">
                                         <span class="input-group-text">Hari</span>
                                     </div>
@@ -101,7 +106,7 @@
                                         <input type="text" class="form-control form-control-sm biaya-input"
                                             name="peserta[0][biaya_penginapan]" placeholder="Penginapan" style="width: 120px;"
                                             onkeyup="calculateJumlah(this)">
-                                        <input type="text" class="form-control form-control-sm biaya-input"
+                                        <input type="text" class="form-control form-control-sm biaya-input uang-harian-input"
                                             name="peserta[0][uang_harian]" placeholder="Uang Harian" style="width: 120px;"
                                             onkeyup="calculateJumlah(this)">
                                         <input type="text" class="form-control form-control-sm biaya-input"
@@ -152,6 +157,7 @@
 @push('script')
     <script>
         let rowIdx = 1;
+        const masterTarif = @json($masterProvinsi);
 
         // Formatting numbers to string with commas
         function formatNumber(n) {
@@ -195,7 +201,6 @@
 
                 newRow.find('input, textarea').val('');
                 newRow.find('.row-jumlah').val('0');
-                newRow.find('.pegawai-select').prop('selectedIndex', 0);
 
                 newRow.find('input, select, textarea').each(function () {
                     var name = $(this).attr('name');
@@ -230,6 +235,30 @@
                     $(this).find('.row-number').text(index + 1);
                 });
             }
+
+            // Auto-fill Uang Harian based on master data
+            $(document).on('change keyup', '.provinsi-select, .tipe-perjalanan-select, .lama-hari-input', function() {
+                let tr = $(this).closest('tr');
+                let provId = tr.find('.provinsi-select').val();
+                let tipe = tr.find('.tipe-perjalanan-select').val();
+                let lamaHari = parseInt(tr.find('.lama-hari-input').val()) || 1;
+                
+                if (provId) {
+                    // find tariff
+                    let tarifInfo = masterTarif.find(t => t.id == provId);
+                    if (tarifInfo) {
+                        let amount = 0;
+                        if (tipe === 'Luar Kota') amount = tarifInfo.luar_kota;
+                        else if (tipe === 'Dalam Kota Lebih Dari 8 Jam') amount = tarifInfo.dalam_kota_lebih_8_jam;
+                        else if (tipe === 'Diklat') amount = tarifInfo.diklat;
+                        
+                        let totalAmount = amount * lamaHari;
+                        let inputUangHarian = tr.find('.uang-harian-input');
+                        inputUangHarian.val(formatNumber(totalAmount));
+                        calculateJumlah(inputUangHarian[0]);
+                    }
+                }
+            });
         });
     </script>
 @endpush

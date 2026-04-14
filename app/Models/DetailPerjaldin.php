@@ -21,4 +21,9 @@ class DetailPerjaldin extends Model
     {
         return $this->belongsTo(MasterPegawai::class, 'pegawai_id');
     }
+
+    public function provinsi()
+    {
+        return $this->belongsTo(MasterUangHarianPerjaldin::class, 'provinsi_id');
+    }
 }

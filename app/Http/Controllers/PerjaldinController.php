@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\DB;
 use App\Models\Tagihan;
 use App\Models\DetailPerjaldin;
 use App\Models\MasterPegawai;
+use App\Models\MasterUangHarianPerjaldin;
 use App\Models\LogStatusDokumen;
 use App\Support\DipaBudgetOptionService;
 
@@ -26,13 +27,13 @@ class PerjaldinController extends Controller
     }
 
     /**
-     * Form tambah Perjaldin (menggunakan MasterPegawai).
+     * Form tambah Perjaldin (menggunakan input manual Pegawai).
      */
     public function create()
     {
-        $pegawais = MasterPegawai::where('status_aktif', true)->orderBy('nama_lengkap')->get();
         $budgetGroups = DipaBudgetOptionService::groupedOptions();
-        return view('perjaldins.create', compact('pegawais', 'budgetGroups'));
+        $masterProvinsi = MasterUangHarianPerjaldin::orderBy('provinsi')->get();
+        return view('perjaldins.create', compact('budgetGroups', 'masterProvinsi'));
     }
 
     /**
@@ -56,9 +57,12 @@ class PerjaldinController extends Controller
             'no_bast' => 'nullable|string|max:100',
             'dipa_revision_item_id' => 'required|exists:dipa_revision_items,id',
             'peserta' => 'required|array|min:1',
-            'peserta.*.pegawai_id' => 'required|exists:master_pegawai,id',
+            'peserta.*.nama_pegawai' => 'required|string|max:100',
+            'peserta.*.nip' => 'nullable|string|max:50',
+            'peserta.*.provinsi_id' => 'nullable|exists:master_uang_harian_perjaldins,id',
+            'peserta.*.tipe_perjalanan' => 'nullable|string|in:Luar Kota,Dalam Kota Lebih Dari 8 Jam,Diklat',
             'peserta.*.no_spt' => 'required|string|max:100',
-            'peserta.*.tujuan' => 'required|string|max:100',
+            'peserta.*.tujuan' => 'nullable|string|max:255',
             'peserta.*.rekening' => 'nullable|string|max:100',
             'peserta.*.tgl_berangkat' => 'required|date',
             'peserta.*.lama_hari' => 'required|integer|min:1',
@@ -103,9 +107,12 @@ class PerjaldinController extends Controller
             foreach ($request->peserta as $pesertaData) {
                 DetailPerjaldin::create([
                     'tagihan_id' => $tagihan->id,
-                    'pegawai_id' => $pesertaData['pegawai_id'],
+                    'nama_pegawai' => $pesertaData['nama_pegawai'],
+                    'nip' => $pesertaData['nip'] ?? null,
                     'no_spt' => $pesertaData['no_spt'],
-                    'tujuan' => $pesertaData['tujuan'],
+                    'provinsi_id' => $pesertaData['provinsi_id'] ?? null,
+                    'tipe_perjalanan' => $pesertaData['tipe_perjalanan'] ?? null,
+                    'tujuan' => $pesertaData['tujuan'] ?? null,
                     'rekening' => $pesertaData['rekening'] ?? null,
                     'tgl_berangkat' => $pesertaData['tgl_berangkat'],
                     'lama_hari' => $pesertaData['lama_hari'],
@@ -207,9 +214,9 @@ class PerjaldinController extends Controller
                 ->withErrors(['error' => 'Tagihan tidak bisa diedit karena statusnya sudah: ' . $tagihan->status]);
         }
 
-        $pegawais = MasterPegawai::where('status_aktif', true)->orderBy('nama_lengkap')->get();
         $budgetGroups = DipaBudgetOptionService::groupedOptions();
-        return view('perjaldins.edit-perjaldin', compact('tagihan', 'pegawais', 'budgetGroups'));
+        $masterProvinsi = MasterUangHarianPerjaldin::orderBy('provinsi')->get();
+        return view('perjaldins.edit-perjaldin', compact('tagihan', 'budgetGroups', 'masterProvinsi'));
     }
 
     /**
@@ -241,9 +248,12 @@ class PerjaldinController extends Controller
             'dipa_revision_item_id' => 'required|exists:dipa_revision_items,id',
             'peserta' => 'required|array|min:1',
             'peserta.*.detail_id' => 'nullable|exists:detail_perjaldin,id',
-            'peserta.*.pegawai_id' => 'required|exists:master_pegawai,id',
+            'peserta.*.nama_pegawai' => 'required|string|max:100',
+            'peserta.*.nip' => 'nullable|string|max:50',
+            'peserta.*.provinsi_id' => 'nullable|exists:master_uang_harian_perjaldins,id',
+            'peserta.*.tipe_perjalanan' => 'nullable|string|in:Luar Kota,Dalam Kota Lebih Dari 8 Jam,Diklat',
             'peserta.*.no_spt' => 'required|string|max:100',
-            'peserta.*.tujuan' => 'required|string|max:100',
+            'peserta.*.tujuan' => 'nullable|string|max:255',
             'peserta.*.rekening' => 'nullable|string|max:100',
             'peserta.*.tgl_berangkat' => 'required|date',
             'peserta.*.lama_hari' => 'required|integer|min:1',
@@ -281,9 +291,12 @@ class PerjaldinController extends Controller
             foreach ($request->peserta as $pesertaData) {
                 DetailPerjaldin::create([
                     'tagihan_id' => $tagihan->id,
-                    'pegawai_id' => $pesertaData['pegawai_id'],
+                    'nama_pegawai' => $pesertaData['nama_pegawai'],
+                    'nip' => $pesertaData['nip'] ?? null,
                     'no_spt' => $pesertaData['no_spt'],
-                    'tujuan' => $pesertaData['tujuan'],
+                    'provinsi_id' => $pesertaData['provinsi_id'] ?? null,
+                    'tipe_perjalanan' => $pesertaData['tipe_perjalanan'] ?? null,
+                    'tujuan' => $pesertaData['tujuan'] ?? null,
                     'rekening' => $pesertaData['rekening'] ?? null,
                     'tgl_berangkat' => $pesertaData['tgl_berangkat'],
                     'lama_hari' => $pesertaData['lama_hari'],

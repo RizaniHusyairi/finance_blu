@@ -46,7 +46,7 @@
                             <th>Nama Pegawai</th>
                             <th>NIP</th>
                             <th>No SPT</th>
-                            <th>Tujuan</th>
+                            <th>Provinsi & Tipe</th>
                             <th>Tgl Berangkat</th>
                             <th class="text-center">Lama</th>
                             <th class="text-end">Tiket</th>
@@ -65,10 +65,13 @@
                             @endphp
                             <tr>
                                 <td class="text-center">{{ $idx + 1 }}</td>
-                                <td class="fw-bold">{{ $detail->pegawai->nama_lengkap ?? '-' }}</td>
-                                <td>{{ $detail->pegawai->nip ?? '-' }}</td>
+                                <td class="fw-bold">{{ $detail->nama_pegawai ?? ($detail->pegawai->nama_lengkap ?? '-') }}</td>
+                                <td>{{ $detail->nip ?? ($detail->pegawai->nip ?? '-') }}</td>
                                 <td>{{ $detail->no_spt }}</td>
-                                <td>{{ $detail->tujuan }}</td>
+                                <td>
+                                    {{ $detail->provinsi?->provinsi ?? '-' }}<br>
+                                    <small class="text-muted">{{ $detail->tipe_perjalanan ?? '-' }}</small>
+                                </td>
                                 <td>{{ \Carbon\Carbon::parse($detail->tgl_berangkat)->format('d/m/Y') }}</td>
                                 <td class="text-center">{{ $detail->lama_hari }} Hr</td>
                                 <td class="text-end">{{ number_format($detail->biaya_tiket, 0, ',', '.') }}</td>

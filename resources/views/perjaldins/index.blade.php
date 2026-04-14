@@ -97,7 +97,7 @@
                                     </td>
                                     <td>
                                         @foreach($tagihan->detailPerjaldin as $detail)
-                                            <span class="badge bg-light text-dark border">{{ $detail->pegawai->nama_lengkap ?? '-' }}</span>
+                                            <span class="badge bg-light text-dark border">{{ $detail->nama_pegawai ?? ($detail->pegawai->nama_lengkap ?? '-') }}</span>
                                         @endforeach
                                     </td>
                                     <td class="fw-bold">Rp {{ number_format($tagihan->total_bruto, 0, ',', '.') }}</td>
