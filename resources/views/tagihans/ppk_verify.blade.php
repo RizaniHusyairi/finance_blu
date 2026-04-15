@@ -140,8 +140,6 @@
 
     {{-- Layout Utama: Kiri Workspace, Kanan Ringkasan --}}
     <div class="row g-4">
-        
-        {{-- KOLOM KIRI: WORKSPACE DOKUMEN --}}
         <div class="col-lg-7 col-xl-8">
             <div class="card border-0 shadow-sm rounded-4 h-100">
                 <div class="card-header bg-white pt-3 px-3 border-bottom-0 pb-0">

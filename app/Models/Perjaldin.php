@@ -2,8 +2,26 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
+
 class Perjaldin extends Tagihan
 {
+    protected static function booted()
+    {
+        parent::booted();
+        static::addGlobalScope('tipe_tagihan', function (Builder $builder) {
+            $builder->where('tipe_tagihan', 'PERJALDIN');
+        });
+    }
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($model) {
+            $model->tipe_tagihan = 'PERJALDIN';
+        });
+    }
     public function pejabatats()
     {
         return $this->detailPerjaldin();

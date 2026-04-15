@@ -2,133 +2,173 @@
 @section('title')
     Detail Perjalanan Dinas
 @endsection
+
+@push('style')
+<style>
+    .hero-status-badge { font-size: 0.85rem; }
+    .status-helper { font-size: 0.8rem; line-height: 1.4; }
+    .info-field label { font-size: 0.75rem; font-weight: 500; letter-spacing: 0.03em; }
+    .accordion-button:not(.collapsed) { background-color: #f0f6ff; color: #0d6efd; box-shadow: none; }
+    .accordion-button:focus { box-shadow: none; }
+</style>
+@endpush
+
 @section('content')
-    <x-page-title title="Manajemen Perjaldin" subtitle="Lihat Detail" />
+<x-page-title title="Manajemen Perjaldin" subtitle="Detail Dokumen" />
 
-    <div class="card">
-        <div class="card-body">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h6 class="mb-0">Detail Tagihan Perjalanan Dinas</h6>
-                <span class="badge fs-6
-                    @switch($tagihan->status)
-                        @case('DRAFT') bg-secondary @break
-                        @case('PENDING_PPK') bg-primary @break
-                        @case('REVISI_PPK') @case('DITOLAK_PPK') bg-warning text-dark @break
-                        @case('DISETUJUI_PPK') bg-success @break
-                        @default bg-info text-dark
-                    @endswitch
-                ">{{ $tagihan->status }}</span>
-            </div>
+@php
+    $status = $tagihan->status;
 
-            <div class="row mb-4">
-                <div class="col-md-4 mb-3">
-                    <label class="text-muted small">Nomor Tagihan</label>
-                    <p class="mb-0 fw-bold text-primary">{{ $tagihan->nomor_tagihan }}</p>
+    $statusConfig = [
+        'DRAFT'                => ['badge' => 'secondary', 'icon' => 'bi-circle',           'text' => 'Data belum diajukan. Silakan lengkapi dan ajukan dokumen.'],
+        'PENDING_PPK'          => ['badge' => 'primary',   'icon' => 'bi-hourglass-split',  'text' => 'Dokumen sedang menunggu verifikasi oleh PPK.'],
+        'REVISI_PPK'           => ['badge' => 'warning',   'icon' => 'bi-arrow-counterclockwise', 'text' => 'PPK meminta perbaikan. Silakan edit data dan ajukan kembali.'],
+        'DITOLAK_PPK'          => ['badge' => 'danger',    'icon' => 'bi-x-octagon',        'text' => 'Dokumen ditolak oleh PPK.'],
+        'DISETUJUI_PPK'        => ['badge' => 'info',      'icon' => 'bi-check-circle',     'text' => 'Disetujui PPK. Menunggu verifikasi Bendahara Pengeluaran.'],
+        'PENDING_BENDAHARA'    => ['badge' => 'primary',   'icon' => 'bi-hourglass-split',  'text' => 'Menunggu verifikasi oleh Bendahara Pengeluaran.'],
+        'REVISI_BENDAHARA'     => ['badge' => 'warning',   'icon' => 'bi-arrow-counterclockwise', 'text' => 'Bendahara meminta perbaikan. Silakan edit data dan ajukan kembali.'],
+        'DITOLAK_BENDAHARA'    => ['badge' => 'danger',    'icon' => 'bi-x-octagon',        'text' => 'Dokumen ditolak oleh Bendahara Pengeluaran.'],
+        'DISETUJUI_PERJALDIN'  => ['badge' => 'success',   'icon' => 'bi-check-circle-fill','text' => 'Verifikasi selesai. Dokumen telah diteruskan ke tahap berikutnya (Operator BLU).'],
+    ];
+
+    $cfg = $statusConfig[$status] ?? ['badge' => 'secondary', 'icon' => 'bi-question-circle', 'text' => 'Status tidak dikenali.'];
+
+    $canEdit = in_array($status, ['DRAFT', 'REVISI_PPK', 'REVISI_BENDAHARA']);
+    $canSubmit = in_array($status, ['DRAFT', 'REVISI_PPK', 'REVISI_BENDAHARA']);
+    $isApprovedPerjaldin = in_array($status, ['DISETUJUI_PERJALDIN', 'PROSES_COA', 'PROSES_SPP', 'SEBAGIAN_SPP_TERBIT', 'SPP_LENGKAP']);
+    $isOperatorPerjaldin = auth()->user()->hasRole('Operator Perjaldin');
+    $isOperatorBlu = auth()->user()->hasRole('Operator BLU');
+@endphp
+
+{{-- Flash Messages --}}
+@if(session('success'))
+    <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm mb-3" role="alert">
+        <i class="bi bi-check-circle-fill me-2"></i>{{ session('success') }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+@endif
+@if(session('error'))
+    <div class="alert alert-danger alert-dismissible fade show border-0 shadow-sm mb-3" role="alert">
+        <i class="bi bi-x-circle-fill me-2"></i>{{ session('error') }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+@endif
+
+{{-- ═══ SECTION 1: HERO HEADER ═══ --}}
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body py-4 px-4">
+        <div class="row align-items-center g-3">
+            <div class="col-md-7">
+                <div class="d-flex align-items-center gap-3 mb-2">
+                    <span class="badge bg-{{ $cfg['badge'] }} hero-status-badge px-3 py-2 rounded-pill">
+                        <i class="bi {{ $cfg['icon'] }} me-1"></i>{{ $status }}
+                    </span>
                 </div>
-                <div class="col-md-4 mb-3">
-                    <label class="text-muted small">Uraian / Deskripsi</label>
-                    <p class="mb-0 fw-bold">{{ $tagihan->deskripsi }}</p>
-                </div>
-                <div class="col-md-4 mb-3">
-                    <label class="text-muted small">Total Bruto</label>
-                    <p class="mb-0 fw-bold text-success fs-5">Rp {{ number_format($tagihan->total_bruto, 0, ',', '.') }}</p>
-                </div>
-            </div>
-
-            <hr>
-
-            <h6 class="mb-3 mt-4">Daftar Peserta Perjalanan Dinas</h6>
-            <div class="table-responsive mb-4">
-                <table class="table table-bordered table-striped align-middle">
-                    <thead class="table-light">
-                        <tr>
-                            <th class="text-center" width="5%">No</th>
-                            <th>Nama Pegawai</th>
-                            <th>NIP</th>
-                            <th>No SPT</th>
-                            <th>Provinsi & Tipe</th>
-                            <th>Tgl Berangkat</th>
-                            <th class="text-center">Lama</th>
-                            <th class="text-end">Tiket</th>
-                            <th class="text-end">Transport</th>
-                            <th class="text-end">Penginapan</th>
-                            <th class="text-end">UH</th>
-                            <th class="text-end">Representasi</th>
-                            <th class="text-end fw-bold">Subtotal</th>
-                            <th>Rekening</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($tagihan->detailPerjaldin as $idx => $detail)
-                            @php
-                                $sub = $detail->biaya_tiket + $detail->biaya_transport + $detail->biaya_penginapan + $detail->uang_harian + $detail->uang_representasi;
-                            @endphp
-                            <tr>
-                                <td class="text-center">{{ $idx + 1 }}</td>
-                                <td class="fw-bold">{{ $detail->nama_pegawai ?? ($detail->pegawai->nama_lengkap ?? '-') }}</td>
-                                <td>{{ $detail->nip ?? ($detail->pegawai->nip ?? '-') }}</td>
-                                <td>{{ $detail->no_spt }}</td>
-                                <td>
-                                    {{ $detail->provinsi?->provinsi ?? '-' }}<br>
-                                    <small class="text-muted">{{ $detail->tipe_perjalanan ?? '-' }}</small>
-                                </td>
-                                <td>{{ \Carbon\Carbon::parse($detail->tgl_berangkat)->format('d/m/Y') }}</td>
-                                <td class="text-center">{{ $detail->lama_hari }} Hr</td>
-                                <td class="text-end">{{ number_format($detail->biaya_tiket, 0, ',', '.') }}</td>
-                                <td class="text-end">{{ number_format($detail->biaya_transport, 0, ',', '.') }}</td>
-                                <td class="text-end">{{ number_format($detail->biaya_penginapan, 0, ',', '.') }}</td>
-                                <td class="text-end">{{ number_format($detail->uang_harian, 0, ',', '.') }}</td>
-                                <td class="text-end">{{ number_format($detail->uang_representasi, 0, ',', '.') }}</td>
-                                <td class="text-end fw-bold">{{ number_format($sub, 0, ',', '.') }}</td>
-                                <td>{{ $detail->rekening ?? '-' }}</td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                    <tfoot>
-                        <tr>
-                            <th colspan="12" class="text-end">TOTAL BRUTO</th>
-                            <th class="text-end bg-light fs-6 text-success">Rp {{ number_format($tagihan->total_bruto, 0, ',', '.') }}</th>
-                            <th></th>
-                        </tr>
-                    </tfoot>
-                </table>
-            </div>
-
-            <hr>
-
-            <h6 class="mb-3 mt-4">Jejak Proses (Audit Trail)</h6>
-            <div class="row mb-5">
-                <div class="col-md-12">
-                    @if($tagihan->logs->isEmpty())
-                        <div class="alert alert-secondary py-2 text-center text-muted mb-0"><small>Belum ada rekaman aktivitas.</small></div>
-                    @else
-                        <ul class="list-group list-group-flush border-start border-2 border-primary ms-3">
-                            @foreach($tagihan->logs as $log)
-                                <li class="list-group-item bg-transparent border-0 position-relative pb-4">
-                                    <span class="position-absolute bg-primary rounded-circle border border-white border-2"
-                                          style="width: 14px; height: 14px; left: -8px; top: 18px;">
-                                    </span>
-                                    <div class="ps-2 pt-1">
-                                        <div class="d-flex justify-content-between align-items-center">
-                                            <strong class="text-primary">{{ $log->status_baru }}</strong>
-                                            <span class="badge bg-light text-secondary border"><i class="bi bi-clock"></i> {{ $log->created_at->format('d M Y, H:i') }}</span>
-                                        </div>
-                                        @if($log->catatan)
-                                            <div class="mt-2 p-2 bg-light border-start border-3 border-secondary rounded small text-dark" style="line-height:1.2;">
-                                                <i class="bi bi-quote text-muted"></i> {{ $log->catatan }}
-                                            </div>
-                                        @endif
-                                    </div>
-                                </li>
-                            @endforeach
-                        </ul>
+                <h5 class="fw-bold mb-1">{{ $tagihan->deskripsi ?? 'Tanpa Judul' }}</h5>
+                <div class="text-muted small mb-2">
+                    <i class="bi bi-hash me-1"></i><strong>{{ $tagihan->nomor_tagihan ?? '-' }}</strong>
+                    <span class="mx-2">·</span>
+                    <i class="bi bi-people me-1"></i>{{ $tagihan->detailPerjaldin->count() }} Peserta
+                    @if($tagihan->periode_bulan && $tagihan->periode_tahun)
+                        <span class="mx-2">·</span>
+                        <i class="bi bi-calendar3 me-1"></i>
+                        {{ \Carbon\Carbon::createFromDate($tagihan->periode_tahun, $tagihan->periode_bulan, 1)->translatedFormat('F Y') }}
                     @endif
                 </div>
+                <div class="alert alert-{{ $cfg['badge'] === 'warning' || $cfg['badge'] === 'danger' ? $cfg['badge'] : 'light' }} border-0 py-2 px-3 mb-0 d-inline-block status-helper rounded-3">
+                    <i class="bi {{ $cfg['icon'] }} me-1"></i>{{ $cfg['text'] }}
+                </div>
             </div>
-
-            <div class="mt-4">
-                <a href="{{ route('perjaldins.index') }}" class="btn btn-secondary px-4"><i class="bi bi-arrow-left"></i> Kembali</a>
+            <div class="col-md-5 text-md-end">
+                <div class="mb-2">
+                    <div class="text-muted small">Total Bruto</div>
+                    <div class="fs-3 fw-bold text-success">Rp {{ number_format($tagihan->total_bruto, 0, ',', '.') }}</div>
+                </div>
+                @if($tagihan->created_at)
+                    <small class="text-muted">
+                        <i class="bi bi-calendar-plus me-1"></i>Dibuat {{ $tagihan->created_at->format('d M Y') }}
+                    </small>
+                @endif
             </div>
         </div>
     </div>
+</div>
+
+{{-- ═══ SECTION 2: QUICK ACTIONS ═══ --}}
+<div class="d-flex flex-wrap gap-2 mb-4">
+    <a href="{{ route('perjaldins.index') }}" class="btn btn-light border">
+        <i class="bi bi-arrow-left me-1"></i>Kembali
+    </a>
+
+    @if($isOperatorPerjaldin && $canEdit)
+        <a href="{{ route('perjaldins.edit-perjaldin', $tagihan->id) }}" class="btn btn-outline-secondary">
+            <i class="bi bi-pencil me-1"></i>Edit Dokumen
+        </a>
+    @endif
+
+    @if($isOperatorPerjaldin && $canSubmit)
+        <form action="{{ route('perjaldin.workflow.submit', $tagihan->id) }}" method="POST"
+              onsubmit="return confirm('Ajukan dokumen Perjaldin ke PPK dan Bendahara?')">
+            @csrf
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-send-check me-1"></i>Ajukan Perjaldin
+            </button>
+        </form>
+    @endif
+
+    @if($isApprovedPerjaldin)
+        <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 d-flex align-items-center" style="font-size:0.82rem;">
+            <i class="bi bi-check-circle-fill me-1"></i>Diteruskan ke Proses Berikutnya
+        </span>
+    @endif
+</div>
+
+{{-- ═══ SECTION 3: INFORMASI DOKUMEN ═══ --}}
+@include('perjaldins.partials.detail-info', ['tagihan' => $tagihan])
+
+{{-- ═══ SECTION 4: WORKFLOW PROGRESS ═══ --}}
+@include('perjaldins.partials.workflow-progress', ['tagihan' => $tagihan])
+
+{{-- ═══ SECTION 5: DAFTAR PESERTA ═══ --}}
+@include('perjaldins.partials.peserta-list', ['tagihan' => $tagihan])
+
+{{-- ═══ SECTION 6: AREA PROSES LANJUTAN OPERATOR BLU (Tersembunyi / Collapsed) ═══ --}}
+@if($tagihan->komponenPerjaldin?->where('total_nominal', '>', 0)->isNotEmpty())
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white border-bottom py-2">
+            <button class="btn btn-sm btn-link text-decoration-none text-muted w-100 text-start d-flex align-items-center gap-2"
+                    type="button" data-bs-toggle="collapse" data-bs-target="#sectionBLU" aria-expanded="false">
+                <i class="bi bi-grid-3x3-gap text-secondary"></i>
+                <span class="small fw-semibold">Informasi Komponen Biaya (Proses Operator BLU)</span>
+                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle ms-auto">
+                    {{ $tagihan->komponenPerjaldin->where('total_nominal', '>', 0)->count() }} Komponen
+                </span>
+                <i class="bi bi-chevron-down ms-1"></i>
+            </button>
+        </div>
+        <div class="collapse" id="sectionBLU">
+            <div class="card-body py-3">
+                @if(!$isApprovedPerjaldin)
+                    <div class="alert alert-secondary py-2 small mb-0">
+                        <i class="bi bi-lock me-1"></i>
+                        Rekapitulasi komponen biaya akan tersedia setelah dokumen Perjaldin disetujui dan diteruskan ke <strong>Operator BLU</strong>.
+                    </div>
+                @else
+                    @foreach($tagihan->komponenPerjaldin->where('total_nominal', '>', 0)->sortBy('kode_komponen') as $komponen)
+                        @include('perjaldins.partials.komponen-card', [
+                            'komponen' => $komponen,
+                            'budgetGroups' => $budgetGroups,
+                            'tagihan' => $tagihan,
+                            'isApprovedPerjaldin' => $isApprovedPerjaldin,
+                        ])
+                    @endforeach
+                @endif
+            </div>
+        </div>
+    </div>
+@endif
+
+{{-- ═══ SECTION 7: AUDIT TRAIL ═══ --}}
+@include('perjaldins.partials.audit-timeline', ['tagihan' => $tagihan])
+
 @endsection

@@ -35,6 +35,11 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
         Route::get('/dashboard', [DashboardController::class, 'internal'])->name('dashboard');
     });
 
+    // Workflow Engine General Routes
+    Route::post('/workflow/approval/{approvalId}/approve', [\App\Http\Controllers\PerjaldinWorkflowController::class, 'approve'])->name('perjaldin.workflow.approve');
+    Route::post('/workflow/approval/{approvalId}/revision', [\App\Http\Controllers\PerjaldinWorkflowController::class, 'revision'])->name('perjaldin.workflow.revision');
+    Route::post('/workflow/approval/{approvalId}/reject', [\App\Http\Controllers\PerjaldinWorkflowController::class, 'reject'])->name('perjaldin.workflow.reject');
+
     // Notification Endpoints (AJAX Polling)
     Route::get('/notifications/fetch', [\App\Http\Controllers\NotificationController::class, 'fetch'])->name('notifications.fetch');
     Route::post('/notifications/mark-read', [\App\Http\Controllers\NotificationController::class, 'markAsRead'])->name('notifications.mark-read');
@@ -151,6 +156,22 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
         Route::get('/perjaldins/{id}/edit', [\App\Http\Controllers\PerjaldinController::class, 'editPerjaldin'])->name('perjaldins.edit-perjaldin');
         Route::put('/perjaldins/{id}', [\App\Http\Controllers\PerjaldinController::class, 'updatePerjaldin'])->name('perjaldins.update-perjaldin');
         Route::delete('/perjaldins/{id}', [\App\Http\Controllers\PerjaldinController::class, 'destroyPerjaldin'])->name('perjaldins.destroy-perjaldin');
+
+        // Komponen Perjaldin — COA & SPP per komponen
+        Route::put('/perjaldins/komponen/{id}/coa', [\App\Http\Controllers\PerjaldinKomponenController::class, 'updateCoa'])->name('perjaldins.komponen.update-coa');
+        Route::post('/perjaldins/komponen/{id}/spp', [\App\Http\Controllers\SppController::class, 'storeFromPerjaldinKomponen'])->name('spps.store-from-perjaldin-komponen');
+
+        // Perjaldin Workflow
+        Route::post('/perjaldins/{id}/workflow/submit', [\App\Http\Controllers\PerjaldinWorkflowController::class, 'submit'])->name('perjaldin.workflow.submit');
+        Route::post('/perjaldins/workflow/approval/{approvalId}/approve', [\App\Http\Controllers\PerjaldinWorkflowController::class, 'approve'])->name('perjaldin.workflow.approve');
+        Route::post('/perjaldins/workflow/approval/{approvalId}/revision', [\App\Http\Controllers\PerjaldinWorkflowController::class, 'revision'])->name('perjaldin.workflow.revision');
+        Route::post('/perjaldins/workflow/approval/{approvalId}/reject', [\App\Http\Controllers\PerjaldinWorkflowController::class, 'reject'])->name('perjaldin.workflow.reject');
+
+        // SPP Workflow
+        Route::post('/spps/{id}/workflow/submit', [\App\Http\Controllers\SppWorkflowController::class, 'submit'])->name('spps.workflow.submit');
+        Route::post('/spps/workflow/approval/{approvalId}/approve', [\App\Http\Controllers\SppWorkflowController::class, 'approve'])->name('spps.workflow.approve');
+        Route::post('/spps/workflow/approval/{approvalId}/revision', [\App\Http\Controllers\SppWorkflowController::class, 'revision'])->name('spps.workflow.revision');
+        Route::post('/spps/workflow/approval/{approvalId}/reject', [\App\Http\Controllers\SppWorkflowController::class, 'reject'])->name('spps.workflow.reject');
     });
 
     // Verifikasi Perjaldin & SPP — PPK
@@ -186,6 +207,13 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
         Route::get('/verifikasi-ppk/sp2d/kontrak/{id}', [\App\Http\Controllers\PpkSp2dKontrakVerifikasiController::class, 'show'])->name('verifikasi-ppk.sp2d.kontrak.show');
         Route::post('/verifikasi-ppk/sp2d/kontrak/{id}/approve', [\App\Http\Controllers\PpkSp2dKontrakVerifikasiController::class, 'approve'])->name('verifikasi-ppk.sp2d.kontrak.approve');
         Route::post('/verifikasi-ppk/sp2d/kontrak/{id}/revisi', [\App\Http\Controllers\PpkSp2dKontrakVerifikasiController::class, 'revisi'])->name('verifikasi-ppk.sp2d.kontrak.revisi');
+    });
+
+    // Verifikasi Perjaldin \u2014 Bendahara Pengeluaran
+    Route::middleware('role:Super Admin|Bendahara Pengeluaran')->group(function () {
+        Route::get('/verifikasi-bendahara', [\App\Http\Controllers\PerjaldinVerifikasiController::class, 'bendaharaIndex'])->name('verifikasi-bendahara.index');
+        Route::post('/verifikasi-bendahara/{id}/approve', [\App\Http\Controllers\PerjaldinVerifikasiController::class, 'bendaharaApprove'])->name('verifikasi-bendahara.approve');
+        Route::post('/verifikasi-bendahara/{id}/revisi', [\App\Http\Controllers\PerjaldinVerifikasiController::class, 'bendaharaRevisi'])->name('verifikasi-bendahara.revisi');
     });
 
     // Verifikasi Perjaldin & SPP — Kasubag

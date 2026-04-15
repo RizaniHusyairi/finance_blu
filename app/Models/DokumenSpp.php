@@ -22,6 +22,11 @@ class DokumenSpp extends Model
         return $this->belongsTo(Tagihan::class, 'tagihan_id');
     }
 
+    public function tagihanPerjaldinKomponen()
+    {
+        return $this->belongsTo(TagihanPerjaldinKomponen::class, 'tagihan_perjaldin_komponen_id');
+    }
+
     public function dipaRevisionItem()
     {
         return $this->belongsTo(DetailDipa::class, 'dipa_revision_item_id');

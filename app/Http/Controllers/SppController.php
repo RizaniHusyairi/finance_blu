@@ -23,7 +23,8 @@ use App\Services\WorkflowService;
 class SppController extends Controller
 {
     /**
-     * Menampilkan daftar Perjaldin yang sudah siap dibikinkan SPP
+     * @deprecated Gunakan flow multi-komponen via PerjaldinKomponenController.
+     * Menampilkan daftar Perjaldin yang sudah siap dibikinkan SPP (LEGACY)
      */
     public function perjaldinIndex()
     {
@@ -36,6 +37,9 @@ class SppController extends Controller
         return view('spps.perjaldin_index', compact('perjaldins'));
     }
 
+    /**
+     * @deprecated Gunakan halaman detail Perjaldin + komponen card.
+     */
     public function detailPerjaldin($perjaldin_id)
     {
         $perjaldin = Perjaldin::with([
@@ -66,6 +70,30 @@ class SppController extends Controller
         return view('spps.detail_perjaldin', compact('perjaldin', 'kategoriTotals', 'budgets'));
     }
 
+    /**
+     * Membuat SPP berdasarkan item biaya / komponen dari dokumen Perjaldin.
+     * Flow baru: multi-komponen SPP.
+     */
+    public function storeFromPerjaldinKomponen(Request $request, $komponenId)
+    {
+        $komponen = \App\Models\TagihanPerjaldinKomponen::findOrFail($komponenId);
+
+        try {
+            DB::transaction(function() use ($komponen, $request) {
+                // PerjaldinKomponenService takes care of the business rules
+                app(\App\Services\PerjaldinKomponenService::class)->createSppFromKomponen($komponen, $request->user()->id);
+                // Status sync will be triggered properly inside or after SPP creation via the workflow submission
+            });
+
+            return redirect()->back()->with('success', 'Draft SPP untuk komponen ini berhasil dibuat.');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', $e->getMessage());
+        }
+    }
+
+    /**
+     * @deprecated Gunakan SppController::storeFromPerjaldinKomponen() untuk flow multi-komponen.
+     */
     public function storePerjaldin(Request $request, $perjaldin_id)
     {
         $request->validate([

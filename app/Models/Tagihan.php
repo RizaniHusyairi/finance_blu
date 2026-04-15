@@ -42,6 +42,11 @@ class Tagihan extends Model
         return $this->hasMany(DetailPerjaldin::class, 'tagihan_id');
     }
 
+    public function komponenPerjaldin()
+    {
+        return $this->hasMany(TagihanPerjaldinKomponen::class, 'tagihan_id');
+    }
+
     public function detailHonorarium()
     {
         return $this->hasMany(DetailHonorarium::class, 'tagihan_id');
@@ -70,6 +75,23 @@ class Tagihan extends Model
     public function workflowInstances()
     {
         return $this->morphMany(WorkflowInstance::class, 'workflowable');
+    }
+
+    public function workflowInstance()
+    {
+        return $this->morphOne(WorkflowInstance::class, 'workflowable')->latestOfMany();
+    }
+
+    public function workflowApprovals()
+    {
+        return $this->hasManyThrough(
+            WorkflowApproval::class,
+            WorkflowInstance::class,
+            'workflowable_id', // Foreign key on workflow_instances table
+            'workflow_instance_id', // Foreign key on workflow_approvals table
+            'id', // Local key on tagihan table
+            'id' // Local key on workflow_instances table
+        )->where('workflow_instances.workflowable_type', static::class);
     }
 
     public function getWaktuVerifikasiPpkAttribute()

@@ -309,13 +309,29 @@
         </li>
         @endhasrole
         @hasrole('Bendahara Pengeluaran')
+
+        {{-- Verifikasi Tagihan Perjaldin --}}
+        <li>
+          <a href="javascript:;" class="has-arrow">
+            <div class="parent-icon"><i class="material-icons-outlined">fact_check</i></div>
+            <div class="menu-title">Verifikasi Tagihan</div>
+          </a>
+          <ul>
+            <li>
+              <a href="{{ route('verifikasi-bendahara.index') }}">
+                <i class="material-icons-outlined">arrow_right</i>Perjaldin
+              </a>
+            </li>
+          </ul>
+        </li>
+
+        {{-- Pembuatan NPI --}}
         <li>
           <a href="javascript:;" class="has-arrow">
             <div class="parent-icon"><i class="material-icons-outlined">receipt_long</i></div>
             <div class="menu-title">Pembuatan NPI</div>
           </a>
           <ul>
-            <!-- TODO: Sementara menggunakan route yang sama (npis.index), perlu dipisah per jenis dokumen jika controller sudah siap -->
             <li><a href="{{ route('npis.kontrak.index') }}"><i class="material-icons-outlined">arrow_right</i>Kontrak</a></li>
             <li><a href="{{ route('npis.index') }}"><i class="material-icons-outlined">arrow_right</i>Perjaldin</a></li>
             <li><a href="{{ route('npis.index') }}"><i class="material-icons-outlined">arrow_right</i>Honor</a></li>
