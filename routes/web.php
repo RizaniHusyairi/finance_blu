@@ -156,6 +156,7 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
         Route::get('/perjaldins/{id}/edit', [\App\Http\Controllers\PerjaldinController::class, 'editPerjaldin'])->name('perjaldins.edit-perjaldin');
         Route::put('/perjaldins/{id}', [\App\Http\Controllers\PerjaldinController::class, 'updatePerjaldin'])->name('perjaldins.update-perjaldin');
         Route::delete('/perjaldins/{id}', [\App\Http\Controllers\PerjaldinController::class, 'destroyPerjaldin'])->name('perjaldins.destroy-perjaldin');
+        Route::get('/perjaldins/{id}/pdf', [\App\Http\Controllers\PerjaldinController::class, 'exportPdf'])->name('perjaldins.pdf');
 
         // Komponen Perjaldin — COA & SPP per komponen
         Route::put('/perjaldins/komponen/{id}/coa', [\App\Http\Controllers\PerjaldinKomponenController::class, 'updateCoa'])->name('perjaldins.komponen.update-coa');

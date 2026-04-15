@@ -488,5 +488,22 @@ class PerjaldinController extends Controller
 
         return redirect()->route('perjaldins.index')->with('success', 'Perjaldin beserta seluruh datanya berhasil dihapus.');
     }
+
+    public function exportPdf($id)
+    {
+        $tagihan = Tagihan::where('tipe_tagihan', 'PERJALDIN')
+            ->with(['detailPerjaldin.pegawai', 'detailPerjaldin.provinsi'])
+            ->findOrFail($id);
+
+        $data = [
+            'tagihan' => $tagihan,
+            'details' => $tagihan->detailPerjaldin
+        ];
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('perjaldins.pdf', $data);
+        $pdf->setPaper('a4', 'landscape');
+
+        return $pdf->stream('Nominatif_Perjaldin_' . sanitizeFileName($tagihan->nomor_tagihan) . '.pdf');
+    }
 }
 

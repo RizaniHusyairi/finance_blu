@@ -100,6 +100,10 @@
         <i class="bi bi-arrow-left me-1"></i>Kembali
     </a>
 
+    <a href="{{ route('perjaldins.pdf', $tagihan->id) }}" target="_blank" class="btn btn-outline-danger bg-white">
+        <i class="bi bi-file-earmark-pdf me-1"></i>Cetak PDF Nominatif & Lampiran
+    </a>
+
     @if($isOperatorPerjaldin && $canEdit)
         <a href="{{ route('perjaldins.edit-perjaldin', $tagihan->id) }}" class="btn btn-outline-secondary">
             <i class="bi bi-pencil me-1"></i>Edit Dokumen
