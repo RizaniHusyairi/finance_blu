@@ -97,8 +97,8 @@ class Tagihan extends Model
     public function getWaktuVerifikasiPpkAttribute()
     {
         $log = $this->relationLoaded('logs')
-            ? $this->logs->firstWhere('status_baru', 'READY_FOR_SPP') ?? $this->logs->firstWhere('status_baru', 'DISETUJUI_PPK')
-            : $this->logs()->whereIn('status_baru', ['READY_FOR_SPP', 'DISETUJUI_PPK'])->latest()->first();
+            ? $this->logs->firstWhere('status_baru', 'READY_FOR_SPP') ?? $this->logs->firstWhere('status_baru', 'DISETUJUI_PERJALDIN') ?? $this->logs->firstWhere('status_baru', 'DISETUJUI_PPK')
+            : $this->logs()->whereIn('status_baru', ['READY_FOR_SPP', 'DISETUJUI_PERJALDIN', 'DISETUJUI_PPK'])->latest()->first();
 
         return optional($log)->created_at;
     }

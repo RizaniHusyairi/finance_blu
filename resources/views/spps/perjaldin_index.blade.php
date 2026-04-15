@@ -16,7 +16,7 @@
     @endif
 
     @php
-        $belumSpp = $perjaldins->where('status', 'DISETUJUI_PPK')->count();
+        $belumSpp = $perjaldins->where('status', 'DISETUJUI_PERJALDIN')->count();
         $prosesSpp = $perjaldins->where('status', 'PROSES_SPP')->count();
         $selesaiSpp = $perjaldins->where('status', 'SPP_TERBIT')->count();
         $tertahan = $perjaldins->filter(fn ($item) => $item->spps->isNotEmpty() && optional($item->spps->first())->status_spp === 'Revisi')->count();
@@ -66,7 +66,7 @@
                         <tr>
                             <th>No</th>
                             <th>No Tagihan / Uraian</th>
-                            <th>Waktu Disetujui PPK</th>
+                            <th>Waktu Verifikasi Akhir</th>
                             <th>Total Netto</th>
                             <th>Pegawai</th>
                             <th>Status SPP</th>
@@ -96,7 +96,7 @@
                                     <span class="badge bg-light border text-dark">{{ $perjaldin->detailPerjaldin->count() }} Pegawai</span>
                                 </td>
                                 <td>
-                                    @if($perjaldin->status === 'DISETUJUI_PPK' && $perjaldin->spps->isEmpty())
+                                    @if($perjaldin->status === 'DISETUJUI_PERJALDIN' && $perjaldin->spps->isEmpty())
                                         <span class="badge bg-warning text-dark">Belum Dibuat SPP</span>
                                     @elseif($perjaldin->status === 'PROSES_SPP' || $perjaldin->spps->isNotEmpty())
                                         <span class="badge bg-info">SPP Dibuat</span>

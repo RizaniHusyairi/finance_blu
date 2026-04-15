@@ -182,9 +182,13 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
         Route::post('/verifikasi-ppk/tagihan-kontrak/{id}/approve', [\App\Http\Controllers\TagihanController::class, 'approveKontrak'])->name('ppk.tagihan.kontrak.approve');
         Route::post('/verifikasi-ppk/tagihan-kontrak/{id}/reject', [\App\Http\Controllers\TagihanController::class, 'rejectKontrak'])->name('ppk.tagihan.kontrak.reject');
 
-        Route::get('/verifikasi-ppk', [\App\Http\Controllers\PerjaldinVerifikasiController::class, 'ppkIndex'])->name('verifikasi-ppk.index');
-        Route::post('/verifikasi-ppk/{id}/approve', [\App\Http\Controllers\PerjaldinVerifikasiController::class, 'approve'])->name('verifikasi-ppk.approve');
-        Route::post('/verifikasi-ppk/{id}/revisi', [\App\Http\Controllers\PerjaldinVerifikasiController::class, 'revisi'])->name('verifikasi-ppk.revisi');
+        // Verifikasi Perjaldin — PPK (halaman baru)
+        Route::get('/verifikasi-ppk/perjaldin', [\App\Http\Controllers\PerjaldinVerifikasiController::class, 'ppkIndex'])->name('verifikasi-ppk.perjaldin.index');
+        Route::get('/verifikasi-ppk/perjaldin/{id}', [\App\Http\Controllers\PerjaldinVerifikasiController::class, 'ppkShow'])->name('verifikasi-ppk.perjaldin.show');
+        Route::post('/verifikasi-ppk/perjaldin/{id}/approve', [\App\Http\Controllers\PerjaldinVerifikasiController::class, 'approve'])->name('verifikasi-ppk.perjaldin.approve');
+        Route::post('/verifikasi-ppk/perjaldin/{id}/revisi', [\App\Http\Controllers\PerjaldinVerifikasiController::class, 'revisi'])->name('verifikasi-ppk.perjaldin.revisi');
+        // Legacy redirect
+        Route::get('/verifikasi-ppk', fn() => redirect()->route('verifikasi-ppk.perjaldin.index'))->name('verifikasi-ppk.index');
         
         // Verifikasi SPP
         Route::get('/verifikasi-ppk/spp', [\App\Http\Controllers\SppVerifikasiController::class, 'sppIndex'])->name('verifikasi-ppk.spp.index');
@@ -209,11 +213,14 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
         Route::post('/verifikasi-ppk/sp2d/kontrak/{id}/revisi', [\App\Http\Controllers\PpkSp2dKontrakVerifikasiController::class, 'revisi'])->name('verifikasi-ppk.sp2d.kontrak.revisi');
     });
 
-    // Verifikasi Perjaldin \u2014 Bendahara Pengeluaran
+    // Verifikasi Perjaldin — Bendahara Pengeluaran (halaman baru)
     Route::middleware('role:Super Admin|Bendahara Pengeluaran')->group(function () {
-        Route::get('/verifikasi-bendahara', [\App\Http\Controllers\PerjaldinVerifikasiController::class, 'bendaharaIndex'])->name('verifikasi-bendahara.index');
-        Route::post('/verifikasi-bendahara/{id}/approve', [\App\Http\Controllers\PerjaldinVerifikasiController::class, 'bendaharaApprove'])->name('verifikasi-bendahara.approve');
-        Route::post('/verifikasi-bendahara/{id}/revisi', [\App\Http\Controllers\PerjaldinVerifikasiController::class, 'bendaharaRevisi'])->name('verifikasi-bendahara.revisi');
+        Route::get('/verifikasi-bendahara/perjaldin', [\App\Http\Controllers\PerjaldinVerifikasiController::class, 'bendaharaIndex'])->name('verifikasi-bendahara.perjaldin.index');
+        Route::get('/verifikasi-bendahara/perjaldin/{id}', [\App\Http\Controllers\PerjaldinVerifikasiController::class, 'bendaharaShow'])->name('verifikasi-bendahara.perjaldin.show');
+        Route::post('/verifikasi-bendahara/perjaldin/{id}/approve', [\App\Http\Controllers\PerjaldinVerifikasiController::class, 'bendaharaApprove'])->name('verifikasi-bendahara.perjaldin.approve');
+        Route::post('/verifikasi-bendahara/perjaldin/{id}/revisi', [\App\Http\Controllers\PerjaldinVerifikasiController::class, 'bendaharaRevisi'])->name('verifikasi-bendahara.perjaldin.revisi');
+        // Legacy redirect
+        Route::get('/verifikasi-bendahara', fn() => redirect()->route('verifikasi-bendahara.perjaldin.index'))->name('verifikasi-bendahara.index');
     });
 
     // Verifikasi Perjaldin & SPP — Kasubag

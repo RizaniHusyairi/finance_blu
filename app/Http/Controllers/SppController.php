@@ -29,7 +29,7 @@ class SppController extends Controller
     public function perjaldinIndex()
     {
         $perjaldins = Tagihan::where('tipe_tagihan', 'PERJALDIN')
-            ->whereIn('status', ['DISETUJUI_PPK', 'PROSES_SPP', 'SPP_TERBIT'])
+            ->whereIn('status', ['DISETUJUI_PERJALDIN', 'PROSES_SPP', 'SPP_TERBIT'])
             ->with(['detailPerjaldin', 'spps', 'logs'])
             ->latest()
             ->get();

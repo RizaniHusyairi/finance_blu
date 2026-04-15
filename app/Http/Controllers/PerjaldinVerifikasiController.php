@@ -10,37 +10,100 @@ use Illuminate\Support\Facades\Auth;
 
 class PerjaldinVerifikasiController extends Controller
 {
+    // ═══════════════════════════════════════════
+    // SHARED HELPERS
+    // ═══════════════════════════════════════════
+
+    private function buildIndex(array $pendingStatuses, array $revisiStatuses, array $selesaiStatuses, string $view)
+    {
+        $search  = request('search');
+        $periode = request('periode');
+
+        $allStatuses = array_merge($pendingStatuses, $revisiStatuses, $selesaiStatuses);
+
+        $base = Tagihan::where('tipe_tagihan', 'PERJALDIN')
+            ->whereIn('status', $allStatuses)
+            ->with(['detailPerjaldin.pegawai', 'logs' => fn($q) => $q->latest()])
+            ->latest();
+
+        if ($search) {
+            $base->where(fn($q) => $q
+                ->where('nomor_tagihan', 'like', "%{$search}%")
+                ->orWhere('deskripsi', 'like', "%{$search}%")
+            );
+        }
+        if ($periode) {
+            $parts = explode('-', $periode);
+            $yr = $parts[0] ?? null;
+            $mo = isset($parts[1]) ? (int)$parts[1] : null;
+            if ($yr && $mo) {
+                $base->where('periode_tahun', $yr)->where('periode_bulan', $mo);
+            }
+        }
+
+        $tagihans        = $base->get();
+        $tagihansPerlu   = $tagihans->whereIn('status', $pendingStatuses)->values();
+        $tagihansRiwayat = $tagihans->whereIn('status', array_merge($revisiStatuses, $selesaiStatuses))->values();
+
+        return view($view, compact(
+            'tagihans', 'tagihansPerlu', 'tagihansRiwayat',
+            'pendingStatuses', 'revisiStatuses', 'selesaiStatuses'
+        ));
+    }
+
+    private function buildShow(int $id, string $userRole, string $approveRoute, string $revisiRoute, string $indexRoute)
+    {
+        $tagihan = Tagihan::where('tipe_tagihan', 'PERJALDIN')
+            ->with([
+                'detailPerjaldin.pegawai',
+                'detailPerjaldin.provinsi',
+                'logs.user',
+            ])
+            ->findOrFail($id);
+
+        return view('verifikasi_perjaldin.show', compact(
+            'tagihan', 'userRole', 'approveRoute', 'revisiRoute', 'indexRoute'
+        ));
+    }
+
+    // ═══════════════════════════════════════════
+    // PPK
+    // ═══════════════════════════════════════════
+
     public function ppkIndex()
     {
-        $tagihans = Tagihan::where('tipe_tagihan', 'PERJALDIN')
-            ->whereNotIn('status', ['DRAFT'])
-            ->with(['detailPerjaldin.pegawai', 'logs' => fn($q) => $q->latest()])
-            ->latest()
-            ->get();
-        return view('verifikasi_ppk.index', compact('tagihans'));
+        return $this->buildIndex(
+            pendingStatuses: ['PENDING_PPK'],
+            revisiStatuses:  ['REVISI_PPK', 'DITOLAK_PPK'],
+            selesaiStatuses: ['PENDING_BENDAHARA', 'REVISI_BENDAHARA', 'DISETUJUI_PERJALDIN'],
+            view: 'verifikasi_perjaldin.index'
+        )->with([
+            'userRole'    => 'PPK',
+            'detailRoute' => 'verifikasi-ppk.perjaldin.show',
+        ]);
     }
 
-    public function kasubagIndex()
+    public function ppkShow(int $id)
     {
-        $tagihans = Tagihan::where('tipe_tagihan', 'PERJALDIN')
-            ->whereNotIn('status', ['DRAFT'])
-            ->with(['detailPerjaldin.pegawai', 'logs' => fn($q) => $q->latest()])
-            ->latest()
-            ->get();
-        return view('verifikasi_kasubag.index', compact('tagihans'));
+        return $this->buildShow(
+            id:           $id,
+            userRole:     'PPK',
+            approveRoute: route('verifikasi-ppk.perjaldin.approve', $id),
+            revisiRoute:  route('verifikasi-ppk.perjaldin.revisi', $id),
+            indexRoute:   'verifikasi-ppk.perjaldin.index',
+        );
     }
 
-    public function approve($id)
+    public function approve(Request $request, $id)
     {
         $tagihan = Tagihan::where('tipe_tagihan', 'PERJALDIN')->findOrFail($id);
-        $user = Auth::user();
+        $user    = Auth::user();
 
-        if (!in_array($tagihan->status, ['PENDING_PPK'])) {
-            return redirect()->back()->withErrors(['error' => 'Tagihan ini tidak dalam status menunggu persetujuan PPK.']);
+        if ($tagihan->status !== 'PENDING_PPK') {
+            return redirect()->back()->withErrors(['error' => 'Dokumen tidak dalam status menunggu PPK.']);
         }
 
         $statusLama = $tagihan->status;
-        // Setelah PPK setuju → teruskan ke Bendahara Pengeluaran
         $tagihan->update(['status' => 'PENDING_BENDAHARA']);
 
         LogStatusDokumen::create([
@@ -51,35 +114,32 @@ class PerjaldinVerifikasiController extends Controller
             'status_sebelumnya' => $statusLama,
             'status_baru'       => 'PENDING_BENDAHARA',
             'aksi'              => 'APPROVE',
-            'catatan'           => 'Disetujui oleh PPK. Diteruskan ke Bendahara Pengeluaran.',
+            'catatan'           => $request->catatan ?: 'Disetujui PPK. Diteruskan ke Bendahara Pengeluaran.',
             'ip_address'        => request()->ip(),
         ]);
 
         try {
-            $operators = User::role('Operator Perjaldin')->get();
-            \Illuminate\Support\Facades\Notification::send($operators, new \App\Notifications\WorkflowNotification([
+            $ops = User::role('Operator Perjaldin')->get();
+            \Illuminate\Support\Facades\Notification::send($ops, new \App\Notifications\WorkflowNotification([
                 'title'   => 'Perjaldin Disetujui PPK',
-                'message' => "Tagihan '{$tagihan->deskripsi}' telah disetujui PPK dan diteruskan ke Bendahara Pengeluaran.",
+                'message' => "Tagihan '{$tagihan->deskripsi}' disetujui PPK, menunggu Bendahara.",
                 'url'     => route('perjaldins.index'),
-                'icon'    => 'check_circle',
-                'color'   => 'success'
+                'icon'    => 'check_circle', 'color' => 'success',
             ]));
         } catch (\Exception $e) {}
 
-        return redirect()->back()->with('success', 'Persetujuan PPK berhasil disimpan. Dokumen diteruskan ke Bendahara Pengeluaran.');
+        return redirect()->route('verifikasi-ppk.perjaldin.index')
+            ->with('success', 'Dokumen disetujui PPK. Diteruskan ke Bendahara Pengeluaran.');
     }
 
     public function revisi(Request $request, $id)
     {
-        $request->validate([
-            'catatan_revisi' => 'required|string',
-        ]);
+        $request->validate(['catatan_revisi' => 'required|string']);
 
         $tagihan = Tagihan::where('tipe_tagihan', 'PERJALDIN')->findOrFail($id);
-        $user = Auth::user();
+        $user    = Auth::user();
 
         $statusLama = $tagihan->status;
-        // PPK kembalikan → REVISI_PPK agar operator bisa edit dan ajukan ulang
         $tagihan->update(['status' => 'REVISI_PPK']);
 
         LogStatusDokumen::create([
@@ -95,38 +155,54 @@ class PerjaldinVerifikasiController extends Controller
         ]);
 
         try {
-            $operatorPerjaldin = User::role('Operator Perjaldin')->get();
-            \Illuminate\Support\Facades\Notification::send($operatorPerjaldin, new \App\Notifications\WorkflowNotification([
+            $ops = User::role('Operator Perjaldin')->get();
+            \Illuminate\Support\Facades\Notification::send($ops, new \App\Notifications\WorkflowNotification([
                 'title'   => 'Revisi dari PPK',
-                'message' => "Tagihan Perjaldin dikembalikan. Catatan: {$request->catatan_revisi}",
+                'message' => "Perjaldin dikembalikan PPK. Catatan: {$request->catatan_revisi}",
                 'url'     => route('perjaldins.index'),
-                'icon'    => 'error',
-                'color'   => 'danger'
+                'icon'    => 'error', 'color' => 'danger',
             ]));
         } catch (\Exception $e) {}
 
-        return redirect()->back()->with('success', 'Data berhasil dikembalikan untuk revisi. Operator Perjaldin telah dinotifikasi.');
+        return redirect()->route('verifikasi-ppk.perjaldin.index')
+            ->with('success', 'Dokumen dikembalikan untuk revisi. Operator telah dinotifikasi.');
     }
 
-    // ═══ VERIFIKASI BENDAHARA PENGELUARAN ═══
+    // ═══════════════════════════════════════════
+    // BENDAHARA PENGELUARAN
+    // ═══════════════════════════════════════════
 
     public function bendaharaIndex()
     {
-        $tagihans = Tagihan::where('tipe_tagihan', 'PERJALDIN')
-            ->whereIn('status', ['PENDING_BENDAHARA', 'REVISI_BENDAHARA', 'DISETUJUI_PERJALDIN'])
-            ->with(['detailPerjaldin.pegawai', 'logs' => fn($q) => $q->latest()])
-            ->latest()
-            ->get();
-        return view('verifikasi_bendahara.index', compact('tagihans'));
+        return $this->buildIndex(
+            pendingStatuses: ['PENDING_BENDAHARA'],
+            revisiStatuses:  ['REVISI_BENDAHARA'],
+            selesaiStatuses: ['DISETUJUI_PERJALDIN'],
+            view: 'verifikasi_perjaldin.index'
+        )->with([
+            'userRole'    => 'Bendahara Pengeluaran',
+            'detailRoute' => 'verifikasi-bendahara.perjaldin.show',
+        ]);
     }
 
-    public function bendaharaApprove($id)
+    public function bendaharaShow(int $id)
+    {
+        return $this->buildShow(
+            id:           $id,
+            userRole:     'Bendahara Pengeluaran',
+            approveRoute: route('verifikasi-bendahara.perjaldin.approve', $id),
+            revisiRoute:  route('verifikasi-bendahara.perjaldin.revisi', $id),
+            indexRoute:   'verifikasi-bendahara.perjaldin.index',
+        );
+    }
+
+    public function bendaharaApprove(Request $request, $id)
     {
         $tagihan = Tagihan::where('tipe_tagihan', 'PERJALDIN')->findOrFail($id);
-        $user = Auth::user();
+        $user    = Auth::user();
 
         if ($tagihan->status !== 'PENDING_BENDAHARA') {
-            return redirect()->back()->withErrors(['error' => 'Tagihan ini tidak dalam status menunggu verifikasi Bendahara Pengeluaran.']);
+            return redirect()->back()->withErrors(['error' => 'Dokumen tidak dalam status menunggu Bendahara Pengeluaran.']);
         }
 
         $statusLama = $tagihan->status;
@@ -140,22 +216,22 @@ class PerjaldinVerifikasiController extends Controller
             'status_sebelumnya' => $statusLama,
             'status_baru'       => 'DISETUJUI_PERJALDIN',
             'aksi'              => 'APPROVE',
-            'catatan'           => 'Disetujui oleh Bendahara Pengeluaran. Dokumen Perjaldin selesai diverifikasi.',
+            'catatan'           => $request->catatan ?: 'Disetujui Bendahara Pengeluaran. Verifikasi selesai.',
             'ip_address'        => request()->ip(),
         ]);
 
         try {
-            $operators = User::role('Operator Perjaldin')->get();
-            \Illuminate\Support\Facades\Notification::send($operators, new \App\Notifications\WorkflowNotification([
+            $ops = User::role('Operator Perjaldin')->get();
+            \Illuminate\Support\Facades\Notification::send($ops, new \App\Notifications\WorkflowNotification([
                 'title'   => 'Perjaldin Disetujui Penuh',
-                'message' => "Tagihan '{$tagihan->deskripsi}' telah disetujui oleh Bendahara Pengeluaran.",
+                'message' => "Tagihan '{$tagihan->deskripsi}' disetujui Bendahara Pengeluaran.",
                 'url'     => route('perjaldins.index'),
-                'icon'    => 'check_circle',
-                'color'   => 'success'
+                'icon'    => 'check_circle', 'color' => 'success',
             ]));
         } catch (\Exception $e) {}
 
-        return redirect()->back()->with('success', 'Dokumen Perjaldin telah disetujui penuh oleh Bendahara Pengeluaran.');
+        return redirect()->route('verifikasi-bendahara.perjaldin.index')
+            ->with('success', 'Dokumen Perjaldin telah disetujui penuh.');
     }
 
     public function bendaharaRevisi(Request $request, $id)
@@ -163,7 +239,7 @@ class PerjaldinVerifikasiController extends Controller
         $request->validate(['catatan_revisi' => 'required|string']);
 
         $tagihan = Tagihan::where('tipe_tagihan', 'PERJALDIN')->findOrFail($id);
-        $user = Auth::user();
+        $user    = Auth::user();
 
         $statusLama = $tagihan->status;
         $tagihan->update(['status' => 'REVISI_BENDAHARA']);
@@ -181,16 +257,29 @@ class PerjaldinVerifikasiController extends Controller
         ]);
 
         try {
-            $operators = User::role('Operator Perjaldin')->get();
-            \Illuminate\Support\Facades\Notification::send($operators, new \App\Notifications\WorkflowNotification([
-                'title'   => 'Revisi dari Bendahara Pengeluaran',
-                'message' => "Tagihan Perjaldin dikembalikan oleh Bendahara. Catatan: {$request->catatan_revisi}",
+            $ops = User::role('Operator Perjaldin')->get();
+            \Illuminate\Support\Facades\Notification::send($ops, new \App\Notifications\WorkflowNotification([
+                'title'   => 'Revisi dari Bendahara',
+                'message' => "Perjaldin dikembalikan Bendahara. Catatan: {$request->catatan_revisi}",
                 'url'     => route('perjaldins.index'),
-                'icon'    => 'error',
-                'color'   => 'danger'
+                'icon'    => 'error', 'color' => 'danger',
             ]));
         } catch (\Exception $e) {}
 
-        return redirect()->back()->with('success', 'Dokumen dikembalikan untuk revisi oleh Bendahara Pengeluaran.');
+        return redirect()->route('verifikasi-bendahara.perjaldin.index')
+            ->with('success', 'Dokumen dikembalikan untuk revisi oleh Bendahara Pengeluaran.');
+    }
+
+    // ═══════════════════════════════════════════
+    // LEGACY — Kasubag (dipertahankan)
+    // ═══════════════════════════════════════════
+
+    public function kasubagIndex()
+    {
+        $tagihans = Tagihan::where('tipe_tagihan', 'PERJALDIN')
+            ->whereNotIn('status', ['DRAFT'])
+            ->with(['detailPerjaldin.pegawai', 'logs' => fn($q) => $q->latest()])
+            ->latest()->get();
+        return view('verifikasi_kasubag.index', compact('tagihans'));
     }
 }
