@@ -23,14 +23,19 @@ use App\Services\WorkflowService;
 class SppController extends Controller
 {
     /**
-     * @deprecated Gunakan flow multi-komponen via PerjaldinKomponenController.
-     * Menampilkan daftar Perjaldin yang sudah siap dibikinkan SPP (LEGACY)
+     * Menampilkan daftar Perjaldin yang sudah siap dibikinkan SPP
      */
     public function perjaldinIndex()
     {
         $perjaldins = Tagihan::where('tipe_tagihan', 'PERJALDIN')
-            ->whereIn('status', ['DISETUJUI_PERJALDIN', 'PROSES_SPP', 'SPP_TERBIT'])
-            ->with(['detailPerjaldin', 'spps', 'logs'])
+            ->whereIn('status', [
+                'DISETUJUI_PERJALDIN',
+                'PROSES_COA',
+                'PROSES_SPP',
+                'SEBAGIAN_SPP_TERBIT',
+                'SPP_LENGKAP'
+            ])
+            ->with(['detailPerjaldin', 'komponenPerjaldin.dokumenSpp', 'logs'])
             ->latest()
             ->get();
 
@@ -38,56 +43,109 @@ class SppController extends Controller
     }
 
     /**
-     * @deprecated Gunakan halaman detail Perjaldin + komponen card.
+     * Menampilkan halaman detail Multi-SPP Perjaldin per komponen
      */
     public function detailPerjaldin($perjaldin_id)
     {
-        $perjaldin = Perjaldin::with([
-            'pejabats.pegawai',
-            'spps.dipaRevisionItem.coa',
-            'dipa.activeRevision.items.coa',
-        ])->findOrFail($perjaldin_id);
-        
-        // Menghitung total tiap kategori
-        $kategoriTotals = [
-            'Tiket' => 0,
-            'Transport' => 0,
-            'Penginapan' => 0,
-            'Uang Harian' => 0,
-            'Uang Representasi' => 0,
-        ];
+        $tagihan = Tagihan::where('tipe_tagihan', 'PERJALDIN')
+            ->with([
+                'detailPerjaldin.pegawai',
+                'komponenPerjaldin.dipaRevisionItem.coa',
+                'komponenPerjaldin.dokumenSpp.logs',
+                'komponenPerjaldin.dokumenSpp.workflowInstances.approvals',
+                'logs'
+            ])
+            ->findOrFail($perjaldin_id);
+            
+        $budgets = \App\Support\DipaBudgetOptionService::groupedOptions();
+        $ppkUsers = clone \App\Models\User::role('PPK')->orderBy('name')->get();
+        $kasubbagUser = \App\Models\User::role('Kepala Subbagian Keuangan dan Tata Usaha')->first();
 
-        foreach($perjaldin->pejabats as $p) {
-            $kategoriTotals['Tiket'] += (float) $p->biaya_tiket;
-            $kategoriTotals['Transport'] += (float) $p->biaya_transport;
-            $kategoriTotals['Penginapan'] += (float) $p->biaya_penginapan;
-            $kategoriTotals['Uang Harian'] += $p->uang_harian;
-            $kategoriTotals['Uang Representasi'] += $p->uang_representasi;
-        }
+        // Hitung counter berikutnya untuk preview nomor SPP
+        $tahun = date('Y');
+        $nextSppCounter = DokumenSpp::whereYear('created_at', $tahun)->count() + 1;
 
-        $budgets = $this->buildBudgetOptions($perjaldin->dipa);
-
-        return view('spps.detail_perjaldin', compact('perjaldin', 'kategoriTotals', 'budgets'));
+        return view('spps.detail_perjaldin', compact('tagihan', 'budgets', 'ppkUsers', 'kasubbagUser', 'nextSppCounter'));
     }
 
     /**
-     * Membuat SPP berdasarkan item biaya / komponen dari dokumen Perjaldin.
-     * Flow baru: multi-komponen SPP.
+     * Membuat atau Update SPP berdasarkan item biaya / komponen dari dokumen Perjaldin.
      */
     public function storeFromPerjaldinKomponen(Request $request, $komponenId)
     {
-        $komponen = \App\Models\TagihanPerjaldinKomponen::findOrFail($komponenId);
+        $komponen = \App\Models\TagihanPerjaldinKomponen::with('dokumenSpp')->findOrFail($komponenId);
+
+        $request->validate([
+            'tanggal_spp' => 'required|date',
+            'tahun_anggaran' => 'required|string',
+            'ppk_verifikator_id' => 'required|exists:users,id',
+        ]);
 
         try {
             DB::transaction(function() use ($komponen, $request) {
-                // PerjaldinKomponenService takes care of the business rules
-                app(\App\Services\PerjaldinKomponenService::class)->createSppFromKomponen($komponen, $request->user()->id);
-                // Status sync will be triggered properly inside or after SPP creation via the workflow submission
+                $tagihan = Tagihan::findOrFail($komponen->tagihan_id);
+                $isUpdate = $komponen->hasDokumenTurunan();
+                
+                $ppkUser = \App\Models\User::with('pegawai')->findOrFail($request->ppk_verifikator_id);
+                $uraianText = 'Belanja Barang Perjalanan Dinas Pegawai - ' . str_replace('_', ' ', $komponen->kode_komponen);
+                
+                // Auto-generate nomor SPP jika baru, atau pertahankan nomor lama jika update
+                $existingSpp = $komponen->dokumenSpp;
+                if ($isUpdate && $existingSpp) {
+                    $nomorSpp = $existingSpp->nomor_spp;
+                } else {
+                    $tahun = date('Y');
+                    $count = DokumenSpp::whereYear('created_at', $tahun)->count() + 1;
+                    $nomorSpp = 'SPP-PJD-' . $komponen->kode_komponen . '-' . $tahun . '-' . str_pad($count, 4, '0', STR_PAD_LEFT);
+                }
+
+                $spp = DokumenSpp::updateOrCreate(
+                    [
+                        'tagihan_perjaldin_komponen_id' => $komponen->id
+                    ],
+                    [
+                        'tagihan_id' => $tagihan->id,
+                        'komponen_biaya' => $komponen->kode_komponen,
+                        'dipa_revision_item_id' => $komponen->dipa_revision_item_id,
+                        'kategori_pembayaran' => 'SP2D BLU - TRF',
+                        'jenis_tagihan' => 'NON REMUNERASI',
+                        'nominal_spp' => $komponen->total_nominal,
+                        'nomor_spp' => $nomorSpp,
+                        'tanggal_spp' => $request->tanggal_spp,
+                        'tahun_anggaran' => $request->tahun_anggaran,
+                        'penandatangan_nama' => $ppkUser->name,
+                        'penandatangan_nip' => $ppkUser->pegawai?->nip ?? '-',
+                        'ppk_verifikator_id' => $request->ppk_verifikator_id,
+                        'uraian' => $uraianText,
+                        'status' => $isUpdate && $komponen->dokumenSpp->status === 'Revisi' ? 'Revisi' : 'DRAFT',
+                        'dibuat_oleh_id' => $request->user()->id,
+                    ]
+                );
+
+                // Rekalkulasi status tagihan
+                if (!in_array($tagihan->status, ['PROSES_SPP', 'SEBAGIAN_SPP_TERBIT', 'SPP_LENGKAP'])) {
+                    $tagihan->update(['status' => 'PROSES_SPP']);
+                }
+
+                \App\Models\LogStatusDokumen::create([
+                    'dokumen_type' => DokumenSpp::class,
+                    'dokumen_id' => $spp->id,
+                    'user_id' => $request->user()->id,
+                    'role_saat_itu' => $request->user()->getRoleNames()->first() ?? 'Operator BLU',
+                    'status_sebelumnya' => $isUpdate ? $komponen->dokumenSpp->status : null,
+                    'status_baru' => $spp->status,
+                    'aksi' => $isUpdate ? 'UPDATE_DRAFT_SPP' : 'CREATE_DRAFT_SPP',
+                    'catatan' => ($isUpdate ? 'Draft dokumen SPP diperbarui' : 'Draft dokumen SPP dibuat') . ' oleh Operator BLU.',
+                    'ip_address' => request()->ip(),
+                ]);
+
+                // Update status komponen
+                $komponen->syncStatusFromDocuments();
             });
 
-            return redirect()->back()->with('success', 'Draft SPP untuk komponen ini berhasil dibuat.');
+            return redirect()->back()->with('success', 'Draft SPP untuk komponen ini berhasil disimpan.');
         } catch (\Exception $e) {
-            return redirect()->back()->with('error', $e->getMessage());
+            return redirect()->back()->withInput()->withErrors(['error' => $e->getMessage()]);
         }
     }
 
@@ -796,13 +854,32 @@ class SppController extends Controller
 
     public function cetakPdf($spp_id)
     {
+        require_once app_path('Helpers/TerbilangHelper.php');
+
+        // Pertama, cek menggunakan model alur baru (DokumenSpp)
+        $dokumenSpp = \App\Models\DokumenSpp::with('tagihan')->find($spp_id);
+
+        if ($dokumenSpp) {
+            $spp = $dokumenSpp;
+            $sppable = $dokumenSpp->tagihan;
+            $jumlahUang = $spp->nominal_spp;
+            $uraianSupplier = $spp->uraian;
+            
+            $terbilang = terbilang_rupiah($jumlahUang);
+
+            $pdf = Pdf::loadView('spps.pdf', compact('spp', 'sppable', 'jumlahUang', 'terbilang', 'uraianSupplier'));
+            $pdf->setPaper('a4', 'portrait');
+
+            return $pdf->stream('SPP-BLU-' . str_replace('/', '-', $spp->nomor_spp) . '.pdf');
+        }
+
+        // Jika tidak ditemukan, fallback ke alur legacy (Spp)
         $spp = Spp::with('sppable')->findOrFail($spp_id);
         $sppable = $spp->sppable;
         
         $jumlahUang = $spp->jumlah_uang;
         $uraianSupplier = $spp->uraian;
         
-        // Buat logic terbilang menggunakan helper rupiah
         $terbilang = terbilang_rupiah($jumlahUang);
 
         $pdf = Pdf::loadView('spps.pdf', compact('spp', 'sppable', 'jumlahUang', 'terbilang', 'uraianSupplier'));

@@ -503,7 +503,7 @@ class PerjaldinController extends Controller
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('perjaldins.pdf', $data);
         $pdf->setPaper('a4', 'landscape');
 
-        return $pdf->stream('Nominatif_Perjaldin_' . sanitizeFileName($tagihan->nomor_tagihan) . '.pdf');
+        return $pdf->stream('Nominatif_Perjaldin_' . \Illuminate\Support\Str::slug($tagihan->nomor_tagihan, '_') . '.pdf');
     }
 }
 

@@ -32,8 +32,7 @@ class PerjaldinKomponenController extends Controller
             $this->service->updateKomponenCoa($komponen, $request->dipa_revision_item_id);
             DB::commit();
 
-            return redirect()
-                ->route('perjaldins.show', $komponen->tagihan_id)
+            return redirect()->back()
                 ->with('success', "COA untuk komponen {$komponen->nama_komponen} berhasil disimpan.");
         } catch (\RuntimeException $e) {
             DB::rollBack();

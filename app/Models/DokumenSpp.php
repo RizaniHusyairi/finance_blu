@@ -57,6 +57,14 @@ class DokumenSpp extends Model
         return $this->morphMany(WorkflowInstance::class, 'workflowable');
     }
 
+    /**
+     * Get the latest workflow instance (singular) — used by SppPerjaldinWorkflowService.
+     */
+    public function workflowInstance()
+    {
+        return $this->morphOne(WorkflowInstance::class, 'workflowable')->latestOfMany();
+    }
+
     public function logs()
     {
         return $this->morphMany(LogStatusDokumen::class, 'dokumen');

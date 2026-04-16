@@ -1,118 +1,115 @@
 @extends('layouts.app')
-@section('title', 'SPP Perjaldin')
+@section('title', 'Manajemen SPP Perjaldin')
 
 @push('css')
     <link href="{{ URL::asset('build/plugins/datatable/css/dataTables.bootstrap5.min.css') }}" rel="stylesheet" />
+    <style>
+        .table-custom-hover tbody tr:hover {
+            background-color: #f8f9fa;
+        }
+    </style>
 @endpush
 
 @section('content')
-    <x-page-title title="Pembuatan SPP" subtitle="Perjalanan Dinas" />
+    <x-page-title title="Pembuatan SPP Perjaldin" subtitle="Kelola item biaya Perjaldin yang siap diproses menjadi SPP" />
 
     @if(session('success'))
-        <div class="alert alert-success border-0 bg-success alert-dismissible fade show">
-            <div class="text-white">{{ session('success') }}</div>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        <div class="alert alert-success border-0 bg-success alert-dismissible fade show shadow-sm text-white">
+            <i class="bi bi-check-circle me-2"></i> {{ session('success') }}
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert"></button>
+        </div>
+    @endif
+    @if(session('error') || $errors->any())
+        <div class="alert alert-danger border-0 bg-danger alert-dismissible fade show shadow-sm text-white">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            {{ session('error') ?? $errors->first() }}
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert"></button>
         </div>
     @endif
 
-    @php
-        $belumSpp = $perjaldins->where('status', 'DISETUJUI_PERJALDIN')->count();
-        $prosesSpp = $perjaldins->where('status', 'PROSES_SPP')->count();
-        $selesaiSpp = $perjaldins->where('status', 'SPP_TERBIT')->count();
-        $tertahan = $perjaldins->filter(fn ($item) => $item->spps->isNotEmpty() && optional($item->spps->first())->status_spp === 'Revisi')->count();
-    @endphp
+    @include('spps.partials.perjaldin_index_summary')
 
-    <div class="row row-cols-1 row-cols-md-2 row-cols-xl-4 g-3 mb-4 mt-2">
-        <div class="col">
-            <div class="card h-100 border-0 shadow-sm bg-secondary text-white">
-                <div class="card-body p-3">
-                    <h6 class="card-title fw-normal mb-1">Belum Ada SPP</h6>
-                    <h3 class="fw-bold mb-0 text-white">{{ $belumSpp }}</h3>
-                </div>
-            </div>
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+            <h6 class="mb-0 fw-bold"><i class="bi bi-list-check me-2 text-primary"></i>Daftar Tagihan Perjaldin Siap SPP</h6>
         </div>
-        <div class="col">
-            <div class="card h-100 border-0 shadow-sm text-white" style="background-color: #0dcaf0;">
-                <div class="card-body p-3">
-                    <h6 class="card-title fw-normal mb-1">Sedang Proses SPP</h6>
-                    <h3 class="fw-bold mb-0 text-white">{{ $prosesSpp }}</h3>
-                </div>
-            </div>
-        </div>
-        <div class="col">
-            <div class="card h-100 border-0 shadow-sm text-white" style="background-color: #20c997;">
-                <div class="card-body p-3">
-                    <h6 class="card-title fw-normal mb-1">Selesai SPP Terbit</h6>
-                    <h3 class="fw-bold mb-0 text-white">{{ $selesaiSpp }}</h3>
-                </div>
-            </div>
-        </div>
-        <div class="col">
-            <div class="card h-100 border-0 shadow-sm bg-warning text-dark">
-                <div class="card-body p-3">
-                    <h6 class="card-title fw-normal mb-1">Perlu Tindak Lanjut</h6>
-                    <h3 class="fw-bold mb-0">{{ $tertahan }} Lembar</h3>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="card">
-        <div class="card-body">
-            <h6 class="mb-3">Daftar Tagihan Perjaldin Siap SPP</h6>
+        <div class="card-body p-0">
             <div class="table-responsive">
-                <table id="example" class="table table-striped table-bordered align-middle" style="width:100%">
+                <table id="example" class="table table-custom-hover align-middle mb-0" style="width:100%">
                     <thead class="table-light">
                         <tr>
-                            <th>No</th>
-                            <th>No Tagihan / Uraian</th>
-                            <th>Waktu Verifikasi Akhir</th>
+                            <th class="ps-4">Dokumen Perjaldin</th>
                             <th>Total Netto</th>
-                            <th>Pegawai</th>
-                            <th>Status SPP</th>
-                            <th class="text-center">Aksi</th>
+                            <th>Info Item Aktif</th>
+                            <th>Status Kesiapan SPP</th>
+                            <th class="text-center pe-4">Aksi</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach ($perjaldins as $idx => $perjaldin)
+                        @forelse ($perjaldins as $idx => $perjaldin)
+                            @php
+                                $komponens = $perjaldin->komponenPerjaldin->where('total_nominal', '>', 0);
+                                $jmlAktif = $komponens->count();
+                                $jmlCoa = $komponens->whereNotNull('dipa_revision_item_id')->count();
+                                $jmlSpp = $komponens->filter(fn($x) => $x->hasDokumenTurunan())->count();
+                                
+                                if($jmlAktif == 0) {
+                                    $progressStatus = ['text' => 'Kosong', 'bg' => 'bg-secondary', 'icon' => 'bi-dash-circle'];
+                                } elseif($jmlCoa < $jmlAktif) {
+                                    $progressStatus = ['text' => 'Menunggu COA', 'bg' => 'bg-warning text-dark', 'icon' => 'bi-tag'];
+                                } elseif($jmlSpp < $jmlAktif) {
+                                    $progressStatus = ['text' => 'Siap Buat SPP', 'bg' => 'bg-primary', 'icon' => 'bi-file-earmark-plus'];
+                                } elseif($jmlSpp == $jmlAktif) {
+                                    $isAllDone = $komponens->every(fn($x) => in_array($x->status_proses, ['DISETUJUI_SPP', 'LANJUT_SPM', 'SELESAI']));
+                                    if ($isAllDone) {
+                                        $progressStatus = ['text' => 'SPP Lengkap', 'bg' => 'bg-success', 'icon' => 'bi-check-circle'];
+                                    } else {
+                                        $progressStatus = ['text' => 'Dalam Verifikasi SPP', 'bg' => 'bg-info text-white', 'icon' => 'bi-hourglass-split'];
+                                    }
+                                }
+                            @endphp
                             <tr>
-                                <td>{{ $idx + 1 }}</td>
-                                <td>
-                                    <strong>{{ $perjaldin->nomor_tagihan }}</strong><br>
-                                    <small>{{ Str::limit($perjaldin->deskripsi, 70) }}</small>
+                                <td class="ps-4 py-3">
+                                    <div class="fw-bold text-dark">{{ $perjaldin->nomor_tagihan }}</div>
+                                    <div class="small text-muted mb-1 text-truncate" style="max-width: 300px;">{{ $perjaldin->deskripsi }}</div>
+                                    <div class="small text-secondary">
+                                        <i class="bi bi-calendar-check me-1"></i> Disetujui: {{ $perjaldin->waktu_verifikasi_ppk ? $perjaldin->waktu_verifikasi_ppk->format('d M Y') : '-' }}
+                                    </div>
                                 </td>
                                 <td>
-                                    @if($perjaldin->waktu_verifikasi_ppk)
-                                        <strong>{{ $perjaldin->waktu_verifikasi_ppk->format('d M Y') }}</strong><br>
-                                        <small class="text-muted">{{ $perjaldin->waktu_verifikasi_ppk->format('H:i') }}</small>
+                                    <div class="fw-bold text-dark">Rp {{ number_format($perjaldin->total_netto, 0, ',', '.') }}</div>
+                                    <div class="small text-muted">{{ $perjaldin->detailPerjaldin->count() }} Peserta</div>
+                                </td>
+                                <td>
+                                    @if($jmlAktif > 0)
+                                        <div class="d-flex flex-column gap-1">
+                                            <div class="small"><strong>{{ $jmlAktif }}</strong> Item Biaya</div>
+                                            <div class="small text-muted"><i class="bi bi-tag-fill me-1 text-secondary"></i>{{ $jmlCoa }} punya COA</div>
+                                            <div class="small text-muted"><i class="bi bi-file-text-fill me-1 text-primary"></i>{{ $jmlSpp }} draft SPP</div>
+                                        </div>
                                     @else
-                                        <small class="text-muted">-</small>
+                                        <span class="text-muted small">Tidak ada item > Rp 0</span>
                                     @endif
                                 </td>
-                                <td class="text-end">
-                                    <strong>Rp {{ number_format($perjaldin->total_netto, 0, ',', '.') }}</strong>
-                                </td>
-                                <td class="text-center">
-                                    <span class="badge bg-light border text-dark">{{ $perjaldin->detailPerjaldin->count() }} Pegawai</span>
-                                </td>
                                 <td>
-                                    @if($perjaldin->status === 'DISETUJUI_PERJALDIN' && $perjaldin->spps->isEmpty())
-                                        <span class="badge bg-warning text-dark">Belum Dibuat SPP</span>
-                                    @elseif($perjaldin->status === 'PROSES_SPP' || $perjaldin->spps->isNotEmpty())
-                                        <span class="badge bg-info">SPP Dibuat</span>
-                                    @elseif($perjaldin->status === 'SPP_TERBIT')
-                                        <span class="badge bg-success">SPP Terbit</span>
-                                    @else
-                                        <span class="badge bg-secondary">{{ $perjaldin->status }}</span>
-                                    @endif
+                                    <span class="badge {{ $progressStatus['bg'] }} px-3 py-2 rounded-pill">
+                                        <i class="bi {{ $progressStatus['icon'] }} me-1"></i> {{ $progressStatus['text'] }}
+                                    </span>
                                 </td>
-                                <td class="text-center">
-                                    <a href="{{ route('spps.perjaldin.detail', $perjaldin->id) }}" class="btn btn-sm btn-primary">
-                                        <i class="bi bi-gear"></i> Kelola SPP
+                                <td class="text-center pe-4">
+                                    <a href="{{ route('spps.perjaldin.detail', $perjaldin->id) }}" class="btn btn-sm btn-outline-primary px-3 rounded-pill fw-bold">
+                                        <i class="bi bi-gear me-1"></i> Kelola Item
                                     </a>
                                 </td>
                             </tr>
-                        @endforeach
+                        @empty
+                            <tr>
+                                <td colspan="5" class="text-center py-5">
+                                    <img src="{{ URL::asset('build/images/no-data.svg') }}" alt="No Data" class="mb-3" style="width: 120px; opacity: 0.5;">
+                                    <h6 class="text-muted fw-normal">Belum ada dokumen Perjaldin yang siap diproses SPP.</h6>
+                                </td>
+                            </tr>
+                        @endforelse
                     </tbody>
                 </table>
             </div>
@@ -123,5 +120,22 @@
 @push('script')
     <script src="{{ URL::asset('build/plugins/datatable/js/jquery.dataTables.min.js') }}"></script>
     <script src="{{ URL::asset('build/plugins/datatable/js/dataTables.bootstrap5.min.js') }}"></script>
-    <script>$(document).ready(function() { $('#example').DataTable(); });</script>
+    <script>
+        $(document).ready(function() { 
+            $('#example').DataTable({
+                "pageLength": 10,
+                "ordering": false, /* Custom ordering visually implies a priority, so disable default DataTable ordering which messes up with badges */
+                "language": {
+                    "search": "Cari Dokumen:",
+                    "lengthMenu": "Tampilkan _MENU_ data",
+                    "info": "Menampilkan _START_ sampai _END_ dari _TOTAL_ data",
+                    "infoEmpty": "Tidak ada data yang tersedia",
+                    "paginate": {
+                        "next": "Selanjutnya",
+                        "previous": "Sebelumnya"
+                    }
+                }
+            }); 
+        });
+    </script>
 @endpush

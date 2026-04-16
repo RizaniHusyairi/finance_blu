@@ -49,6 +49,13 @@ class SppPerjaldinWorkflowService
                 $instance->update(['status' => 'IN_PROGRESS', 'step_saat_ini' => 1]);
             } else {
                 if ($instance->status === 'IN_PROGRESS') {
+                    // Jika SPP masih DRAFT tapi instance sudah IN_PROGRESS,
+                    // berarti submit sebelumnya gagal di tengah jalan — recovery: sinkronisasi ulang
+                    if (in_array($spp->status, $allowedSubmitStatuses)) {
+                        $this->syncSppStatus($spp);
+                        $this->writeWorkflowAuditLog($spp, $oldStatus, $spp->status, 'SUBMIT_SPP', 'Dokumen SPP disubmit ke alur workflow (recovery).', $actor, $ipAddress);
+                        return $instance->fresh(['approvals']);
+                    }
                     throw new Exception("SPP sudah memiliki proses workflow yang sedang berjalan.");
                 }
 

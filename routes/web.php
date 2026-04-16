@@ -158,9 +158,7 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
         Route::delete('/perjaldins/{id}', [\App\Http\Controllers\PerjaldinController::class, 'destroyPerjaldin'])->name('perjaldins.destroy-perjaldin');
         Route::get('/perjaldins/{id}/pdf', [\App\Http\Controllers\PerjaldinController::class, 'exportPdf'])->name('perjaldins.pdf');
 
-        // Komponen Perjaldin — COA & SPP per komponen
-        Route::put('/perjaldins/komponen/{id}/coa', [\App\Http\Controllers\PerjaldinKomponenController::class, 'updateCoa'])->name('perjaldins.komponen.update-coa');
-        Route::post('/perjaldins/komponen/{id}/spp', [\App\Http\Controllers\SppController::class, 'storeFromPerjaldinKomponen'])->name('spps.store-from-perjaldin-komponen');
+
 
         // Perjaldin Workflow
         Route::post('/perjaldins/{id}/workflow/submit', [\App\Http\Controllers\PerjaldinWorkflowController::class, 'submit'])->name('perjaldin.workflow.submit');
@@ -168,11 +166,6 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
         Route::post('/perjaldins/workflow/approval/{approvalId}/revision', [\App\Http\Controllers\PerjaldinWorkflowController::class, 'revision'])->name('perjaldin.workflow.revision');
         Route::post('/perjaldins/workflow/approval/{approvalId}/reject', [\App\Http\Controllers\PerjaldinWorkflowController::class, 'reject'])->name('perjaldin.workflow.reject');
 
-        // SPP Workflow
-        Route::post('/spps/{id}/workflow/submit', [\App\Http\Controllers\SppWorkflowController::class, 'submit'])->name('spps.workflow.submit');
-        Route::post('/spps/workflow/approval/{approvalId}/approve', [\App\Http\Controllers\SppWorkflowController::class, 'approve'])->name('spps.workflow.approve');
-        Route::post('/spps/workflow/approval/{approvalId}/revision', [\App\Http\Controllers\SppWorkflowController::class, 'revision'])->name('spps.workflow.revision');
-        Route::post('/spps/workflow/approval/{approvalId}/reject', [\App\Http\Controllers\SppWorkflowController::class, 'reject'])->name('spps.workflow.reject');
     });
 
     // Verifikasi Perjaldin & SPP — PPK
@@ -271,6 +264,16 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
         Route::get('/spps/perjaldin', [\App\Http\Controllers\SppController::class, 'perjaldinIndex'])->name('spps.perjaldin.index');
         Route::get('/spps/perjaldin/{perjaldin}/detail', [\App\Http\Controllers\SppController::class, 'detailPerjaldin'])->name('spps.perjaldin.detail');
         Route::post('/spps/perjaldin/{perjaldin}', [\App\Http\Controllers\SppController::class, 'storePerjaldin'])->name('spps.perjaldin.store');
+
+        // Komponen Perjaldin — COA & SPP per komponen
+        Route::put('/perjaldins/komponen/{id}/coa', [\App\Http\Controllers\PerjaldinKomponenController::class, 'updateCoa'])->name('perjaldins.komponen.update-coa');
+        Route::post('/perjaldins/komponen/{id}/spp', [\App\Http\Controllers\SppController::class, 'storeFromPerjaldinKomponen'])->name('spps.store-from-perjaldin-komponen');
+
+        // SPP Workflow (submit/approve/revisi/reject)
+        Route::post('/spps/{id}/workflow/submit', [\App\Http\Controllers\SppWorkflowController::class, 'submit'])->name('spps.workflow.submit');
+        Route::post('/spps/workflow/approval/{approvalId}/approve', [\App\Http\Controllers\SppWorkflowController::class, 'approve'])->name('spps.workflow.approve');
+        Route::post('/spps/workflow/approval/{approvalId}/revision', [\App\Http\Controllers\SppWorkflowController::class, 'revision'])->name('spps.workflow.revision');
+        Route::post('/spps/workflow/approval/{approvalId}/reject', [\App\Http\Controllers\SppWorkflowController::class, 'reject'])->name('spps.workflow.reject');
 
         // SPP Honor
         Route::get('/spps/honor', [\App\Http\Controllers\SppController::class, 'honorIndex'])->name('spps.honor.index');
