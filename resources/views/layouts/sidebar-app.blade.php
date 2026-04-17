@@ -170,7 +170,7 @@
           <ul>
             {{-- TODO: Buat route SP2D Kontrak/Perjaldin/Honor khusus PPK jika controller sudah siap --}}
             <li><a href="{{ route('verifikasi-ppk.sp2d.kontrak.index') }}"><i class="material-icons-outlined">arrow_right</i>Kontrak</a></li>
-            <li><a href="#"><i class="material-icons-outlined">arrow_right</i>Perjaldin</a></li>
+            <li><a href="{{ route('verifikasi-sp2d.perjaldin.index') }}"><i class="material-icons-outlined">arrow_right</i>Perjaldin</a></li>
             <li><a href="#"><i class="material-icons-outlined">arrow_right</i>Honor</a></li>
           </ul>
         </li>
@@ -265,7 +265,7 @@
               <a href="{{ route('verifikasi-kasubag.sp2d.kontrak.index') }}"><i class="material-icons-outlined">arrow_right</i>Kontrak</a>
             </li>
             <li>
-              <a href="#"><i class="material-icons-outlined">arrow_right</i>Perjaldin</a>
+              <a href="{{ route('verifikasi-sp2d.perjaldin.index') }}"><i class="material-icons-outlined">arrow_right</i>Perjaldin</a>
             </li>
             <li>
               <a href="#"><i class="material-icons-outlined">arrow_right</i>Honor</a>

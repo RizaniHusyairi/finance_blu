@@ -285,6 +285,14 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
         Route::post('/verifikasi-npi/perjaldin/{id}/revisi', [\App\Http\Controllers\VerifikasiNpiPerjaldinController::class, 'reject'])->name('verifikasi-npi.perjaldin.reject');
     });
 
+    // ==== VERIFIKASI SP2D PERJALDIN — Terpadu 2 Role ====
+    Route::middleware('role:Super Admin|PPK|Kepala Subbagian Keuangan dan Tata Usaha')->group(function () {
+        Route::get('/verifikasi-sp2d/perjaldin', [\App\Http\Controllers\VerifikasiSp2dPerjaldinController::class, 'index'])->name('verifikasi-sp2d.perjaldin.index');
+        Route::get('/verifikasi-sp2d/perjaldin/{id}/detail', [\App\Http\Controllers\VerifikasiSp2dPerjaldinController::class, 'show'])->name('verifikasi-sp2d.perjaldin.detail');
+        Route::post('/verifikasi-sp2d/perjaldin/{id}/approve', [\App\Http\Controllers\VerifikasiSp2dPerjaldinController::class, 'approve'])->name('verifikasi-sp2d.perjaldin.approve');
+        Route::post('/verifikasi-sp2d/perjaldin/{id}/revisi', [\App\Http\Controllers\VerifikasiSp2dPerjaldinController::class, 'reject'])->name('verifikasi-sp2d.perjaldin.reject');
+    });
+
     // ==== MODUL PEMBUATAN SPP (BLU) ====
     Route::middleware('role:Super Admin|Operator BLU')->group(function () {
         // SPP Perjaldin
