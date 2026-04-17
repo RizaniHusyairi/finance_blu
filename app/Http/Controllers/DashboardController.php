@@ -81,6 +81,22 @@ class DashboardController extends Controller
             $chartBarRealisasi[] = (float) $realisasi;
         }
 
+        $budgetItems = DetailDipa::query()
+            ->join('master_coas', 'dipa_revision_items.coa_id', '=', 'master_coas.id')
+            ->join('dipa_revisions', 'dipa_revision_items.dipa_revision_id', '=', 'dipa_revisions.id')
+            ->join('master_dipas', 'dipa_revisions.master_dipa_id', '=', 'master_dipas.id')
+            ->where('dipa_revisions.is_active', true)
+            ->where('dipa_revision_items.status_aktif', true)
+            ->select([
+                'master_coas.kode_mak_lengkap as coa',
+                'master_coas.nama_akun as description',
+                'dipa_revision_items.nilai_pagu as initial_budget',
+                'master_dipas.tahun_anggaran as year',
+            ])
+            ->latest('dipa_revision_items.updated_at')
+            ->take(5)
+            ->get();
+
         // ============================================================
         // CHART: Status Tagihan (Donut)
         // ============================================================
@@ -121,7 +137,7 @@ class DashboardController extends Controller
             'totalKontrakAktif', 'totalMitra', 'tagihanPending', 'tagihanRevisi', 'sppBulanIni',
             'chartBarLabels', 'chartBarPagu', 'chartBarRealisasi',
             'statusCounts',
-            'activeContracts', 'pendingTagihan', 'jatuhTempo'
+            'activeContracts', 'pendingTagihan', 'jatuhTempo', 'budgetItems'
         ));
     }
 
@@ -361,5 +377,4 @@ class DashboardController extends Controller
         return view('dashboard.ppk', $data);
     }
 }
-
 

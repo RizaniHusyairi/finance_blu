@@ -24,10 +24,12 @@ class SppVerifikasiController extends Controller
             ->orderByRaw(
                 "CASE 
                     WHEN status = ? THEN 1
+                    WHEN status = ? THEN 1
+                    WHEN status = ? THEN 2
                     WHEN status = ? THEN 2
                     ELSE 3
                 END",
-                ['Menunggu Verifikasi', 'Revisi']
+                ['Menunggu Verifikasi', 'PENDING_PPK', 'Revisi', 'REVISI_PPK']
             )
             ->latest()
             ->get();
@@ -42,7 +44,7 @@ class SppVerifikasiController extends Controller
     {
         $spp = Spp::with('tagihan')->findOrFail($spp_id);
 
-        if ($spp->status !== 'Menunggu Verifikasi') {
+        if (!in_array($spp->status, ['Menunggu Verifikasi', 'PENDING_PPK'], true)) {
             return back()->with('warning', "SPP {$spp->nomor_spp} tidak sedang menunggu verifikasi.");
         }
 
@@ -58,18 +60,16 @@ class SppVerifikasiController extends Controller
 
         if ($workflowFullyApproved) {
             // Semua approver (PPK + Kasubbag) sudah approve → status final
-            $spp->update(['status' => 'APPROVED']);
+            $spp->update(['status' => $this->isPerjaldinSpp($spp) ? 'DISETUJUI_SPP' : 'APPROVED']);
 
-            // Update tagihan ke SPP_TERBIT
-            if ($spp->tagihan && $spp->tagihan->status === 'PROSES_SPP') {
-                $spp->tagihan->update(['status' => 'SPP_TERBIT']);
-            }
+            $this->syncParentTagihanAfterSppFinal($spp);
         } else {
             // Baru PPK saja yang approve, Kasubbag belum
-            $spp->update(['status' => 'Disetujui PPK']);
+            $spp->update(['status' => $this->isPerjaldinSpp($spp) ? 'PENDING_KASUBBAG' : 'Disetujui PPK']);
         }
 
-        $statusBaru = $workflowFullyApproved ? 'APPROVED' : 'Disetujui PPK';
+        $statusBaru = $spp->status;
+        $this->syncPerjaldinKomponenStatus($spp);
 
         LogStatusDokumen::create([
             'dokumen_type' => DokumenSpp::class,
@@ -112,13 +112,14 @@ class SppVerifikasiController extends Controller
 
         $spp = Spp::with('tagihan')->findOrFail($spp_id);
 
-        if ($spp->status !== 'Menunggu Verifikasi') {
+        if (!in_array($spp->status, ['Menunggu Verifikasi', 'PENDING_PPK'], true)) {
             return back()->with('warning', "SPP {$spp->nomor_spp} tidak sedang menunggu verifikasi.");
         }
 
         $spp->update([
-            'status' => 'Revisi',
+            'status' => $this->isPerjaldinSpp($spp) ? 'REVISI_PPK' : 'Revisi',
         ]);
+        $this->syncPerjaldinKomponenStatus($spp);
 
         // --- Workflow Engine: request revision ---
         try {
@@ -133,7 +134,7 @@ class SppVerifikasiController extends Controller
             'user_id' => Auth::id(),
             'role_saat_itu' => Auth::user()?->getRoleNames()->first() ?? 'PPK',
             'status_sebelumnya' => 'Menunggu Verifikasi',
-            'status_baru' => 'Revisi',
+            'status_baru' => $spp->status,
             'aksi' => 'REVISI_PPK',
             'catatan' => $request->catatan_revisi,
             'ip_address' => request()->ip(),
@@ -214,7 +215,12 @@ class SppVerifikasiController extends Controller
                 }
             }
 
-            $canAct = ($kasubbagApproval && $kasubbagApproval->status === 'PENDING' && $wf->status === 'IN_PROGRESS');
+            $canAct = (
+                $kasubbagApproval
+                && $kasubbagApproval->status === 'PENDING'
+                && $wf->status === 'IN_PROGRESS'
+                && (int) $wf->step_saat_ini === (int) $kasubbagApproval->urutan_step
+            );
 
             $spp->kasubbagApprovalStatus = $kasubbagApproval ? $kasubbagApproval->status : 'N/A';
             $spp->ppkApprovalStatus = $ppkApproval ? $ppkApproval->status : 'N/A';
@@ -293,7 +299,12 @@ class SppVerifikasiController extends Controller
             }
         }
 
-        $canAct = ($kasubbagApproval && $kasubbagApproval->status === 'PENDING' && $wf->status === 'IN_PROGRESS');
+        $canAct = (
+            $kasubbagApproval
+            && $kasubbagApproval->status === 'PENDING'
+            && $wf->status === 'IN_PROGRESS'
+            && (int) $wf->step_saat_ini === (int) $kasubbagApproval->urutan_step
+        );
 
         $latestRevisionNote = null;
         $revisions = $wf->approvals->where('status', 'REVISION')->sortByDesc('acted_at');
@@ -324,16 +335,14 @@ class SppVerifikasiController extends Controller
 
             if ($workflowFullyApproved) {
                 // Semua approver (PPK + Kasubbag) sudah approve → status final
-                $spp->update(['status' => 'APPROVED']);
+                $spp->update(['status' => $this->isPerjaldinSpp($spp) ? 'DISETUJUI_SPP' : 'APPROVED']);
 
-                // Update tagihan ke SPP_TERBIT
-                if ($spp->tagihan && $spp->tagihan->status === 'PROSES_SPP') {
-                    $spp->tagihan->update(['status' => 'SPP_TERBIT']);
-                }
+                $this->syncParentTagihanAfterSppFinal($spp);
             }
             // Jika belum fully approved, tidak ubah status SPP — tetap Menunggu Verifikasi
 
-            $statusBaru = $workflowFullyApproved ? 'APPROVED' : 'Disetujui Kasubbag';
+            $statusBaru = $workflowFullyApproved ? $spp->status : 'Disetujui Kasubbag';
+            $this->syncPerjaldinKomponenStatus($spp);
 
             LogStatusDokumen::create([
                 'dokumen_type' => DokumenSpp::class,
@@ -380,8 +389,9 @@ class SppVerifikasiController extends Controller
             app(WorkflowService::class)->requestRevision($spp, Auth::id(), $request->catatan_revisi);
 
             $spp->update([
-                'status' => 'Revisi',
+                'status' => $this->isPerjaldinSpp($spp) ? 'REVISI_KASUBBAG' : 'Revisi',
             ]);
+            $this->syncPerjaldinKomponenStatus($spp);
 
             LogStatusDokumen::create([
                 'dokumen_type' => DokumenSpp::class,
@@ -389,7 +399,7 @@ class SppVerifikasiController extends Controller
                 'user_id' => Auth::id(),
                 'role_saat_itu' => Auth::user()?->getRoleNames()->first() ?? 'Kepala Subbagian Keuangan dan Tata Usaha',
                 'status_sebelumnya' => 'Menunggu Verifikasi Kasubbag',
-                'status_baru' => 'Revisi',
+                'status_baru' => $spp->status,
                 'aksi' => 'REVISI_KASUBBAG',
                 'catatan' => $request->catatan_revisi,
                 'ip_address' => request()->ip(),
@@ -430,5 +440,60 @@ class SppVerifikasiController extends Controller
         }
 
         return $allApproved && !$hasBlockingStatus;
+    }
+
+    private function isPerjaldinSpp(Spp $spp): bool
+    {
+        return $spp->tagihan?->tipe_tagihan === 'PERJALDIN'
+            || (bool) $spp->tagihan_perjaldin_komponen_id;
+    }
+
+    private function syncPerjaldinKomponenStatus(Spp $spp): void
+    {
+        if ($spp->tagihanPerjaldinKomponen) {
+            app(\App\Services\PerjaldinKomponenService::class)
+                ->syncKomponenStatus($spp->tagihanPerjaldinKomponen);
+        }
+    }
+
+    private function syncParentTagihanAfterSppFinal(Spp $spp): void
+    {
+        $tagihan = $spp->tagihan;
+
+        if (!$tagihan) {
+            return;
+        }
+
+        if ($tagihan->tipe_tagihan !== 'PERJALDIN') {
+            if ($tagihan->status === 'PROSES_SPP') {
+                $tagihan->update(['status' => 'SPP_TERBIT']);
+            }
+            return;
+        }
+
+        $komponens = $tagihan->komponenPerjaldin()
+            ->where('total_nominal', '>', 0)
+            ->with('dokumenSpp')
+            ->get();
+
+        if ($komponens->isEmpty()) {
+            return;
+        }
+
+        $approvedStatuses = ['DISETUJUI_SPP', 'APPROVED', 'Disetujui PPK'];
+        $approvedCount = $komponens->filter(function ($komponen) use ($approvedStatuses) {
+            return $komponen->dokumenSpp
+                && in_array($komponen->dokumenSpp->status, $approvedStatuses, true);
+        })->count();
+
+        if ($approvedCount === 0) {
+            return;
+        }
+
+        $tagihan->update([
+            'status' => $approvedCount === $komponens->count()
+                ? 'SPP_LENGKAP'
+                : 'SEBAGIAN_SPP_TERBIT',
+        ]);
     }
 }

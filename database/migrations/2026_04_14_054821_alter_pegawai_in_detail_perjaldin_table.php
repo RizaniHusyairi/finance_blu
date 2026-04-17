@@ -3,6 +3,7 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
@@ -12,7 +13,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('detail_perjaldin', function (Blueprint $table) {
-            $table->dropForeign(['pegawai_id']);
+            if (DB::getDriverName() !== 'sqlite') {
+                $table->dropForeign(['pegawai_id']);
+            }
             $table->unsignedBigInteger('pegawai_id')->nullable()->change();
             
             $table->string('nama_pegawai')->nullable()->after('pegawai_id');
@@ -29,7 +32,9 @@ return new class extends Migration
             $table->dropColumn(['nama_pegawai', 'nip']);
             
             $table->unsignedBigInteger('pegawai_id')->nullable(false)->change();
-            $table->foreign('pegawai_id')->references('id')->on('master_pegawai');
+            if (DB::getDriverName() !== 'sqlite') {
+                $table->foreign('pegawai_id')->references('id')->on('master_pegawai');
+            }
         });
     }
 };

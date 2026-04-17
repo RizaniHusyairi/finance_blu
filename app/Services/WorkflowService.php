@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\DokumenSpp;
 use App\Models\WorkflowApproval;
 use App\Models\WorkflowDefinition;
 use App\Models\WorkflowInstance;
@@ -20,14 +21,14 @@ class WorkflowService
             ->firstOrFail();
 
         // Batalkan instance aktif sebelumnya jika ada (misal re-submit setelah revisi)
-        WorkflowInstance::where('workflowable_type', get_class($document))
+        WorkflowInstance::whereIn('workflowable_type', $this->workflowableTypes($document))
             ->where('workflowable_id', $document->getKey())
             ->whereIn('status', ['IN_PROGRESS', 'DRAFT', 'REVISION'])
             ->update(['status' => 'REJECTED']); // tutup instance lama
 
         $instance = WorkflowInstance::create([
             'workflow_definition_id' => $definition->id,
-            'workflowable_type' => get_class($document),
+            'workflowable_type' => $this->workflowableType($document),
             'workflowable_id' => $document->getKey(),
             'step_saat_ini' => 1,
             'status' => 'IN_PROGRESS',
@@ -175,7 +176,7 @@ class WorkflowService
      */
     public function getActiveInstance(Model $document): ?WorkflowInstance
     {
-        return WorkflowInstance::where('workflowable_type', get_class($document))
+        return WorkflowInstance::whereIn('workflowable_type', $this->workflowableTypes($document))
             ->where('workflowable_id', $document->getKey())
             ->where('status', 'IN_PROGRESS')
             ->latest()
@@ -229,5 +230,21 @@ class WorkflowService
                   });
             })
             ->first();
+    }
+
+    private function workflowableType(Model $document): string
+    {
+        if ($document instanceof DokumenSpp) {
+            return DokumenSpp::class;
+        }
+
+        return get_class($document);
+    }
+
+    private function workflowableTypes(Model $document): array
+    {
+        $types = [get_class($document), $this->workflowableType($document)];
+
+        return array_values(array_unique($types));
     }
 }

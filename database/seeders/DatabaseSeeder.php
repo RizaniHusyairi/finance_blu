@@ -18,6 +18,7 @@ class DatabaseSeeder extends Seeder
             MasterDipaSeeder::class,
             MasterPegawaiSeeder::class,
             WorkflowDefinitionSeeder::class,
+            SppPerjaldinWorkflowSeeder::class,
             MasterUangHarianPerjaldinSeeder::class,
             MasterTarifPajakSeeder::class,
         ]);

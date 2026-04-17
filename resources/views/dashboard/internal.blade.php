@@ -155,6 +155,30 @@
             </div>
             <div class="card-body p-4">
                 <div id="chartSerapan" style="min-height: 320px;"></div>
+                @if($budgetItems->isNotEmpty())
+                    <div class="table-responsive mt-3">
+                        <table class="table table-sm align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>COA</th>
+                                    <th>Uraian</th>
+                                    <th>Tahun</th>
+                                    <th class="text-end">Pagu</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($budgetItems as $item)
+                                    <tr>
+                                        <td class="fw-bold">{{ $item->coa }}</td>
+                                        <td>{{ Str::limit($item->description, 40) }}</td>
+                                        <td>{{ $item->year }}</td>
+                                        <td class="text-end fw-bold">Rp {{ number_format($item->initial_budget, 0, ',', '.') }}</td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                @endif
             </div>
         </div>
     </div>

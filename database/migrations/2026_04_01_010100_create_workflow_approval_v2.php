@@ -57,7 +57,7 @@ return new class extends Migration
                 $table->string('role_code', 100);
                 $table->foreignId('assigned_user_id')->nullable()->constrained('users')->nullOnDelete();
                 $table->foreignId('acted_by_user_id')->nullable()->constrained('users')->nullOnDelete();
-                $table->enum('status', ['PENDING', 'APPROVED', 'REJECTED', 'REVISION'])->default('PENDING');
+                $table->enum('status', ['WAITING', 'PENDING', 'APPROVED', 'REJECTED', 'REVISION'])->default('PENDING');
                 $table->text('catatan')->nullable();
                 $table->dateTime('acted_at')->nullable();
                 $table->string('ip_address', 45)->nullable();

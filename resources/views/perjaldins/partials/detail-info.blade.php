@@ -40,20 +40,6 @@
                 <span class="fw-bold">{{ $tagihan->detailPerjaldin->count() }} orang</span>
             </div>
             <div class="col-md-4">
-                <label class="text-muted small d-block mb-1"><i class="bi bi-person-badge me-1"></i>Nama PPK</label>
-                <span class="fw-bold">{{ $tagihan->ppk_nama_snapshot ?? '-' }}</span>
-                @if($tagihan->ppk_nip_snapshot)
-                    <br><small class="text-muted">NIP: {{ $tagihan->ppk_nip_snapshot }}</small>
-                @endif
-            </div>
-            <div class="col-md-4">
-                <label class="text-muted small d-block mb-1"><i class="bi bi-person-badge me-1"></i>Bendahara Pengeluaran</label>
-                <span class="fw-bold">{{ $tagihan->bendahara_pengeluaran_nama_snapshot ?? '-' }}</span>
-                @if($tagihan->bendahara_pengeluaran_nip_snapshot)
-                    <br><small class="text-muted">NIP: {{ $tagihan->bendahara_pengeluaran_nip_snapshot }}</small>
-                @endif
-            </div>
-            <div class="col-md-4">
                 <label class="text-muted small d-block mb-1"><i class="bi bi-cash-stack me-1"></i>Total Bruto</label>
                 <span class="fw-semibold fs-5 text-success">Rp {{ number_format($tagihan->total_bruto, 0, ',', '.') }}</span>
             </div>

@@ -26,11 +26,16 @@ class PerjaldinWorkflowService
         $allowedSubmitStatuses = [
             'DRAFT',
             'REVISI_PPK',
+            'REVISI_PPSPM',
             'REVISI_BENDAHARA',
+            'REVISI_BENDAHARA_PENERIMAAN',
             'REVISI_BENDAHARA_PENGELUARAN',
-            'REVISI_KEPALA_SUBBAGIAN_KEUANGAN_DAN_TATA_USAHA',
+            'REVISI_KASUBBAG',
             'DITOLAK_PPK',
-            'DITOLAK_BENDAHARA_PENGELUARAN'
+            'DITOLAK_PPSPM',
+            'DITOLAK_BENDAHARA_PENERIMAAN',
+            'DITOLAK_BENDAHARA_PENGELUARAN',
+            'DITOLAK_KASUBBAG',
         ];
 
         if (!in_array($tagihan->status, $allowedSubmitStatuses)) {
@@ -41,7 +46,7 @@ class PerjaldinWorkflowService
             $definition = $this->getActiveWorkflowDefinition();
             $oldStatus = $tagihan->status;
 
-            $instance = $tagihan->workflowInstance;
+            $instance = $this->latestWorkflowInstance($tagihan);
 
             if (!$instance) {
                 // Buat instance baru
@@ -54,18 +59,16 @@ class PerjaldinWorkflowService
                 }
 
                 if ($instance->status === 'REVISION') {
-                    // Resubmit
-                    $currentApproval = $instance->currentApproval;
-                    if ($currentApproval && $currentApproval->status === 'REVISION') {
-                        $currentApproval->update([
-                            'status' => 'PENDING',
-                            'acted_by_user_id' => null,
-                            'acted_at' => null,
-                            'catatan' => null,
-                            'ip_address' => null,
-                        ]);
-                    }
-                    $instance->update(['status' => 'IN_PROGRESS']);
+                    // Resubmit setelah revisi selalu mengulang verifikasi awal,
+                    // karena substansi dokumen bisa berubah.
+                    $instance->approvals()->update([
+                        'status' => DB::raw("CASE WHEN urutan_step = 1 THEN 'PENDING' ELSE 'WAITING' END"),
+                        'acted_by_user_id' => null,
+                        'acted_at' => null,
+                        'catatan' => null,
+                        'ip_address' => null,
+                    ]);
+                    $instance->update(['status' => 'IN_PROGRESS', 'step_saat_ini' => 1]);
                 } else {
                      throw new Exception("Workflow tagihan sudah {$instance->status} dan tidak bisa disubmit ulang secara langsung.");
                 }
@@ -114,20 +117,26 @@ class PerjaldinWorkflowService
                 'ip_address' => $ipAddress,
             ]);
 
-            // Cek apakah ada next step
-            $nextApproval = WorkflowApproval::where('workflow_instance_id', $instance->id)
-                ->where('urutan_step', '>', $approval->urutan_step)
-                ->orderBy('urutan_step', 'asc')
-                ->first();
+            $remainingInCurrentStep = $instance->approvals()
+                ->where('urutan_step', $approval->urutan_step)
+                ->where('status', 'PENDING')
+                ->exists();
 
-            if ($nextApproval) {
-                $instance->update([
-                    'step_saat_ini' => $nextApproval->urutan_step
-                ]);
-            } else {
-                $instance->update([
-                    'status' => 'APPROVED'
-                ]);
+            if (!$remainingInCurrentStep) {
+                $nextStep = $instance->approvals()
+                    ->where('urutan_step', '>', $approval->urutan_step)
+                    ->orderBy('urutan_step', 'asc')
+                    ->value('urutan_step');
+
+                if ($nextStep) {
+                    $instance->update(['step_saat_ini' => $nextStep]);
+                    $instance->approvals()
+                        ->where('urutan_step', $nextStep)
+                        ->where('status', 'WAITING')
+                        ->update(['status' => 'PENDING']);
+                } else {
+                    $instance->update(['status' => 'APPROVED']);
+                }
             }
 
             $this->syncTagihanStatus($tagihan);
@@ -237,7 +246,7 @@ class PerjaldinWorkflowService
      */
     public function syncTagihanStatus(Tagihan $tagihan): void
     {
-        $instance = $tagihan->workflowInstance;
+        $instance = $this->latestWorkflowInstance($tagihan);
 
         if (!$instance) {
             // Biarkan seperti yang sekarang, tapi kalau dipaksakan:
@@ -245,7 +254,9 @@ class PerjaldinWorkflowService
             return;
         }
 
-        $currentApproval = $instance->currentApproval;
+        $currentApproval = $this->currentPendingApproval($instance)
+            ?? $this->latestRevisionApproval($instance)
+            ?? $instance->currentApproval;
         $rolePrefix = $currentApproval ? $this->normalizeRoleCode($currentApproval->role_code) : 'SISTEM';
 
         $mappedStatus = '';
@@ -254,7 +265,7 @@ class PerjaldinWorkflowService
                 $mappedStatus = 'DRAFT';
                 break;
             case 'IN_PROGRESS':
-                $mappedStatus = "PENDING_{$rolePrefix}";
+                $mappedStatus = $this->pendingStatusForInstance($instance, $rolePrefix);
                 break;
             case 'REVISION':
                 $mappedStatus = "REVISI_{$rolePrefix}";
@@ -270,6 +281,23 @@ class PerjaldinWorkflowService
         }
 
         $tagihan->update(['status' => $mappedStatus]);
+    }
+
+    public function pendingApprovalForRole(Tagihan $tagihan, string $roleCode): ?WorkflowApproval
+    {
+        $instance = $this->latestWorkflowInstance($tagihan);
+
+        if (!$instance || $instance->status !== 'IN_PROGRESS') {
+            return null;
+        }
+
+        $roleCodes = [$roleCode, $this->mapRoleCodeToName($roleCode)];
+
+        return $instance->approvals()
+            ->where('urutan_step', $instance->step_saat_ini)
+            ->where('status', 'PENDING')
+            ->whereIn('role_code', array_values(array_unique($roleCodes)))
+            ->first();
     }
 
     /**
@@ -291,8 +319,8 @@ class PerjaldinWorkflowService
                 'urutan_step' => $step->urutan_step,
                 'nama_step' => $step->nama_step,
                 'role_code' => $step->role_code,
-                'assigned_user_id' => $this->resolveAssignedUserIdByRoleCode($step->role_code),
-                'status' => 'PENDING',
+                'assigned_user_id' => $this->resolveAssignedUserIdForStep($step->role_code, $instance->workflowable),
+                'status' => $step->urutan_step === 1 ? 'PENDING' : 'WAITING',
             ]);
         }
     }
@@ -324,12 +352,27 @@ class PerjaldinWorkflowService
         ]);
     }
 
+    protected function latestWorkflowInstance(Tagihan $tagihan): ?WorkflowInstance
+    {
+        return WorkflowInstance::where('workflowable_type', Tagihan::class)
+            ->where('workflowable_id', $tagihan->id)
+            ->latest()
+            ->first();
+    }
+
     /**
      * Normalisasi Role Code untuk label status ringkas.
      */
     protected function normalizeRoleCode(string $roleCode): string
     {
-        return Str::upper(str_replace([' ', '-'], '_', trim($roleCode)));
+        $normalized = Str::upper(str_replace([' ', '-'], '_', trim($roleCode)));
+
+        return match ($normalized) {
+            'BENDAHARA_PENERIMAAN' => 'BENDAHARA_PENERIMAAN',
+            'BENDAHARA_PENGELUARAN' => 'BENDAHARA_PENGELUARAN',
+            'KEPALA_SUBBAGIAN_KEUANGAN_DAN_TATA_USAHA' => 'KASUBBAG',
+            default => $normalized,
+        };
     }
 
     /**
@@ -337,6 +380,8 @@ class PerjaldinWorkflowService
      */
     protected const ROLE_CODE_MAP = [
         'PPK'                     => 'PPK',
+        'PPSPM'                   => 'PPSPM',
+        'BENDAHARA_PENERIMAAN'    => 'Bendahara Penerimaan',
         'BENDAHARA_PENGELUARAN'   => 'Bendahara Pengeluaran',
         'OPERATOR_PERJALDIN'      => 'Operator Perjaldin',
         'OPERATOR_BLU'            => 'Operator BLU',
@@ -368,6 +413,29 @@ class PerjaldinWorkflowService
     }
 
     /**
+     * Prioritaskan verifikator yang dipilih pada form Perjaldin.
+     */
+    protected function resolveAssignedUserIdForStep(string $roleCode, ?Tagihan $tagihan = null): ?int
+    {
+        if ($tagihan instanceof Tagihan) {
+            $field = match ($this->normalizeRoleCode($roleCode)) {
+                'PPK' => 'ppk_user_id',
+                'PPSPM' => 'ppspm_user_id',
+                'BENDAHARA_PENERIMAAN' => 'bendahara_penerimaan_user_id',
+                'BENDAHARA_PENGELUARAN' => 'bendahara_pengeluaran_user_id',
+                'KASUBBAG' => 'kasubbag_user_id',
+                default => null,
+            };
+
+            if ($field && filled($tagihan->{$field})) {
+                return (int) $tagihan->{$field};
+            }
+        }
+
+        return $this->resolveAssignedUserIdByRoleCode($roleCode);
+    }
+
+    /**
      * Validasi actor berwenang execute step approval.
      */
     protected function actorCanAct(WorkflowApproval $approval, User $actor): bool
@@ -379,6 +447,43 @@ class PerjaldinWorkflowService
         // Check via mapped role name
         $roleName = $this->mapRoleCodeToName($approval->role_code);
         return $actor->hasRole($roleName);
+    }
+
+    protected function currentPendingApproval(WorkflowInstance $instance): ?WorkflowApproval
+    {
+        return $instance->approvals()
+            ->where('urutan_step', $instance->step_saat_ini)
+            ->where('status', 'PENDING')
+            ->orderBy('id')
+            ->first();
+    }
+
+    protected function latestRevisionApproval(WorkflowInstance $instance): ?WorkflowApproval
+    {
+        return $instance->approvals()
+            ->where('status', 'REVISION')
+            ->latest('acted_at')
+            ->first();
+    }
+
+    protected function pendingStatusForInstance(WorkflowInstance $instance, string $rolePrefix): string
+    {
+        $pendingRoles = $instance->approvals()
+            ->where('urutan_step', $instance->step_saat_ini)
+            ->where('status', 'PENDING')
+            ->pluck('role_code')
+            ->map(fn ($roleCode) => $this->normalizeRoleCode($roleCode))
+            ->values();
+
+        if ($pendingRoles->contains('KASUBBAG')) {
+            return 'PENDING_KASUBBAG';
+        }
+
+        if ($pendingRoles->count() > 1) {
+            return 'PENDING_VERIFIKASI_PERJALDIN';
+        }
+
+        return "PENDING_{$rolePrefix}";
     }
 
     /**

@@ -5,9 +5,9 @@
 <x-page-title title="Verifikasi Dokumen" subtitle="Daftar SPP Menunggu Verifikasi PPK" />
 
 @php
-    $menungguCount = $spps->where('status', 'Menunggu Verifikasi')->count();
-    $disetujuiCount = $spps->whereNotIn('status', ['Menunggu Verifikasi', 'Revisi'])->count();
-    $revisiCount = $spps->where('status', 'Revisi')->count();
+    $menungguCount = $spps->filter(fn($spp) => $spp->status_spp === 'Menunggu Verifikasi')->count();
+    $disetujuiCount = $spps->filter(fn($spp) => !in_array($spp->status_spp, ['Menunggu Verifikasi', 'Revisi'], true))->count();
+    $revisiCount = $spps->filter(fn($spp) => $spp->status_spp === 'Revisi')->count();
     $totalCount = $spps->count();
 @endphp
 
@@ -88,11 +88,11 @@
                             Rp {{ number_format($spp->nominal_spp, 0, ',', '.') }}
                         </td>
                         <td class="text-center">
-                            @if($spp->status == 'Menunggu Verifikasi')
+                            @if($spp->status_spp == 'Menunggu Verifikasi')
                                 <span class="badge bg-warning text-dark"><i class="bi bi-clock"></i> Perlu Direviu</span>
-                            @elseif($spp->status == 'Revisi')
+                            @elseif($spp->status_spp == 'Revisi')
                                 <span class="badge bg-danger"><i class="bi bi-x-circle"></i> Dikembalikan</span>
-                            @elseif($spp->status == 'Disetujui PPK')
+                            @elseif($spp->status_spp == 'Disetujui PPK')
                                 <span class="badge bg-success"><i class="bi bi-check-circle"></i> Disetujui PPK</span>
                             @else
                                 <span class="badge bg-primary"><i class="bi bi-info-circle"></i> {{ $spp->status_spp }}</span>
@@ -103,7 +103,7 @@
                                 <i class="bi bi-eye"></i> Cek PDF
                             </a>
 
-                            @if($spp->status == 'Menunggu Verifikasi')
+                            @if($spp->status_spp == 'Menunggu Verifikasi')
                                 <!-- Tombol Setujui -->
                                 <form action="{{ route('verifikasi-ppk.spp.approve', $spp->spp_id) }}" method="POST" class="d-inline">
                                     @csrf

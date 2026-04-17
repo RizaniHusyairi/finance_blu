@@ -6,6 +6,22 @@
     <link href="{{ URL::asset('build/plugins/datatable/css/dataTables.bootstrap5.min.css') }}" rel="stylesheet" />
 @endpush
 @section('content')
+    @php
+        $revisiDraftStatuses = [
+            'DRAFT',
+            'REVISI_PPK',
+            'REVISI_PPSPM',
+            'REVISI_BENDAHARA',
+            'REVISI_BENDAHARA_PENERIMAAN',
+            'REVISI_BENDAHARA_PENGELUARAN',
+            'REVISI_KASUBBAG',
+            'DITOLAK_PPK',
+            'DITOLAK_PPSPM',
+            'DITOLAK_BENDAHARA_PENERIMAAN',
+            'DITOLAK_BENDAHARA_PENGELUARAN',
+            'DITOLAK_KASUBBAG',
+        ];
+    @endphp
     <x-page-title title="Manajemen" subtitle="Perjaldin" />
 
     <div class="row row-cols-1 row-cols-md-2 row-cols-xl-4 g-3 mb-4">
@@ -21,15 +37,15 @@
             <div class="card h-100 border-0 shadow-sm text-white" style="background-color: #0dcaf0;">
                 <div class="card-body p-3">
                     <h6 class="card-title fw-normal mb-2">Draft & Revisi</h6>
-                    <h3 class="fw-bold mb-0 text-white">{{ $tagihans->whereIn('status', ['DRAFT', 'REVISI_PPK', 'DITOLAK_PPK'])->count() }}</h3>
+                    <h3 class="fw-bold mb-0 text-white">{{ $tagihans->whereIn('status', $revisiDraftStatuses)->count() }}</h3>
                 </div>
             </div>
         </div>
         <div class="col">
             <div class="card h-100 border-0 shadow-sm bg-warning text-dark">
                 <div class="card-body p-3">
-                    <h6 class="card-title fw-normal mb-2">Menunggu Verifikasi PPK</h6>
-                    <h3 class="fw-bold mb-0">{{ $tagihans->where('status', 'PENDING_PPK')->count() }}</h3>
+                    <h6 class="card-title fw-normal mb-2">Menunggu Verifikasi</h6>
+                    <h3 class="fw-bold mb-0">{{ $tagihans->whereIn('status', ['PENDING_VERIFIKASI_PERJALDIN', 'PENDING_PPK', 'PENDING_PPSPM', 'PENDING_BENDAHARA', 'PENDING_BENDAHARA_PENERIMAAN', 'PENDING_BENDAHARA_PENGELUARAN', 'PENDING_KASUBBAG'])->count() }}</h3>
                 </div>
             </div>
         </div>
@@ -37,7 +53,7 @@
             <div class="card h-100 border-0 shadow-sm text-white" style="background-color: #20c997;">
                 <div class="card-body p-3">
                     <h6 class="card-title fw-normal mb-2">Disetujui / Proses SPP</h6>
-                    <h3 class="fw-bold mb-0 text-white">{{ $tagihans->whereIn('status', ['DISETUJUI_PPK', 'PROSES_SPP', 'SPP_TERBIT'])->count() }}</h3>
+                    <h3 class="fw-bold mb-0 text-white">{{ $tagihans->whereIn('status', ['DISETUJUI_PERJALDIN', 'PROSES_COA', 'PROSES_SPP', 'SEBAGIAN_SPP_TERBIT', 'SPP_LENGKAP'])->count() }}</h3>
                 </div>
             </div>
         </div>
@@ -47,7 +63,7 @@
         <h6 class="mb-0 text-uppercase fw-bold">Daftar Tagihan Perjaldin</h6>
         <div class="d-flex gap-2">
             <a href="{{ route('perjaldins.create') }}" class="btn btn-success"><i class="bi bi-plus-lg"></i> Tambah Perjaldin</a>
-            <button type="button" class="btn btn-primary" onclick="submitBulk()"><i class="bi bi-send"></i> Ajukan ke PPK</button>
+            <button type="button" class="btn btn-primary" onclick="submitBulk()"><i class="bi bi-send"></i> Ajukan Verifikasi</button>
         </div>
     </div>
     <hr>
@@ -87,7 +103,7 @@
                             @foreach ($tagihans as $tagihan)
                                 <tr>
                                     <td class="text-center">
-                                        @if(in_array($tagihan->status, ['DRAFT', 'REVISI_PPK', 'DITOLAK_PPK']))
+                                        @if(in_array($tagihan->status, $revisiDraftStatuses))
                                             <input class="form-check-input row-checkbox" type="checkbox" name="tagihan_ids[]" value="{{ $tagihan->id }}">
                                         @endif
                                     </td>
@@ -109,9 +125,30 @@
                                             @case('PENDING_PPK')
                                                 <span class="badge bg-primary"><i class="bi bi-hourglass-split"></i> Menunggu PPK</span>
                                                 @break
+                                            @case('PENDING_VERIFIKASI_PERJALDIN')
+                                                <span class="badge bg-primary"><i class="bi bi-hourglass-split"></i> Menunggu Verifikator</span>
+                                                @break
+                                            @case('PENDING_KASUBBAG')
+                                                <span class="badge bg-info text-dark"><i class="bi bi-hourglass-split"></i> Menunggu Kasubbag</span>
+                                                @break
+                                            @case('PENDING_BENDAHARA')
+                                            @case('PENDING_BENDAHARA_PENERIMAAN')
+                                            @case('PENDING_BENDAHARA_PENGELUARAN')
+                                            @case('PENDING_PPSPM')
+                                                <span class="badge bg-primary"><i class="bi bi-hourglass-split"></i> Menunggu Verifikasi</span>
+                                                @break
                                             @case('REVISI_PPK')
                                             @case('DITOLAK_PPK')
-                                                <span class="badge bg-warning text-dark"><i class="bi bi-arrow-counterclockwise"></i> Revisi PPK</span>
+                                            @case('REVISI_PPSPM')
+                                            @case('DITOLAK_PPSPM')
+                                            @case('REVISI_BENDAHARA')
+                                            @case('REVISI_BENDAHARA_PENERIMAAN')
+                                            @case('DITOLAK_BENDAHARA_PENERIMAAN')
+                                            @case('REVISI_BENDAHARA_PENGELUARAN')
+                                            @case('DITOLAK_BENDAHARA_PENGELUARAN')
+                                            @case('REVISI_KASUBBAG')
+                                            @case('DITOLAK_KASUBBAG')
+                                                <span class="badge bg-warning text-dark"><i class="bi bi-arrow-counterclockwise"></i> Perlu Revisi</span>
                                                 @php $lastLog = $tagihan->logs->first(); @endphp
                                                 @if($lastLog && $lastLog->catatan)
                                                     <div class="mt-1 p-2 bg-warning bg-opacity-10 border border-warning rounded small text-dark">
@@ -121,7 +158,8 @@
                                                 @endif
                                                 @break
                                             @case('DISETUJUI_PPK')
-                                                <span class="badge bg-success"><i class="bi bi-check-circle"></i> Disetujui PPK</span>
+                                            @case('DISETUJUI_PERJALDIN')
+                                                <span class="badge bg-success"><i class="bi bi-check-circle"></i> Disetujui</span>
                                                 @break
                                             @case('PROSES_SPP')
                                             @case('SPP_TERBIT')
@@ -134,7 +172,7 @@
                                     <td>
                                         <div class="d-flex align-items-center gap-1 flex-wrap">
                                             <a href="{{ route('perjaldins.show', $tagihan->id) }}" class="btn btn-sm btn-outline-info"><i class="bi bi-eye-fill"></i></a>
-                                            @if(in_array($tagihan->status, ['DRAFT', 'REVISI_PPK', 'DITOLAK_PPK']))
+                                            @if(in_array($tagihan->status, $revisiDraftStatuses))
                                                 <a href="{{ route('perjaldins.edit-perjaldin', $tagihan->id) }}" class="btn btn-sm btn-outline-warning"><i class="bi bi-pencil-fill"></i> Edit</a>
                                                 <button type="button" class="btn btn-sm btn-outline-danger" onclick="deletePerjaldin('{{ route('perjaldins.destroy-perjaldin', $tagihan->id) }}')"><i class="bi bi-trash-fill"></i></button>
                                             @endif
@@ -183,7 +221,7 @@
                     return false;
                 }
 
-                if (confirm('Ajukan ' + checked.length + ' Perjaldin untuk verifikasi PPK?')) {
+                if (confirm('Ajukan ' + checked.length + ' Perjaldin untuk verifikasi PPSPM, Bendahara Penerimaan, Bendahara Pengeluaran, dan PPK?')) {
                     $('.dynamic-hidden-ids').remove();
                     
                     checked.each(function() {

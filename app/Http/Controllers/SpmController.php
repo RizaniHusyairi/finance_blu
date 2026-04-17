@@ -19,7 +19,7 @@ class SpmController extends Controller
     {
         $perjaldins = Perjaldin::with(['pejabats', 'spps.spm'])
             ->whereHas('spps', function ($q) {
-                $q->where('status', 'Disetujui PPK')
+                $q->whereIn('status', ['Disetujui PPK', 'DISETUJUI_SPP', 'APPROVED'])
                     ->orWhereHas('spm');
             })
             ->latest()
@@ -78,12 +78,14 @@ class SpmController extends Controller
 
     public function cetakPdfSpm($spm_id)
     {
+        require_once app_path('Helpers/TerbilangHelper.php');
+
         $spm = DokumenSpm::with(['spp.tagihan', 'ppspm'])->findOrFail($spm_id);
         $spp = $spm->spp;
         $sppable = $spp?->sppable;
         $jumlahUang = (float) ($spp?->nominal_spp ?? 0);
         $uraianSupplier = $spp?->uraian ?? ($sppable->uraian ?? 'Belanja Perjalanan Dinas');
-        $terbilang = terbilang_rupiah($jumlahUang);
+        $terbilang = \terbilang_rupiah($jumlahUang);
 
         if (! $spm->nomor_spm) {
             $spm->nomor_spm = 'SPM-BLU/APTP-' . date('Y') . '/DRAFT';

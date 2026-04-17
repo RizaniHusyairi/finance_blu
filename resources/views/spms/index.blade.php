@@ -25,7 +25,7 @@
             <div class="card h-100 border-0 shadow-sm bg-warning text-dark">
                 <div class="card-body p-3">
                     <h6 class="card-title fw-normal mb-1">SPP Siap Dibuatkan SPM</h6>
-                    <h3 class="fw-bold mb-0">{{ \App\Models\Spp::doesntHave('spm')->where('status', 'Disetujui PPK')->count() }}</h3>
+                    <h3 class="fw-bold mb-0">{{ \App\Models\Spp::doesntHave('spm')->whereIn('status', ['Disetujui PPK', 'DISETUJUI_SPP', 'APPROVED'])->count() }}</h3>
                 </div>
             </div>
         </div>
@@ -72,7 +72,8 @@
                     <tbody>
                         @foreach ($perjaldins as $idx => $perjaldin)
                         @php
-                            $totalSppReady   = $perjaldin->spps->filter(fn($spp) => !$spp->spm && $spp->status === 'Disetujui PPK')->count();
+                            $readySppStatuses = ['Disetujui PPK', 'DISETUJUI_SPP', 'APPROVED'];
+                            $totalSppReady   = $perjaldin->spps->filter(fn($spp) => !$spp->spm && in_array($spp->status, $readySppStatuses, true))->count();
                             $totalSpmDikirim = $perjaldin->spps->filter(fn($spp) => optional($spp->spm)->status === \App\Models\DokumenSpm::STATUS_SUBMITTED_PPSPM)->count();
                             $totalSpmTerbit  = $perjaldin->spps->filter(fn($spp) => in_array(optional($spp->spm)->status, [
                                 \App\Models\DokumenSpm::STATUS_SUBMITTED_KASUBAG,

@@ -28,6 +28,18 @@
     </style>
 </head>
 <body>
+@php
+    $tagihan = $spp?->tagihan;
+    $nomorTagihan = $tagihan?->nomor_tagihan ?? '-';
+    $tanggalTagihanSource = $tagihan?->tanggal_tagihan
+        ?? $tagihan?->tanggal_perjaldin
+        ?? $tagihan?->tanggal_ttd
+        ?? $tagihan?->created_at
+        ?? null;
+    $tanggalTagihan = $tanggalTagihanSource
+        ? \Carbon\Carbon::parse($tanggalTagihanSource)->format('d/m/Y')
+        : '-';
+@endphp
 
     <table class="table-main">
         <!-- HEADER 1 -->
@@ -127,17 +139,17 @@
                         <td style="border: none; width: 60%; padding: 0;"></td>
                     </tr>
                     <tr>
-                        <td style="border: none; padding: 0;">No. BAST</td>
+                        <td style="border: none; padding: 0;">No. Tagihan</td>
                         <td style="border: none; padding: 0;">:</td>
-                        <td style="border: none; padding: 0;">{{ $sppable->no_bast ?? '-' }}</td>
+                        <td style="border: none; padding: 0;">{{ $nomorTagihan }}</td>
                     </tr>
                     <tr>
                         <td colspan="3" style="border: none; padding: 6px 0;"></td>
                     </tr>
                     <tr>
-                        <td style="border: none; padding: 0;">Tgl. BAST</td>
+                        <td style="border: none; padding: 0;">Tgl. Tagihan</td>
                         <td style="border: none; padding: 0;">:</td>
-                        <td style="border: none; padding: 0;">{{ $sppable->no_bast ? \Carbon\Carbon::parse($spp->tanggal_spp)->format('d/m/Y') : '' }}</td>
+                        <td style="border: none; padding: 0;">{{ $tanggalTagihan }}</td>
                     </tr>
                 </table>
             </td>

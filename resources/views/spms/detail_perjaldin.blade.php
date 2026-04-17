@@ -53,7 +53,7 @@
                     </thead>
                     <tbody>
                         @php $no = 1; @endphp
-                        @foreach($perjaldin->spps->filter(fn($spp) => $spp->status === 'Disetujui PPK' || $spp->spm) as $spp)
+                        @foreach($perjaldin->spps->filter(fn($spp) => in_array($spp->status, ['Disetujui PPK', 'DISETUJUI_SPP', 'APPROVED'], true) || $spp->spm) as $spp)
                         @php $slug = 'spm' . $spp->spp_id; @endphp
                         <tr>
                             <td>{{ $no++ }}</td>

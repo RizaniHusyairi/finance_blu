@@ -117,7 +117,9 @@ class SppController extends Controller
                         'penandatangan_nip' => $ppkUser->pegawai?->nip ?? '-',
                         'ppk_verifikator_id' => $request->ppk_verifikator_id,
                         'uraian' => $uraianText,
-                        'status' => $isUpdate && $komponen->dokumenSpp->status === 'Revisi' ? 'Revisi' : 'DRAFT',
+                        'status' => $isUpdate && in_array($komponen->dokumenSpp->status, ['Revisi', 'REVISI_PPK', 'REVISI_KASUBBAG'], true)
+                            ? $komponen->dokumenSpp->status
+                            : 'DRAFT',
                         'dibuat_oleh_id' => $request->user()->id,
                     ]
                 );

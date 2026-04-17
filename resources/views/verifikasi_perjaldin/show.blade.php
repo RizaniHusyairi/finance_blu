@@ -38,13 +38,26 @@
 @php
     $statusMap = [
         'DRAFT'               => ['class'=>'bg-secondary',          'text'=>'Draft',                             'helper'=>'Belum diajukan.'],
+        'PENDING_VERIFIKASI_PERJALDIN' => ['class'=>'bg-primary',    'text'=>'Menunggu Verifikator',              'helper'=>'Menunggu PPSPM, Bendahara Penerimaan, Bendahara Pengeluaran, dan PPK.'],
         'PENDING_PPK'         => ['class'=>'bg-primary',            'text'=>'Menunggu Verifikasi PPK',           'helper'=>'Dokumen sedang menunggu persetujuan PPK.'],
+        'PENDING_PPSPM'       => ['class'=>'bg-primary',            'text'=>'Menunggu Verifikasi PPSPM',         'helper'=>'Dokumen sedang menunggu persetujuan PPSPM.'],
         'REVISI_PPK'          => ['class'=>'bg-warning text-dark',  'text'=>'Revisi oleh PPK',                  'helper'=>'Dokumen dikembalikan. Operator perlu merevisi.'],
+        'REVISI_PPSPM'        => ['class'=>'bg-warning text-dark',  'text'=>'Revisi oleh PPSPM',                'helper'=>'Dokumen dikembalikan oleh PPSPM. Operator perlu merevisi.'],
         'DITOLAK_PPK'         => ['class'=>'bg-danger',             'text'=>'Ditolak PPK',                      'helper'=>'Dokumen ditolak oleh PPK.'],
+        'DITOLAK_PPSPM'       => ['class'=>'bg-danger',             'text'=>'Ditolak PPSPM',                    'helper'=>'Dokumen ditolak oleh PPSPM.'],
         'PENDING_BENDAHARA'   => ['class'=>'bg-info text-dark',     'text'=>'Menunggu Verifikasi Bendahara',     'helper'=>'Menunggu verifikasi Bendahara Pengeluaran.'],
+        'PENDING_BENDAHARA_PENERIMAAN' => ['class'=>'bg-info text-dark', 'text'=>'Menunggu Bendahara Penerimaan', 'helper'=>'Menunggu verifikasi Bendahara Penerimaan.'],
+        'PENDING_BENDAHARA_PENGELUARAN' => ['class'=>'bg-info text-dark', 'text'=>'Menunggu Bendahara Pengeluaran', 'helper'=>'Menunggu verifikasi Bendahara Pengeluaran.'],
         'REVISI_BENDAHARA'    => ['class'=>'bg-warning text-dark',  'text'=>'Revisi oleh Bendahara',            'helper'=>'Dokumen dikembalikan oleh Bendahara Pengeluaran.'],
+        'REVISI_BENDAHARA_PENERIMAAN' => ['class'=>'bg-warning text-dark', 'text'=>'Revisi Bendahara Penerimaan', 'helper'=>'Dokumen dikembalikan oleh Bendahara Penerimaan.'],
+        'REVISI_BENDAHARA_PENGELUARAN' => ['class'=>'bg-warning text-dark', 'text'=>'Revisi Bendahara Pengeluaran', 'helper'=>'Dokumen dikembalikan oleh Bendahara Pengeluaran.'],
         'DITOLAK_BENDAHARA'   => ['class'=>'bg-danger',             'text'=>'Ditolak Bendahara',                'helper'=>'Dokumen ditolak oleh Bendahara Pengeluaran.'],
-        'DISETUJUI_PERJALDIN' => ['class'=>'bg-success',            'text'=>'Disetujui — Verifikasi Selesai',   'helper'=>'Dokumen telah disetujui oleh PPK dan Bendahara.'],
+        'DITOLAK_BENDAHARA_PENERIMAAN' => ['class'=>'bg-danger',     'text'=>'Ditolak Bendahara Penerimaan',     'helper'=>'Dokumen ditolak oleh Bendahara Penerimaan.'],
+        'DITOLAK_BENDAHARA_PENGELUARAN' => ['class'=>'bg-danger',    'text'=>'Ditolak Bendahara Pengeluaran',    'helper'=>'Dokumen ditolak oleh Bendahara Pengeluaran.'],
+        'PENDING_KASUBBAG'    => ['class'=>'bg-info text-dark',      'text'=>'Menunggu Kasubbag',                'helper'=>'Seluruh verifikator sudah menyetujui. Menunggu persetujuan Kasubbag.'],
+        'REVISI_KASUBBAG'     => ['class'=>'bg-warning text-dark',   'text'=>'Revisi oleh Kasubbag',             'helper'=>'Dokumen dikembalikan oleh Kasubbag.'],
+        'DITOLAK_KASUBBAG'    => ['class'=>'bg-danger',              'text'=>'Ditolak Kasubbag',                 'helper'=>'Dokumen ditolak oleh Kasubbag.'],
+        'DISETUJUI_PERJALDIN' => ['class'=>'bg-success',            'text'=>'Disetujui — Verifikasi Selesai',   'helper'=>'Dokumen telah disetujui oleh seluruh verifikator dan Kasubbag.'],
     ];
     $sc = $statusMap[$tagihan->status] ?? ['class'=>'bg-secondary','text'=>$tagihan->status,'helper'=>''];
     $bulanMap=[1=>'Januari',2=>'Februari',3=>'Maret',4=>'April',5=>'Mei',6=>'Juni',7=>'Juli',8=>'Agustus',9=>'September',10=>'Oktober',11=>'November',12=>'Desember'];
@@ -123,10 +136,31 @@
                         @endif
                     </div>
                     <div class="col-6 col-md-4">
+                        <div class="info-label">PPSPM</div>
+                        <div class="info-value">{{ $tagihan->ppspm_nama_snapshot ?? '-' }}</div>
+                        @if($tagihan->ppspm_nip_snapshot)
+                            <div class="text-muted" style="font-size:.72rem;">NIP: {{ $tagihan->ppspm_nip_snapshot }}</div>
+                        @endif
+                    </div>
+                    <div class="col-6 col-md-4">
+                        <div class="info-label">Bendahara Penerimaan</div>
+                        <div class="info-value">{{ $tagihan->bendahara_penerimaan_nama_snapshot ?? '-' }}</div>
+                        @if($tagihan->bendahara_penerimaan_nip_snapshot)
+                            <div class="text-muted" style="font-size:.72rem;">NIP: {{ $tagihan->bendahara_penerimaan_nip_snapshot }}</div>
+                        @endif
+                    </div>
+                    <div class="col-6 col-md-4">
                         <div class="info-label">Bendahara Pengeluaran</div>
                         <div class="info-value">{{ $tagihan->bendahara_pengeluaran_nama_snapshot ?? '-' }}</div>
                         @if($tagihan->bendahara_pengeluaran_nip_snapshot)
                             <div class="text-muted" style="font-size:.72rem;">NIP: {{ $tagihan->bendahara_pengeluaran_nip_snapshot }}</div>
+                        @endif
+                    </div>
+                    <div class="col-6 col-md-4">
+                        <div class="info-label">Kasubbag</div>
+                        <div class="info-value">{{ $tagihan->kasubbag_nama_snapshot ?? '-' }}</div>
+                        @if($tagihan->kasubbag_nip_snapshot)
+                            <div class="text-muted" style="font-size:.72rem;">NIP: {{ $tagihan->kasubbag_nip_snapshot }}</div>
                         @endif
                     </div>
                     <div class="col-6 col-md-4">
@@ -187,6 +221,7 @@
             @include('verifikasi_perjaldin.partials.verification-action-panel', [
                 'tagihan'      => $tagihan,
                 'userRole'     => $userRole,
+                'currentApproval' => $currentApproval ?? null,
                 'approveRoute' => $approveRoute,
                 'revisiRoute'  => $revisiRoute,
             ])

@@ -26,21 +26,28 @@ class SppPerjaldinWorkflowSeeder extends Seeder
 
         WorkflowDefinitionStep::where('workflow_definition_id', $wfPerjaldin->id)->delete();
         
-        WorkflowDefinitionStep::create([
-            'workflow_definition_id' => $wfPerjaldin->id,
-            'urutan_step' => 1,
-            'nama_step' => 'Verifikasi PPK',
-            'role_code' => 'PPK',
-            'is_required' => true,
-            'can_reject' => true,
-            'can_request_revision' => true,
-        ]);
+        foreach ([
+            ['nama_step' => 'Verifikasi PPSPM', 'role_code' => 'PPSPM'],
+            ['nama_step' => 'Verifikasi Bendahara Penerimaan', 'role_code' => 'BENDAHARA_PENERIMAAN'],
+            ['nama_step' => 'Verifikasi Bendahara Pengeluaran', 'role_code' => 'BENDAHARA_PENGELUARAN'],
+            ['nama_step' => 'Verifikasi PPK', 'role_code' => 'PPK'],
+        ] as $step) {
+            WorkflowDefinitionStep::create([
+                'workflow_definition_id' => $wfPerjaldin->id,
+                'urutan_step' => 1,
+                'nama_step' => $step['nama_step'],
+                'role_code' => $step['role_code'],
+                'is_required' => true,
+                'can_reject' => true,
+                'can_request_revision' => true,
+            ]);
+        }
 
         WorkflowDefinitionStep::create([
             'workflow_definition_id' => $wfPerjaldin->id,
             'urutan_step' => 2,
-            'nama_step' => 'Verifikasi Bendahara Pengeluaran',
-            'role_code' => 'BENDAHARA_PENGELUARAN',
+            'nama_step' => 'Persetujuan Kasubbag',
+            'role_code' => 'KASUBBAG',
             'is_required' => true,
             'can_reject' => true,
             'can_request_revision' => true,
@@ -70,9 +77,9 @@ class SppPerjaldinWorkflowSeeder extends Seeder
 
         WorkflowDefinitionStep::create([
             'workflow_definition_id' => $wfSpp->id,
-            'urutan_step' => 2,
-            'nama_step' => 'Verifikasi Kasubbag',
-            'role_code' => 'KASUBBAG',
+            'urutan_step' => 1,
+            'nama_step' => 'Verifikasi Kepala Subbagian Keuangan dan Tata Usaha',
+            'role_code' => 'Kepala Subbagian Keuangan dan Tata Usaha',
             'is_required' => true,
             'can_reject' => true,
             'can_request_revision' => true,
@@ -83,8 +90,10 @@ class SppPerjaldinWorkflowSeeder extends Seeder
             'Operator BLU',
             'Operator Perjaldin',
             'PPK',
+            'PPSPM',
+            'Bendahara Penerimaan',
             'Bendahara Pengeluaran',
-            'Kasubbag'
+            'Kepala Subbagian Keuangan dan Tata Usaha',
         ];
 
         foreach ($roles as $role) {

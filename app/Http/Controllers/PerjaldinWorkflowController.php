@@ -20,27 +20,13 @@ class PerjaldinWorkflowController extends Controller
     {
         $tagihan = Tagihan::findOrFail($tagihanId);
 
-        $allowed = ['DRAFT', 'REVISI_PPK', 'REVISI_BENDAHARA', 'DITOLAK_PPK'];
-        if (!in_array($tagihan->status, $allowed)) {
-            return redirect()->back()->with('error', "Dokumen tidak dapat diajukan karena status saat ini: {$tagihan->status}.");
+        try {
+            $this->workflowService->submit($tagihan, $request->user(), $request->ip());
+
+            return redirect()->back()->with('success', 'Dokumen Perjaldin berhasil diajukan ke PPSPM, Bendahara Penerimaan, Bendahara Pengeluaran, dan PPK.');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', $e->getMessage());
         }
-
-        $statusLama = $tagihan->status;
-        $tagihan->update(['status' => 'PENDING_PPK']);
-
-        \App\Models\LogStatusDokumen::create([
-            'dokumen_type'      => Tagihan::class,
-            'dokumen_id'        => $tagihan->id,
-            'user_id'           => $request->user()->id,
-            'role_saat_itu'     => $request->user()->getRoleNames()->first() ?? 'Operator Perjaldin',
-            'status_sebelumnya' => $statusLama,
-            'status_baru'       => 'PENDING_PPK',
-            'aksi'              => 'SUBMIT',
-            'catatan'           => 'Dokumen diajukan oleh Operator Perjaldin.',
-            'ip_address'        => $request->ip(),
-        ]);
-
-        return redirect()->back()->with('success', 'Dokumen Perjaldin berhasil diajukan ke PPK dan Bendahara Pengeluaran.');
     }
 
     public function approve(Request $request, int $approvalId)

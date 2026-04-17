@@ -202,7 +202,7 @@ class PerjaldinKomponenService
         ]);
 
         // Update status komponen
-        $komponen->update(['status_proses' => TagihanPerjaldinKomponen::STATUS_SPP_TERBIT]);
+        $komponen->update(['status_proses' => TagihanPerjaldinKomponen::STATUS_SPP_DRAFT]);
 
         // Log
         LogStatusDokumen::create([

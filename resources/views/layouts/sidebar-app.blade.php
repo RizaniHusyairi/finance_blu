@@ -72,6 +72,19 @@
         @endhasanyrole
         @hasrole('Operator Perjaldin')
         <li>
+          <a href="javascript:;" class="has-arrow">
+            <div class="parent-icon"><i class="material-icons-outlined">folder</i></div>
+            <div class="menu-title">Master Data</div>
+          </a>
+          <ul>
+            <li>
+              <a href="{{ route('master-uang-harian-perjaldin.index') }}">
+                <i class="material-icons-outlined">arrow_right</i>Uang Harian
+              </a>
+            </li>
+          </ul>
+        </li>
+        <li>
           <a href="{{ route('perjaldins.index') }}">
             <div class="parent-icon"><i class="material-icons-outlined">flight_takeoff</i>
             </div>
@@ -129,8 +142,7 @@
           </a>
           <ul>
             <li><a href="{{ route('verifikasi-ppk.spp.index') }}"><i class="material-icons-outlined">arrow_right</i>Kontrak</a></li>
-            {{-- TODO: Pisahkan route SPP Perjaldin & Honor jika controller sudah siap --}}
-            <li><a href="{{ route('verifikasi-ppk.spp.index') }}"><i class="material-icons-outlined">arrow_right</i>Perjaldin</a></li>
+            <li><a href="{{ route('verifikasi-ppk.spp-perjaldin.index') }}"><i class="material-icons-outlined">arrow_right</i>Perjaldin</a></li>
             <li><a href="{{ route('verifikasi-ppk.spp.index') }}"><i class="material-icons-outlined">arrow_right</i>Honor</a></li>
           </ul>
         </li>
@@ -144,7 +156,7 @@
           <ul>
             <li><a href="{{ route('verifikasi-ppk.npi.kontrak.index') }}"><i class="material-icons-outlined">arrow_right</i>Kontrak</a></li>
             {{-- TODO: Buat route NPI Perjaldin & Honor khusus PPK jika controller sudah siap --}}
-            <li><a href="#"><i class="material-icons-outlined">arrow_right</i>Perjaldin</a></li>
+            <li><a href="{{ route('verifikasi-npi.perjaldin.index') }}"><i class="material-icons-outlined">arrow_right</i>Perjaldin</a></li>
             <li><a href="#"><i class="material-icons-outlined">arrow_right</i>Honor</a></li>
           </ul>
         </li>
@@ -181,6 +193,19 @@
         @hasrole('Kepala Subbagian Keuangan dan Tata Usaha')
         <li>
           <a href="javascript:;" class="has-arrow">
+            <div class="parent-icon"><i class="material-icons-outlined">fact_check</i></div>
+            <div class="menu-title">Verifikasi Tagihan</div>
+          </a>
+          <ul>
+            <li>
+              <a href="{{ route('verifikasi-kasubag.index') }}">
+                <i class="material-icons-outlined">arrow_right</i>Perjaldin
+              </a>
+            </li>
+          </ul>
+        </li>
+        <li>
+          <a href="javascript:;" class="has-arrow">
             <div class="parent-icon"><i class="material-icons-outlined">history_edu</i></div>
             <div class="menu-title">Verifikasi SPP</div>
           </a>
@@ -189,7 +214,7 @@
               <a href="{{ route('verifikasi-kasubag.spp.index') }}"><i class="material-icons-outlined">arrow_right</i>Kontrak</a>
             </li>
             <li>
-              <a href="{{ route('verifikasi-kasubag.spp.index') }}"><i class="material-icons-outlined">arrow_right</i>Perjaldin</a>
+              <a href="{{ route('verifikasi-kasubag.spp-perjaldin.index') }}"><i class="material-icons-outlined">arrow_right</i>Perjaldin</a>
             </li>
             <li>
               <a href="{{ route('verifikasi-kasubag.spp.index') }}"><i class="material-icons-outlined">arrow_right</i>Honor</a>
@@ -206,7 +231,7 @@
               <a href="{{ route('verifikasi-kasubag.spm.kontrak.index') }}"><i class="material-icons-outlined">arrow_right</i>Kontrak</a>
             </li>
             <li>
-              <a href="{{ route('verifikasi-kasubag.spm.index') }}"><i class="material-icons-outlined">arrow_right</i>Perjaldin</a>
+              <a href="{{ route('verifikasi-kasubag.spm-perjaldin.index') }}"><i class="material-icons-outlined">arrow_right</i>Perjaldin</a>
             </li>
             <li>
               <a href="#"><i class="material-icons-outlined">arrow_right</i>Honor</a>
@@ -223,7 +248,7 @@
               <a href="{{ route('verifikasi-kasubag.npi.kontrak.index') }}"><i class="material-icons-outlined">arrow_right</i>Kontrak</a>
             </li>
             <li>
-              <a href="{{ route('verifikasi-kasubag.npi.index') }}"><i class="material-icons-outlined">arrow_right</i>Perjaldin</a>
+              <a href="{{ route('verifikasi-npi.perjaldin.index') }}"><i class="material-icons-outlined">arrow_right</i>Perjaldin</a>
             </li>
             <li>
               <a href="{{ route('verifikasi-kasubag.npi.index') }}"><i class="material-icons-outlined">arrow_right</i>Honor</a>
@@ -266,7 +291,7 @@
             <div class="menu-title">Pembuatan SPM</div>
           </a>
           <ul>
-            <li><a href="{{ route('spms.index') }}"><i class="material-icons-outlined">arrow_right</i>SPM Perjaldin</a></li>
+            <li><a href="{{ route('spms.perjaldin.index') }}"><i class="material-icons-outlined">arrow_right</i>SPM Perjaldin</a></li>
             <li><a href="{{ route('spms.index') }}"><i class="material-icons-outlined">arrow_right</i>SPM Honor</a></li>
             <li><a href="{{ route('spms.kontrak.index') }}"><i class="material-icons-outlined">arrow_right</i>SPM Kontrak</a></li>
           </ul>
@@ -298,11 +323,24 @@
         @hasrole('PPSPM')
         <li>
           <a href="javascript:;" class="has-arrow">
-            <div class="parent-icon"><i class="material-icons-outlined">verified_user</i></div>
-            <div class="menu-title">Verifikasi (PPSPM)</div>
+            <div class="parent-icon"><i class="material-icons-outlined">fact_check</i></div>
+            <div class="menu-title">Verifikasi Tagihan</div>
           </a>
           <ul>
-            <li><a href="{{ route('verifikasi-ppspm.spm.index') }}"><i class="material-icons-outlined">arrow_right</i>SPM Perjaldin</a></li>
+            <li>
+              <a href="{{ route('verifikasi-ppspm.perjaldin.index') }}">
+                <i class="material-icons-outlined">arrow_right</i>Perjaldin
+              </a>
+            </li>
+          </ul>
+        </li>
+        <li>
+          <a href="javascript:;" class="has-arrow">
+            <div class="parent-icon"><i class="material-icons-outlined">verified_user</i></div>
+            <div class="menu-title">Verifikasi SPM</div>
+          </a>
+          <ul>
+            <li><a href="{{ route('verifikasi-ppspm.spm-perjaldin.index') }}"><i class="material-icons-outlined">arrow_right</i>SPM Perjaldin</a></li>
             <li><a href="#"><i class="material-icons-outlined">arrow_right</i>SPM Honor</a></li>
             <li><a href="{{ route('verifikasi-ppspm.spm.kontrak.index') }}"><i class="material-icons-outlined">arrow_right</i>SPM Kontrak</a></li>
           </ul>
@@ -333,7 +371,7 @@
           </a>
           <ul>
             <li><a href="{{ route('npis.kontrak.index') }}"><i class="material-icons-outlined">arrow_right</i>Kontrak</a></li>
-            <li><a href="{{ route('npis.index') }}"><i class="material-icons-outlined">arrow_right</i>Perjaldin</a></li>
+            <li><a href="{{ route('npis.perjaldin.index') }}"><i class="material-icons-outlined">arrow_right</i>Perjaldin</a></li>
             <li><a href="{{ route('npis.index') }}"><i class="material-icons-outlined">arrow_right</i>Honor</a></li>
           </ul>
         </li>
@@ -344,7 +382,7 @@
           </a>
           <ul>
             <li><a href="{{ route('sp2ds.kontrak.index') }}"><i class="material-icons-outlined">arrow_right</i>Kontrak</a></li>
-            <li><a href="{{ route('sp2ds.index') }}"><i class="material-icons-outlined">arrow_right</i>Perjaldin</a></li>
+            <li><a href="{{ route('sp2ds.perjaldin.index') }}"><i class="material-icons-outlined">arrow_right</i>Perjaldin</a></li>
             <li><a href="{{ route('sp2ds.index') }}"><i class="material-icons-outlined">arrow_right</i>Honor</a></li>
           </ul>
         </li>
@@ -361,12 +399,25 @@
         @hasrole('Bendahara Penerimaan')
         <li>
           <a href="javascript:;" class="has-arrow">
+            <div class="parent-icon"><i class="material-icons-outlined">fact_check</i></div>
+            <div class="menu-title">Verifikasi Tagihan</div>
+          </a>
+          <ul>
+            <li>
+              <a href="{{ route('verifikasi-bendahara-penerimaan.perjaldin.index') }}">
+                <i class="material-icons-outlined">arrow_right</i>Perjaldin
+              </a>
+            </li>
+          </ul>
+        </li>
+        <li>
+          <a href="javascript:;" class="has-arrow">
             <div class="parent-icon"><i class="material-icons-outlined">how_to_reg</i></div>
             <div class="menu-title">Verifikasi NPI</div>
           </a>
           <ul>
             <li><a href="{{ route('verifikasi-bendahara-penerimaan.npi.kontrak.index') }}"><i class="material-icons-outlined">arrow_right</i>Kontrak</a></li>
-            <li><a href="#"><i class="material-icons-outlined">arrow_right</i>Perjaldin</a></li>
+            <li><a href="{{ route('verifikasi-npi.perjaldin.index') }}"><i class="material-icons-outlined">arrow_right</i>Perjaldin</a></li>
             <li><a href="#"><i class="material-icons-outlined">arrow_right</i>Honor</a></li>
           </ul>
         </li>

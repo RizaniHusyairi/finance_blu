@@ -21,20 +21,33 @@
 
     $statusConfig = [
         'DRAFT'                => ['badge' => 'secondary', 'icon' => 'bi-circle',           'text' => 'Data belum diajukan. Silakan lengkapi dan ajukan dokumen.'],
+        'PENDING_VERIFIKASI_PERJALDIN' => ['badge' => 'primary', 'icon' => 'bi-hourglass-split', 'text' => 'Dokumen sedang diverifikasi oleh PPSPM, Bendahara Penerimaan, Bendahara Pengeluaran, dan PPK.'],
         'PENDING_PPK'          => ['badge' => 'primary',   'icon' => 'bi-hourglass-split',  'text' => 'Dokumen sedang menunggu verifikasi oleh PPK.'],
+        'PENDING_PPSPM'        => ['badge' => 'primary',   'icon' => 'bi-hourglass-split',  'text' => 'Dokumen sedang menunggu verifikasi oleh PPSPM.'],
         'REVISI_PPK'           => ['badge' => 'warning',   'icon' => 'bi-arrow-counterclockwise', 'text' => 'PPK meminta perbaikan. Silakan edit data dan ajukan kembali.'],
+        'REVISI_PPSPM'         => ['badge' => 'warning',   'icon' => 'bi-arrow-counterclockwise', 'text' => 'PPSPM meminta perbaikan. Silakan edit data dan ajukan kembali.'],
         'DITOLAK_PPK'          => ['badge' => 'danger',    'icon' => 'bi-x-octagon',        'text' => 'Dokumen ditolak oleh PPK.'],
+        'DITOLAK_PPSPM'        => ['badge' => 'danger',    'icon' => 'bi-x-octagon',        'text' => 'Dokumen ditolak oleh PPSPM.'],
         'DISETUJUI_PPK'        => ['badge' => 'info',      'icon' => 'bi-check-circle',     'text' => 'Disetujui PPK. Menunggu verifikasi Bendahara Pengeluaran.'],
         'PENDING_BENDAHARA'    => ['badge' => 'primary',   'icon' => 'bi-hourglass-split',  'text' => 'Menunggu verifikasi oleh Bendahara Pengeluaran.'],
+        'PENDING_BENDAHARA_PENERIMAAN' => ['badge' => 'primary', 'icon' => 'bi-hourglass-split', 'text' => 'Menunggu verifikasi oleh Bendahara Penerimaan.'],
+        'PENDING_BENDAHARA_PENGELUARAN' => ['badge' => 'primary', 'icon' => 'bi-hourglass-split', 'text' => 'Menunggu verifikasi oleh Bendahara Pengeluaran.'],
         'REVISI_BENDAHARA'     => ['badge' => 'warning',   'icon' => 'bi-arrow-counterclockwise', 'text' => 'Bendahara meminta perbaikan. Silakan edit data dan ajukan kembali.'],
+        'REVISI_BENDAHARA_PENERIMAAN' => ['badge' => 'warning', 'icon' => 'bi-arrow-counterclockwise', 'text' => 'Bendahara Penerimaan meminta perbaikan. Silakan edit data dan ajukan kembali.'],
+        'REVISI_BENDAHARA_PENGELUARAN' => ['badge' => 'warning', 'icon' => 'bi-arrow-counterclockwise', 'text' => 'Bendahara Pengeluaran meminta perbaikan. Silakan edit data dan ajukan kembali.'],
         'DITOLAK_BENDAHARA'    => ['badge' => 'danger',    'icon' => 'bi-x-octagon',        'text' => 'Dokumen ditolak oleh Bendahara Pengeluaran.'],
+        'DITOLAK_BENDAHARA_PENERIMAAN' => ['badge' => 'danger', 'icon' => 'bi-x-octagon', 'text' => 'Dokumen ditolak oleh Bendahara Penerimaan.'],
+        'DITOLAK_BENDAHARA_PENGELUARAN' => ['badge' => 'danger', 'icon' => 'bi-x-octagon', 'text' => 'Dokumen ditolak oleh Bendahara Pengeluaran.'],
+        'PENDING_KASUBBAG'     => ['badge' => 'info',      'icon' => 'bi-hourglass-split',  'text' => 'Seluruh verifikator sudah menyetujui. Menunggu persetujuan Kasubbag.'],
+        'REVISI_KASUBBAG'      => ['badge' => 'warning',   'icon' => 'bi-arrow-counterclockwise', 'text' => 'Kasubbag meminta perbaikan. Silakan edit data dan ajukan kembali.'],
+        'DITOLAK_KASUBBAG'     => ['badge' => 'danger',    'icon' => 'bi-x-octagon',        'text' => 'Dokumen ditolak oleh Kasubbag.'],
         'DISETUJUI_PERJALDIN'  => ['badge' => 'success',   'icon' => 'bi-check-circle-fill','text' => 'Verifikasi selesai. Dokumen telah diteruskan ke tahap berikutnya (Operator BLU).'],
     ];
 
     $cfg = $statusConfig[$status] ?? ['badge' => 'secondary', 'icon' => 'bi-question-circle', 'text' => 'Status tidak dikenali.'];
 
-    $canEdit = in_array($status, ['DRAFT', 'REVISI_PPK', 'REVISI_BENDAHARA']);
-    $canSubmit = in_array($status, ['DRAFT', 'REVISI_PPK', 'REVISI_BENDAHARA']);
+    $canEdit = in_array($status, ['DRAFT', 'REVISI_PPK', 'REVISI_PPSPM', 'REVISI_BENDAHARA', 'REVISI_BENDAHARA_PENERIMAAN', 'REVISI_BENDAHARA_PENGELUARAN', 'REVISI_KASUBBAG', 'DITOLAK_PPK', 'DITOLAK_PPSPM', 'DITOLAK_BENDAHARA_PENERIMAAN', 'DITOLAK_BENDAHARA_PENGELUARAN', 'DITOLAK_KASUBBAG']);
+    $canSubmit = $canEdit;
     $isApprovedPerjaldin = in_array($status, ['DISETUJUI_PERJALDIN', 'PROSES_COA', 'PROSES_SPP', 'SEBAGIAN_SPP_TERBIT', 'SPP_LENGKAP']);
     $isOperatorPerjaldin = auth()->user()->hasRole('Operator Perjaldin');
     $isOperatorBlu = auth()->user()->hasRole('Operator BLU');
@@ -112,7 +125,7 @@
 
     @if($isOperatorPerjaldin && $canSubmit)
         <form action="{{ route('perjaldin.workflow.submit', $tagihan->id) }}" method="POST"
-              onsubmit="return confirm('Ajukan dokumen Perjaldin ke PPK dan Bendahara?')">
+              onsubmit="return confirm('Ajukan dokumen Perjaldin ke PPSPM, Bendahara Penerimaan, Bendahara Pengeluaran, dan PPK?')">
             @csrf
             <button type="submit" class="btn btn-primary">
                 <i class="bi bi-send-check me-1"></i>Ajukan Perjaldin
@@ -129,6 +142,9 @@
 
 {{-- ═══ SECTION 3: INFORMASI DOKUMEN ═══ --}}
 @include('perjaldins.partials.detail-info', ['tagihan' => $tagihan])
+
+{{-- ═══ SECTION 3.5: INFORMASI VERIFIKATOR ═══ --}}
+@include('perjaldins.partials.verifikator-info', ['tagihan' => $tagihan])
 
 {{-- ═══ SECTION 4: WORKFLOW PROGRESS ═══ --}}
 @include('perjaldins.partials.workflow-progress', ['tagihan' => $tagihan])

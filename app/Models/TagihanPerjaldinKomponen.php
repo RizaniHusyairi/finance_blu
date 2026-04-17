@@ -84,9 +84,12 @@ class TagihanPerjaldinKomponen extends Model
                     'PENDING_KASUBBAG' => self::STATUS_PENDING_KASUBBAG,
                     'REVISI_PPK' => self::STATUS_REVISI_PPK,
                     'REVISI_KASUBBAG' => self::STATUS_REVISI_KASUBBAG,
+                    'Revisi' => self::STATUS_REVISI_PPK,
                     'DITOLAK_PPK' => self::STATUS_DITOLAK_PPK,
                     'DITOLAK_KASUBBAG' => self::STATUS_DITOLAK_KASUBBAG,
                     'DISETUJUI_SPP' => self::STATUS_DISETUJUI_SPP,
+                    'APPROVED' => self::STATUS_DISETUJUI_SPP,
+                    'Disetujui PPK' => self::STATUS_DISETUJUI_SPP,
                 ];
 
                 $status = $statusMap[$spp->status] ?? self::STATUS_SPP_DRAFT;

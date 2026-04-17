@@ -26,6 +26,7 @@ class SppPerjaldinWorkflowService
 
         $allowedSubmitStatuses = [
             'DRAFT',
+            'Revisi',
             'REVISI_PPK',
             'REVISI_KASUBBAG',
             'DITOLAK_PPK',
@@ -36,7 +37,7 @@ class SppPerjaldinWorkflowService
             throw new Exception("SPP tidak dapat disubmit karena status saat ini: {$spp->status}.");
         }
 
-        return DB::transaction(function () use ($spp, $actor, $ipAddress) {
+        return DB::transaction(function () use ($spp, $actor, $ipAddress, $allowedSubmitStatuses) {
             $definition = $this->getActiveWorkflowDefinition();
             $oldStatus = $spp->status;
 
@@ -120,20 +121,28 @@ class SppPerjaldinWorkflowService
                 'ip_address' => $ipAddress,
             ]);
 
-            // Cek apakah ada next step
-            $nextApproval = WorkflowApproval::where('workflow_instance_id', $instance->id)
-                ->where('urutan_step', '>', $approval->urutan_step)
-                ->orderBy('urutan_step', 'asc')
-                ->first();
+            // Cek apakah masih ada role lain di step yang sama yang belum approve
+            $remainingInCurrentStep = $instance->approvals()
+                ->where('urutan_step', $approval->urutan_step)
+                ->where('status', 'PENDING')
+                ->exists();
 
-            if ($nextApproval) {
-                $instance->update([
-                    'step_saat_ini' => $nextApproval->urutan_step
-                ]);
-            } else {
-                $instance->update([
-                    'status' => 'APPROVED'
-                ]);
+            if (!$remainingInCurrentStep) {
+                // Semua verifikator paralel di step ini sudah approve
+                $nextApproval = WorkflowApproval::where('workflow_instance_id', $instance->id)
+                    ->where('urutan_step', '>', $approval->urutan_step)
+                    ->orderBy('urutan_step', 'asc')
+                    ->first();
+
+                if ($nextApproval) {
+                    $instance->update([
+                        'step_saat_ini' => $nextApproval->urutan_step
+                    ]);
+                } else {
+                    $instance->update([
+                        'status' => 'APPROVED'
+                    ]);
+                }
             }
 
             $this->syncSppStatus($spp);
@@ -242,6 +251,8 @@ class SppPerjaldinWorkflowService
      */
     public function syncSppStatus(DokumenSpp $spp): void
     {
+        // Hindari membaca cache relasi lama (yang mungkin bernilai null)
+        $spp->load('workflowInstance');
         $instance = $spp->workflowInstance;
 
         if (!$instance) {
@@ -337,6 +348,10 @@ class SppPerjaldinWorkflowService
      */
     protected function normalizeRoleCode(string $roleCode): string
     {
+        if ($roleCode === 'Kepala Subbagian Keuangan dan Tata Usaha') {
+            return 'KASUBBAG';
+        }
+
         return Str::upper(str_replace([' ', '-'], '_', trim($roleCode)));
     }
 

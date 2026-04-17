@@ -97,7 +97,7 @@
                             <a href="{{ route('spps.cetak-pdf', $spp->id) }}" target="_blank" class="btn btn-sm btn-outline-danger" title="Cetak PDF">
                                 <i class="bi bi-file-pdf"></i>
                             </a>
-                            @if(in_array($spp->status, ['DRAFT', 'Revisi']))
+                            @if(in_array($spp->status, ['DRAFT', 'Revisi', 'REVISI_PPK', 'REVISI_KASUBBAG'], true))
                                 <button class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#modalSpp{{ $komponen->id }}">
                                     <i class="bi bi-pencil"></i> Edit SPP
                                 </button>
@@ -110,6 +110,9 @@
                             @else
                                 <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalSpp{{ $komponen->id }}">
                                     <i class="bi bi-eye"></i> Lihat detail
+                                </button>
+                                <button class="btn btn-sm btn-info text-white" data-bs-toggle="modal" data-bs-target="#modalAktivitas{{ $komponen->id }}">
+                                    <i class="bi bi-activity"></i> Aktivitas SPP
                                 </button>
                             @endif
                         </div>
@@ -128,7 +131,7 @@
                 @csrf
                 <div class="modal-header">
                     <h5 class="modal-title">
-                        @if($hasSpp && !in_array($spp->status, ['DRAFT', 'Revisi']))
+                        @if($hasSpp && !in_array($spp->status, ['DRAFT', 'Revisi', 'REVISI_PPK', 'REVISI_KASUBBAG'], true))
                             Lihat Draft SPP: {{ $komponen->nama_komponen }}
                         @else
                             {{ $hasSpp ? 'Edit' : 'Buat' }} Draft SPP: {{ $komponen->nama_komponen }}
@@ -137,9 +140,9 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    @php $isReadOnly = $hasSpp && !in_array($spp->status, ['DRAFT', 'Revisi']); @endphp
+                    @php $isReadOnly = $hasSpp && !in_array($spp->status, ['DRAFT', 'Revisi', 'REVISI_PPK', 'REVISI_KASUBBAG'], true); @endphp
 
-                    @if($hasSpp && $spp->status === 'Revisi')
+                    @if($hasSpp && $spp->status_spp === 'Revisi')
                         <div class="alert alert-danger mb-3">
                             <strong><i class="bi bi-exclamation-triangle-fill me-1"></i> Catatan Revisi:</strong><br>
                             {{ $spp->logs()->where('aksi', 'REVISI_SPP')->latest()->value('catatan') ?? 'Tidak ada catatan.' }}
@@ -224,3 +227,57 @@
         </div>
     </div>
 </div>
+
+<!-- Modal Aktivitas SPP -->
+@if($hasSpp)
+<div class="modal fade" id="modalAktivitas{{ $komponen->id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered text-start">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title"><i class="bi bi-activity me-2"></i>Aktivitas Workflow SPP</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0">
+                <ul class="list-group list-group-flush">
+                    @php
+                        $workflow = $spp->workflowInstances?->sortByDesc('created_at')->first();
+                        $apps = $workflow ? $workflow->approvals->sortBy('urutan_step') : collect([]);
+                    @endphp
+                    @forelse($apps as $app)
+                        <li class="list-group-item d-flex justify-content-between align-items-center py-3">
+                            <div>
+                                <h6 class="mb-1 fw-bold">{{ $app->nama_step }}</h6>
+                                <small class="text-muted"><i class="bi bi-person me-1"></i>{{ $app->actedByUser?->name ?? 'Sistem / Belum Ditentukan' }}</small>
+                                @if($app->catatan)
+                                <div class="small text-warning mt-1"><i class="bi bi-chat-left-text me-1"></i>Catatan: {{ $app->catatan }}</div>
+                                @endif
+                                @if($app->acted_at)
+                                <div class="small text-muted mt-1"><i class="bi bi-clock me-1"></i>{{ \Carbon\Carbon::parse($app->acted_at)->format('d M Y, H:i') }}</div>
+                                @endif
+                            </div>
+                            <div>
+                                @if($app->status === 'APPROVED')
+                                    <span class="badge bg-success rounded-pill px-3 py-2">Selesai</span>
+                                @elseif($app->status === 'REJECTED')
+                                    <span class="badge bg-danger rounded-pill px-3 py-2">Ditolak</span>
+                                @elseif($app->status === 'REVISION')
+                                    <span class="badge bg-warning rounded-pill px-3 py-2 text-dark">Revisi</span>
+                                @elseif($app->status === 'PENDING')
+                                    <span class="badge bg-primary rounded-pill px-3 py-2">Menunggu</span>
+                                @else
+                                    <span class="badge bg-secondary rounded-pill px-3 py-2">Belum</span>
+                                @endif
+                            </div>
+                        </li>
+                    @empty
+                        <li class="list-group-item text-center py-4 text-muted">Belum ada aktivitas workflow tercatat. Pastikan SPP telah diajukan ke PPK.</li>
+                    @endforelse
+                </ul>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+            </div>
+        </div>
+    </div>
+</div>
+@endif

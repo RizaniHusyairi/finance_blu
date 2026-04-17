@@ -4,6 +4,30 @@ namespace App\Models;
 
 class Spp extends DokumenSpp
 {
+    public function getMorphClass()
+    {
+        return DokumenSpp::class;
+    }
+
+    public function getKategoriBiayaAttribute()
+    {
+        return $this->komponen_biaya
+            ?: $this->kategori_pembayaran
+            ?: $this->jenis_tagihan;
+    }
+
+    public function getJumlahUangAttribute()
+    {
+        return $this->nominal_spp;
+    }
+
+    public function getUraianAttribute()
+    {
+        return $this->attributes['uraian']
+            ?? optional($this->tagihan)->deskripsi
+            ?? 'Belanja Perjalanan Dinas';
+    }
+
     public function getSppIdAttribute()
     {
         return $this->id;
@@ -91,6 +115,12 @@ class Spp extends DokumenSpp
             return $this->spm->status_spp;
         }
 
-        return $this->status;
+        return match ($this->status) {
+            'PENDING_PPK', 'Menunggu Verifikasi' => 'Menunggu Verifikasi',
+            'PENDING_KASUBBAG' => 'Menunggu Verifikasi Kasubbag',
+            'REVISI_PPK', 'REVISI_KASUBBAG', 'Revisi' => 'Revisi',
+            'DISETUJUI_SPP', 'APPROVED', 'Disetujui PPK' => 'Disetujui PPK',
+            default => $this->status,
+        };
     }
 }

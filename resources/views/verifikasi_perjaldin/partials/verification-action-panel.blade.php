@@ -2,19 +2,14 @@
 {{-- Variables: $tagihan, $userRole, $approveRoute, $revisiRoute --}}
 @php
     $status = $tagihan->status;
-    $isPpk = $userRole === 'PPK';
-    $isBendahara = $userRole === 'Bendahara Pengeluaran';
-
-    $canActPpk        = $isPpk && $status === 'PENDING_PPK';
-    $canActBendahara  = $isBendahara && $status === 'PENDING_BENDAHARA';
-    $canAct = $canActPpk || $canActBendahara;
+    $currentApproval = $currentApproval ?? null;
+    $canAct = (bool) $currentApproval;
 
     $panelClass = $canAct ? 'border-primary' : 'border-secondary';
     $headerClass = $canAct ? 'bg-primary text-white' : 'bg-light text-secondary';
 
-    $revisiStatuses = ['REVISI_PPK','REVISI_BENDAHARA'];
     $lastRevisiLog = $tagihan->logs
-        ->filter(fn($l) => in_array($l->status_baru, $revisiStatuses))
+        ->filter(fn($l) => str_starts_with((string) $l->status_baru, 'REVISI_'))
         ->sortByDesc('created_at')
         ->first();
 @endphp
@@ -77,34 +72,17 @@
                 </button>
             </form>
 
-        @elseif($isPpk && $status === 'PENDING_BENDAHARA')
-            <div class="text-center py-3">
-                <i class="bi bi-check-circle-fill text-success fs-2 mb-2 d-block"></i>
-                <p class="fw-semibold text-success mb-1">Anda sudah menyetujui dokumen ini.</p>
-                <p class="text-muted small">Saat ini dokumen menunggu verifikasi <strong>Bendahara Pengeluaran</strong>.</p>
-            </div>
-        @elseif($isPpk && $status === 'DISETUJUI_PERJALDIN')
-            <div class="text-center py-3">
-                <i class="bi bi-check-all text-success fs-2 mb-2 d-block"></i>
-                <p class="fw-semibold text-success mb-1">Dokumen telah disetujui penuh.</p>
-                <p class="text-muted small">Verifikasi selesai oleh PPK dan Bendahara Pengeluaran.</p>
-            </div>
-        @elseif($isBendahara && !in_array($status, ['PENDING_BENDAHARA','DISETUJUI_PERJALDIN']))
-            <div class="text-center py-3 text-muted">
-                <i class="bi bi-lock fs-2 mb-2 d-block"></i>
-                <p class="small">Dokumen belum berada pada tahap verifikasi Bendahara Pengeluaran.</p>
-                <p class="small mb-0">Status saat ini: <strong>@include('verifikasi_perjaldin.partials.status-badge', ['status' => $status])</strong></p>
-            </div>
         @elseif($status === 'DISETUJUI_PERJALDIN')
             <div class="text-center py-3">
                 <i class="bi bi-check-all text-success fs-2 mb-2 d-block"></i>
                 <p class="fw-semibold text-success mb-1">Verifikasi selesai.</p>
-                <p class="text-muted small">Dokumen telah disetujui oleh semua pihak.</p>
+                <p class="text-muted small">Dokumen telah disetujui seluruh verifikator dan Kasubbag.</p>
             </div>
         @else
             <div class="text-center py-3 text-muted">
                 <i class="bi bi-info-circle fs-2 mb-2 d-block"></i>
                 <p class="small">Dokumen ini tidak berada pada tahap verifikasi Anda saat ini.</p>
+                <p class="small mb-0">Status saat ini: <strong>@include('verifikasi_perjaldin.partials.status-badge', ['status' => $status])</strong></p>
             </div>
         @endif
     </div>

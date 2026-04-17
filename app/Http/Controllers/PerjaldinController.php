@@ -9,6 +9,7 @@ use App\Models\DetailPerjaldin;
 use App\Models\MasterPegawai;
 use App\Models\MasterUangHarianPerjaldin;
 use App\Models\LogStatusDokumen;
+use App\Models\User;
 use App\Support\DipaBudgetOptionService;
 use App\Services\PerjaldinKomponenService;
 
@@ -99,11 +100,13 @@ class PerjaldinController extends Controller
     {
         $budgetGroups = DipaBudgetOptionService::groupedOptions();
         $masterProvinsi = MasterUangHarianPerjaldin::orderBy('provinsi')->get();
-        // Load User PPK dan Bendahara Pengeluaran
-        $ppkUsers = clone \App\Models\User::role('PPK')->get();
-        $bendaharaUsers = clone \App\Models\User::role('Bendahara Pengeluaran')->get();
+        $ppkUsers = User::role('PPK')->with('pegawai')->orderBy('name')->get();
+        $ppspmUsers = User::role('PPSPM')->with('pegawai')->orderBy('name')->get();
+        $bendaharaPenerimaanUsers = User::role('Bendahara Penerimaan')->with('pegawai')->orderBy('name')->get();
+        $bendaharaUsers = User::role('Bendahara Pengeluaran')->with('pegawai')->orderBy('name')->get();
+        $kasubbagUser = User::role('Kepala Subbagian Keuangan dan Tata Usaha')->with('pegawai')->orderBy('name')->first();
 
-        return view('perjaldins.create', compact('budgetGroups', 'masterProvinsi', 'ppkUsers', 'bendaharaUsers'));
+        return view('perjaldins.create', compact('budgetGroups', 'masterProvinsi', 'ppkUsers', 'ppspmUsers', 'bendaharaPenerimaanUsers', 'bendaharaUsers', 'kasubbagUser'));
     }
 
     /**
@@ -128,9 +131,18 @@ class PerjaldinController extends Controller
             'ppk_user_id' => 'nullable|exists:users,id',
             'ppk_nama_snapshot' => 'required|string|max:150',
             'ppk_nip_snapshot' => 'required|string|max:100',
-            'bendahara_pengeluaran_user_id' => 'nullable|exists:users,id',
+            'ppspm_user_id' => 'required|exists:users,id',
+            'ppspm_nama_snapshot' => 'required|string|max:150',
+            'ppspm_nip_snapshot' => 'nullable|string|max:100',
+            'bendahara_penerimaan_user_id' => 'required|exists:users,id',
+            'bendahara_penerimaan_nama_snapshot' => 'required|string|max:150',
+            'bendahara_penerimaan_nip_snapshot' => 'nullable|string|max:100',
+            'bendahara_pengeluaran_user_id' => 'required|exists:users,id',
             'bendahara_pengeluaran_nama_snapshot' => 'required|string|max:150',
             'bendahara_pengeluaran_nip_snapshot' => 'required|string|max:100',
+            'kasubbag_user_id' => 'required|exists:users,id',
+            'kasubbag_nama_snapshot' => 'required|string|max:150',
+            'kasubbag_nip_snapshot' => 'nullable|string|max:100',
 
             'peserta' => 'required|array|min:1',
             'peserta.*.nama_pegawai' => 'required|string|max:150',
@@ -168,9 +180,18 @@ class PerjaldinController extends Controller
                 'ppk_user_id' => $request->ppk_user_id,
                 'ppk_nama_snapshot' => $request->ppk_nama_snapshot,
                 'ppk_nip_snapshot' => $request->ppk_nip_snapshot,
+                'ppspm_user_id' => $request->ppspm_user_id,
+                'ppspm_nama_snapshot' => $request->ppspm_nama_snapshot,
+                'ppspm_nip_snapshot' => $request->ppspm_nip_snapshot,
+                'bendahara_penerimaan_user_id' => $request->bendahara_penerimaan_user_id,
+                'bendahara_penerimaan_nama_snapshot' => $request->bendahara_penerimaan_nama_snapshot,
+                'bendahara_penerimaan_nip_snapshot' => $request->bendahara_penerimaan_nip_snapshot,
                 'bendahara_pengeluaran_user_id' => $request->bendahara_pengeluaran_user_id,
                 'bendahara_pengeluaran_nama_snapshot' => $request->bendahara_pengeluaran_nama_snapshot,
                 'bendahara_pengeluaran_nip_snapshot' => $request->bendahara_pengeluaran_nip_snapshot,
+                'kasubbag_user_id' => $request->kasubbag_user_id,
+                'kasubbag_nama_snapshot' => $request->kasubbag_nama_snapshot,
+                'kasubbag_nip_snapshot' => $request->kasubbag_nip_snapshot,
                 'total_bruto' => $totalBruto,
                 'total_potongan' => 0,
                 'total_netto' => $totalBruto,
@@ -256,11 +277,16 @@ class PerjaldinController extends Controller
         if ($updatedCount > 0) {
             // Kirim notifikasi ke PPK (Optional)
             try {
-                $verifikators = \App\Models\User::role('PPK')->get(); // Nanti ini bisa dinamis berdasarkan next step
+                $verifikators = \App\Models\User::role([
+                    'PPSPM',
+                    'Bendahara Penerimaan',
+                    'Bendahara Pengeluaran',
+                    'PPK',
+                ])->get();
                 \Illuminate\Support\Facades\Notification::send($verifikators, new \App\Notifications\WorkflowNotification([
                     'title' => 'Pengajuan Perjaldin Baru',
-                    'message' => "Ada {$updatedCount} Pengajuan Perjaldin baru masuk alur persetujuan.",
-                    'url' => route('verifikasi-ppk.index'),
+                    'message' => "Ada {$updatedCount} pengajuan Perjaldin baru masuk alur verifikasi.",
+                    'url' => route('dashboard'),
                     'icon' => 'assignment',
                     'color' => 'warning'
                 ]));
@@ -289,6 +315,8 @@ class PerjaldinController extends Controller
                 'komponenPerjaldin.dokumenSpp.spm.npi.sp2d',
                 'komponenPerjaldin.dipaRevisionItem.coa',
                 'logs' => fn($q) => $q->latest(),
+                'workflowInstances' => fn($q) => $q->latest(),
+                'workflowInstances.approvals.actedByUser',
             ])
             ->findOrFail($id);
 
@@ -306,18 +334,20 @@ class PerjaldinController extends Controller
             ->with('detailPerjaldin.pegawai')
             ->findOrFail($id);
 
-        if (!in_array($tagihan->status, ['DRAFT', 'REVISI_PPK', 'DITOLAK_PPK'])) {
+        if (!in_array($tagihan->status, $this->editablePerjaldinStatuses())) {
             return redirect()->route('perjaldins.index')
                 ->withErrors(['error' => 'Tagihan tidak bisa diedit karena statusnya sudah: ' . $tagihan->status]);
         }
 
         $budgetGroups = DipaBudgetOptionService::groupedOptions();
         $masterProvinsi = MasterUangHarianPerjaldin::orderBy('provinsi')->get();
-        // Load User PPK dan Bendahara Pengeluaran
-        $ppkUsers = clone \App\Models\User::role('PPK')->get();
-        $bendaharaUsers = clone \App\Models\User::role('Bendahara Pengeluaran')->get();
+        $ppkUsers = User::role('PPK')->with('pegawai')->orderBy('name')->get();
+        $ppspmUsers = User::role('PPSPM')->with('pegawai')->orderBy('name')->get();
+        $bendaharaPenerimaanUsers = User::role('Bendahara Penerimaan')->with('pegawai')->orderBy('name')->get();
+        $bendaharaUsers = User::role('Bendahara Pengeluaran')->with('pegawai')->orderBy('name')->get();
+        $kasubbagUser = User::role('Kepala Subbagian Keuangan dan Tata Usaha')->with('pegawai')->orderBy('name')->first();
 
-        return view('perjaldins.edit-perjaldin', compact('tagihan', 'budgetGroups', 'masterProvinsi', 'ppkUsers', 'bendaharaUsers'));
+        return view('perjaldins.edit-perjaldin', compact('tagihan', 'budgetGroups', 'masterProvinsi', 'ppkUsers', 'ppspmUsers', 'bendaharaPenerimaanUsers', 'bendaharaUsers', 'kasubbagUser'));
     }
 
     /**
@@ -327,7 +357,7 @@ class PerjaldinController extends Controller
     {
         $tagihan = Tagihan::where('tipe_tagihan', 'PERJALDIN')->findOrFail($id);
 
-        if (!in_array($tagihan->status, ['DRAFT', 'REVISI_PPK', 'DITOLAK_PPK'])) {
+        if (!in_array($tagihan->status, $this->editablePerjaldinStatuses())) {
             return redirect()->route('perjaldins.index')
                 ->withErrors(['error' => 'Tagihan tidak bisa diedit karena statusnya sudah: ' . $tagihan->status]);
         }
@@ -349,9 +379,18 @@ class PerjaldinController extends Controller
             'ppk_user_id' => 'nullable|exists:users,id',
             'ppk_nama_snapshot' => 'required|string|max:150',
             'ppk_nip_snapshot' => 'required|string|max:100',
-            'bendahara_pengeluaran_user_id' => 'nullable|exists:users,id',
+            'ppspm_user_id' => 'required|exists:users,id',
+            'ppspm_nama_snapshot' => 'required|string|max:150',
+            'ppspm_nip_snapshot' => 'nullable|string|max:100',
+            'bendahara_penerimaan_user_id' => 'required|exists:users,id',
+            'bendahara_penerimaan_nama_snapshot' => 'required|string|max:150',
+            'bendahara_penerimaan_nip_snapshot' => 'nullable|string|max:100',
+            'bendahara_pengeluaran_user_id' => 'required|exists:users,id',
             'bendahara_pengeluaran_nama_snapshot' => 'required|string|max:150',
             'bendahara_pengeluaran_nip_snapshot' => 'required|string|max:100',
+            'kasubbag_user_id' => 'required|exists:users,id',
+            'kasubbag_nama_snapshot' => 'required|string|max:150',
+            'kasubbag_nip_snapshot' => 'nullable|string|max:100',
 
             'peserta' => 'required|array|min:1',
             'peserta.*.detail_id' => 'nullable|exists:detail_perjaldin,id',
@@ -391,9 +430,18 @@ class PerjaldinController extends Controller
                 'ppk_user_id' => $request->ppk_user_id,
                 'ppk_nama_snapshot' => $request->ppk_nama_snapshot,
                 'ppk_nip_snapshot' => $request->ppk_nip_snapshot,
+                'ppspm_user_id' => $request->ppspm_user_id,
+                'ppspm_nama_snapshot' => $request->ppspm_nama_snapshot,
+                'ppspm_nip_snapshot' => $request->ppspm_nip_snapshot,
+                'bendahara_penerimaan_user_id' => $request->bendahara_penerimaan_user_id,
+                'bendahara_penerimaan_nama_snapshot' => $request->bendahara_penerimaan_nama_snapshot,
+                'bendahara_penerimaan_nip_snapshot' => $request->bendahara_penerimaan_nip_snapshot,
                 'bendahara_pengeluaran_user_id' => $request->bendahara_pengeluaran_user_id,
                 'bendahara_pengeluaran_nama_snapshot' => $request->bendahara_pengeluaran_nama_snapshot,
                 'bendahara_pengeluaran_nip_snapshot' => $request->bendahara_pengeluaran_nip_snapshot,
+                'kasubbag_user_id' => $request->kasubbag_user_id,
+                'kasubbag_nama_snapshot' => $request->kasubbag_nama_snapshot,
+                'kasubbag_nip_snapshot' => $request->kasubbag_nip_snapshot,
                 'total_bruto' => $totalBruto,
                 'total_netto' => $totalBruto - $tagihan->total_potongan,
                 'status' => 'DRAFT', // Reset ke draft saat diedit
@@ -477,7 +525,7 @@ class PerjaldinController extends Controller
     {
         $tagihan = Tagihan::where('tipe_tagihan', 'PERJALDIN')->findOrFail($id);
 
-        if (!in_array($tagihan->status, ['DRAFT', 'REVISI_PPK', 'DITOLAK_PPK'])) {
+        if (!in_array($tagihan->status, $this->editablePerjaldinStatuses())) {
             return redirect()->route('perjaldins.index')
                 ->withErrors(['error' => 'Tidak dapat menghapus tagihan dengan status: ' . $tagihan->status]);
         }
@@ -505,5 +553,22 @@ class PerjaldinController extends Controller
 
         return $pdf->stream('Nominatif_Perjaldin_' . \Illuminate\Support\Str::slug($tagihan->nomor_tagihan, '_') . '.pdf');
     }
-}
 
+    private function editablePerjaldinStatuses(): array
+    {
+        return [
+            'DRAFT',
+            'REVISI_PPK',
+            'REVISI_PPSPM',
+            'REVISI_BENDAHARA',
+            'REVISI_BENDAHARA_PENERIMAAN',
+            'REVISI_BENDAHARA_PENGELUARAN',
+            'REVISI_KASUBBAG',
+            'DITOLAK_PPK',
+            'DITOLAK_PPSPM',
+            'DITOLAK_BENDAHARA_PENERIMAAN',
+            'DITOLAK_BENDAHARA_PENGELUARAN',
+            'DITOLAK_KASUBBAG',
+        ];
+    }
+}

@@ -53,24 +53,28 @@
                         <input type="text" name="kota_ttd" class="form-control" placeholder="Samarinda" required value="{{ old('kota_ttd', $tagihan->kota_ttd) }}">
                     </div>
                     <div class="col-md-3 mb-3">
-                    <div class="col-md-3 mb-3">
                         <label class="form-label">Tanggal TTD <span class="text-danger">*</span></label>
                         <input type="date" name="tanggal_ttd" class="form-control" required value="{{ old('tanggal_ttd', $tagihan->tanggal_ttd) }}">
                     </div>
                 </div>
 
-                <!-- SECTION B: PENANDATANGAN -->
-                <h5 class="mb-3 border-bottom pb-2 text-primary mt-4"><i class="bi bi-pen"></i> Bagian B: Penandatangan Dokumen</h5>
+                <!-- SECTION B: VERIFIKATOR -->
+                <h5 class="mb-3 border-bottom pb-2 text-primary mt-4"><i class="bi bi-pen"></i> Bagian B: Verifikator Dokumen</h5>
+                @php
+                    $kasubbagId = old('kasubbag_user_id', $tagihan->kasubbag_user_id ?: optional($kasubbagUser)->id);
+                    $kasubbagNama = old('kasubbag_nama_snapshot', $tagihan->kasubbag_nama_snapshot ?: optional($kasubbagUser)->name);
+                    $kasubbagNip = old('kasubbag_nip_snapshot', $tagihan->kasubbag_nip_snapshot ?: optional(optional($kasubbagUser)->pegawai)->nip);
+                @endphp
                 <div class="row mb-4">
                     <!-- PPK -->
-                    <div class="col-md-6 mb-3 border-end">
+                    <div class="col-md-6 col-xl mb-3">
                         <h6 class="text-muted mb-3">Pejabat Pembuat Komitmen</h6>
                         <div class="mb-2">
                             <label class="form-label">Pilih User PPK (Opsional)</label>
                             <select name="ppk_user_id" class="form-select select2" id="ppkUserId">
                                 <option value="">-- Pilih User PPK --</option>
                                 @foreach($ppkUsers as $user)
-                                    <option value="{{ $user->id }}" data-nip="{{ $user->nip }}" data-nama="{{ $user->name }}" {{ old('ppk_user_id', $tagihan->ppk_user_id) == $user->id ? 'selected' : '' }}>
+                                    <option value="{{ $user->id }}" data-nip="{{ optional($user->pegawai)->nip }}" data-nama="{{ $user->name }}" {{ old('ppk_user_id', $tagihan->ppk_user_id) == $user->id ? 'selected' : '' }}>
                                         {{ $user->name }}
                                     </option>
                                 @endforeach
@@ -87,15 +91,65 @@
                         </div>
                     </div>
 
+                    <!-- PPSPM -->
+                    <div class="col-md-6 col-xl mb-3">
+                        <h6 class="text-muted mb-3">PPSPM</h6>
+                        <div class="mb-2">
+                            <label class="form-label">Pilih User PPSPM <span class="text-danger">*</span></label>
+                            <select name="ppspm_user_id" class="form-select select2" id="ppspmUserId" required>
+                                <option value="">-- Pilih User PPSPM --</option>
+                                @foreach($ppspmUsers as $user)
+                                    <option value="{{ $user->id }}" data-nip="{{ optional($user->pegawai)->nip }}" data-nama="{{ $user->name }}" {{ old('ppspm_user_id', $tagihan->ppspm_user_id) == $user->id ? 'selected' : '' }}>
+                                        {{ $user->name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            <small class="text-muted d-block mt-1">Pilih untuk auto-fill Nama & NIP di bawah ini</small>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label">Nama PPSPM <span class="text-danger">*</span></label>
+                            <input type="text" name="ppspm_nama_snapshot" id="ppspmNamaSnapshot" class="form-control" required value="{{ old('ppspm_nama_snapshot', $tagihan->ppspm_nama_snapshot) }}">
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label">NIP PPSPM</label>
+                            <input type="text" name="ppspm_nip_snapshot" id="ppspmNipSnapshot" class="form-control" value="{{ old('ppspm_nip_snapshot', $tagihan->ppspm_nip_snapshot) }}">
+                        </div>
+                    </div>
+
+                    <!-- Bendahara Penerimaan -->
+                    <div class="col-md-6 col-xl mb-3">
+                        <h6 class="text-muted mb-3">Bendahara Penerimaan</h6>
+                        <div class="mb-2">
+                            <label class="form-label">Pilih User Bendahara Penerimaan <span class="text-danger">*</span></label>
+                            <select name="bendahara_penerimaan_user_id" class="form-select select2" id="bendaharaPenerimaanUserId" required>
+                                <option value="">-- Pilih Bendahara Penerimaan --</option>
+                                @foreach($bendaharaPenerimaanUsers as $user)
+                                    <option value="{{ $user->id }}" data-nip="{{ optional($user->pegawai)->nip }}" data-nama="{{ $user->name }}" {{ old('bendahara_penerimaan_user_id', $tagihan->bendahara_penerimaan_user_id) == $user->id ? 'selected' : '' }}>
+                                        {{ $user->name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            <small class="text-muted d-block mt-1">Pilih untuk auto-fill Nama & NIP di bawah ini</small>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label">Nama Bendahara Penerimaan <span class="text-danger">*</span></label>
+                            <input type="text" name="bendahara_penerimaan_nama_snapshot" id="bendaharaPenerimaanNamaSnapshot" class="form-control" required value="{{ old('bendahara_penerimaan_nama_snapshot', $tagihan->bendahara_penerimaan_nama_snapshot) }}">
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label">NIP Bendahara Penerimaan</label>
+                            <input type="text" name="bendahara_penerimaan_nip_snapshot" id="bendaharaPenerimaanNipSnapshot" class="form-control" value="{{ old('bendahara_penerimaan_nip_snapshot', $tagihan->bendahara_penerimaan_nip_snapshot) }}">
+                        </div>
+                    </div>
+
                     <!-- Bendahara Pengeluaran -->
-                    <div class="col-md-6 mb-3">
+                    <div class="col-md-6 col-xl mb-3">
                         <h6 class="text-muted mb-3">Bendahara Pengeluaran</h6>
                         <div class="mb-2">
-                            <label class="form-label">Pilih User Bendahara (Opsional)</label>
-                            <select name="bendahara_pengeluaran_user_id" class="form-select select2" id="bendaharaUserId">
+                            <label class="form-label">Pilih User Bendahara <span class="text-danger">*</span></label>
+                            <select name="bendahara_pengeluaran_user_id" class="form-select select2" id="bendaharaUserId" required>
                                 <option value="">-- Pilih User Bendahara --</option>
                                 @foreach($bendaharaUsers as $user)
-                                    <option value="{{ $user->id }}" data-nip="{{ $user->nip }}" data-nama="{{ $user->name }}" {{ old('bendahara_pengeluaran_user_id', $tagihan->bendahara_pengeluaran_user_id) == $user->id ? 'selected' : '' }}>
+                                    <option value="{{ $user->id }}" data-nip="{{ optional($user->pegawai)->nip }}" data-nama="{{ $user->name }}" {{ old('bendahara_pengeluaran_user_id', $tagihan->bendahara_pengeluaran_user_id) == $user->id ? 'selected' : '' }}>
                                         {{ $user->name }}
                                     </option>
                                 @endforeach
@@ -109,6 +163,23 @@
                         <div class="mb-2">
                             <label class="form-label">NIP Bendahara (Cetak PDF) <span class="text-danger">*</span></label>
                             <input type="text" name="bendahara_pengeluaran_nip_snapshot" id="bendaharaNipSnapshot" class="form-control" required value="{{ old('bendahara_pengeluaran_nip_snapshot', $tagihan->bendahara_pengeluaran_nip_snapshot) }}">
+                        </div>
+                    </div>
+
+                    <!-- Kasubbag -->
+                    <div class="col-md-6 col-xl mb-3">
+                        <h6 class="text-muted mb-3">Kasubbag</h6>
+                        <input type="hidden" name="kasubbag_user_id" value="{{ $kasubbagId }}">
+                        <div class="mb-2">
+                            <label class="form-label">User Kasubbag</label>
+                            <input type="text" class="form-control" readonly value="{{ $kasubbagNama ?: 'Belum ada user Kasubbag' }}">
+                            <input type="hidden" name="kasubbag_nama_snapshot" value="{{ $kasubbagNama }}">
+                            <small class="text-muted d-block mt-1">Ditentukan otomatis dari role Kasubbag.</small>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label">NIP Kasubbag</label>
+                            <input type="text" class="form-control" readonly value="{{ $kasubbagNip ?: '-' }}">
+                            <input type="hidden" name="kasubbag_nip_snapshot" value="{{ $kasubbagNip }}">
                         </div>
                     </div>
                 </div>
@@ -228,6 +299,24 @@
                 if(selected.val() !== '') {
                     $('#ppkNamaSnapshot').val(selected.data('nama'));
                     $('#ppkNipSnapshot').val(selected.data('nip'));
+                }
+            });
+
+            // Auto-fill PPSPM
+            $('#ppspmUserId').change(function() {
+                let selected = $(this).find(':selected');
+                if(selected.val() !== '') {
+                    $('#ppspmNamaSnapshot').val(selected.data('nama'));
+                    $('#ppspmNipSnapshot').val(selected.data('nip'));
+                }
+            });
+
+            // Auto-fill Bendahara Penerimaan
+            $('#bendaharaPenerimaanUserId').change(function() {
+                let selected = $(this).find(':selected');
+                if(selected.val() !== '') {
+                    $('#bendaharaPenerimaanNamaSnapshot').val(selected.data('nama'));
+                    $('#bendaharaPenerimaanNipSnapshot').val(selected.data('nip'));
                 }
             });
 

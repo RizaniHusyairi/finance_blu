@@ -1,10 +1,10 @@
 {{-- list-summary.blade.php --}}
 {{-- Variables: $tagihans, $roleLabel, $pendingStatus --}}
 @php
-    $totalPending  = $tagihans->whereIn('status', $pendingStatuses)->count();
+    $totalPending  = isset($tagihansPerlu) ? $tagihansPerlu->count() : $tagihans->whereIn('status', $pendingStatuses)->count();
     $totalRevisi   = $tagihans->whereIn('status', $revisiStatuses)->count();
-    $totalSelesai  = $tagihans->whereIn('status', $selesaiStatuses)->count();
-    $totalNominal  = $tagihans->whereIn('status', $pendingStatuses)->sum('total_bruto');
+    $totalSelesai  = isset($tagihansRiwayat) ? $tagihansRiwayat->count() : $tagihans->whereIn('status', $selesaiStatuses)->count();
+    $totalNominal  = isset($tagihansPerlu) ? $tagihansPerlu->sum('total_bruto') : $tagihans->whereIn('status', $pendingStatuses)->sum('total_bruto');
 @endphp
 
 <div class="row g-3 mb-4">
