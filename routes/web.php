@@ -144,6 +144,8 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
         Route::get('/honorarium/{id}/edit', [HonorariumController::class, 'edit'])->name('honorarium.edit');
         Route::put('/honorarium/{id}', [HonorariumController::class, 'update'])->name('honorarium.update');
         Route::delete('/honorarium/{id}', [HonorariumController::class, 'destroy'])->name('honorarium.destroy');
+        Route::get('/honorarium/{id}/pdf', [HonorariumController::class, 'exportPdf'])->name('honorarium.pdf');
+        Route::get('/honorarium/{id}/pdf-nominatif', [HonorariumController::class, 'exportNominatifPdf'])->name('honorarium.pdf-nominatif');
     });
 
     // Manajemen Perjaldin — Operator Perjaldin

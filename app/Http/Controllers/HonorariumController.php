@@ -13,6 +13,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\Notification;
 use App\Support\DipaBudgetOptionService;
 use App\Notifications\WorkflowNotification;
+use App\Services\DocumentArchiveService;
 
 class HonorariumController extends Controller
 {
@@ -57,8 +58,13 @@ class HonorariumController extends Controller
     {
         $budgetGroups = DipaBudgetOptionService::groupedOptions();
         $nextNumber = $this->generateNextNumber();
+        $tarifPajaks = \App\Models\MasterTarifPajak::where('status_aktif', true)
+            ->where('kode_pajak', 'like', 'PPH%')
+            ->orderBy('kode_pajak')->get();
+        $ppkUsers = User::role('PPK')->get();
+        $bendaharaUsers = User::role('Bendahara Pengeluaran')->get();
 
-        return view('honorarium.create', compact('budgetGroups', 'nextNumber'));
+        return view('honorarium.create', compact('budgetGroups', 'nextNumber', 'tarifPajaks', 'ppkUsers', 'bendaharaUsers'));
     }
 
     public function store(Request $request)
@@ -88,6 +94,10 @@ class HonorariumController extends Controller
             'items.*.rekening' => 'nullable|string|max:100',
             'items.*.jenis_bank' => 'nullable|string|max:50',
             'items.*.nama_rekening' => 'nullable|string|max:100',
+            'items.*.no_hp' => 'nullable|string|max:50',
+            'file_sk' => 'nullable|file|mimes:pdf,doc,docx|max:10240',
+            'ppk_id' => 'required|exists:users,id',
+            'bendahara_pengeluaran_id' => 'required|exists:users,id',
         ]);
 
         try {
@@ -104,6 +114,9 @@ class HonorariumController extends Controller
 
             $status = $request->submit_type === 'submit_ppk' ? 'PENDING_PPK' : 'DRAFT';
 
+            $ppk = User::find($request->ppk_id);
+            $bendahara = User::find($request->bendahara_pengeluaran_id);
+
             $tagihan = Tagihan::create([
                 'nomor_tagihan' => $nomorTagihan,
                 'tipe_tagihan' => 'HONORARIUM',
@@ -115,6 +128,12 @@ class HonorariumController extends Controller
                 'total_netto' => $totalNetto,
                 'status' => $status,
                 'created_by' => auth()->id(),
+                'ppk_user_id' => $ppk?->id,
+                'ppk_nama_snapshot' => $ppk?->name,
+                'ppk_nip_snapshot' => $ppk?->nip,
+                'bendahara_pengeluaran_user_id' => $bendahara?->id,
+                'bendahara_pengeluaran_nama_snapshot' => $bendahara?->name,
+                'bendahara_pengeluaran_nip_snapshot' => $bendahara?->nip,
             ]);
 
             foreach ($request->items as $itemData) {
@@ -129,6 +148,7 @@ class HonorariumController extends Controller
                     'rekening' => $itemData['rekening'] ?? '',
                     'jenis_bank' => $itemData['jenis_bank'] ?? '',
                     'nama_rekening' => $itemData['nama_rekening'] ?? '',
+                    'no_hp' => $itemData['no_hp'] ?? '',
                 ]);
             }
 
@@ -145,6 +165,19 @@ class HonorariumController extends Controller
                     : 'Tagihan Honorarium dibuat sebagai Draft.',
                 'ip_address' => $request->ip(),
             ]);
+
+            if ($request->hasFile('file_sk')) {
+                app(DocumentArchiveService::class)->upload(
+                    $tagihan,
+                    'SK Honorarium',
+                    $request->file('file_sk'),
+                    [
+                        'directory' => 'arsip-dokumen/Tagihan',
+                        'uploaded_by' => Auth::id(),
+                        'keterangan' => 'File SK otomatis terunggah saat pembuatan NPI Honorarium',
+                    ]
+                );
+            }
 
             if ($status === 'PENDING_PPK') {
                 $this->notifyRoles(
@@ -184,8 +217,14 @@ class HonorariumController extends Controller
         }
 
         $budgetGroups = DipaBudgetOptionService::groupedOptions();
+        $tarifPajaks = \App\Models\MasterTarifPajak::where('status_aktif', true)
+            ->where('kode_pajak', 'like', 'PPH%')
+            ->orderBy('kode_pajak')->get();
 
-        return view('honorarium.edit', compact('tagihan', 'budgetGroups'));
+        $ppkUsers = User::role('PPK')->get();
+        $bendaharaUsers = User::role('Bendahara Pengeluaran')->get();
+
+        return view('honorarium.edit', compact('tagihan', 'budgetGroups', 'tarifPajaks', 'ppkUsers', 'bendaharaUsers'));
     }
 
     public function update(Request $request, $id)
@@ -221,6 +260,10 @@ class HonorariumController extends Controller
             'items.*.rekening' => 'nullable|string|max:100',
             'items.*.jenis_bank' => 'nullable|string|max:50',
             'items.*.nama_rekening' => 'nullable|string|max:100',
+            'items.*.no_hp' => 'nullable|string|max:50',
+            'file_sk' => 'nullable|file|mimes:pdf,doc,docx|max:10240',
+            'ppk_id' => 'required|exists:users,id',
+            'bendahara_pengeluaran_id' => 'required|exists:users,id',
         ]);
 
         try {
@@ -234,6 +277,9 @@ class HonorariumController extends Controller
             $statusLama = $tagihan->status;
             $statusBaru = $request->submit_type === 'submit_ppk' ? 'PENDING_PPK' : 'DRAFT';
 
+            $ppk = User::find($request->ppk_id);
+            $bendahara = User::find($request->bendahara_pengeluaran_id);
+
             $tagihan->update([
                 'master_dipa_id' => $selectedItem->dipaRevision->master_dipa_id,
                 'dipa_revision_item_id' => $selectedItem->id,
@@ -242,6 +288,12 @@ class HonorariumController extends Controller
                 'total_potongan' => $totalPph,
                 'total_netto' => $totalNetto,
                 'status' => $statusBaru,
+                'ppk_user_id' => $ppk?->id,
+                'ppk_nama_snapshot' => $ppk?->name,
+                'ppk_nip_snapshot' => $ppk?->nip,
+                'bendahara_pengeluaran_user_id' => $bendahara?->id,
+                'bendahara_pengeluaran_nama_snapshot' => $bendahara?->name,
+                'bendahara_pengeluaran_nip_snapshot' => $bendahara?->nip,
             ]);
 
             // Delete old, re-insert
@@ -259,6 +311,7 @@ class HonorariumController extends Controller
                     'rekening' => $itemData['rekening'] ?? '',
                     'jenis_bank' => $itemData['jenis_bank'] ?? '',
                     'nama_rekening' => $itemData['nama_rekening'] ?? '',
+                    'no_hp' => $itemData['no_hp'] ?? '',
                 ]);
             }
 
@@ -273,6 +326,34 @@ class HonorariumController extends Controller
                 'catatan' => 'Data honorarium diperbarui oleh PPABP.',
                 'ip_address' => $request->ip(),
             ]);
+
+            if ($request->hasFile('file_sk')) {
+                $docService = app(DocumentArchiveService::class);
+                $existingSk = $tagihan->arsipDokumen()->where('jenis_dokumen', 'SK Honorarium')->first();
+                if ($existingSk) {
+                    $docService->replace(
+                        $tagihan,
+                        'SK Honorarium',
+                        $request->file('file_sk'),
+                        [
+                            'directory' => 'arsip-dokumen/Tagihan',
+                            'uploaded_by' => Auth::id(),
+                            'keterangan' => 'Pembaruan File SK Honorarium',
+                        ]
+                    );
+                } else {
+                    $docService->upload(
+                        $tagihan,
+                        'SK Honorarium',
+                        $request->file('file_sk'),
+                        [
+                            'directory' => 'arsip-dokumen/Tagihan',
+                            'uploaded_by' => Auth::id(),
+                            'keterangan' => 'File SK diunggah pada saat update Honorarium',
+                        ]
+                    );
+                }
+            }
 
             if ($statusBaru === 'PENDING_PPK') {
                 $this->notifyRoles(
@@ -413,6 +494,36 @@ class HonorariumController extends Controller
         }
 
         return redirect()->route('honorarium.ppk.pending')->with('success', 'Tagihan honorarium berhasil dikembalikan untuk revisi.');
+    }
+
+    public function exportPdf($id)
+    {
+        $tagihan = Tagihan::where('tipe_tagihan', 'HONORARIUM')
+            ->with(['detailHonorarium', 'dipaRevisionItem.coa'])
+            ->findOrFail($id);
+
+        $data = [
+            'tagihan' => $tagihan,
+            'details' => $tagihan->detailHonorarium,
+        ];
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('honorarium.pdf', $data);
+        $pdf->setPaper('a4', 'landscape');
+
+        return $pdf->stream('Honorarium_' . \Illuminate\Support\Str::slug($tagihan->nomor_tagihan, '_') . '.pdf');
+    }
+
+    public function exportNominatifPdf($id)
+    {
+        $tagihan = Tagihan::where('tipe_tagihan', 'HONORARIUM')
+            ->findOrFail($id);
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('honorarium.pdf-nominatif', [
+            'tagihan' => $tagihan,
+        ]);
+        $pdf->setPaper('a4', 'portrait');
+
+        return $pdf->stream('Nominatif_Honorarium_' . \Illuminate\Support\Str::slug($tagihan->nomor_tagihan, '_') . '.pdf');
     }
 
     private function generateNextNumber(): string

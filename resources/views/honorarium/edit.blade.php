@@ -26,7 +26,7 @@
         </div>
     @endif
 
-    <form action="{{ route('honorarium.update', $tagihan->id) }}" method="POST">
+    <form action="{{ route('honorarium.update', $tagihan->id) }}" method="POST" enctype="multipart/form-data">
         @csrf
         @method('PUT')
 
@@ -53,6 +53,26 @@
                         <label class="form-label">Uraian / Deskripsi Kegiatan <span class="text-danger">*</span></label>
                         <input type="text" name="deskripsi" class="form-control" required
                             value="{{ old('deskripsi', $tagihan->deskripsi) }}">
+                    </div>
+                </div>
+                <div class="row g-3 mt-1">
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Verifikator PPK <span class="text-danger">*</span></label>
+                        <select name="ppk_id" class="form-select select2" required>
+                            <option value="">-- Pilih Pejabat Pembuat Komitmen --</option>
+                            @foreach($ppkUsers as $ppk)
+                                <option value="{{ $ppk->id }}" {{ old('ppk_id', $tagihan->ppk_user_id) == $ppk->id ? 'selected' : '' }}>{{ $ppk->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Verifikator Bendahara Pengeluaran <span class="text-danger">*</span></label>
+                        <select name="bendahara_pengeluaran_id" class="form-select select2" required>
+                            <option value="">-- Pilih Bendahara Pengeluaran --</option>
+                            @foreach($bendaharaUsers as $bendahara)
+                                <option value="{{ $bendahara->id }}" {{ old('bendahara_pengeluaran_id', $tagihan->bendahara_pengeluaran_user_id) == $bendahara->id ? 'selected' : '' }}>{{ $bendahara->name }}</option>
+                            @endforeach
+                        </select>
                     </div>
                 </div>
             </div>
@@ -82,6 +102,7 @@
                                 <th>No Rekening</th>
                                 <th>Jenis Bank</th>
                                 <th>Nama Rekening</th>
+                                <th>No HP</th>
                                 <th style="width: 70px;">Aksi</th>
                             </tr>
                         </thead>
@@ -92,10 +113,35 @@
                                 <td><input type="text" class="form-control form-control-sm bg-light" id="grandHonor" readonly></td>
                                 <td><input type="text" class="form-control form-control-sm bg-light" id="grandPph" readonly></td>
                                 <td><input type="text" class="form-control form-control-sm bg-light" id="grandNetto" readonly></td>
-                                <td colspan="4"></td>
+                                <td colspan="5"></td>
                             </tr>
                         </tfoot>
                     </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="card rounded-4 border-top border-4 border-warning shadow-sm mb-4">
+            <div class="card-body p-4">
+                <h6 class="fw-bold text-warning mb-4"><i class="bi bi-file-earmark-pdf me-2"></i>C. Upload File SK Dasar Pembayaran Honorarium</h6>
+                <div class="row">
+                    <div class="col-md-6">
+                        @php
+                            $existingSk = $tagihan->arsipDokumen()->where('jenis_dokumen', 'SK Honorarium')->first();
+                        @endphp
+                        <label class="form-label">Silakan unggah dokumen SK Honorarium (Opsional) <span class="text-muted"><small>Format: PDF, DOCX (Maks 10MB)</small></span></label>
+                        @if($existingSk)
+                            <div class="mb-2">
+                                <a href="{{ route('documents.download', $existingSk->id) }}" class="btn btn-sm btn-outline-primary" target="_blank">
+                                    <i class="bi bi-download"></i> Unduh SK Saat Ini
+                                </a>
+                                <span class="ms-2 font-12 text-muted">{{ $existingSk->nama_file_asli }}</span>
+                            </div>
+                            <div class="form-text text-warning mb-2"><i class="bi bi-info-circle"></i> Mengunggah file baru akan menimpa file SK sebelumnya.</div>
+                        @endif
+                        <input type="file" name="file_sk" id="file_sk" accept=".pdf,.doc,.docx" class="form-control">
+                        <div class="form-text">File yang diunggah akan otomatis terarsip dalam lampiran dokumen Tagihan NPI Honorarium.</div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -125,8 +171,18 @@
 
     function recalcRow(row) {
         const honor = toNumber(row.querySelector('.honor_amount').value);
-        const pph = toNumber(row.querySelector('.pph_amount').value);
-        row.querySelector('.netto_display').value = formatRp(honor - pph);
+        
+        const pphSelect = row.querySelector('.pph_percentage');
+        let pphPct = 0;
+        if (pphSelect) pphPct = toNumber(pphSelect.options[pphSelect.selectedIndex].getAttribute('data-pct'));
+        
+        let pphAmount = (honor * pphPct) / 100;
+        row.querySelector('.pph_amount').value = pphAmount;
+        if(row.querySelector('.pph_display')) {
+            row.querySelector('.pph_display').value = formatRp(pphAmount);
+        }
+        
+        row.querySelector('.netto_display').value = formatRp(honor - Math.round(pphAmount));
     }
 
     function recalcGrandTotal() {
@@ -148,6 +204,9 @@
     }
 
     function addRow(data = {}) {
+        let nH = parseFloat(data.nilai_honor) || 0;
+        let nP = parseFloat(data.pph) || 0;
+        let inferredPct = (nH > 0 && nP > 0) ? Math.round((nP / nH) * 100) : 0;
         const tbody = document.querySelector('#honorariumTable tbody');
         const tr = document.createElement('tr');
         tr.innerHTML = `
@@ -165,11 +224,26 @@
                 <input type="text" name="items[${rowIndex}][jabatan]" class="form-control form-control-sm" value="${data.jabatan ?? ''}">
             </td>
             <td><input type="number" step="0.01" min="0" name="items[${rowIndex}][nilai_honor]" class="form-control form-control-sm honor_amount" value="${data.nilai_honor ?? 0}" required></td>
-            <td><input type="number" step="0.01" min="0" name="items[${rowIndex}][pph]" class="form-control form-control-sm pph_amount" value="${data.pph ?? 0}"></td>
+            <td>
+                <select class="form-select form-select-sm pph_percentage mb-1" style="font-size: 11px;">
+                    <option value="0" data-pct="0">0% (Tanpa PPh)</option>
+                    @foreach($tarifPajaks as $tp)
+                        <option value="{{ $tp->persentase }}" data-pct="{{ $tp->persentase }}" ${inferredPct == parseFloat({{ $tp->persentase }}) ? 'selected' : ''}>
+                            {{ $tp->kode_pajak }} ({{ (float)$tp->persentase }}%)
+                        </option>
+                    @endforeach
+                </select>
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-light border-end-0 text-muted" style="padding: 0.1rem 0.3rem; font-size:10px;">Rp</span>
+                    <input type="text" class="form-control form-control-sm pph_display bg-light border-start-0 px-1" readonly style="font-size:11px;" value="${formatRp(data.pph ?? 0)}">
+                </div>
+                <input type="hidden" name="items[${rowIndex}][pph]" class="pph_amount" value="${data.pph ?? 0}">
+            </td>
             <td><input type="text" class="form-control form-control-sm netto_display bg-light" readonly></td>
             <td><input type="text" name="items[${rowIndex}][rekening]" class="form-control form-control-sm" value="${data.rekening ?? ''}"></td>
             <td><input type="text" name="items[${rowIndex}][jenis_bank]" class="form-control form-control-sm" value="${data.jenis_bank ?? ''}"></td>
             <td><input type="text" name="items[${rowIndex}][nama_rekening]" class="form-control form-control-sm" value="${data.nama_rekening ?? ''}"></td>
+            <td><input type="text" name="items[${rowIndex}][no_hp]" class="form-control form-control-sm" value="${data.no_hp ?? ''}"></td>
             <td class="text-center"><button type="button" class="btn btn-sm btn-danger btn-remove-row"><i class="bi bi-trash"></i></button></td>
         `;
         tbody.appendChild(tr);
@@ -180,6 +254,12 @@
     document.getElementById('btnAddRow').addEventListener('click', () => addRow());
     document.addEventListener('input', function (e) {
         if (e.target.classList.contains('honor_amount') || e.target.classList.contains('pph_amount')) {
+            recalcRow(e.target.closest('tr'));
+            recalcGrandTotal();
+        }
+    });
+    document.addEventListener('change', function (e) {
+        if (e.target.classList.contains('pph_percentage')) {
             recalcRow(e.target.closest('tr'));
             recalcGrandTotal();
         }
