@@ -203,6 +203,29 @@ class WorkflowDefinitionSeeder extends Seeder
                     ],
                 ],
             ],
+            [
+                'kode' => 'TAGIHAN_HONORARIUM',
+                'nama' => 'Verifikasi Tagihan Honorarium',
+                'target_type' => 'App\Models\Tagihan',
+                'steps' => [
+                    [
+                        'urutan_step' => 1,
+                        'nama_step' => 'Verifikasi PPK',
+                        'role_code' => 'PPK',
+                        'is_required' => true,
+                        'can_reject' => true,
+                        'can_request_revision' => true,
+                    ],
+                    [
+                        'urutan_step' => 1,
+                        'nama_step' => 'Verifikasi Bendahara Pengeluaran',
+                        'role_code' => 'Bendahara Pengeluaran',
+                        'is_required' => true,
+                        'can_reject' => true,
+                        'can_request_revision' => true,
+                    ],
+                ],
+            ],
         ];
 
         foreach ($workflows as $wfData) {

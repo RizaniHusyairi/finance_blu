@@ -173,11 +173,8 @@
 
                 {{-- Action Buttons --}}
                 <div class="d-flex gap-2 mb-4">
-                    <button type="submit" name="submit_type" value="draft" class="btn btn-secondary px-4">
+                    <button type="submit" name="submit_type" value="draft" class="btn btn-primary px-4" id="btnSubmitPpk">
                         <i class="bi bi-save me-1"></i> Simpan Draft
-                    </button>
-                    <button type="submit" name="submit_type" value="submit_ppk" class="btn btn-primary px-4" id="btnSubmitPpk">
-                        <i class="bi bi-send me-1"></i> Simpan & Ajukan ke PPK
                     </button>
                     <a href="{{ route('honorarium.index') }}" class="btn btn-outline-secondary px-4">Batal</a>
                 </div>
@@ -253,8 +250,7 @@
                         <div class="card-body p-3">
                             <p class="small text-muted mb-2"><i class="bi bi-lightbulb text-warning me-1"></i> <strong>Catatan:</strong></p>
                             <ul class="small text-muted mb-0 ps-3">
-                                <li><strong>Simpan Draft</strong> — data tersimpan dan dapat diedit kembali.</li>
-                                <li><strong>Ajukan ke PPK</strong> — data dikirim untuk verifikasi dan tidak bisa diedit sampai disetujui/ditolak.</li>
+                                <li><strong>Simpan Draft</strong> — data tersimpan dan dapat diedit kembali. Untuk dapat mengajukan verifikasi, Anda harus melengkapi unggahan dokumen di halaman Detail (setelah draft ini disimpan).</li>
                             </ul>
                         </div>
                     </div>

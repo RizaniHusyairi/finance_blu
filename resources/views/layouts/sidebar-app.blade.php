@@ -130,7 +130,7 @@
           <ul>
             <li><a href="{{ route('ppk.tagihan.kontrak.index') }}"><i class="material-icons-outlined">arrow_right</i>Kontrak</a></li>
             <li><a href="{{ route('verifikasi-ppk.perjaldin.index') }}"><i class="material-icons-outlined">arrow_right</i>Perjaldin</a></li>
-            <li><a href="{{ route('honorarium.ppk.pending') }}"><i class="material-icons-outlined">arrow_right</i>Honorarium</a></li>
+            <li><a href="{{ route('verifikasi-ppk.honorarium.index') }}"><i class="material-icons-outlined">arrow_right</i>Honorarium</a></li>
           </ul>
         </li>
 
@@ -358,6 +358,11 @@
             <li>
               <a href="{{ route('verifikasi-bendahara.perjaldin.index') }}">
                 <i class="material-icons-outlined">arrow_right</i>Perjaldin
+              </a>
+            </li>
+            <li>
+              <a href="{{ route('verifikasi-bendahara.honorarium.index') }}">
+                <i class="material-icons-outlined">arrow_right</i>Honorarium
               </a>
             </li>
           </ul>

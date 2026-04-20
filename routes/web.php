@@ -144,6 +144,9 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
         Route::get('/honorarium/{id}/edit', [HonorariumController::class, 'edit'])->name('honorarium.edit');
         Route::put('/honorarium/{id}', [HonorariumController::class, 'update'])->name('honorarium.update');
         Route::delete('/honorarium/{id}', [HonorariumController::class, 'destroy'])->name('honorarium.destroy');
+        Route::post('/honorarium/{id}/dokumen-upload', [HonorariumController::class, 'uploadDokumen'])->name('honorarium.dokumen.upload');
+        Route::delete('/honorarium/{id}/dokumen-delete/{arsip_id}', [HonorariumController::class, 'deleteDokumen'])->name('honorarium.dokumen.delete');
+        Route::post('/honorarium/{id}/submit-verifikasi', [HonorariumController::class, 'submitVerifikasi'])->name('honorarium.submit-verifikasi');
         Route::get('/honorarium/{id}/pdf', [HonorariumController::class, 'exportPdf'])->name('honorarium.pdf');
         Route::get('/honorarium/{id}/pdf-nominatif', [HonorariumController::class, 'exportNominatifPdf'])->name('honorarium.pdf-nominatif');
     });
@@ -214,6 +217,12 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
         Route::get('/verifikasi-ppk/sp2d/kontrak/{id}', [\App\Http\Controllers\PpkSp2dKontrakVerifikasiController::class, 'show'])->name('verifikasi-ppk.sp2d.kontrak.show');
         Route::post('/verifikasi-ppk/sp2d/kontrak/{id}/approve', [\App\Http\Controllers\PpkSp2dKontrakVerifikasiController::class, 'approve'])->name('verifikasi-ppk.sp2d.kontrak.approve');
         Route::post('/verifikasi-ppk/sp2d/kontrak/{id}/revisi', [\App\Http\Controllers\PpkSp2dKontrakVerifikasiController::class, 'revisi'])->name('verifikasi-ppk.sp2d.kontrak.revisi');
+
+        // Honorarium - Verifikasi PPK (Parallel Workflow)
+        Route::get('/verifikasi-ppk/honorarium', [\App\Http\Controllers\PpkHonorariumVerifikasiController::class, 'index'])->name('verifikasi-ppk.honorarium.index');
+        Route::get('/verifikasi-ppk/honorarium/{id}', [\App\Http\Controllers\PpkHonorariumVerifikasiController::class, 'show'])->name('verifikasi-ppk.honorarium.show');
+        Route::post('/verifikasi-ppk/honorarium/{id}/approve', [\App\Http\Controllers\PpkHonorariumVerifikasiController::class, 'approve'])->name('verifikasi-ppk.honorarium.approve');
+        Route::post('/verifikasi-ppk/honorarium/{id}/revisi', [\App\Http\Controllers\PpkHonorariumVerifikasiController::class, 'revisi'])->name('verifikasi-ppk.honorarium.revisi');
     });
 
     // Verifikasi Perjaldin — Bendahara Pengeluaran (halaman baru)
@@ -224,6 +233,12 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
         Route::post('/verifikasi-bendahara/perjaldin/{id}/revisi', [\App\Http\Controllers\PerjaldinVerifikasiController::class, 'bendaharaRevisi'])->name('verifikasi-bendahara.perjaldin.revisi');
         // Legacy redirect
         Route::get('/verifikasi-bendahara', fn() => redirect()->route('verifikasi-bendahara.perjaldin.index'))->name('verifikasi-bendahara.index');
+
+        // Honorarium - Verifikasi Bendahara Pengeluaran (Parallel Workflow)
+        Route::get('/verifikasi-bendahara/honorarium', [\App\Http\Controllers\BendaharaHonorariumVerifikasiController::class, 'index'])->name('verifikasi-bendahara.honorarium.index');
+        Route::get('/verifikasi-bendahara/honorarium/{id}', [\App\Http\Controllers\BendaharaHonorariumVerifikasiController::class, 'show'])->name('verifikasi-bendahara.honorarium.show');
+        Route::post('/verifikasi-bendahara/honorarium/{id}/approve', [\App\Http\Controllers\BendaharaHonorariumVerifikasiController::class, 'approve'])->name('verifikasi-bendahara.honorarium.approve');
+        Route::post('/verifikasi-bendahara/honorarium/{id}/revisi', [\App\Http\Controllers\BendaharaHonorariumVerifikasiController::class, 'revisi'])->name('verifikasi-bendahara.honorarium.revisi');
     });
 
     // Verifikasi Perjaldin & SPP — Kasubag
@@ -432,21 +447,8 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
         Route::post('/sp2ds/{sp2d_id}/execute', [\App\Http\Controllers\Sp2dController::class, 'catatBku'])->name('sp2ds.catat-bku');
     });
 
-    
 
-    Route::middleware('role:PPK')->group(function () {
-    Route::get('/honorarium/ppk/pending', [HonorariumController::class, 'pendingPpk'])
-        ->name('honorarium.ppk.pending');
 
-    Route::get('/honorarium/ppk/{honorarium}/verify', [HonorariumController::class, 'verifyPpk'])
-        ->name('ppk.tagihan.honorarium.verify');
-
-    Route::post('/honorarium/{honorarium}/approve-ppk', [HonorariumController::class, 'approvePpk'])
-        ->name('honorarium.approve-ppk');
-
-    Route::post('/honorarium/{honorarium}/reject-ppk', [HonorariumController::class, 'rejectPpk'])
-        ->name('honorarium.reject-ppk');
-});
 
     // Laporan BKU
     Route::middleware('role:Super Admin|KPA|Kepala Subbagian Keuangan dan Tata Usaha|Kepala Seksi Pelayanan dan Kerjasama|PPK|Bendahara Pengeluaran|Bendahara Penerimaan')->group(function () {

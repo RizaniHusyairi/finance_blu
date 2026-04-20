@@ -12,6 +12,11 @@ class Tagihan extends Model
     protected $table = 'tagihan';
     protected $guarded = ['id'];
 
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
     public function pihak()
     {
         return $this->belongsTo(MasterPihak::class, 'pihak_id');
