@@ -135,9 +135,21 @@
                         <p class="fw-medium mb-4">{{ $tagihan->deskripsi }}</p>
 
                         <p class="text-muted small text-uppercase mb-1">Sumber Anggaran / DIPA</p>
-                        <p class="fw-medium mb-0">
+                        <p class="fw-medium mb-4">
                             {{ $tagihan->sumber_dana ?? 'Sumber Dana / DIPA (belum tersedia)' }}
                         </p>
+
+                        <p class="text-muted small text-uppercase mb-1">Dokumen Pendukung (SK Honorarium)</p>
+                        @php
+                            $skDoc = $tagihan->arsipDokumen->where('jenis_dokumen', 'SK Honorarium')->first();
+                        @endphp
+                        @if($skDoc)
+                            <a href="{{ Storage::url($skDoc->path_file) }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-file-earmark-pdf me-1"></i> {{ $skDoc->nama_file_asli }}
+                            </a>
+                        @else
+                            <p class="fw-medium text-muted small"><i class="bi bi-dash-circle me-1"></i> Tidak ada file SK yang dilampirkan</p>
+                        @endif
                     </div>
                     <div class="col-md-4 border-start d-flex flex-column justify-content-center">
                         <p class="text-muted small text-uppercase mb-1 text-md-end">Tanggal Dibuat</p>
