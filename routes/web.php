@@ -33,6 +33,8 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
     // Internal Dashboard — all internal roles
     Route::middleware("role:$internalRoles")->group(function () {
         Route::get('/dashboard', [DashboardController::class, 'internal'])->name('dashboard');
+        Route::get('/dashboard/bendahara-penerimaan', [\App\Http\Controllers\BendaharaPenerimaanDashboardController::class, 'index'])->name('dashboard.bendahara-penerimaan');
+        Route::get('/dashboard/bendahara-pengeluaran', [\App\Http\Controllers\BendaharaPengeluaranDashboardController::class, 'index'])->name('dashboard.bendahara-pengeluaran');
     });
 
     // Workflow Engine General Routes

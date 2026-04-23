@@ -56,7 +56,7 @@ class RoleAndPermissionSeeder extends Seeder
         $operator = User::updateOrCreate([
             'email' => 'operator@admin.com',
         ], [
-            'name' => 'Operator BLU',
+            'name' => 'KARTIKA',
             'email_verified_at' => now(),
             'password' => Hash::make('password'),
         ]);
@@ -67,7 +67,7 @@ class RoleAndPermissionSeeder extends Seeder
         $pengadaan = User::updateOrCreate([
             'email' => 'pengadaan@admin.com',
         ], [
-            'name' => 'Pejabat Pengadaan Test',
+            'name' => 'VERNALDI',
             'email_verified_at' => now(),
             'password' => Hash::make('password'),
         ]);
@@ -134,7 +134,7 @@ class RoleAndPermissionSeeder extends Seeder
         $perjaldin = User::updateOrCreate([
             'email' => 'perjaldin@admin.com',
         ], [
-            'name' => 'AULIA',
+            'name' => 'KHARISMA',
             'email_verified_at' => now(),
             'password' => Hash::make('password'),
         ]);
@@ -144,7 +144,7 @@ class RoleAndPermissionSeeder extends Seeder
         $ppabp = User::updateOrCreate([
             'email' => 'ppabp@admin.com',
         ], [
-            'name' => 'PPABP Test',
+            'name' => 'AULIA',
             'email_verified_at' => now(),
             'password' => Hash::make('password'),
         ]);

@@ -27,6 +27,12 @@ class DashboardController extends Controller
         if (Auth::user()->hasRole('PPK')) {
             return $this->ppk();   
         }
+        if (Auth::user()->hasRole('Bendahara Penerimaan')) {
+            return redirect()->route('dashboard.bendahara-penerimaan');
+        }
+        if (Auth::user()->hasRole('Bendahara Pengeluaran')) {
+            return redirect()->route('dashboard.bendahara-pengeluaran');
+        }
 
         $now = now();
 
