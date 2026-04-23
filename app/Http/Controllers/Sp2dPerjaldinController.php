@@ -154,9 +154,11 @@ class Sp2dPerjaldinController extends Controller
         
         $wf = $sp2d ? $sp2d->workflowInstances->first() : null;
 
+        $autoNomorSp2d = \App\Services\DocumentNumberingService::generateDerivedNumber($spp->nomor_spp ?? '', 'SP2D');
+
         return view('sp2ds.perjaldin.detail', compact(
             'npi', 'spm', 'spp', 'tagihan', 'komponen', 'sp2d',
-            'defaultNilai', 'defaultTahun', 'checks', 'isLengkap', 'wf'
+            'defaultNilai', 'defaultTahun', 'checks', 'isLengkap', 'wf', 'autoNomorSp2d'
         ));
     }
 

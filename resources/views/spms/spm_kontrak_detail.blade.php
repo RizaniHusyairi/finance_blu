@@ -406,7 +406,8 @@
                             <div class="row g-3">
                                 <div class="col-md-6">
                                     <label class="form-label fw-semibold">Nomor SPM <span class="text-danger">*</span></label>
-                                    <input type="text" name="nomor_spm" class="form-control" required value="{{ old('nomor_spm', $spmModel?->nomor_spm ?? '') }}" placeholder="Ketik nomor SPM">
+                                    <input type="text" name="nomor_spm" class="form-control fw-bold text-primary bg-light" required value="{{ old('nomor_spm', $spmModel?->nomor_spm ?? $autoNomorSpm) }}" placeholder="Ketik nomor SPM">
+                                    <small class="text-muted"><i class="bi bi-info-circle me-1"></i>Nomor di atas diturunkan dari SPP, ubah jika perlu.</small>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label fw-semibold">Tanggal SPM <span class="text-danger">*</span></label>

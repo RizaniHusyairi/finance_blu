@@ -573,6 +573,16 @@
 
                     {{-- TAB ADDENDUM --}}
                     <div class="tab-pane fade" id="addendum" role="tabpanel" aria-labelledby="addendum-tab">
+                        <div class="d-flex flex-column flex-lg-row justify-content-between gap-3 align-items-lg-center mb-3">
+                            <div>
+                                <h6 class="fw-bold mb-1">Riwayat dan Workspace Addendum</h6>
+                                <div class="small text-muted">Pantau perubahan kontrak, status addendum, dan buka workspace detail untuk approval atau revisi.</div>
+                            </div>
+                            <a href="{{ route('addendums.index', $kontrak->id) }}" class="btn btn-primary btn-sm fw-bold">
+                                <i class="bi bi-journal-text me-1"></i> Kelola Addendum
+                            </a>
+                        </div>
+
                         <div class="table-responsive">
                             <table class="table table-striped table-hover align-middle">
                                 <thead>
@@ -580,8 +590,9 @@
                                         <th>No. Addendum</th>
                                         <th>Tanggal</th>
                                         <th>Jenis Perubahan</th>
+                                        <th>Status</th>
                                         <th>Keterangan</th>
-                                        <th class="text-center">Dokumen</th>
+                                        <th class="text-center">Aksi</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -590,18 +601,28 @@
                                         <td class="fw-bold">{{ $addm->nomor_addendum }}</td>
                                         <td>{{ \Carbon\Carbon::parse($addm->tanggal_addendum)->format('d M Y') }}</td>
                                         <td><span class="badge bg-secondary">{{ str_replace('_', ' ', $addm->jenis_addendum) }}</span></td>
+                                        <td>
+                                            @php
+                                                $statusWorkflow = $addm->status_workflow ?? ($addm->status_addendum ?? 'DRAFT');
+                                                $statusClass = match($statusWorkflow) {
+                                                    'APPROVED' => 'bg-success',
+                                                    'SUBMITTED' => 'bg-warning text-dark',
+                                                    'REJECTED' => 'bg-danger',
+                                                    default => 'bg-secondary',
+                                                };
+                                            @endphp
+                                            <span class="badge {{ $statusClass }}">{{ str_replace('_', ' ', $statusWorkflow) }}</span>
+                                        </td>
                                         <td><small>{{ Str::limit($addm->keterangan_alasan, 50) }}</small></td>
                                         <td class="text-center">
-                                            @if($addm->file_addendum)
-                                                <a href="{{ Storage::url($addm->file_addendum) }}" target="_blank" class="btn btn-sm btn-light text-primary border"><i class="bi bi-download"></i></a>
-                                            @else
-                                                -
-                                            @endif
+                                            <a href="{{ route('addendums.show', [$kontrak->id, $addm->id]) }}" class="btn btn-sm btn-light text-primary border">
+                                                <i class="bi bi-search me-1"></i> Detail
+                                            </a>
                                         </td>
                                     </tr>
                                     @empty
                                     <tr>
-                                        <td colspan="5" class="text-center py-4 text-muted">Belum ada riwayat addendum pada kontrak ini.</td>
+                                        <td colspan="6" class="text-center py-4 text-muted">Belum ada riwayat addendum pada kontrak ini.</td>
                                     </tr>
                                     @endforelse
                                 </tbody>

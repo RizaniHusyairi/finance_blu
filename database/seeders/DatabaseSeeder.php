@@ -21,6 +21,8 @@ class DatabaseSeeder extends Seeder
             SppPerjaldinWorkflowSeeder::class,
             MasterUangHarianPerjaldinSeeder::class,
             MasterTarifPajakSeeder::class,
+            BukuPembantuBungaRekeningSeeder::class,
+            
         ]);
     }
 }

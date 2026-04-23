@@ -164,7 +164,7 @@
                                 </div>
                             @else
                                 @php
-                                    $previewNomor = 'SPP-PJD-' . $komponen->kode_komponen . '-' . date('Y') . '-' . str_pad($nextSppCounter + $loop->index, 4, '0', STR_PAD_LEFT);
+                                    $previewNomor = 'SPP-BLU/APTP-' . date('Y') . '/' . str_pad($nextSppCounter + $loop->index, 4, '0', STR_PAD_LEFT);
                                 @endphp
                                 <div class="input-group">
                                     <span class="input-group-text bg-secondary text-white"><i class="bi bi-hash"></i></span>

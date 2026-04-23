@@ -194,6 +194,8 @@ class SpmPerjaldinController extends Controller
 
         $oldPpspmId = old('ppspm_id', $spmModel?->ppspm_id);
 
+        $autoNomorSpm = \App\Services\DocumentNumberingService::generateDerivedNumber($sppModel->nomor_spp, 'SPM');
+
         return view('spms.spm_perjaldin_detail', compact(
             'sppModel',
             'tagihan',
@@ -215,6 +217,7 @@ class SpmPerjaldinController extends Controller
             'progressStep',
             'recentActivities',
             'oldPpspmId',
+            'autoNomorSpm'
         ));
     }
 

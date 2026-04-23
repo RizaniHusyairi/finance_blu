@@ -143,7 +143,7 @@
           <ul>
             <li><a href="{{ route('verifikasi-ppk.spp.index') }}"><i class="material-icons-outlined">arrow_right</i>Kontrak</a></li>
             <li><a href="{{ route('verifikasi-ppk.spp-perjaldin.index') }}"><i class="material-icons-outlined">arrow_right</i>Perjaldin</a></li>
-            <li><a href="{{ route('verifikasi-ppk.spp.index') }}"><i class="material-icons-outlined">arrow_right</i>Honor</a></li>
+            <li><a href="{{ route('verifikasi-spp.honor.index') }}"><i class="material-icons-outlined">arrow_right</i>Honor</a></li>
           </ul>
         </li>
 
@@ -157,7 +157,7 @@
             <li><a href="{{ route('verifikasi-ppk.npi.kontrak.index') }}"><i class="material-icons-outlined">arrow_right</i>Kontrak</a></li>
             {{-- TODO: Buat route NPI Perjaldin & Honor khusus PPK jika controller sudah siap --}}
             <li><a href="{{ route('verifikasi-npi.perjaldin.index') }}"><i class="material-icons-outlined">arrow_right</i>Perjaldin</a></li>
-            <li><a href="#"><i class="material-icons-outlined">arrow_right</i>Honor</a></li>
+            <li><a href="{{ route('verifikasi-npi.honor.index') }}"><i class="material-icons-outlined">arrow_right</i>Honor</a></li>
           </ul>
         </li>
 
@@ -171,7 +171,7 @@
             {{-- TODO: Buat route SP2D Kontrak/Perjaldin/Honor khusus PPK jika controller sudah siap --}}
             <li><a href="{{ route('verifikasi-ppk.sp2d.kontrak.index') }}"><i class="material-icons-outlined">arrow_right</i>Kontrak</a></li>
             <li><a href="{{ route('verifikasi-sp2d.perjaldin.index') }}"><i class="material-icons-outlined">arrow_right</i>Perjaldin</a></li>
-            <li><a href="#"><i class="material-icons-outlined">arrow_right</i>Honor</a></li>
+            <li><a href="{{ route('verifikasi-sp2d.honor.index') }}"><i class="material-icons-outlined">arrow_right</i>Honor</a></li>
           </ul>
         </li>
 
@@ -217,7 +217,7 @@
               <a href="{{ route('verifikasi-kasubag.spp-perjaldin.index') }}"><i class="material-icons-outlined">arrow_right</i>Perjaldin</a>
             </li>
             <li>
-              <a href="{{ route('verifikasi-kasubag.spp.index') }}"><i class="material-icons-outlined">arrow_right</i>Honor</a>
+              <a href="{{ route('verifikasi-spp.honor.index') }}"><i class="material-icons-outlined">arrow_right</i>Honor</a>
             </li>
           </ul>
         </li>
@@ -234,7 +234,7 @@
               <a href="{{ route('verifikasi-kasubag.spm-perjaldin.index') }}"><i class="material-icons-outlined">arrow_right</i>Perjaldin</a>
             </li>
             <li>
-              <a href="#"><i class="material-icons-outlined">arrow_right</i>Honor</a>
+              <a href="{{ route('verifikasi-spm.honor.index') }}"><i class="material-icons-outlined">arrow_right</i>Honor</a>
             </li>
           </ul>
         </li>
@@ -251,7 +251,7 @@
               <a href="{{ route('verifikasi-npi.perjaldin.index') }}"><i class="material-icons-outlined">arrow_right</i>Perjaldin</a>
             </li>
             <li>
-              <a href="{{ route('verifikasi-kasubag.npi.index') }}"><i class="material-icons-outlined">arrow_right</i>Honor</a>
+              <a href="{{ route('verifikasi-npi.honor.index') }}"><i class="material-icons-outlined">arrow_right</i>Honor</a>
             </li>
           </ul>
         </li>
@@ -268,7 +268,7 @@
               <a href="{{ route('verifikasi-sp2d.perjaldin.index') }}"><i class="material-icons-outlined">arrow_right</i>Perjaldin</a>
             </li>
             <li>
-              <a href="#"><i class="material-icons-outlined">arrow_right</i>Honor</a>
+              <a href="{{ route('verifikasi-sp2d.honor.index') }}"><i class="material-icons-outlined">arrow_right</i>Honor</a>
             </li>
           </ul>
         </li>
@@ -292,7 +292,7 @@
           </a>
           <ul>
             <li><a href="{{ route('spms.perjaldin.index') }}"><i class="material-icons-outlined">arrow_right</i>SPM Perjaldin</a></li>
-            <li><a href="{{ route('spms.index') }}"><i class="material-icons-outlined">arrow_right</i>SPM Honor</a></li>
+            <li><a href="{{ route('spms.honor.index') }}"><i class="material-icons-outlined">arrow_right</i>SPM Honor</a></li>
             <li><a href="{{ route('spms.kontrak.index') }}"><i class="material-icons-outlined">arrow_right</i>SPM Kontrak</a></li>
           </ul>
         </li>
@@ -341,7 +341,7 @@
           </a>
           <ul>
             <li><a href="{{ route('verifikasi-ppspm.spm-perjaldin.index') }}"><i class="material-icons-outlined">arrow_right</i>SPM Perjaldin</a></li>
-            <li><a href="#"><i class="material-icons-outlined">arrow_right</i>SPM Honor</a></li>
+            <li><a href="{{ route('verifikasi-spm.honor.index') }}"><i class="material-icons-outlined">arrow_right</i>SPM Honor</a></li>
             <li><a href="{{ route('verifikasi-ppspm.spm.kontrak.index') }}"><i class="material-icons-outlined">arrow_right</i>SPM Kontrak</a></li>
           </ul>
         </li>
@@ -377,7 +377,7 @@
           <ul>
             <li><a href="{{ route('npis.kontrak.index') }}"><i class="material-icons-outlined">arrow_right</i>Kontrak</a></li>
             <li><a href="{{ route('npis.perjaldin.index') }}"><i class="material-icons-outlined">arrow_right</i>Perjaldin</a></li>
-            <li><a href="{{ route('npis.index') }}"><i class="material-icons-outlined">arrow_right</i>Honor</a></li>
+            <li><a href="{{ route('npis.honor.index') }}"><i class="material-icons-outlined">arrow_right</i>Honor</a></li>
           </ul>
         </li>
         <li>
@@ -388,16 +388,31 @@
           <ul>
             <li><a href="{{ route('sp2ds.kontrak.index') }}"><i class="material-icons-outlined">arrow_right</i>Kontrak</a></li>
             <li><a href="{{ route('sp2ds.perjaldin.index') }}"><i class="material-icons-outlined">arrow_right</i>Perjaldin</a></li>
-            <li><a href="{{ route('sp2ds.index') }}"><i class="material-icons-outlined">arrow_right</i>Honor</a></li>
+            <li><a href="{{ route('sp2ds.honor.index') }}"><i class="material-icons-outlined">arrow_right</i>Honor</a></li>
+          </ul>
+        </li>
+        {{-- Penyetoran Pajak --}}
+        <li>
+          <a href="javascript:;" class="has-arrow">
+            <div class="parent-icon"><i class="material-icons-outlined">receipt</i></div>
+            <div class="menu-title">Penyetoran Pajak</div>
+          </a>
+          <ul>
+            <li><a href="{{ route('pajak-potongan.kontrak.index') }}"><i class="material-icons-outlined">arrow_right</i>Kontrak</a></li>
           </ul>
         </li>
         <li>
           <a href="javascript:;" class="has-arrow">
             <div class="parent-icon"><i class="material-icons-outlined">summarize</i></div>
-            <div class="menu-title">Laporan</div>
+            <div class="menu-title">Pembukuan</div>
           </a>
           <ul>
-            <li><a href="{{ route('reports.bku') }}"><i class="material-icons-outlined">arrow_right</i>Laporan BKU</a></li>
+            <li><a href="{{ route('pembukuan.bku.index') }}"><i class="material-icons-outlined">arrow_right</i>Buku Kas Umum</a></li>
+            <li><a href="{{ route('pembukuan.bank.index') }}"><i class="material-icons-outlined">arrow_right</i>Buku Pembantu Bank</a></li>
+            <li><a href="{{ route('pembukuan.bendahara.index') }}"><i class="material-icons-outlined">arrow_right</i>Buku Pembantu Bendahara</a></li>
+            <li><a href="{{ route('pembukuan.bunga.index') }}"><i class="material-icons-outlined">arrow_right</i>Buku Pembantu Bunga Rekening</a></li>
+            <li><a href="{{ route('pembukuan.pajak.index') }}"><i class="material-icons-outlined">arrow_right</i>Buku Pembantu Pajak</a></li>
+            <li><a href="{{ route('pembukuan.pengesahan.index') }}"><i class="material-icons-outlined">arrow_right</i>Buku Pengesahan Belanja</a></li>
           </ul>
         </li>
         @endhasrole
@@ -423,11 +438,25 @@
           <ul>
             <li><a href="{{ route('verifikasi-bendahara-penerimaan.npi.kontrak.index') }}"><i class="material-icons-outlined">arrow_right</i>Kontrak</a></li>
             <li><a href="{{ route('verifikasi-npi.perjaldin.index') }}"><i class="material-icons-outlined">arrow_right</i>Perjaldin</a></li>
-            <li><a href="#"><i class="material-icons-outlined">arrow_right</i>Honor</a></li>
+            <li><a href="{{ route('verifikasi-npi.honor.index') }}"><i class="material-icons-outlined">arrow_right</i>Honor</a></li>
+          </ul>
+        </li>
+        <li>
+          <a href="javascript:;" class="has-arrow">
+            <div class="parent-icon"><i class="material-icons-outlined">summarize</i></div>
+            <div class="menu-title">Pembukuan</div>
+          </a>
+          <ul>
+            <li><a href="{{ route('pembukuan.bku.index') }}"><i class="material-icons-outlined">arrow_right</i>Buku Kas Umum</a></li>
+            <li><a href="{{ route('pembukuan.bank.index') }}"><i class="material-icons-outlined">arrow_right</i>Buku Pembantu Bank</a></li>
+            <li><a href="{{ route('pembukuan.bendahara.index') }}"><i class="material-icons-outlined">arrow_right</i>Buku Pembantu Bendahara</a></li>
+            <li><a href="{{ route('pembukuan.bunga.index') }}"><i class="material-icons-outlined">arrow_right</i>Buku Pembantu Bunga Rekening</a></li>
+            <li><a href="{{ route('pembukuan.pengesahan.index') }}"><i class="material-icons-outlined">arrow_right</i>Buku Pengesahan Belanja</a></li>
+            <li><a href="{{ route('pembukuan.piutang.index') }}"><i class="material-icons-outlined">arrow_right</i>Pengecekan Pembayaran (Piutang)</a></li>
           </ul>
         </li>
         @endhasrole
-        @hasanyrole('Super Admin|KPA|Kepala Subbagian Keuangan dan Tata Usaha|Kepala Seksi Pelayanan dan Kerjasama|PPK|Bendahara Penerimaan')
+        @hasanyrole('Super Admin|KPA|Kepala Subbagian Keuangan dan Tata Usaha|Kepala Seksi Pelayanan dan Kerjasama|PPK')
         <li>
           <a href="{{ route('reports.bku') }}">
             <div class="parent-icon"><i class="material-icons-outlined">summarize</i>

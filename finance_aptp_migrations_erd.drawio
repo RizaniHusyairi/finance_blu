@@ -1,0 +1,433 @@
+<mxfile host="app.diagrams.net" modified="2026-04-21T09:00:00.000Z" agent="Codex" version="24.7.17">
+  <diagram id="finance-erd" name="ERD">
+    <mxGraphModel dx="2142" dy="1234" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="5200" pageHeight="2600" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <mxCell id="lbl_auth" value="AUTH &amp; SYSTEM" style="text;html=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=18;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="20" width="240" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="lbl_master" value="MASTER DATA" style="text;html=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=18;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="950" y="20" width="240" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="lbl_workflow" value="WORKFLOW" style="text;html=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=18;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="2360" y="20" width="240" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="lbl_contract" value="KONTRAK" style="text;html=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=18;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="2940" y="20" width="240" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="lbl_trx" value="TAGIHAN &amp; TRANSAKSI" style="text;html=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=18;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="760" width="320" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="lbl_docs" value="DOKUMEN PENCAIRAN" style="text;html=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=18;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="1070" width="320" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="lbl_finance" value="BKU / BANK / REKONSILIASI" style="text;html=0;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=18;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1520" y="1070" width="420" height="30" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="note_scope" value="ERD ini dibuat murni dari migration project.&#xa;&#xa;Yang ditampilkan: PK, FK, dan kolom bisnis utama.&#xa;timestamps / softDeletes / snapshot field panjang diringkas agar kanvas tetap terbaca.&#xa;&#xa;Catatan: jika controller/model memakai kolom tambahan yang belum punya migration, kolom itu sengaja tidak dimasukkan." style="shape=note;whiteSpace=wrap;html=0;strokeColor=#d6b656;fillColor=#fff2cc;fontSize=12;align=left;verticalAlign=top;spacing=6;" vertex="1" parent="1">
+          <mxGeometry x="3600" y="60" width="520" height="170" as="geometry"/>
+        </mxCell>
+        <mxCell id="note_morph" value="Relasi polymorphic / non-FK yang penting:&#xa;- notifications.notifiable_type + notifiable_id&#xa;- model_has_roles.model_type + model_id&#xa;- model_has_permissions.model_type + model_id&#xa;- rekening_bank.pemilik_type + pemilik_id&#xa;- workflow_instances.workflowable_type + workflowable_id&#xa;- log_status_dokumen.dokumen_type + dokumen_id&#xa;- arsip_dokumen.documentable_type + documentable_id&#xa;- sessions.user_id hanya indexed, bukan FK constraint" style="shape=note;whiteSpace=wrap;html=0;strokeColor=#6c8ebf;fillColor=#dae8fc;fontSize=12;align=left;verticalAlign=top;spacing=6;" vertex="1" parent="1">
+          <mxGeometry x="3600" y="250" width="520" height="240" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="users" value="users&#xa;----------------&#xa;PK id&#xa;name&#xa;email (UQ)&#xa;email_verified_at?&#xa;password&#xa;remember_token&#xa;timestamps" style="rounded=0;whiteSpace=wrap;html=0;align=left;verticalAlign=top;spacing=6;fontFamily=Courier New;fontSize=11;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="40" y="60" width="250" height="150" as="geometry"/>
+        </mxCell>
+        <mxCell id="sessions" value="sessions&#xa;----------------&#xa;PK id&#xa;user_id? (index only)&#xa;ip_address?&#xa;user_agent?&#xa;payload&#xa;last_activity" style="rounded=0;whiteSpace=wrap;html=0;align=left;verticalAlign=top;spacing=6;fontFamily=Courier New;fontSize=11;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="320" y="60" width="250" height="140" as="geometry"/>
+        </mxCell>
+        <mxCell id="password_reset_tokens" value="password_reset_tokens&#xa;----------------&#xa;PK email&#xa;token&#xa;created_at?" style="rounded=0;whiteSpace=wrap;html=0;align=left;verticalAlign=top;spacing=6;fontFamily=Courier New;fontSize=11;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="600" y="60" width="250" height="90" as="geometry"/>
+        </mxCell>
+        <mxCell id="notifications" value="notifications&#xa;----------------&#xa;PK id (uuid)&#xa;type&#xa;notifiable_type [morph]&#xa;notifiable_id [morph]&#xa;data&#xa;read_at?&#xa;timestamps" style="rounded=0;whiteSpace=wrap;html=0;align=left;verticalAlign=top;spacing=6;fontFamily=Courier New;fontSize=11;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="40" y="230" width="250" height="150" as="geometry"/>
+        </mxCell>
+        <mxCell id="permissions" value="permissions&#xa;----------------&#xa;PK id&#xa;name&#xa;guard_name&#xa;timestamps" style="rounded=0;whiteSpace=wrap;html=0;align=left;verticalAlign=top;spacing=6;fontFamily=Courier New;fontSize=11;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="320" y="230" width="250" height="100" as="geometry"/>
+        </mxCell>
+        <mxCell id="roles" value="roles&#xa;----------------&#xa;PK id&#xa;name&#xa;guard_name&#xa;timestamps&#xa;(teams=false in config)" style="rounded=0;whiteSpace=wrap;html=0;align=left;verticalAlign=top;spacing=6;fontFamily=Courier New;fontSize=11;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="600" y="230" width="250" height="110" as="geometry"/>
+        </mxCell>
+        <mxCell id="role_has_permissions" value="role_has_permissions&#xa;----------------&#xa;PK/FK permission_id&#xa;PK/FK role_id" style="rounded=0;whiteSpace=wrap;html=0;align=left;verticalAlign=top;spacing=6;fontFamily=Courier New;fontSize=11;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="320" y="360" width="250" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="model_has_roles" value="model_has_roles&#xa;----------------&#xa;PK/FK role_id&#xa;PK model_type [morph]&#xa;PK model_id [morph]" style="rounded=0;whiteSpace=wrap;html=0;align=left;verticalAlign=top;spacing=6;fontFamily=Courier New;fontSize=11;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="40" y="400" width="250" height="100" as="geometry"/>
+        </mxCell>
+        <mxCell id="model_has_permissions" value="model_has_permissions&#xa;----------------&#xa;PK/FK permission_id&#xa;PK model_type [morph]&#xa;PK model_id [morph]" style="rounded=0;whiteSpace=wrap;html=0;align=left;verticalAlign=top;spacing=6;fontFamily=Courier New;fontSize=11;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="600" y="400" width="250" height="100" as="geometry"/>
+        </mxCell>
+        <mxCell id="cache" value="cache&#xa;----------------&#xa;PK key&#xa;value&#xa;expiration" style="rounded=0;whiteSpace=wrap;html=0;align=left;verticalAlign=top;spacing=6;fontFamily=Courier New;fontSize=11;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="40" y="530" width="250" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="cache_locks" value="cache_locks&#xa;----------------&#xa;PK key&#xa;owner&#xa;expiration" style="rounded=0;whiteSpace=wrap;html=0;align=left;verticalAlign=top;spacing=6;fontFamily=Courier New;fontSize=11;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="320" y="530" width="250" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="jobs" value="jobs&#xa;----------------&#xa;PK id&#xa;queue&#xa;payload&#xa;attempts&#xa;reserved_at?&#xa;available_at&#xa;created_at" style="rounded=0;whiteSpace=wrap;html=0;align=left;verticalAlign=top;spacing=6;fontFamily=Courier New;fontSize=11;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="40" y="640" width="250" height="130" as="geometry"/>
+        </mxCell>
+        <mxCell id="job_batches" value="job_batches&#xa;----------------&#xa;PK id&#xa;name&#xa;total_jobs&#xa;pending_jobs&#xa;failed_jobs&#xa;finished_at?" style="rounded=0;whiteSpace=wrap;html=0;align=left;verticalAlign=top;spacing=6;fontFamily=Courier New;fontSize=11;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="320" y="640" width="250" height="120" as="geometry"/>
+        </mxCell>
+        <mxCell id="failed_jobs" value="failed_jobs&#xa;----------------&#xa;PK id&#xa;uuid (UQ)&#xa;connection&#xa;queue&#xa;failed_at" style="rounded=0;whiteSpace=wrap;html=0;align=left;verticalAlign=top;spacing=6;fontFamily=Courier New;fontSize=11;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="600" y="640" width="250" height="110" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="master_coas" value="master_coas&#xa;----------------&#xa;PK id&#xa;kode_mak_lengkap (UQ)&#xa;nama_akun&#xa;jenis_akun?&#xa;status_aktif" style="rounded=0;whiteSpace=wrap;html=0;align=left;verticalAlign=top;spacing=6;fontFamily=Courier New;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="950" y="60" width="260" height="120" as="geometry"/>
+        </mxCell>
+        <mxCell id="master_dipas" value="master_dipas&#xa;----------------&#xa;PK id&#xa;nomor_dipa (UQ)&#xa;tahun_anggaran&#xa;tanggal_disahkan?&#xa;revisi_aktif_ke&#xa;status_aktif" style="rounded=0;whiteSpace=wrap;html=0;align=left;verticalAlign=top;spacing=6;fontFamily=Courier New;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="1230" y="60" width="260" height="130" as="geometry"/>
+        </mxCell>
+        <mxCell id="dipa_revisions" value="dipa_revisions&#xa;----------------&#xa;PK id&#xa;FK master_dipa_id&#xa;nomor_revisi&#xa;tanggal_revisi?&#xa;total_pagu&#xa;is_active" style="rounded=0;whiteSpace=wrap;html=0;align=left;verticalAlign=top;spacing=6;fontFamily=Courier New;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="1510" y="60" width="260" height="130" as="geometry"/>
+        </mxCell>
+        <mxCell id="dipa_revision_items" value="dipa_revision_items&#xa;----------------&#xa;PK id&#xa;FK dipa_revision_id&#xa;FK coa_id&#xa;nilai_pagu&#xa;status_aktif" style="rounded=0;whiteSpace=wrap;html=0;align=left;verticalAlign=top;spacing=6;fontFamily=Courier New;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="1230" y="220" width="260" height="110" as="geometry"/>
+        </mxCell>
+        <mxCell id="master_pihak" value="master_pihak&#xa;----------------&#xa;PK id&#xa;kategori&#xa;jenis_entitas&#xa;kode_pihak (UQ)?&#xa;FK user_id?&#xa;npwp?&#xa;nama_pihak&#xa;jabatan_penandatangan?&#xa;status_aktif" style="rounded=0;whiteSpace=wrap;html=0;align=left;verticalAlign=top;spacing=6;fontFamily=Courier New;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="1790" y="60" width="260" height="180" as="geometry"/>
+        </mxCell>
+        <mxCell id="master_pegawai" value="master_pegawai&#xa;----------------&#xa;PK id&#xa;FK user_id?&#xa;nip (UQ)?&#xa;nama_lengkap&#xa;jabatan?&#xa;npwp?&#xa;status_aktif" style="rounded=0;whiteSpace=wrap;html=0;align=left;verticalAlign=top;spacing=6;fontFamily=Courier New;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="1790" y="270" width="260" height="140" as="geometry"/>
+        </mxCell>
+        <mxCell id="rekening_bank" value="rekening_bank&#xa;----------------&#xa;PK id&#xa;pemilik_type [morph]&#xa;pemilik_id [morph]&#xa;nama_bank&#xa;nomor_rekening&#xa;nama_rekening&#xa;is_default&#xa;status_aktif" style="rounded=0;whiteSpace=wrap;html=0;align=left;verticalAlign=top;spacing=6;fontFamily=Courier New;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="2070" y="60" width="260" height="170" as="geometry"/>
+        </mxCell>
+        <mxCell id="master_tarif_pajak" value="master_tarif_pajak&#xa;----------------&#xa;PK id&#xa;kode_pajak (UQ)?&#xa;jenis_pajak&#xa;persentase&#xa;berlaku_mulai?&#xa;berlaku_sampai?&#xa;status_aktif" style="rounded=0;whiteSpace=wrap;html=0;align=left;verticalAlign=top;spacing=6;fontFamily=Courier New;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="2070" y="250" width="260" height="150" as="geometry"/>
+        </mxCell>
+        <mxCell id="master_uang_harian_perjaldins" value="master_uang_harian_perjaldins&#xa;----------------&#xa;PK id&#xa;provinsi (UQ)&#xa;satuan&#xa;luar_kota&#xa;dalam_kota_lebih_8_jam&#xa;diklat" style="rounded=0;whiteSpace=wrap;html=0;align=left;verticalAlign=top;spacing=6;fontFamily=Courier New;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="1790" y="430" width="260" height="140" as="geometry"/>
+        </mxCell>
+        <mxCell id="document_number_sequences" value="document_number_sequences&#xa;----------------&#xa;PK id&#xa;series_prefix&#xa;suffix_code&#xa;tahun&#xa;last_number&#xa;number_padding&#xa;is_active" style="rounded=0;whiteSpace=wrap;html=0;align=left;verticalAlign=top;spacing=6;fontFamily=Courier New;fontSize=11;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="2070" y="430" width="260" height="150" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="workflow_definitions" value="workflow_definitions&#xa;----------------&#xa;PK id&#xa;kode (UQ)&#xa;nama&#xa;target_type&#xa;status_aktif" style="rounded=0;whiteSpace=wrap;html=0;align=left;verticalAlign=top;spacing=6;fontFamily=Courier New;fontSize=11;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="2360" y="60" width="260" height="110" as="geometry"/>
+        </mxCell>
+        <mxCell id="workflow_definition_steps" value="workflow_definition_steps&#xa;----------------&#xa;PK id&#xa;FK workflow_definition_id&#xa;urutan_step&#xa;nama_step&#xa;role_code&#xa;is_required&#xa;can_reject&#xa;can_request_revision" style="rounded=0;whiteSpace=wrap;html=0;align=left;verticalAlign=top;spacing=6;fontFamily=Courier New;fontSize=11;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="2640" y="60" width="260" height="180" as="geometry"/>
+        </mxCell>
+        <mxCell id="workflow_instances" value="workflow_instances&#xa;----------------&#xa;PK id&#xa;FK workflow_definition_id&#xa;workflowable_type [morph]&#xa;workflowable_id [morph]&#xa;step_saat_ini&#xa;status" style="rounded=0;whiteSpace=wrap;html=0;align=left;verticalAlign=top;spacing=6;fontFamily=Courier New;fontSize=11;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="2360" y="200" width="260" height="150" as="geometry"/>
+        </mxCell>
+        <mxCell id="workflow_approvals" value="workflow_approvals&#xa;----------------&#xa;PK id&#xa;FK workflow_instance_id&#xa;urutan_step&#xa;nama_step&#xa;role_code&#xa;FK assigned_user_id?&#xa;FK acted_by_user_id?&#xa;status&#xa;acted_at?" style="rounded=0;whiteSpace=wrap;html=0;align=left;verticalAlign=top;spacing=6;fontFamily=Courier New;fontSize=11;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="2640" y="260" width="260" height="190" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="kontrak_pengadaan" value="kontrak_pengadaan&#xa;----------------&#xa;PK id&#xa;FK vendor_id&#xa;FK ppk_user_id?&#xa;FK master_dipa_id&#xa;FK dipa_revision_item_id?&#xa;nomor_spk (UQ)&#xa;tanggal_spk&#xa;nomor_spmk?&#xa;nama_pekerjaan&#xa;nilai_total_kontrak&#xa;metode_pembayaran&#xa;status_kontrak" style="rounded=0;whiteSpace=wrap;html=0;align=left;verticalAlign=top;spacing=6;fontFamily=Courier New;fontSize=11;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="2940" y="60" width="280" height="220" as="geometry"/>
+        </mxCell>
+        <mxCell id="kontrak_termin" value="kontrak_termin&#xa;----------------&#xa;PK id&#xa;FK kontrak_pengadaan_id&#xa;jenis_termin&#xa;termin_ke&#xa;persentase&#xa;nilai_bruto_termin&#xa;status_termin" style="rounded=0;whiteSpace=wrap;html=0;align=left;verticalAlign=top;spacing=6;fontFamily=Courier New;fontSize=11;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="3240" y="60" width="260" height="150" as="geometry"/>
+        </mxCell>
+        <mxCell id="jaminan_kontrak" value="jaminan_kontrak&#xa;----------------&#xa;PK id&#xa;FK kontrak_pengadaan_id&#xa;jenis_jaminan&#xa;penjamin&#xa;nomor_jaminan&#xa;nilai_jaminan" style="rounded=0;whiteSpace=wrap;html=0;align=left;verticalAlign=top;spacing=6;fontFamily=Courier New;fontSize=11;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="3240" y="230" width="260" height="130" as="geometry"/>
+        </mxCell>
+        <mxCell id="kontrak_addendum" value="kontrak_addendum&#xa;----------------&#xa;PK id&#xa;FK kontrak_pengadaan_id&#xa;nomor_addendum (UQ)&#xa;tanggal_addendum&#xa;jenis_addendum&#xa;nilai_kontrak_baru?&#xa;status_addendum" style="rounded=0;whiteSpace=wrap;html=0;align=left;verticalAlign=top;spacing=6;fontFamily=Courier New;fontSize=11;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="3240" y="380" width="260" height="150" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="transaksi_penerimaan" value="transaksi_penerimaan&#xa;----------------&#xa;PK id&#xa;FK mitra_id&#xa;FK coa_id&#xa;nomor_invoice (UQ)&#xa;tanggal_invoice?&#xa;nominal_tagihan&#xa;total_dibayar&#xa;status_pembayaran" style="rounded=0;whiteSpace=wrap;html=0;align=left;verticalAlign=top;spacing=6;fontFamily=Courier New;fontSize=11;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="40" y="800" width="270" height="160" as="geometry"/>
+        </mxCell>
+        <mxCell id="tagihan" value="tagihan&#xa;----------------&#xa;PK id&#xa;nomor_tagihan (UQ)&#xa;tipe_tagihan&#xa;FK master_dipa_id?&#xa;FK dipa_revision_item_id?&#xa;FK pihak_id?&#xa;deskripsi&#xa;total_bruto&#xa;total_potongan&#xa;total_netto&#xa;status&#xa;FK created_by&#xa;FK users lain: ppk / benpeng / ppspm / benpen / kasubbag&#xa;periode_bulan? + periode_tahun?" style="rounded=0;whiteSpace=wrap;html=0;align=left;verticalAlign=top;spacing=6;fontFamily=Courier New;fontSize=11;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="330" y="800" width="300" height="250" as="geometry"/>
+        </mxCell>
+        <mxCell id="potongan_tagihan" value="potongan_tagihan&#xa;----------------&#xa;PK id&#xa;FK tagihan_id&#xa;FK pajak_id?&#xa;FK akun_potongan_id?&#xa;jenis_potongan&#xa;nominal_potongan&#xa;kode_billing?&#xa;ntpn?" style="rounded=0;whiteSpace=wrap;html=0;align=left;verticalAlign=top;spacing=6;fontFamily=Courier New;fontSize=11;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="650" y="800" width="270" height="170" as="geometry"/>
+        </mxCell>
+        <mxCell id="detail_perjaldin" value="detail_perjaldin&#xa;----------------&#xa;PK id&#xa;FK tagihan_id&#xa;FK pegawai_id?&#xa;nama_pegawai? / nip?&#xa;no_spt&#xa;no_sppd?&#xa;FK provinsi_id?&#xa;tipe_perjalanan?&#xa;tujuan?&#xa;rekening?&#xa;tgl_berangkat&#xa;lama_hari&#xa;biaya_tiket / transport / penginapan&#xa;uang_harian / uang_representasi" style="rounded=0;whiteSpace=wrap;html=0;align=left;verticalAlign=top;spacing=6;fontFamily=Courier New;fontSize=11;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="940" y="800" width="300" height="250" as="geometry"/>
+        </mxCell>
+        <mxCell id="tagihan_perjaldin_komponen" value="tagihan_perjaldin_komponen&#xa;----------------&#xa;PK id&#xa;FK tagihan_id&#xa;kode_komponen&#xa;nama_komponen&#xa;FK dipa_revision_item_id?&#xa;total_nominal&#xa;jumlah_peserta&#xa;status_proses" style="rounded=0;whiteSpace=wrap;html=0;align=left;verticalAlign=top;spacing=6;fontFamily=Courier New;fontSize=11;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="1260" y="800" width="300" height="180" as="geometry"/>
+        </mxCell>
+        <mxCell id="detail_kontrak" value="detail_kontrak&#xa;----------------&#xa;PK id&#xa;FK tagihan_id&#xa;FK kontrak_termin_id&#xa;tanggal_invoice?&#xa;nomor_invoice?&#xa;nomor_bapp? / tanggal_bapp?&#xa;nomor_bast? / tanggal_bast?&#xa;nama_pemeriksa?" style="rounded=0;whiteSpace=wrap;html=0;align=left;verticalAlign=top;spacing=6;fontFamily=Courier New;fontSize=11;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="1580" y="800" width="280" height="180" as="geometry"/>
+        </mxCell>
+        <mxCell id="detail_honorarium" value="detail_honorarium&#xa;----------------&#xa;PK id&#xa;FK tagihan_id&#xa;nama_personel&#xa;nrp_nip?&#xa;jabatan?&#xa;nilai_honor&#xa;pph&#xa;rekening&#xa;jenis_bank&#xa;nama_rekening&#xa;no_hp?" style="rounded=0;whiteSpace=wrap;html=0;align=left;verticalAlign=top;spacing=6;fontFamily=Courier New;fontSize=11;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="1880" y="800" width="280" height="190" as="geometry"/>
+        </mxCell>
+        <mxCell id="realisasi_anggaran" value="realisasi_anggaran&#xa;----------------&#xa;PK id&#xa;FK dipa_revision_item_id&#xa;FK tagihan_id?&#xa;tanggal_pencairan&#xa;nomor_bukti (UQ)&#xa;nominal_cair&#xa;FK created_by?" style="rounded=0;whiteSpace=wrap;html=0;align=left;verticalAlign=top;spacing=6;fontFamily=Courier New;fontSize=11;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="2180" y="800" width="280" height="150" as="geometry"/>
+        </mxCell>
+        <mxCell id="log_status_dokumen" value="log_status_dokumen&#xa;----------------&#xa;PK id&#xa;dokumen_type [morph]&#xa;dokumen_id [morph]&#xa;FK user_id&#xa;role_saat_itu&#xa;status_sebelumnya?&#xa;status_baru&#xa;aksi" style="rounded=0;whiteSpace=wrap;html=0;align=left;verticalAlign=top;spacing=6;fontFamily=Courier New;fontSize=11;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="2480" y="800" width="280" height="170" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="dokumen_spp" value="dokumen_spp&#xa;----------------&#xa;PK id&#xa;FK tagihan_id&#xa;FK tagihan_perjaldin_komponen_id?&#xa;FK dipa_revision_item_id?&#xa;kategori_pembayaran&#xa;jenis_tagihan&#xa;nominal_spp&#xa;nomor_spp (UQ)&#xa;tanggal_spp&#xa;status&#xa;FK dibuat_oleh_id&#xa;FK ppk_verifikator_id?" style="rounded=0;whiteSpace=wrap;html=0;align=left;verticalAlign=top;spacing=6;fontFamily=Courier New;fontSize=11;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="40" y="1110" width="280" height="220" as="geometry"/>
+        </mxCell>
+        <mxCell id="dokumen_spm" value="dokumen_spm&#xa;----------------&#xa;PK id&#xa;FK spp_id&#xa;nomor_spm (UQ)&#xa;tanggal_spm&#xa;FK ppspm_id&#xa;FK dipa_revision_item_id?&#xa;tahun_anggaran?&#xa;jenis_tagihan&#xa;jatuh_tempo&#xa;cara_bayar&#xa;nominal_spm?&#xa;status&#xa;FK dibuat_oleh_id?" style="rounded=0;whiteSpace=wrap;html=0;align=left;verticalAlign=top;spacing=6;fontFamily=Courier New;fontSize=11;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="340" y="1110" width="280" height="240" as="geometry"/>
+        </mxCell>
+        <mxCell id="dokumen_npi" value="dokumen_npi&#xa;----------------&#xa;PK id&#xa;FK spm_id&#xa;nomor_npi (UQ)&#xa;tanggal_npi&#xa;FK bendahara_penerimaan_id&#xa;status" style="rounded=0;whiteSpace=wrap;html=0;align=left;verticalAlign=top;spacing=6;fontFamily=Courier New;fontSize=11;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="640" y="1110" width="260" height="130" as="geometry"/>
+        </mxCell>
+        <mxCell id="dokumen_sp2d" value="dokumen_sp2d&#xa;----------------&#xa;PK id&#xa;FK npi_id&#xa;nomor_sp2d (UQ)&#xa;tanggal_sp2d&#xa;FK bendahara_pengeluaran_id&#xa;status" style="rounded=0;whiteSpace=wrap;html=0;align=left;verticalAlign=top;spacing=6;fontFamily=Courier New;fontSize=11;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="920" y="1110" width="260" height="130" as="geometry"/>
+        </mxCell>
+        <mxCell id="arsip_dokumen" value="arsip_dokumen&#xa;----------------&#xa;PK id&#xa;documentable_type [morph]&#xa;documentable_id [morph]&#xa;jenis_dokumen&#xa;nama_file_asli&#xa;path_file&#xa;FK uploaded_by?&#xa;uploaded_at?&#xa;is_active" style="rounded=0;whiteSpace=wrap;html=0;align=left;verticalAlign=top;spacing=6;fontFamily=Courier New;fontSize=11;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="1200" y="1110" width="280" height="190" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="buku_kas_umum" value="buku_kas_umum&#xa;----------------&#xa;PK id&#xa;tanggal_transaksi&#xa;nomor_bukti&#xa;uraian&#xa;arus_kas&#xa;nominal&#xa;saldo_akhir&#xa;FK sumber_rekening_id&#xa;FK referensi_pengeluaran_id?&#xa;FK referensi_penerimaan_id?" style="rounded=0;whiteSpace=wrap;html=0;align=left;verticalAlign=top;spacing=6;fontFamily=Courier New;fontSize=11;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="1520" y="1110" width="280" height="190" as="geometry"/>
+        </mxCell>
+        <mxCell id="import_mutasi_bank" value="import_mutasi_bank&#xa;----------------&#xa;PK id&#xa;FK rekening_bank_id&#xa;periode_awal?&#xa;periode_akhir?&#xa;path_file?&#xa;FK uploaded_by?&#xa;status_import" style="rounded=0;whiteSpace=wrap;html=0;align=left;verticalAlign=top;spacing=6;fontFamily=Courier New;fontSize=11;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="1820" y="1110" width="280" height="150" as="geometry"/>
+        </mxCell>
+        <mxCell id="detail_mutasi_bank" value="detail_mutasi_bank&#xa;----------------&#xa;PK id&#xa;FK import_mutasi_bank_id&#xa;tanggal_transaksi&#xa;nomor_referensi_bank?&#xa;debit / kredit&#xa;saldo?&#xa;arah_mutasi&#xa;status_rekonsiliasi" style="rounded=0;whiteSpace=wrap;html=0;align=left;verticalAlign=top;spacing=6;fontFamily=Courier New;fontSize=11;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="2120" y="1110" width="280" height="170" as="geometry"/>
+        </mxCell>
+        <mxCell id="rekonsiliasi_bank" value="rekonsiliasi_bank&#xa;----------------&#xa;PK id&#xa;FK detail_mutasi_bank_id&#xa;FK bku_id?&#xa;FK transaksi_penerimaan_id?&#xa;FK tagihan_id?&#xa;nominal_mutasi&#xa;nominal_sistem&#xa;selisih&#xa;status&#xa;FK direkonsiliasi_oleh?" style="rounded=0;whiteSpace=wrap;html=0;align=left;verticalAlign=top;spacing=6;fontFamily=Courier New;fontSize=11;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="2420" y="1110" width="280" height="190" as="geometry"/>
+        </mxCell>
+        <mxCell id="rekonsiliasi_bank_logs" value="rekonsiliasi_bank_logs&#xa;----------------&#xa;PK id&#xa;FK rekonsiliasi_bank_id&#xa;FK user_id?&#xa;aksi&#xa;catatan?" style="rounded=0;whiteSpace=wrap;html=0;align=left;verticalAlign=top;spacing=6;fontFamily=Courier New;fontSize=11;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="2720" y="1110" width="260" height="120" as="geometry"/>
+        </mxCell>
+        <mxCell id="laporan_pengesahan_blu" value="laporan_pengesahan_blu&#xa;----------------&#xa;PK id&#xa;nomor_laporan (UQ)&#xa;periode_bulan&#xa;tahun&#xa;total_penerimaan&#xa;total_pengeluaran&#xa;saldo_akhir_blu&#xa;status_pengesahan&#xa;status_sp3b?&#xa;FK disetujui_kpa_id?" style="rounded=0;whiteSpace=wrap;html=0;align=left;verticalAlign=top;spacing=6;fontFamily=Courier New;fontSize=11;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="3000" y="1110" width="280" height="180" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="e_master_pihak_users" value="user_id" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=ERone;startArrow=ERmany;strokeColor=#666666;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="master_pihak" target="users">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_master_pegawai_users" value="user_id" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=ERone;startArrow=ERmany;strokeColor=#666666;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="master_pegawai" target="users">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_role_perm_perm" value="permission_id" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=ERone;startArrow=ERmany;strokeColor=#666666;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="role_has_permissions" target="permissions">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_role_perm_role" value="role_id" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=ERone;startArrow=ERmany;strokeColor=#666666;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="role_has_permissions" target="roles">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_model_role_role" value="role_id" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=ERone;startArrow=ERmany;strokeColor=#666666;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="model_has_roles" target="roles">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_model_perm_perm" value="permission_id" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=ERone;startArrow=ERmany;strokeColor=#666666;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="model_has_permissions" target="permissions">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="e_dipa_revisions_master_dipas" value="master_dipa_id" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=ERone;startArrow=ERmany;strokeColor=#666666;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="dipa_revisions" target="master_dipas">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_dipa_items_revision" value="dipa_revision_id" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=ERone;startArrow=ERmany;strokeColor=#666666;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="dipa_revision_items" target="dipa_revisions">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_dipa_items_coa" value="coa_id" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=ERone;startArrow=ERmany;strokeColor=#666666;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="dipa_revision_items" target="master_coas">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="e_wf_steps_defs" value="workflow_definition_id" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=ERone;startArrow=ERmany;strokeColor=#666666;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="workflow_definition_steps" target="workflow_definitions">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_wf_instances_defs" value="workflow_definition_id" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=ERone;startArrow=ERmany;strokeColor=#666666;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="workflow_instances" target="workflow_definitions">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_wf_approvals_instances" value="workflow_instance_id" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=ERone;startArrow=ERmany;strokeColor=#666666;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="workflow_approvals" target="workflow_instances">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_wf_approvals_users" value="assigned_user_id / acted_by_user_id" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=ERone;startArrow=ERmany;strokeColor=#666666;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="workflow_approvals" target="users">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="e_kontrak_vendor" value="vendor_id" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=ERone;startArrow=ERmany;strokeColor=#666666;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="kontrak_pengadaan" target="master_pihak">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_kontrak_ppk" value="ppk_user_id" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=ERone;startArrow=ERmany;strokeColor=#666666;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="kontrak_pengadaan" target="users">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_kontrak_dipa" value="master_dipa_id" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=ERone;startArrow=ERmany;strokeColor=#666666;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="kontrak_pengadaan" target="master_dipas">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_kontrak_dipa_item" value="dipa_revision_item_id" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=ERone;startArrow=ERmany;strokeColor=#666666;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="kontrak_pengadaan" target="dipa_revision_items">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_termin_kontrak" value="kontrak_pengadaan_id" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=ERone;startArrow=ERmany;strokeColor=#666666;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="kontrak_termin" target="kontrak_pengadaan">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_jaminan_kontrak" value="kontrak_pengadaan_id" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=ERone;startArrow=ERmany;strokeColor=#666666;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="jaminan_kontrak" target="kontrak_pengadaan">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_addendum_kontrak" value="kontrak_pengadaan_id" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=ERone;startArrow=ERmany;strokeColor=#666666;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="kontrak_addendum" target="kontrak_pengadaan">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="e_transaksi_mitra" value="mitra_id" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=ERone;startArrow=ERmany;strokeColor=#666666;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="transaksi_penerimaan" target="master_pihak">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_transaksi_coa" value="coa_id" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=ERone;startArrow=ERmany;strokeColor=#666666;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="transaksi_penerimaan" target="master_coas">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_tagihan_dipa" value="master_dipa_id" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=ERone;startArrow=ERmany;strokeColor=#666666;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="tagihan" target="master_dipas">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_tagihan_item" value="dipa_revision_item_id" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=ERone;startArrow=ERmany;strokeColor=#666666;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="tagihan" target="dipa_revision_items">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_tagihan_pihak" value="pihak_id" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=ERone;startArrow=ERmany;strokeColor=#666666;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="tagihan" target="master_pihak">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_tagihan_users" value="created_by + role user refs" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=ERone;startArrow=ERmany;strokeColor=#666666;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="tagihan" target="users">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_potongan_tagihan" value="tagihan_id" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=ERone;startArrow=ERmany;strokeColor=#666666;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="potongan_tagihan" target="tagihan">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_potongan_pajak" value="pajak_id" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=ERone;startArrow=ERmany;strokeColor=#666666;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="potongan_tagihan" target="master_tarif_pajak">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_potongan_coa" value="akun_potongan_id" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=ERone;startArrow=ERmany;strokeColor=#666666;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="potongan_tagihan" target="master_coas">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_detail_perjaldin_tagihan" value="tagihan_id" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=ERone;startArrow=ERmany;strokeColor=#666666;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="detail_perjaldin" target="tagihan">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_detail_perjaldin_pegawai" value="pegawai_id" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=ERone;startArrow=ERmany;strokeColor=#666666;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="detail_perjaldin" target="master_pegawai">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_detail_perjaldin_prov" value="provinsi_id" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=ERone;startArrow=ERmany;strokeColor=#666666;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="detail_perjaldin" target="master_uang_harian_perjaldins">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_komponen_tagihan" value="tagihan_id" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=ERone;startArrow=ERmany;strokeColor=#666666;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="tagihan_perjaldin_komponen" target="tagihan">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_komponen_item" value="dipa_revision_item_id" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=ERone;startArrow=ERmany;strokeColor=#666666;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="tagihan_perjaldin_komponen" target="dipa_revision_items">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_detail_kontrak_tagihan" value="tagihan_id" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=ERone;startArrow=ERmany;strokeColor=#666666;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="detail_kontrak" target="tagihan">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_detail_kontrak_termin" value="kontrak_termin_id" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=ERone;startArrow=ERmany;strokeColor=#666666;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="detail_kontrak" target="kontrak_termin">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_detail_honor_tagihan" value="tagihan_id" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=ERone;startArrow=ERmany;strokeColor=#666666;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="detail_honorarium" target="tagihan">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_realisasi_item" value="dipa_revision_item_id" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=ERone;startArrow=ERmany;strokeColor=#666666;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="realisasi_anggaran" target="dipa_revision_items">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_realisasi_tagihan" value="tagihan_id" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=ERone;startArrow=ERmany;strokeColor=#666666;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="realisasi_anggaran" target="tagihan">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_realisasi_users" value="created_by" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=ERone;startArrow=ERmany;strokeColor=#666666;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="realisasi_anggaran" target="users">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_log_users" value="user_id" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=ERone;startArrow=ERmany;strokeColor=#666666;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="log_status_dokumen" target="users">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="e_spp_tagihan" value="tagihan_id" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=ERone;startArrow=ERmany;strokeColor=#666666;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="dokumen_spp" target="tagihan">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_spp_komponen" value="tagihan_perjaldin_komponen_id" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=ERone;startArrow=ERmany;strokeColor=#666666;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="dokumen_spp" target="tagihan_perjaldin_komponen">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_spp_item" value="dipa_revision_item_id" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=ERone;startArrow=ERmany;strokeColor=#666666;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="dokumen_spp" target="dipa_revision_items">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_spp_users" value="dibuat_oleh_id / ppk_verifikator_id" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=ERone;startArrow=ERmany;strokeColor=#666666;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="dokumen_spp" target="users">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_spm_spp" value="spp_id" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=ERone;startArrow=ERmany;strokeColor=#666666;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="dokumen_spm" target="dokumen_spp">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_spm_users" value="ppspm_id / dibuat_oleh_id" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=ERone;startArrow=ERmany;strokeColor=#666666;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="dokumen_spm" target="users">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_spm_item" value="dipa_revision_item_id" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=ERone;startArrow=ERmany;strokeColor=#666666;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="dokumen_spm" target="dipa_revision_items">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_npi_spm" value="spm_id" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=ERone;startArrow=ERmany;strokeColor=#666666;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="dokumen_npi" target="dokumen_spm">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_npi_users" value="bendahara_penerimaan_id" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=ERone;startArrow=ERmany;strokeColor=#666666;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="dokumen_npi" target="users">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_sp2d_npi" value="npi_id" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=ERone;startArrow=ERmany;strokeColor=#666666;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="dokumen_sp2d" target="dokumen_npi">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_sp2d_users" value="bendahara_pengeluaran_id" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=ERone;startArrow=ERmany;strokeColor=#666666;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="dokumen_sp2d" target="users">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_arsip_users" value="uploaded_by" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=ERone;startArrow=ERmany;strokeColor=#666666;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="arsip_dokumen" target="users">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="e_bku_rekening" value="sumber_rekening_id" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=ERone;startArrow=ERmany;strokeColor=#666666;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="buku_kas_umum" target="rekening_bank">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_bku_tagihan" value="referensi_pengeluaran_id" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=ERone;startArrow=ERmany;strokeColor=#666666;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="buku_kas_umum" target="tagihan">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_bku_penerimaan" value="referensi_penerimaan_id" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=ERone;startArrow=ERmany;strokeColor=#666666;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="buku_kas_umum" target="transaksi_penerimaan">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_import_rekening" value="rekening_bank_id" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=ERone;startArrow=ERmany;strokeColor=#666666;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="import_mutasi_bank" target="rekening_bank">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_import_users" value="uploaded_by" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=ERone;startArrow=ERmany;strokeColor=#666666;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="import_mutasi_bank" target="users">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_mutasi_import" value="import_mutasi_bank_id" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=ERone;startArrow=ERmany;strokeColor=#666666;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="detail_mutasi_bank" target="import_mutasi_bank">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_rekon_mutasi" value="detail_mutasi_bank_id" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=ERone;startArrow=ERmany;strokeColor=#666666;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="rekonsiliasi_bank" target="detail_mutasi_bank">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_rekon_bku" value="bku_id" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=ERone;startArrow=ERmany;strokeColor=#666666;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="rekonsiliasi_bank" target="buku_kas_umum">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_rekon_penerimaan" value="transaksi_penerimaan_id" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=ERone;startArrow=ERmany;strokeColor=#666666;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="rekonsiliasi_bank" target="transaksi_penerimaan">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_rekon_tagihan" value="tagihan_id" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=ERone;startArrow=ERmany;strokeColor=#666666;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="rekonsiliasi_bank" target="tagihan">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_rekon_users" value="direkonsiliasi_oleh" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=ERone;startArrow=ERmany;strokeColor=#666666;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="rekonsiliasi_bank" target="users">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_rekon_logs_rekon" value="rekonsiliasi_bank_id" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=ERone;startArrow=ERmany;strokeColor=#666666;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="rekonsiliasi_bank_logs" target="rekonsiliasi_bank">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_rekon_logs_users" value="user_id" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=ERone;startArrow=ERmany;strokeColor=#666666;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="rekonsiliasi_bank_logs" target="users">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_laporan_users" value="disetujui_kpa_id" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;endArrow=ERone;startArrow=ERmany;strokeColor=#666666;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="laporan_pengesahan_blu" target="users">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="e_note_notifications" value="morph" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;dashed=1;endArrow=none;strokeColor=#6c8ebf;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="notifications" target="note_morph">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_note_model_roles" value="morph" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;dashed=1;endArrow=none;strokeColor=#6c8ebf;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="model_has_roles" target="note_morph">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_note_model_permissions" value="morph" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;dashed=1;endArrow=none;strokeColor=#6c8ebf;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="model_has_permissions" target="note_morph">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_note_rekening" value="morph" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;dashed=1;endArrow=none;strokeColor=#6c8ebf;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="rekening_bank" target="note_morph">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_note_wf_instances" value="morph" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;dashed=1;endArrow=none;strokeColor=#6c8ebf;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="workflow_instances" target="note_morph">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_note_logs" value="morph" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;dashed=1;endArrow=none;strokeColor=#6c8ebf;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="log_status_dokumen" target="note_morph">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_note_arsip" value="morph" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;dashed=1;endArrow=none;strokeColor=#6c8ebf;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="arsip_dokumen" target="note_morph">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -29,4 +29,9 @@ class TransaksiPenerimaan extends Model
     {
         return $this->belongsTo(MasterCoa::class, 'coa_id');
     }
+
+    public function bukuKasUmums()
+    {
+        return $this->hasMany(BukuKasUmum::class, 'referensi_penerimaan_id');
+    }
 }

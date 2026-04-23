@@ -24,7 +24,7 @@ class ContractController extends Controller
     public function index()
     {
         $contracts = \App\Models\KontrakPengadaan::with(['vendor', 'ppkUser.pegawai', 'addendums', 'termin'])->latest()->get();
-        $addendums = \App\Models\KontrakAddendum::with(['kontrakUtama.vendor'])->latest()->get();
+        $addendums = \App\Models\KontrakAddendum::with(['kontrakUtama.vendor', 'logs.user'])->latest()->get();
 
         $totalAktif = $contracts->where('status_kontrak', 'AKTIF')->count();
         $totalSelesai = $contracts->where('status_kontrak', 'SELESAI')->count();
@@ -286,12 +286,14 @@ class ContractController extends Controller
     {
         $kontrak = \App\Models\KontrakPengadaan::with([
             'termin.detailKontrak.tagihan.logs.user',
-            'addendums',
+            'addendums.logs.user',
+            'addendums.arsipDokumen',
             'vendor.rekening',
             'ppkUser.pegawai',
             'dipa.activeRevision',
             'dipaRevisionItem.coa',
             'arsipDokumen',
+            'jaminanKontrak',
         ])->findOrFail($id);
 
         // 1. Ambil log pembuatan kontrak
@@ -305,11 +307,13 @@ class ContractController extends Controller
 
         // 2. Ambil log dari Addendum (jika ada)
         $logAddendum = $kontrak->addendums->map(function($add) {
+            $latestLog = $add->logs->sortByDesc('created_at')->first();
+
             return [
-                'tanggal' => $add->created_at,
-                'judul' => 'Addendum ' . $add->nomor_addendum . ' Dibuat',
-                'aktor' => 'Sistem',
-                'catatan' => $add->keterangan_alasan ?? 'Perubahan kontrak',
+                'tanggal' => $latestLog?->created_at ?? $add->created_at,
+                'judul' => 'Addendum ' . $add->nomor_addendum . ' - ' . str_replace('_', ' ', $add->status_workflow ?? 'DRAFT'),
+                'aktor' => $latestLog?->user?->name ?? 'Sistem',
+                'catatan' => $latestLog?->catatan ?? ($add->keterangan_alasan ?? 'Perubahan kontrak'),
                 'ikon' => 'bi-pencil-square'
             ];
         });
@@ -944,5 +948,4 @@ class ContractController extends Controller
         ]));
     }
 }
-
 

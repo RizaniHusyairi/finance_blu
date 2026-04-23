@@ -96,6 +96,17 @@ class SppVerifikasiController extends Controller
             'color' => 'success'
         ]));
 
+        if (!$workflowFullyApproved) {
+            $kasubbags = User::role('Kepala Subbagian Keuangan dan Tata Usaha')->get();
+            Notification::send($kasubbags, new WorkflowNotification([
+                'title' => 'SPP Menunggu Verifikasi',
+                'message' => "SPP {$spp->nomor_spp} telah disetujui PPK dan menunggu verifikasi Anda.",
+                'url' => route('verifikasi-kasubag.spp.index'),
+                'icon' => 'fact_check',
+                'color' => 'primary'
+            ]));
+        }
+
         return back()->with('success', $workflowFullyApproved
             ? "SPP Nomor {$spp->nomor_spp} telah disetujui oleh semua pihak."
             : "SPP Nomor {$spp->nomor_spp} berhasil disetujui PPK.");

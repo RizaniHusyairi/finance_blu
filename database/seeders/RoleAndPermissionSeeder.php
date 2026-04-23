@@ -79,7 +79,7 @@ class RoleAndPermissionSeeder extends Seeder
         $ppk = User::updateOrCreate([
             'email' => 'ppk@admin.com',
         ], [
-            'name' => 'Pejabat Pembuat Komitmen Test',
+            'name' => 'GUNAWAN',
             'email_verified_at' => now(),
             'password' => Hash::make('password'),
         ]);
@@ -88,9 +88,9 @@ class RoleAndPermissionSeeder extends Seeder
 
         // Create Kasubag for Testing
         $kasubag = User::updateOrCreate([
-            'email' => 'kasubag@admin.com',
+            'email' => 'kasubbag@admin.com',
         ], [
-            'name' => 'Kepala Subbagian Keuangan Test',
+            'name' => 'ZALDI ARDIAN',
             'email_verified_at' => now(),
             'password' => Hash::make('password'),
         ]);
@@ -101,7 +101,7 @@ class RoleAndPermissionSeeder extends Seeder
         $ppspm = User::updateOrCreate([
             'email' => 'ppspm@admin.com',
         ], [
-            'name' => 'PPSPM Test',
+            'name' => 'MUTIA RACHMI',
             'email_verified_at' => now(),
             'password' => Hash::make('password'),
         ]);
@@ -112,7 +112,7 @@ class RoleAndPermissionSeeder extends Seeder
         $bendaharaPengeluaran = User::updateOrCreate([
             'email' => 'bendahara.pengeluaran@admin.com',
         ], [
-            'name' => 'Bendahara Pengeluaran Test',
+            'name' => 'YENI PUJI ASTUTI',
             'email_verified_at' => now(),
             'password' => Hash::make('password'),
         ]);
@@ -122,7 +122,7 @@ class RoleAndPermissionSeeder extends Seeder
         $bendaharaPenerimaan = User::updateOrCreate([
             'email' => 'bendahara.penerimaan@admin.com',
         ], [
-            'name' => 'Bendahara Penerimaan Test',
+            'name' => 'SITI KHOLIFAH',
             'email_verified_at' => now(),
             'password' => Hash::make('password'),
         ]);
@@ -134,7 +134,7 @@ class RoleAndPermissionSeeder extends Seeder
         $perjaldin = User::updateOrCreate([
             'email' => 'perjaldin@admin.com',
         ], [
-            'name' => 'Operator Perjaldin Test',
+            'name' => 'AULIA',
             'email_verified_at' => now(),
             'password' => Hash::make('password'),
         ]);

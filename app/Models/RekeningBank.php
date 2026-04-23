@@ -31,4 +31,24 @@ class RekeningBank extends Model
     {
         return $this->morphTo();
     }
+
+    public function importMutasiBanks()
+    {
+        return $this->hasMany(ImportMutasiBank::class, 'rekening_bank_id');
+    }
+
+    public function detailMutasiBanks()
+    {
+        return $this->hasManyThrough(
+            DetailMutasiBank::class,
+            ImportMutasiBank::class,
+            'rekening_bank_id',
+            'import_mutasi_bank_id'
+        );
+    }
+
+    public function bukuKasUmums()
+    {
+        return $this->hasMany(BukuKasUmum::class, 'sumber_rekening_id');
+    }
 }

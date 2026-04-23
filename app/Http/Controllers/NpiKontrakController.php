@@ -179,6 +179,8 @@ class NpiKontrakController extends Controller
                 ];
             })->values();
 
+        $autoNomorNpi = \App\Services\DocumentNumberingService::generateDerivedNumber($sppModel->nomor_spp, 'NPI');
+
         return view('npis.kontrak_detail', compact(
             'spmModel',
             'sppModel',
@@ -203,7 +205,8 @@ class NpiKontrakController extends Controller
             'recentActivities',
             'rekeningReady',
             'ppkSpp',
-            'kasubbagUser'
+            'kasubbagUser',
+            'autoNomorNpi'
         ));
     }
 

@@ -215,6 +215,8 @@ class SpmKontrakController extends Controller
                 ];
             })->values();
 
+        $autoNomorSpm = \App\Services\DocumentNumberingService::generateDerivedNumber($sppModel->nomor_spp, 'SPM');
+
         return view('spms.spm_kontrak_detail', compact(
             'sppModel',
             'tagihan',
@@ -244,6 +246,7 @@ class SpmKontrakController extends Controller
             'progressStep',
             'recentActivities',
             'kasubbagUser',
+            'autoNomorSpm'
         ));
     }
 

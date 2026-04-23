@@ -219,7 +219,8 @@
                             
                             <div class="mb-3">
                                 <label class="form-label fw-semibold">Nomor SP2D <span class="text-danger">*</span></label>
-                                <input type="text" name="nomor_sp2d" class="form-control" required value="{{ old('nomor_sp2d', $sp2d?->nomor_sp2d) }}" placeholder="Contoh: 1234/SP2D/2026">
+                                <input type="text" name="nomor_sp2d" class="form-control fw-bold text-primary bg-light" required value="{{ old('nomor_sp2d', $sp2d?->nomor_sp2d ?? $autoNomorSp2d) }}" placeholder="Contoh: 1234/SP2D/2026">
+                                <small class="text-muted"><i class="bi bi-info-circle me-1"></i>Nomor di atas diturunkan dari SPP, ubah jika perlu.</small>
                             </div>
 
                             <div class="mb-3">

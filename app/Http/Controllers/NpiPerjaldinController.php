@@ -154,6 +154,8 @@ class NpiPerjaldinController extends Controller
                 ];
             })->values();
 
+        $autoNomorNpi = \App\Services\DocumentNumberingService::generateDerivedNumber($sppModel->nomor_spp, 'NPI');
+
         return view('npis.perjaldin_detail', compact(
             'spmModel',
             'sppModel',
@@ -173,7 +175,8 @@ class NpiPerjaldinController extends Controller
             'kasubbagApproval',
             'recentActivities',
             'ppkSpp',
-            'kasubbagUser'
+            'kasubbagUser',
+            'autoNomorNpi'
         ));
     }
 

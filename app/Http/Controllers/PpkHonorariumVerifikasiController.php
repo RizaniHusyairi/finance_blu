@@ -148,9 +148,9 @@ class PpkHonorariumVerifikasiController extends Controller
         $skHonorarium = $tagihan->arsipDokumen->firstWhere('jenis_dokumen', 'SK Honorarium');
 
         $documentStatuses = collect([
-            ['key' => 'daftar_nominatif', 'label' => 'Daftar Nominatif', 'path' => $daftarNominatif?->id, 'required' => true],
-            ['key' => 'dokumen_honorarium', 'label' => 'Dokumen Honorarium', 'path' => $dokumenHonorarium?->id, 'required' => true],
-            ['key' => 'sk_honorarium', 'label' => 'SK Honorarium', 'path' => $skHonorarium?->id, 'required' => false],
+            ['key' => 'daftar_nominatif', 'label' => 'Daftar Nominatif', 'path' => $daftarNominatif?->path_file, 'required' => true],
+            ['key' => 'dokumen_honorarium', 'label' => 'Dokumen Honorarium', 'path' => $dokumenHonorarium?->path_file, 'required' => true],
+            ['key' => 'sk_honorarium', 'label' => 'SK Honorarium', 'path' => $skHonorarium?->path_file, 'required' => false],
         ])->map(function ($item) {
             $isAvailable = !empty($item['path']);
             $status = !$item['required'] ? 'not_required' : ($isAvailable ? 'ready' : 'missing');

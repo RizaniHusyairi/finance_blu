@@ -69,6 +69,11 @@ class KontrakPengadaan extends Model
         return $this->hasMany(KontrakTermin::class, 'kontrak_pengadaan_id');
     }
 
+    public function jaminanKontrak()
+    {
+        return $this->hasMany(JaminanKontrak::class, 'kontrak_pengadaan_id');
+    }
+
     public function arsipDokumen()
     {
         return $this->morphMany(ArsipDokumen::class, 'documentable');

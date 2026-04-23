@@ -121,8 +121,12 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
         Route::post('/contracts/{contract}/submit', [ContractController::class, 'submit'])->name('contracts.submit');
         Route::post('/contracts/{contract}/approve', [ContractController::class, 'approve'])->name('contracts.approve');
         Route::post('/contracts/{contract}/reject', [ContractController::class, 'reject'])->name('contracts.reject');
+        Route::get('/contracts/{contract}/addendums', [ContractAddendumController::class, 'index'])->name('addendums.index');
         Route::get('/contracts/{contract}/addendums/create', [ContractAddendumController::class, 'create'])->name('addendums.create');
         Route::post('/contracts/{contract}/addendums', [ContractAddendumController::class, 'store'])->name('addendums.store');
+        Route::get('/contracts/{contract}/addendums/{addendum}', [ContractAddendumController::class, 'show'])->name('addendums.show');
+        Route::get('/contracts/{contract}/addendums/{addendum}/edit', [ContractAddendumController::class, 'edit'])->name('addendums.edit');
+        Route::put('/contracts/{contract}/addendums/{addendum}', [ContractAddendumController::class, 'update'])->name('addendums.update');
         Route::post('/contracts/{contract}/addendums/{addendum}/submit', [ContractAddendumController::class, 'submit'])->name('addendums.submit');
         Route::post('/contracts/{contract}/addendums/{addendum}/approve', [ContractAddendumController::class, 'approve'])->name('addendums.approve');
         Route::post('/contracts/{contract}/addendums/{addendum}/reject', [ContractAddendumController::class, 'reject'])->name('addendums.reject');
@@ -276,6 +280,14 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
         Route::post('/verifikasi-kasubag/sp2d/kontrak/{id}/revisi', [\App\Http\Controllers\KasubbagSp2dKontrakVerifikasiController::class, 'revisi'])->name('verifikasi-kasubag.sp2d.kontrak.revisi');
     });
 
+    // ==== VERIFIKASI SPP HONORARIUM — Terpadu 2 Role (PPK & Kasubbag) ====
+    Route::middleware('role:Super Admin|PPK|Kepala Subbagian Keuangan dan Tata Usaha')->group(function () {
+        Route::get('/verifikasi-spp/honor', [\App\Http\Controllers\VerifikasiSppHonorController::class, 'index'])->name('verifikasi-spp.honor.index');
+        Route::get('/verifikasi-spp/honor/{spp}/detail', [\App\Http\Controllers\VerifikasiSppHonorController::class, 'detail'])->name('verifikasi-spp.honor.detail');
+        Route::post('/verifikasi-spp/honor/{spp}/approve', [\App\Http\Controllers\VerifikasiSppHonorController::class, 'approve'])->name('verifikasi-spp.honor.approve');
+        Route::post('/verifikasi-spp/honor/{spp}/reject', [\App\Http\Controllers\VerifikasiSppHonorController::class, 'reject'])->name('verifikasi-spp.honor.reject');
+    });
+
     // ==== VERIFIKASI NPI — Bendahara Penerimaan (TTD) ====
     Route::middleware('role:Super Admin|Bendahara Penerimaan')->group(function () {
         Route::get('/verifikasi-bendahara-penerimaan/perjaldin', [\App\Http\Controllers\PerjaldinVerifikasiController::class, 'bendaharaPenerimaanIndex'])->name('verifikasi-bendahara-penerimaan.perjaldin.index');
@@ -294,12 +306,19 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
         Route::post('/verifikasi-bendahara-penerimaan/npi/kontrak/{id}/revisi', [\App\Http\Controllers\BenpenNpiKontrakVerifikasiController::class, 'revisi'])->name('verifikasi-bendahara-penerimaan.npi.kontrak.revisi');
     });
 
-    // ==== VERIFIKASI NPI PERJALDIN — Terpadu 3 Role ====
+    // ==== VERIFIKASI NPI PERJALDIN & HONORARIUM — Terpadu 3 Role ====
     Route::middleware('role:Super Admin|PPK|Bendahara Penerimaan|Kepala Subbagian Keuangan dan Tata Usaha')->group(function () {
+        // NPI Perjaldin
         Route::get('/verifikasi-npi/perjaldin', [\App\Http\Controllers\VerifikasiNpiPerjaldinController::class, 'index'])->name('verifikasi-npi.perjaldin.index');
         Route::get('/verifikasi-npi/perjaldin/{id}/detail', [\App\Http\Controllers\VerifikasiNpiPerjaldinController::class, 'show'])->name('verifikasi-npi.perjaldin.detail');
         Route::post('/verifikasi-npi/perjaldin/{id}/approve', [\App\Http\Controllers\VerifikasiNpiPerjaldinController::class, 'approve'])->name('verifikasi-npi.perjaldin.approve');
         Route::post('/verifikasi-npi/perjaldin/{id}/revisi', [\App\Http\Controllers\VerifikasiNpiPerjaldinController::class, 'reject'])->name('verifikasi-npi.perjaldin.reject');
+
+        // NPI Honorarium
+        Route::get('/verifikasi-npi/honor', [\App\Http\Controllers\VerifikasiNpiHonorController::class, 'index'])->name('verifikasi-npi.honor.index');
+        Route::get('/verifikasi-npi/honor/{id}/detail', [\App\Http\Controllers\VerifikasiNpiHonorController::class, 'show'])->name('verifikasi-npi.honor.detail');
+        Route::post('/verifikasi-npi/honor/{id}/approve', [\App\Http\Controllers\VerifikasiNpiHonorController::class, 'approve'])->name('verifikasi-npi.honor.approve');
+        Route::post('/verifikasi-npi/honor/{id}/revisi', [\App\Http\Controllers\VerifikasiNpiHonorController::class, 'reject'])->name('verifikasi-npi.honor.reject');
     });
 
     // ==== VERIFIKASI SP2D PERJALDIN — Terpadu 2 Role ====
@@ -308,6 +327,12 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
         Route::get('/verifikasi-sp2d/perjaldin/{id}/detail', [\App\Http\Controllers\VerifikasiSp2dPerjaldinController::class, 'show'])->name('verifikasi-sp2d.perjaldin.detail');
         Route::post('/verifikasi-sp2d/perjaldin/{id}/approve', [\App\Http\Controllers\VerifikasiSp2dPerjaldinController::class, 'approve'])->name('verifikasi-sp2d.perjaldin.approve');
         Route::post('/verifikasi-sp2d/perjaldin/{id}/revisi', [\App\Http\Controllers\VerifikasiSp2dPerjaldinController::class, 'reject'])->name('verifikasi-sp2d.perjaldin.reject');
+
+        // SP2D Honorarium
+        Route::get('/verifikasi-sp2d/honor', [\App\Http\Controllers\VerifikasiSp2dHonorController::class, 'index'])->name('verifikasi-sp2d.honor.index');
+        Route::get('/verifikasi-sp2d/honor/{id}/detail', [\App\Http\Controllers\VerifikasiSp2dHonorController::class, 'show'])->name('verifikasi-sp2d.honor.detail');
+        Route::post('/verifikasi-sp2d/honor/{id}/approve', [\App\Http\Controllers\VerifikasiSp2dHonorController::class, 'approve'])->name('verifikasi-sp2d.honor.approve');
+        Route::post('/verifikasi-sp2d/honor/{id}/revisi', [\App\Http\Controllers\VerifikasiSp2dHonorController::class, 'reject'])->name('verifikasi-sp2d.honor.reject');
     });
 
     // ==== MODUL PEMBUATAN SPP (BLU) ====
@@ -331,6 +356,7 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
         Route::get('/spps/honor', [\App\Http\Controllers\SppController::class, 'honorIndex'])->name('spps.honor.index');
         Route::get('/spps/honor/{honorarium}/detail', [\App\Http\Controllers\SppController::class, 'detailHonor'])->name('spps.honor.detail');
         Route::post('/spps/honor/{honorarium}', [\App\Http\Controllers\SppController::class, 'storeHonor'])->name('spps.honor.store');
+        Route::post('/spps/honor/{honorarium}/submit', [\App\Http\Controllers\SppController::class, 'submitHonorToPpk'])->name('spps.honor.submit');
 
         // SPP Kontrak
         Route::get('/spps/kontrak', [\App\Http\Controllers\SppController::class, 'kontrakIndex'])->name('spps.kontrak.index');
@@ -364,6 +390,12 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
         Route::get('/spms/kontrak/{spp}/detail', [\App\Http\Controllers\SpmKontrakController::class, 'show'])->name('spms.kontrak.detail');
         Route::post('/spms/kontrak/{spp}/store', [\App\Http\Controllers\SpmKontrakController::class, 'store'])->name('spms.kontrak.store');
         Route::post('/spms/kontrak/{spp}/submit', [\App\Http\Controllers\SpmKontrakController::class, 'submit'])->name('spms.kontrak.submit');
+
+        // SPM Honorarium
+        Route::get('/spms/honor', [\App\Http\Controllers\SpmHonorController::class, 'index'])->name('spms.honor.index');
+        Route::get('/spms/honor/{spp}/detail', [\App\Http\Controllers\SpmHonorController::class, 'show'])->name('spms.honor.detail');
+        Route::post('/spms/honor/{spp}/store', [\App\Http\Controllers\SpmHonorController::class, 'store'])->name('spms.honor.store');
+        Route::post('/spms/honor/{spp}/submit', [\App\Http\Controllers\SpmHonorController::class, 'submit'])->name('spms.honor.submit');
     });
 
     // ==== MODUL VERIFIKASI SPM (PPSPM) ====
@@ -409,6 +441,14 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
         Route::post('/verifikasi-kasubag/spm/kontrak/{id}/revisi', [\App\Http\Controllers\KasubbagSpmKontrakVerifikasiController::class, 'revisi'])->name('verifikasi-kasubag.spm.kontrak.revisi');
     });
 
+    // ==== MODUL VERIFIKASI SPM HONORARIUM (PPSPM & KASUBBAG) ====
+    Route::middleware('role:Super Admin|PPSPM|Kepala Subbagian Keuangan dan Tata Usaha')->group(function () {
+        Route::get('/verifikasi-spm/honor', [\App\Http\Controllers\VerifikasiSpmHonorController::class, 'index'])->name('verifikasi-spm.honor.index');
+        Route::get('/verifikasi-spm/honor/{spm}/detail', [\App\Http\Controllers\VerifikasiSpmHonorController::class, 'show'])->name('verifikasi-spm.honor.detail');
+        Route::post('/verifikasi-spm/honor/{spm}/approve', [\App\Http\Controllers\VerifikasiSpmHonorController::class, 'approve'])->name('verifikasi-spm.honor.approve');
+        Route::post('/verifikasi-spm/honor/{spm}/reject', [\App\Http\Controllers\VerifikasiSpmHonorController::class, 'reject'])->name('verifikasi-spm.honor.reject');
+    });
+
     // ==== MODUL NPI (Nota Pemindahbukuan Internal) — Bendahara Pengeluaran ====
     Route::middleware('role:Super Admin|Bendahara Pengeluaran')->group(function () {
         // NPI Perjaldin
@@ -416,6 +456,12 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
         Route::get('/npis/perjaldin/{id}/detail', [\App\Http\Controllers\NpiPerjaldinController::class, 'show'])->name('npis.perjaldin.detail');
         Route::post('/npis/perjaldin/{id}/store', [\App\Http\Controllers\NpiPerjaldinController::class, 'store'])->name('npis.perjaldin.store');
         Route::post('/npis/perjaldin/{id}/submit', [\App\Http\Controllers\NpiPerjaldinController::class, 'submit'])->name('npis.perjaldin.submit');
+
+        // NPI Honorarium
+        Route::get('/npis/honor', [\App\Http\Controllers\NpiHonorController::class, 'index'])->name('npis.honor.index');
+        Route::get('/npis/honor/{spm}/detail', [\App\Http\Controllers\NpiHonorController::class, 'show'])->name('npis.honor.detail');
+        Route::post('/npis/honor/{spm}/store', [\App\Http\Controllers\NpiHonorController::class, 'store'])->name('npis.honor.store');
+        Route::post('/npis/honor/{spm}/submit', [\App\Http\Controllers\NpiHonorController::class, 'submit'])->name('npis.honor.submit');
 
         // NPI Legacy (if needed)
         Route::get('/npis', [\App\Http\Controllers\NpiController::class, 'index'])->name('npis.index');
@@ -436,6 +482,12 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
         Route::post('/sp2ds/perjaldin/{npi_id}/store', [\App\Http\Controllers\Sp2dPerjaldinController::class, 'store'])->name('sp2ds.perjaldin.store');
         Route::post('/sp2ds/perjaldin/{npi_id}/submit', [\App\Http\Controllers\Sp2dPerjaldinController::class, 'submit'])->name('sp2ds.perjaldin.submit');
 
+        // SP2D Honorarium
+        Route::get('/sp2ds/honor', [\App\Http\Controllers\Sp2dHonorController::class, 'index'])->name('sp2ds.honor.index');
+        Route::get('/sp2ds/honor/{npi_id}/detail', [\App\Http\Controllers\Sp2dHonorController::class, 'detail'])->name('sp2ds.honor.detail');
+        Route::post('/sp2ds/honor/{npi_id}/store', [\App\Http\Controllers\Sp2dHonorController::class, 'store'])->name('sp2ds.honor.store');
+        Route::post('/sp2ds/honor/{npi_id}/submit', [\App\Http\Controllers\Sp2dHonorController::class, 'submit'])->name('sp2ds.honor.submit');
+
         Route::get('/sp2ds/kontrak', [\App\Http\Controllers\Sp2dKontrakController::class, 'index'])->name('sp2ds.kontrak.index');
         Route::get('/sp2ds/kontrak/{npi_id}/detail', [\App\Http\Controllers\Sp2dKontrakController::class, 'show'])->name('sp2ds.kontrak.detail');
         Route::post('/sp2ds/kontrak/npi/{npi_id}/draft', [\App\Http\Controllers\Sp2dKontrakController::class, 'storeDraft'])->name('sp2ds.kontrak.store');
@@ -447,6 +499,55 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
         Route::post('/sp2ds/{sp2d_id}/execute', [\App\Http\Controllers\Sp2dController::class, 'catatBku'])->name('sp2ds.catat-bku');
     });
 
+    // ==== MODUL PENYETORAN PAJAK — Bendahara Pengeluaran ====
+    Route::middleware('role:Super Admin|Bendahara Pengeluaran|Bendahara Penerimaan')->group(function () {
+        Route::get('/pembukuan/bku/pdf', [\App\Http\Controllers\BukuKasUmumController::class, 'pdf'])->name('pembukuan.bku.pdf');
+        Route::get('/pembukuan/bku', [\App\Http\Controllers\BukuKasUmumController::class, 'index'])->name('pembukuan.bku.index');
+        Route::get('/pembukuan/bku/{id}', [\App\Http\Controllers\BukuKasUmumController::class, 'show'])
+            ->whereNumber('id')
+            ->name('pembukuan.bku.show');
+
+        Route::get('/pembukuan/bank/mutasi', [\App\Http\Controllers\BukuPembantuBankController::class, 'mutasi'])->name('pembukuan.bank.mutasi');
+        Route::get('/pembukuan/bank/rekonsiliasi', [\App\Http\Controllers\BukuPembantuBankController::class, 'rekonsiliasi'])->name('pembukuan.bank.rekonsiliasi');
+        Route::get('/pembukuan/bank', [\App\Http\Controllers\BukuPembantuBankController::class, 'index'])->name('pembukuan.bank.index');
+        Route::get('/pembukuan/bank/{rekening}', [\App\Http\Controllers\BukuPembantuBankController::class, 'show'])
+            ->whereNumber('rekening')
+            ->name('pembukuan.bank.show');
+
+        Route::get('/pembukuan/bendahara/pdf', [\App\Http\Controllers\BukuPembantuBendaharaController::class, 'pdf'])->name('pembukuan.bendahara.pdf');
+        Route::get('/pembukuan/bendahara', [\App\Http\Controllers\BukuPembantuBendaharaController::class, 'index'])->name('pembukuan.bendahara.index');
+
+        Route::get('/pembukuan/bunga-rekening/pdf', [\App\Http\Controllers\BukuPembantuBungaController::class, 'pdf'])->name('pembukuan.bunga.pdf');
+        Route::get('/pembukuan/bunga-rekening', [\App\Http\Controllers\BukuPembantuBungaController::class, 'index'])->name('pembukuan.bunga.index');
+
+        Route::get('/pembukuan/pajak/pdf', [\App\Http\Controllers\BukuPembantuPajakController::class, 'pdf'])->name('pembukuan.pajak.pdf');
+        Route::get('/pembukuan/pajak', [\App\Http\Controllers\BukuPembantuPajakController::class, 'index'])->name('pembukuan.pajak.index');
+        Route::get('/pembukuan/pajak/{potongan}', [\App\Http\Controllers\BukuPembantuPajakController::class, 'show'])
+            ->whereNumber('potongan')
+            ->name('pembukuan.pajak.show');
+
+        Route::get('/pembukuan/pengesahan-belanja/pdf', [\App\Http\Controllers\BukuPengesahanBelanjaController::class, 'pdf'])->name('pembukuan.pengesahan.pdf');
+        Route::get('/pembukuan/pengesahan-belanja', [\App\Http\Controllers\BukuPengesahanBelanjaController::class, 'index'])->name('pembukuan.pengesahan.index');
+        Route::get('/pembukuan/pengesahan-belanja/{laporan}', [\App\Http\Controllers\BukuPengesahanBelanjaController::class, 'show'])
+            ->whereNumber('laporan')
+            ->name('pembukuan.pengesahan.show');
+
+        Route::get('/pembukuan/piutang', [\App\Http\Controllers\PengecekanPembayaranPiutangController::class, 'index'])
+            ->name('pembukuan.piutang.index');
+
+        Route::get('/pajak-potongan', [\App\Http\Controllers\PenyetoranPajakController::class, 'index'])->name('pajak-potongan.index');
+        Route::get('/pajak-potongan/{potongan}/detail', [\App\Http\Controllers\PenyetoranPajakController::class, 'show'])->name('pajak-potongan.detail');
+        Route::post('/pajak-potongan/{potongan}/billing', [\App\Http\Controllers\PenyetoranPajakController::class, 'storeBilling'])->name('pajak-potongan.billing');
+        Route::post('/pajak-potongan/{potongan}/ntpn', [\App\Http\Controllers\PenyetoranPajakController::class, 'storeNtpn'])->name('pajak-potongan.ntpn');
+        Route::get('/pajak-potongan/{potongan}/cetak', [\App\Http\Controllers\PenyetoranPajakController::class, 'cetak'])->name('pajak-potongan.cetak');
+
+        // Penyetoran Pajak — Kontrak
+        Route::get('/pajak-potongan/kontrak', [\App\Http\Controllers\PenyetoranPajakKontrakController::class, 'index'])->name('pajak-potongan.kontrak.index');
+        Route::get('/pajak-potongan/kontrak/{potongan}/detail', [\App\Http\Controllers\PenyetoranPajakKontrakController::class, 'show'])->name('pajak-potongan.kontrak.detail');
+        Route::post('/pajak-potongan/kontrak/{potongan}/billing', [\App\Http\Controllers\PenyetoranPajakKontrakController::class, 'storeBilling'])->name('pajak-potongan.kontrak.billing');
+        Route::post('/pajak-potongan/kontrak/{potongan}/ntpn', [\App\Http\Controllers\PenyetoranPajakKontrakController::class, 'storeNtpn'])->name('pajak-potongan.kontrak.ntpn');
+        Route::get('/pajak-potongan/kontrak/{potongan}/cetak', [\App\Http\Controllers\PenyetoranPajakKontrakController::class, 'cetak'])->name('pajak-potongan.kontrak.cetak');
+    });
 
 
 

@@ -462,7 +462,8 @@
                             <div class="row g-3">
                                 <div class="col-md-6">
                                     <label class="form-label fw-semibold">Nomor SPP <span class="text-danger">*</span></label>
-                                    <input type="text" name="nomor_spp" class="form-control" required value="{{ old('nomor_spp', $sppModel->nomor_spp ?? '') }}" placeholder="Ketik nomor SPP">
+                                    <input type="text" name="nomor_spp" class="form-control fw-bold text-primary bg-light" required value="{{ old('nomor_spp', $sppModel->nomor_spp ?? $autoNomorSpp) }}" placeholder="Ketik nomor SPP">
+                                    <small class="text-muted"><i class="bi bi-info-circle me-1"></i>Nomor di atas digenerate otomatis, ubah jika perlu.</small>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label fw-semibold">Tanggal SPP <span class="text-danger">*</span></label>

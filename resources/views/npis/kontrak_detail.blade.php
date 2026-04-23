@@ -143,7 +143,8 @@
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label class="form-label">Nomor NPI <span class="text-danger">*</span></label>
-                                <input type="text" name="nomor_npi" class="form-control" value="{{ old('nomor_npi', $npiModel?->nomor_npi) }}" required>
+                                <input type="text" name="nomor_npi" class="form-control fw-bold text-primary bg-light" value="{{ old('nomor_npi', $npiModel?->nomor_npi ?? $autoNomorNpi) }}" required>
+                                <small class="text-muted"><i class="bi bi-info-circle me-1"></i>Nomor di atas diturunkan dari SPP, ubah jika perlu.</small>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Tanggal NPI <span class="text-danger">*</span></label>

@@ -63,7 +63,7 @@ class SppController extends Controller
 
         // Hitung counter berikutnya untuk preview nomor SPP
         $tahun = date('Y');
-        $nextSppCounter = DokumenSpp::whereYear('created_at', $tahun)->count() + 1;
+        $nextSppCounter = \App\Services\DocumentNumberingService::getNextSppSequence($tahun);
 
         return view('spps.detail_perjaldin', compact('tagihan', 'budgets', 'ppkUsers', 'kasubbagUser', 'nextSppCounter'));
     }
@@ -94,9 +94,7 @@ class SppController extends Controller
                 if ($isUpdate && $existingSpp) {
                     $nomorSpp = $existingSpp->nomor_spp;
                 } else {
-                    $tahun = date('Y');
-                    $count = DokumenSpp::whereYear('created_at', $tahun)->count() + 1;
-                    $nomorSpp = 'SPP-PJD-' . $komponen->kode_komponen . '-' . $tahun . '-' . str_pad($count, 4, '0', STR_PAD_LEFT);
+                    $nomorSpp = \App\Services\DocumentNumberingService::generateSppNumber(date('Y'));
                 }
 
                 $spp = DokumenSpp::updateOrCreate(
@@ -224,7 +222,7 @@ class SppController extends Controller
     public function honorIndex()
     {
         $honorariums = Tagihan::where('tipe_tagihan', 'HONORARIUM')
-            ->whereIn('status', ['DISETUJUI_PPK', 'PROSES_SPP', 'SPP_TERBIT'])
+            ->whereIn('status', ['DISETUJUI', 'PROSES_SPP', 'SPP_TERBIT', 'SEBAGIAN_SPP_TERBIT', 'SPP_LENGKAP'])
             ->with(['detailHonorarium', 'spps', 'logs'])
             ->latest()
             ->get();
@@ -234,79 +232,295 @@ class SppController extends Controller
 
     public function detailHonor($honorarium_id)
     {
-        $honorarium = Transaction::with([
-                'budget.activeRevision.items.coa',
-                'honorariumItems',
+        $tagihan = Tagihan::where('tipe_tagihan', 'HONORARIUM')
+            ->with([
+                'detailHonorarium',
+                'arsipDokumen',
+                'potonganTagihan',
+                'logs.user',
                 'spps.dipaRevisionItem.coa',
+                'spps.ppkVerifikator',
+                'spps.dibuatOleh',
+                'spps.arsipDokumen',
+                'spps.logs.user',
+                'spps.workflowInstances.approvals.assignedUser',
+                'spps.workflowInstances.approvals.actedByUser',
             ])
-            ->where('tipe_tagihan', 'HONORARIUM')
             ->findOrFail($honorarium_id);
 
-        $budgets = $this->buildBudgetOptions($honorarium->budget);
+        $sppModel = $tagihan->spps->sortByDesc('created_at')->first();
+        
+        // Budget item options: Honorarium has dipa_revision_item_id on tagihan
+        $selectedBudgetItem = $sppModel?->dipaRevisionItem ?? \App\Models\DetailDipa::with('coa')->find($tagihan->dipa_revision_item_id);
+        
+        $ppkUsers = User::role('PPK')->orderBy('name')->get();
+        $kasubbagUser = User::role('Kepala Subbagian Keuangan dan Tata Usaha')->orderBy('name')->first();
+        
+        $skHonorarium = $tagihan->arsipDokumen->firstWhere('jenis_dokumen', 'SK Honorarium');
+        $daftarNominatif = $tagihan->arsipDokumen->firstWhere('jenis_dokumen', 'Daftar Nominatif Bertandatangan');
+        $dokumenHonorarium = $tagihan->arsipDokumen->firstWhere('jenis_dokumen', 'Dokumen Honorarium Bertandatangan');
 
-        return view('spps.detail_honor', compact('honorarium', 'budgets'));
+        $documentStatuses = collect([
+            [
+                'key' => 'daftar_nominatif',
+                'label' => 'Daftar Nominatif',
+                'path' => $daftarNominatif?->path_file,
+                'required' => true,
+            ],
+            [
+                'key' => 'dokumen_honorarium',
+                'label' => 'Dokumen Honorarium Bertandatangan',
+                'path' => $dokumenHonorarium?->path_file,
+                'required' => true,
+            ],
+            [
+                'key' => 'sk_honorarium',
+                'label' => 'SK Honorarium',
+                'path' => $skHonorarium?->path_file,
+                'required' => false,
+            ],
+        ])->map(function ($item) {
+            $isAvailable = !empty($item['path']);
+            $status = !$item['required']
+                ? 'not_required'
+                : ($isAvailable ? 'ready' : 'missing');
+
+            return array_merge($item, [
+                'status' => $status,
+                'is_available' => $isAvailable,
+            ]);
+        })->values();
+
+        $semuaPunyaRekening = $tagihan->detailHonorarium->every(fn($item) => filled($item->rekening) && filled($item->nama_rekening));
+        $mainDocumentsReady = $documentStatuses
+            ->whereIn('key', ['daftar_nominatif', 'dokumen_honorarium'])
+            ->every(fn ($item) => $item['status'] === 'ready');
+            
+        $draftReady = $sppModel
+            && filled($sppModel->nomor_spp)
+            && filled($sppModel->tanggal_spp)
+            && (float) $sppModel->nominal_spp > 0
+            && filled($selectedBudgetItem?->coa)
+            && filled($sppModel->ppk_verifikator_id);
+
+        $readinessChecklist = collect([
+            [
+                'label' => 'Item DIPA / COA tersedia',
+                'status' => filled($selectedBudgetItem?->coa) ? 'ready' : 'missing',
+                'hint' => filled($selectedBudgetItem?->coa)
+                    ? 'Item anggaran aktif sudah terpilih untuk SPP.'
+                    : 'Honorarium belum memiliki item DIPA / COA aktif.',
+            ],
+            [
+                'label' => 'Validasi rekening semua penerima',
+                'status' => $semuaPunyaRekening ? 'ready' : 'missing',
+                'hint' => $semuaPunyaRekening
+                    ? 'Rekening bank untuk semua orang sudah tersedia.'
+                    : 'Masih ada penerima honorarium yang datanya kurang / invalid.',
+            ],
+            [
+                'label' => 'Dokumen pendukung utama tersedia',
+                'status' => $mainDocumentsReady ? 'ready' : 'missing',
+                'hint' => $mainDocumentsReady
+                    ? 'Daftar Nominatif dan BAST sudah tersedia.'
+                    : 'Masih ada dokumen utama yang belum terlampir.',
+            ],
+            [
+                'label' => 'Verifikator PPK dipilih',
+                'status' => filled($sppModel?->ppk_verifikator_id) ? 'ready' : 'missing',
+                'hint' => filled($sppModel?->ppk_verifikator_id)
+                    ? 'Verifikator PPK sudah ditentukan.'
+                    : 'Pilih verifikator PPK pada draft SPP.',
+            ],
+            [
+                'label' => 'Draft SPP sudah lengkap',
+                'status' => $draftReady ? 'ready' : 'missing',
+                'hint' => $draftReady
+                    ? 'Nomor, tanggal, nilai, dan data draft SPP sudah lengkap.'
+                    : 'Draft SPP belum lengkap atau belum disimpan.',
+            ],
+        ])->values();
+
+        $sppStatus = $sppModel?->status ?? 'Belum Dibuat';
+        $workflowSummary = match ($sppStatus) {
+            'DRAFT' => [
+                'label' => 'Draft tersimpan',
+                'tone' => 'warning',
+                'description' => 'Draft masih bisa diubah oleh Operator BLU dan belum diajukan.',
+                'edit_state' => 'editable',
+            ],
+            'Revisi' => [
+                'label' => 'Perlu revisi',
+                'tone' => 'danger',
+                'description' => 'Dokumen dikembalikan revisi. Perbaiki draft lalu ajukan ulang.',
+                'edit_state' => 'editable',
+            ],
+            'Menunggu Verifikasi' => [
+                'label' => 'Menunggu verifikasi PPK',
+                'tone' => 'info',
+                'description' => 'Dokumen sudah diajukan dan sedang diverifikasi PPK.',
+                'edit_state' => 'locked',
+            ],
+            'Disetujui PPK' => [
+                'label' => 'Disetujui PPK',
+                'tone' => 'success',
+                'description' => 'SPP telah disetujui PPK dan siap lanjut ke SPM.',
+                'edit_state' => 'locked',
+            ],
+            'DISETUJUI_SPP' => [
+                'label' => 'Selesai Diverifikasi',
+                'tone' => 'success',
+                'description' => 'Disetujui seluruh verifikator dan selesai.',
+                'edit_state' => 'locked',
+            ],
+            default => [
+                'label' => 'Belum dibuat',
+                'tone' => 'secondary',
+                'description' => 'Kumpulkan form draft SPP untuk mematangkan SPP.',
+                'edit_state' => 'editable',
+            ],
+        };
+
+        $readinessIssues = $readinessChecklist
+            ->where('status', 'missing')
+            ->pluck('hint')
+            ->filter()
+            ->values();
+
+        $canSubmitToPpk = $sppModel && in_array($sppModel->status, ['DRAFT', 'Revisi']);
+        $isReadyToSubmit = $canSubmitToPpk && $readinessIssues->isEmpty();
+        $readinessStatus = match ($sppStatus) {
+            'Menunggu Verifikasi' => ['label' => 'Dalam Verifikasi', 'class' => 'bg-info', 'message' => 'Dalam antrean verifikasi PPK.'],
+            'Disetujui PPK', 'DISETUJUI_SPP', 'APPROVED' => ['label' => 'Terverifikasi', 'class' => 'bg-success', 'message' => 'Telah terverifikasi sepenuhnya.'],
+            'Revisi' => ['label' => 'Perlu Revisi', 'class' => 'bg-danger', 'message' => 'Kembali revisi. Lengkapi kekurangan draft.'],
+            default => ['label' => $isReadyToSubmit ? 'Siap Diajukan' : 'Belum Lengkap', 'class' => $isReadyToSubmit ? 'bg-success' : 'bg-warning text-dark', 'message' => $isReadyToSubmit ? 'Checklist valid. Klik Ajukan SPP ke PPK.' : 'Ada item checklist mandatory yang kurang.']
+        };
+
+        $latestWorkflowInstance = collect($sppModel?->workflowInstances ?? [])->sortByDesc('created_at')->first();
+        $ppkApproval = collect($latestWorkflowInstance?->approvals ?? [])->firstWhere('role_code', 'PPK');
+        $kasubbagApproval = collect($latestWorkflowInstance?->approvals ?? [])->firstWhere('role_code', 'Kepala Subbagian Keuangan dan Tata Usaha');
+        $submittedLog = collect($sppModel?->logs ?? [])->sortByDesc('created_at')->firstWhere('aksi', 'SUBMIT_PPK');
+
+        $activitySummary = [
+            ['label' => 'Dibuat oleh', 'value' => $sppModel?->dibuatOleh?->name ?? '-', 'meta' => optional($sppModel?->created_at)->format('d M Y H:i')],
+            ['label' => 'Terakhir diperbarui', 'value' => optional($sppModel?->updated_at)->format('d M Y H:i') ?? '-', 'meta' => 'Pembaharuan log SPP Honorarium'],
+            ['label' => 'Diajukan ke PPK', 'value' => optional($submittedLog?->created_at)->format('d M Y H:i') ?? 'Belum diajukan', 'meta' => null],
+            ['label' => 'Status SPP', 'value' => $workflowSummary['label'], 'meta' => null],
+        ];
+
+        $recentActivities = collect($sppModel?->logs ?? [])
+            ->sortByDesc('created_at')->take(4)
+            ->map(function ($log) {
+                return ['title' => str_replace('_', ' ', $log->aksi), 'time' => optional($log->created_at)->format('d M Y H:i'), 'actor' => $log->user?->name, 'note' => $log->catatan];
+            })->values();
+
+        $autoNomorSpp = \App\Services\DocumentNumberingService::generateSppNumber(date('Y'));
+
+        return view('spps.detail_honor', compact(
+            'tagihan', 'sppModel', 'selectedBudgetItem', 'ppkUsers', 'kasubbagUser', 'documentStatuses', 'readinessChecklist',
+            'readinessIssues', 'workflowSummary', 'activitySummary', 'recentActivities', 'isReadyToSubmit', 'readinessStatus',
+            'ppkApproval', 'kasubbagApproval', 'autoNomorSpp'
+        ));
     }
 
     public function storeHonor(Request $request, $honorarium_id)
     {
+        $tagihan = Tagihan::where('tipe_tagihan', 'HONORARIUM')->findOrFail($honorarium_id);
+        $existingSpp = $tagihan->spps()->latest()->first();
+
         $request->validate([
-            'jumlah_uang' => 'required|numeric',
-            'nomor_spp' => 'required|string',
+            'nomor_spp' => ['required', 'string', Rule::unique('dokumen_spp', 'nomor_spp')->ignore($existingSpp?->id)],
             'tanggal_spp' => 'required|date',
-            'tahun_anggaran' => 'required|string',
-            'nomor_dipa' => 'required|string',
-            'tanggal_dipa' => 'required|date',
-            'akun_mak' => 'required|string',
-            'penandatangan_nama' => 'required|string',
-            'penandatangan_nip' => 'required|string',
+            'ppk_verifikator_id' => 'required|exists:users,id',
+            'uraian' => 'nullable|string'
         ]);
 
-        $honorarium = Transaction::where('tipe_tagihan', 'HONORARIUM')->findOrFail($honorarium_id);
+        $defaultBudgetItemId = $existingSpp?->dipa_revision_item_id ?? $tagihan->dipa_revision_item_id;
 
-        $uraianText = 'Pembayaran Belanja Barang - ' . $honorarium->description;
+        if (!$defaultBudgetItemId) {
+            return back()->withInput()->withErrors(['error' => 'Honorarium belum memiliki item anggaran/DIPA.']);
+        }
 
-        DB::transaction(function () use ($request, $honorarium, $uraianText) {
-            $honorarium->spps()->updateOrCreate(
+        DB::transaction(function () use ($request, $tagihan, $existingSpp, $defaultBudgetItemId) {
+            $spp = DokumenSpp::updateOrCreate(
+                ['id' => $existingSpp?->id],
                 [
-                    'kategori_biaya' => 'Honorarium',
-                ],
-                [
-                    'jumlah_uang' => $request->jumlah_uang,
-                    'uraian' => $uraianText,
+                    'tagihan_id' => $tagihan->id,
+                    'dipa_revision_item_id' => $defaultBudgetItemId,
+                    'kategori_pembayaran' => 'SP2D BLU - TRF',
+                    'jenis_tagihan' => 'NON REMUNERASI',
+                    'nominal_spp' => $tagihan->total_netto,
                     'nomor_spp' => $request->nomor_spp,
                     'tanggal_spp' => $request->tanggal_spp,
-                    'tahun_anggaran' => $request->tahun_anggaran,
-                    'nomor_dipa' => $request->nomor_dipa,
-                    'tanggal_dipa' => $request->tanggal_dipa,
-                    'no_kontrak' => $honorarium->bast_number ?? null,
-                    'tgl_kontrak' => $honorarium->bast_date ?? null,
-                    'akun_mak' => $request->akun_mak,
-                    'penandatangan_nama' => $request->penandatangan_nama,
-                    'penandatangan_nip' => $request->penandatangan_nip,
-                    'jenis_tagihan' => 'NON REMUNERASI',
-                    'jatuh_tempo' => 'Segera',
-                    'cara_bayar' => 'SP2D BLU - TRF',
-                    'status_spp' => 'Menunggu Verifikasi',
-                    'catatan_revisi' => null,
+                    'status' => $existingSpp && $existingSpp->status === 'Revisi' ? 'Revisi' : 'DRAFT',
+                    'dibuat_oleh_id' => auth()->id(),
+                    'ppk_verifikator_id' => $request->ppk_verifikator_id,
+                    'uraian' => $request->uraian ?? $tagihan->deskripsi,
                 ]
             );
 
-            if ($honorarium->status === 'Disetujui PPK') {
-                $honorarium->update(['status' => 'Proses SPP']);
-            }
+            LogStatusDokumen::create([
+                'dokumen_type' => Tagihan::class,
+                'dokumen_id' => $tagihan->id,
+                'user_id' => auth()->id(),
+                'role_saat_itu' => auth()->user()?->getRoleNames()->first() ?? 'Operator BLU',
+                'status_sebelumnya' => $tagihan->status,
+                'status_baru' => $tagihan->status,
+                'aksi' => $existingSpp ? 'UPDATE_DRAFT_SPP' : 'CREATE_DRAFT_SPP',
+                'catatan' => 'Draft dokumen SPP Honorarium disimpan oleh Operator BLU.',
+                'ip_address' => request()->ip(),
+            ]);
         });
 
-        // Notify PPK
-        $ppks = \App\Models\User::role('PPK')->get();
-        \Illuminate\Support\Facades\Notification::send($ppks, new \App\Notifications\WorkflowNotification([
-            'title' => 'SPP Honor Baru',
-            'message' => "SPP Honorarium ({$honorarium->transaction_number}) menunggu verifikasi Anda.",
-            'url' => route('verifikasi-ppk.spp.index'),
-            'icon' => 'receipt_long',
-            'color' => 'primary'
-        ]));
+        return redirect()->route('spps.honor.detail', $tagihan->id)->with('success', 'Draft SPP Honorarium berhasil disimpan.');
+    }
 
-        return redirect()->route('spps.honor.detail', $honorarium_id)->with('success', 'SPP Honorarium berhasil diterbitkan.');
+    public function submitHonorToPpk($honorarium_id)
+    {
+        $tagihan = Tagihan::where('tipe_tagihan', 'HONORARIUM')->with('spps')->findOrFail($honorarium_id);
+        $spp = $tagihan->spps()->latest()->first();
+
+        if (!$spp) return back()->withErrors(['error' => 'Draft SPP belum dibuat.']);
+        if (!in_array($spp->status, ['DRAFT', 'Revisi'])) return back()->withErrors(['error' => 'SPP tidak siap diajukan (Bukan mode DRAFT).']);
+        if (!$spp->ppk_verifikator_id) return back()->withErrors(['error' => 'Verifikator PPK belum dipilih.']);
+
+        DB::transaction(function () use ($tagihan, $spp) {
+            $statusSebelumnya = $spp->status;
+            $spp->update(['status' => 'Menunggu Verifikasi']);
+
+            // Generate workflow definition secara seragam menggunakan definisi paralel PPK-Kasubbag existing.
+            app(WorkflowService::class)->startWorkflow('SPP_KONTRAK_PPK', $spp, $spp->ppk_verifikator_id);
+            
+            if (!in_array($tagihan->status, ['PROSES_SPP', 'SPP_TERBIT'])) {
+                $tagihan->update(['status' => 'PROSES_SPP']);
+            }
+
+            LogStatusDokumen::create([
+                'dokumen_type' => DokumenSpp::class,
+                'dokumen_id' => $spp->id,
+                'user_id' => auth()->id(),
+                'role_saat_itu' => auth()->user()?->getRoleNames()->first() ?? 'Operator BLU',
+                'status_sebelumnya' => $statusSebelumnya,
+                'status_baru' => 'Menunggu Verifikasi',
+                'aksi' => 'SUBMIT_PPK',
+                'catatan' => 'Dokumen SPP Honorarium diajukan ke PPK untuk verifikasi.',
+                'ip_address' => request()->ip(),
+            ]);
+        });
+
+        // Notifikasi ke verifikator PPK
+        $selectedPpk = User::find($spp->ppk_verifikator_id);
+        if ($selectedPpk) {
+            Notification::send($selectedPpk, new WorkflowNotification([
+                'title' => 'SPP Honorarium Diajukan',
+                'message' => "SPP Honorarium ({$spp->nomor_spp}) menunggu verifikasi Anda.",
+                'url' => route('verifikasi-ppk.spp.index'),
+                'icon' => 'receipt_long',
+                'color' => 'primary',
+            ]));
+        }
+
+        return redirect()->route('spps.honor.detail', $tagihan->id)->with('success', 'SPP honorarium berhasil diajukan ke PPK.');
     }
 
     // ===================================================================
@@ -611,6 +825,7 @@ class SppController extends Controller
                 ];
             })
             ->values();
+        $autoNomorSpp = \App\Services\DocumentNumberingService::generateSppNumber(date('Y'));
 
         return view('spps.detail_kontrak', compact(
             'tagihan',
@@ -618,6 +833,7 @@ class SppController extends Controller
             'termin',
             'kontrak',
             'budgetItems',
+            'autoNomorSpp',
             'selectedBudgetItem',
             'sppModel',
             'ppkUsers',

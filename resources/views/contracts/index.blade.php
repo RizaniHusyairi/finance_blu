@@ -88,8 +88,8 @@
                                                 <a href="{{ route('contracts.show', $kontrak->id) }}" class="btn btn-sm btn-light text-info border shadow-sm" title="Detail">
                                                     <i class="bi bi-search"></i> Detail
                                                 </a>
-                                                <a href="#" class="btn btn-sm btn-light text-warning border shadow-sm" title="Buat Addendum">
-                                                    <i class="bi bi-plus-circle"></i> Addm.
+                                                <a href="{{ route('addendums.index', $kontrak->id) }}" class="btn btn-sm btn-light text-warning border shadow-sm" title="Kelola Addendum">
+                                                    <i class="bi bi-journal-text"></i> Addm. <span class="ms-1">{{ $kontrak->addendums->count() }}</span>
                                                 </a>
                                                 @if(Auth::user()->hasRole('Pejabat Pengadaan') && $kontrak->status_kontrak === 'DRAFT')
                                                     <form action="{{ route('contracts.destroy', $kontrak->id) }}" method="POST" class="d-inline m-0" onsubmit="return confirm('Apakah Anda yakin ingin menghapus Draf Kontrak ini? Segala arsip file terkait akan ikut terhapus permanen.')">
@@ -144,7 +144,7 @@
                                             <small><i class="bi bi-calendar me-1"></i>{{ $addm->tanggal_addendum ? \Carbon\Carbon::parse($addm->tanggal_addendum)->format('d M Y') : '-' }}</small>
                                         </td>
                                         <td>
-                                            <span class="badge bg-secondary">{{ $addm->jenis_perubahan ?? 'Perubahan' }}</span>
+                                            <span class="badge bg-secondary">{{ str_replace('_', ' ', $addm->jenis_addendum ?? 'Perubahan') }}</span>
                                         </td>
                                         <td>
                                             @if($addm->nilai_kontrak_baru)
@@ -155,11 +155,20 @@
                                             @endif
                                         </td>
                                         <td>
-                                            <span class="badge bg-info">{{ $addm->status ?? 'PROSES' }}</span>
+                                            @php
+                                                $statusWorkflow = $addm->status_workflow ?? ($addm->status_addendum ?? 'DRAFT');
+                                                $statusClass = match($statusWorkflow) {
+                                                    'APPROVED' => 'bg-success',
+                                                    'SUBMITTED' => 'bg-warning text-dark',
+                                                    'REJECTED' => 'bg-danger',
+                                                    default => 'bg-secondary',
+                                                };
+                                            @endphp
+                                            <span class="badge {{ $statusClass }}">{{ str_replace('_', ' ', $statusWorkflow) }}</span>
                                         </td>
                                         <td class="text-center">
-                                            <a href="#" class="btn btn-sm btn-light text-primary border shadow-sm" title="View File">
-                                                <i class="bi bi-search"></i> File
+                                            <a href="{{ route('addendums.show', [$addm->kontrak_pengadaan_id, $addm->id]) }}" class="btn btn-sm btn-light text-primary border shadow-sm" title="Detail Addendum">
+                                                <i class="bi bi-search"></i> Detail
                                             </a>
                                         </td>
                                     </tr>

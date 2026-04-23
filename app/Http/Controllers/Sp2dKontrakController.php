@@ -208,10 +208,12 @@ class Sp2dKontrakController extends Controller
                 ]);
         }
 
+        $autoNomorSp2d = \App\Services\DocumentNumberingService::generateDerivedNumber($spp->nomor_spp, 'SP2D');
+
         return view('sp2ds.kontrak_detail', compact(
             'npi', 'sp2d', 'spm', 'spp', 'tagihan', 'detailKontrak', 'termin', 'kontrak', 
             'vendor', 'rekening', 'nominalSp2d', 'statusSp2d', 'isEditable', 'canSubmit',
-            'wf', 'ppkApproval', 'kasubbagApproval', 'revisionNotes'
+            'wf', 'ppkApproval', 'kasubbagApproval', 'revisionNotes', 'autoNomorSp2d'
         ));
     }
 
