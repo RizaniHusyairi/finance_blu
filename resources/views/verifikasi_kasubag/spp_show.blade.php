@@ -1,10 +1,10 @@
 @extends('layouts.app')
-@section('title', 'Detail Verifikasi SPP — Kasubbag')
+@section('title', 'Detail Verifikasi SPP — ' . ($roleLabel ?? 'Kasubbag'))
 @section('content')
     <div class="d-flex justify-content-between align-items-center mb-3">
         <div>
-            <h4 class="mb-1"><a href="{{ route('verifikasi-kasubag.spp.index') }}" class="text-decoration-none text-muted"><i class="bi bi-arrow-left"></i> Kembali</a> | Verifikasi SPP Kontrak</h4>
-            <div class="text-muted small">Kepala Subbagian Keuangan dan Tata Usaha</div>
+            <h4 class="mb-1"><a href="{{ route($indexRoute ?? 'verifikasi-kasubag.spp.index') }}" class="text-decoration-none text-muted"><i class="bi bi-arrow-left"></i> Kembali</a> | Verifikasi SPP Kontrak</h4>
+            <div class="text-muted small">{{ $roleLabel ?? 'Kepala Subbagian Keuangan dan Tata Usaha' }}</div>
         </div>
         <div>
             @if($statusFinal === 'Selesai Diverifikasi')
@@ -70,6 +70,32 @@
                     <div class="text-{{ $ppkColor }} small">{{ $ppkText }}</div>
                     @if($ppkApproval && $ppkApproval->acted_at)
                         <div class="text-muted" style="font-size: 0.7rem;">{{ \Carbon\Carbon::parse($ppkApproval->acted_at)->format('d M Y H:i') }}</div>
+                    @endif
+                </div>
+
+                <!-- Connector -->
+                <div class="flex-fill d-flex align-items-center px-2">
+                    <div class="w-100 border-top border-2 border-muted" style="border-style: dashed !important;"></div>
+                </div>
+
+                <!-- Koordinator Keuangan -->
+                <div class="flex-fill">
+                    @php
+                        $koorColor = 'warning';
+                        $koorIcon = 'bi-hourglass-split';
+                        $koorText = 'Menunggu';
+                        if (!empty($koordinatorApproval)) {
+                            if ($koordinatorApproval->status === 'APPROVED') { $koorColor = 'success'; $koorIcon = 'bi-check-lg'; $koorText = 'Disetujui'; }
+                            if ($koordinatorApproval->status === 'REVISION') { $koorColor = 'danger'; $koorIcon = 'bi-x-lg'; $koorText = 'Revisi'; }
+                        }
+                    @endphp
+                    <div class="d-inline-flex justify-content-center align-items-center rounded-circle border border-2 border-{{ $koorColor }} text-{{ $koorColor }} mb-2 bg-{{ $koorColor }} bg-opacity-10" style="width: 40px; height: 40px;">
+                        <i class="bi {{ $koorIcon }} fs-5"></i>
+                    </div>
+                    <div class="fw-bold small">Koord. Keuangan</div>
+                    <div class="text-{{ $koorColor }} small">{{ $koorText }}</div>
+                    @if(!empty($koordinatorApproval) && $koordinatorApproval->acted_at)
+                        <div class="text-muted" style="font-size: 0.7rem;">{{ \Carbon\Carbon::parse($koordinatorApproval->acted_at)->format('d M Y H:i') }}</div>
                     @endif
                 </div>
 
@@ -279,11 +305,11 @@
                         <div class="modal-body text-center py-4">
                             <i class="bi bi-check-circle text-success" style="font-size: 4rem;"></i>
                             <h4 class="mt-3 mb-2">Apakah Anda yakin?</h4>
-                            <p class="text-muted mb-0">Anda akan memberikan persetujuan sebagai Kasubbag untuk SPP <strong>{{ $spp->nomor_spp }}</strong>.</p>
+                            <p class="text-muted mb-0">Anda akan memberikan persetujuan sebagai <strong>{{ $roleLabel ?? 'Kasubbag' }}</strong> untuk SPP <strong>{{ $spp->nomor_spp }}</strong>.</p>
                         </div>
                         <div class="modal-footer justify-content-center border-0 pb-4">
                             <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Batal</button>
-                            <form action="{{ route('verifikasi-kasubag.spp.approve', $spp->id) }}" method="POST">
+                            <form action="{{ route($approveRoute ?? 'verifikasi-kasubag.spp.approve', $spp->id) }}" method="POST">
                                 @csrf
                                 <button type="submit" class="btn btn-success px-4 fw-bold">Teruskan Proses</button>
                             </form>
@@ -300,7 +326,7 @@
                             <h5 class="modal-title text-white">Kembalikan untuk Revisi</h5>
                             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                         </div>
-                        <form action="{{ route('verifikasi-kasubag.spp.revisi', $spp->id) }}" method="POST">
+                        <form action="{{ route($revisiRoute ?? 'verifikasi-kasubag.spp.revisi', $spp->id) }}" method="POST">
                             @csrf
                             <div class="modal-body">
                                 <p class="text-muted small">SPP ini akan dikembalikan ke Operator BLU. Operator harus memperbaiki dan mensubmit ulang SPP ini sehingga Verifikasi PPK dan Kasubbag akan diulang dari awal.</p>

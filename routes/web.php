@@ -306,8 +306,23 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
         Route::post('/verifikasi-kasubag/sp2d/kontrak/{id}/revisi', [\App\Http\Controllers\KasubbagSp2dKontrakVerifikasiController::class, 'revisi'])->name('verifikasi-kasubag.sp2d.kontrak.revisi');
     });
 
-    // ==== VERIFIKASI SPP HONORARIUM — Terpadu 2 Role (PPK & Kasubbag) ====
-    Route::middleware('role:Super Admin|PPK|Kepala Subbagian Keuangan dan Tata Usaha')->group(function () {
+    // Verifikasi SPP — Koordinator Keuangan
+    Route::middleware('role:Super Admin|Koordinator Keuangan')->group(function () {
+        // SPP Kontrak/Honor (legacy via SppVerifikasiController)
+        Route::get('/verifikasi-koordinator/spp', [\App\Http\Controllers\SppVerifikasiController::class, 'koordinatorIndex'])->name('verifikasi-koordinator.spp.index');
+        Route::get('/verifikasi-koordinator/spp/{id}', [\App\Http\Controllers\SppVerifikasiController::class, 'koordinatorShow'])->name('verifikasi-koordinator.spp.show');
+        Route::post('/verifikasi-koordinator/spp/{id}/approve', [\App\Http\Controllers\SppVerifikasiController::class, 'approveKoordinator'])->name('verifikasi-koordinator.spp.approve');
+        Route::post('/verifikasi-koordinator/spp/{id}/revisi', [\App\Http\Controllers\SppVerifikasiController::class, 'revisiKoordinator'])->name('verifikasi-koordinator.spp.revisi');
+
+        // SPP Perjaldin
+        Route::get('/verifikasi-koordinator/spp-perjaldin', [\App\Http\Controllers\SppPerjaldinVerifikasiController::class, 'koordinatorIndex'])->name('verifikasi-koordinator.spp-perjaldin.index');
+        Route::get('/verifikasi-koordinator/spp-perjaldin/{id}', [\App\Http\Controllers\SppPerjaldinVerifikasiController::class, 'koordinatorShow'])->name('verifikasi-koordinator.spp-perjaldin.show');
+        Route::post('/verifikasi-koordinator/spp-perjaldin/{id}/approve', [\App\Http\Controllers\SppPerjaldinVerifikasiController::class, 'approve'])->name('verifikasi-koordinator.spp-perjaldin.approve');
+        Route::post('/verifikasi-koordinator/spp-perjaldin/{id}/revisi', [\App\Http\Controllers\SppPerjaldinVerifikasiController::class, 'revisi'])->name('verifikasi-koordinator.spp-perjaldin.revisi');
+    });
+
+    // ==== VERIFIKASI SPP HONORARIUM — Terpadu 3 Role (PPK, Koordinator Keuangan, Kasubbag) ====
+    Route::middleware('role:Super Admin|PPK|Kepala Subbagian Keuangan dan Tata Usaha|Koordinator Keuangan')->group(function () {
         Route::get('/verifikasi-spp/honor', [\App\Http\Controllers\VerifikasiSppHonorController::class, 'index'])->name('verifikasi-spp.honor.index');
         Route::get('/verifikasi-spp/honor/{spp}/detail', [\App\Http\Controllers\VerifikasiSppHonorController::class, 'detail'])->name('verifikasi-spp.honor.detail');
         Route::post('/verifikasi-spp/honor/{spp}/approve', [\App\Http\Controllers\VerifikasiSppHonorController::class, 'approve'])->name('verifikasi-spp.honor.approve');

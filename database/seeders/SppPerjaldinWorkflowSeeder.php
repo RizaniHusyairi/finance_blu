@@ -78,6 +78,16 @@ class SppPerjaldinWorkflowSeeder extends Seeder
         WorkflowDefinitionStep::create([
             'workflow_definition_id' => $wfSpp->id,
             'urutan_step' => 1,
+            'nama_step' => 'Verifikasi Koordinator Keuangan',
+            'role_code' => 'Koordinator Keuangan',
+            'is_required' => true,
+            'can_reject' => true,
+            'can_request_revision' => true,
+        ]);
+
+        WorkflowDefinitionStep::create([
+            'workflow_definition_id' => $wfSpp->id,
+            'urutan_step' => 1,
             'nama_step' => 'Verifikasi Kepala Subbagian Keuangan dan Tata Usaha',
             'role_code' => 'Kepala Subbagian Keuangan dan Tata Usaha',
             'is_required' => true,
@@ -94,6 +104,7 @@ class SppPerjaldinWorkflowSeeder extends Seeder
             'Bendahara Penerimaan',
             'Bendahara Pengeluaran',
             'Kepala Subbagian Keuangan dan Tata Usaha',
+            'Koordinator Keuangan',
         ];
 
         foreach ($roles as $role) {

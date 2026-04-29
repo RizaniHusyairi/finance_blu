@@ -28,6 +28,7 @@ class VerifikasiSppHonorController extends Controller
     private function activeRoleCode(User $user): string
     {
         if ($user->hasRole('PPK')) return 'PPK';
+        if ($user->hasRole('Koordinator Keuangan')) return 'Koordinator Keuangan';
         if ($user->hasRole('Kepala Subbagian Keuangan dan Tata Usaha')) return 'Kepala Subbagian Keuangan dan Tata Usaha';
         
         return '';
@@ -41,7 +42,7 @@ class VerifikasiSppHonorController extends Controller
         $user = $request->user();
         $roleCode = $this->activeRoleCode($user);
         
-        abort_unless($roleCode !== '', 403, 'Akses ditolak. Anda tidak memiliki peran verifikator PPK atau Kasubbag.');
+        abort_unless($roleCode !== '', 403, 'Akses ditolak. Anda tidak memiliki peran verifikator PPK, Koordinator Keuangan, atau Kasubbag.');
 
         $query = DokumenSpp::with([
             'tagihan.detailHonorarium',
@@ -169,6 +170,7 @@ class VerifikasiSppHonorController extends Controller
 
         $ppkApproval = $instance?->approvals->where('role_code', 'PPK')->first();
         $kasubbagApproval = $instance?->approvals->where('role_code', 'Kepala Subbagian Keuangan dan Tata Usaha')->first();
+        $koordinatorApproval = $instance?->approvals->where('role_code', 'Koordinator Keuangan')->first();
 
         $selectedBudgetItem = $sppModel?->dipaRevisionItem ?? \App\Models\DetailDipa::with('coa')->find($tagihan->dipa_revision_item_id);
         
@@ -209,6 +211,7 @@ class VerifikasiSppHonorController extends Controller
             'myApproval',
             'ppkApproval',
             'kasubbagApproval',
+            'koordinatorApproval',
             'selectedBudgetItem',
             'readinessChecklist'
         ));

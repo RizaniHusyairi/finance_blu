@@ -265,6 +265,29 @@
             </li>
           </ul>
         </li>
+        @endhasrole
+
+        @hasrole('Koordinator Keuangan')
+        <li>
+          <a href="javascript:;" class="has-arrow">
+            <div class="parent-icon"><i class="material-icons-outlined">history_edu</i></div>
+            <div class="menu-title">Verifikasi SPP</div>
+          </a>
+          <ul>
+            <li>
+              <a href="{{ route('verifikasi-koordinator.spp.index') }}"><i class="material-icons-outlined">arrow_right</i>Kontrak</a>
+            </li>
+            <li>
+              <a href="{{ route('verifikasi-koordinator.spp-perjaldin.index') }}"><i class="material-icons-outlined">arrow_right</i>Perjaldin</a>
+            </li>
+            <li>
+              <a href="{{ route('verifikasi-spp.honor.index') }}"><i class="material-icons-outlined">arrow_right</i>Honor</a>
+            </li>
+          </ul>
+        </li>
+        @endhasrole
+
+        @hasrole('Kepala Subbagian Keuangan dan Tata Usaha')
         <li>
           <a href="javascript:;" class="has-arrow">
             <div class="parent-icon"><i class="material-icons-outlined">fact_check</i></div>

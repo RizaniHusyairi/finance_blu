@@ -15,6 +15,7 @@
 
     $ppkStatusLabel = $ppkApproval->status ?? 'BELUM DIAJUKAN';
     $kasubbagStatusLabel = $kasubbagApproval->status ?? 'BELUM DIAJUKAN';
+    $koordinatorStatusLabel = ($koordinatorApproval ?? null)?->status ?? 'BELUM DIAJUKAN';
 
     $ppkStatusClass = match($ppkStatusLabel) {
         'APPROVED' => 'text-success',
@@ -24,6 +25,13 @@
     };
 
     $kasubbagStatusClass = match($kasubbagStatusLabel) {
+        'APPROVED' => 'text-success',
+        'PENDING' => 'text-warning',
+        'REVISION', 'REJECTED' => 'text-danger',
+        default => 'text-muted'
+    };
+
+    $koordinatorStatusClass = match($koordinatorStatusLabel) {
         'APPROVED' => 'text-success',
         'PENDING' => 'text-warning',
         'REVISION', 'REJECTED' => 'text-danger',
@@ -141,6 +149,12 @@
                             <div class="timeline-label">Verifikasi PPK</div>
                             <div class="timeline-sub fw-bold {{ $ppkStatusClass }}">{{ $ppkStatusLabel }}</div>
                             <div class="timeline-sub mt-0" style="font-size:0.7rem">{{ $sppModel->ppkVerifikator?->name }}</div>
+                        </div>
+
+                        <div class="timeline-step {{ ($koordinatorApproval ?? null)?->status === 'APPROVED' ? 'passed' : (($koordinatorApproval ?? null)?->status === 'REVISION' ? 'revision' : ($progressStep >= 2 ? 'active' : '')) }}">
+                            <div class="timeline-icon"><i class="bi bi-cash-coin"></i></div>
+                            <div class="timeline-label">Verifikasi Koord. Keuangan</div>
+                            <div class="timeline-sub fw-bold {{ $koordinatorStatusClass }}">{{ $koordinatorStatusLabel }}</div>
                         </div>
 
                         <div class="timeline-step {{ $kasubbagApproval?->status === 'APPROVED' ? 'passed' : ($kasubbagApproval?->status === 'REVISION' ? 'revision' : ($progressStep >= 2 ? 'active' : '')) }}">

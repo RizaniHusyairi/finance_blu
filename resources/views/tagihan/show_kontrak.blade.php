@@ -542,6 +542,7 @@
                             @php
                                 $st = $tagihan->status;
                                 $isApproved  = in_array($st, ['APPROVED','DISETUJUI_KONTRAK','READY_FOR_SPP'], true);
+                                $isInSpp     = in_array($st, ['PROSES_SPP','SEBAGIAN_SPP_TERBIT','SPP_TERBIT','SPP_LENGKAP'], true);
                                 $isRejected  = str_starts_with($st, 'DITOLAK_');
                                 $isRevisi    = str_starts_with($st, 'REVISI_');
                                 $isPending   = str_starts_with($st, 'PENDING_');
@@ -551,6 +552,20 @@
                                 <i class="bi bi-check-circle-fill text-success" style="font-size: 3rem;"></i>
                                 <h6 class="fw-bold mt-3 text-success">Tagihan Disetujui</h6>
                                 <p class="text-muted small">Seluruh verifikator menyetujui. Tagihan siap diproses ke pembuatan SPP.</p>
+                            @elseif($isInSpp)
+                                <i class="bi bi-arrow-right-circle-fill text-primary" style="font-size: 3rem;"></i>
+                                <h6 class="fw-bold mt-3 text-primary">
+                                    @switch($st)
+                                        @case('PROSES_SPP') Sedang Diproses ke SPP @break
+                                        @case('SEBAGIAN_SPP_TERBIT') Sebagian SPP Terbit @break
+                                        @case('SPP_TERBIT') SPP Terbit @break
+                                        @case('SPP_LENGKAP') SPP Lengkap @break
+                                    @endswitch
+                                </h6>
+                                <p class="text-muted small">
+                                    Tagihan telah disetujui dan sudah masuk tahap pembuatan SPP oleh Operator BLU.
+                                    Verifikasi pengadaan untuk tagihan ini sudah selesai.
+                                </p>
                             @elseif($isRejected)
                                 <i class="bi bi-x-octagon text-danger" style="font-size: 3rem;"></i>
                                 <h6 class="fw-bold mt-3 text-danger">Tagihan Ditolak</h6>

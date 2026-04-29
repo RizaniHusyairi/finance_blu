@@ -1,10 +1,10 @@
 @extends('layouts.app')
-@section('title', 'Verifikasi SPP — Kasubbag')
+@section('title', 'Verifikasi SPP — ' . ($roleLabel ?? 'Kasubbag'))
 @push('css')
     <link href="{{ URL::asset('build/plugins/datatable/css/dataTables.bootstrap5.min.css') }}" rel="stylesheet" />
 @endpush
 @section('content')
-    <x-page-title title="Antrean Verifikasi SPP" subtitle="Kepala Subbagian Keuangan dan Tata Usaha" />
+    <x-page-title title="Antrean Verifikasi SPP" subtitle="{{ $roleLabel ?? 'Kepala Subbagian Keuangan dan Tata Usaha' }}" />
 
     @if(session('success'))
         <div class="alert alert-success border-0 bg-success alert-dismissible fade show">
@@ -63,7 +63,7 @@
     <!-- Filter Tab -->
     <div class="card mb-4 border-0 shadow-sm">
         <div class="card-body p-3">
-            <form action="{{ route('verifikasi-kasubag.spp.index') }}" method="GET" class="d-flex align-items-center gap-3">
+            <form action="{{ route($indexRoute ?? 'verifikasi-kasubag.spp.index') }}" method="GET" class="d-flex align-items-center gap-3">
                 <label class="fw-bold mb-0">Filter Status Saya:</label>
                 <select name="status" class="form-select form-select-sm w-auto" onchange="this.form.submit()">
                     <option value="Semua" {{ request('status') == 'Semua' ? 'selected' : '' }}>Semua Pengajuan</option>
@@ -88,6 +88,7 @@
                             <th>Vendor / Pekerjaan</th>
                             <th class="text-end">Nilai SPP (Rp)</th>
                             <th class="text-center">Status PPK</th>
+                            <th class="text-center">Status Koord. Keuangan</th>
                             <th class="text-center">Status Kasubbag</th>
                             <th class="text-center">Status Final</th>
                             <th class="text-center">Aksi</th>
@@ -126,6 +127,16 @@
                                 @endif
                             </td>
                             <td class="text-center">
+                                @php $koorStat = $spp->koordinatorApprovalStatus ?? 'N/A'; @endphp
+                                @if($koorStat === 'APPROVED')
+                                    <span class="badge bg-success border border-success"><i class="bi bi-check-circle"></i> Disetujui</span>
+                                @elseif($koorStat === 'REVISION')
+                                    <span class="badge bg-danger border border-danger"><i class="bi bi-x-circle"></i> Revisi</span>
+                                @else
+                                    <span class="badge bg-warning text-dark border border-warning"><i class="bi bi-hourglass-split"></i> Pending</span>
+                                @endif
+                            </td>
+                            <td class="text-center">
                                 @if($spp->kasubbagApprovalStatus === 'APPROVED')
                                     <span class="badge bg-success border border-success"><i class="bi bi-check-circle"></i> Disetujui</span>
                                 @elseif($spp->kasubbagApprovalStatus === 'REVISION')
@@ -144,7 +155,7 @@
                                 @endif
                             </td>
                             <td class="text-center">
-                                <a href="{{ route('verifikasi-kasubag.spp.show', $spp->id) }}" class="btn btn-sm btn-primary">
+                                <a href="{{ route($showRoute ?? 'verifikasi-kasubag.spp.show', $spp->id) }}" class="btn btn-sm btn-primary">
                                     <i class="bi bi-eye"></i> Detail
                                 </a>
                             </td>

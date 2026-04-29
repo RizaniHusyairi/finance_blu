@@ -73,6 +73,29 @@
                     <div class="w-100 border-top border-2 border-muted" style="border-style: dashed !important;"></div>
                 </div>
 
+                {{-- Koordinator Keuangan --}}
+                <div class="flex-fill">
+                    @php
+                        $koorColor = 'warning'; $koorIcon = 'bi-hourglass-split'; $koorText = 'Menunggu';
+                        if (!empty($koordinatorApproval)) {
+                            if ($koordinatorApproval->status === 'APPROVED') { $koorColor = 'success'; $koorIcon = 'bi-check-lg'; $koorText = 'Disetujui'; }
+                            if ($koordinatorApproval->status === 'REVISION') { $koorColor = 'danger'; $koorIcon = 'bi-x-lg'; $koorText = 'Revisi'; }
+                        }
+                    @endphp
+                    <div class="d-inline-flex justify-content-center align-items-center rounded-circle border border-2 border-{{ $koorColor }} text-{{ $koorColor }} mb-2 bg-{{ $koorColor }} bg-opacity-10" style="width: 40px; height: 40px;">
+                        <i class="bi {{ $koorIcon }} fs-5"></i>
+                    </div>
+                    <div class="fw-bold small">Koord. Keuangan</div>
+                    <div class="text-{{ $koorColor }} small">{{ $koorText }}</div>
+                    @if(!empty($koordinatorApproval) && $koordinatorApproval->acted_at)
+                        <div class="text-muted" style="font-size: 0.7rem;">{{ \Carbon\Carbon::parse($koordinatorApproval->acted_at)->format('d M Y H:i') }}</div>
+                    @endif
+                </div>
+
+                <div class="flex-fill d-flex align-items-center px-2">
+                    <div class="w-100 border-top border-2 border-muted" style="border-style: dashed !important;"></div>
+                </div>
+
                 {{-- Kasubbag --}}
                 <div class="flex-fill">
                     @php
@@ -314,6 +337,15 @@
                         @if($ppkApproval)
                             <span class="badge {{ $ppkApproval->status === 'APPROVED' ? 'bg-success' : ($ppkApproval->status === 'REVISION' ? 'bg-danger' : 'bg-warning text-dark') }}">
                                 {{ $ppkApproval->status }}
+                            </span>
+                        @endif
+                    </div>
+                    <div class="list-group-item py-3">
+                        <div class="small text-muted">Koordinator Keuangan</div>
+                        <div class="fw-bold">{{ ($koordinatorApproval ?? null)?->actedByUser?->name ?? (($koordinatorApproval ?? null)?->assignedUser?->name ?? '-') }}</div>
+                        @if(!empty($koordinatorApproval))
+                            <span class="badge {{ $koordinatorApproval->status === 'APPROVED' ? 'bg-success' : ($koordinatorApproval->status === 'REVISION' ? 'bg-danger' : 'bg-warning text-dark') }}">
+                                {{ $koordinatorApproval->status }}
                             </span>
                         @endif
                     </div>

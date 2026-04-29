@@ -46,9 +46,10 @@ class SppPerjaldinVerifikasiController extends Controller
             $wf = $spp->workflowInstances->first();
             if (!$wf) continue;
 
-            $myApproval  = $wf->approvals->where('role_code', $roleCode)->first();
-            $ppkApproval = $wf->approvals->where('role_code', 'PPK')->first();
-            $kasApproval = $wf->approvals->where('role_code', 'Kepala Subbagian Keuangan dan Tata Usaha')->first();
+            $myApproval          = $wf->approvals->where('role_code', $roleCode)->first();
+            $ppkApproval         = $wf->approvals->where('role_code', 'PPK')->first();
+            $kasApproval         = $wf->approvals->where('role_code', 'Kepala Subbagian Keuangan dan Tata Usaha')->first();
+            $koordinatorApproval = $wf->approvals->where('role_code', 'Koordinator Keuangan')->first();
 
             // Determine combined status
             if ($wf->status === 'REVISION') {
@@ -72,6 +73,7 @@ class SppPerjaldinVerifikasiController extends Controller
             $spp->myApprovalStatus = $myApproval?->status ?? 'N/A';
             $spp->ppkApprovalStatus = $ppkApproval?->status ?? 'N/A';
             $spp->kasApprovalStatus = $kasApproval?->status ?? 'N/A';
+            $spp->koordinatorApprovalStatus = $koordinatorApproval?->status ?? 'N/A';
             $spp->statusFinal = $statusFinal;
             $spp->canAct = $canAct;
             $spp->workflow = $wf;
@@ -106,9 +108,10 @@ class SppPerjaldinVerifikasiController extends Controller
         $wf = $spp->workflowInstances->first();
         abort_unless($wf, 404, 'Workflow tidak ditemukan untuk dokumen SPP ini.');
 
-        $myApproval  = $wf->approvals->where('role_code', $roleCode)->first();
-        $ppkApproval = $wf->approvals->where('role_code', 'PPK')->first();
-        $kasApproval = $wf->approvals->where('role_code', 'Kepala Subbagian Keuangan dan Tata Usaha')->first();
+        $myApproval          = $wf->approvals->where('role_code', $roleCode)->first();
+        $ppkApproval         = $wf->approvals->where('role_code', 'PPK')->first();
+        $kasApproval         = $wf->approvals->where('role_code', 'Kepala Subbagian Keuangan dan Tata Usaha')->first();
+        $koordinatorApproval = $wf->approvals->where('role_code', 'Koordinator Keuangan')->first();
 
         // Determine combined status
         if ($wf->status === 'REVISION') {
@@ -139,7 +142,7 @@ class SppPerjaldinVerifikasiController extends Controller
 
         return compact(
             'spp', 'wf', 'tagihan', 'komponen',
-            'myApproval', 'ppkApproval', 'kasApproval',
+            'myApproval', 'ppkApproval', 'kasApproval', 'koordinatorApproval',
             'statusFinal', 'canAct', 'latestRevisionNote'
         );
     }
@@ -229,6 +232,53 @@ class SppPerjaldinVerifikasiController extends Controller
         $indexRoute   = 'verifikasi-kasubag.spp-perjaldin.index';
         $approveRoute = 'verifikasi-kasubag.spp-perjaldin.approve';
         $revisiRoute  = 'verifikasi-kasubag.spp-perjaldin.revisi';
+
+        return view('verifikasi_spp_perjaldin.show', array_merge(
+            $data,
+            compact('roleLabel', 'roleSlug', 'indexRoute', 'approveRoute', 'revisiRoute')
+        ));
+    }
+
+    // =====================================================================
+    //  KOORDINATOR KEUANGAN — Index & Show
+    // =====================================================================
+
+    public function koordinatorIndex(Request $request)
+    {
+        $roleCode = 'Koordinator Keuangan';
+        $data     = $this->buildIndexData($roleCode);
+        $viewSpps = $data['processed'];
+
+        if ($request->has('status') && $request->status !== 'Semua') {
+            $viewSpps = match ($request->status) {
+                'Pending'  => $viewSpps->where('myApprovalStatus', 'PENDING'),
+                'Approved' => $viewSpps->where('myApprovalStatus', 'APPROVED'),
+                'Revisi'   => $viewSpps->where('myApprovalStatus', 'REVISION'),
+                default    => $viewSpps,
+            };
+        }
+
+        $roleLabel  = 'Koordinator Keuangan';
+        $roleSlug   = 'koordinator';
+        $indexRoute = 'verifikasi-koordinator.spp-perjaldin.index';
+        $showRoute  = 'verifikasi-koordinator.spp-perjaldin.show';
+
+        return view('verifikasi_spp_perjaldin.index', array_merge(
+            $data,
+            compact('viewSpps', 'roleLabel', 'roleSlug', 'indexRoute', 'showRoute')
+        ));
+    }
+
+    public function koordinatorShow(int $id)
+    {
+        $roleCode = 'Koordinator Keuangan';
+        $data     = $this->buildShowData($id, $roleCode);
+
+        $roleLabel    = 'Koordinator Keuangan';
+        $roleSlug     = 'koordinator';
+        $indexRoute   = 'verifikasi-koordinator.spp-perjaldin.index';
+        $approveRoute = 'verifikasi-koordinator.spp-perjaldin.approve';
+        $revisiRoute  = 'verifikasi-koordinator.spp-perjaldin.revisi';
 
         return view('verifikasi_spp_perjaldin.show', array_merge(
             $data,
@@ -359,6 +409,10 @@ class SppPerjaldinVerifikasiController extends Controller
 
     private function detectRoleCode(User $user): string
     {
+        if ($user->hasRole('Koordinator Keuangan')) {
+            return 'Koordinator Keuangan';
+        }
+
         if ($user->hasRole('Kepala Subbagian Keuangan dan Tata Usaha')) {
             return 'Kepala Subbagian Keuangan dan Tata Usaha';
         }

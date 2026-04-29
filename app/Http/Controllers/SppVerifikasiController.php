@@ -209,6 +209,7 @@ class SppVerifikasiController extends Controller
 
             $kasubbagApproval = $wf->approvals->where('role_code', $roleName)->first();
             $ppkApproval = $wf->approvals->where('role_code', 'PPK')->first();
+            $koordinatorApproval = $wf->approvals->where('role_code', 'Koordinator Keuangan')->first();
             
             if ($wf->status === 'REVISION') {
                 $statusFinal = 'Perlu Revisi';
@@ -235,6 +236,7 @@ class SppVerifikasiController extends Controller
 
             $spp->kasubbagApprovalStatus = $kasubbagApproval ? $kasubbagApproval->status : 'N/A';
             $spp->ppkApprovalStatus = $ppkApproval ? $ppkApproval->status : 'N/A';
+            $spp->koordinatorApprovalStatus = $koordinatorApproval ? $koordinatorApproval->status : 'N/A';
             $spp->statusFinal = $statusFinal;
             $spp->canAct = $canAct;
             $spp->workflow = $wf;
@@ -259,12 +261,21 @@ class SppVerifikasiController extends Controller
             }
         }
 
+        $roleSlug   = 'kasubbag';
+        $indexRoute = 'verifikasi-kasubag.spp.index';
+        $showRoute  = 'verifikasi-kasubag.spp.show';
+        $roleLabel  = 'Kepala Subbagian Keuangan dan Tata Usaha';
+
         return view('verifikasi_kasubag.spp_index', compact(
             'viewSpps', 
             'countPending', 
             'countApprovedMe', 
             'countRevisi', 
-            'countSelesai'
+            'countSelesai',
+            'roleSlug',
+            'indexRoute',
+            'showRoute',
+            'roleLabel'
         ));
     }
 
@@ -292,6 +303,7 @@ class SppVerifikasiController extends Controller
 
         $kasubbagApproval = $wf->approvals->where('role_code', $roleName)->first();
         $ppkApproval = $wf->approvals->where('role_code', 'PPK')->first();
+        $koordinatorApproval = $wf->approvals->where('role_code', 'Koordinator Keuangan')->first();
         $operatorApproval = collect(['status' => 'APPROVED', 'acted_by_user_id' => $spp->dibuat_oleh_id, 'acted_at' => $spp->created_at]);
 
         if ($wf->status === 'REVISION') {
@@ -323,15 +335,28 @@ class SppVerifikasiController extends Controller
             $latestRevisionNote = $revisions->first();
         }
 
+        // Variables for view-route compatibility (kasubbag default)
+        $roleSlug     = 'kasubbag';
+        $indexRoute   = 'verifikasi-kasubag.spp.index';
+        $approveRoute = 'verifikasi-kasubag.spp.approve';
+        $revisiRoute  = 'verifikasi-kasubag.spp.revisi';
+        $roleLabel    = 'Kepala Subbagian Keuangan dan Tata Usaha';
+
         return view('verifikasi_kasubag.spp_show', compact(
             'spp', 
             'wf',
             'kasubbagApproval',
             'ppkApproval',
+            'koordinatorApproval',
             'operatorApproval',
             'statusFinal',
             'canAct',
-            'latestRevisionNote'
+            'latestRevisionNote',
+            'roleSlug',
+            'indexRoute',
+            'approveRoute',
+            'revisiRoute',
+            'roleLabel'
         ));
     }
 
@@ -426,6 +451,265 @@ class SppVerifikasiController extends Controller
             ]));
 
             return redirect()->route('verifikasi-kasubag.spp.index')->with('warning', "Catatan revisi untuk SPP {$spp->nomor_spp} telah dikirim.");
+        } catch (\Exception $e) {
+            return back()->with('error', 'Gagal memproses revisi: ' . $e->getMessage());
+        }
+    }
+
+    // ==== MODUL VERIFIKASI SPP KOORDINATOR KEUANGAN ====
+
+    public function koordinatorIndex(Request $request)
+    {
+        $roleName = 'Koordinator Keuangan';
+
+        $spps = Spp::with([
+                'tagihan.pihak',
+                'tagihan.detailKontrak.kontrakTermin.kontrak',
+                'workflowInstances' => function($q) {
+                    $q->latest()->limit(1);
+                },
+                'workflowInstances.approvals'
+            ])
+            ->whereHas('workflowInstances', function($q) use ($roleName) {
+                $q->whereHas('approvals', function($a) use ($roleName) {
+                    $a->where('role_code', $roleName);
+                });
+            })
+            ->latest()
+            ->get();
+
+        $processedSpps = collect();
+        foreach ($spps as $spp) {
+            $wf = $spp->workflowInstances->first();
+            if (!$wf) continue;
+
+            $myApproval         = $wf->approvals->where('role_code', $roleName)->first();
+            $ppkApproval        = $wf->approvals->where('role_code', 'PPK')->first();
+            $kasubbagApproval   = $wf->approvals->where('role_code', 'Kepala Subbagian Keuangan dan Tata Usaha')->first();
+
+            if ($wf->status === 'REVISION') {
+                $statusFinal = 'Perlu Revisi';
+            } elseif ($wf->status === 'APPROVED') {
+                $statusFinal = 'Selesai Diverifikasi';
+            } else {
+                $pending = $wf->approvals->where('status', 'PENDING');
+                $statusFinal = $pending->count() > 1 ? 'Menunggu Verifikasi' : 'Dalam Proses';
+            }
+
+            $canAct = (
+                $myApproval
+                && $myApproval->status === 'PENDING'
+                && $wf->status === 'IN_PROGRESS'
+                && (int) $wf->step_saat_ini === (int) $myApproval->urutan_step
+            );
+
+            $spp->kasubbagApprovalStatus    = $kasubbagApproval ? $kasubbagApproval->status : 'N/A';
+            $spp->ppkApprovalStatus         = $ppkApproval ? $ppkApproval->status : 'N/A';
+            $spp->koordinatorApprovalStatus = $myApproval ? $myApproval->status : 'N/A';
+            $spp->myApprovalStatus          = $myApproval ? $myApproval->status : 'N/A';
+            $spp->statusFinal = $statusFinal;
+            $spp->canAct = $canAct;
+            $spp->workflow = $wf;
+
+            $processedSpps->push($spp);
+        }
+
+        $countPending    = $processedSpps->where('myApprovalStatus', 'PENDING')->count();
+        $countApprovedMe = $processedSpps->where('myApprovalStatus', 'APPROVED')->count();
+        $countRevisi     = $processedSpps->where('myApprovalStatus', 'REVISION')->count();
+        $countSelesai    = $processedSpps->where('statusFinal', 'Selesai Diverifikasi')->count();
+
+        $viewSpps = $processedSpps;
+
+        if ($request->has('status') && $request->status !== 'Semua') {
+            if ($request->status === 'Pending') {
+                $viewSpps = $viewSpps->where('myApprovalStatus', 'PENDING');
+            } elseif ($request->status === 'Approved') {
+                $viewSpps = $viewSpps->where('myApprovalStatus', 'APPROVED');
+            } elseif ($request->status === 'Revisi') {
+                $viewSpps = $viewSpps->where('myApprovalStatus', 'REVISION');
+            }
+        }
+
+        $roleSlug   = 'koordinator';
+        $indexRoute = 'verifikasi-koordinator.spp.index';
+        $showRoute  = 'verifikasi-koordinator.spp.show';
+        $roleLabel  = 'Koordinator Keuangan';
+
+        return view('verifikasi_kasubag.spp_index', compact(
+            'viewSpps',
+            'countPending',
+            'countApprovedMe',
+            'countRevisi',
+            'countSelesai',
+            'roleSlug',
+            'indexRoute',
+            'showRoute',
+            'roleLabel'
+        ));
+    }
+
+    public function koordinatorShow($id)
+    {
+        $roleName = 'Koordinator Keuangan';
+
+        $spp = Spp::with([
+            'tagihan.pihak',
+            'tagihan.detailKontrak.kontrakTermin.kontrak',
+            'tagihan.dipaRevisionItem.coa',
+            'tagihan.potonganTagihan.pajak',
+            'tagihan.potonganTagihan.akunPotongan',
+            'arsipDokumen',
+            'workflowInstances' => function($q) {
+                $q->latest()->limit(1);
+            },
+            'workflowInstances.approvals'
+        ])->findOrFail($id);
+
+        $wf = $spp->workflowInstances->first();
+        if (!$wf) {
+            return back()->with('error', 'Workflow tidak ditemukan untuk dokumen ini.');
+        }
+
+        $kasubbagApproval    = $wf->approvals->where('role_code', 'Kepala Subbagian Keuangan dan Tata Usaha')->first();
+        $ppkApproval         = $wf->approvals->where('role_code', 'PPK')->first();
+        $koordinatorApproval = $wf->approvals->where('role_code', $roleName)->first();
+        $operatorApproval    = collect(['status' => 'APPROVED', 'acted_by_user_id' => $spp->dibuat_oleh_id, 'acted_at' => $spp->created_at]);
+
+        if ($wf->status === 'REVISION') {
+            $statusFinal = 'Perlu Revisi';
+        } elseif ($wf->status === 'APPROVED') {
+            $statusFinal = 'Selesai Diverifikasi';
+        } else {
+            $pending = $wf->approvals->where('status', 'PENDING');
+            $statusFinal = $pending->count() > 1 ? 'Menunggu Verifikasi' : 'Dalam Proses';
+        }
+
+        $canAct = (
+            $koordinatorApproval
+            && $koordinatorApproval->status === 'PENDING'
+            && $wf->status === 'IN_PROGRESS'
+            && (int) $wf->step_saat_ini === (int) $koordinatorApproval->urutan_step
+        );
+
+        $latestRevisionNote = null;
+        $revisions = $wf->approvals->where('status', 'REVISION')->sortByDesc('acted_at');
+        if ($revisions->isNotEmpty()) {
+            $latestRevisionNote = $revisions->first();
+        }
+
+        $roleSlug     = 'koordinator';
+        $indexRoute   = 'verifikasi-koordinator.spp.index';
+        $approveRoute = 'verifikasi-koordinator.spp.approve';
+        $revisiRoute  = 'verifikasi-koordinator.spp.revisi';
+        $roleLabel    = 'Koordinator Keuangan';
+
+        return view('verifikasi_kasubag.spp_show', compact(
+            'spp',
+            'wf',
+            'kasubbagApproval',
+            'ppkApproval',
+            'koordinatorApproval',
+            'operatorApproval',
+            'statusFinal',
+            'canAct',
+            'latestRevisionNote',
+            'roleSlug',
+            'indexRoute',
+            'approveRoute',
+            'revisiRoute',
+            'roleLabel'
+        ));
+    }
+
+    public function approveKoordinator($spp_id)
+    {
+        $spp = Spp::with('tagihan')->findOrFail($spp_id);
+
+        try {
+            app(WorkflowService::class)->approveCurrentStep($spp, Auth::id(), 'Dokumen SPP disetujui oleh Koordinator Keuangan.');
+
+            $workflowFullyApproved = $this->finalizeWorkflowIfComplete($spp);
+
+            if ($workflowFullyApproved) {
+                $spp->update(['status' => $this->isPerjaldinSpp($spp) ? 'DISETUJUI_SPP' : 'APPROVED']);
+                $this->syncParentTagihanAfterSppFinal($spp);
+            }
+
+            $statusBaru = $workflowFullyApproved ? $spp->status : 'Disetujui Koordinator Keuangan';
+            $this->syncPerjaldinKomponenStatus($spp);
+
+            LogStatusDokumen::create([
+                'dokumen_type' => DokumenSpp::class,
+                'dokumen_id' => $spp->id,
+                'user_id' => Auth::id(),
+                'role_saat_itu' => Auth::user()?->getRoleNames()->first() ?? 'Koordinator Keuangan',
+                'status_sebelumnya' => 'Menunggu Verifikasi',
+                'status_baru' => $statusBaru,
+                'aksi' => 'APPROVE_KOORDINATOR_KEUANGAN',
+                'catatan' => $workflowFullyApproved
+                    ? 'Dokumen SPP disetujui oleh Koordinator Keuangan. Seluruh approver telah menyetujui — SPP final.'
+                    : 'Dokumen SPP disetujui oleh Koordinator Keuangan.',
+                'ip_address' => request()->ip(),
+            ]);
+
+            if ($workflowFullyApproved) {
+                $operators = User::role('Operator BLU')->get();
+                Notification::send($operators, new WorkflowNotification([
+                    'title' => 'SPP Disetujui Final',
+                    'message' => "SPP {$spp->nomor_spp} telah disetujui oleh semua pihak dan siap lanjut ke SPM.",
+                    'url' => $this->resolveOperatorDetailRoute($spp),
+                    'icon' => 'verified',
+                    'color' => 'success'
+                ]));
+            }
+
+            return redirect()->route('verifikasi-koordinator.spp.index')->with('success', $workflowFullyApproved
+                ? "SPP Nomor {$spp->nomor_spp} telah disetujui oleh semua pihak."
+                : "SPP Nomor {$spp->nomor_spp} berhasil disetujui Koordinator Keuangan.");
+        } catch (\Exception $e) {
+            return back()->with('error', 'Gagal memproses approval: ' . $e->getMessage());
+        }
+    }
+
+    public function revisiKoordinator(Request $request, $spp_id)
+    {
+        $request->validate([
+            'catatan_revisi' => 'required|string|max:1000'
+        ]);
+
+        $spp = Spp::with('tagihan')->findOrFail($spp_id);
+
+        try {
+            app(WorkflowService::class)->requestRevision($spp, Auth::id(), $request->catatan_revisi);
+
+            $spp->update([
+                'status' => $this->isPerjaldinSpp($spp) ? 'REVISI_KOORDINATOR' : 'Revisi',
+            ]);
+            $this->syncPerjaldinKomponenStatus($spp);
+
+            LogStatusDokumen::create([
+                'dokumen_type' => DokumenSpp::class,
+                'dokumen_id' => $spp->id,
+                'user_id' => Auth::id(),
+                'role_saat_itu' => Auth::user()?->getRoleNames()->first() ?? 'Koordinator Keuangan',
+                'status_sebelumnya' => 'Menunggu Verifikasi Koordinator Keuangan',
+                'status_baru' => $spp->status,
+                'aksi' => 'REVISI_KOORDINATOR_KEUANGAN',
+                'catatan' => $request->catatan_revisi,
+                'ip_address' => request()->ip(),
+            ]);
+
+            $operators = User::role('Operator BLU')->get();
+            Notification::send($operators, new WorkflowNotification([
+                'title' => 'SPP Direvisi Koordinator Keuangan',
+                'message' => "SPP {$spp->nomor_spp} perlu revisi. Catatan: {$request->catatan_revisi}",
+                'url' => $this->resolveOperatorDetailRoute($spp),
+                'icon' => 'error_outline',
+                'color' => 'danger'
+            ]));
+
+            return redirect()->route('verifikasi-koordinator.spp.index')->with('warning', "Catatan revisi untuk SPP {$spp->nomor_spp} telah dikirim.");
         } catch (\Exception $e) {
             return back()->with('error', 'Gagal memproses revisi: ' . $e->getMessage());
         }

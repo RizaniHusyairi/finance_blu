@@ -57,6 +57,14 @@ class WorkflowDefinitionSeeder extends Seeder
                     ],
                     [
                         'urutan_step' => 1,
+                        'nama_step' => 'Verifikasi Koordinator Keuangan',
+                        'role_code' => 'Koordinator Keuangan',
+                        'is_required' => true,
+                        'can_reject' => true,
+                        'can_request_revision' => true,
+                    ],
+                    [
+                        'urutan_step' => 1,
                         'nama_step' => 'Verifikasi Kasubbag',
                         'role_code' => 'Kepala Subbagian Keuangan dan Tata Usaha',
                         'is_required' => true,

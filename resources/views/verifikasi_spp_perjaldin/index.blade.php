@@ -90,6 +90,7 @@
                             <th>Tagihan Perjaldin</th>
                             <th class="text-end">Nilai SPP (Rp)</th>
                             <th class="text-center">Status PPK</th>
+                            <th class="text-center">Status Koord. Keuangan</th>
                             <th class="text-center">Status Kasubbag</th>
                             <th class="text-center">Status Final</th>
                             <th class="text-center">Aksi</th>
@@ -122,6 +123,15 @@
                                 @if($spp->ppkApprovalStatus === 'APPROVED')
                                     <span class="badge bg-success"><i class="bi bi-check-circle"></i> Disetujui</span>
                                 @elseif($spp->ppkApprovalStatus === 'REVISION')
+                                    <span class="badge bg-danger"><i class="bi bi-x-circle"></i> Revisi</span>
+                                @else
+                                    <span class="badge bg-warning text-dark"><i class="bi bi-hourglass-split"></i> Pending</span>
+                                @endif
+                            </td>
+                            <td class="text-center">
+                                @if($spp->koordinatorApprovalStatus === 'APPROVED')
+                                    <span class="badge bg-success"><i class="bi bi-check-circle"></i> Disetujui</span>
+                                @elseif($spp->koordinatorApprovalStatus === 'REVISION')
                                     <span class="badge bg-danger"><i class="bi bi-x-circle"></i> Revisi</span>
                                 @else
                                     <span class="badge bg-warning text-dark"><i class="bi bi-hourglass-split"></i> Pending</span>
