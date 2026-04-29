@@ -163,6 +163,20 @@ class KontrakPengadaan extends Model
             ->first();
     }
 
+    public function getGambarRabArsipAttribute()
+    {
+        return $this->arsipDokumen
+            ->where('is_active', true)
+            ->where('jenis_dokumen', 'GAMBAR_RAB')
+            ->sortByDesc('created_at')
+            ->first();
+    }
+
+    public function getFileGambarRabAttribute()
+    {
+        return optional($this->gambar_rab_arsip)->path_file;
+    }
+
     public function getFileSpkFinalTtdAttribute()
     {
         return optional($this->spk_final_ttd_arsip)->path_file;

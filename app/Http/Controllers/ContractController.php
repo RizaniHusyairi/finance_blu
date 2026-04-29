@@ -23,7 +23,7 @@ class ContractController extends Controller
      */
     public function index()
     {
-        $contracts = \App\Models\KontrakPengadaan::with(['vendor', 'ppkUser.pegawai', 'addendums', 'termin'])->latest()->get();
+        $contracts = \App\Models\KontrakPengadaan::with(['vendor', 'ppkUser.profilable', 'addendums', 'termin'])->latest()->get();
         $addendums = \App\Models\KontrakAddendum::with(['kontrakUtama.vendor', 'logs.user'])->latest()->get();
 
         $totalAktif = $contracts->where('status_kontrak', 'AKTIF')->count();
@@ -61,7 +61,7 @@ class ContractController extends Controller
      */
     public function verifikasiIndex(Request $request)
     {
-        $query = \App\Models\KontrakPengadaan::with(['vendor', 'ppkUser.pegawai', 'dipa'])->latest();
+        $query = \App\Models\KontrakPengadaan::with(['vendor', 'ppkUser.profilable', 'dipa'])->latest();
         
         $filter = $request->input('status', 'ALL');
         
@@ -86,7 +86,7 @@ class ContractController extends Controller
      */
     public function verifikasiShow($id)
     {
-        $kontrak = \App\Models\KontrakPengadaan::with(['vendor.rekening', 'ppkUser.pegawai', 'dipa.activeRevision', 'dipaRevisionItem.coa', 'termin', 'arsipDokumen'])->findOrFail($id);
+        $kontrak = \App\Models\KontrakPengadaan::with(['vendor.rekening', 'ppkUser.profilable', 'dipa.activeRevision', 'dipaRevisionItem.coa', 'termin', 'arsipDokumen'])->findOrFail($id);
         $this->ensureAssignedPpk($kontrak);
         
         // Cek Pagu DIPA
@@ -115,10 +115,10 @@ class ContractController extends Controller
             ->orderBy('nama_pihak')
             ->get();
         $budgetGroups = DipaBudgetOptionService::groupedOptions();
-        $ppkUsers = User::role('PPK')->with('pegawai')->orderBy('name')->get();
+        $ppkUsers = User::role('PPK')->with('profilable')->orderByDisplayName()->get();
         $documentNumberService = app(DocumentNumberService::class);
         $nomorSpkPreview = $documentNumberService->previewByKey('SPK');
-        $nomorSpmkPreview = $documentNumberService->previewByKey('SPMK');
+        $nomorSpmkPreview = $documentNumberService->previewByKey('SPMK', null, 1);
 
         return view('contracts.create', compact('vendors', 'budgetGroups', 'ppkUsers', 'nomorSpkPreview', 'nomorSpmkPreview'));
     }
@@ -151,9 +151,9 @@ class ContractController extends Controller
             'satuan_waktu' => 'required|in:HARI,MINGGU,BULAN',
             'jangka_waktu' => 'required|integer|min:1',
             'tanggal_selesai' => 'required|date|after_or_equal:tanggal_mulai',
-            'masa_pemeliharaan_hari' => 'required|integer|min:0',
-            'tanggal_mulai_pemeliharaan' => 'required|date',
-            'tanggal_selesai_pemeliharaan' => 'required|date|after_or_equal:tanggal_mulai_pemeliharaan',
+            'masa_pemeliharaan_hari' => 'nullable|integer|min:0',
+            'tanggal_mulai_pemeliharaan' => 'nullable|date',
+            'tanggal_selesai_pemeliharaan' => 'nullable|date|after_or_equal:tanggal_mulai_pemeliharaan',
             'ketentuan_denda' => 'nullable|string',
             'nilai_total_kontrak' => 'required|numeric|min:0',
             'metode_pembayaran' => 'required|in:LUMPSUM,TERMIN',
@@ -226,9 +226,9 @@ class ContractController extends Controller
                 'satuan_waktu' => $validated['satuan_waktu'],
                 'tanggal_mulai' => $validated['tanggal_mulai'],
                 'tanggal_selesai' => $validated['tanggal_selesai'],
-                'masa_pemeliharaan_hari' => $validated['masa_pemeliharaan_hari'],
-                'tanggal_mulai_pemeliharaan' => $validated['tanggal_mulai_pemeliharaan'],
-                'tanggal_selesai_pemeliharaan' => $validated['tanggal_selesai_pemeliharaan'],
+                'masa_pemeliharaan_hari' => $validated['masa_pemeliharaan_hari'] ?? 0,
+                'tanggal_mulai_pemeliharaan' => $validated['tanggal_mulai_pemeliharaan'] ?? null,
+                'tanggal_selesai_pemeliharaan' => $validated['tanggal_selesai_pemeliharaan'] ?? null,
                 'ketentuan_denda' => $validated['ketentuan_denda'] ?? null,
                 'status_kontrak' => 'DRAFT',
             ]);
@@ -289,7 +289,7 @@ class ContractController extends Controller
             'addendums.logs.user',
             'addendums.arsipDokumen',
             'vendor.rekening',
-            'ppkUser.pegawai',
+            'ppkUser.profilable',
             'dipa.activeRevision',
             'dipaRevisionItem.coa',
             'arsipDokumen',
@@ -365,7 +365,7 @@ class ContractController extends Controller
             ->orderBy('nama_pihak')
             ->get();
         $budgetGroups = DipaBudgetOptionService::groupedOptions();
-        $ppkUsers = User::role('PPK')->with('pegawai')->orderBy('name')->get();
+        $ppkUsers = User::role('PPK')->with('profilable')->orderByDisplayName()->get();
         $selectedPpkUserId = $kontrak->ppk_user_id;
 
         return view('contracts.edit', compact('kontrak', 'vendors', 'budgetGroups', 'ppkUsers', 'selectedPpkUserId'));
@@ -405,9 +405,9 @@ class ContractController extends Controller
             'satuan_waktu' => 'required|in:HARI,MINGGU,BULAN',
             'jangka_waktu' => 'required|integer|min:1',
             'tanggal_selesai' => 'required|date|after_or_equal:tanggal_mulai',
-            'masa_pemeliharaan_hari' => 'required|integer|min:0',
-            'tanggal_mulai_pemeliharaan' => 'required|date',
-            'tanggal_selesai_pemeliharaan' => 'required|date|after_or_equal:tanggal_mulai_pemeliharaan',
+            'masa_pemeliharaan_hari' => 'nullable|integer|min:0',
+            'tanggal_mulai_pemeliharaan' => 'nullable|date',
+            'tanggal_selesai_pemeliharaan' => 'nullable|date|after_or_equal:tanggal_mulai_pemeliharaan',
             'ketentuan_denda' => 'nullable|string',
             'nilai_total_kontrak' => 'required|numeric|min:0',
             'metode_pembayaran' => 'required|in:LUMPSUM,TERMIN',
@@ -478,9 +478,9 @@ class ContractController extends Controller
                 'satuan_waktu' => $validated['satuan_waktu'],
                 'tanggal_mulai' => $validated['tanggal_mulai'],
                 'tanggal_selesai' => $validated['tanggal_selesai'],
-                'masa_pemeliharaan_hari' => $validated['masa_pemeliharaan_hari'],
-                'tanggal_mulai_pemeliharaan' => $validated['tanggal_mulai_pemeliharaan'],
-                'tanggal_selesai_pemeliharaan' => $validated['tanggal_selesai_pemeliharaan'],
+                'masa_pemeliharaan_hari' => $validated['masa_pemeliharaan_hari'] ?? 0,
+                'tanggal_mulai_pemeliharaan' => $validated['tanggal_mulai_pemeliharaan'] ?? null,
+                'tanggal_selesai_pemeliharaan' => $validated['tanggal_selesai_pemeliharaan'] ?? null,
                 'ketentuan_denda' => $validated['ketentuan_denda'] ?? null,
             ]);
 
@@ -580,14 +580,80 @@ class ContractController extends Controller
         return back()->with('success', $msg);
     }
 
+    public function uploadSpkGambarRab(Request $request, $id)
+    {
+        abort_unless(
+            Auth::user()?->hasAnyRole(['Super Admin', 'Pejabat Pengadaan']),
+            403,
+            'Hanya user pengadaan yang dapat mengunggah Gambar RAB.'
+        );
+
+        $kontrak = \App\Models\KontrakPengadaan::with('arsipDokumen')->findOrFail($id);
+
+        $request->validate([
+            'gambar_rab' => 'required|image|mimes:jpg,jpeg,png|max:5120',
+        ], [
+            'gambar_rab.required' => 'Gambar RAB wajib diunggah sebelum export PDF Draft SPK.',
+            'gambar_rab.image' => 'File RAB harus berupa gambar.',
+            'gambar_rab.mimes' => 'Gambar RAB harus berformat JPG, JPEG, atau PNG.',
+            'gambar_rab.max' => 'Ukuran Gambar RAB maksimal 5 MB.',
+        ]);
+
+        $file = $request->file('gambar_rab');
+
+        $this->replaceKontrakArsipAktif(
+            $kontrak,
+            'GAMBAR_RAB',
+            $file->store('kontrak/gambar-rab', 'public'),
+            $file->getClientOriginalName()
+        );
+
+        return back()->with('success', 'Gambar RAB berhasil diunggah. PDF Draft SPK sudah dapat diexport.');
+    }
+
+    public function viewSpkGambarRab($id)
+    {
+        $kontrak = \App\Models\KontrakPengadaan::with('arsipDokumen')->findOrFail($id);
+        $gambarRabArsip = $kontrak->gambar_rab_arsip;
+
+        abort_unless($gambarRabArsip, 404);
+
+        $disk = $gambarRabArsip->disk ?: 'public';
+        $storage = Storage::disk($disk);
+
+        abort_unless($storage->exists($gambarRabArsip->path_file), 404);
+
+        return $storage->response(
+            $gambarRabArsip->path_file,
+            $gambarRabArsip->nama_file_asli ?: basename($gambarRabArsip->path_file)
+        );
+    }
+
     public function exportSpkPdf($id)
     {
         $kontrak = \App\Models\KontrakPengadaan::with([
             'vendor.rekening',
-            'ppkUser.pegawai',
+            'ppkUser.profilable',
             'dipa.activeRevision',
             'dipaRevisionItem.coa',
+            'arsipDokumen',
         ])->findOrFail($id);
+
+        $gambarRabArsip = $kontrak->gambar_rab_arsip;
+
+        if (!$gambarRabArsip) {
+            return back()->withErrors([
+                'gambar_rab' => 'Gambar RAB wajib diunggah terlebih dahulu sebelum export PDF Draft SPK.',
+            ]);
+        }
+
+        $gambarRabDataUri = $this->buildImageDataUriFromArsip($gambarRabArsip);
+
+        if (!$gambarRabDataUri) {
+            return back()->withErrors([
+                'gambar_rab' => 'File Gambar RAB tidak ditemukan atau tidak dapat dibaca. Silakan unggah ulang Gambar RAB.',
+            ]);
+        }
 
         $pdf = Pdf::loadView('contracts.spk_pdf', [
             'kontrak' => $kontrak,
@@ -597,6 +663,7 @@ class ContractController extends Controller
             'activeRevision' => optional($kontrak->dipa)->activeRevision,
             'itemAnggaran' => $kontrak->dipaRevisionItem,
             'coa' => optional($kontrak->dipaRevisionItem)->coa,
+            'gambarRabDataUri' => $gambarRabDataUri,
             'terbilangNilaiKontrak' => function_exists('terbilang_rupiah')
                 ? terbilang_rupiah((float) $kontrak->nilai_total_kontrak)
                 : null,
@@ -655,7 +722,7 @@ class ContractController extends Controller
     {
         $kontrak = \App\Models\KontrakPengadaan::with([
             'vendor.rekening',
-            'ppkUser.pegawai',
+            'ppkUser.profilable',
             'dipa.activeRevision',
             'dipaRevisionItem.coa',
         ])->findOrFail($id);
@@ -679,7 +746,7 @@ class ContractController extends Controller
     {
         $kontrak = \App\Models\KontrakPengadaan::with([
             'vendor.rekening',
-            'ppkUser.pegawai',
+            'ppkUser.profilable',
             'dipa.activeRevision',
             'dipaRevisionItem.coa',
         ])->findOrFail($id);
@@ -771,6 +838,29 @@ class ContractController extends Controller
             ->where('jenis_dokumen', 'SPK_FINAL_TTD')
             ->where('is_active', true)
             ->exists();
+    }
+
+    private function buildImageDataUriFromArsip(?ArsipDokumen $arsip): ?string
+    {
+        if (!$arsip || !$arsip->path_file) {
+            return null;
+        }
+
+        $disk = $arsip->disk ?: 'public';
+        $storage = Storage::disk($disk);
+
+        if (!$storage->exists($arsip->path_file)) {
+            return null;
+        }
+
+        $fullPath = $storage->path($arsip->path_file);
+        $mimeType = function_exists('mime_content_type') ? mime_content_type($fullPath) : null;
+        $mimeType = $mimeType ?: match (strtolower(pathinfo($arsip->path_file, PATHINFO_EXTENSION))) {
+            'png' => 'image/png',
+            default => 'image/jpeg',
+        };
+
+        return 'data:' . $mimeType . ';base64,' . base64_encode(file_get_contents($fullPath));
     }
 
     private function buildTerminScheme(Request $request, float $nilaiTotalKontrak): array
@@ -917,7 +1007,7 @@ class ContractController extends Controller
 
     private function resolvePpkUser(int $userId): User
     {
-        $user = User::role('PPK')->with('pegawai')->findOrFail($userId);
+        $user = User::role('PPK')->with('profilable')->findOrFail($userId);
 
         if (!$user->pegawai || empty($user->pegawai->nip)) {
             throw new \RuntimeException('User PPK yang dipilih belum memiliki data pegawai atau NIP yang lengkap.');
@@ -948,4 +1038,3 @@ class ContractController extends Controller
         ]));
     }
 }
-

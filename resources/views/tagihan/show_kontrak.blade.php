@@ -1,12 +1,128 @@
 @extends('layouts.app')
 @section('title', 'Detail Tagihan Termin')
 
+@push('css')
+<style>
+    .verifikator-avatar {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        font-weight: 700;
+        font-size: .9rem;
+        flex-shrink: 0;
+        text-shadow: 0 1px 1px rgba(0,0,0,.15);
+    }
+    .verifikator-card {
+        transition: all .15s ease;
+        border-left: 4px solid transparent;
+        position: relative;
+    }
+    .verifikator-card.is-filled { border-left-color: var(--bs-success); }
+    .verifikator-card.is-empty  { border-left-color: var(--bs-warning); background: #fff8e1; }
+    .verifikator-step-no {
+        position: absolute;
+        top: -10px; left: -10px;
+        width: 26px; height: 26px;
+        border-radius: 50%;
+        background: #fff;
+        border: 2px solid var(--bs-primary);
+        color: var(--bs-primary);
+        font-size: .75rem;
+        font-weight: 700;
+        display: flex; align-items: center; justify-content: center;
+        z-index: 2;
+        box-shadow: 0 2px 4px rgba(0,0,0,.08);
+    }
+    .role-chip {
+        font-size: .68rem;
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-weight: 600;
+        letter-spacing: .3px;
+    }
+</style>
+@endpush
+
 @section('content')
+@php
+    $statusBadge = match($tagihan->status) {
+        'DRAFT'                          => ['class' => 'bg-warning text-dark', 'icon' => 'pencil-square',         'label' => 'Draft — Sedang Disusun'],
+        'PENDING_VERIFIKASI_KONTRAK'     => ['class' => 'bg-info text-dark',    'icon' => 'people-fill',           'label' => 'Verifikasi Paralel Berjalan'],
+        'PENDING_PPK'                    => ['class' => 'bg-info text-white',   'icon' => 'hourglass-split',       'label' => 'Menunggu PPK'],
+        'PENDING_PPSPM'                  => ['class' => 'bg-info text-white',   'icon' => 'hourglass-split',       'label' => 'Menunggu PPSPM'],
+        'PENDING_KOORDINATOR_KEUANGAN'   => ['class' => 'bg-info text-white',   'icon' => 'hourglass-split',       'label' => 'Menunggu Koordinator Keuangan'],
+        'PENDING_BENDAHARA_PENGELUARAN'  => ['class' => 'bg-info text-white',   'icon' => 'hourglass-split',       'label' => 'Menunggu Bendahara Pengeluaran'],
+        'PENDING_BENDAHARA_PENERIMAAN'   => ['class' => 'bg-info text-white',   'icon' => 'hourglass-split',       'label' => 'Menunggu Bendahara Penerimaan'],
+        'PENDING_KASUBBAG'               => ['class' => 'bg-primary text-white','icon' => 'hourglass-split',       'label' => 'Menunggu Kasubbag (Final)'],
+        'REVISI_PPK', 'REVISI_PPSPM', 'REVISI_KOORDINATOR_KEUANGAN', 'REVISI_BENDAHARA_PENGELUARAN', 'REVISI_BENDAHARA_PENERIMAAN', 'REVISI_KASUBBAG', 'REVISI_PEJABAT_PENGADAAN'
+                                         => ['class' => 'bg-warning text-dark', 'icon' => 'arrow-counterclockwise','label' => 'Perlu Revisi'],
+        'DITOLAK_PPK', 'DITOLAK_PPSPM', 'DITOLAK_KOORDINATOR_KEUANGAN', 'DITOLAK_BENDAHARA_PENGELUARAN', 'DITOLAK_BENDAHARA_PENERIMAAN', 'DITOLAK_KASUBBAG'
+                                         => ['class' => 'bg-danger text-white', 'icon' => 'x-octagon',             'label' => 'Ditolak'],
+        'APPROVED', 'DISETUJUI_KONTRAK', 'READY_FOR_SPP'
+                                         => ['class' => 'bg-success text-white','icon' => 'check-circle',          'label' => 'Disetujui — Siap SPP'],
+        default                          => ['class' => 'bg-secondary text-white', 'icon' => 'circle',             'label' => $tagihan->status],
+    };
+
+    // Ambil status approval per role_code dari workflow_approvals (untuk indikator visual)
+    $approvalStatusByRole = collect();
+    if ($tagihan->relationLoaded('workflowInstance') ? $tagihan->workflowInstance : ($tagihan->workflowInstance ?? null)) {
+        $instance = $tagihan->workflowInstance;
+        if ($instance) {
+            $approvalStatusByRole = $instance->approvals
+                ->keyBy(fn ($a) => strtoupper(str_replace([' ', '-'], '_', $a->role_code)));
+        }
+    }
+
+    $approvalMeta = [
+        'PENDING'  => ['cls' => 'pending',  'icon' => 'hourglass-split',         'label' => 'Menunggu',  'color' => 'warning'],
+        'APPROVED' => ['cls' => 'approved', 'icon' => 'check-circle-fill',       'label' => 'Disetujui', 'color' => 'success'],
+        'REVISION' => ['cls' => 'revision', 'icon' => 'arrow-counterclockwise',  'label' => 'Revisi',    'color' => 'danger'],
+        'REJECTED' => ['cls' => 'rejected', 'icon' => 'x-circle-fill',           'label' => 'Ditolak',   'color' => 'danger'],
+        'WAITING'  => ['cls' => 'waiting',  'icon' => 'clock-history',           'label' => 'Belum aktif','color' => 'secondary'],
+    ];
+
+    // Daftar verifikator + meta untuk styling (urutan = alur tanda-tangan dokumen)
+    $verifikatorList = [
+        ['key' => 'ppk',                  'role_code' => 'PPK',                   'label' => 'PPK',                                          'short' => 'PPK',          'color' => '#0d6efd', 'nama' => $tagihan->ppk_nama_snapshot,                  'nip' => $tagihan->ppk_nip_snapshot,                  'auto' => true],
+        ['key' => 'ppspm',                'role_code' => 'PPSPM',                 'label' => 'PPSPM',                                        'short' => 'PPSPM',        'color' => '#6610f2', 'nama' => $tagihan->ppspm_nama_snapshot,                'nip' => $tagihan->ppspm_nip_snapshot,                'auto' => false],
+        ['key' => 'bendahara_pengeluaran','role_code' => 'BENDAHARA_PENGELUARAN', 'label' => 'Bendahara Pengeluaran',                        'short' => 'BEND. KELUAR', 'color' => '#d63384', 'nama' => $tagihan->bendahara_pengeluaran_nama_snapshot,'nip' => $tagihan->bendahara_pengeluaran_nip_snapshot,'auto' => false],
+        ['key' => 'bendahara_penerimaan', 'role_code' => 'BENDAHARA_PENERIMAAN',  'label' => 'Bendahara Penerimaan',                         'short' => 'BEND. TERIMA', 'color' => '#fd7e14', 'nama' => $tagihan->bendahara_penerimaan_nama_snapshot, 'nip' => $tagihan->bendahara_penerimaan_nip_snapshot, 'auto' => false],
+        ['key' => 'koordinator_keuangan', 'role_code' => 'KOORDINATOR_KEUANGAN',  'label' => 'Koordinator Keuangan',                         'short' => 'KOOR. KEU',    'color' => '#198754', 'nama' => $tagihan->koordinator_keuangan_nama_snapshot, 'nip' => $tagihan->koordinator_keuangan_nip_snapshot, 'auto' => false],
+        ['key' => 'kasubbag',             'role_code' => 'KASUBBAG',              'label' => 'Kepala Subbagian Keuangan dan Tata Usaha',     'short' => 'KASUBBAG',     'color' => '#0dcaf0', 'nama' => $tagihan->kasubbag_nama_snapshot,             'nip' => $tagihan->kasubbag_nip_snapshot,             'auto' => false],
+    ];
+
+    $initials = function ($name) {
+        $name = trim((string) $name);
+        if ($name === '') return '?';
+        $parts = preg_split('/\s+/', $name);
+        $first = mb_substr($parts[0] ?? '', 0, 1);
+        $last  = count($parts) > 1 ? mb_substr(end($parts), 0, 1) : '';
+        return mb_strtoupper($first . $last);
+    };
+
+    $verifikatorTerisi = collect($verifikatorList)->filter(fn($v) => !empty($v['nama']))->count();
+    $verifikatorTotal  = count($verifikatorList);
+    $verifikatorLengkap = $verifikatorTerisi === $verifikatorTotal;
+@endphp
+
 <div class="container-fluid py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
         <div>
             <h4 class="fw-bold mb-1">Detail Tagihan Termin</h4>
-            <p class="text-muted mb-0">Pusat persetujuan kelengkapan Berita Acara dan Tagihan (Status: <span class="badge bg-warning text-dark">{{ $tagihan->status }}</span>)</p>
+            <div class="d-flex align-items-center flex-wrap gap-2 mt-2">
+                <span class="badge {{ $statusBadge['class'] }} px-3 py-2">
+                    <i class="bi bi-{{ $statusBadge['icon'] }} me-1"></i> {{ $statusBadge['label'] }}
+                </span>
+                <span class="text-muted small font-monospace">{{ $tagihan->nomor_tagihan }}</span>
+                <span class="text-muted small">·</span>
+                <span class="text-muted small">{{ $kontrak->nomor_spk ?? '-' }}</span>
+                <span class="text-muted small">·</span>
+                <span class="text-muted small">Termin {{ $termin->termin_ke ?? '-' }} ({{ $termin->jenis_termin }})</span>
+            </div>
         </div>
         <div class="d-flex gap-2">
             <a href="{{ route('contracts.index') }}" class="btn btn-outline-secondary">
@@ -134,7 +250,84 @@
                                 </div>
                             </div>
                         </div>
+
                     </div>
+                </div>
+            </div>
+
+            {{-- Verifikator Penagihan (snapshot saat tagihan dibuat) --}}
+            <div class="card border-0 shadow-sm rounded-4 mb-4">
+                <div class="card-header bg-white border-bottom pt-4 px-4 pb-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
+                    <div>
+                        <h5 class="fw-bold mb-0 text-success"><i class="bi bi-people-fill me-2"></i>Verifikator Penagihan</h5>
+                        <p class="text-muted small mb-0 mt-1">Daftar pejabat penanda tangan dokumen — diurutkan sesuai alur verifikasi</p>
+                    </div>
+                    <div class="text-end">
+                        <span class="badge {{ $verifikatorLengkap ? 'bg-success' : 'bg-warning text-dark' }} fs-6">
+                            <i class="bi bi-{{ $verifikatorLengkap ? 'check-circle' : 'exclamation-triangle' }} me-1"></i>
+                            {{ $verifikatorTerisi }}/{{ $verifikatorTotal }} terisi
+                        </span>
+                    </div>
+                </div>
+                <div class="card-body p-4">
+                    <div class="row g-3">
+                        @foreach($verifikatorList as $idx => $v)
+                            @php
+                                $filled = !empty($v['nama']);
+                                $approval = $approvalStatusByRole->get($v['role_code']);
+                                $apvMeta = $approval ? ($approvalMeta[$approval->status] ?? null) : null;
+                            @endphp
+                            <div class="col-md-6 col-xl-4">
+                                <div class="verifikator-card border rounded-3 p-3 h-100 {{ $filled ? 'is-filled' : 'is-empty' }}">
+                                    <span class="verifikator-step-no" style="border-color: {{ $v['color'] }}; color: {{ $v['color'] }};">{{ $idx + 1 }}</span>
+
+                                    @if($apvMeta)
+                                        <span class="badge bg-{{ $apvMeta['color'] }} position-absolute" style="top: -8px; right: 8px;">
+                                            <i class="bi bi-{{ $apvMeta['icon'] }} me-1"></i>{{ $apvMeta['label'] }}
+                                        </span>
+                                    @endif
+
+                                    <div class="d-flex align-items-start gap-3">
+                                        <div class="verifikator-avatar" style="background: {{ $v['color'] }};">
+                                            {{ $initials($v['nama']) }}
+                                        </div>
+                                        <div class="flex-grow-1 min-width-0">
+                                            <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+                                                <span class="role-chip" style="background: {{ $v['color'] }}1a; color: {{ $v['color'] }};">{{ $v['short'] }}</span>
+                                                @if($v['auto'])
+                                                    <span class="role-chip" style="background: #e9ecef; color: #495057;" title="Diambil otomatis dari kontrak">
+                                                        <i class="bi bi-link-45deg"></i> auto
+                                                    </span>
+                                                @endif
+                                            </div>
+                                            <div class="fw-bold text-truncate" title="{{ $v['nama'] }}">{{ $v['nama'] ?: '— belum dipilih —' }}</div>
+                                            @if($v['nip'])
+                                                <div class="small text-muted font-monospace">NIP: {{ $v['nip'] }}</div>
+                                            @else
+                                                <div class="small text-muted fst-italic">NIP belum tersedia</div>
+                                            @endif
+                                            <div class="small text-muted mt-1" title="{{ $v['label'] }}">{{ \Illuminate\Support\Str::limit($v['label'], 38) }}</div>
+                                            @if($approval && $approval->acted_at)
+                                                <div class="small text-muted mt-1">
+                                                    <i class="bi bi-clock me-1"></i>{{ $approval->acted_at->format('d M Y H:i') }}
+                                                    @if($approval->catatan)
+                                                        · <span class="fst-italic">"{{ \Illuminate\Support\Str::limit($approval->catatan, 40) }}"</span>
+                                                    @endif
+                                                </div>
+                                            @endif
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+
+                    @unless($verifikatorLengkap)
+                        <div class="alert alert-warning border-0 small mb-0 mt-3 py-2">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Beberapa verifikator belum terisi. Tagihan lama mungkin dibuat sebelum fitur ini ada.
+                        </div>
+                    @endunless
                 </div>
             </div>
 
@@ -153,20 +346,47 @@
                                     <span class="badge bg-danger"><i class="bi bi-x-circle me-1"></i>Belum Lengkap</span>
                                 @endif
                             </div>
-                            <p class="small text-muted mb-4">Cetak draft PDF BAPP, lakukan penandatanganan, scan, lalu unggah kembali versi finalnya.</p>
-                            
+                            <p class="small text-muted mb-3">Unggah <strong>Gambar RAB</strong> terlebih dahulu, lalu cetak draft PDF BAPP yang akan menampilkan gambar tersebut. Setelah ditandatangani, scan & unggah versi finalnya.</p>
+
+                            {{-- Status Gambar RAB --}}
+                            <div class="border rounded p-2 mb-3 d-flex align-items-center justify-content-between {{ $hasGambarRabBapp ? 'bg-light border-success' : 'bg-warning-subtle border-warning' }}">
+                                <div class="small">
+                                    @if($hasGambarRabBapp)
+                                        <i class="bi bi-check-circle-fill text-success me-1"></i>
+                                        <span class="fw-semibold">Gambar RAB sudah diunggah</span>
+                                    @else
+                                        <i class="bi bi-exclamation-triangle-fill text-warning me-1"></i>
+                                        <span class="fw-semibold">Gambar RAB belum diunggah</span>
+                                    @endif
+                                </div>
+                                @if($hasGambarRabBapp && $gambarRabBapp)
+                                    <a href="{{ route('tagihan.kontrak.view-arsip', [$tagihan->id, $gambarRabBapp->id]) }}" target="_blank" class="btn btn-sm btn-link p-0 text-decoration-none">
+                                        <i class="bi bi-eye"></i> Lihat
+                                    </a>
+                                @endif
+                            </div>
+
                             <div class="d-grid gap-2">
                                 @if($tagihan->status === 'DRAFT')
-                                    <a href="{{ route('tagihan.kontrak.export-pdf', [$tagihan->id, 'BAPP']) }}" target="_blank" class="btn btn-outline-danger btn-sm">
-                                        <i class="bi bi-file-pdf me-1"></i> Cetak BAPP (PDF)
-                                    </a>
+                                    <button type="button" class="btn btn-outline-warning btn-sm" data-bs-toggle="modal" data-bs-target="#modalBappGambarRab">
+                                        <i class="bi bi-image me-1"></i> {{ $hasGambarRabBapp ? 'Ganti Gambar RAB' : 'Unggah Gambar RAB' }}
+                                    </button>
+                                    @if($hasGambarRabBapp)
+                                        <a href="{{ route('tagihan.kontrak.export-pdf', [$tagihan->id, 'BAPP']) }}" target="_blank" class="btn btn-outline-danger btn-sm">
+                                            <i class="bi bi-file-pdf me-1"></i> Cetak BAPP (PDF)
+                                        </a>
+                                    @else
+                                        <button type="button" class="btn btn-outline-danger btn-sm" disabled title="Unggah Gambar RAB terlebih dahulu">
+                                            <i class="bi bi-file-pdf me-1"></i> Cetak BAPP (PDF)
+                                        </button>
+                                    @endif
                                     <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalBapp">
                                         <i class="bi bi-upload me-1"></i> Unggah BAPP Final
                                     </button>
                                 @endif
                                 @if($hasBappFinal)
                                     @php $file = $detailKontrak->arsipDokumen->firstWhere('jenis_dokumen', 'BAPP_FINAL_TTD'); @endphp
-                                    <a href="{{ \Illuminate\Support\Facades\Storage::url($file->path_file) }}" target="_blank" class="btn btn-sm btn-success text-white">Lihat Final BAPP</a>
+                                    <a href="{{ route('tagihan.kontrak.view-arsip', [$tagihan->id, $file->id]) }}" target="_blank" class="btn btn-sm btn-success text-white">Lihat Final BAPP</a>
                                 @endif
                             </div>
                         </div>
@@ -201,7 +421,7 @@
                                 @endif
                                 @if($hasBastFinal)
                                     @php $file = $detailKontrak->arsipDokumen->firstWhere('jenis_dokumen', 'BAST_FINAL_TTD'); @endphp
-                                    <a href="{{ \Illuminate\Support\Facades\Storage::url($file->path_file) }}" target="_blank" class="btn btn-sm btn-success text-white">Lihat Final BAST</a>
+                                    <a href="{{ route('tagihan.kontrak.view-arsip', [$tagihan->id, $file->id]) }}" target="_blank" class="btn btn-sm btn-success text-white">Lihat Final BAST</a>
                                 @endif
                             </div>
                             @endif
@@ -234,7 +454,7 @@
                                 @endif
                                 @if($hasBapFinal)
                                     @php $file = $detailKontrak->arsipDokumen->firstWhere('jenis_dokumen', 'BAP_FINAL_TTD'); @endphp
-                                    <a href="{{ \Illuminate\Support\Facades\Storage::url($file->path_file) }}" target="_blank" class="btn btn-sm btn-success text-white">Lihat Final BAP</a>
+                                    <a href="{{ route('tagihan.kontrak.view-arsip', [$tagihan->id, $file->id]) }}" target="_blank" class="btn btn-sm btn-success text-white">Lihat Final BAP</a>
                                 @endif
                             </div>
                         </div>
@@ -246,31 +466,55 @@
 
         {{-- Area Kanan: Status Kelengkapan --}}
         <div class="col-lg-4">
-            <div class="card border-0 shadow-sm rounded-4 sticky-top topbar-safe-sticky">
+            <div class="card border-0 shadow-sm rounded-4 sticky-top topbar-safe-sticky z-1">
                 <div class="card-body p-4">
                     @if($tagihan->status === 'DRAFT')
-                        <h5 class="fw-bold mb-3">Syarat Pengajuan (PPK)</h5>
-                        <p class="text-muted small">Lengkapi seluruh dokumen Berita Acara bertandatangan untuk bisa mengajukan tagihan.</p>
-                        
-                        <ul class="list-group mb-4">
-                            <li class="list-group-item d-flex justify-content-between align-items-center border-0 px-0">
-                                <span><i class="bi bi-circle-fill me-2 small {{ $hasBappFinal ? 'text-success' : 'text-secondary' }}"></i>BAPP Final</span>
-                                @if($hasBappFinal) <i class="bi bi-check fs-5 text-success"></i> @endif
+                        <h5 class="fw-bold mb-1">Syarat Pengajuan</h5>
+                        <p class="text-muted small mb-3">Pastikan seluruh checklist di bawah terpenuhi sebelum mengajukan tagihan ke PPK.</p>
+
+                        {{-- Checklist Berita Acara --}}
+                        <div class="text-uppercase text-muted small fw-bold mb-2" style="letter-spacing: .5px;">Berita Acara</div>
+                        <ul class="list-group mb-3">
+                            <li class="list-group-item d-flex justify-content-between align-items-center border-0 px-0 py-1">
+                                <span><i class="bi bi-{{ $hasBappFinal ? 'check-circle-fill text-success' : 'circle text-secondary' }} me-2"></i>BAPP Final bertandatangan</span>
+                                @if($hasBappFinal)<span class="badge bg-success-subtle text-success">OK</span>@endif
                             </li>
-                            <li class="list-group-item d-flex justify-content-between align-items-center border-0 px-0">
-                                <span><i class="bi bi-circle-fill me-2 small {{ $hasBapFinal ? 'text-success' : 'text-secondary' }}"></i>BAP Final</span>
-                                @if($hasBapFinal) <i class="bi bi-check fs-5 text-success"></i> @endif
+                            <li class="list-group-item d-flex justify-content-between align-items-center border-0 px-0 py-1">
+                                <span><i class="bi bi-{{ $hasBapFinal ? 'check-circle-fill text-success' : 'circle text-secondary' }} me-2"></i>BAP Final bertandatangan</span>
+                                @if($hasBapFinal)<span class="badge bg-success-subtle text-success">OK</span>@endif
                             </li>
                             @if($wajibBast)
-                            <li class="list-group-item d-flex justify-content-between align-items-center border-0 px-0">
-                                <span><i class="bi bi-circle-fill me-2 small {{ $hasBastFinal ? 'text-success' : 'text-secondary' }}"></i>BAST Final</span>
-                                @if($hasBastFinal) <i class="bi bi-check fs-5 text-success"></i> @endif
+                            <li class="list-group-item d-flex justify-content-between align-items-center border-0 px-0 py-1">
+                                <span><i class="bi bi-{{ $hasBastFinal ? 'check-circle-fill text-success' : 'circle text-secondary' }} me-2"></i>BAST Final bertandatangan</span>
+                                @if($hasBastFinal)<span class="badge bg-success-subtle text-success">OK</span>@endif
                             </li>
                             @endif
+                            <li class="list-group-item d-flex justify-content-between align-items-center border-0 px-0 py-1">
+                                <span><i class="bi bi-{{ $hasGambarRabBapp ? 'check-circle-fill text-success' : 'circle text-secondary' }} me-2"></i>Gambar RAB BAPP</span>
+                                @if($hasGambarRabBapp)<span class="badge bg-success-subtle text-success">OK</span>@endif
+                            </li>
                         </ul>
 
-                        @if($isReadyToSubmit)
-                            <div class="alert alert-success border-0 small mb-4 py-2">
+                        {{-- Checklist Verifikator --}}
+                        <div class="text-uppercase text-muted small fw-bold mb-2 mt-3" style="letter-spacing: .5px;">Verifikator</div>
+                        <ul class="list-group mb-3">
+                            @foreach($verifikatorList as $v)
+                                <li class="list-group-item d-flex justify-content-between align-items-center border-0 px-0 py-1">
+                                    <span class="text-truncate" style="max-width: 75%;">
+                                        <i class="bi bi-{{ !empty($v['nama']) ? 'check-circle-fill text-success' : 'circle text-secondary' }} me-2"></i>{{ $v['short'] }}
+                                    </span>
+                                    @if(!empty($v['nama']))
+                                        <span class="badge bg-success-subtle text-success" title="{{ $v['nama'] }}">OK</span>
+                                    @else
+                                        <span class="badge bg-warning text-dark">—</span>
+                                    @endif
+                                </li>
+                            @endforeach
+                        </ul>
+
+                        {{-- Action button --}}
+                        @if($isReadyToSubmit && $verifikatorLengkap)
+                            <div class="alert alert-success border-0 small mb-3 py-2">
                                 <i class="bi bi-check-circle me-1"></i> Tagihan siap diajukan ke PPK.
                             </div>
                             <form action="{{ route('tagihan.kontrak.submit', $tagihan->id) }}" method="POST">
@@ -280,8 +524,13 @@
                                 </button>
                             </form>
                         @else
-                            <div class="alert alert-warning border-0 small mb-4 py-2">
-                                <i class="bi bi-exclamation-triangle me-1"></i> Tagihan belum siap diajukan. Mohon lengkapi finalisasi file Berita Acara yang kurang.
+                            <div class="alert alert-warning border-0 small mb-3 py-2">
+                                <i class="bi bi-exclamation-triangle me-1"></i>
+                                @if(!$verifikatorLengkap)
+                                    Verifikator belum lengkap. Hubungi Pejabat Pengadaan untuk melengkapi.
+                                @else
+                                    Lengkapi finalisasi dokumen Berita Acara yang masih kurang.
+                                @endif
                             </div>
                             <button type="button" class="btn btn-secondary w-100 fw-bold py-2" disabled>
                                 <i class="bi bi-send me-1"></i> Ajukan Tagihan ke PPK
@@ -290,34 +539,88 @@
                     @else
                         <h5 class="fw-bold mb-3">Informasi Status Tagihan</h5>
                         <div class="text-center py-3 mb-3 border-bottom">
-                            @if($tagihan->status === 'PENDING_PPK')
-                                <i class="bi bi-hourglass-split text-warning" style="font-size: 3rem;"></i>
-                                <h6 class="fw-bold mt-3 text-warning">Menunggu Verifikasi PPK</h6>
-                                <p class="text-muted small">Tagihan Anda sedang antre untuk ditinjau dan divalidasi oleh Pejabat Pembuat Komitmen.</p>
-                            @elseif($tagihan->status === 'REVISI_PEJABAT_PENGADAAN')
-                                <i class="bi bi-x-circle text-danger" style="font-size: 3rem;"></i>
-                                <h6 class="fw-bold mt-3 text-danger">Revisi Diperlukan</h6>
-                                <p class="text-muted small">Tagihan ditolak/dikembalikan oleh PPK karena ada hal yang perlu diperbaiki.</p>
-                            @else
+                            @php
+                                $st = $tagihan->status;
+                                $isApproved  = in_array($st, ['APPROVED','DISETUJUI_KONTRAK','READY_FOR_SPP'], true);
+                                $isRejected  = str_starts_with($st, 'DITOLAK_');
+                                $isRevisi    = str_starts_with($st, 'REVISI_');
+                                $isPending   = str_starts_with($st, 'PENDING_');
+                            @endphp
+
+                            @if($isApproved)
                                 <i class="bi bi-check-circle-fill text-success" style="font-size: 3rem;"></i>
                                 <h6 class="fw-bold mt-3 text-success">Tagihan Disetujui</h6>
-                                <p class="text-muted small">Dokumen verifikasi sudah diterima. Proses berikutnya dijalankan untuk pembuatan SPP.</p>
+                                <p class="text-muted small">Seluruh verifikator menyetujui. Tagihan siap diproses ke pembuatan SPP.</p>
+                            @elseif($isRejected)
+                                <i class="bi bi-x-octagon text-danger" style="font-size: 3rem;"></i>
+                                <h6 class="fw-bold mt-3 text-danger">Tagihan Ditolak</h6>
+                                <p class="text-muted small">{{ $statusBadge['label'] }}. Workflow telah dihentikan.</p>
+                            @elseif($isRevisi)
+                                <i class="bi bi-arrow-counterclockwise text-warning" style="font-size: 3rem;"></i>
+                                <h6 class="fw-bold mt-3 text-warning">Revisi Diperlukan</h6>
+                                <p class="text-muted small">{{ $statusBadge['label'] }}. Silakan perbaiki tagihan dan ajukan ulang.</p>
+                            @elseif($st === 'PENDING_VERIFIKASI_KONTRAK')
+                                @php
+                                    $wfStep1 = optional($tagihan->workflowInstance)->approvals?->where('urutan_step', 1) ?? collect();
+                                    $wfStep1Approved = $wfStep1->where('status', 'APPROVED')->count();
+                                    $wfStep1Total = $wfStep1->count();
+                                @endphp
+                                <i class="bi bi-people-fill text-info" style="font-size: 3rem;"></i>
+                                <h6 class="fw-bold mt-3 text-info">Verifikasi Paralel Berjalan</h6>
+                                <p class="text-muted small">
+                                    <strong>{{ $wfStep1Approved }} dari {{ $wfStep1Total }}</strong> verifikator paralel sudah menyetujui.
+                                    Tagihan akan lanjut ke Kasubbag setelah semua selesai.
+                                </p>
+                                @if($wfStep1Total > 0)
+                                    <div class="progress mt-2 mb-3" style="height: 6px;">
+                                        <div class="progress-bar bg-info" style="width: {{ round(($wfStep1Approved / $wfStep1Total) * 100) }}%"></div>
+                                    </div>
+                                @endif
+                            @elseif($st === 'PENDING_KASUBBAG')
+                                <i class="bi bi-shield-check text-primary" style="font-size: 3rem;"></i>
+                                <h6 class="fw-bold mt-3 text-primary">Menunggu Persetujuan Kasubbag</h6>
+                                <p class="text-muted small">5 verifikator paralel sudah menyetujui. Menunggu finalisasi Kepala Subbagian Keuangan dan Tata Usaha.</p>
+                            @elseif($isPending)
+                                <i class="bi bi-hourglass-split text-info" style="font-size: 3rem;"></i>
+                                <h6 class="fw-bold mt-3 text-info">{{ $statusBadge['label'] }}</h6>
+                                <p class="text-muted small">Tagihan sedang dalam proses verifikasi.</p>
+                            @else
+                                <i class="bi bi-question-circle text-muted" style="font-size: 3rem;"></i>
+                                <h6 class="fw-bold mt-3 text-muted">{{ $statusBadge['label'] }}</h6>
+                                <p class="text-muted small">Status tagihan tidak dikenali.</p>
                             @endif
                         </div>
                         
-                        <h6 class="fw-bold text-secondary mb-3 fs-6">Kelengkapan Terlampir:</h6>
-                        <ul class="list-group mb-0">
-                            <li class="list-group-item d-flex justify-content-between align-items-center border-0 px-0">
+                        <h6 class="fw-bold text-secondary mb-2 fs-6">Kelengkapan Terlampir</h6>
+                        <ul class="list-group mb-3">
+                            <li class="list-group-item d-flex justify-content-between align-items-center border-0 px-0 py-1">
                                 <span><i class="bi bi-check-circle-fill me-2 small text-success"></i>BAPP Final</span>
                             </li>
-                            <li class="list-group-item d-flex justify-content-between align-items-center border-0 px-0">
+                            <li class="list-group-item d-flex justify-content-between align-items-center border-0 px-0 py-1">
                                 <span><i class="bi bi-check-circle-fill me-2 small text-success"></i>BAP Final</span>
                             </li>
                             @if($wajibBast)
-                            <li class="list-group-item d-flex justify-content-between align-items-center border-0 px-0">
+                            <li class="list-group-item d-flex justify-content-between align-items-center border-0 px-0 py-1">
                                 <span><i class="bi bi-check-circle-fill me-2 small text-success"></i>BAST Final</span>
                             </li>
                             @endif
+                        </ul>
+
+                        <h6 class="fw-bold text-secondary mb-2 fs-6">Verifikator Tercatat</h6>
+                        <ul class="list-group mb-0">
+                            @foreach($verifikatorList as $v)
+                                @if(!empty($v['nama']))
+                                    <li class="list-group-item border-0 px-0 py-1">
+                                        <div class="d-flex align-items-start gap-2">
+                                            <span class="role-chip mt-1" style="background: {{ $v['color'] }}1a; color: {{ $v['color'] }}; flex-shrink:0;">{{ $v['short'] }}</span>
+                                            <div class="small flex-grow-1">
+                                                <div class="fw-semibold text-truncate">{{ $v['nama'] }}</div>
+                                                @if($v['nip'])<div class="text-muted font-monospace" style="font-size: .72rem;">NIP: {{ $v['nip'] }}</div>@endif
+                                            </div>
+                                        </div>
+                                    </li>
+                                @endif
+                            @endforeach
                         </ul>
                     @endif
                 </div>
@@ -327,6 +630,7 @@
 </div>
 
 {{-- Modals for Uploads --}}
+@include('tagihan.partials.modal_upload_arsip', ['id' => 'modalBappGambarRab', 'title' => 'Unggah Gambar RAB (BAPP)', 'jenis' => 'BAPP_GAMBAR_RAB', 'mimes' => '.jpg,.jpeg,.png'])
 @include('tagihan.partials.modal_upload_arsip', ['id' => 'modalBapp', 'title' => 'Unggah BAPP Final', 'jenis' => 'BAPP_FINAL_TTD', 'mimes' => '.pdf'])
 @if($wajibBast)
     @include('tagihan.partials.modal_upload_arsip', ['id' => 'modalBast', 'title' => 'Unggah BAST Final', 'jenis' => 'BAST_FINAL_TTD', 'mimes' => '.pdf'])

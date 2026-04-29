@@ -2,13 +2,11 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
-use Illuminate\Database\Seeder;
-
-use Spatie\Permission\Models\Role;
-use App\Models\Supplier;
+use App\Models\MasterPegawai;
 use App\Models\User;
+use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
+use Spatie\Permission\Models\Role;
 
 class RoleAndPermissionSeeder extends Seeder
 {
@@ -20,7 +18,7 @@ class RoleAndPermissionSeeder extends Seeder
         // Reset cached roles and permissions
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
-        // 13 roles based on PRD
+        // 14 roles berdasarkan PRD
         $roles = [
             'Super Admin',
             'KPA',
@@ -34,121 +32,176 @@ class RoleAndPermissionSeeder extends Seeder
             'Operator BLU',
             'PPABP',
             'Operator Perjaldin',
-            'Mitra'
+            'Koordinator Keuangan',
+            'Mitra',
         ];
 
         foreach ($roles as $role) {
             Role::findOrCreate($role, 'web');
         }
 
-        // Create Super Admin User
-        $superAdmin = User::updateOrCreate([
-            'email' => 'admin@admin.com',
-        ], [
-            'name' => 'Super Admin',
-            'email_verified_at' => now(),
-            'password' => Hash::make('password'),
-        ]);
+        /*
+         * Setiap user sistem WAJIB terhubung ke 1 pegawai (profilable).
+         * Daftar di bawah memetakan: email user → role → data pegawai.
+         * Pegawai dibuat (firstOrCreate by nip), kemudian user dibuat
+         * dengan profilable_type/profilable_id menunjuk ke pegawai tersebut.
+         *
+         * Display name user diambil dari pegawai.nama_lengkap (kolom users.name sudah dihapus).
+         */
+        $userPegawaiMap = [
+            [
+                'email' => 'admin@sikeren.id',
+                'role'  => 'Super Admin',
+                'pegawai' => [
+                    'nip'          => '000000000000000001',
+                    'nama_lengkap' => 'Super Admin',
+                    'jabatan'      => 'System Administrator',
+                    'npwp'         => null,
+                    'status_aktif' => true,
+                ],
+            ],
+            [
+                'email' => 'operator@sikeren.id',
+                'role'  => 'Operator BLU',
+                'pegawai' => [
+                    'nip'          => '198706122010121001',
+                    'nama_lengkap' => 'KARTIKA',
+                    'jabatan'      => 'Operator BLU',
+                    'npwp'         => '71.234.567.8-901.000',
+                    'status_aktif' => true,
+                ],
+            ],
+            [
+                'email' => 'pengadaan@sikeren.id',
+                'role'  => 'Pejabat Pengadaan',
+                'pegawai' => [
+                    'nip'          => '198508192011011011',
+                    'nama_lengkap' => 'VERNALDI',
+                    'jabatan'      => 'Pejabat Pengadaan',
+                    'npwp'         => '81.234.567.8-901.000',
+                    'status_aktif' => true,
+                ],
+            ],
+            [
+                'email' => 'ppk@sikeren.id',
+                'role'  => 'PPK',
+                'pegawai' => [
+                    'nip'          => '197905082008011002',
+                    'nama_lengkap' => 'GUNAWAN',
+                    'jabatan'      => 'Pejabat Pembuat Komitmen',
+                    'npwp'         => '72.234.567.8-901.000',
+                    'status_aktif' => true,
+                ],
+            ],
+            [
+                'email' => 'kasubbag@sikeren.id',
+                'role'  => 'Kepala Subbagian Keuangan dan Tata Usaha',
+                'pegawai' => [
+                    'nip'          => '197611212005011003',
+                    'nama_lengkap' => 'ZALDI ARDIAN',
+                    'jabatan'      => 'Kepala Subbagian Keuangan dan Tata Usaha',
+                    'npwp'         => '73.234.567.8-901.000',
+                    'status_aktif' => true,
+                ],
+            ],
+            [
+                'email' => 'ppspm@sikeren.id',
+                'role'  => 'PPSPM',
+                'pegawai' => [
+                    'nip'          => '198102142009021004',
+                    'nama_lengkap' => 'MUTIA RACHMI',
+                    'jabatan'      => 'PPSPM',
+                    'npwp'         => '74.234.567.8-901.000',
+                    'status_aktif' => true,
+                ],
+            ],
+            [
+                'email' => 'bendahara.pengeluaran@sikeren.id',
+                'role'  => 'Bendahara Pengeluaran',
+                'pegawai' => [
+                    'nip'          => '198305172011011005',
+                    'nama_lengkap' => 'YENI PUJI ASTUTI',
+                    'jabatan'      => 'Bendahara Pengeluaran',
+                    'npwp'         => '75.234.567.8-901.000',
+                    'status_aktif' => true,
+                ],
+            ],
+            [
+                'email' => 'bendahara.penerimaan@sikeren.id',
+                'role'  => 'Bendahara Penerimaan',
+                'pegawai' => [
+                    'nip'          => '198409242012011006',
+                    'nama_lengkap' => 'SITI KHOLIFAH',
+                    'jabatan'      => 'Bendahara Penerimaan',
+                    'npwp'         => '76.234.567.8-901.000',
+                    'status_aktif' => true,
+                ],
+            ],
+            [
+                'email' => 'perjaldin@sikeren.id',
+                'role'  => 'Operator Perjaldin',
+                'pegawai' => [
+                    'nip'          => '198812102014021007',
+                    'nama_lengkap' => 'KHARISMA',
+                    'jabatan'      => 'Operator Perjaldin',
+                    'npwp'         => '77.234.567.8-901.000',
+                    'status_aktif' => true,
+                ],
+            ],
+            [
+                'email' => 'ppabp@sikeren.id',
+                'role'  => 'PPABP',
+                'pegawai' => [
+                    'nip'          => '199107302015032012',
+                    'nama_lengkap' => 'AULIA',
+                    'jabatan'      => 'PPABP',
+                    'npwp'         => '82.234.567.8-901.000',
+                    'status_aktif' => true,
+                ],
+            ],
+            [
+                'email' => 'koordinator.keuangan@sikeren.id',
+                'role'  => 'Koordinator Keuangan',
+                'pegawai' => [
+                    'nip'          => '198404252010011013',
+                    'nama_lengkap' => 'RAHMAT HIDAYAT',
+                    'jabatan'      => 'Koordinator Keuangan',
+                    'npwp'         => '83.234.567.8-901.000',
+                    'status_aktif' => true,
+                ],
+            ],
+        ];
 
-        $superAdmin->syncRoles(['Super Admin']);
-        
-        // Create an Operator for Testing
-        $operator = User::updateOrCreate([
-            'email' => 'operator@admin.com',
-        ], [
-            'name' => 'KARTIKA',
-            'email_verified_at' => now(),
-            'password' => Hash::make('password'),
-        ]);
+        foreach ($userPegawaiMap as $entry) {
+            // 1) Pastikan role ada
+            Role::findOrCreate($entry['role'], 'web');
 
-        $operator->syncRoles(['Operator BLU']);
+            // 2) Buat / update pegawai (firstOrCreate by NIP)
+            $pegawai = MasterPegawai::updateOrCreate(
+                ['nip' => $entry['pegawai']['nip']],
+                $entry['pegawai']
+            );
 
-        // Create Pejabat Pengadaan for Testing
-        $pengadaan = User::updateOrCreate([
-            'email' => 'pengadaan@admin.com',
-        ], [
-            'name' => 'VERNALDI',
-            'email_verified_at' => now(),
-            'password' => Hash::make('password'),
-        ]);
+            // 3) Buat / update user dengan profilable menunjuk ke pegawai
+            $user = User::updateOrCreate(
+                ['email' => $entry['email']],
+                [
+                    'email_verified_at' => now(),
+                    'password'          => Hash::make('password'),
+                    'profilable_type'   => MasterPegawai::class,
+                    'profilable_id'     => $pegawai->id,
+                ]
+            );
 
-        $pengadaan->syncRoles(['Pejabat Pengadaan']);
-        
-       
-        
-        $ppk = User::updateOrCreate([
-            'email' => 'ppk@admin.com',
-        ], [
-            'name' => 'GUNAWAN',
-            'email_verified_at' => now(),
-            'password' => Hash::make('password'),
-        ]);
+            // 4) Sinkronkan role (replace, bukan tambah) sesuai mapping
+            $user->syncRoles([$entry['role']]);
 
-        $ppk->syncRoles(['PPK']);
-
-        // Create Kasubag for Testing
-        $kasubag = User::updateOrCreate([
-            'email' => 'kasubbag@admin.com',
-        ], [
-            'name' => 'ZALDI ARDIAN',
-            'email_verified_at' => now(),
-            'password' => Hash::make('password'),
-        ]);
-
-        $kasubag->syncRoles(['Kepala Subbagian Keuangan dan Tata Usaha']);
-
-        // Create PPSPM for Testing
-        $ppspm = User::updateOrCreate([
-            'email' => 'ppspm@admin.com',
-        ], [
-            'name' => 'MUTIA RACHMI',
-            'email_verified_at' => now(),
-            'password' => Hash::make('password'),
-        ]);
-
-        $ppspm->syncRoles(['PPSPM']);
-
-        // Create Bendahara Pengeluaran for Testing
-        $bendaharaPengeluaran = User::updateOrCreate([
-            'email' => 'bendahara.pengeluaran@admin.com',
-        ], [
-            'name' => 'YENI PUJI ASTUTI',
-            'email_verified_at' => now(),
-            'password' => Hash::make('password'),
-        ]);
-        $bendaharaPengeluaran->syncRoles(['Bendahara Pengeluaran']);
-
-        // Create Bendahara Penerimaan for Testing
-        $bendaharaPenerimaan = User::updateOrCreate([
-            'email' => 'bendahara.penerimaan@admin.com',
-        ], [
-            'name' => 'SITI KHOLIFAH',
-            'email_verified_at' => now(),
-            'password' => Hash::make('password'),
-        ]);
-        $bendaharaPenerimaan->syncRoles(['Bendahara Penerimaan']);
-
-        
-
-         // Create Pejabat Pengadaan for Testing
-        $perjaldin = User::updateOrCreate([
-            'email' => 'perjaldin@admin.com',
-        ], [
-            'name' => 'KHARISMA',
-            'email_verified_at' => now(),
-            'password' => Hash::make('password'),
-        ]);
-
-        $perjaldin->syncRoles(['Operator Perjaldin']);
-        
-        $ppabp = User::updateOrCreate([
-            'email' => 'ppabp@admin.com',
-        ], [
-            'name' => 'AULIA',
-            'email_verified_at' => now(),
-            'password' => Hash::make('password'),
-        ]);
-
-        $ppabp->syncRoles(['PPABP']);
+            $this->command?->info(sprintf(
+                '  ✓ %s  (%s)  →  role: %s',
+                str_pad($entry['email'], 35),
+                $entry['pegawai']['nama_lengkap'],
+                $entry['role']
+            ));
+        }
     }
 }

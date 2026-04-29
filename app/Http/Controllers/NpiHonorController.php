@@ -100,7 +100,7 @@ class NpiHonorController extends Controller
         
         $npiModel = $spmModel->npi;
 
-        $bendaharaPenerimaans = User::role('Bendahara Penerimaan')->orderBy('name')->get();
+        $bendaharaPenerimaans = User::role('Bendahara Penerimaan')->orderByDisplayName()->get();
         // Verifikator lain untuk info tampilan (Opsional jika ditampilkan)
         $ppkSpp = $sppModel?->ppkVerifikator;
         $kasubbagUser = User::role('Kepala Subbagian Keuangan dan Tata Usaha')->first();

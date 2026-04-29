@@ -7,6 +7,7 @@
     $ringkasanFinalArsip = $kontrak->ringkasan_kontrak_final_ttd_arsip;
     $spkFinalArsip = $kontrak->spk_final_ttd_arsip;
     $spmkFinalArsip = $kontrak->spmk_final_ttd_arsip;
+    $gambarRabArsip = $kontrak->gambar_rab_arsip;
     $selectedCoa = optional($kontrak->dipaRevisionItem)->coa;
 @endphp
 
@@ -308,12 +309,26 @@
                     </div>
                     <div class="d-flex flex-wrap gap-2">
                         @if(!in_array($kontrak->status_kontrak, ['AKTIF', 'SELESAI']))
-                        <a href="{{ route('contracts.spk.export-pdf', $kontrak->id) }}" target="_blank" class="btn btn-outline-danger btn-sm fw-bold">
-                            <i class="bi bi-filetype-pdf me-1"></i> Export PDF Draft
-                        </a>
+                        <button type="button" class="btn btn-outline-primary btn-sm fw-bold" data-bs-toggle="modal" data-bs-target="#modalUploadGambarRab">
+                            <i class="bi bi-image me-1"></i> {{ $gambarRabArsip ? 'Ganti Gambar RAB' : 'Upload Gambar RAB' }}
+                        </button>
+                        @if($gambarRabArsip)
+                            <a href="{{ route('contracts.spk.export-pdf', $kontrak->id) }}" target="_blank" class="btn btn-outline-danger btn-sm fw-bold">
+                                <i class="bi bi-filetype-pdf me-1"></i> Export PDF Draft
+                            </a>
+                        @else
+                            <button type="button" class="btn btn-outline-danger btn-sm fw-bold" disabled title="Upload Gambar RAB terlebih dahulu">
+                                <i class="bi bi-filetype-pdf me-1"></i> Export PDF Draft
+                            </button>
+                        @endif
                         <button type="button" class="btn btn-primary btn-sm fw-bold" data-bs-toggle="modal" data-bs-target="#modalUploadSpkFinal">
                             <i class="bi bi-upload me-1"></i> Upload Final Bertandatangan
                         </button>
+                        @endif
+                        @if($gambarRabArsip)
+                            <a href="{{ route('contracts.spk.gambar-rab', $kontrak->id) }}" target="_blank" class="btn btn-outline-success btn-sm fw-bold">
+                                <i class="bi bi-eye me-1"></i> Lihat Gambar RAB
+                            </a>
                         @endif
                         @if($spkFinalArsip)
                             <a href="{{ Storage::url($spkFinalArsip->path_file) }}" target="_blank" class="btn btn-success btn-sm fw-bold text-white">
@@ -333,6 +348,18 @@
                             @else
                                 <div class="badge bg-danger fs-6"><i class="bi bi-x-circle me-1"></i> Belum Diunggah</div>
                                 <div class="small text-muted mt-2">Upload SPK final bertandatangan untuk mengaktifkan kontrak.</div>
+                            @endif
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="border rounded-4 p-3 h-100 bg-light">
+                            <div class="small text-muted mb-1">Gambar RAB untuk Draft SPK</div>
+                            @if($gambarRabArsip)
+                                <div class="badge bg-success fs-6"><i class="bi bi-check-circle me-1"></i> Sudah Diunggah</div>
+                                <div class="small text-muted mt-2">Waktu: {{ optional($gambarRabArsip->uploaded_at)->translatedFormat('d M Y H:i') ?? optional($gambarRabArsip->created_at)->translatedFormat('d M Y H:i') }}</div>
+                            @else
+                                <div class="badge bg-danger fs-6"><i class="bi bi-x-circle me-1"></i> Wajib Diunggah</div>
+                                <div class="small text-muted mt-2">Upload gambar RAB sebelum export PDF Draft SPK.</div>
                             @endif
                         </div>
                     </div>
@@ -749,6 +776,44 @@
 </div>
 @endforeach
 @endif
+
+<div class="modal fade" id="modalUploadGambarRab" tabindex="-1" aria-labelledby="modalUploadGambarRabLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form action="{{ route('contracts.spk.upload-gambar-rab', $kontrak->id) }}" method="POST" enctype="multipart/form-data" class="modal-content border-0 rounded-4 shadow">
+            @csrf
+            <div class="modal-header bg-primary text-white border-0">
+                <div>
+                    <h5 class="modal-title fw-bold" id="modalUploadGambarRabLabel">Upload Gambar RAB</h5>
+                    <div class="small opacity-75">{{ $kontrak->nomor_spk }}</div>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="alert alert-light border shadow-sm">
+                    <i class="bi bi-info-circle-fill text-primary me-2"></i>
+                    Gambar RAB wajib diunggah sebelum export PDF Draft SPK dan akan tampil pada PDF sebelum kolom <strong>JENIS KONTRAK</strong>.
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Gambar RAB <span class="text-danger">*</span></label>
+                    <input type="file" name="gambar_rab" class="form-control" accept=".jpg,.jpeg,.png,image/jpeg,image/png" required>
+                    <div class="form-text">Format JPG/JPEG/PNG, maksimal 5 MB.</div>
+                </div>
+                @if($gambarRabArsip)
+                    <div class="small text-muted">
+                        Gambar aktif saat ini:
+                        <a href="{{ route('contracts.spk.gambar-rab', $kontrak->id) }}" target="_blank" class="fw-bold text-decoration-none">Lihat gambar</a>
+                    </div>
+                @endif
+            </div>
+            <div class="modal-footer bg-light border-0">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
+                <button type="submit" class="btn btn-primary fw-bold">
+                    <i class="bi bi-upload me-1"></i> Simpan Gambar RAB
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
 
 <div class="modal fade" id="modalUploadSpkFinal" tabindex="-1" aria-labelledby="modalUploadSpkFinalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">

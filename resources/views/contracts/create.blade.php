@@ -42,7 +42,7 @@
                                     <option value="">-- Cari Vendor --</option>
                                     @foreach($vendors as $vendor)
                                         <option value="{{ $vendor->id }}" {{ old('vendor_id') == $vendor->id ? 'selected' : '' }}>
-                                            {{ $vendor->nama_pihak }} ({{ str_replace('_', ' ', $vendor->kategori) }})
+                                            {{ $vendor->nama_pihak }}
                                         </option>
                                     @endforeach
                                 </select>
@@ -81,7 +81,7 @@
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-bold">Tanggal SPK <span class="text-danger">*</span></label>
-                                <input type="date" class="form-control" name="tanggal_spk" value="{{ old('tanggal_spk') }}" required>
+                                <input type="date" class="form-control" name="tanggal_spk" value="{{ old('tanggal_spk', now()->format('Y-m-d')) }}" required>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-bold">Nomor SPMK</label>
@@ -90,7 +90,7 @@
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-bold">Tanggal SPMK <span class="text-danger">*</span></label>
-                                <input type="date" class="form-control" name="tanggal_spmk" value="{{ old('tanggal_spmk') }}" required>
+                                <input type="date" class="form-control" name="tanggal_spmk" value="{{ old('tanggal_spmk', now()->format('Y-m-d')) }}" required>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-bold">Nomor Surat Undangan Pengadaan Langsung <span class="text-danger">*</span></label>
@@ -143,21 +143,21 @@
                     <div class="card-body p-4">
                         <div class="row g-4 align-items-end">
                             <div class="col-md-4">
-                                <label class="form-label fw-bold">Tanggal Mulai Pemeliharaan <span class="text-danger">*</span></label>
-                                <input type="date" class="form-control" id="tanggal_mulai_pemeliharaan" name="tanggal_mulai_pemeliharaan" value="{{ old('tanggal_mulai_pemeliharaan') }}" required onchange="hitungTanggalSelesaiPemeliharaan()">
+                                <label class="form-label fw-bold">Tanggal Mulai Pemeliharaan</label>
+                                <input type="date" class="form-control" id="tanggal_mulai_pemeliharaan" name="tanggal_mulai_pemeliharaan" value="{{ old('tanggal_mulai_pemeliharaan') }}" onchange="hitungTanggalSelesaiPemeliharaan()">
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label fw-bold">Masa Pemeliharaan (hari kalender) <span class="text-danger">*</span></label>
-                                <input type="number" class="form-control" id="masa_pemeliharaan_hari" name="masa_pemeliharaan_hari" value="{{ old('masa_pemeliharaan_hari', 0) }}" min="0" placeholder="Contoh: 180" required oninput="hitungTanggalSelesaiPemeliharaan()">
+                                <label class="form-label fw-bold">Masa Pemeliharaan (hari kalender)</label>
+                                <input type="number" class="form-control" id="masa_pemeliharaan_hari" name="masa_pemeliharaan_hari" value="{{ old('masa_pemeliharaan_hari') }}" min="0" placeholder="Contoh: 180" oninput="hitungTanggalSelesaiPemeliharaan()">
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label fw-bold">Tanggal Selesai Pemeliharaan <span class="text-danger">*</span></label>
-                                <input type="date" class="form-control bg-light" id="tanggal_selesai_pemeliharaan" name="tanggal_selesai_pemeliharaan" value="{{ old('tanggal_selesai_pemeliharaan') }}" readonly required>
+                                <label class="form-label fw-bold">Tanggal Selesai Pemeliharaan</label>
+                                <input type="date" class="form-control bg-light" id="tanggal_selesai_pemeliharaan" name="tanggal_selesai_pemeliharaan" value="{{ old('tanggal_selesai_pemeliharaan') }}" readonly>
                             </div>
                             <div class="col-12">
                                 <div class="alert alert-warning border-0 mb-0">
                                     <small class="mb-0 d-block">
-                                        Tanggal selesai pemeliharaan akan dihitung otomatis berdasarkan tanggal mulai pemeliharaan dan masa pemeliharaan yang diinput.
+                                        Waktu pemeliharaan bersifat opsional. Jika diisi, tanggal selesai pemeliharaan akan dihitung otomatis berdasarkan tanggal mulai dan masa pemeliharaan.
                                     </small>
                                 </div>
                             </div>

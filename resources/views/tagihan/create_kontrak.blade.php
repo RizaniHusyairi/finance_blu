@@ -161,17 +161,17 @@
                             <div class="col-md-4">
                                 <label class="form-label fw-bold">Nomor BAPP <small class="text-muted">(Pemeriksaan)</small></label>
                                 <div class="form-control-plaintext mb-2 text-muted fst-italic small"><i class="bi bi-magic me-1"></i>Akan digenerate: <strong class="text-primary">{{ $previewBapp }}</strong></div>
-                                <input type="date" class="form-control" name="tanggal_bapp">
+                                <input type="date" class="form-control" name="tanggal_bapp" value="{{ old('tanggal_bapp', now()->format('Y-m-d')) }}">
                             </div>
                             <div class="col-md-4" id="wrapper_bast_fields" style="display: none;">
                                 <label class="form-label fw-bold">Nomor BAST <small class="text-danger">*</small> <small class="text-muted">(Serah Terima)</small></label>
                                 <div class="form-control-plaintext mb-2 text-muted fst-italic small"><i class="bi bi-magic me-1"></i>Akan digenerate: <strong class="text-primary">{{ $previewBast }}</strong></div>
-                                <input type="date" class="form-control" name="tanggal_bast" id="tanggal_bast">
+                                <input type="date" class="form-control" name="tanggal_bast" id="tanggal_bast" value="{{ old('tanggal_bast', now()->format('Y-m-d')) }}">
                             </div>
                             <div class="col-md-4" id="wrapper_bap_fields">
                                 <label class="form-label fw-bold">Nomor BAP <small class="text-danger">*</small> <small class="text-muted">(Pembayaran)</small></label>
                                 <div class="form-control-plaintext mb-2 text-muted fst-italic small"><i class="bi bi-magic me-1"></i>Akan digenerate: <strong class="text-primary">{{ $previewBap }}</strong></div>
-                                <input type="date" class="form-control" name="tanggal_bap" required>
+                                <input type="date" class="form-control" name="tanggal_bap" value="{{ old('tanggal_bap', now()->format('Y-m-d')) }}" required>
                             </div>
                             
                             <div class="col-12 mt-4 pt-3 border-top">
@@ -179,18 +179,82 @@
                                 <div class="row g-3">
                                     <div class="col-md-4">
                                         <label class="form-label fw-bold small">Nama Pemeriksa <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-control" name="nama_pemeriksa" placeholder="Nama Lengkap" required>
+                                        <select class="form-select" name="nama_pemeriksa" id="namaPemeriksaSelect" required>
+                                            <option value="">-- Pilih Pegawai --</option>
+                                            @foreach($pegawaiList as $peg)
+                                                <option
+                                                    value="{{ $peg->nama_lengkap }}"
+                                                    data-nip="{{ $peg->nip }}"
+                                                    data-jabatan="{{ $peg->jabatan }}"
+                                                    @selected(old('nama_pemeriksa') === $peg->nama_lengkap)
+                                                >{{ $peg->nama_lengkap }}</option>
+                                            @endforeach
+                                        </select>
+                                        <small class="text-muted">NIP & Jabatan akan terisi otomatis.</small>
                                     </div>
                                     <div class="col-md-4">
-                                        <label class="form-label fw-bold small">NIP Pemeriksa <small class="text-muted">(Opsional)</small></label>
-                                        <input type="text" class="form-control" name="nip_pemeriksa" placeholder="NIP / NRK">
+                                        <label class="form-label fw-bold small">NIP Pemeriksa <small class="text-muted">(Otomatis)</small></label>
+                                        <input type="text" class="form-control bg-light" name="nip_pemeriksa" id="nipPemeriksaInput" placeholder="Akan terisi setelah memilih nama" value="{{ old('nip_pemeriksa') }}" readonly>
                                     </div>
                                     <div class="col-md-4">
                                         <label class="form-label fw-bold small">Jabatan Pemeriksa <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-control" name="jabatan_pemeriksa" placeholder="Contoh: Pejabat Penerima Hasil Pekerjaan" required>
+                                        <input type="text" class="form-control bg-light" name="jabatan_pemeriksa" id="jabatanPemeriksaInput" placeholder="Akan terisi setelah memilih nama" value="{{ old('jabatan_pemeriksa') }}" required readonly>
                                     </div>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Bagian 2b: Verifikator Tagihan --}}
+            <div class="col-12 mb-4">
+                <div class="card shadow-sm border-0 rounded-4 h-100 border-success">
+                    <div class="card-header bg-success text-white py-3 rounded-top-4">
+                        <h6 class="mb-0 fw-bold"><i class="bi bi-people-fill me-2"></i>2b. Verifikator Penagihan</h6>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="alert alert-info border-0 small mb-4">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Pilih pejabat yang akan menjadi verifikator/penanda tangan untuk tagihan ini.
+                            <strong>PPK</strong> ditentukan otomatis dari kontrak yang dipilih.
+                            Nama &amp; NIP akan dipotret (snapshot) dan ditampilkan pada dokumen yang dicetak.
+                        </div>
+
+                        @php
+                            $verifikatorFields = [
+                                ['key' => 'ppspm',                 'label' => 'PPSPM',                                          'options' => $verifikatorOptions['ppspm'] ?? collect()],
+                                ['key' => 'koordinator_keuangan',  'label' => 'Koordinator Keuangan',                            'options' => $verifikatorOptions['koordinator_keuangan'] ?? collect()],
+                                ['key' => 'bendahara_pengeluaran', 'label' => 'Bendahara Pengeluaran',                           'options' => $verifikatorOptions['bendahara_pengeluaran'] ?? collect()],
+                                ['key' => 'bendahara_penerimaan',  'label' => 'Bendahara Penerimaan',                            'options' => $verifikatorOptions['bendahara_penerimaan'] ?? collect()],
+                                ['key' => 'kasubbag',              'label' => 'Kepala Subbagian Keuangan dan Tata Usaha',         'options' => $verifikatorOptions['kasubbag'] ?? collect()],
+                            ];
+                        @endphp
+
+                        <div class="row g-3">
+                            @foreach($verifikatorFields as $vf)
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold small">{{ $vf['label'] }} <span class="text-danger">*</span></label>
+                                    <select
+                                        class="form-select verifikator-select"
+                                        name="{{ $vf['key'] }}_user_id"
+                                        data-key="{{ $vf['key'] }}"
+                                        required
+                                    >
+                                        <option value="">-- Pilih {{ $vf['label'] }} --</option>
+                                        @foreach($vf['options'] as $opt)
+                                            <option
+                                                value="{{ $opt['id'] }}"
+                                                data-name="{{ $opt['name'] }}"
+                                                data-nip="{{ $opt['nip'] }}"
+                                                data-jabatan="{{ $opt['jabatan'] }}"
+                                                @selected(old($vf['key'].'_user_id') == $opt['id'])
+                                            >{{ $opt['name'] }} {{ $opt['nip'] !== '-' ? '— NIP: '.$opt['nip'] : '' }}</option>
+                                        @endforeach
+                                    </select>
+                                    <div class="small text-muted mt-1" id="info_{{ $vf['key'] }}"></div>
+                                </div>
+                            @endforeach
                         </div>
                     </div>
                 </div>
@@ -416,5 +480,50 @@
         $('#total_netto').val(netto);
         $('#total_netto_display').text('Rp ' + formatRupiahCustom(Math.round(netto)));
     }
+
+    // Verifikator info preview (NIP & Jabatan)
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('.verifikator-select').forEach(function (sel) {
+            const key = sel.dataset.key;
+            const info = document.getElementById('info_' + key);
+            const update = function () {
+                const opt = sel.options[sel.selectedIndex];
+                if (!opt || !opt.value) {
+                    info.innerHTML = '';
+                    return;
+                }
+                const nip = opt.dataset.nip || '-';
+                const jab = opt.dataset.jabatan || '';
+                info.innerHTML = '<i class="bi bi-person-badge me-1"></i>NIP: <span class="font-monospace">' + nip + '</span>' + (jab ? ' &middot; ' + jab : '');
+            };
+            sel.addEventListener('change', update);
+            if (sel.value) update();
+        });
+    });
+
+    // Auto-fill NIP & Jabatan saat memilih Nama Pemeriksa dari dropdown pegawai
+    document.addEventListener('DOMContentLoaded', function () {
+        const namaSelect = document.getElementById('namaPemeriksaSelect');
+        const nipInput = document.getElementById('nipPemeriksaInput');
+        const jabatanInput = document.getElementById('jabatanPemeriksaInput');
+
+        if (!namaSelect || !nipInput || !jabatanInput) return;
+
+        function syncPemeriksa() {
+            const opt = namaSelect.options[namaSelect.selectedIndex];
+            if (!opt || !opt.value) {
+                nipInput.value = '';
+                jabatanInput.value = '';
+                return;
+            }
+            nipInput.value = opt.dataset.nip || '';
+            jabatanInput.value = opt.dataset.jabatan || '';
+        }
+
+        namaSelect.addEventListener('change', syncPemeriksa);
+
+        // Inisialisasi (mis. setelah validasi gagal & old() mengembalikan pilihan)
+        if (namaSelect.value) syncPemeriksa();
+    });
 </script>
 @endpush

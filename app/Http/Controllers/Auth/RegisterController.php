@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use App\Models\Supplier;
+use App\Models\MasterMitraVendor;
 use App\Models\User;
 use Illuminate\Foundation\Auth\RegistersUsers;
 use Illuminate\Support\Facades\Hash;
@@ -65,19 +65,25 @@ class RegisterController extends Controller
      */
     protected function create(array $data)
     {
+        // 1) Buat record mitra/vendor dulu sebagai profil utama user
+        $mitra = MasterMitraVendor::create([
+            'kategori' => 'PENGELUARAN',
+            'jenis_entitas' => 'BADAN_USAHA',
+            'nama_pihak' => $data['name'],
+            'email' => $data['email'],
+            'status_aktif' => true,
+        ]);
+
+        // 2) Buat user dan hubungkan ke mitra via profilable polymorphic
         $user = User::create([
-            'name' => $data['name'],
             'email' => $data['email'],
             'password' => Hash::make($data['password']),
+            'profilable_type' => \App\Models\MasterPihak::class,
+            'profilable_id' => $mitra->id,
         ]);
 
         Role::findOrCreate('Mitra', 'web');
         $user->assignRole('Mitra');
-
-        Supplier::firstOrCreate(
-            ['user_id' => $user->id],
-            ['name' => $user->name]
-        );
 
         return $user;
     }

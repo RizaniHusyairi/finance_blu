@@ -133,21 +133,34 @@ class PenyetoranPajakKontrakController extends Controller
      */
     public function storeBilling(Request $request, $id)
     {
-        $request->validate([
-            'kode_billing'  => 'required|string|max:50',
-            'file_billing'  => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
-        ]);
-
         $potongan = PotonganTagihan::findOrFail($id);
 
         if ($potongan->ntpn) {
             return back()->withErrors('Kode Billing tidak dapat diubah karena NTPN sudah terinput.');
         }
 
+        // E-Billing (cetakan DJP) wajib diunggah pertama kali; saat update boleh kosong
+        // (akan mempertahankan file lama).
+        $existingBilling = $potongan->arsipDokumen()
+            ->where('jenis_dokumen', 'KODE_BILLING')
+            ->exists();
+
+        $request->validate([
+            'kode_billing'  => 'required|string|max:50',
+            'file_billing'  => ($existingBilling ? 'nullable' : 'required') . '|file|mimes:pdf,jpg,jpeg,png|max:5120',
+        ], [
+            'file_billing.required' => 'File E-Billing (cetakan DJP) wajib diunggah.',
+        ]);
+
         DB::transaction(function() use ($request, $potongan) {
             $potongan->update(['kode_billing' => $request->kode_billing]);
 
             if ($request->hasFile('file_billing')) {
+                // Hapus arsip e-billing lama agar hanya menyimpan versi terbaru
+                $potongan->arsipDokumen()
+                    ->where('jenis_dokumen', 'KODE_BILLING')
+                    ->delete();
+
                 $file = $request->file('file_billing');
                 $path = $file->store('arsip/pajak-kontrak', 'public');
 
@@ -161,7 +174,7 @@ class PenyetoranPajakKontrakController extends Controller
                     'ukuran_file'       => $file->getSize(),
                     'uploaded_by'       => auth()->id(),
                     'uploaded_at'       => now(),
-                    'keterangan'        => 'Dokumen DJP Kode Billing',
+                    'keterangan'        => 'E-Billing (cetakan DJP) Kode Billing',
                 ]);
             }
 

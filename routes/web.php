@@ -8,6 +8,7 @@ use App\Http\Controllers\ContractTermController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\CoaController;
 use App\Http\Controllers\DipaController;
+use App\Http\Controllers\DocumentNumberController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\SupplierController;
 use Illuminate\Support\Facades\Auth;
@@ -26,7 +27,7 @@ Route::get('/', function () {
         : redirect()->route('dashboard');
 });
 
-$internalRoles = 'Super Admin|KPA|Kepala Subbagian Keuangan dan Tata Usaha|Kepala Seksi Pelayanan dan Kerjasama|PPK|PPSPM|Bendahara Pengeluaran|Bendahara Penerimaan|Pejabat Pengadaan|Operator BLU|PPABP|Operator Perjaldin';
+$internalRoles = 'Super Admin|KPA|Kepala Subbagian Keuangan dan Tata Usaha|Kepala Seksi Pelayanan dan Kerjasama|PPK|PPSPM|Bendahara Pengeluaran|Bendahara Penerimaan|Pejabat Pengadaan|Operator BLU|PPABP|Operator Perjaldin|Koordinator Keuangan';
 
 Route::middleware('auth')->group(function () use ($internalRoles) {
 
@@ -63,6 +64,13 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
     // Master Data — Supplier / Mitra
     Route::middleware('role:Super Admin|Pejabat Pengadaan')->group(function () {
         Route::resource('suppliers', SupplierController::class);
+        Route::get('/document-numbers', [DocumentNumberController::class, 'index'])->name('document-numbers.index');
+        Route::post('/document-numbers', [DocumentNumberController::class, 'store'])->name('document-numbers.store');
+        Route::post('/document-numbers/reserve', [DocumentNumberController::class, 'reserve'])->name('document-numbers.reserve');
+        Route::post('/document-numbers/{documentNumber}/release', [DocumentNumberController::class, 'release'])->name('document-numbers.release');
+        Route::post('/document-numbers/{documentNumber}/mark-used', [DocumentNumberController::class, 'markUsed'])->name('document-numbers.mark-used');
+        Route::post('/document-numbers/{documentNumber}/cancel', [DocumentNumberController::class, 'cancel'])->name('document-numbers.cancel');
+        Route::get('/document-numbers/check', [DocumentNumberController::class, 'check'])->name('document-numbers.check');
     });
 
     // Master Data — DIPA
@@ -108,13 +116,29 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
         Route::get('/tagihan/kontrak/{id}', [\App\Http\Controllers\TagihanController::class, 'showKontrak'])->name('tagihan.kontrak.show');
         Route::post('/tagihan/kontrak/{id}/submit', [\App\Http\Controllers\TagihanController::class, 'submitKontrak'])->name('tagihan.kontrak.submit');
         Route::post('/tagihan/kontrak/{id}/arsip', [\App\Http\Controllers\TagihanController::class, 'uploadArsipKontrak'])->name('tagihan.kontrak.upload-arsip');
+        Route::get('/tagihan/kontrak/{id}/arsip/{arsipId}', [\App\Http\Controllers\TagihanController::class, 'viewArsipKontrak'])->name('tagihan.kontrak.view-arsip');
         Route::get('/tagihan/kontrak/{id}/export/{type}', [\App\Http\Controllers\TagihanController::class, 'exportPdfKontrak'])->name('tagihan.kontrak.export-pdf');
+    });
+
+    // Verifikasi Tagihan Kontrak — multi-role (PPK, PPSPM, Koor.Keu, Bend×2, Kasubbag)
+    Route::middleware('role:PPK|PPSPM|Koordinator Keuangan|Bendahara Pengeluaran|Bendahara Penerimaan|Kepala Subbagian Keuangan dan Tata Usaha|Super Admin')->group(function () {
+        Route::get('/verifikasi-tagihan-kontrak', [\App\Http\Controllers\TagihanKontrakVerifikasiController::class, 'index'])->name('verifikasi-tagihan-kontrak.index');
+        Route::get('/verifikasi-tagihan-kontrak/{id}', [\App\Http\Controllers\TagihanKontrakVerifikasiController::class, 'show'])->name('verifikasi-tagihan-kontrak.show');
+        Route::get('/verifikasi-tagihan-kontrak/{id}/kontrak-arsip/{jenis}', [\App\Http\Controllers\TagihanKontrakVerifikasiController::class, 'viewKontrakArsip'])->name('verifikasi-tagihan-kontrak.kontrak-arsip');
+        Route::post('/verifikasi-tagihan-kontrak/{id}/approve', [\App\Http\Controllers\TagihanKontrakVerifikasiController::class, 'approve'])->name('verifikasi-tagihan-kontrak.approve');
+        Route::post('/verifikasi-tagihan-kontrak/{id}/revisi', [\App\Http\Controllers\TagihanKontrakVerifikasiController::class, 'revisi'])->name('verifikasi-tagihan-kontrak.revisi');
+        Route::post('/verifikasi-tagihan-kontrak/{id}/reject', [\App\Http\Controllers\TagihanKontrakVerifikasiController::class, 'reject'])->name('verifikasi-tagihan-kontrak.reject');
+    });
+
+    Route::middleware('role:Super Admin|Pejabat Pengadaan|PPK')->group(function () {
 
         Route::get('/contracts/verifikasi', [ContractController::class, 'verifikasiIndex'])->name('contracts.verifikasi');
         Route::get('/contracts/verifikasi/{id}', [ContractController::class, 'verifikasiShow'])->name('contracts.verifikasi.show');
         Route::get('/contracts/{contract}/ringkasan-kontrak/export-pdf', [ContractController::class, 'exportRingkasanKontrakPdf'])->name('contracts.ringkasan.export-pdf');
         Route::post('/contracts/{contract}/ringkasan-kontrak/upload-final', [ContractController::class, 'uploadRingkasanKontrakFinal'])->name('contracts.ringkasan.upload-final');
         Route::get('/contracts/{contract}/spk/export-pdf', [ContractController::class, 'exportSpkPdf'])->name('contracts.spk.export-pdf');
+        Route::post('/contracts/{contract}/spk/upload-gambar-rab', [ContractController::class, 'uploadSpkGambarRab'])->name('contracts.spk.upload-gambar-rab');
+        Route::get('/contracts/{contract}/spk/gambar-rab', [ContractController::class, 'viewSpkGambarRab'])->name('contracts.spk.gambar-rab');
         Route::post('/contracts/{contract}/spk/upload-final', [ContractController::class, 'uploadSpkFinal'])->name('contracts.spk.upload-final');
         Route::get('/contracts/{contract}/spmk/export-pdf', [ContractController::class, 'exportSpmkPdf'])->name('contracts.spmk.export-pdf');
         Route::post('/contracts/{contract}/spmk/upload-final', [ContractController::class, 'uploadSpmkFinal'])->name('contracts.spmk.upload-final');
@@ -491,7 +515,6 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
         Route::post('/sp2ds/honor/{npi_id}/submit', [\App\Http\Controllers\Sp2dHonorController::class, 'submit'])->name('sp2ds.honor.submit');
 
         Route::get('/sp2ds/kontrak', [\App\Http\Controllers\Sp2dKontrakController::class, 'index'])->name('sp2ds.kontrak.index');
-        Route::get('/sp2ds/kontrak/{npi_id}/detail', [\App\Http\Controllers\Sp2dKontrakController::class, 'show'])->name('sp2ds.kontrak.detail');
         Route::post('/sp2ds/kontrak/npi/{npi_id}/draft', [\App\Http\Controllers\Sp2dKontrakController::class, 'storeDraft'])->name('sp2ds.kontrak.store');
         Route::post('/sp2ds/kontrak/npi/{npi_id}/submit', [\App\Http\Controllers\Sp2dKontrakController::class, 'submitVerification'])->name('sp2ds.kontrak.submit');
         Route::get('/sp2ds', [\App\Http\Controllers\Sp2dController::class, 'index'])->name('sp2ds.index');
@@ -499,6 +522,7 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
         Route::post('/sp2ds/npi/{npi_id}/store', [\App\Http\Controllers\Sp2dController::class, 'store'])->name('sp2ds.store');
         Route::post('/sp2ds/{sp2d_id}/approve', [\App\Http\Controllers\Sp2dController::class, 'approve'])->name('sp2ds.approve');
         Route::post('/sp2ds/{sp2d_id}/execute', [\App\Http\Controllers\Sp2dController::class, 'catatBku'])->name('sp2ds.catat-bku');
+        Route::get('/sp2ds/kontrak/{npi_id}/detail', [\App\Http\Controllers\Sp2dKontrakController::class, 'show'])->name('sp2ds.kontrak.detail');
     });
 
     // ==== MODUL PENYETORAN PAJAK — Bendahara Pengeluaran ====

@@ -22,7 +22,7 @@ class ContractAddendumController extends Controller
     {
         $contract->load([
             'vendor',
-            'ppkUser.pegawai',
+            'ppkUser.profilable',
             'termin',
             'jaminanKontrak',
             'addendums.logs.user',
@@ -54,7 +54,7 @@ class ContractAddendumController extends Controller
     public function create(KontrakPengadaan $contract): View
     {
         return view('contracts.addendums_create', [
-            'contract' => $contract->load(['vendor', 'ppkUser.pegawai']),
+            'contract' => $contract->load(['vendor', 'ppkUser.profilable']),
             'addendum' => new KontrakAddendum([
                 'tanggal_addendum' => now()->toDateString(),
                 'jenis_addendum' => KontrakAddendum::TYPE_TAMBAH_KURANG_NILAI,
@@ -108,7 +108,7 @@ class ContractAddendumController extends Controller
     {
         $this->ensureAddendumBelongsToContract($contract, $addendum);
 
-        $contract->load(['vendor', 'ppkUser.pegawai', 'termin.detailKontrak.tagihan', 'jaminanKontrak']);
+        $contract->load(['vendor', 'ppkUser.profilable', 'termin.detailKontrak.tagihan', 'jaminanKontrak']);
         $addendum->load(['arsipDokumen', 'logs.user']);
 
         $previousAddendums = $contract->addendums()
@@ -139,7 +139,7 @@ class ContractAddendumController extends Controller
         $this->ensureEditable($addendum);
 
         return view('contracts.addendums_edit', [
-            'contract' => $contract->load(['vendor', 'ppkUser.pegawai']),
+            'contract' => $contract->load(['vendor', 'ppkUser.profilable']),
             'addendum' => $addendum->load('arsipDokumen'),
             'jenisOptions' => KontrakAddendum::jenisOptions(),
             'formAction' => route('addendums.update', [$contract, $addendum]),

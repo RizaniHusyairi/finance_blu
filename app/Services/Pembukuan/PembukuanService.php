@@ -474,7 +474,7 @@ class PembukuanService
     public function buildPengesahanDetail(LaporanPengesahanBlu $laporan): array
     {
         $laporan->loadMissing([
-            'approver.pegawai',
+            'approver.profilable',
             'arsipDokumen.uploader',
         ]);
 

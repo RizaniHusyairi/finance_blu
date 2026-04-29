@@ -20,16 +20,21 @@ class BukuPembantuBungaRekeningSeeder extends Seeder
         DB::transaction(function () {
             Role::findOrCreate('Bendahara Pengeluaran', 'web');
 
-            $bendahara = User::query()->firstOrCreate(
-                ['email' => 'bendahara.pengeluaran@admin.com'],
-                [
-                    'name' => 'YENI PUJI ASTUTI',
-                    'email_verified_at' => now(),
-                    'password' => bcrypt('password'),
-                ]
-            );
+            // User Bendahara Pengeluaran dibuat oleh RoleAndPermissionSeeder
+            // yang berjalan lebih dulu di DatabaseSeeder.
+            // Cari berdasarkan email primer; fallback berdasarkan role kalau email berbeda.
+            $bendahara = User::query()
+                ->where('email', 'bendahara.pengeluaran@sikeren.id')
+                ->first()
+                ?? User::role('Bendahara Pengeluaran')->first();
 
-            if (!$bendahara->hasRole('Bendahara Pengeluaran')) {
+            if (! $bendahara) {
+                throw new \RuntimeException(
+                    'User Bendahara Pengeluaran tidak ditemukan. Pastikan RoleAndPermissionSeeder dijalankan lebih dulu.'
+                );
+            }
+
+            if (! $bendahara->hasRole('Bendahara Pengeluaran')) {
                 $bendahara->assignRole('Bendahara Pengeluaran');
             }
 

@@ -61,6 +61,13 @@
         .page-break {
             page-break-before: always;
         }
+
+        .rab-image {
+            max-width: 100%;
+            max-height: 520px;
+            display: block;
+            margin: 8px auto 0;
+        }
     </style>
 </head>
 
@@ -122,6 +129,12 @@
         <tr>
             <td colspan="2">
                 Nilai Kontrak termasuk Pajak Pertambahan Nilai (PPN) adalah sebesar <strong>Rp {{ number_format((float) ($kontrak->nilai_total_kontrak ?? 0), 0, ',', '.') }}</strong> ({{ $terbilangNilaiKontrak ?? '-' }} rupiah).
+            </td>
+        </tr>
+        <tr>
+            <td colspan="2">
+                <strong>GAMBAR RAB:</strong>
+                <img src="{{ $gambarRabDataUri }}" alt="Gambar RAB" class="rab-image">
             </td>
         </tr>
         <tr>

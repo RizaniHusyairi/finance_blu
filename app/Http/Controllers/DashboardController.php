@@ -154,8 +154,11 @@ class DashboardController extends Controller
     {
         $user = auth()->user();
 
-        // Find vendor/mitra linked to this user
-        $vendor = MasterMitraVendor::where('user_id', $user->id)->first();
+        // Find vendor/mitra linked to this user via polymorphic profilable
+        $profile = $user->profilable;
+        $vendor = $profile instanceof \App\Models\MasterPihak
+            ? MasterMitraVendor::find($profile->id)
+            : null;
 
         $contracts = collect();
         $tagihan = collect();
@@ -335,26 +338,42 @@ class DashboardController extends Controller
             $tabTagihan = \App\Models\Tagihan::where('status', 'PENDING_REVIEW')->latest()->get();
             
             // Pencairan (Union of SPP, NPI, SP2D)
+            $pembuatJoin = function ($query) {
+                $query
+                    ->leftJoin('master_pegawai', function ($join) {
+                        $join->on('master_pegawai.id', '=', 'users.profilable_id')
+                            ->where('users.profilable_type', '=', \App\Models\MasterPegawai::class);
+                    })
+                    ->leftJoin('master_pihak', function ($join) {
+                        $join->on('master_pihak.id', '=', 'users.profilable_id')
+                            ->whereIn('users.profilable_type', [\App\Models\MasterPihak::class, \App\Models\MasterMitraVendor::class]);
+                    });
+            };
+            $pembuatExpr = DB::raw('COALESCE(master_pegawai.nama_lengkap, master_pihak.nama_pihak, users.email) as pembuat');
+
             $listSpp = DB::table('dokumen_spp')
                 ->join('users', 'dokumen_spp.dibuat_oleh_id', '=', 'users.id')
-                ->select('dokumen_spp.id', 'dokumen_spp.nomor_spp as nomor', 'dokumen_spp.nominal_spp as nilai', 'users.name as pembuat')
+                ->tap($pembuatJoin)
+                ->select('dokumen_spp.id', 'dokumen_spp.nomor_spp as nomor', 'dokumen_spp.nominal_spp as nilai', $pembuatExpr)
                 ->where('dokumen_spp.status', 'DRAFT')
                 ->get()->map(function($i) { $i->jenis = 'SPP'; $i->prioritas = 'Sedang'; $i->url_reject = route('verifikasi-ppk.spp.revisi', $i->id); $i->url_approve = route('verifikasi-ppk.spp.approve', $i->id); return $i; });
                 
             $listNpi = DB::table('dokumen_npi')
                 ->join('users', 'dokumen_npi.bendahara_penerimaan_id', '=', 'users.id')
+                ->tap($pembuatJoin)
                 ->join('dokumen_spm', 'dokumen_npi.spm_id', '=', 'dokumen_spm.id')
                 ->join('dokumen_spp', 'dokumen_spm.spp_id', '=', 'dokumen_spp.id')
-                ->select('dokumen_npi.id', 'dokumen_npi.nomor_npi as nomor', 'dokumen_spp.nominal_spp as nilai', 'users.name as pembuat')
+                ->select('dokumen_npi.id', 'dokumen_npi.nomor_npi as nomor', 'dokumen_spp.nominal_spp as nilai', $pembuatExpr)
                 ->where('dokumen_npi.status', 'DRAFT')
                 ->get()->map(function($i) { $i->jenis = 'NPI'; $i->prioritas = 'Sedang'; $i->url_reject = route('verifikasi-ppk.npi.revisi', $i->id); $i->url_approve = route('verifikasi-ppk.npi.approve', $i->id);  return $i; });
                 
             $listSp2d = DB::table('dokumen_sp2d')
                 ->join('users', 'dokumen_sp2d.bendahara_pengeluaran_id', '=', 'users.id')
+                ->tap($pembuatJoin)
                 ->join('dokumen_npi', 'dokumen_sp2d.npi_id', '=', 'dokumen_npi.id')
                 ->join('dokumen_spm', 'dokumen_npi.spm_id', '=', 'dokumen_spm.id')
                 ->join('dokumen_spp', 'dokumen_spm.spp_id', '=', 'dokumen_spp.id')
-                ->select('dokumen_sp2d.id', 'dokumen_sp2d.nomor_sp2d as nomor', 'dokumen_spp.nominal_spp as nilai', 'users.name as pembuat')
+                ->select('dokumen_sp2d.id', 'dokumen_sp2d.nomor_sp2d as nomor', 'dokumen_spp.nominal_spp as nilai', $pembuatExpr)
                 ->where('dokumen_sp2d.status', 'DRAFT')
                 ->get()->map(function($i) { $i->jenis = 'SP2D'; $i->prioritas = 'Tinggi'; $i->url_reject = '#'; $i->url_approve = '#'; return $i; });
 

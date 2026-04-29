@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use Illuminate\Foundation\Auth\AuthenticatesUsers;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 class LoginController extends Controller
 {
@@ -34,6 +35,7 @@ class LoginController extends Controller
         'Operator BLU',
         'PPABP',
         'Operator Perjaldin',
+        'Koordinator Keuangan',
     ];
 
     /**
@@ -65,5 +67,41 @@ class LoginController extends Controller
         return redirect()->route('login')->withErrors([
             'email' => 'Akun ini belum memiliki role akses.',
         ]);
+    }
+
+    /**
+     * Get the failed login response instance.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Symfony\Component\HttpFoundation\Response
+     *
+     * @throws \Illuminate\Validation\ValidationException
+     */
+    protected function sendFailedLoginResponse(Request $request)
+    {
+        throw ValidationException::withMessages([
+            $this->username() => ['Email atau password yang Anda masukkan salah.'],
+        ]);
+    }
+
+    /**
+     * Redirect the user after determining they are locked out.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Symfony\Component\HttpFoundation\Response
+     *
+     * @throws \Illuminate\Validation\ValidationException
+     */
+    protected function sendLockoutResponse(Request $request)
+    {
+        $seconds = $this->limiter()->availableIn(
+            $this->throttleKey($request)
+        );
+
+        throw ValidationException::withMessages([
+            $this->username() => [
+                "Terlalu banyak percobaan login. Silakan coba lagi dalam {$seconds} detik.",
+            ],
+        ])->status(429);
     }
 }

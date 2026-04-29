@@ -17,6 +17,14 @@ class Tagihan extends Model
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    // === Relasi Verifikator (untuk display & lookup; snapshot tetap di kolom *_nama_snapshot) ===
+    public function ppkUser() { return $this->belongsTo(User::class, 'ppk_user_id'); }
+    public function ppspmUser() { return $this->belongsTo(User::class, 'ppspm_user_id'); }
+    public function bendaharaPenerimaanUser() { return $this->belongsTo(User::class, 'bendahara_penerimaan_user_id'); }
+    public function bendaharaPengeluaranUser() { return $this->belongsTo(User::class, 'bendahara_pengeluaran_user_id'); }
+    public function kasubbagUser() { return $this->belongsTo(User::class, 'kasubbag_user_id'); }
+    public function koordinatorKeuanganUser() { return $this->belongsTo(User::class, 'koordinator_keuangan_user_id'); }
+
     public function pihak()
     {
         return $this->belongsTo(MasterPihak::class, 'pihak_id');

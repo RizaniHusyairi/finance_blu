@@ -148,16 +148,16 @@
                                 <input type="date" class="form-control bg-light" id="tanggal_selesai" name="tanggal_selesai" value="{{ old('tanggal_selesai', $kontrak->tanggal_selesai) }}" readonly required>
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label fw-bold">Masa Pemeliharaan (hari kalender) <span class="text-danger">*</span></label>
-                                <input type="number" class="form-control" id="masa_pemeliharaan_hari" name="masa_pemeliharaan_hari" value="{{ old('masa_pemeliharaan_hari', $kontrak->masa_pemeliharaan_hari ?? 0) }}" min="0" placeholder="Contoh: 180" required oninput="hitungTanggalSelesaiPemeliharaan()">
+                                <label class="form-label fw-bold">Masa Pemeliharaan (hari kalender)</label>
+                                <input type="number" class="form-control" id="masa_pemeliharaan_hari" name="masa_pemeliharaan_hari" value="{{ old('masa_pemeliharaan_hari', ((int) ($kontrak->masa_pemeliharaan_hari ?? 0) > 0 ? $kontrak->masa_pemeliharaan_hari : null)) }}" min="0" placeholder="Contoh: 180" oninput="hitungTanggalSelesaiPemeliharaan()">
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label fw-bold">Tanggal Mulai Pemeliharaan <span class="text-danger">*</span></label>
-                                <input type="date" class="form-control" id="tanggal_mulai_pemeliharaan" name="tanggal_mulai_pemeliharaan" value="{{ old('tanggal_mulai_pemeliharaan', $kontrak->tanggal_mulai_pemeliharaan) }}" required onchange="hitungTanggalSelesaiPemeliharaan()">
+                                <label class="form-label fw-bold">Tanggal Mulai Pemeliharaan</label>
+                                <input type="date" class="form-control" id="tanggal_mulai_pemeliharaan" name="tanggal_mulai_pemeliharaan" value="{{ old('tanggal_mulai_pemeliharaan', $kontrak->tanggal_mulai_pemeliharaan) }}" onchange="hitungTanggalSelesaiPemeliharaan()">
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label fw-bold">Tanggal Selesai Pemeliharaan <span class="text-danger">*</span></label>
-                                <input type="date" class="form-control bg-light" id="tanggal_selesai_pemeliharaan" name="tanggal_selesai_pemeliharaan" value="{{ old('tanggal_selesai_pemeliharaan', $kontrak->tanggal_selesai_pemeliharaan) }}" readonly required>
+                                <label class="form-label fw-bold">Tanggal Selesai Pemeliharaan</label>
+                                <input type="date" class="form-control bg-light" id="tanggal_selesai_pemeliharaan" name="tanggal_selesai_pemeliharaan" value="{{ old('tanggal_selesai_pemeliharaan', $kontrak->tanggal_selesai_pemeliharaan) }}" readonly>
                             </div>
                             <div class="col-md-12">
                                 <label class="form-label fw-bold">Ketentuan Denda</label>

@@ -58,7 +58,7 @@ class SppController extends Controller
             ->findOrFail($perjaldin_id);
             
         $budgets = \App\Support\DipaBudgetOptionService::groupedOptions();
-        $ppkUsers = clone \App\Models\User::role('PPK')->orderBy('name')->get();
+        $ppkUsers = clone \App\Models\User::role('PPK')->orderByDisplayName()->get();
         $kasubbagUser = \App\Models\User::role('Kepala Subbagian Keuangan dan Tata Usaha')->first();
 
         // Hitung counter berikutnya untuk preview nomor SPP
@@ -86,7 +86,7 @@ class SppController extends Controller
                 $tagihan = Tagihan::findOrFail($komponen->tagihan_id);
                 $isUpdate = $komponen->hasDokumenTurunan();
                 
-                $ppkUser = \App\Models\User::with('pegawai')->findOrFail($request->ppk_verifikator_id);
+                $ppkUser = \App\Models\User::with('profilable')->findOrFail($request->ppk_verifikator_id);
                 $uraianText = 'Belanja Barang Perjalanan Dinas Pegawai - ' . str_replace('_', ' ', $komponen->kode_komponen);
                 
                 // Auto-generate nomor SPP jika baru, atau pertahankan nomor lama jika update
@@ -253,8 +253,8 @@ class SppController extends Controller
         // Budget item options: Honorarium has dipa_revision_item_id on tagihan
         $selectedBudgetItem = $sppModel?->dipaRevisionItem ?? \App\Models\DetailDipa::with('coa')->find($tagihan->dipa_revision_item_id);
         
-        $ppkUsers = User::role('PPK')->orderBy('name')->get();
-        $kasubbagUser = User::role('Kepala Subbagian Keuangan dan Tata Usaha')->orderBy('name')->first();
+        $ppkUsers = User::role('PPK')->orderByDisplayName()->get();
+        $kasubbagUser = User::role('Kepala Subbagian Keuangan dan Tata Usaha')->orderByDisplayName()->first();
         
         $skHonorarium = $tagihan->arsipDokumen->firstWhere('jenis_dokumen', 'SK Honorarium');
         $daftarNominatif = $tagihan->arsipDokumen->firstWhere('jenis_dokumen', 'Daftar Nominatif Bertandatangan');
@@ -567,13 +567,12 @@ class SppController extends Controller
             ->values();
         $sppModel = $tagihan->spps->sortByDesc('created_at')->first();
         $selectedBudgetItem = $sppModel?->dipaRevisionItem ?? $budgetItems->first();
-        $ppkUsers = User::role('PPK')->orderBy('name')->get();
-        $kasubbagUser = User::role('Kepala Subbagian Keuangan dan Tata Usaha')->orderBy('name')->first();
+        $ppkUsers = User::role('PPK')->orderByDisplayName()->get();
+        $kasubbagUser = User::role('Kepala Subbagian Keuangan dan Tata Usaha')->orderByDisplayName()->first();
         $pajaks = MasterTarifPajak::orderBy('jenis_pajak')->get();
         $potonganTagihans = collect($tagihan->potonganTagihan);
         $potonganPajak = $potonganTagihans->filter(fn ($item) => $item->jenis_potongan !== 'ANGSURAN_UANG_MUKA');
         $isPelunasan = ($termin?->jenis_termin ?? null) === 'PELUNASAN';
-        $ebillingDocument = $sppModel?->arsipDokumen?->firstWhere('jenis_dokumen', 'E_BILLING');
         $requiresTaxDocuments = $potonganPajak->isNotEmpty();
 
         $documentStatuses = collect([
@@ -608,12 +607,6 @@ class SppController extends Controller
                 'required' => $requiresTaxDocuments,
             ],
             [
-                'key' => 'ebilling',
-                'label' => 'E-Billing',
-                'path' => $ebillingDocument?->path_file,
-                'required' => $requiresTaxDocuments,
-            ],
-            [
                 'key' => 'lampiran_lainnya',
                 'label' => 'Lampiran Lainnya',
                 'path' => $detailKontrak?->file_lampiran_lainnya,
@@ -638,8 +631,10 @@ class SppController extends Controller
             ->whereIn('key', ['bapp', 'bast', 'bap', 'invoice'])
             ->every(fn ($item) => in_array($item['status'], ['ready', 'not_required']));
         $taxDocumentsReady = !$requiresTaxDocuments || $documentStatuses
-            ->whereIn('key', ['faktur_pajak', 'ebilling'])
+            ->whereIn('key', ['faktur_pajak'])
             ->every(fn ($item) => in_array($item['status'], ['ready', 'not_required']));
+        // Catatan: E-Billing dipindahkan ke tahap setelah SP2D disetujui (diunggah oleh Operator BLU),
+        // sehingga tidak lagi menjadi syarat di tahap SPP.
         $draftReady = $sppModel
             && filled($sppModel->nomor_spp)
             && filled($sppModel->tanggal_spp)
@@ -874,7 +869,6 @@ class SppController extends Controller
             'pajak.*.dpp' => 'required|numeric|min:0',
             'pajak.*.nominal' => 'required|numeric|min:0',
             'file_faktur_pajak' => 'nullable|file|mimes:pdf|max:5120',
-            'file_ebilling' => 'nullable|file|mimes:pdf|max:5120',
         ]);
 
         $kontrak = $tagihan->detailKontrak?->kontrakTermin?->kontrak;
@@ -957,24 +951,6 @@ class SppController extends Controller
                     'disk' => 'public',
                     'mime_type' => $request->file('file_faktur_pajak')->getMimeType(),
                     'ukuran_file' => $request->file('file_faktur_pajak')->getSize(),
-                    'uploaded_by' => auth()->id(),
-                    'uploaded_at' => now(),
-                    'is_active' => true,
-                ]);
-            }
-
-            if ($request->hasFile('file_ebilling')) {
-                $spp->arsipDokumen()
-                    ->where('jenis_dokumen', 'E_BILLING')
-                    ->delete();
-
-                $spp->arsipDokumen()->create([
-                    'jenis_dokumen' => 'E_BILLING',
-                    'nama_file_asli' => $request->file('file_ebilling')->getClientOriginalName(),
-                    'path_file' => $request->file('file_ebilling')->store('spp/ebilling', 'public'),
-                    'disk' => 'public',
-                    'mime_type' => $request->file('file_ebilling')->getMimeType(),
-                    'ukuran_file' => $request->file('file_ebilling')->getSize(),
                     'uploaded_by' => auth()->id(),
                     'uploaded_at' => now(),
                     'is_active' => true,

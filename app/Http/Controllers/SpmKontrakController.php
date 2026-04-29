@@ -114,8 +114,8 @@ class SpmKontrakController extends Controller
         $selectedBudgetItem = $sppModel->dipaRevisionItem;
         $spmModel = $sppModel->spm;
 
-        $ppspms = User::role('PPSPM')->orderBy('name')->get();
-        $kasubbagUser = User::role('Kepala Subbagian Keuangan dan Tata Usaha')->orderBy('name')->first();
+        $ppspms = User::role('PPSPM')->orderByDisplayName()->get();
+        $kasubbagUser = User::role('Kepala Subbagian Keuangan dan Tata Usaha')->orderByDisplayName()->first();
 
         // Potongan
         $potonganTagihans = collect($tagihan->potonganTagihan ?? []);
@@ -390,15 +390,12 @@ class SpmKontrakController extends Controller
      */
     private function buildDocumentStatuses($detailKontrak, $spmModel, $isPelunasan, $requiresTaxDocuments)
     {
-        $ebillingDocument = $spmModel?->arsipDokumen?->firstWhere('jenis_dokumen', 'E_BILLING');
-
         return collect([
             ['key' => 'bapp', 'label' => 'BAPP', 'path' => $detailKontrak?->file_bapp, 'required' => true],
             ['key' => 'bast', 'label' => 'BAST', 'path' => $detailKontrak?->file_bast, 'required' => $isPelunasan],
             ['key' => 'bap', 'label' => 'BAP', 'path' => $detailKontrak?->file_bap, 'required' => true],
             ['key' => 'invoice', 'label' => 'Invoice', 'path' => $detailKontrak?->file_invoice, 'required' => true],
             ['key' => 'faktur_pajak', 'label' => 'Faktur Pajak', 'path' => $detailKontrak?->file_faktur_pajak, 'required' => $requiresTaxDocuments],
-            ['key' => 'ebilling', 'label' => 'E-Billing', 'path' => $ebillingDocument?->path_file, 'required' => $requiresTaxDocuments],
             ['key' => 'kwitansi', 'label' => 'Kwitansi', 'path' => $detailKontrak?->file_kwitansi ?? null, 'required' => false],
             ['key' => 'spp_pdf', 'label' => 'SPP (PDF)', 'path' => null, 'required' => false],
         ])->map(function ($item) {

@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class DocumentNumberSequence extends Model
 {
     protected $fillable = [
+        'sequence_group',
         'series_prefix',
         'suffix_code',
         'tahun',

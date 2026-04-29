@@ -171,7 +171,6 @@ class PpkSp2dKontrakVerifikasiController extends Controller
         $isPelunasan = ($termin?->jenis_termin ?? null) === 'PELUNASAN';
         $potonganPajak = collect($tagihan?->potonganTagihan ?? [])->filter(fn ($item) => $item->jenis_potongan !== 'ANGSURAN_UANG_MUKA');
         $requiresTaxDocuments = $potonganPajak->isNotEmpty();
-        $ebillingDocument = $spm?->arsipDokumen?->firstWhere('jenis_dokumen', 'E_BILLING');
         $buktiTransferSp2d = $sp2d->arsipDokumen?->firstWhere('jenis_dokumen', 'BUKTI_TRANSFER_SP2D');
 
         $documentStatuses = collect([
@@ -182,7 +181,6 @@ class PpkSp2dKontrakVerifikasiController extends Controller
             ['key' => 'bast', 'label' => 'BAST', 'path' => $detailKontrak?->file_bast, 'required' => $isPelunasan],
             ['key' => 'bap', 'label' => 'BAP', 'path' => $detailKontrak?->file_bap, 'required' => true],
             ['key' => 'faktur_pajak', 'label' => 'Faktur Pajak', 'path' => $detailKontrak?->file_faktur_pajak, 'required' => $requiresTaxDocuments],
-            ['key' => 'ebilling', 'label' => 'E-Billing', 'path' => $ebillingDocument?->path_file, 'required' => $requiresTaxDocuments],
             ['key' => 'bukti_transfer', 'label' => 'Bukti Transfer SP2D', 'path' => $buktiTransferSp2d?->path_file, 'required' => false],
         ])->map(function ($item) {
             $isAvailable = !empty($item['path']);

@@ -7,14 +7,14 @@
         <div class="">
             <div class="row g-0">
                 <div
-                    class="col-12 col-xl-8 col-xxl-8 auth-cover-left align-items-center justify-content-center d-none d-xl-flex border-end">
+                    class="col-12 col-xl-7 col-xxl-7 auth-cover-left align-items-center justify-content-center d-none d-xl-flex border-end">
 
                     <div class="card rounded-0 mb-0 border-0 shadow-none bg-transparent bg-none text-center">
                         <div>
-                            <video autoplay muted playsinline  style="width:50%;
+                            <video autoplay muted playsinline  style="width:100%;
     height:100%;
     object-fit:cover;">
-                                <source src="{{ URL::asset('logo/logo_apt_vid.mp4') }}" type="video/mp4"  style="object-fit: cover; width:100%;">
+                                <source src="{{ URL::asset('logo/animasi-logo.mp4') }}" type="video/mp4"  style="object-fit: cover; width:100%;">
                             </video>
                         </div>
                     </div>
@@ -22,15 +22,29 @@
                 </div>
 
                 <div
-                    class="col-12 col-xl-4 col-xxl-4 auth-cover-right align-items-center justify-content-center border-top border-4 border-primary border-gradient-1">
+                    class="col-12 col-xl-5 col-xxl-5 auth-cover-right align-items-center justify-content-center border-top border-4 border-primary border-gradient-1">
                     <div class="card rounded-0 m-3 mb-0 border-0 shadow-none bg-none">
                         <div class="card-body p-sm-5">
-                            <img src="{{ URL::asset('logo/logo-apt.svg') }}" class="mb-4" width="145"
+                            <img src="{{ URL::asset('logo/minilogo-sikeren.png') }}" class="mb-4" width="145"
                                 alt="">
-                            <h4 class="fw-bold">Sistem Informasi Keuangan dan Tagihan </h4>
+                            <h4 class="fw-bold">Sistem Informasi Keuangan dan Penagihan Terpadu</h4>
                             <p class="mb-0">BLU Kantor UPBU kelas 1 Aji Pangeran Tumenggung Pranoto - Samarinda</p>
 
                             <div class="form-body mt-4">
+                                @if ($errors->any())
+                                    <div class="alert alert-danger border-0 bg-danger bg-opacity-10 text-danger d-flex align-items-start mb-3"
+                                        role="alert">
+                                        <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
+                                        <div class="text-start">
+                                            <strong>Login gagal!</strong>
+                                            <ul class="mb-0 ps-3">
+                                                @foreach ($errors->all() as $error)
+                                                    <li>{{ $error }}</li>
+                                                @endforeach
+                                            </ul>
+                                        </div>
+                                    </div>
+                                @endif
                                 <form method="POST" action="{{ route('login') }}" class="row g-3">
                                     @csrf
 
@@ -94,6 +108,25 @@
     </div>
 @endsection
 @push('script')
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    @if ($errors->any())
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Login Gagal',
+                        html: @json($errors->first()),
+                        confirmButtonText: 'Coba Lagi',
+                        customClass: {
+                            confirmButton: 'btn btn-grd-primary text-white px-4'
+                        },
+                        buttonsStyling: false
+                    });
+                }
+            });
+        </script>
+    @endif
     <script>
         $(document).ready(function() {
             $("#show_hide_password a").on('click', function(event) {

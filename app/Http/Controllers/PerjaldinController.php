@@ -100,11 +100,11 @@ class PerjaldinController extends Controller
     {
         $budgetGroups = DipaBudgetOptionService::groupedOptions();
         $masterProvinsi = MasterUangHarianPerjaldin::orderBy('provinsi')->get();
-        $ppkUsers = User::role('PPK')->with('pegawai')->orderBy('name')->get();
-        $ppspmUsers = User::role('PPSPM')->with('pegawai')->orderBy('name')->get();
-        $bendaharaPenerimaanUsers = User::role('Bendahara Penerimaan')->with('pegawai')->orderBy('name')->get();
-        $bendaharaUsers = User::role('Bendahara Pengeluaran')->with('pegawai')->orderBy('name')->get();
-        $kasubbagUser = User::role('Kepala Subbagian Keuangan dan Tata Usaha')->with('pegawai')->orderBy('name')->first();
+        $ppkUsers = User::role('PPK')->with('profilable')->orderByDisplayName()->get();
+        $ppspmUsers = User::role('PPSPM')->with('profilable')->orderByDisplayName()->get();
+        $bendaharaPenerimaanUsers = User::role('Bendahara Penerimaan')->with('profilable')->orderByDisplayName()->get();
+        $bendaharaUsers = User::role('Bendahara Pengeluaran')->with('profilable')->orderByDisplayName()->get();
+        $kasubbagUser = User::role('Kepala Subbagian Keuangan dan Tata Usaha')->with('profilable')->orderByDisplayName()->first();
 
         return view('perjaldins.create', compact('budgetGroups', 'masterProvinsi', 'ppkUsers', 'ppspmUsers', 'bendaharaPenerimaanUsers', 'bendaharaUsers', 'kasubbagUser'));
     }
@@ -341,11 +341,11 @@ class PerjaldinController extends Controller
 
         $budgetGroups = DipaBudgetOptionService::groupedOptions();
         $masterProvinsi = MasterUangHarianPerjaldin::orderBy('provinsi')->get();
-        $ppkUsers = User::role('PPK')->with('pegawai')->orderBy('name')->get();
-        $ppspmUsers = User::role('PPSPM')->with('pegawai')->orderBy('name')->get();
-        $bendaharaPenerimaanUsers = User::role('Bendahara Penerimaan')->with('pegawai')->orderBy('name')->get();
-        $bendaharaUsers = User::role('Bendahara Pengeluaran')->with('pegawai')->orderBy('name')->get();
-        $kasubbagUser = User::role('Kepala Subbagian Keuangan dan Tata Usaha')->with('pegawai')->orderBy('name')->first();
+        $ppkUsers = User::role('PPK')->with('profilable')->orderByDisplayName()->get();
+        $ppspmUsers = User::role('PPSPM')->with('profilable')->orderByDisplayName()->get();
+        $bendaharaPenerimaanUsers = User::role('Bendahara Penerimaan')->with('profilable')->orderByDisplayName()->get();
+        $bendaharaUsers = User::role('Bendahara Pengeluaran')->with('profilable')->orderByDisplayName()->get();
+        $kasubbagUser = User::role('Kepala Subbagian Keuangan dan Tata Usaha')->with('profilable')->orderByDisplayName()->first();
 
         return view('perjaldins.edit-perjaldin', compact('tagihan', 'budgetGroups', 'masterProvinsi', 'ppkUsers', 'ppspmUsers', 'bendaharaPenerimaanUsers', 'bendaharaUsers', 'kasubbagUser'));
     }

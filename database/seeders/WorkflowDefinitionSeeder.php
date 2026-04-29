@@ -13,7 +13,7 @@ class WorkflowDefinitionSeeder extends Seeder
         $workflows = [
             [
                 'kode' => 'TAGIHAN_KONTRAK_PPK',
-                'nama' => 'Verifikasi Tagihan Kontrak oleh PPK',
+                'nama' => 'Verifikasi Tagihan Kontrak oleh PPK (legacy)',
                 'target_type' => 'App\\Models\\Tagihan',
                 'steps' => [
                     [
@@ -24,6 +24,22 @@ class WorkflowDefinitionSeeder extends Seeder
                         'can_reject' => true,
                         'can_request_revision' => true,
                     ],
+                ],
+            ],
+            [
+                // Workflow baru: 5 verifikator paralel di step 1, lalu Kasubbag finalisasi di step 2
+                'kode' => 'TAGIHAN_KONTRAK_VERIFIKATOR',
+                'nama' => 'Verifikasi Tagihan Kontrak (Multi-Verifikator)',
+                'target_type' => 'App\\Models\\Tagihan',
+                'steps' => [
+                    // === STEP 1 (paralel) — semua wajib approve baru lanjut ke step 2 ===
+                    ['urutan_step' => 1, 'nama_step' => 'Verifikasi PPK',                  'role_code' => 'PPK',                   'is_required' => true, 'can_reject' => true, 'can_request_revision' => true],
+                    ['urutan_step' => 1, 'nama_step' => 'Verifikasi PPSPM',                'role_code' => 'PPSPM',                 'is_required' => true, 'can_reject' => true, 'can_request_revision' => true],
+                    ['urutan_step' => 1, 'nama_step' => 'Verifikasi Koordinator Keuangan', 'role_code' => 'KOORDINATOR_KEUANGAN',  'is_required' => true, 'can_reject' => true, 'can_request_revision' => true],
+                    ['urutan_step' => 1, 'nama_step' => 'Verifikasi Bendahara Pengeluaran','role_code' => 'BENDAHARA_PENGELUARAN', 'is_required' => true, 'can_reject' => true, 'can_request_revision' => true],
+                    ['urutan_step' => 1, 'nama_step' => 'Verifikasi Bendahara Penerimaan', 'role_code' => 'BENDAHARA_PENERIMAAN',  'is_required' => true, 'can_reject' => true, 'can_request_revision' => true],
+                    // === STEP 2 — finalisasi Kasubbag ===
+                    ['urutan_step' => 2, 'nama_step' => 'Persetujuan Kasubbag',            'role_code' => 'KASUBBAG',              'is_required' => true, 'can_reject' => true, 'can_request_revision' => true],
                 ],
             ],
             [

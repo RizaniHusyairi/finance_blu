@@ -23,6 +23,13 @@
         'REVISI_KASUBBAG'     => ['class' => 'bg-warning text-dark',   'icon' => 'bi-arrow-counterclockwise',  'label' => 'Revisi Kasubbag'],
         'DITOLAK_KASUBBAG'    => ['class' => 'bg-danger',             'icon' => 'bi-x-octagon',               'label' => 'Ditolak Kasubbag'],
         'DISETUJUI_PERJALDIN' => ['class' => 'bg-success',            'icon' => 'bi-check-circle-fill',       'label' => 'Disetujui'],
+        // === Tagihan Kontrak ===
+        'PENDING_VERIFIKASI_KONTRAK'      => ['class' => 'bg-warning text-dark', 'icon' => 'bi-people-fill',           'label' => 'Verifikasi Paralel'],
+        'PENDING_KOORDINATOR_KEUANGAN'    => ['class' => 'bg-primary',           'icon' => 'bi-hourglass-split',       'label' => 'Menunggu Koor.Keuangan'],
+        'REVISI_KOORDINATOR_KEUANGAN'     => ['class' => 'bg-warning text-dark', 'icon' => 'bi-arrow-counterclockwise','label' => 'Revisi Koor.Keuangan'],
+        'DITOLAK_KOORDINATOR_KEUANGAN'    => ['class' => 'bg-danger',            'icon' => 'bi-x-octagon',             'label' => 'Ditolak Koor.Keuangan'],
+        'READY_FOR_SPP'                   => ['class' => 'bg-success',           'icon' => 'bi-check-circle-fill',     'label' => 'Disetujui · Siap SPP'],
+        'DISETUJUI_KONTRAK'               => ['class' => 'bg-success',           'icon' => 'bi-check-circle-fill',     'label' => 'Disetujui'],
     ];
     $s = $map[$status] ?? ['class' => 'bg-secondary', 'icon' => 'bi-question-circle', 'label' => $status];
     $size = $size ?? '';

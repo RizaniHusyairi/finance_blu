@@ -103,8 +103,8 @@ class SpmHonorController extends Controller
         $selectedBudgetItem = $sppModel->dipaRevisionItem;
         $spmModel = $sppModel->spm;
 
-        $ppspms = User::role('PPSPM')->orderBy('name')->get();
-        $kasubbagUser = User::role('Kepala Subbagian Keuangan dan Tata Usaha')->orderBy('name')->first();
+        $ppspms = User::role('PPSPM')->orderByDisplayName()->get();
+        $kasubbagUser = User::role('Kepala Subbagian Keuangan dan Tata Usaha')->orderByDisplayName()->first();
 
         // Nominal SPM = nominal SPP (otomatis penuh, pph sudah netto)
         $nominalSpm = (float) ($sppModel->nominal_spp ?? $tagihan->total_netto ?? 0);

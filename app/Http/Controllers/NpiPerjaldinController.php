@@ -104,7 +104,7 @@ class NpiPerjaldinController extends Controller
         
         $npiModel = $spmModel->npi;
 
-        $bendaharaPenerimaans = User::role('Bendahara Penerimaan')->orderBy('name')->get();
+        $bendaharaPenerimaans = User::role('Bendahara Penerimaan')->orderByDisplayName()->get();
         // Fetch PPK & Kasubbag
         $ppkSpp = $sppModel?->ppkVerifikator; // Asumsi jika SPP menyimpan info verifikator PPK
         $kasubbagUser = User::role('Kepala Subbagian Keuangan dan Tata Usaha')->first();

@@ -79,7 +79,14 @@
         </tr>
     </table>
 
-    <p>Dengan ini menyatakan bahwa pekerjaan seperti tersebut di atas telah selesai dan dilaksanakan dengan baik dan benar sesuai yang tercantum dalam Surat Perintah Kerja (SPK).</p>
+    <p>Dengan ini menyatakan bahwa pekerjaan seperti tersebut di atas telah selesai 100% dan dilaksanakan dengan baik dan benar sesuai yang tercantum dalam Surat Perintah Kerja (SPK) sebagai berikut :</p>
+
+    @isset($gambarRabBase64)
+        <div style="text-align: center; margin: 12px 0 16px 0;">
+            <img src="{{ $gambarRabBase64 }}" alt="Gambar RAB" style="max-width: 100%; max-height: 420px; border: 1px solid #999;">
+            <div style="font-size: 10px; color: #555; margin-top: 4px; font-style: italic;">Lampiran Gambar Rincian Anggaran Biaya (RAB)</div>
+        </div>
+    @endisset
 
     <p>Demikian Berita Acara Pemeriksaan Pekerjaan ini dibuat untuk dipergunakan sebagaimana mestinya.</p>
 

@@ -15,7 +15,6 @@ class MasterPihak extends Model
         'kategori',
         'jenis_entitas',
         'kode_pihak',
-        'user_id',
         'npwp',
         'nama_pihak',
         'nama_penanggung_jawab',
@@ -38,7 +37,7 @@ class MasterPihak extends Model
 
     public function user()
     {
-        return $this->belongsTo(User::class);
+        return $this->morphOne(User::class, 'profilable');
     }
 
     public function getNamaPerusahaanAttribute()

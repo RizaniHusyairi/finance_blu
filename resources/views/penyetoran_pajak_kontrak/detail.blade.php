@@ -228,14 +228,24 @@
                                 <input type="text" name="kode_billing" class="form-control font-monospace text-primary fw-bold" value="{{ old('kode_billing', $potongan->kode_billing) }}" placeholder="Masukkan Kode Billing" required>
                             </div>
                             <div class="mb-3">
-                                <label class="form-label small fw-semibold">Lampiran DJP Kode Billing <span class="text-muted">(opsional)</span></label>
-                                <input type="file" name="file_billing" class="form-control form-control-sm" accept=".pdf,.jpg,.jpeg,.png">
-                                <div class="form-text">PDF / JPG / PNG, maks 5MB</div>
+                                <label class="form-label small fw-semibold">
+                                    E-Billing (Cetakan DJP)
+                                    <span class="text-danger">{{ $arsipBilling ? '' : '*' }}</span>
+                                </label>
+                                <input type="file" name="file_billing" class="form-control form-control-sm"
+                                       accept=".pdf,.jpg,.jpeg,.png" {{ $arsipBilling ? '' : 'required' }}>
+                                <div class="form-text">Unggah file E-Billing (cetakan DJP) untuk Kode Billing di atas. PDF / JPG / PNG, maks 5MB.</div>
                                 @if($arsipBilling)
-                                    <div class="mt-1 small text-success"><i class="bi bi-paperclip"></i> {{ $arsipBilling->nama_file_asli }}</div>
+                                    <div class="mt-1 small text-success">
+                                        <i class="bi bi-paperclip"></i>
+                                        <a href="{{ Storage::url($arsipBilling->path_file) }}" target="_blank" class="text-success fw-semibold">
+                                            {{ $arsipBilling->nama_file_asli }}
+                                        </a>
+                                        <span class="text-muted">— upload baru untuk mengganti.</span>
+                                    </div>
                                 @endif
                             </div>
-                            <button class="btn btn-primary w-100 fw-bold"><i class="bi bi-save me-1"></i> SIMPAN KODE BILLING</button>
+                            <button class="btn btn-primary w-100 fw-bold"><i class="bi bi-save me-1"></i> SIMPAN KODE BILLING & E-BILLING</button>
                         </form>
                     </div>
                 </div>

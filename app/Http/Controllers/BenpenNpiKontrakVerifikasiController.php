@@ -188,8 +188,6 @@ class BenpenNpiKontrakVerifikasiController extends Controller
         $isPelunasan = ($termin?->jenis_termin ?? null) === 'PELUNASAN';
         $potonganPajak = collect($tagihan?->potonganTagihan ?? [])->filter(fn ($item) => $item->jenis_potongan !== 'ANGSURAN_UANG_MUKA');
         $requiresTaxDocuments = $potonganPajak->isNotEmpty();
-        $ebillingDocument = $spm?->arsipDokumen?->firstWhere('jenis_dokumen', 'E_BILLING');
-
         $documentStatuses = collect([
             ['key' => 'spm', 'label' => 'SPM', 'path' => true, 'required' => true],
             ['key' => 'spp', 'label' => 'SPP', 'path' => true, 'required' => true],
@@ -198,7 +196,6 @@ class BenpenNpiKontrakVerifikasiController extends Controller
             ['key' => 'bap', 'label' => 'BAP', 'path' => $detailKontrak?->file_bap, 'required' => true],
             ['key' => 'invoice', 'label' => 'Invoice', 'path' => $detailKontrak?->file_invoice, 'required' => true],
             ['key' => 'faktur_pajak', 'label' => 'Faktur Pajak', 'path' => $detailKontrak?->file_faktur_pajak, 'required' => $requiresTaxDocuments],
-            ['key' => 'ebilling', 'label' => 'E-Billing', 'path' => $ebillingDocument?->path_file, 'required' => $requiresTaxDocuments],
             ['key' => 'kwitansi', 'label' => 'Kwitansi', 'path' => $detailKontrak?->file_kwitansi ?? null, 'required' => false],
         ])->map(function ($item) {
             $isAvailable = !empty($item['path']);

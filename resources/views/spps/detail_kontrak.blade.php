@@ -21,7 +21,6 @@
         'tarif' => (float) $pj->persentase,
     ])->values();
     $isPelunasan = ($termin->jenis_termin ?? null) === 'PELUNASAN';
-    $ebillingPath = optional(optional($sppModel)->arsipDokumen?->firstWhere('jenis_dokumen', 'E_BILLING'))->path_file;
     $statusTagihanClass = match ($tagihan->status) {
         'READY_FOR_SPP' => 'bg-info',
         'PROSES_SPP' => 'bg-primary',

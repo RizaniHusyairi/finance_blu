@@ -107,8 +107,8 @@ class SpmPerjaldinController extends Controller
         $selectedBudgetItem = $komponen?->dipaRevisionItem;
         $spmModel  = $sppModel->spm;
 
-        $ppspms = User::role('PPSPM')->orderBy('name')->get();
-        $kasubbagUser = User::role('Kepala Subbagian Keuangan dan Tata Usaha')->orderBy('name')->first();
+        $ppspms = User::role('PPSPM')->orderByDisplayName()->get();
+        $kasubbagUser = User::role('Kepala Subbagian Keuangan dan Tata Usaha')->orderByDisplayName()->first();
 
         // Nominal SPM = nominal SPP
         $nominalSpm = (float) ($sppModel->nominal_spp ?? 0);

@@ -190,15 +190,12 @@ class PpspmSpmKontrakVerifikasiController extends Controller
         $kontrak = $detailKontrak?->kontrakTermin?->kontrak;
         $isPelunasan = ($detailKontrak?->kontrakTermin?->jenis_termin ?? null) === 'PELUNASAN';
         $requiresTaxDocuments = collect($tagihan?->potonganTagihan ?? [])->filter(fn ($item) => $item->jenis_potongan !== 'ANGSURAN_UANG_MUKA')->isNotEmpty();
-        $ebillingDocument = $spmModel->arsipDokumen?->firstWhere('jenis_dokumen', 'E_BILLING');
-
         $documentStatuses = collect([
             ['key' => 'bapp', 'label' => 'BAPP', 'path' => $detailKontrak?->file_bapp, 'required' => true],
             ['key' => 'bast', 'label' => 'BAST', 'path' => $detailKontrak?->file_bast, 'required' => $isPelunasan],
             ['key' => 'bap', 'label' => 'BAP', 'path' => $detailKontrak?->file_bap, 'required' => true],
             ['key' => 'invoice', 'label' => 'Invoice', 'path' => $detailKontrak?->file_invoice, 'required' => true],
             ['key' => 'faktur_pajak', 'label' => 'Faktur Pajak', 'path' => $detailKontrak?->file_faktur_pajak, 'required' => $requiresTaxDocuments],
-            ['key' => 'ebilling', 'label' => 'E-Billing', 'path' => $ebillingDocument?->path_file, 'required' => $requiresTaxDocuments],
             ['key' => 'kwitansi', 'label' => 'Kwitansi', 'path' => $detailKontrak?->file_kwitansi ?? null, 'required' => false],
         ])->map(function ($item) {
             $isAvailable = !empty($item['path']);
