@@ -19,20 +19,88 @@
         .ttd-table td { width: 50%; text-align: center; }
         .ttd-space { height: 80px; }
         p { text-align: justify; margin-top: 0; margin-bottom: 10px; }
+        p { text-align: justify; margin-top: 0; margin-bottom: 10px; }
+        footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
+    <footer>
+        <?php 
+            $footerPath = public_path('logo/footer_pdf-removebg-preview.png');
+            $footerType = pathinfo($footerPath, PATHINFO_EXTENSION);
+            if (file_exists($footerPath)) {
+                $footerData = file_get_contents($footerPath);
+                $footerBase64 = 'data:image/' . $footerType . ';base64,' . base64_encode($footerData);
+            } else {
+                $footerBase64 = '';
+            }
+        ?>
+        <img src="{{ $footerBase64 }}" alt="Footer" style="width: 65%; height: auto; opacity: 0.8;">
+    </footer>
 
-    <div class="text-center mb-4">
-        <div style="font-size: 12pt;">
-            KEMENTERIAN PERHUBUNGAN<br>
-            DIREKTORAT JENDERAL PERHUBUNGAN UDARA<br>
-            BADAN LAYANAN UMUM<br>
-            KANTOR UNIT PENYELENGGARA BANDAR UDARA KELAS I<br>
-            AJI PANGERAN TUMENGGUNG PRANOTO – SAMARINDA<br>
-            <span style="font-size: 10pt;">Jl. Poros Samarinda – Bontang, Kel. Sungai Siring, Samarinda – Kalimantan Timur</span>
-        </div>
-        <hr style="border: 1px solid black; margin-top: 5px; margin-bottom: 5px;">
+    <div class="header" style="margin-bottom: 15px;">
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 5px; border: none;">
+            <tr>
+                <td style="width: 15%; text-align: center; vertical-align: middle; border: none; padding: 0;">
+                    <?php 
+                        $path = public_path('logo/Logo_Kementerian_Perhubungan_Indonesia_(Kemenhub).png');
+                        $type = pathinfo($path, PATHINFO_EXTENSION);
+                        if (file_exists($path)) {
+                            $data = file_get_contents($path);
+                            $base64 = 'data:image/' . $type . ';base64,' . base64_encode($data);
+                        } else {
+                            $base64 = '';
+                        }
+                    ?>
+                    <img src="{{ $base64 }}" alt="Logo Kemenhub" style="width: 90px; height: auto;">
+                </td>
+                <td style="width: 85%; text-align: center; vertical-align: middle; border: none; padding: 0;">
+                    <div style="font-size: 18px; font-weight: bold; letter-spacing: 2px;">KEMENTERIAN PERHUBUNGAN</div>
+                    <div style="font-size: 16px; font-weight: bold; letter-spacing: 2px;">DIREKTORAT JENDERAL PERHUBUNGAN UDARA</div>
+                    <div style="font-size: 14px; font-weight: bold;">BADAN LAYANAN UMUM</div>
+                    <div style="font-size: 14px; font-weight: bold;">KANTOR UNIT PENYELENGGARA BANDAR UDARA KELAS I</div>
+                    <div style="font-size: 14px; font-weight: bold;">AJI PANGERAN TUMENGGUNG PRANOTO &ndash; SAMARINDA</div>
+                </td>
+            </tr>
+        </table>
+        
+        <table style="width: 100%; border-collapse: collapse; border: none; font-weight: normal; font-size: 13px;">
+            <tr>
+                <td style="width: 44%; text-align: left; vertical-align: top; border: none; padding: 0 10px 0 55px;">
+                    Jl. Poros Samarinda &ndash; Bontang, Kel. Sungai<br>
+                    Siring, Samarinda &ndash; Kalimantan Timur
+                </td>
+                <td style="width: 1px; background-color: black; padding: 0;"></td>
+                <td style="width: 16%; text-align: left; vertical-align: top; border: none; padding: 0 10px;">
+                    TELP. (0541)<br>
+                    2831593
+                </td>
+                <td style="width: 1px; background-color: black; padding: 0;"></td>
+                <td style="width: 39%; text-align: left; vertical-align: top; border: none; padding: 0 10px;">
+                    <table style="width: 100%; border-collapse: collapse; border: none; font-size: 13px;">
+                        <tr>
+                            <td style="width: 40px; border: none; padding: 0;">FAX</td>
+                            <td style="width: 10px; border: none; padding: 0;">:</td>
+                            <td style="border: none; padding: 0;">(0541) 743786</td>
+                        </tr>
+                        <tr>
+                            <td style="border: none; padding: 0;">EMAIL</td>
+                            <td style="border: none; padding: 0;">:</td>
+                            <td style="border: none; padding: 0; color: blue; text-decoration: underline;">mail.aptpranotoairport@gmail.com</td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+
+        <div style="border-bottom: 2px solid black; margin-top: 5px; margin-bottom: 2px;"></div>
+        <div style="border-bottom: 1px solid black;"></div>
     </div>
 
     <div class="text-center mb-4 mt-3">
