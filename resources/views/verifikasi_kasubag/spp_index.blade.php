@@ -86,6 +86,7 @@
                             <th>No. SPP / Tanggal</th>
                             <th>No. Tagihan / Dasar Kontrak</th>
                             <th>Vendor / Pekerjaan</th>
+                            <th>Beban Anggaran (COA)</th>
                             <th class="text-end">Nilai SPP (Rp)</th>
                             <th class="text-center">Status PPK</th>
                             <th class="text-center">Status Koord. Keuangan</th>
@@ -104,15 +105,38 @@
                                     <i class="bi bi-calendar-check"></i> {{ \Carbon\Carbon::parse($spp->tanggal_spp)->isoFormat('D MMM Y') }}
                                 </span>
                             </td>
+                            @php
+                                $kontrak    = $spp->tagihan?->detailKontrak?->kontrakTermin?->kontrak;
+                                $termin     = $spp->tagihan?->detailKontrak?->kontrakTermin;
+                                $vendorNama = $kontrak?->vendor?->nama_pihak
+                                    ?? $spp->tagihan?->pihak?->nama_pihak
+                                    ?? '-';
+                                $uraian     = $termin?->keterangan_termin
+                                    ?? $kontrak?->nama_pekerjaan
+                                    ?? $spp->tagihan?->deskripsi
+                                    ?? '-';
+                                $coa        = $spp->dipaRevisionItem?->coa
+                                    ?? $spp->tagihan?->dipaRevisionItem?->coa;
+                            @endphp
                             <td>
                                 <span class="text-muted d-block small">Tagihan: {{ $spp->tagihan->nomor_tagihan ?? '-' }}</span>
-                                <span class="fw-bold">{{ $spp->tagihan->detailKontrak->kontrakTermin->kontrak->nomor_kontrak ?? '-' }}</span>
+                                <span class="fw-bold">{{ $kontrak?->nomor_spk ?? '-' }}</span>
                             </td>
                             <td>
-                                <span class="d-block fw-bold">{{ $spp->tagihan->pihak->nama_pihak ?? '-' }}</span>
-                                <small class="text-muted d-block text-truncate" style="max-width: 200px;" title="{{ $spp->tagihan->detailKontrak->kontrakTermin->uraian_termin ?? '-' }}">
-                                    {{ $spp->tagihan->detailKontrak->kontrakTermin->uraian_termin ?? '-' }}
+                                <span class="d-block fw-bold">{{ $vendorNama }}</span>
+                                <small class="text-muted d-block text-truncate" style="max-width: 200px;" title="{{ $uraian }}">
+                                    {{ $uraian }}
                                 </small>
+                            </td>
+                            <td>
+                                @if($coa)
+                                    <span class="badge bg-primary">{{ $coa->kode_mak_lengkap }}</span>
+                                    <small class="text-muted d-block text-truncate" style="max-width: 220px;" title="{{ $coa->nama_akun }}">
+                                        {{ $coa->nama_akun }}
+                                    </small>
+                                @else
+                                    <span class="text-muted">-</span>
+                                @endif
                             </td>
                             <td class="text-end text-success fw-bold">
                                 Rp {{ number_format($spp->nominal_spp, 0, ',', '.') }}

@@ -222,6 +222,7 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
         
         // Verifikasi SPP (legacy kontrak)
         Route::get('/verifikasi-ppk/spp', [\App\Http\Controllers\SppVerifikasiController::class, 'sppIndex'])->name('verifikasi-ppk.spp.index');
+        Route::get('/verifikasi-ppk/spp/{id}', [\App\Http\Controllers\SppVerifikasiController::class, 'sppShow'])->name('verifikasi-ppk.spp.show');
         Route::post('/verifikasi-ppk/spp/{spp_id}/approve', [\App\Http\Controllers\SppVerifikasiController::class, 'approveSpp'])->name('verifikasi-ppk.spp.approve');
         Route::post('/verifikasi-ppk/spp/{spp_id}/revisi', [\App\Http\Controllers\SppVerifikasiController::class, 'revisiSpp'])->name('verifikasi-ppk.spp.revisi');
 

@@ -180,21 +180,24 @@
                     </div>
                     <div class="row mb-3">
                         <div class="col-sm-4 text-muted">Nomor Kontrak / SPK</div>
-                        <div class="col-sm-8 fw-bold">{{ $spp->tagihan->detailKontrak->kontrakTermin->kontrak->nomor_kontrak ?? '-' }}</div>
+                        <div class="col-sm-8 fw-bold">{{ $spp->tagihan?->detailKontrak?->kontrakTermin?->kontrak?->nomor_spk ?? '-' }}</div>
                     </div>
                     <div class="row mb-3">
                         <div class="col-sm-4 text-muted">Vendor / Dibayarkan Kepada</div>
-                        <div class="col-sm-8">{{ $spp->tagihan->pihak->nama_pihak ?? '-' }}</div>
+                        <div class="col-sm-8">{{ $spp->tagihan?->detailKontrak?->kontrakTermin?->kontrak?->vendor?->nama_pihak ?? $spp->tagihan?->pihak?->nama_pihak ?? '-' }}</div>
                     </div>
                     <div class="row mb-3">
                         <div class="col-sm-4 text-muted">Uraian / Termin Pekerjaan</div>
-                        <div class="col-sm-8">{{ $spp->tagihan->detailKontrak->kontrakTermin->uraian_termin ?? '-' }}</div>
+                        <div class="col-sm-8">{{ $spp->tagihan?->detailKontrak?->kontrakTermin?->keterangan_termin ?? $spp->tagihan?->detailKontrak?->kontrakTermin?->kontrak?->nama_pekerjaan ?? $spp->tagihan?->deskripsi ?? '-' }}</div>
                     </div>
                     <div class="row mb-3">
                         <div class="col-sm-4 text-muted">Beban Anggaran (COA)</div>
                         <div class="col-sm-8">
-                            <span class="badge bg-primary">{{ $spp->tagihan->dipaRevisionItem->coa->kode_akun ?? '-' }}</span> 
-                            {{ $spp->tagihan->dipaRevisionItem->coa->nama_akun ?? '-' }}
+                            @php
+                                $coaShow = $spp->dipaRevisionItem?->coa ?? $spp->tagihan?->dipaRevisionItem?->coa;
+                            @endphp
+                            <span class="badge bg-primary">{{ $coaShow?->kode_mak_lengkap ?? '-' }}</span>
+                            {{ $coaShow?->nama_akun ?? '-' }}
                         </div>
                     </div>
                 </div>
@@ -211,24 +214,27 @@
                             <thead class="table-light">
                                 <tr>
                                     <th>Jenis Potongan</th>
-                                    <th>Akun (COA)</th>
                                     <th class="text-end">Nominal</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @php $totalPotongan = 0; @endphp
                                 @foreach($spp->tagihan->potonganTagihan as $potonganTagihan)
-                                    @php $totalPotongan += $potonganTagihan->nominal; @endphp
+                                    @php $totalPotongan += (float) $potonganTagihan->nominal_potongan; @endphp
                                     <tr>
-                                        <td>{{ $potonganTagihan->pajak->jenis_pajak ?? '-' }}</td>
-                                        <td>{{ $potonganTagihan->akunPotongan->kode_mak_lengkap ?? '-' }} {{ $potonganTagihan->akunPotongan->nama_akun ?? '-' }}</td>
-                                        <td class="text-end text-danger fw-bold">Rp {{ number_format($potonganTagihan->nominal, 0, ',', '.') }}</td>
+                                        <td>
+                                            {{ $potonganTagihan->pajak->jenis_pajak ?? $potonganTagihan->nama_pajak_snapshot ?? $potonganTagihan->jenis_potongan ?? '-' }}
+                                            @if($potonganTagihan->persentase_tarif_snapshot)
+                                                <small class="text-muted">({{ rtrim(rtrim(number_format($potonganTagihan->persentase_tarif_snapshot, 2, ',', '.'), '0'), ',') }}%)</small>
+                                            @endif
+                                        </td>
+                                        <td class="text-end text-danger fw-bold">Rp {{ number_format((float) $potonganTagihan->nominal_potongan, 0, ',', '.') }}</td>
                                     </tr>
                                 @endforeach
                             </tbody>
                             <tfoot class="table-light">
                                 <tr>
-                                    <th colspan="2" class="text-end">Total Potongan:</th>
+                                    <th colspan="1" class="text-end">Total Potongan:</th>
                                     <th class="text-end text-danger fs-6">Rp {{ number_format($totalPotongan, 0, ',', '.') }}</th>
                                 </tr>
                             </tfoot>
