@@ -31,15 +31,30 @@
                     <h6 class="text-secondary border-bottom pb-1"><i class="bi bi-person me-1"></i> 1. Informasi Pegawai</h6>
                     <div class="mb-2">
                         <label class="form-label mb-1 small">Nama Pegawai <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control form-control-sm input-nama @error("peserta.{$index}.nama_pegawai") is-invalid @enderror" name="peserta[{{ $index }}][nama_pegawai]" placeholder="Nama" required value="{{ $row['nama_pegawai'] ?? '' }}">
+                        <select class="form-select form-select-sm pegawai-select @error("peserta.{$index}.nama_pegawai") is-invalid @enderror" name="peserta[{{ $index }}][pegawai_id]" required>
+                            <option value="">-- Pilih Pegawai --</option>
+                            @foreach($masterPegawai as $peg)
+                                <option value="{{ $peg->id }}"
+                                    data-nama="{{ $peg->nama_lengkap }}"
+                                    data-nip="{{ $peg->nip }}"
+                                    data-rek="{{ $peg->nomor_rekening }}"
+                                    data-namarek="{{ $peg->nama_rekening }}"
+                                    {{ (isset($row['nama_pegawai']) && $peg->nama_lengkap == ($row['nama_pegawai'] ?? '')) ? 'selected' : '' }}
+                                >
+                                    {{ $peg->nama_lengkap }} {{ $peg->nip ? '(' . $peg->nip . ')' : '' }}
+                                </option>
+                            @endforeach
+                        </select>
+                        <input type="hidden" class="input-nama-hidden" name="peserta[{{ $index }}][nama_pegawai]" value="{{ $row['nama_pegawai'] ?? '' }}">
                     </div>
                     <div class="mb-2">
                         <label class="form-label mb-1 small">NIP</label>
-                        <input type="text" class="form-control form-control-sm" name="peserta[{{ $index }}][nip]" placeholder="NIP (Opsional)" value="{{ $row['nip'] ?? '' }}">
+                        <input type="text" class="form-control form-control-sm nip-input" name="peserta[{{ $index }}][nip]" placeholder="Otomatis terisi" value="{{ $row['nip'] ?? '' }}" readonly>
                     </div>
                     <div class="mb-2">
                         <label class="form-label mb-1 small">Rekening</label>
-                        <input type="text" class="form-control form-control-sm" name="peserta[{{ $index }}][rekening]" placeholder="Rekening (Opsional)" value="{{ $row['rekening'] ?? '' }}">
+                        <input type="text" class="form-control form-control-sm rekening-input" name="peserta[{{ $index }}][rekening]" placeholder="Rekening (Opsional)" value="{{ $row['rekening'] ?? '' }}">
+                        <small class="text-muted font-10 rek-hint d-none"><i class="bi bi-info-circle"></i> Tidak ada data rekening, silakan isi manual.</small>
                     </div>
                 </div>
 

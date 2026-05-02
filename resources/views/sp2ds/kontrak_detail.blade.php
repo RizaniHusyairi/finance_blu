@@ -75,6 +75,9 @@
                         <span class="badge {{ $kasubbagApproval?->status === 'APPROVED' ? 'bg-success' : ($kasubbagApproval?->status === 'PENDING' ? 'bg-warning text-dark' : (in_array($kasubbagApproval?->status, ['REVISION','REJECTED']) ? 'bg-danger' : 'bg-light text-dark border')) }}">
                             KSB: {{ $kasubbagApproval?->status ?? 'N/A' }}
                         </span>
+                        <span class="badge {{ $ppspmApproval?->status === 'APPROVED' ? 'bg-success' : ($ppspmApproval?->status === 'PENDING' ? 'bg-warning text-dark' : (in_array($ppspmApproval?->status, ['REVISION','REJECTED']) ? 'bg-danger' : 'bg-light text-dark border')) }}">
+                            PPSPM: {{ $ppspmApproval?->status ?? 'N/A' }}
+                        </span>
                     @endif
                 </div>
 
@@ -142,6 +145,10 @@
                     <div class="border rounded p-2 text-center {{ $kasubbagApproval?->status === 'APPROVED' ? 'border-success bg-success bg-opacity-10' : ($kasubbagApproval?->status === 'PENDING' ? 'border-warning bg-warning bg-opacity-10' : (in_array($kasubbagApproval?->status, ['REVISION','REJECTED']) ? 'border-danger bg-danger bg-opacity-10' : 'bg-light')) }}" style="flex: 1; min-width: 100px;">
                         <div class="fw-bold" style="font-size: 12px;">Kasubbag</div>
                         <div style="font-size: 10px;">{{ $kasubbagApproval?->status ?? 'WAITING' }}</div>
+                    </div>
+                    <div class="border rounded p-2 text-center {{ $ppspmApproval?->status === 'APPROVED' ? 'border-success bg-success bg-opacity-10' : ($ppspmApproval?->status === 'PENDING' ? 'border-warning bg-warning bg-opacity-10' : (in_array($ppspmApproval?->status, ['REVISION','REJECTED']) ? 'border-danger bg-danger bg-opacity-10' : 'bg-light')) }}" style="flex: 1; min-width: 100px;">
+                        <div class="fw-bold" style="font-size: 12px;">PPSPM</div>
+                        <div style="font-size: 10px;">{{ $ppspmApproval?->status ?? 'WAITING' }}</div>
                     </div>
                 </div>
             </div>
@@ -336,9 +343,9 @@
                 <div class="modal-body">
                     <p>Setelah pengajuan, form SP2D akan dikunci sementara.</p>
                     <p>Notifikasi verifikasi paralel akan otomatis dikirimkan ke:</p>
-                    <ul>
                         <li><strong>PPK</strong></li>
                         <li><strong>Kepala Subbagian Keuangan dan Tata Usaha</strong></li>
+                        <li><strong>PPSPM</strong></li>
                     </ul>
                 </div>
                 <div class="modal-footer border-0">

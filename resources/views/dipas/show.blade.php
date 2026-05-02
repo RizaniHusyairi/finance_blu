@@ -213,24 +213,30 @@
                     <thead class="table-light">
                         <tr>
                             <th class="text-center" width="5%">No</th>
-                            <th width="22%">COA Lengkap</th>
-                            <th width="10%">Kode Akun</th>
-                            <th width="20%">Nama Akun</th>
-                            <th width="12%">Jenis Akun</th>
+                            <th width="18%">COA Lengkap</th>
+                            <th width="15%">Nama Akun</th>
                             <th width="14%" class="text-end">Nilai Pagu</th>
+                            <th width="14%" class="text-end">Realisasi</th>
+                            <th width="14%" class="text-end">Sisa Pagu</th>
                             <th width="8%" class="text-center">Status</th>
-                            <th width="18%" class="text-center">Aksi</th>
+                            <th width="12%" class="text-center">Aksi</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse($items as $item)
                             <tr>
                                 <td class="text-center">{{ $loop->iteration }}</td>
-                                <td class="fw-bold text-primary">{{ $item->coa->kode_mak_lengkap ?? '-' }}</td>
-                                <td>{{ $item->coa->kd_akun ?? '-' }}</td>
-                                <td>{{ $item->coa->nama_akun ?? '-' }}</td>
-                                <td>{{ $item->coa->jenis_akun ?? '-' }}</td>
-                                <td class="text-end fw-semibold">Rp {{ number_format($item->nilai_pagu, 0, ',', '.') }}</td>
+                                <td class="fw-bold text-primary">
+                                    {{ $item->coa->kode_mak_lengkap ?? '-' }}<br>
+                                    <small class="text-muted">{{ $item->coa->kd_akun ?? '-' }}</small>
+                                </td>
+                                <td>
+                                    {{ $item->coa->nama_akun ?? '-' }}<br>
+                                    <small class="text-muted">{{ $item->coa->jenis_akun ?? '-' }}</small>
+                                </td>
+                                <td class="text-end fw-semibold text-dark">Rp {{ number_format($item->nilai_pagu, 0, ',', '.') }}</td>
+                                <td class="text-end text-success">Rp {{ number_format($item->total_realisasi, 0, ',', '.') }}</td>
+                                <td class="text-end fw-bold {{ $item->sisa_pagu < 0 ? 'text-danger' : 'text-primary' }}">Rp {{ number_format($item->sisa_pagu, 0, ',', '.') }}</td>
                                 <td class="text-center">
                                     <span class="badge {{ $item->status_aktif ? 'bg-success' : 'bg-secondary' }}">{{ $item->status_aktif ? 'Aktif' : 'Nonaktif' }}</span>
                                 </td>

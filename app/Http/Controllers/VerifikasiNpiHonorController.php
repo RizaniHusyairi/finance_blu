@@ -26,6 +26,7 @@ class VerifikasiNpiHonorController extends Controller
         if ($user->hasRole('Bendahara Penerimaan')) return 'Bendahara Penerimaan';
         if ($user->hasRole('PPK')) return 'PPK';
         if ($user->hasRole('Kepala Subbagian Keuangan dan Tata Usaha')) return 'Kepala Subbagian Keuangan dan Tata Usaha';
+        if ($user->hasRole('Koordinator Keuangan')) return 'Koordinator Keuangan';
         
         return '';
     }
@@ -66,7 +67,7 @@ class VerifikasiNpiHonorController extends Controller
                     $sq->whereNull('assigned_user_id')->orWhere('assigned_user_id', $user->id);
                 });
             });
-        } elseif ($roleCode === 'Kepala Subbagian Keuangan dan Tata Usaha') {
+        } elseif (in_array($roleCode, ['Kepala Subbagian Keuangan dan Tata Usaha', 'Koordinator Keuangan'], true)) {
             $query->whereHas('workflowInstances.approvals', function($q) use ($roleCode) {
                 $q->where('role_code', $roleCode);
             });

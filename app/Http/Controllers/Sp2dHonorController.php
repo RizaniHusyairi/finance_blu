@@ -174,6 +174,7 @@ class Sp2dHonorController extends Controller
             $workflow = $sp2d->workflowInstances->first();
             $ppkApproval = collect($workflow?->approvals ?? [])->firstWhere('role_code', 'PPK');
             $kasubbagApproval = collect($workflow?->approvals ?? [])->firstWhere('role_code', 'Kepala Subbagian Keuangan dan Tata Usaha');
+            $ppspmApproval = collect($workflow?->approvals ?? [])->firstWhere('role_code', 'PPSPM');
         }
 
         if ($progressStep == 3) {
@@ -189,7 +190,7 @@ class Sp2dHonorController extends Controller
             'checks', 'rekeningPenerima',
             'defaultNilai', 'defaultTahun',
             'progressStep', 'isSP2DFinal',
-            'workflow', 'ppkApproval', 'kasubbagApproval', 'autoNomorSp2d'
+            'workflow', 'ppkApproval', 'kasubbagApproval', 'ppspmApproval', 'autoNomorSp2d'
         ));
     }
 
@@ -316,6 +317,13 @@ class Sp2dHonorController extends Controller
                 'title' => 'Tugas Verifikasi SP2D Honorarium',
                 'message' => "Mohon evaluasi paralelisasi penyelesaian SP2D Honorarium #{$sp2d->nomor_sp2d}.",
                 'url' => route('verifikasi-kasubag.sp2d.kontrak.index') // Note: same
+            ]));
+
+            $ppspms = User::role('PPSPM')->get();
+            Notification::send($ppspms, new WorkflowNotification([
+                'title' => 'Tugas Verifikasi SP2D Honorarium',
+                'message' => "Mohon evaluasi paralelisasi penyelesaian SP2D Honorarium #{$sp2d->nomor_sp2d}.",
+                'url' => '#' 
             ]));
 
             DB::commit();

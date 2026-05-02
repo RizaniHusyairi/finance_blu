@@ -179,26 +179,14 @@ class Sp2dController extends Controller
 
     private function syncRealisasiAnggaran(DokumenSp2d $sp2d, ?string $catatanBku = null): void
     {
-        $spp = optional(optional($sp2d->npi)->spm)->spp;
-        $tagihan = optional($spp)->tagihan;
-
-        if (! $spp || ! $tagihan || ! $spp->dipa_revision_item_id) {
-            return;
+        try {
+            $budgetRealizationService = app(\App\Services\BudgetRealizationService::class);
+            $budgetRealizationService->recordFromSp2d($sp2d);
+        } catch (\Exception $e) {
+            \Log::error('Gagal mencatat realisasi anggaran dari SP2D: ' . $e->getMessage());
+            // Optionally, we can rethrow or just log. Since it's critical, maybe rethrow?
+            throw $e;
         }
-
-        RealisasiAnggaran::updateOrCreate(
-            [
-                'tagihan_id' => $tagihan->id,
-                'nomor_bukti' => $sp2d->nomor_sp2d,
-            ],
-            [
-                'dipa_revision_item_id' => $spp->dipa_revision_item_id,
-                'tanggal_pencairan' => $sp2d->tanggal_sp2d,
-                'nominal_cair' => $spp->nominal_spp,
-                'keterangan' => $catatanBku ?: 'Realisasi dari eksekusi SP2D.',
-                'created_by' => Auth::id(),
-            ]
-        );
     }
 
     private function syncTagihanStatus(DokumenSp2d $sp2d): void

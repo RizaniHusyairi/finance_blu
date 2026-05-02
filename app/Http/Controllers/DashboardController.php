@@ -356,7 +356,7 @@ class DashboardController extends Controller
                 ->tap($pembuatJoin)
                 ->select('dokumen_spp.id', 'dokumen_spp.nomor_spp as nomor', 'dokumen_spp.nominal_spp as nilai', $pembuatExpr)
                 ->where('dokumen_spp.status', 'DRAFT')
-                ->get()->map(function($i) { $i->jenis = 'SPP'; $i->prioritas = 'Sedang'; $i->url_reject = route('verifikasi-ppk.spp.revisi', $i->id); $i->url_approve = route('verifikasi-ppk.spp.approve', $i->id); return $i; });
+                ->get()->map(function($i) { $i->jenis = 'SPP'; $i->prioritas = 'Sedang'; $i->url_reject = route('verifikasi-spp.kontrak.revisi', $i->id); $i->url_approve = route('verifikasi-spp.kontrak.approve', $i->id); return $i; });
                 
             $listNpi = DB::table('dokumen_npi')
                 ->join('users', 'dokumen_npi.bendahara_penerimaan_id', '=', 'users.id')

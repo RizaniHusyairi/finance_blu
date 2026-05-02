@@ -63,7 +63,7 @@ class WorkflowService
      * Approve step aktif saat ini.
      * Jika tidak ada step lanjutan, workflow selesai (APPROVED).
      */
-    public function approveCurrentStep(Model $document, int $actedByUserId, ?string $catatan = null): WorkflowInstance
+    public function approveCurrentStep(Model $document, int $actedByUserId, ?string $catatan = null, ?int $approvalId = null): WorkflowInstance
     {
         $instance = $this->getActiveInstance($document);
 
@@ -71,7 +71,11 @@ class WorkflowService
             throw new \RuntimeException('Tidak ada workflow aktif untuk dokumen ini.');
         }
 
-        $approval = $this->getPendingApprovalForUser($instance, $instance->step_saat_ini, $actedByUserId);
+        if ($approvalId) {
+            $approval = $instance->approvals()->where('id', $approvalId)->where('status', 'PENDING')->first();
+        } else {
+            $approval = $this->getPendingApprovalForUser($instance, $instance->step_saat_ini, $actedByUserId);
+        }
 
         if (!$approval) {
             throw new \RuntimeException('Tidak ada approval step yang pending untuk Anda.');
@@ -114,7 +118,7 @@ class WorkflowService
     /**
      * Request revision pada step aktif.
      */
-    public function requestRevision(Model $document, int $actedByUserId, ?string $catatan = null): WorkflowInstance
+    public function requestRevision(Model $document, int $actedByUserId, ?string $catatan = null, ?int $approvalId = null): WorkflowInstance
     {
         $instance = $this->getActiveInstance($document);
 
@@ -122,7 +126,11 @@ class WorkflowService
             throw new \RuntimeException('Tidak ada workflow aktif untuk dokumen ini.');
         }
 
-        $approval = $this->getPendingApprovalForUser($instance, $instance->step_saat_ini, $actedByUserId);
+        if ($approvalId) {
+            $approval = $instance->approvals()->where('id', $approvalId)->where('status', 'PENDING')->first();
+        } else {
+            $approval = $this->getPendingApprovalForUser($instance, $instance->step_saat_ini, $actedByUserId);
+        }
 
         if (!$approval) {
             throw new \RuntimeException('Tidak ada approval step yang pending untuk Anda.');
@@ -144,7 +152,7 @@ class WorkflowService
     /**
      * Reject step aktif secara permanen.
      */
-    public function rejectCurrentStep(Model $document, int $actedByUserId, ?string $catatan = null): WorkflowInstance
+    public function rejectCurrentStep(Model $document, int $actedByUserId, ?string $catatan = null, ?int $approvalId = null): WorkflowInstance
     {
         $instance = $this->getActiveInstance($document);
 
@@ -152,7 +160,11 @@ class WorkflowService
             throw new \RuntimeException('Tidak ada workflow aktif untuk dokumen ini.');
         }
 
-        $approval = $this->getPendingApprovalForUser($instance, $instance->step_saat_ini, $actedByUserId);
+        if ($approvalId) {
+            $approval = $instance->approvals()->where('id', $approvalId)->where('status', 'PENDING')->first();
+        } else {
+            $approval = $this->getPendingApprovalForUser($instance, $instance->step_saat_ini, $actedByUserId);
+        }
 
         if (!$approval) {
             throw new \RuntimeException('Tidak ada approval step yang pending untuk Anda.');

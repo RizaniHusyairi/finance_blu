@@ -334,70 +334,86 @@
             </div>
 
             {{-- Panel Aksi Verifikasi --}}
-            @if($canAct)
-            <div class="card border-0 shadow-sm bg-light">
-                <div class="card-body text-center py-4">
-                    <h5 class="fw-bold mb-3">Aksi Verifikasi</h5>
-                    <p class="text-muted small mb-4">Pastikan data SPM Perjaldin sudah sesuai sebelum memberikan persetujuan.</p>
+            @if(isset($activeRoleApprovals) && count($activeRoleApprovals) > 0)
+                @foreach($activeRoleApprovals as $index => $approval)
+                    @php
+                        $roleName = $approval['role'];
+                        $approvalId = $approval['approval_id'];
+                        $approveRouteDynamic = $approval['approveRoute'];
+                        $revisiRouteDynamic = $approval['revisiRoute'];
+                        $modalSuffix = \Illuminate\Support\Str::slug($roleName) . '_' . $approvalId;
+                    @endphp
+                    <div class="card border-0 shadow-sm bg-light mb-4">
+                        <div class="card-body text-center py-4">
+                            <h5 class="fw-bold mb-3">Aksi Verifikasi ({{ $roleName }})</h5>
+                            <p class="text-muted small mb-4">Pastikan data SPM Perjaldin sudah sesuai sebelum memberikan persetujuan sebagai {{ $roleName }}.</p>
 
-                    <button type="button" class="btn btn-success w-100 mb-2 py-2 fs-6 fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#modalApprove">
-                        <i class="material-icons-outlined me-1" style="font-size: 18px; vertical-align: middle;">check_circle</i> Setujui SPM
-                    </button>
-                    <button type="button" class="btn btn-outline-danger w-100 py-2 fw-bold" data-bs-toggle="modal" data-bs-target="#modalRevisi">
-                        <i class="material-icons-outlined me-1" style="font-size: 18px; vertical-align: middle;">cancel</i> Minta Revisi
-                    </button>
-                </div>
-            </div>
-
-            {{-- Modal Approve --}}
-            <div class="modal fade" id="modalApprove" tabindex="-1" aria-hidden="true">
-                <div class="modal-dialog modal-dialog-centered">
-                    <div class="modal-content">
-                        <div class="modal-header bg-success text-white">
-                            <h5 class="modal-title text-white">Konfirmasi Persetujuan</h5>
-                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                        </div>
-                        <div class="modal-body text-center py-4">
-                            <i class="material-icons-outlined text-success" style="font-size: 4rem;">check_circle</i>
-                            <h4 class="mt-3 mb-2">Apakah Anda yakin?</h4>
-                            <p class="text-muted mb-0">Anda akan memberikan persetujuan sebagai <strong>{{ $roleLabel }}</strong> untuk SPM <strong>{{ $spm->nomor_spm }}</strong>.</p>
-                        </div>
-                        <div class="modal-footer justify-content-center border-0 pb-4">
-                            <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Batal</button>
-                            <form action="{{ route($approveRoute, $spm->id) }}" method="POST">
-                                @csrf
-                                <button type="submit" class="btn btn-success px-4 fw-bold">Teruskan Proses</button>
-                            </form>
+                            <button type="button" class="btn btn-success w-100 mb-2 py-2 fs-6 fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#modalApprove_{{ $modalSuffix }}">
+                                <i class="material-icons-outlined me-1" style="font-size: 18px; vertical-align: middle;">check_circle</i> Setujui SPM ({{ $roleName }})
+                            </button>
+                            <button type="button" class="btn btn-outline-danger w-100 py-2 fw-bold" data-bs-toggle="modal" data-bs-target="#modalRevisi_{{ $modalSuffix }}">
+                                <i class="material-icons-outlined me-1" style="font-size: 18px; vertical-align: middle;">cancel</i> Minta Revisi ({{ $roleName }})
+                            </button>
                         </div>
                     </div>
-                </div>
-            </div>
 
-            {{-- Modal Revisi --}}
-            <div class="modal fade" id="modalRevisi" tabindex="-1" aria-hidden="true">
-                <div class="modal-dialog modal-dialog-centered">
-                    <div class="modal-content">
-                        <div class="modal-header bg-danger text-white">
-                            <h5 class="modal-title text-white">Kembalikan untuk Revisi</h5>
-                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                        </div>
-                        <form action="{{ route($revisiRoute, $spm->id) }}" method="POST">
-                            @csrf
-                            <div class="modal-body">
-                                <p class="text-muted small">SPM ini akan direvisi. Berikan catatan mengenai revisi yang diperlukan.</p>
-                                <div class="mb-3 mt-3 text-start">
-                                    <label class="form-label fw-bold">Catatan / Alasan Revisi <span class="text-danger">*</span></label>
-                                    <textarea name="catatan_revisi" class="form-control" rows="4" required placeholder="Jelaskan apa yang harus diperbaiki..."></textarea>
+                    {{-- Modal Approve --}}
+                    <div class="modal fade" id="modalApprove_{{ $modalSuffix }}" tabindex="-1" aria-hidden="true">
+                        <div class="modal-dialog modal-dialog-centered">
+                            <div class="modal-content">
+                                <div class="modal-header bg-success text-white">
+                                    <h5 class="modal-title text-white">Konfirmasi Persetujuan ({{ $roleName }})</h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body text-center py-4">
+                                    <i class="material-icons-outlined text-success" style="font-size: 4rem;">check_circle</i>
+                                    <h4 class="mt-3 mb-2">Apakah Anda yakin?</h4>
+                                    <p class="text-muted mb-0">Anda akan memberikan persetujuan sebagai <strong>{{ $roleName }}</strong> untuk SPM <strong>{{ $spm->nomor_spm }}</strong>.</p>
+                                </div>
+                                <div class="modal-footer justify-content-center border-0 pb-4">
+                                    <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Batal</button>
+                                    <form action="{{ $approveRouteDynamic }}" method="POST">
+                                        @csrf
+                                        <input type="hidden" name="approval_id" value="{{ $approvalId }}">
+                                        <button type="submit" class="btn btn-success px-4 fw-bold">Teruskan Proses</button>
+                                    </form>
                                 </div>
                             </div>
-                            <div class="modal-footer bg-light">
-                                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Batal</button>
-                                <button type="submit" class="btn btn-danger fw-bold">Kembalikan SPM</button>
-                            </div>
-                        </form>
+                        </div>
                     </div>
+
+                    {{-- Modal Revisi --}}
+                    <div class="modal fade" id="modalRevisi_{{ $modalSuffix }}" tabindex="-1" aria-hidden="true">
+                        <div class="modal-dialog modal-dialog-centered">
+                            <div class="modal-content">
+                                <div class="modal-header bg-danger text-white">
+                                    <h5 class="modal-title text-white">Kembalikan untuk Revisi ({{ $roleName }})</h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                </div>
+                                <form action="{{ $revisiRouteDynamic }}" method="POST">
+                                    @csrf
+                                    <input type="hidden" name="approval_id" value="{{ $approvalId }}">
+                                    <div class="modal-body">
+                                        <p class="text-muted small">SPM ini akan direvisi. Berikan catatan mengenai revisi yang diperlukan.</p>
+                                        <div class="mb-3 mt-3 text-start">
+                                            <label class="form-label fw-bold">Catatan / Alasan Revisi <span class="text-danger">*</span></label>
+                                            <textarea name="catatan_revisi" class="form-control" rows="4" required placeholder="Jelaskan apa yang harus diperbaiki..."></textarea>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer bg-light">
+                                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Batal</button>
+                                        <button type="submit" class="btn btn-danger fw-bold">Kembalikan SPM</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                @endforeach
+            @elseif(isset($canAct) && $canAct)
+                {{-- Fallback jika activeRoleApprovals kosong tetapi canAct true --}}
+                <div class="alert alert-warning text-center">
+                    Tombol aksi tidak tersedia. Terjadi kesalahan pada konfigurasi multi-role.
                 </div>
-            </div>
             @endif
         </div>
     </div>

@@ -105,6 +105,7 @@ class SpmHonorController extends Controller
 
         $ppspms = User::role('PPSPM')->orderByDisplayName()->get();
         $kasubbagUser = User::role('Kepala Subbagian Keuangan dan Tata Usaha')->orderByDisplayName()->first();
+        $koordinatorUser = User::role('Koordinator Keuangan')->orderByDisplayName()->first();
 
         // Nominal SPM = nominal SPP (otomatis penuh, pph sudah netto)
         $nominalSpm = (float) ($sppModel->nominal_spp ?? $tagihan->total_netto ?? 0);
@@ -171,17 +172,19 @@ class SpmHonorController extends Controller
         ])->values();
 
         $readinessIssues = $readinessChecklist->where('status', 'missing')->pluck('hint')->filter()->values();
+        $isChecklistComplete = $readinessIssues->isEmpty();
 
         // Status SPM
         $statusSpm = $spmModel?->status ?? 'Belum Dibuat';
         $canEditSpm = !$spmModel || in_array($spmModel->status, ['DRAFT', DokumenSpm::STATUS_REVISI, '']);
         $canSubmit = $spmModel && in_array($spmModel->status, ['DRAFT', DokumenSpm::STATUS_REVISI]);
-        $isReadyToSubmit = $canSubmit && $readinessIssues->isEmpty();
+        $isReadyToSubmit = $canSubmit && $isChecklistComplete;
 
         // Workflow
         $latestWorkflowInstance = collect($spmModel?->workflowInstances ?? [])->sortByDesc('created_at')->first();
         $ppspmApproval = collect($latestWorkflowInstance?->approvals ?? [])->firstWhere('role_code', 'PPSPM');
         $kasubbagApproval = collect($latestWorkflowInstance?->approvals ?? [])->firstWhere('role_code', 'Kepala Subbagian Keuangan dan Tata Usaha');
+        $koordinatorApproval = collect($latestWorkflowInstance?->approvals ?? [])->firstWhere('role_code', 'Koordinator Keuangan');
 
         // Progress step
         $progressStep = 1;
@@ -225,12 +228,15 @@ class SpmHonorController extends Controller
             'documentStatuses',
             'readinessChecklist',
             'readinessIssues',
+            'isChecklistComplete',
             'statusSpm',
             'canEditSpm',
             'canSubmit',
             'isReadyToSubmit',
             'ppspmApproval',
             'kasubbagApproval',
+            'koordinatorApproval',
+            'koordinatorUser',
             'progressStep',
             'recentActivities',
             'autoNomorSpm'
@@ -346,7 +352,7 @@ class SpmHonorController extends Controller
                 'status_sebelumnya' => $statusSebelumnya,
                 'status_baru' => DokumenSpm::STATUS_MENUNGGU_VERIFIKASI,
                 'aksi' => 'SUBMIT_VERIFIKASI',
-                'catatan' => 'SPM Honorarium diajukan untuk verifikasi paralel (PPSPM & Kasubbag).',
+                'catatan' => 'SPM Honorarium diajukan untuk verifikasi paralel (PPSPM & Koordinator Keuangan & Kasubbag).',
                 'ip_address' => request()->ip(),
             ]);
         });
@@ -363,12 +369,23 @@ class SpmHonorController extends Controller
             ]));
         }
 
+        $koordinatorUsers = User::role('Koordinator Keuangan')->get();
+        if ($koordinatorUsers->isNotEmpty()) {
+            Notification::send($koordinatorUsers, new WorkflowNotification([
+                'title' => 'SPM Honorarium Diajukan',
+                'message' => "SPM Honorarium ({$spm->nomor_spm}) menunggu verifikasi Anda.",
+                'url' => route('verifikasi-koordinator.spm.honor.index'),
+                'icon' => 'fact_check',
+                'color' => 'success',
+            ]));
+        }
+
         $kasubbagUsers = User::role('Kepala Subbagian Keuangan dan Tata Usaha')->get();
         if ($kasubbagUsers->isNotEmpty()) {
             Notification::send($kasubbagUsers, new WorkflowNotification([
                 'title' => 'Ceklist SPM Honorarium',
                 'message' => "Ada SPM Honorarium yang baru diajukan ({$spm->nomor_spm}) yang menanti persetujuan Kasubbag.",
-                'url' => '#', 
+                'url' => route('verifikasi-kasubag.spm.honor.index'),
                 'icon' => 'fact_check',
                 'color' => 'success',
             ]));

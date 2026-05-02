@@ -57,128 +57,189 @@
                     </div>
                 </div>
 
-                <!-- SECTION B: VERIFIKATOR -->
+                <!-- SECTION B: VERIFIKATOR DOKUMEN -->
                 <h5 class="mb-3 border-bottom pb-2 text-primary mt-4"><i class="bi bi-pen"></i> Bagian B: Verifikator Dokumen</h5>
                 @php
                     $kasubbagId = old('kasubbag_user_id', optional($kasubbagUser)->id);
                     $kasubbagNama = old('kasubbag_nama_snapshot', optional($kasubbagUser)->name);
                     $kasubbagNip = old('kasubbag_nip_snapshot', optional(optional($kasubbagUser)->pegawai)->nip);
                 @endphp
-                <div class="row mb-4">
+
+                {{-- Baris 1: Pejabat Otorisasi --}}
+                <div class="row g-3 mb-3">
                     <!-- PPK -->
-                    <div class="col-md-6 col-xl mb-3">
-                        <h6 class="text-muted mb-3">Pejabat Pembuat Komitmen</h6>
-                        <div class="mb-2">
-                            <label class="form-label">Pilih User PPK (Opsional)</label>
-                            <select name="ppk_user_id" class="form-select select2" id="ppkUserId">
-                                <option value="">-- Pilih User PPK --</option>
-                                @foreach($ppkUsers as $user)
-                                    <option value="{{ $user->id }}" data-nip="{{ optional($user->pegawai)->nip }}" data-nama="{{ $user->name }}" {{ old('ppk_user_id') == $user->id ? 'selected' : '' }}>
-                                        {{ $user->name }}
-                                    </option>
-                                @endforeach
-                            </select>
-                            <small class="text-muted d-block mt-1">Pilih untuk auto-fill Nama & NIP di bawah ini</small>
-                        </div>
-                        <div class="mb-2">
-                            <label class="form-label">Nama PPK (Cetak PDF) <span class="text-danger">*</span></label>
-                            <input type="text" name="ppk_nama_snapshot" id="ppkNamaSnapshot" class="form-control" required value="{{ old('ppk_nama_snapshot') }}">
-                        </div>
-                        <div class="mb-2">
-                            <label class="form-label">NIP PPK (Cetak PDF) <span class="text-danger">*</span></label>
-                            <input type="text" name="ppk_nip_snapshot" id="ppkNipSnapshot" class="form-control" required value="{{ old('ppk_nip_snapshot') }}">
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card border shadow-sm h-100">
+                            <div class="card-header bg-light py-2 px-3">
+                                <h6 class="mb-0 fw-bold font-13"><i class="bi bi-person-badge me-1 text-primary"></i> Pejabat Pembuat Komitmen (PPK)</h6>
+                            </div>
+                            <div class="card-body p-3">
+                                <div class="mb-2">
+                                    <label class="form-label font-12 mb-1">Pilih User PPK</label>
+                                    <select name="ppk_user_id" class="form-select form-select-sm select2" id="ppkUserId">
+                                        <option value="">-- Pilih --</option>
+                                        @foreach($ppkUsers as $user)
+                                            <option value="{{ $user->id }}" data-nip="{{ optional($user->pegawai)->nip }}" data-nama="{{ $user->name }}" {{ old('ppk_user_id') == $user->id ? 'selected' : '' }}>
+                                                {{ $user->name }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label font-12 mb-1">Nama <span class="text-danger">*</span></label>
+                                    <input type="text" name="ppk_nama_snapshot" id="ppkNamaSnapshot" class="form-control form-control-sm" required value="{{ old('ppk_nama_snapshot') }}">
+                                </div>
+                                <div class="mb-0">
+                                    <label class="form-label font-12 mb-1">NIP <span class="text-danger">*</span></label>
+                                    <input type="text" name="ppk_nip_snapshot" id="ppkNipSnapshot" class="form-control form-control-sm" required value="{{ old('ppk_nip_snapshot') }}">
+                                </div>
+                            </div>
                         </div>
                     </div>
 
                     <!-- PPSPM -->
-                    <div class="col-md-6 col-xl mb-3">
-                        <h6 class="text-muted mb-3">PPSPM</h6>
-                        <div class="mb-2">
-                            <label class="form-label">Pilih User PPSPM <span class="text-danger">*</span></label>
-                            <select name="ppspm_user_id" class="form-select select2" id="ppspmUserId" required>
-                                <option value="">-- Pilih User PPSPM --</option>
-                                @foreach($ppspmUsers as $user)
-                                    <option value="{{ $user->id }}" data-nip="{{ optional($user->pegawai)->nip }}" data-nama="{{ $user->name }}" {{ old('ppspm_user_id') == $user->id ? 'selected' : '' }}>
-                                        {{ $user->name }}
-                                    </option>
-                                @endforeach
-                            </select>
-                            <small class="text-muted d-block mt-1">Pilih untuk auto-fill Nama & NIP di bawah ini</small>
-                        </div>
-                        <div class="mb-2">
-                            <label class="form-label">Nama PPSPM <span class="text-danger">*</span></label>
-                            <input type="text" name="ppspm_nama_snapshot" id="ppspmNamaSnapshot" class="form-control" required value="{{ old('ppspm_nama_snapshot') }}">
-                        </div>
-                        <div class="mb-2">
-                            <label class="form-label">NIP PPSPM</label>
-                            <input type="text" name="ppspm_nip_snapshot" id="ppspmNipSnapshot" class="form-control" value="{{ old('ppspm_nip_snapshot') }}">
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card border shadow-sm h-100">
+                            <div class="card-header bg-light py-2 px-3">
+                                <h6 class="mb-0 fw-bold font-13"><i class="bi bi-person-check me-1 text-success"></i> PPSPM</h6>
+                            </div>
+                            <div class="card-body p-3">
+                                <div class="mb-2">
+                                    <label class="form-label font-12 mb-1">Pilih User PPSPM <span class="text-danger">*</span></label>
+                                    <select name="ppspm_user_id" class="form-select form-select-sm select2" id="ppspmUserId" required>
+                                        <option value="">-- Pilih --</option>
+                                        @foreach($ppspmUsers as $user)
+                                            <option value="{{ $user->id }}" data-nip="{{ optional($user->pegawai)->nip }}" data-nama="{{ $user->name }}" {{ old('ppspm_user_id') == $user->id ? 'selected' : '' }}>
+                                                {{ $user->name }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label font-12 mb-1">Nama <span class="text-danger">*</span></label>
+                                    <input type="text" name="ppspm_nama_snapshot" id="ppspmNamaSnapshot" class="form-control form-control-sm" required value="{{ old('ppspm_nama_snapshot') }}">
+                                </div>
+                                <div class="mb-0">
+                                    <label class="form-label font-12 mb-1">NIP</label>
+                                    <input type="text" name="ppspm_nip_snapshot" id="ppspmNipSnapshot" class="form-control form-control-sm" value="{{ old('ppspm_nip_snapshot') }}">
+                                </div>
+                            </div>
                         </div>
                     </div>
 
+                    <!-- Koordinator Keuangan -->
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card border shadow-sm h-100">
+                            <div class="card-header bg-light py-2 px-3">
+                                <h6 class="mb-0 fw-bold font-13"><i class="bi bi-clipboard-check me-1 text-info"></i> Koordinator Keuangan</h6>
+                            </div>
+                            <div class="card-body p-3">
+                                <div class="mb-2">
+                                    <label class="form-label font-12 mb-1">Pilih User <span class="text-danger">*</span></label>
+                                    <select name="koordinator_keuangan_user_id" class="form-select form-select-sm select2" id="koorKeuanganUserId" required>
+                                        <option value="">-- Pilih --</option>
+                                        @foreach($koorKeuanganUsers as $user)
+                                            <option value="{{ $user->id }}" data-nip="{{ optional($user->pegawai)->nip }}" data-nama="{{ $user->name }}" {{ old('koordinator_keuangan_user_id') == $user->id ? 'selected' : '' }}>
+                                                {{ $user->name }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label font-12 mb-1">Nama <span class="text-danger">*</span></label>
+                                    <input type="text" name="koordinator_keuangan_nama_snapshot" id="koorKeuanganNamaSnapshot" class="form-control form-control-sm" required value="{{ old('koordinator_keuangan_nama_snapshot') }}">
+                                </div>
+                                <div class="mb-0">
+                                    <label class="form-label font-12 mb-1">NIP</label>
+                                    <input type="text" name="koordinator_keuangan_nip_snapshot" id="koorKeuanganNipSnapshot" class="form-control form-control-sm" value="{{ old('koordinator_keuangan_nip_snapshot') }}">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Baris 2: Bendahara & Kasubbag --}}
+                <div class="row g-3 mb-4">
                     <!-- Bendahara Penerimaan -->
-                    <div class="col-md-6 col-xl mb-3">
-                        <h6 class="text-muted mb-3">Bendahara Penerimaan</h6>
-                        <div class="mb-2">
-                            <label class="form-label">Pilih User Bendahara Penerimaan <span class="text-danger">*</span></label>
-                            <select name="bendahara_penerimaan_user_id" class="form-select select2" id="bendaharaPenerimaanUserId" required>
-                                <option value="">-- Pilih Bendahara Penerimaan --</option>
-                                @foreach($bendaharaPenerimaanUsers as $user)
-                                    <option value="{{ $user->id }}" data-nip="{{ optional($user->pegawai)->nip }}" data-nama="{{ $user->name }}" {{ old('bendahara_penerimaan_user_id') == $user->id ? 'selected' : '' }}>
-                                        {{ $user->name }}
-                                    </option>
-                                @endforeach
-                            </select>
-                            <small class="text-muted d-block mt-1">Pilih untuk auto-fill Nama & NIP di bawah ini</small>
-                        </div>
-                        <div class="mb-2">
-                            <label class="form-label">Nama Bendahara Penerimaan <span class="text-danger">*</span></label>
-                            <input type="text" name="bendahara_penerimaan_nama_snapshot" id="bendaharaPenerimaanNamaSnapshot" class="form-control" required value="{{ old('bendahara_penerimaan_nama_snapshot') }}">
-                        </div>
-                        <div class="mb-2">
-                            <label class="form-label">NIP Bendahara Penerimaan</label>
-                            <input type="text" name="bendahara_penerimaan_nip_snapshot" id="bendaharaPenerimaanNipSnapshot" class="form-control" value="{{ old('bendahara_penerimaan_nip_snapshot') }}">
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card border shadow-sm h-100">
+                            <div class="card-header bg-light py-2 px-3">
+                                <h6 class="mb-0 fw-bold font-13"><i class="bi bi-wallet2 me-1 text-warning"></i> Bendahara Penerimaan</h6>
+                            </div>
+                            <div class="card-body p-3">
+                                <div class="mb-2">
+                                    <label class="form-label font-12 mb-1">Pilih User <span class="text-danger">*</span></label>
+                                    <select name="bendahara_penerimaan_user_id" class="form-select form-select-sm select2" id="bendaharaPenerimaanUserId" required>
+                                        <option value="">-- Pilih --</option>
+                                        @foreach($bendaharaPenerimaanUsers as $user)
+                                            <option value="{{ $user->id }}" data-nip="{{ optional($user->pegawai)->nip }}" data-nama="{{ $user->name }}" {{ old('bendahara_penerimaan_user_id') == $user->id ? 'selected' : '' }}>
+                                                {{ $user->name }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label font-12 mb-1">Nama <span class="text-danger">*</span></label>
+                                    <input type="text" name="bendahara_penerimaan_nama_snapshot" id="bendaharaPenerimaanNamaSnapshot" class="form-control form-control-sm" required value="{{ old('bendahara_penerimaan_nama_snapshot') }}">
+                                </div>
+                                <div class="mb-0">
+                                    <label class="form-label font-12 mb-1">NIP</label>
+                                    <input type="text" name="bendahara_penerimaan_nip_snapshot" id="bendaharaPenerimaanNipSnapshot" class="form-control form-control-sm" value="{{ old('bendahara_penerimaan_nip_snapshot') }}">
+                                </div>
+                            </div>
                         </div>
                     </div>
 
                     <!-- Bendahara Pengeluaran -->
-                    <div class="col-md-6 col-xl mb-3">
-                        <h6 class="text-muted mb-3">Bendahara Pengeluaran</h6>
-                        <div class="mb-2">
-                            <label class="form-label">Pilih User Bendahara <span class="text-danger">*</span></label>
-                            <select name="bendahara_pengeluaran_user_id" class="form-select select2" id="bendaharaUserId" required>
-                                <option value="">-- Pilih User Bendahara --</option>
-                                @foreach($bendaharaUsers as $user)
-                                    <option value="{{ $user->id }}" data-nip="{{ optional($user->pegawai)->nip }}" data-nama="{{ $user->name }}" {{ old('bendahara_pengeluaran_user_id') == $user->id ? 'selected' : '' }}>
-                                        {{ $user->name }}
-                                    </option>
-                                @endforeach
-                            </select>
-                            <small class="text-muted d-block mt-1">Pilih untuk auto-fill Nama & NIP di bawah ini</small>
-                        </div>
-                        <div class="mb-2">
-                            <label class="form-label">Nama Bendahara (Cetak PDF) <span class="text-danger">*</span></label>
-                            <input type="text" name="bendahara_pengeluaran_nama_snapshot" id="bendaharaNamaSnapshot" class="form-control" required value="{{ old('bendahara_pengeluaran_nama_snapshot') }}">
-                        </div>
-                        <div class="mb-2">
-                            <label class="form-label">NIP Bendahara (Cetak PDF) <span class="text-danger">*</span></label>
-                            <input type="text" name="bendahara_pengeluaran_nip_snapshot" id="bendaharaNipSnapshot" class="form-control" required value="{{ old('bendahara_pengeluaran_nip_snapshot') }}">
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card border shadow-sm h-100">
+                            <div class="card-header bg-light py-2 px-3">
+                                <h6 class="mb-0 fw-bold font-13"><i class="bi bi-cash-stack me-1 text-danger"></i> Bendahara Pengeluaran</h6>
+                            </div>
+                            <div class="card-body p-3">
+                                <div class="mb-2">
+                                    <label class="form-label font-12 mb-1">Pilih User <span class="text-danger">*</span></label>
+                                    <select name="bendahara_pengeluaran_user_id" class="form-select form-select-sm select2" id="bendaharaUserId" required>
+                                        <option value="">-- Pilih --</option>
+                                        @foreach($bendaharaUsers as $user)
+                                            <option value="{{ $user->id }}" data-nip="{{ optional($user->pegawai)->nip }}" data-nama="{{ $user->name }}" {{ old('bendahara_pengeluaran_user_id') == $user->id ? 'selected' : '' }}>
+                                                {{ $user->name }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label font-12 mb-1">Nama <span class="text-danger">*</span></label>
+                                    <input type="text" name="bendahara_pengeluaran_nama_snapshot" id="bendaharaNamaSnapshot" class="form-control form-control-sm" required value="{{ old('bendahara_pengeluaran_nama_snapshot') }}">
+                                </div>
+                                <div class="mb-0">
+                                    <label class="form-label font-12 mb-1">NIP <span class="text-danger">*</span></label>
+                                    <input type="text" name="bendahara_pengeluaran_nip_snapshot" id="bendaharaNipSnapshot" class="form-control form-control-sm" required value="{{ old('bendahara_pengeluaran_nip_snapshot') }}">
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Kasubbag -->
-                    <div class="col-md-6 col-xl mb-3">
-                        <h6 class="text-muted mb-3">Kasubbag</h6>
-                        <input type="hidden" name="kasubbag_user_id" value="{{ $kasubbagId }}">
-                        <div class="mb-2">
-                            <label class="form-label">User Kasubbag</label>
-                            <input type="text" class="form-control" readonly value="{{ $kasubbagNama ?: 'Belum ada user Kasubbag' }}">
-                            <input type="hidden" name="kasubbag_nama_snapshot" value="{{ $kasubbagNama }}">
-                            <small class="text-muted d-block mt-1">Ditentukan otomatis dari role Kasubbag.</small>
-                        </div>
-                        <div class="mb-2">
-                            <label class="form-label">NIP Kasubbag</label>
-                            <input type="text" class="form-control" readonly value="{{ $kasubbagNip ?: '-' }}">
-                            <input type="hidden" name="kasubbag_nip_snapshot" value="{{ $kasubbagNip }}">
+                    <!-- Kasubbag (Otomatis) -->
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card border shadow-sm h-100 bg-light bg-opacity-50">
+                            <div class="card-header bg-light py-2 px-3">
+                                <h6 class="mb-0 fw-bold font-13"><i class="bi bi-person-gear me-1 text-secondary"></i> Kasubbag <span class="badge bg-secondary font-10 ms-1">Otomatis</span></h6>
+                            </div>
+                            <div class="card-body p-3">
+                                <input type="hidden" name="kasubbag_user_id" value="{{ $kasubbagId }}">
+                                <div class="mb-2">
+                                    <label class="form-label font-12 mb-1">User Kasubbag</label>
+                                    <input type="text" class="form-control form-control-sm bg-white" readonly value="{{ $kasubbagNama ?: 'Belum ada user Kasubbag' }}">
+                                    <input type="hidden" name="kasubbag_nama_snapshot" value="{{ $kasubbagNama }}">
+                                </div>
+                                <div class="mb-0">
+                                    <label class="form-label font-12 mb-1">NIP Kasubbag</label>
+                                    <input type="text" class="form-control form-control-sm bg-white" readonly value="{{ $kasubbagNip ?: '-' }}">
+                                    <input type="hidden" name="kasubbag_nip_snapshot" value="{{ $kasubbagNip }}">
+                                    <small class="text-muted font-10 d-block mt-1">Ditentukan otomatis dari role Kasubbag.</small>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -208,7 +269,7 @@
                     @endphp
 
                     @foreach($oldPeserta as $index => $row)
-                        @include('perjaldins.partials.peserta-card', ['index' => $index, 'row' => $row, 'masterProvinsi' => $masterProvinsi, 'isCreate' => true])
+                        @include('perjaldins.partials.peserta-card', ['index' => $index, 'row' => $row, 'masterProvinsi' => $masterProvinsi, 'masterPegawai' => $masterPegawai, 'isCreate' => true])
                     @endforeach
                 </div>
 
@@ -328,6 +389,15 @@
                 }
             });
 
+            // Auto-fill Koordinator Keuangan
+            $('#koorKeuanganUserId').change(function() {
+                let selected = $(this).find(':selected');
+                if(selected.val() !== '') {
+                    $('#koorKeuanganNamaSnapshot').val(selected.data('nama'));
+                    $('#koorKeuanganNipSnapshot').val(selected.data('nip'));
+                }
+            });
+
             // Add Row Check
             $(document).on('click', '.btn-add-row-trigger', function (e) {
                 e.preventDefault();
@@ -341,6 +411,9 @@
                 newRow.find('.summary-total').text('0');
                 newRow.find('.file-existing-notice').remove();
                 newRow.find('.file-status-badge').removeClass('bg-success').addClass('bg-secondary').html('<i class="bi bi-paperclip"></i> SPT Kosong');
+                newRow.find('.nip-input').val('').prop('readonly', true);
+                newRow.find('.rekening-input').val('').prop('readonly', false);
+                newRow.find('.rek-hint').addClass('d-none');
 
                 // Adjust Collapse id
                 let collapseId = 'collapsePeserta' + rowIdx;
@@ -385,10 +458,36 @@
                 calculateUangHarian($(this).closest('.item-row'));
             });
 
-            // Update Summary Name & Tujuan Live
-            $(document).on('input', '.input-nama', function() {
-                $(this).closest('.item-row').find('.summary-nama').text($(this).val() || '-');
+            // Auto-fill pegawai (NIP, Rekening, Summary)
+            $(document).on('change', '.pegawai-select', function() {
+                let card = $(this).closest('.item-row');
+                let selected = $(this).find(':selected');
+                let nama = selected.data('nama') || '';
+                let nip = selected.data('nip') || '';
+                let rek = selected.data('rek') || '';
+
+                // Fill hidden nama & NIP
+                card.find('.input-nama-hidden').val(nama);
+                card.find('.nip-input').val(nip);
+
+                // Rekening: auto-fill if available, otherwise leave editable with hint
+                if (rek) {
+                    card.find('.rekening-input').val(rek).prop('readonly', false);
+                    card.find('.rek-hint').addClass('d-none');
+                } else {
+                    card.find('.rekening-input').val('').prop('readonly', false);
+                    if (selected.val() !== '') {
+                        card.find('.rek-hint').removeClass('d-none');
+                    } else {
+                        card.find('.rek-hint').addClass('d-none');
+                    }
+                }
+
+                // Update summary
+                card.find('.summary-nama').text(nama || '-');
             });
+
+            // Update Summary Tujuan Live
             $(document).on('input', '.input-tujuan', function() {
                 $(this).closest('.item-row').find('.summary-tujuan').text($(this).val() || '-');
             });

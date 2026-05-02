@@ -13,11 +13,15 @@
 
     $ppspmStatusLabel = $ppspmApproval?->status ?? 'Belum diajukan';
     $kasubbagStatusLabel = $kasubbagApproval?->status ?? 'Belum diajukan';
+    $koordinatorStatusLabel = $koordinatorApproval?->status ?? 'Belum diajukan';
     $ppspmStatusClass = match($ppspmStatusLabel) {
-        'APPROVED' => 'text-success', 'PENDING' => 'text-warning', 'REVISION','REJECTED' => 'text-danger', default => 'text-muted'
+        'APPROVED' => 'bg-success', 'PENDING' => 'bg-warning text-dark', 'REVISION','REJECTED' => 'bg-danger', default => 'bg-secondary'
     };
     $kasubbagStatusClass = match($kasubbagStatusLabel) {
-        'APPROVED' => 'text-success', 'PENDING' => 'text-warning', 'REVISION','REJECTED' => 'text-danger', default => 'text-muted'
+        'APPROVED' => 'bg-success', 'PENDING' => 'bg-warning text-dark', 'REVISION','REJECTED' => 'bg-danger', default => 'bg-secondary'
+    };
+    $koordinatorStatusClass = match($koordinatorStatusLabel) {
+        'APPROVED' => 'bg-success', 'PENDING' => 'bg-warning text-dark', 'REVISION','REJECTED' => 'bg-danger', default => 'bg-secondary'
     };
 
     $workflowLockLabel = ($canEditSpm) ? 'Dapat diedit' : 'Terkunci / readonly';
@@ -152,34 +156,58 @@
                     </div>
                 </div>
                 <div class="col-xl-7">
-                    <div class="timeline-wrapper pt-0">
-                        <div class="timeline-line"></div>
-                        {{-- Step 1: Draft --}}
-                        <div class="timeline-step {{ $progressStep >= 1 ? 'passed' : '' }}">
-                            <div class="timeline-icon"><i class="bi bi-file-earmark-text"></i></div>
-                            <div class="timeline-label">Draft Dibuat</div>
-                            <div class="timeline-sub">{{ $spmModel ? 'Telah disimpan' : 'Belum dimulai' }}</div>
-                        </div>
-                        {{-- Step 2: Verifikasi PPSPM --}}
-                        <div class="timeline-step {{ $ppspmApproval?->status === 'APPROVED' ? 'passed' : ($ppspmApproval?->status === 'REVISION' ? 'revision' : ($progressStep == 2 ? 'active' : '')) }}">
-                            <div class="timeline-icon"><i class="bi bi-person-check"></i></div>
-                            <div class="timeline-label">Verifikasi PPSPM</div>
-                            <div class="timeline-sub fw-semibold {{ $ppspmStatusClass }}">{{ $ppspmStatusLabel }}</div>
-                            @if($ppspmApproval) <div class="timeline-sub mt-0 opacity-75" style="font-size: 0.7rem;">{{ $spmModel?->ppspm?->name }}</div> @endif
-                        </div>
-                        {{-- Step 2: Verifikasi Kasubbag --}}
-                        <div class="timeline-step {{ $kasubbagApproval?->status === 'APPROVED' ? 'passed' : ($kasubbagApproval?->status === 'REVISION' ? 'revision' : ($progressStep == 2 ? 'active' : '')) }}">
-                            <div class="timeline-icon"><i class="bi bi-person-badge"></i></div>
-                            <div class="timeline-label">Verifikasi Kasubbag</div>
-                            <div class="timeline-sub fw-semibold {{ $kasubbagStatusClass }}">{{ $kasubbagStatusLabel }}</div>
-                            <div class="timeline-sub mt-0 opacity-75" style="font-size: 0.7rem;">{{ $kasubbagUser?->name ?? 'Kasubbag Keuangan' }}</div>
-                        </div>
-                        {{-- Step 3: Final --}}
-                        <div class="timeline-step {{ $progressStep >= 4 ? 'passed' : '' }}">
-                            <div class="timeline-icon"><i class="bi bi-check-all"></i></div>
-                            <div class="timeline-label">Selesai</div>
-                            <div class="timeline-sub">SPM Disetujui Final</div>
-                        </div>
+                    <div class="bg-white p-3 rounded-3 border shadow-sm h-100">
+                        <h6 class="fw-bold text-secondary mb-3"><i class="bi bi-people me-2"></i> Status Verifikator SPM</h6>
+                        <ul class="list-group mb-0">
+                            <!-- PPSPM -->
+                            <li class="list-group-item px-3 py-2 border-start-0 border-end-0 border-top-0 border-bottom">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 35px; height: 35px;">
+                                            <i class="bi bi-person-check fs-5"></i>
+                                        </div>
+                                        <div>
+                                            <div class="fw-semibold text-dark">PPSPM</div>
+                                            <div class="small text-muted">{{ $spmModel?->ppspm?->name ?? 'Belum Ditentukan' }}</div>
+                                            @if($spmModel?->ppspm?->nip)<div class="text-muted font-monospace" style="font-size: .72rem;">NIP: {{ $spmModel->ppspm->nip }}</div>@endif
+                                        </div>
+                                    </div>
+                                    <span class="badge {{ $ppspmStatusClass }}">{{ $ppspmStatusLabel }}</span>
+                                </div>
+                            </li>
+                            <!-- Koordinator Keuangan -->
+                            <li class="list-group-item px-3 py-2 border-start-0 border-end-0 border-top-0 border-bottom">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="bg-info bg-opacity-10 text-info rounded-circle d-flex align-items-center justify-content-center" style="width: 35px; height: 35px;">
+                                            <i class="bi bi-person-gear fs-5"></i>
+                                        </div>
+                                        <div>
+                                            <div class="fw-semibold text-dark">Koordinator Keuangan</div>
+                                            <div class="small text-muted">{{ $koordinatorUser?->name ?? 'Belum Ditentukan' }}</div>
+                                            @if($koordinatorUser?->nip)<div class="text-muted font-monospace" style="font-size: .72rem;">NIP: {{ $koordinatorUser->nip }}</div>@endif
+                                        </div>
+                                    </div>
+                                    <span class="badge {{ $koordinatorStatusClass }}">{{ $koordinatorStatusLabel }}</span>
+                                </div>
+                            </li>
+                            <!-- Kasubbag -->
+                            <li class="list-group-item px-3 py-2 border-0">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="bg-warning bg-opacity-10 text-warning rounded-circle d-flex align-items-center justify-content-center" style="width: 35px; height: 35px;">
+                                            <i class="bi bi-person-badge fs-5"></i>
+                                        </div>
+                                        <div>
+                                            <div class="fw-semibold text-dark">Kepala Subbagian Keuangan dan Tata Usaha</div>
+                                            <div class="small text-muted">{{ $kasubbagUser?->name ?? 'Belum Ditentukan' }}</div>
+                                            @if($kasubbagUser?->nip)<div class="text-muted font-monospace" style="font-size: .72rem;">NIP: {{ $kasubbagUser->nip }}</div>@endif
+                                        </div>
+                                    </div>
+                                    <span class="badge {{ $kasubbagStatusClass }}">{{ $kasubbagStatusLabel }}</span>
+                                </div>
+                            </li>
+                        </ul>
                     </div>
                 </div>
             </div>

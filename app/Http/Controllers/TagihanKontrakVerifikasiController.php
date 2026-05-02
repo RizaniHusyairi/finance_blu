@@ -113,8 +113,11 @@ class TagihanKontrakVerifikasiController extends Controller
         abort_unless($tagihan->tipe_tagihan === 'KONTRAK', 404);
 
         $user = Auth::user();
-        $myApproval = $this->resolvePendingApprovalForUser($tagihan, $user);
-        $canAct = $myApproval !== null;
+
+        // Resolve ALL pending approvals for dual-role users (e.g. PPSPM + Koordinator)
+        $myApprovals = $this->resolvePendingApprovalsForUser($tagihan, $user);
+        $myApproval = $myApprovals->first(); // backwards compat
+        $canAct = $myApprovals->isNotEmpty();
 
         // Group approvals by step untuk UI
         $instance = $tagihan->workflowInstance;
@@ -123,7 +126,7 @@ class TagihanKontrakVerifikasiController extends Controller
             : collect();
 
         return view('tagihan_kontrak_verifikasi.show', compact(
-            'tagihan', 'myApproval', 'canAct', 'instance', 'approvalsByStep'
+            'tagihan', 'myApproval', 'myApprovals', 'canAct', 'instance', 'approvalsByStep'
         ));
     }
 
@@ -160,7 +163,7 @@ class TagihanKontrakVerifikasiController extends Controller
         $tagihan = Tagihan::findOrFail($id);
         abort_unless($tagihan->tipe_tagihan === 'KONTRAK', 404);
 
-        $approval = $this->resolvePendingApprovalForUser($tagihan, Auth::user());
+        $approval = $this->resolveTargetApproval($request, $tagihan);
         if (! $approval) {
             return back()->withErrors(['error' => 'Anda tidak memiliki approval yang pending pada tagihan ini.']);
         }
@@ -182,7 +185,7 @@ class TagihanKontrakVerifikasiController extends Controller
         $tagihan = Tagihan::findOrFail($id);
         abort_unless($tagihan->tipe_tagihan === 'KONTRAK', 404);
 
-        $approval = $this->resolvePendingApprovalForUser($tagihan, Auth::user());
+        $approval = $this->resolveTargetApproval($request, $tagihan);
         if (! $approval) {
             return back()->withErrors(['error' => 'Anda tidak memiliki approval yang pending pada tagihan ini.']);
         }
@@ -204,7 +207,7 @@ class TagihanKontrakVerifikasiController extends Controller
         $tagihan = Tagihan::findOrFail($id);
         abort_unless($tagihan->tipe_tagihan === 'KONTRAK', 404);
 
-        $approval = $this->resolvePendingApprovalForUser($tagihan, Auth::user());
+        $approval = $this->resolveTargetApproval($request, $tagihan);
         if (! $approval) {
             return back()->withErrors(['error' => 'Anda tidak memiliki approval yang pending pada tagihan ini.']);
         }
@@ -219,12 +222,41 @@ class TagihanKontrakVerifikasiController extends Controller
             ->with('success', 'Tagihan ditolak.');
     }
 
-    /** Helper: cari approval PENDING untuk user pada step aktif. */
+    /**
+     * Resolve target approval: jika approval_id dikirim dari form (dual-role), gunakan itu.
+     * Validasi bahwa approval tersebut memang milik user yang login dan masih PENDING.
+     * Fallback ke resolusi otomatis jika approval_id tidak ada.
+     */
+    private function resolveTargetApproval(Request $request, Tagihan $tagihan): ?WorkflowApproval
+    {
+        $user = Auth::user();
+
+        if ($request->filled('approval_id')) {
+            $roleCodes = $this->roleCodesFromRoleNames($user->getRoleNames()->toArray());
+            $approval = WorkflowApproval::where('id', $request->input('approval_id'))
+                ->where('status', 'PENDING')
+                ->whereIn('role_code', $roleCodes)
+                ->whereHas('instance', fn($q) => $q->where('workflowable_id', $tagihan->id)->where('workflowable_type', \App\Models\Tagihan::class))
+                ->first();
+
+            return $approval;
+        }
+
+        return $this->resolvePendingApprovalForUser($tagihan, $user);
+    }
+
+    /** Helper: cari approval PENDING untuk user pada step aktif (kembalikan pertama saja). */
     private function resolvePendingApprovalForUser(Tagihan $tagihan, $user): ?WorkflowApproval
+    {
+        return $this->resolvePendingApprovalsForUser($tagihan, $user)->first();
+    }
+
+    /** Helper: cari SEMUA approval PENDING untuk user pada step aktif (untuk dual-role). */
+    private function resolvePendingApprovalsForUser(Tagihan $tagihan, $user): \Illuminate\Support\Collection
     {
         $instance = $tagihan->workflowInstance;
         if (! $instance || $instance->status !== 'IN_PROGRESS') {
-            return null;
+            return collect();
         }
 
         $roleCodes = $this->roleCodesFromRoleNames($user->getRoleNames()->toArray());
@@ -238,7 +270,7 @@ class TagihanKontrakVerifikasiController extends Controller
                       $q2->whereNull('assigned_user_id')->whereIn('role_code', $roleCodes);
                   });
             })
-            ->first();
+            ->get();
     }
 
     /** Mapping nama Spatie role → role_code yang dipakai workflow. */

@@ -109,6 +109,7 @@ class SpmPerjaldinController extends Controller
 
         $ppspms = User::role('PPSPM')->orderByDisplayName()->get();
         $kasubbagUser = User::role('Kepala Subbagian Keuangan dan Tata Usaha')->orderByDisplayName()->first();
+        $koordinatorUser = User::role('Koordinator Keuangan')->orderByDisplayName()->first();
 
         // Nominal SPM = nominal SPP
         $nominalSpm = (float) ($sppModel->nominal_spp ?? 0);
@@ -164,6 +165,7 @@ class SpmPerjaldinController extends Controller
         $latestWorkflowInstance = collect($spmModel?->workflowInstances ?? [])->sortByDesc('created_at')->first();
         $ppspmApproval    = collect($latestWorkflowInstance?->approvals ?? [])->firstWhere('role_code', 'PPSPM');
         $kasubbagApproval = collect($latestWorkflowInstance?->approvals ?? [])->firstWhere('role_code', 'Kepala Subbagian Keuangan dan Tata Usaha');
+        $koordinatorApproval = collect($latestWorkflowInstance?->approvals ?? [])->firstWhere('role_code', 'Koordinator Keuangan');
 
         // Progress step
         $progressStep = 1;
@@ -214,6 +216,8 @@ class SpmPerjaldinController extends Controller
             'isReadyToSubmit',
             'ppspmApproval',
             'kasubbagApproval',
+            'koordinatorApproval',
+            'koordinatorUser',
             'progressStep',
             'recentActivities',
             'oldPpspmId',
@@ -316,7 +320,7 @@ class SpmPerjaldinController extends Controller
 
             $spm->update(['status' => DokumenSpm::STATUS_MENUNGGU_VERIFIKASI]);
 
-            // Start workflow paralel PPSPM + Kasubbag
+            // Start workflow paralel PPSPM + Kasubbag + Koordinator Keuangan
             app(WorkflowService::class)->startWorkflow('SPM_PERJALDIN_PPSPM', $spm, $spm->ppspm_id);
 
             LogStatusDokumen::create([
@@ -327,7 +331,7 @@ class SpmPerjaldinController extends Controller
                 'status_sebelumnya' => $statusSebelumnya,
                 'status_baru'       => DokumenSpm::STATUS_MENUNGGU_VERIFIKASI,
                 'aksi'              => 'SUBMIT_VERIFIKASI',
-                'catatan'           => 'SPM Perjaldin diajukan untuk verifikasi paralel PPSPM + Kasubbag.',
+                'catatan'           => 'SPM Perjaldin diajukan untuk verifikasi paralel PPSPM + Koordinator Keuangan + Kasubbag.',
                 'ip_address'        => request()->ip(),
             ]);
         });
@@ -344,12 +348,23 @@ class SpmPerjaldinController extends Controller
             ]));
         }
 
+        $koordinatorUsers = User::role('Koordinator Keuangan')->get();
+        if ($koordinatorUsers->isNotEmpty()) {
+            Notification::send($koordinatorUsers, new WorkflowNotification([
+                'title'   => 'SPM Perjaldin Diajukan',
+                'message' => "SPM Perjaldin ({$spm->nomor_spm}) menunggu verifikasi Anda.",
+                'url'     => route('verifikasi-koordinator.spm.perjaldin.index'),
+                'icon'    => 'description',
+                'color'   => 'primary',
+            ]));
+        }
+
         $kasubbagUsers = User::role('Kepala Subbagian Keuangan dan Tata Usaha')->get();
         if ($kasubbagUsers->isNotEmpty()) {
             Notification::send($kasubbagUsers, new WorkflowNotification([
                 'title'   => 'SPM Perjaldin Diajukan',
                 'message' => "SPM Perjaldin ({$spm->nomor_spm}) menunggu verifikasi Anda.",
-                'url'     => route('verifikasi-kasubag.spm.index'),
+                'url'     => route('verifikasi-kasubag.spm.perjaldin.index'),
                 'icon'    => 'description',
                 'color'   => 'primary',
             ]));

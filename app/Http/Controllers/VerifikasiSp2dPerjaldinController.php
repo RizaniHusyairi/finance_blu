@@ -27,6 +27,7 @@ class VerifikasiSp2dPerjaldinController extends Controller
     {
         if ($user->hasRole('PPK')) return 'PPK';
         if ($user->hasRole('Kepala Subbagian Keuangan dan Tata Usaha')) return 'Kepala Subbagian Keuangan dan Tata Usaha';
+        if ($user->hasRole('Koordinator Keuangan')) return 'Koordinator Keuangan';
         
         return '';
     }
@@ -54,7 +55,7 @@ class VerifikasiSp2dPerjaldinController extends Controller
         ->whereNotIn('status', [DokumenSp2d::STATUS_DRAFT]); 
 
         // Filter Spesifik Role
-        if ($roleCode === 'PPK' || $roleCode === 'Kepala Subbagian Keuangan dan Tata Usaha') {
+        if (in_array($roleCode, ['PPK', 'Kepala Subbagian Keuangan dan Tata Usaha', 'Koordinator Keuangan'], true)) {
             $query->whereHas('workflowInstances.approvals', function($q) use ($roleCode, $user) {
                 $q->where('role_code', $roleCode)->where(function($sq) use ($user) {
                     $sq->whereNull('assigned_user_id')->orWhere('assigned_user_id', $user->id);

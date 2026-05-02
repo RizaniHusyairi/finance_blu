@@ -94,6 +94,7 @@ class Sp2dKontrakController extends Controller
             $statusClass = 'bg-warning text-dark';
             $ppkStatus = '-';
             $kasubbagStatus = '-';
+            $ppspmStatus = '-';
 
             if (!$sp2d) {
                 $summary['belum_dibuat']++;
@@ -126,9 +127,11 @@ class Sp2dKontrakController extends Controller
                     $approvals = collect($wf->approvals);
                     $ppkApproval = $approvals->firstWhere('role_code', 'PPK');
                     $ksbApproval = $approvals->firstWhere('role_code', 'Kepala Subbagian Keuangan dan Tata Usaha');
+                    $ppspmAppr = $approvals->firstWhere('role_code', 'PPSPM');
                     
                     $ppkStatus = $ppkApproval ? $ppkApproval->status : '-';
                     $kasubbagStatus = $ksbApproval ? $ksbApproval->status : '-';
+                    $ppspmStatus = $ppspmAppr ? $ppspmAppr->status : '-';
                 }
             }
 
@@ -151,6 +154,7 @@ class Sp2dKontrakController extends Controller
                 'raw_status' => $sp2d?->status,
                 'ppk_status' => $ppkStatus,
                 'kasubbag_status' => $kasubbagStatus,
+                'ppspm_status' => $ppspmStatus,
             ];
         });
 
@@ -193,6 +197,7 @@ class Sp2dKontrakController extends Controller
 
         $ppkApproval = $approvals->firstWhere('role_code', 'PPK');
         $kasubbagApproval = $approvals->firstWhere('role_code', 'Kepala Subbagian Keuangan dan Tata Usaha');
+        $ppspmApproval = $approvals->firstWhere('role_code', 'PPSPM');
 
         $revisionNotes = collect();
         if ($sp2d) {
@@ -213,7 +218,7 @@ class Sp2dKontrakController extends Controller
         return view('sp2ds.kontrak_detail', compact(
             'npi', 'sp2d', 'spm', 'spp', 'tagihan', 'detailKontrak', 'termin', 'kontrak',
             'vendor', 'rekening', 'nominalSp2d', 'statusSp2d', 'isEditable', 'canSubmit',
-            'wf', 'ppkApproval', 'kasubbagApproval', 'revisionNotes', 'autoNomorSp2d'
+            'wf', 'ppkApproval', 'kasubbagApproval', 'ppspmApproval', 'revisionNotes', 'autoNomorSp2d'
         ));
     }
 
@@ -288,6 +293,7 @@ class Sp2dKontrakController extends Controller
             $expectedSteps = [
                 'PPK' => 1,
                 'Kepala Subbagian Keuangan dan Tata Usaha' => 1,
+                'PPSPM' => 1,
             ];
 
             $workflowService->startWorkflow('SP2D_KONTRAK', $sp2d);
@@ -313,7 +319,8 @@ class Sp2dKontrakController extends Controller
             }
 
             $ksbUsers = User::role('Kepala Subbagian Keuangan dan Tata Usaha')->get();
-            $verifiers = $ppkUsers->concat($ksbUsers)->unique('id');
+            $ppspmUsers = User::role('PPSPM')->get();
+            $verifiers = $ppkUsers->concat($ksbUsers)->concat($ppspmUsers)->unique('id');
 
             if ($verifiers->isNotEmpty()) {
                 Notification::send($verifiers, new WorkflowNotification([

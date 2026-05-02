@@ -4,6 +4,7 @@
 @php
     $ppkStatus = $ppkApproval?->status ?? 'N/A';
     $kasubbagStatus = $kasubbagApproval?->status ?? 'N/A';
+    $koordinatorStatus = $koordinatorApproval?->status ?? 'N/A';
 
     $badgeClass = fn($s) => match($s) {
         'APPROVED' => 'bg-success',
@@ -64,6 +65,7 @@
                     <span class="badge bg-secondary" title="Status SP2D">SP2D: {{ $sp2d->status }}</span>
                     <span class="badge {{ $badgeClass($ppkStatus) }}" title="PPK">PPK: {{ $ppkStatus }}</span>
                     <span class="badge {{ $badgeClass($kasubbagStatus) }}" title="Kasubbag">KSB: {{ $kasubbagStatus }}</span>
+                    <span class="badge {{ $badgeClass($koordinatorStatus) }}" title="Koordinator Keuangan">Koor: {{ $koordinatorStatus }}</span>
                     <span class="badge {{ $finalBadge }}">{{ $statusFinal }}</span>
                 </div>
 
@@ -107,7 +109,7 @@
             <div class="col-8">
                 <div class="row h-100 g-3">
                     {{-- PPK --}}
-                    <div class="col-sm-6">
+                    <div class="col-sm-4">
                         <div class="border rounded p-3 text-center h-100 {{ $ppkStatus === 'APPROVED' ? 'border-success bg-success bg-opacity-10' : ($ppkStatus === 'PENDING' ? 'border-warning bg-warning bg-opacity-10' : (in_array($ppkStatus, ['REVISION','REJECTED']) ? 'border-danger bg-danger bg-opacity-10' : '')) }}">
                             <div class="fw-bold mb-1" style="font-size: 13px;">PPK</div>
                             <div class="text-muted mb-2" style="font-size: 11px;">{{ $ppkApproval?->assignedUser?->name ?? 'Verifikator PPK' }}</div>
@@ -119,13 +121,24 @@
                     </div>
 
                     {{-- Kasubbag --}}
-                    <div class="col-sm-6">
+                    <div class="col-sm-4">
                         <div class="border rounded p-3 text-center h-100 {{ $kasubbagStatus === 'APPROVED' ? 'border-success bg-success bg-opacity-10' : ($kasubbagStatus === 'PENDING' ? 'border-warning bg-warning bg-opacity-10' : (in_array($kasubbagStatus, ['REVISION','REJECTED']) ? 'border-danger bg-danger bg-opacity-10' : '')) }}">
                             <div class="fw-bold mb-1" style="font-size: 13px;">Kasubbag</div>
                             <div class="text-muted mb-2" style="font-size: 11px;">{{ $kasubbagApproval?->assignedUser?->name ?? 'Verifikator Kasubbag' }}</div>
                             <span class="badge {{ $badgeClass($kasubbagStatus) }}">{{ $kasubbagStatus }}</span>
                             @if($kasubbagApproval?->acted_at)
                                 <div class="mt-2" style="font-size: 11px; color: #6c757d;">{{ \Carbon\Carbon::parse($kasubbagApproval->acted_at)->format('d M Y H:i') }}</div>
+                            @endif
+                        </div>
+                    </div>
+                    {{-- Koordinator Keuangan --}}
+                    <div class="col-sm-4">
+                        <div class="border rounded p-3 text-center h-100 {{ $koordinatorStatus === 'APPROVED' ? 'border-success bg-success bg-opacity-10' : ($koordinatorStatus === 'PENDING' ? 'border-warning bg-warning bg-opacity-10' : (in_array($koordinatorStatus, ['REVISION','REJECTED']) ? 'border-danger bg-danger bg-opacity-10' : '')) }}">
+                            <div class="fw-bold mb-1" style="font-size: 13px;">Koordinator</div>
+                            <div class="text-muted mb-2" style="font-size: 11px;">{{ $koordinatorApproval?->assignedUser?->name ?? 'Verifikator Koordinator' }}</div>
+                            <span class="badge {{ $badgeClass($koordinatorStatus) }}">{{ $koordinatorStatus }}</span>
+                            @if($koordinatorApproval?->acted_at)
+                                <div class="mt-2" style="font-size: 11px; color: #6c757d;">{{ \Carbon\Carbon::parse($koordinatorApproval->acted_at)->format('d M Y H:i') }}</div>
                             @endif
                         </div>
                     </div>
@@ -301,6 +314,7 @@
             <div class="mt-3 d-flex gap-2 justify-content-center">
                 <span class="badge {{ $badgeClass($ppkStatus) }}">PPK: {{ $ppkStatus }}</span>
                 <span class="badge {{ $badgeClass($kasubbagStatus) }}">Kasubbag: {{ $kasubbagStatus }}</span>
+                <span class="badge {{ $badgeClass($koordinatorStatus) }}">Koordinator: {{ $koordinatorStatus }}</span>
             </div>
         </div>
     </div>
@@ -330,7 +344,7 @@
                     <p>Anda akan memverifikasi dan menyetujui SP2D Nomor <strong>{{ $sp2d->nomor_sp2d }}</strong> dengan nilai pencairan <strong>Rp {{ number_format($nominalSp2d, 0, ',', '.') }}</strong>.</p>
                     <div class="alert alert-info border-0 py-3 small">
                         <i class="material-icons-outlined align-middle me-1 mb-1" style="font-size:24px;">info</i>
-                        Tindakan ini akan menandai persetujuan Anda sebagai <strong>{{ $currentRole }}</strong>. Dokumen hanya akan sepenuhnya terbit menjadi SP2D Selesai apabila PPK dan Kasubbag telah menyetujuinya.
+                        Tindakan ini akan menandai persetujuan Anda sebagai <strong>{{ $currentRole }}</strong>. Dokumen hanya akan sepenuhnya terbit menjadi SP2D Selesai apabila seluruh verifikator telah menyetujuinya.
                     </div>
                 </div>
                 <div class="modal-footer border-0">

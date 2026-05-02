@@ -58,14 +58,15 @@ class SppController extends Controller
             ->findOrFail($perjaldin_id);
             
         $budgets = \App\Support\DipaBudgetOptionService::groupedOptions();
-        $ppkUsers = clone \App\Models\User::role('PPK')->orderByDisplayName()->get();
-        $kasubbagUser = \App\Models\User::role('Kepala Subbagian Keuangan dan Tata Usaha')->first();
+        $ppkUser = \App\Models\User::find($tagihan->ppk_user_id) ?? \App\Models\User::role('PPK')->orderByDisplayName()->first();
+        $kasubbagUser = \App\Models\User::find($tagihan->kasubbag_user_id) ?? \App\Models\User::role('Kepala Subbagian Keuangan dan Tata Usaha')->first();
+        $koordinatorUser = \App\Models\User::find($tagihan->koordinator_keuangan_user_id) ?? \App\Models\User::role('Koordinator Keuangan')->first();
 
         // Hitung counter berikutnya untuk preview nomor SPP
         $tahun = date('Y');
         $nextSppCounter = \App\Services\DocumentNumberingService::getNextSppSequence($tahun);
 
-        return view('spps.detail_perjaldin', compact('tagihan', 'budgets', 'ppkUsers', 'kasubbagUser', 'nextSppCounter'));
+        return view('spps.detail_perjaldin', compact('tagihan', 'budgets', 'ppkUser', 'kasubbagUser', 'koordinatorUser', 'nextSppCounter'));
     }
 
     /**
@@ -207,7 +208,7 @@ class SppController extends Controller
         \Illuminate\Support\Facades\Notification::send($ppks, new \App\Notifications\WorkflowNotification([
             'title' => 'Pengajuan SPP',
             'message' => "Surat Permintaan Pembayaran ({$request->kategori_biaya}) menunggu verifikasi Anda.",
-            'url' => route('verifikasi-ppk.spp.index'),
+            'url' => route('verifikasi-spp.perjaldin.index'),
             'icon' => 'receipt_long',
             'color' => 'primary'
         ]));
@@ -253,8 +254,9 @@ class SppController extends Controller
         // Budget item options: Honorarium has dipa_revision_item_id on tagihan
         $selectedBudgetItem = $sppModel?->dipaRevisionItem ?? \App\Models\DetailDipa::with('coa')->find($tagihan->dipa_revision_item_id);
         
-        $ppkUsers = User::role('PPK')->orderByDisplayName()->get();
-        $kasubbagUser = User::role('Kepala Subbagian Keuangan dan Tata Usaha')->orderByDisplayName()->first();
+        $ppkUser = \App\Models\User::find($tagihan->ppk_user_id) ?? \App\Models\User::role('PPK')->orderByDisplayName()->first();
+        $kasubbagUser = \App\Models\User::find($tagihan->kasubbag_user_id) ?? \App\Models\User::role('Kepala Subbagian Keuangan dan Tata Usaha')->orderByDisplayName()->first();
+        $koordinatorUser = \App\Models\User::find($tagihan->koordinator_keuangan_user_id) ?? \App\Models\User::role('Koordinator Keuangan')->orderByDisplayName()->first();
         
         $skHonorarium = $tagihan->arsipDokumen->firstWhere('jenis_dokumen', 'SK Honorarium');
         $daftarNominatif = $tagihan->arsipDokumen->firstWhere('jenis_dokumen', 'Daftar Nominatif Bertandatangan');
@@ -398,6 +400,7 @@ class SppController extends Controller
 
         $latestWorkflowInstance = collect($sppModel?->workflowInstances ?? [])->sortByDesc('created_at')->first();
         $ppkApproval = collect($latestWorkflowInstance?->approvals ?? [])->firstWhere('role_code', 'PPK');
+        $koordinatorApproval = collect($latestWorkflowInstance?->approvals ?? [])->firstWhere('role_code', 'Koordinator Keuangan');
         $kasubbagApproval = collect($latestWorkflowInstance?->approvals ?? [])->firstWhere('role_code', 'Kepala Subbagian Keuangan dan Tata Usaha');
         $submittedLog = collect($sppModel?->logs ?? [])->sortByDesc('created_at')->firstWhere('aksi', 'SUBMIT_PPK');
 
@@ -417,9 +420,9 @@ class SppController extends Controller
         $autoNomorSpp = \App\Services\DocumentNumberingService::generateSppNumber(date('Y'));
 
         return view('spps.detail_honor', compact(
-            'tagihan', 'sppModel', 'selectedBudgetItem', 'ppkUsers', 'kasubbagUser', 'documentStatuses', 'readinessChecklist',
+            'tagihan', 'sppModel', 'selectedBudgetItem', 'ppkUser', 'kasubbagUser', 'koordinatorUser', 'documentStatuses', 'readinessChecklist',
             'readinessIssues', 'workflowSummary', 'activitySummary', 'recentActivities', 'isReadyToSubmit', 'readinessStatus',
-            'ppkApproval', 'kasubbagApproval', 'autoNomorSpp'
+            'ppkApproval', 'koordinatorApproval', 'kasubbagApproval', 'autoNomorSpp'
         ));
     }
 
@@ -488,8 +491,7 @@ class SppController extends Controller
             $statusSebelumnya = $spp->status;
             $spp->update(['status' => 'Menunggu Verifikasi']);
 
-            // Generate workflow definition secara seragam menggunakan definisi paralel PPK-Kasubbag existing.
-            app(WorkflowService::class)->startWorkflow('SPP_KONTRAK_PPK', $spp, $spp->ppk_verifikator_id);
+            app(WorkflowService::class)->startWorkflow('SPP_HONORARIUM_PPK', $spp, $spp->ppk_verifikator_id);
             
             if (!in_array($tagihan->status, ['PROSES_SPP', 'SPP_TERBIT'])) {
                 $tagihan->update(['status' => 'PROSES_SPP']);
@@ -514,7 +516,7 @@ class SppController extends Controller
             Notification::send($selectedPpk, new WorkflowNotification([
                 'title' => 'SPP Honorarium Diajukan',
                 'message' => "SPP Honorarium ({$spp->nomor_spp}) menunggu verifikasi Anda.",
-                'url' => route('verifikasi-ppk.spp.index'),
+                'url' => route('verifikasi-spp.honor.index'),
                 'icon' => 'receipt_long',
                 'color' => 'primary',
             ]));
@@ -567,8 +569,9 @@ class SppController extends Controller
             ->values();
         $sppModel = $tagihan->spps->sortByDesc('created_at')->first();
         $selectedBudgetItem = $sppModel?->dipaRevisionItem ?? $budgetItems->first();
-        $ppkUsers = User::role('PPK')->orderByDisplayName()->get();
-        $kasubbagUser = User::role('Kepala Subbagian Keuangan dan Tata Usaha')->orderByDisplayName()->first();
+        $ppkUser = \App\Models\User::find($tagihan->ppk_user_id) ?? \App\Models\User::role('PPK')->orderByDisplayName()->first();
+        $kasubbagUser = \App\Models\User::find($tagihan->kasubbag_user_id) ?? \App\Models\User::role('Kepala Subbagian Keuangan dan Tata Usaha')->orderByDisplayName()->first();
+        $koordinatorUser = \App\Models\User::find($tagihan->koordinator_keuangan_user_id) ?? \App\Models\User::role('Koordinator Keuangan')->orderByDisplayName()->first();
         $pajaks = MasterTarifPajak::orderBy('jenis_pajak')->get();
         $potonganTagihans = collect($tagihan->potonganTagihan);
         $potonganPajak = $potonganTagihans->filter(fn ($item) => $item->jenis_potongan !== 'ANGSURAN_UANG_MUKA');
@@ -760,6 +763,8 @@ class SppController extends Controller
         
         $ppkApproval = collect($latestWorkflowInstance?->approvals ?? [])
             ->firstWhere('role_code', 'PPK');
+        $koordinatorApproval = collect($latestWorkflowInstance?->approvals ?? [])
+            ->firstWhere('role_code', 'Koordinator Keuangan');
         $kasubbagApproval = collect($latestWorkflowInstance?->approvals ?? [])
             ->firstWhere('role_code', 'Kepala Subbagian Keuangan dan Tata Usaha');
 
@@ -788,6 +793,11 @@ class SppController extends Controller
                 'label' => 'Verifikator PPK',
                 'value' => $sppModel?->ppkVerifikator?->name ?? '-',
                 'meta' => $ppkApproval?->status ? 'Status: ' . $ppkApproval->status : null,
+            ],
+            [
+                'label' => 'Verifikator Koordinator Keuangan',
+                'value' => $koordinatorUser?->name ?? '-',
+                'meta' => $koordinatorApproval?->status ? 'Status: ' . $koordinatorApproval->status : null,
             ],
             [
                 'label' => 'Verifikator Kasubbag',
@@ -831,8 +841,9 @@ class SppController extends Controller
             'autoNomorSpp',
             'selectedBudgetItem',
             'sppModel',
-            'ppkUsers',
+            'ppkUser',
             'kasubbagUser',
+            'koordinatorUser',
             'pajaks',
             'documentStatuses',
             'readinessChecklist',
@@ -843,6 +854,7 @@ class SppController extends Controller
             'isReadyToSubmit',
             'readinessStatus',
             'ppkApproval',
+            'koordinatorApproval',
             'kasubbagApproval',
         ));
     }
@@ -1033,7 +1045,7 @@ class SppController extends Controller
             Notification::send($selectedPpk, new WorkflowNotification([
                 'title' => 'SPP Kontrak Diajukan',
                 'message' => "SPP Kontrak ({$spp->nomor_spp}) menunggu verifikasi Anda.",
-                'url' => route('verifikasi-ppk.spp.index'),
+                'url' => route('verifikasi-spp.kontrak.index'),
                 'icon' => 'receipt_long',
                 'color' => 'primary',
             ]));

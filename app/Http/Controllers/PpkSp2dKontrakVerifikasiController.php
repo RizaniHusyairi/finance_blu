@@ -13,11 +13,28 @@ use Illuminate\Support\Facades\Notification;
 
 class PpkSp2dKontrakVerifikasiController extends Controller
 {
+    private function activeRoleCode(): string
+    {
+        return request()->routeIs('verifikasi-koordinator.*')
+            ? 'Koordinator Keuangan'
+            : 'PPK';
+    }
+
+    private function routePrefix(): string
+    {
+        return $this->activeRoleCode() === 'Koordinator Keuangan'
+            ? 'verifikasi-koordinator.sp2d.kontrak'
+            : 'verifikasi-ppk.sp2d.kontrak';
+    }
+
     /**
      * Halaman antrean verifikasi SP2D Kontrak untuk PPK.
      */
     public function index(Request $request)
     {
+        $currentRole = $this->activeRoleCode();
+        $routePrefix = $this->routePrefix();
+
         $sp2dQuery = DokumenSp2d::with([
             'npi.spm.spp.tagihan.detailKontrak.kontrakTermin.kontrak.vendor',
             'bendaharaPengeluaran',
@@ -36,6 +53,8 @@ class PpkSp2dKontrakVerifikasiController extends Controller
             $sp2d->_workflowInstance = $latestInstance;
             $sp2d->_ppkApproval = $approvals->firstWhere('role_code', 'PPK');
             $sp2d->_kasubbagApproval = $approvals->firstWhere('role_code', 'Kepala Subbagian Keuangan dan Tata Usaha');
+            $sp2d->_koordinatorApproval = $approvals->firstWhere('role_code', 'Koordinator Keuangan');
+            $sp2d->_currentApproval = $approvals->firstWhere('role_code', $this->activeRoleCode());
 
             $allApproved = $approvals->every(fn ($a) => $a->status === 'APPROVED') && $approvals->isNotEmpty();
             $anyRevision = $approvals->contains(fn ($a) => in_array($a->status, ['REVISION', 'REJECTED']));
@@ -52,6 +71,7 @@ class PpkSp2dKontrakVerifikasiController extends Controller
                     $pendingRoles = $pending->pluck('role_code')->map(fn ($role) => match($role) {
                         'PPK' => 'PPK',
                         'Kepala Subbagian Keuangan dan Tata Usaha' => 'Kasubbag',
+                        'Koordinator Keuangan' => 'Koordinator',
                         default => $role,
                     });
                     $sp2d->_statusFinal = 'Menunggu ' . $pendingRoles->join(' & ');
@@ -69,7 +89,7 @@ class PpkSp2dKontrakVerifikasiController extends Controller
         $filtered = $sp2dList;
 
         if ($filterPpk !== 'semua') {
-            $filtered = $filtered->filter(fn ($sp2d) => $sp2d->_ppkApproval?->status === strtoupper($filterPpk));
+            $filtered = $filtered->filter(fn ($sp2d) => $sp2d->_currentApproval?->status === strtoupper($filterPpk));
         }
         if ($filterKasubbag !== 'semua') {
             $filtered = $filtered->filter(fn ($sp2d) => $sp2d->_kasubbagApproval?->status === strtoupper($filterKasubbag));
@@ -97,9 +117,9 @@ class PpkSp2dKontrakVerifikasiController extends Controller
         }
 
         $summary = [
-            'pending' => $sp2dList->filter(fn ($n) => $n->_ppkApproval?->status === 'PENDING')->count(),
-            'approved' => $sp2dList->filter(fn ($n) => $n->_ppkApproval?->status === 'APPROVED')->count(),
-            'revision' => $sp2dList->filter(fn ($n) => in_array($n->_ppkApproval?->status, ['REVISION', 'REJECTED'])
+            'pending' => $sp2dList->filter(fn ($n) => $n->_currentApproval?->status === 'PENDING')->count(),
+            'approved' => $sp2dList->filter(fn ($n) => $n->_currentApproval?->status === 'APPROVED')->count(),
+            'revision' => $sp2dList->filter(fn ($n) => in_array($n->_currentApproval?->status, ['REVISION', 'REJECTED'])
                 || $n->_workflowInstance?->status === 'REVISION')->count(),
             'selesai' => $sp2dList->filter(fn ($n) => $n->_statusFinal === 'Selesai Diverifikasi')->count(),
         ];
@@ -110,8 +130,8 @@ class PpkSp2dKontrakVerifikasiController extends Controller
             'filterPpk' => $filterPpk,
             'filterKasubbag' => $filterKasubbag,
             'search' => $search,
-            'currentRole' => 'PPK',
-            'routePrefix' => 'verifikasi-ppk.sp2d.kontrak',
+            'currentRole' => $currentRole,
+            'routePrefix' => $routePrefix,
         ]);
     }
 
@@ -120,6 +140,9 @@ class PpkSp2dKontrakVerifikasiController extends Controller
      */
     public function show($sp2d_id)
     {
+        $currentRole = $this->activeRoleCode();
+        $routePrefix = $this->routePrefix();
+
         $sp2d = DokumenSp2d::with([
             'npi.spm.spp.tagihan.detailKontrak.kontrakTermin.kontrak.vendor.rekening',
             'npi.spm.spp.tagihan.potonganTagihan.pajak',
@@ -148,9 +171,10 @@ class PpkSp2dKontrakVerifikasiController extends Controller
 
         $ppkApproval = $approvals->firstWhere('role_code', 'PPK');
         $kasubbagApproval = $approvals->firstWhere('role_code', 'Kepala Subbagian Keuangan dan Tata Usaha');
-        $currentUserApproval = $ppkApproval;
+        $koordinatorApproval = $approvals->firstWhere('role_code', 'Koordinator Keuangan');
+        $currentUserApproval = $approvals->firstWhere('role_code', $currentRole);
 
-        $canApprove = $ppkApproval && $ppkApproval->status === 'PENDING';
+        $canApprove = $currentUserApproval && $currentUserApproval->status === 'PENDING';
         $canRequestRevision = $canApprove;
 
         $allApproved = $approvals->every(fn ($a) => $a->status === 'APPROVED') && $approvals->isNotEmpty();
@@ -203,14 +227,15 @@ class PpkSp2dKontrakVerifikasiController extends Controller
             'activeWorkflowInstance' => $activeWorkflowInstance,
             'ppkApproval' => $ppkApproval,
             'kasubbagApproval' => $kasubbagApproval,
+            'koordinatorApproval' => $koordinatorApproval,
             'currentUserApproval' => $currentUserApproval,
             'canApprove' => $canApprove,
             'canRequestRevision' => $canRequestRevision,
             'statusFinal' => $statusFinal,
             'revisionNotes' => $revisionNotes,
             'documentStatuses' => $documentStatuses,
-            'currentRole' => 'PPK',
-            'routePrefix' => 'verifikasi-ppk.sp2d.kontrak',
+            'currentRole' => $currentRole,
+            'routePrefix' => $routePrefix,
         ]);
     }
 
@@ -220,8 +245,10 @@ class PpkSp2dKontrakVerifikasiController extends Controller
     public function approve(Request $request, $sp2d_id)
     {
         $sp2d = DokumenSp2d::findOrFail($sp2d_id);
+        $currentRole = $this->activeRoleCode();
+        $routePrefix = $this->routePrefix();
 
-        DB::transaction(function () use ($sp2d, $request) {
+        DB::transaction(function () use ($sp2d, $request, $currentRole) {
             $workflowService = app(WorkflowService::class);
             $instance = $workflowService->approveCurrentStep($sp2d, auth()->id(), $request->input('catatan'));
 
@@ -229,11 +256,11 @@ class PpkSp2dKontrakVerifikasiController extends Controller
                 'dokumen_type' => DokumenSp2d::class,
                 'dokumen_id' => $sp2d->id,
                 'user_id' => auth()->id(),
-                'role_saat_itu' => 'PPK',
+                'role_saat_itu' => $currentRole,
                 'status_sebelumnya' => $sp2d->status,
                 'status_baru' => $instance->status === 'APPROVED' ? DokumenSp2d::STATUS_DISETUJUI_FINAL : $sp2d->status,
-                'aksi' => 'APPROVE_PPK_SP2D',
-                'catatan' => $request->input('catatan', 'SP2D disetujui PPK.'),
+                'aksi' => 'APPROVE_' . str($currentRole)->upper()->replace(' ', '_') . '_SP2D',
+                'catatan' => $request->input('catatan', "SP2D disetujui {$currentRole}."),
                 'ip_address' => request()->ip(),
             ]);
 
@@ -242,7 +269,7 @@ class PpkSp2dKontrakVerifikasiController extends Controller
             }
         });
 
-        return redirect()->route('verifikasi-ppk.sp2d.kontrak.show', $sp2d_id)
+        return redirect()->route($routePrefix . '.show', $sp2d_id)
             ->with('success', 'SP2D berhasil disetujui.');
     }
 
@@ -256,8 +283,10 @@ class PpkSp2dKontrakVerifikasiController extends Controller
         ]);
 
         $sp2d = DokumenSp2d::findOrFail($sp2d_id);
+        $currentRole = $this->activeRoleCode();
+        $routePrefix = $this->routePrefix();
 
-        DB::transaction(function () use ($sp2d, $request) {
+        DB::transaction(function () use ($sp2d, $request, $currentRole) {
             $workflowService = app(WorkflowService::class);
             $workflowService->requestRevision($sp2d, auth()->id(), $request->catatan_revisi);
 
@@ -267,10 +296,10 @@ class PpkSp2dKontrakVerifikasiController extends Controller
                 'dokumen_type' => DokumenSp2d::class,
                 'dokumen_id' => $sp2d->id,
                 'user_id' => auth()->id(),
-                'role_saat_itu' => 'PPK',
+                'role_saat_itu' => $currentRole,
                 'status_sebelumnya' => $sp2d->status,
                 'status_baru' => DokumenSp2d::STATUS_REVISI,
-                'aksi' => 'REVISI_PPK_SP2D',
+                'aksi' => 'REVISI_' . str($currentRole)->upper()->replace(' ', '_') . '_SP2D',
                 'catatan' => $request->catatan_revisi,
                 'ip_address' => request()->ip(),
             ]);
@@ -279,7 +308,7 @@ class PpkSp2dKontrakVerifikasiController extends Controller
             if ($benPenUsers->isNotEmpty()) {
                 Notification::send($benPenUsers, new WorkflowNotification([
                     'title' => 'SP2D Kontrak Dikembalikan',
-                    'message' => "SP2D {$sp2d->nomor_sp2d} dikembalikan oleh PPK: {$request->catatan_revisi}",
+                    'message' => "SP2D {$sp2d->nomor_sp2d} dikembalikan oleh {$currentRole}: {$request->catatan_revisi}",
                     'url' => route('sp2ds.kontrak.index'),
                     'icon' => 'reply',
                     'color' => 'warning',
@@ -287,7 +316,7 @@ class PpkSp2dKontrakVerifikasiController extends Controller
             }
         });
 
-        return redirect()->route('verifikasi-ppk.sp2d.kontrak.show', $sp2d_id)
+        return redirect()->route($routePrefix . '.show', $sp2d_id)
             ->with('success', 'SP2D dikembalikan untuk revisi.');
     }
 }

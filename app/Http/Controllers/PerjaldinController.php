@@ -105,8 +105,10 @@ class PerjaldinController extends Controller
         $bendaharaPenerimaanUsers = User::role('Bendahara Penerimaan')->with('profilable')->orderByDisplayName()->get();
         $bendaharaUsers = User::role('Bendahara Pengeluaran')->with('profilable')->orderByDisplayName()->get();
         $kasubbagUser = User::role('Kepala Subbagian Keuangan dan Tata Usaha')->with('profilable')->orderByDisplayName()->first();
+        $koorKeuanganUsers = User::role('Koordinator Keuangan')->with('profilable')->orderByDisplayName()->get();
+        $masterPegawai = MasterPegawai::where('status_aktif', true)->orderBy('nama_lengkap')->get();
 
-        return view('perjaldins.create', compact('budgetGroups', 'masterProvinsi', 'ppkUsers', 'ppspmUsers', 'bendaharaPenerimaanUsers', 'bendaharaUsers', 'kasubbagUser'));
+        return view('perjaldins.create', compact('budgetGroups', 'masterProvinsi', 'ppkUsers', 'ppspmUsers', 'bendaharaPenerimaanUsers', 'bendaharaUsers', 'kasubbagUser', 'koorKeuanganUsers', 'masterPegawai'));
     }
 
     /**
@@ -143,6 +145,9 @@ class PerjaldinController extends Controller
             'kasubbag_user_id' => 'required|exists:users,id',
             'kasubbag_nama_snapshot' => 'required|string|max:150',
             'kasubbag_nip_snapshot' => 'nullable|string|max:100',
+            'koordinator_keuangan_user_id' => 'nullable|exists:users,id',
+            'koordinator_keuangan_nama_snapshot' => 'nullable|string|max:150',
+            'koordinator_keuangan_nip_snapshot' => 'nullable|string|max:100',
 
             'peserta' => 'required|array|min:1',
             'peserta.*.nama_pegawai' => 'required|string|max:150',
@@ -192,6 +197,9 @@ class PerjaldinController extends Controller
                 'kasubbag_user_id' => $request->kasubbag_user_id,
                 'kasubbag_nama_snapshot' => $request->kasubbag_nama_snapshot,
                 'kasubbag_nip_snapshot' => $request->kasubbag_nip_snapshot,
+                'koordinator_keuangan_user_id' => $request->koordinator_keuangan_user_id,
+                'koordinator_keuangan_nama_snapshot' => $request->koordinator_keuangan_nama_snapshot,
+                'koordinator_keuangan_nip_snapshot' => $request->koordinator_keuangan_nip_snapshot,
                 'total_bruto' => $totalBruto,
                 'total_potongan' => 0,
                 'total_netto' => $totalBruto,
@@ -346,8 +354,10 @@ class PerjaldinController extends Controller
         $bendaharaPenerimaanUsers = User::role('Bendahara Penerimaan')->with('profilable')->orderByDisplayName()->get();
         $bendaharaUsers = User::role('Bendahara Pengeluaran')->with('profilable')->orderByDisplayName()->get();
         $kasubbagUser = User::role('Kepala Subbagian Keuangan dan Tata Usaha')->with('profilable')->orderByDisplayName()->first();
+        $koorKeuanganUsers = User::role('Koordinator Keuangan')->with('profilable')->orderByDisplayName()->get();
+        $masterPegawai = MasterPegawai::where('status_aktif', true)->orderBy('nama_lengkap')->get();
 
-        return view('perjaldins.edit-perjaldin', compact('tagihan', 'budgetGroups', 'masterProvinsi', 'ppkUsers', 'ppspmUsers', 'bendaharaPenerimaanUsers', 'bendaharaUsers', 'kasubbagUser'));
+        return view('perjaldins.edit-perjaldin', compact('tagihan', 'budgetGroups', 'masterProvinsi', 'ppkUsers', 'ppspmUsers', 'bendaharaPenerimaanUsers', 'bendaharaUsers', 'kasubbagUser', 'koorKeuanganUsers', 'masterPegawai'));
     }
 
     /**
@@ -391,6 +401,9 @@ class PerjaldinController extends Controller
             'kasubbag_user_id' => 'required|exists:users,id',
             'kasubbag_nama_snapshot' => 'required|string|max:150',
             'kasubbag_nip_snapshot' => 'nullable|string|max:100',
+            'koordinator_keuangan_user_id' => 'nullable|exists:users,id',
+            'koordinator_keuangan_nama_snapshot' => 'nullable|string|max:150',
+            'koordinator_keuangan_nip_snapshot' => 'nullable|string|max:100',
 
             'peserta' => 'required|array|min:1',
             'peserta.*.detail_id' => 'nullable|exists:detail_perjaldin,id',
@@ -442,6 +455,9 @@ class PerjaldinController extends Controller
                 'kasubbag_user_id' => $request->kasubbag_user_id,
                 'kasubbag_nama_snapshot' => $request->kasubbag_nama_snapshot,
                 'kasubbag_nip_snapshot' => $request->kasubbag_nip_snapshot,
+                'koordinator_keuangan_user_id' => $request->koordinator_keuangan_user_id,
+                'koordinator_keuangan_nama_snapshot' => $request->koordinator_keuangan_nama_snapshot,
+                'koordinator_keuangan_nip_snapshot' => $request->koordinator_keuangan_nip_snapshot,
                 'total_bruto' => $totalBruto,
                 'total_netto' => $totalBruto - $tagihan->total_potongan,
                 'status' => 'DRAFT', // Reset ke draft saat diedit

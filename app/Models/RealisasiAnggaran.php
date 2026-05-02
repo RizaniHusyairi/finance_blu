@@ -31,4 +31,19 @@ class RealisasiAnggaran extends Model
     {
         return $this->belongsTo(User::class, 'created_by');
     }
+
+    public function dokumenSp2d()
+    {
+        return $this->belongsTo(DokumenSp2d::class, 'dokumen_sp2d_id');
+    }
+
+    public function coa()
+    {
+        return $this->belongsTo(MasterCoa::class, 'master_coa_id');
+    }
+
+    public function sourceable()
+    {
+        return $this->morphTo();
+    }
 }

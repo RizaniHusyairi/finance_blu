@@ -114,6 +114,13 @@
                                 <button class="btn btn-sm btn-info text-white" data-bs-toggle="modal" data-bs-target="#modalAktivitas{{ $komponen->id }}">
                                     <i class="bi bi-activity"></i> Aktivitas SPP
                                 </button>
+                                @if(in_array($spp->status, ['DISETUJUI_SPP', 'APPROVED', 'SPP_TERBIT'], true))
+                                    @hasanyrole('Super Admin|Operator BLU')
+                                        <a href="{{ route('spms.perjaldin.detail', $spp->id) }}" class="btn btn-sm btn-success" title="{{ $spp->spm ? 'Lanjutkan SPM' : 'Lanjut Buat SPM' }}">
+                                            <i class="bi bi-arrow-right-circle"></i> {{ $spp->spm ? 'Lanjutkan SPM' : 'Lanjut Buat SPM' }}
+                                        </a>
+                                    @endhasanyrole
+                                @endif
                             @endif
                         </div>
                     </div>
@@ -200,19 +207,17 @@
                     <hr>
                     <h6 class="mb-3">Verifikator & Penandatangan</h6>
                     <div class="row mb-3">
-                        <div class="col-md-6">
-                            <label class="form-label fw-bold">PPK Verifikator (Wajib)</label>
-                            <select name="ppk_verifikator_id" class="form-select border-primary" required {{ $isReadOnly ? 'disabled' : '' }}>
-                                <option value="">-- Pilih PPK --</option>
-                                @foreach($ppkUsers as $ppk)
-                                    <option value="{{ $ppk->id }}" {{ ($spp->ppk_verifikator_id ?? '') == $ppk->id ? 'selected' : '' }}>
-                                        {{ $ppk->name }}
-                                    </option>
-                                @endforeach
-                            </select>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">Verifikator PPK</label>
+                            <input type="text" class="form-control bg-light text-muted border-0 shadow-none" value="{{ $ppkUser->name ?? 'PPK Tidak Tersedia (Otomatis)' }}" readonly>
+                            <input type="hidden" name="ppk_verifikator_id" value="{{ $ppkUser->id ?? '' }}">
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-bold">Kasubbag Verifikator (Otomatis)</label>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">Koordinator Keuangan</label>
+                            <input type="text" class="form-control bg-light text-muted border-0 shadow-none" value="{{ $koordinatorUser->name ?? '(User Koordinator belum ada)' }}" readonly>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">Kasubbag (Otomatis)</label>
                             <input type="text" class="form-control bg-light text-muted border-0 shadow-none" value="{{ $kasubbagUser->name ?? '(User Kasubbag belum ada)' }}" readonly>
                         </div>
                     </div>

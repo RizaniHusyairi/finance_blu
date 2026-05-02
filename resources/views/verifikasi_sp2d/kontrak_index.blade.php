@@ -78,7 +78,7 @@
     <div class="card-body py-3">
         <form method="GET" action="{{ route($routePrefix . '.index') }}" class="row g-2 align-items-end">
             <div class="col-md-2">
-                <label class="form-label small fw-semibold mb-1">Status PPK</label>
+                <label class="form-label small fw-semibold mb-1">Status Saya ({{ $currentRole }})</label>
                 <select name="status_ppk" class="form-select form-select-sm">
                     <option value="semua" {{ $filterPpk === 'semua' ? 'selected' : '' }}>Semua</option>
                     <option value="pending" {{ $filterPpk === 'pending' ? 'selected' : '' }}>Pending</option>
@@ -121,6 +121,7 @@
                         <th class="text-end">Nilai SP2D</th>
                         <th class="text-center">PPK</th>
                         <th class="text-center">Kasubbag</th>
+                        <th class="text-center">Koordinator</th>
                         <th class="text-center">Status Final</th>
                         <th class="text-center" style="width: 100px;">Aksi</th>
                     </tr>
@@ -162,11 +163,15 @@
                                 <span class="badge {{ $ks === 'APPROVED' ? 'bg-success' : ($ks === 'PENDING' ? 'bg-warning text-dark' : (in_array($ks, ['REVISION', 'REJECTED']) ? 'bg-danger' : 'bg-light text-dark border')) }}">{{ $ks ?? 'N/A' }}</span>
                             </td>
                             <td class="text-center">
+                                @php($kos = $sp2d->_koordinatorApproval?->status)
+                                <span class="badge {{ $kos === 'APPROVED' ? 'bg-success' : ($kos === 'PENDING' ? 'bg-warning text-dark' : (in_array($kos, ['REVISION', 'REJECTED']) ? 'bg-danger' : 'bg-light text-dark border')) }}">{{ $kos ?? 'N/A' }}</span>
+                            </td>
+                            <td class="text-center">
                                 @php($sf = $sp2d->_statusFinal)
                                 <span class="badge {{ $sf === 'Selesai Diverifikasi' ? 'bg-success' : (str_contains($sf, 'Revisi') ? 'bg-danger' : 'bg-info text-dark') }}" style="font-size: 11px;">{{ $sf }}</span>
                             </td>
                             <td class="text-center">
-                                @if(($currentRole === 'PPK' ? $sp2d->_ppkApproval : $sp2d->_kasubbagApproval)?->status === 'PENDING')
+                                @if(($sp2d->_currentApproval ?? null)?->status === 'PENDING')
                                     <a href="{{ route($routePrefix . '.show', $sp2d->id) }}" class="btn btn-sm btn-primary px-3">
                                         <i class="material-icons-outlined" style="font-size:14px; vertical-align: middle;">fact_check</i> Verifikasi
                                     </a>
@@ -179,7 +184,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="9" class="text-center py-5 text-muted">
+                            <td colspan="10" class="text-center py-5 text-muted">
                                 <i class="material-icons-outlined" style="font-size: 48px; opacity: 0.3;">inbox</i>
                                 <div class="mt-2">Tidak ada SP2D Kontrak yang memenuhi filter.</div>
                             </td>

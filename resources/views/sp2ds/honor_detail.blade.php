@@ -138,10 +138,10 @@
                 <div class="progression-label">Pencatatan Draf</div>
                 <div class="text-muted small">Bendahara Pengeluaran</div>
             </div>
-            <div class="progression-step {{ $progressStep >= 2 ? ($ppkApproval?->status == 'APPROVED' && $kasubbagApproval?->status == 'APPROVED' ? 'passed' : ($ppkApproval?->status == 'REVISION' || $kasubbagApproval?->status == 'REVISION' ? 'fail' : 'active')) : '' }}">
+            <div class="progression-step {{ $progressStep >= 2 ? ($ppkApproval?->status == 'APPROVED' && $kasubbagApproval?->status == 'APPROVED' && $ppspmApproval?->status == 'APPROVED' ? 'passed' : ($ppkApproval?->status == 'REVISION' || $kasubbagApproval?->status == 'REVISION' || $ppspmApproval?->status == 'REVISION' ? 'fail' : 'active')) : '' }}">
                 <div class="progression-icon"><i class="bi bi-shield-check"></i></div>
                 <div class="progression-label">Validasi Keuangan</div>
-                <div class="text-muted small">PPK & Kasubbag</div>
+                <div class="text-muted small">PPK, Kasubbag, PPSPM</div>
             </div>
             <div class="progression-step {{ $progressStep == 3 ? 'passed' : '' }}">
                 <div class="progression-icon"><i class="bi bi-check-all"></i></div>
@@ -291,7 +291,7 @@
                         
                         <hr class="my-4 border-dashed opacity-25">
 
-                        <form action="{{ route('sp2ds.honor.submit', $npi->id) }}" method="POST" onsubmit="return confirm('Pengajuan akan mengunci Draf dan mengoper SP2D ini ke Verifikator (PPK & Kasubbag). Lanjutkan?');">
+                        <form action="{{ route('sp2ds.honor.submit', $npi->id) }}" method="POST" onsubmit="return confirm('Pengajuan akan mengunci Draf dan mengoper SP2D ini ke Verifikator (PPK, Kasubbag & PPSPM). Lanjutkan?');">
                             @csrf
                             <button type="submit" class="btn btn-success fw-bold w-100 shadow py-2" {{ !$checks['sp2d_valid'] ? 'disabled' : '' }}>
                                 <i class="bi bi-send-check-fill me-1"></i> AJUKAN VERIFIKASI SP2D SEKARANG

@@ -111,6 +111,9 @@
                                 $wfInstance = collect($spm?->workflowInstances ?? [])->sortByDesc('created_at')->first();
                                 $ppspmApproval = collect($wfInstance?->approvals ?? [])->firstWhere('role_code', 'PPSPM');
                                 $kasubbagApproval = collect($wfInstance?->approvals ?? [])->firstWhere('role_code', 'Kepala Subbagian Keuangan dan Tata Usaha');
+                                $koordinatorApproval = collect($wfInstance?->approvals ?? [])->first(
+                                    fn ($approval) => in_array($approval->role_code, ['Koordinator Keuangan', 'KOORDINATOR_KEUANGAN'], true)
+                                );
                             @endphp
                             <tr>
                                 <td>{{ $idx + 1 }}</td>
@@ -152,10 +155,21 @@
                                                     'APPROVED' => 'bg-success-subtle text-success',
                                                     'PENDING' => 'bg-warning-subtle text-warning',
                                                     'REVISION' => 'bg-danger-subtle text-danger',
+                                                    'REJECTED' => 'bg-danger-subtle text-danger',
+                                                    'WAITING' => 'bg-light text-muted',
+                                                    default => 'bg-light text-muted',
+                                                };
+                                                $koordinatorStatusClass = match($koordinatorApproval?->status ?? '-') {
+                                                    'APPROVED' => 'bg-success-subtle text-success',
+                                                    'PENDING' => 'bg-warning-subtle text-warning',
+                                                    'REVISION' => 'bg-danger-subtle text-danger',
+                                                    'REJECTED' => 'bg-danger-subtle text-danger',
+                                                    'WAITING' => 'bg-light text-muted',
                                                     default => 'bg-light text-muted',
                                                 };
                                             @endphp
                                             <span class="spm-verif-badge {{ $ppspmStatusClass }}"><i class="bi bi-person-check"></i> PPSPM: {{ $ppspmApproval?->status ?? '-' }}</span>
+                                            <span class="spm-verif-badge {{ $koordinatorStatusClass }}"><i class="bi bi-person-check"></i> Koor Keu: {{ $koordinatorApproval?->status ?? '-' }}</span>
                                             <span class="spm-verif-badge {{ $kasubbagStatusClass }}"><i class="bi bi-person-badge"></i> Kasubbag: {{ $kasubbagApproval?->status ?? '-' }}</span>
                                         </div>
                                     @else

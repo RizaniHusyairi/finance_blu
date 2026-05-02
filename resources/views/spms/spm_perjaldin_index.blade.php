@@ -17,10 +17,20 @@
         'Disetujui Final' => 'SPM Terbit',
         default => 'Belum Dibuat',
     };
+    $verificationStatusClass = fn($status) => match ($status ?? '-') {
+        'APPROVED' => 'bg-success-subtle text-success',
+        'PENDING' => 'bg-warning-subtle text-warning',
+        'REVISION', 'REJECTED' => 'bg-danger-subtle text-danger',
+        'WAITING' => 'bg-light text-muted',
+        default => 'bg-light text-muted',
+    };
 @endphp
 
 @push('css')
     <link href="{{ URL::asset('build/plugins/datatable/css/dataTables.bootstrap5.min.css') }}" rel="stylesheet" />
+    <style>
+        .spm-verif-badge { display: inline-flex; align-items: center; gap: .25rem; font-size: .72rem; font-weight: 600; padding: .15rem .5rem; border-radius: .35rem; }
+    </style>
 @endpush
 
 @section('content')
@@ -111,6 +121,7 @@
                             <th>COA</th>
                             <th class="text-end">Nilai SPP (Rp)</th>
                             <th class="text-center">Status SPM</th>
+                            <th class="text-center">Verifikasi Koor Keu</th>
                             <th class="text-center">Aksi</th>
                         </tr>
                     </thead>
@@ -119,6 +130,10 @@
                         @php
                             $hasSpm = (bool) $spp->spm;
                             $spmStatus = $spp->spm?->status ?? 'Belum Dibuat';
+                            $wfInstance = collect($spp->spm?->workflowInstances ?? [])->sortByDesc('created_at')->first();
+                            $koordinatorApproval = collect($wfInstance?->approvals ?? [])->first(
+                                fn ($approval) => in_array($approval->role_code, ['Koordinator Keuangan', 'KOORDINATOR_KEUANGAN'], true)
+                            );
                         @endphp
                         <tr>
                             <td>{{ $idx + 1 }}</td>
@@ -152,6 +167,15 @@
                                 @endif
                                 @if($hasSpm && $spmStatus === 'Revisi' && $spp->spm->catatan_revisi)
                                     <div class="text-danger small mt-1 fw-bold text-truncate" style="max-width: 150px;" title="{{ $spp->spm->catatan_revisi }}">"{{ $spp->spm->catatan_revisi }}"</div>
+                                @endif
+                            </td>
+                            <td class="text-center">
+                                @if($hasSpm && $wfInstance)
+                                    <span class="spm-verif-badge {{ $verificationStatusClass($koordinatorApproval?->status) }}">
+                                        <i class="bi bi-person-check"></i> {{ $koordinatorApproval?->status ?? '-' }}
+                                    </span>
+                                @else
+                                    <span class="text-muted small">-</span>
                                 @endif
                             </td>
                             <td class="text-center">

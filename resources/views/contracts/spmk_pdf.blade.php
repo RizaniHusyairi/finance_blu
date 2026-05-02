@@ -5,12 +5,14 @@
     <title>SPMK {{ $kontrak->nomor_spmk ?? $kontrak->nomor_spk ?? '-' }}</title>
     <style>
         @page { margin: 30px 40px 50px 40px; }
+        * { font-family: "Arial", "Helvetica", sans-serif; }
         body {
-            font-family: "Times New Roman", Times, serif;
+            font-family: "Arial", "Helvetica", sans-serif;
             font-size: 14px;
             line-height: 1.5;
             color: #000;
         }
+        table, th, td { font-family: "Arial", "Helvetica", sans-serif; }
         .text-center { text-align: center; }
         .text-justify { text-align: justify; }
         .fw-bold { font-weight: bold; }
@@ -48,7 +50,7 @@
                 $footerBase64 = '';
             }
         ?>
-        <img src="{{ $footerBase64 }}" alt="Footer" style="width: 80%; height: auto; display: block; margin: 0 auto;">
+        <img src="{{ $footerBase64 }}" alt="Footer" style="width: 80%; display: block; margin: 0 auto;">
     </footer>
 
     <div class="header" style="margin-bottom: 15px;">
@@ -65,9 +67,9 @@
                             $base64 = '';
                         }
                     ?>
-                    <img src="{{ $base64 }}" alt="Logo Kemenhub" style="width: 90px; height: auto;">
+                    <img src="{{ $base64 }}" alt="Logo Kemenhub" style="width: 75px; height: auto;">
                 </td>
-                <td style="width: 85%; text-align: center; vertical-align: middle; border: none; padding: 0;">
+                <td style="width: 85%; text-align: center; border: none; padding: 0;">
                     <div style="font-size: 18px; font-weight: bold; letter-spacing: 2px;">KEMENTERIAN PERHUBUNGAN</div>
                     <div style="font-size: 16px; font-weight: bold; letter-spacing: 2px;">DIREKTORAT JENDERAL PERHUBUNGAN UDARA</div>
                     <div style="font-size: 14px; font-weight: bold;">BADAN LAYANAN UMUM</div>
@@ -77,20 +79,19 @@
             </tr>
         </table>
         
-        <table style="width: 100%; border-collapse: collapse; border: none; font-weight: normal; font-size: 13px;">
+        <table style="width: 100%; border-collapse: collapse; border: none; font-weight: normal; font-size: 10px;">
             <tr>
-                <td style="width: 44%; text-align: left; vertical-align: top; border: none; padding: 0 10px 0 55px;">
-                    Jl. Poros Samarinda &ndash; Bontang, Kel. Sungai<br>
+                <td style="text-align: left; vertical-align: top; border: none; padding: 0 10px 0 40px;">
+                    Jl. Poros Samarinda &ndash; Bontang, Kel. Sungai
                     Siring, Samarinda &ndash; Kalimantan Timur
                 </td>
                 <td style="width: 1px; background-color: black; padding: 0;"></td>
-                <td style="width: 16%; text-align: left; vertical-align: top; border: none; padding: 0 10px;">
-                    TELP. (0541)<br>
-                    2831593
+                <td style="width: 20%; text-align: center; vertical-align: top; border: none; padding: 0 0px;">
+                    TELP. (0541) 2831593
                 </td>
                 <td style="width: 1px; background-color: black; padding: 0;"></td>
                 <td style="width: 39%; text-align: left; vertical-align: top; border: none; padding: 0 10px;">
-                    <table style="width: 100%; border-collapse: collapse; border: none; font-size: 13px;">
+                    <table style="width: 100%; border-collapse: collapse; border: none; font-size: 10px;">
                         <tr>
                             <td style="width: 40px; border: none; padding: 0;">FAX</td>
                             <td style="width: 10px; border: none; padding: 0;">:</td>
@@ -99,7 +100,7 @@
                         <tr>
                             <td style="border: none; padding: 0;">EMAIL</td>
                             <td style="border: none; padding: 0;">:</td>
-                            <td style="border: none; padding: 0; color: blue; text-decoration: underline;">mail.aptpranotoairport@gmail.com</td>
+                            <td style="border: none; padding: 0; ">mail.aptpranotoairport@gmail.com</td>
                         </tr>
                     </table>
                 </td>

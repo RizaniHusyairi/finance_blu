@@ -1,11 +1,11 @@
 @extends('layouts.app')
-@section('title', 'Verifikasi NPI Kontrak — PPK')
+@section('title', 'Verifikasi NPI Kontrak - ' . ($currentRole ?? 'PPK'))
 
 @section('content')
 <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4">
     <div>
         <h5 class="fw-bold text-primary mb-0">Verifikasi NPI</h5>
-        <p class="text-muted mb-0">Kontrak — Pejabat Pembuat Komitmen (PPK)</p>
+        <p class="text-muted mb-0">Kontrak - {{ $currentRole ?? 'PPK' }}</p>
     </div>
 </div>
 
@@ -76,9 +76,9 @@
 {{-- Filter Bar --}}
 <div class="card border-0 shadow-sm mb-4">
     <div class="card-body py-3">
-        <form method="GET" action="{{ route('verifikasi-ppk.npi.kontrak.index') }}" class="row g-2 align-items-end">
+        <form method="GET" action="{{ route(($routePrefix ?? 'verifikasi-ppk.npi.kontrak') . '.index') }}" class="row g-2 align-items-end">
             <div class="col-md-2">
-                <label class="form-label small fw-semibold mb-1">Status Saya (PPK)</label>
+                <label class="form-label small fw-semibold mb-1">Status Saya ({{ $currentRole ?? 'PPK' }})</label>
                 <select name="status_ppk" class="form-select form-select-sm">
                     <option value="semua" {{ $filterPpk === 'semua' ? 'selected' : '' }}>Semua</option>
                     <option value="pending" {{ $filterPpk === 'pending' ? 'selected' : '' }}>Pending</option>
@@ -110,7 +110,7 @@
             </div>
             <div class="col-md-2 d-flex gap-1">
                 <button type="submit" class="btn btn-primary btn-sm flex-grow-1"><i class="material-icons-outlined" style="font-size:16px; vertical-align: middle;">search</i> Filter</button>
-                <a href="{{ route('verifikasi-ppk.npi.kontrak.index') }}" class="btn btn-outline-secondary btn-sm"><i class="material-icons-outlined" style="font-size:16px; vertical-align: middle;">refresh</i></a>
+                <a href="{{ route(($routePrefix ?? 'verifikasi-ppk.npi.kontrak') . '.index') }}" class="btn btn-outline-secondary btn-sm"><i class="material-icons-outlined" style="font-size:16px; vertical-align: middle;">refresh</i></a>
             </div>
         </form>
     </div>
@@ -131,6 +131,7 @@
                         <th class="text-center">BenPen</th>
                         <th class="text-center">PPK</th>
                         <th class="text-center">Kasubbag</th>
+                        <th class="text-center">Koordinator</th>
                         <th class="text-center">Status Final</th>
                         <th class="text-center" style="width: 100px;">Aksi</th>
                     </tr>
@@ -175,16 +176,20 @@
                                 <span class="badge {{ $ks === 'APPROVED' ? 'bg-success' : ($ks === 'PENDING' ? 'bg-warning text-dark' : (in_array($ks, ['REVISION', 'REJECTED']) ? 'bg-danger' : 'bg-light text-dark border')) }}">{{ $ks ?? 'N/A' }}</span>
                             </td>
                             <td class="text-center">
+                                @php($kos = $npi->_koordinatorApproval?->status)
+                                <span class="badge {{ $kos === 'APPROVED' ? 'bg-success' : ($kos === 'PENDING' ? 'bg-warning text-dark' : (in_array($kos, ['REVISION', 'REJECTED']) ? 'bg-danger' : 'bg-light text-dark border')) }}">{{ $kos ?? 'N/A' }}</span>
+                            </td>
+                            <td class="text-center">
                                 @php($sf = $npi->_statusFinal)
                                 <span class="badge {{ $sf === 'Selesai Diverifikasi' ? 'bg-success' : (str_contains($sf, 'Revisi') ? 'bg-danger' : 'bg-info') }}" style="font-size: 11px;">{{ $sf }}</span>
                             </td>
                             <td class="text-center">
-                                @if($npi->_ppkApproval?->status === 'PENDING')
-                                    <a href="{{ route('verifikasi-ppk.npi.kontrak.show', $npi->id) }}" class="btn btn-sm btn-primary px-3">
+                                @if($npi->_currentApproval?->status === 'PENDING')
+                                    <a href="{{ route(($routePrefix ?? 'verifikasi-ppk.npi.kontrak') . '.show', $npi->id) }}" class="btn btn-sm btn-primary px-3">
                                         <i class="material-icons-outlined" style="font-size:14px; vertical-align: middle;">fact_check</i> Verifikasi
                                     </a>
                                 @else
-                                    <a href="{{ route('verifikasi-ppk.npi.kontrak.show', $npi->id) }}" class="btn btn-sm btn-outline-secondary px-3">
+                                    <a href="{{ route(($routePrefix ?? 'verifikasi-ppk.npi.kontrak') . '.show', $npi->id) }}" class="btn btn-sm btn-outline-secondary px-3">
                                         <i class="material-icons-outlined" style="font-size:14px; vertical-align: middle;">visibility</i> Detail
                                     </a>
                                 @endif
@@ -192,7 +197,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="10" class="text-center py-5 text-muted">
+                            <td colspan="11" class="text-center py-5 text-muted">
                                 <i class="material-icons-outlined" style="font-size: 48px; opacity: 0.3;">inbox</i>
                                 <div class="mt-2">Tidak ada NPI Kontrak yang memenuhi filter.</div>
                             </td>

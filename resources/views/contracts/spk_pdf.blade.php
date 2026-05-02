@@ -66,8 +66,11 @@
         .rab-image {
             max-width: 100%;
             max-height: 520px;
-            display: block;
-            margin: 8px auto 0;
+            margin: 10px auto;
+        }
+
+        .rab-image-cell {
+            text-align: center;
         }
 
         footer {
@@ -214,8 +217,7 @@
             </td>
         </tr>
         <tr>
-            <td colspan="2">
-                <strong>GAMBAR RAB:</strong>
+            <td colspan="2" align="center" class="rab-image-cell">
                 <img src="{{ $gambarRabDataUri }}" alt="Gambar RAB" class="rab-image">
             </td>
         </tr>

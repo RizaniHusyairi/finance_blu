@@ -1,4 +1,13 @@
-<?php
+import re
+
+file_path = "app/Http/Controllers/SppPerjaldinVerifikasiController.php"
+with open(file_path, "r") as f:
+    content = f.read()
+
+helpers_start = content.find("    // =====================================================================\n    //  Helpers")
+helpers_content = content[helpers_start:]
+
+new_controller = r"""<?php
 
 namespace App\Http\Controllers;
 
@@ -246,7 +255,7 @@ class SppPerjaldinVerifikasiController extends Controller
                 'status_baru'       => $statusBaru,
                 'aksi'              => 'APPROVE_' . strtoupper(str_replace(' ', '_', $roleCode)),
                 'catatan'           => $isFullyApproved
-                    ? 'Dokumen SPP Perjaldin disetujui. Semua approver telah menyetujui — SPP final.'
+                    ? 'Dokumen SPP Perjaldin disetujui. Semua approver telah menyetujui â€” SPP final.'
                     : 'Dokumen SPP Perjaldin disetujui oleh ' . $roleCode . '.',
                 'ip_address'        => $request->ip(),
             ]);
@@ -326,49 +335,8 @@ class SppPerjaldinVerifikasiController extends Controller
         }
     }
 
-    // =====================================================================
-    //  Helpers
-    // =====================================================================
+""" + helpers_content
 
-    private function detectRoleCode(User $user): string
-    {
-        if ($user->hasRole('Koordinator Keuangan')) {
-            return 'Koordinator Keuangan';
-        }
-
-        if ($user->hasRole('Kepala Subbagian Keuangan dan Tata Usaha')) {
-            return 'Kepala Subbagian Keuangan dan Tata Usaha';
-        }
-
-        return 'PPK';
-    }
-
-    private function syncParentTagihan(DokumenSpp $spp): void
-    {
-        $tagihan = $spp->tagihan;
-
-        if (!$tagihan || $tagihan->tipe_tagihan !== 'PERJALDIN') {
-            return;
-        }
-
-        $komponens = $tagihan->komponenPerjaldin()
-            ->where('total_nominal', '>', 0)
-            ->with('dokumenSpp')
-            ->get();
-
-        if ($komponens->isEmpty()) return;
-
-        $approvedStatuses = ['DISETUJUI_SPP', 'APPROVED'];
-        $approvedCount = $komponens->filter(fn($k) =>
-            $k->dokumenSpp && in_array($k->dokumenSpp->status, $approvedStatuses, true)
-        )->count();
-
-        if ($approvedCount === 0) return;
-
-        $tagihan->update([
-            'status' => $approvedCount === $komponens->count()
-                ? 'SPP_LENGKAP'
-                : 'SEBAGIAN_SPP_TERBIT',
-        ]);
-    }
-}
+with open(file_path, "w") as fw:
+    fw.write(new_controller)
+print("Done refactoring SppPerjaldinVerifikasiController")

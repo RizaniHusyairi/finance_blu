@@ -25,6 +25,7 @@ class VerifikasiSp2dHonorController extends Controller
     {
         if ($user->hasRole('PPK')) return 'PPK';
         if ($user->hasRole('Kepala Subbagian Keuangan dan Tata Usaha')) return 'Kepala Subbagian Keuangan dan Tata Usaha';
+        if ($user->hasRole('Koordinator Keuangan')) return 'Koordinator Keuangan';
         
         return '';
     }

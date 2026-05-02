@@ -15,6 +15,8 @@ use Illuminate\Support\Facades\Notification;
 
 class VerifikasiSppHonorController extends Controller
 {
+    private const SPP_HONORARIUM_WORKFLOW = 'SPP_HONORARIUM_PPK';
+
     protected WorkflowService $workflowService;
 
     public function __construct(WorkflowService $workflowService)
@@ -25,13 +27,14 @@ class VerifikasiSppHonorController extends Controller
     /**
      * Memastikan role aktif (PPK atau Kasubbag).
      */
-    private function activeRoleCode(User $user): string
+    private function activeRoleCodes(User $user): array
     {
-        if ($user->hasRole('PPK')) return 'PPK';
-        if ($user->hasRole('Koordinator Keuangan')) return 'Koordinator Keuangan';
-        if ($user->hasRole('Kepala Subbagian Keuangan dan Tata Usaha')) return 'Kepala Subbagian Keuangan dan Tata Usaha';
+        $roles = [];
+        if ($user->hasRole('PPK')) $roles[] = 'PPK';
+        if ($user->hasRole('Koordinator Keuangan')) $roles[] = 'Koordinator Keuangan';
+        if ($user->hasRole('Kepala Subbagian Keuangan dan Tata Usaha')) $roles[] = 'Kepala Subbagian Keuangan dan Tata Usaha';
         
-        return '';
+        return $roles;
     }
 
     /**
@@ -40,9 +43,9 @@ class VerifikasiSppHonorController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
-        $roleCode = $this->activeRoleCode($user);
+        $roleCodes = $this->activeRoleCodes($user);
         
-        abort_unless($roleCode !== '', 403, 'Akses ditolak. Anda tidak memiliki peran verifikator PPK, Koordinator Keuangan, atau Kasubbag.');
+        abort_unless(count($roleCodes) > 0, 403, 'Akses ditolak. Anda tidak memiliki peran verifikator PPK, Koordinator Keuangan, atau Kasubbag.');
 
         $query = DokumenSpp::with([
             'tagihan.detailHonorarium',
@@ -56,18 +59,17 @@ class VerifikasiSppHonorController extends Controller
         ->whereHas('tagihan', function($q) {
             $q->where('tipe_tagihan', 'HONORARIUM');
         })
+        ->whereHas('workflowInstances.definition', fn ($q) => $q->where('kode', self::SPP_HONORARIUM_WORKFLOW))
         ->whereNotIn('status', ['DRAFT']);
 
         // Filter berdasarkan Assigned Role/User
-        $query->whereHas('workflowInstances', function ($q) use ($roleCode, $user) {
-            $q->whereHas('approvals', function ($q2) use ($roleCode, $user) {
-                // Untuk PPK periksa target user id-nya
-                if ($roleCode === 'PPK') {
-                    $q2->where('role_code', 'PPK')
-                       ->where('assigned_user_id', $user->id);
-                } else {
-                    $q2->where('role_code', $roleCode);
-                }
+        $query->whereHas('workflowInstances', function ($q) use ($roleCodes, $user) {
+            $q->whereHas('approvals', function ($q2) use ($roleCodes, $user) {
+                $q2->whereIn('role_code', $roleCodes)
+                   ->where(function ($q3) use ($user) {
+                       $q3->whereNull('assigned_user_id')
+                          ->orWhere('assigned_user_id', $user->id);
+                   });
             });
         });
 
@@ -98,21 +100,23 @@ class VerifikasiSppHonorController extends Controller
 
         foreach ($allSpps as $spp) {
             $instance = $spp->workflowInstances->first();
-            $myApproval = $instance?->approvals->where('role_code', $roleCode)->first();
-            if ($myApproval && $myApproval->role_code === 'PPK' && $myApproval->assigned_user_id !== $user->id) {
-                $myApproval = null; // PPK assigned_user_id strict check
-            }
+            
+            $myApprovals = collect($instance?->approvals)->filter(function($app) use ($roleCodes, $user) {
+                if (!in_array($app->role_code, $roleCodes)) return false;
+                if ($app->role_code === 'PPK' && $app->assigned_user_id !== $user->id) return false;
+                return true;
+            });
 
-            if (!$myApproval) continue;
+            if ($myApprovals->isEmpty()) continue;
 
-            // Map variables for views
-            $spp->my_approval_status = $myApproval->status;
-
-            if ($myApproval->status === 'PENDING') {
+            if ($myApprovals->contains('status', 'PENDING')) {
+                $spp->my_approval_status = 'PENDING';
                 $listMenunggu->push($spp);
-            } elseif ($myApproval->status === 'REVISION') {
+            } elseif ($myApprovals->contains('status', 'REVISION') || $myApprovals->contains('status', 'REJECTED')) {
+                $spp->my_approval_status = 'REVISION';
                 $listRevisi->push($spp);
-            } elseif ($myApproval->status === 'APPROVED') {
+            } else {
+                $spp->my_approval_status = 'APPROVED';
                 if (in_array($spp->status, ['DISETUJUI_SPP', 'SPP_TERBIT'])) {
                     $listSelesai->push($spp);
                 } else {
@@ -134,7 +138,7 @@ class VerifikasiSppHonorController extends Controller
             'listRevisi',
             'listSelesai',
             'statusFilter',
-            'roleCode',
+            'roleCodes',
             'search'
         ));
     }
@@ -145,8 +149,8 @@ class VerifikasiSppHonorController extends Controller
     public function detail($spp_id)
     {
         $user = auth()->user();
-        $roleCode = $this->activeRoleCode($user);
-        abort_unless($roleCode !== '', 403, 'Akses ditolak.');
+        $roleCodes = $this->activeRoleCodes($user);
+        abort_unless(count($roleCodes) > 0, 403, 'Akses ditolak.');
 
         $sppModel = DokumenSpp::with([
             'tagihan',
@@ -158,14 +162,26 @@ class VerifikasiSppHonorController extends Controller
             'workflowInstances.approvals.actedByUser',
             'logs' => fn($q) => $q->latest()
         ])->findOrFail($spp_id);
+        $this->ensureHonorSpp($sppModel);
 
         $tagihan = $sppModel->tagihan;
         
         $instance = $sppModel->workflowInstances->first();
-        // Cari status approval milik User (strictly on Role & User_ID if PPK)
-        $myApproval = $instance?->approvals->where('role_code', $roleCode)->first();
-        if ($myApproval && $myApproval->role_code === 'PPK' && $myApproval->assigned_user_id !== $user->id) {
-            $myApproval = null;
+        
+        $activeRoleApprovals = [];
+        foreach ($roleCodes as $role) {
+            $approval = $instance?->approvals->where('role_code', $role)->first();
+            if (!$approval) continue;
+            if ($role === 'PPK' && $approval->assigned_user_id !== $user->id) continue;
+            
+            if ($approval->status === 'PENDING') {
+                $activeRoleApprovals[] = [
+                    'role' => $role,
+                    'approval_id' => $approval->id,
+                    'approveRoute' => route('verifikasi-spp.honor.approve', $spp_id),
+                    'revisiRoute' => route('verifikasi-spp.honor.reject', $spp_id)
+                ];
+            }
         }
 
         $ppkApproval = $instance?->approvals->where('role_code', 'PPK')->first();
@@ -206,7 +222,7 @@ class VerifikasiSppHonorController extends Controller
         return view('verifikasi-spp.honor.detail', compact(
             'sppModel',
             'tagihan',
-            'roleCode',
+            'roleCodes',
             'instance',
             'myApproval',
             'ppkApproval',
@@ -223,12 +239,13 @@ class VerifikasiSppHonorController extends Controller
     public function approve(Request $request, $spp_id)
     {
         $user = auth()->user();
-        $roleCode = $this->activeRoleCode($user);
-        abort_unless($roleCode !== '', 403, 'Akses ditolak.');
+        $roleCodes = $this->activeRoleCodes($user);
+        abort_unless(count($roleCodes) > 0, 403, 'Akses ditolak.');
 
         $catatan = $request->input('catatan') ?: 'Disetujui oleh ' . $roleCode;
 
-        $sppModel = DokumenSpp::with(['workflowInstances.approvals'])->findOrFail($spp_id);
+        $sppModel = DokumenSpp::with(['tagihan', 'workflowInstances.approvals'])->findOrFail($spp_id);
+        $this->ensureHonorSpp($sppModel);
         $instance = $sppModel->workflowInstances->first();
         
         $myApproval = $instance?->approvals->where('role_code', $roleCode)->first();
@@ -304,12 +321,13 @@ class VerifikasiSppHonorController extends Controller
         $request->validate(['catatan' => 'required|string|min:5']);
 
         $user = auth()->user();
-        $roleCode = $this->activeRoleCode($user);
-        abort_unless($roleCode !== '', 403, 'Akses ditolak.');
+        $roleCodes = $this->activeRoleCodes($user);
+        abort_unless(count($roleCodes) > 0, 403, 'Akses ditolak.');
 
         $catatan = $request->input('catatan');
 
-        $sppModel = DokumenSpp::with(['workflowInstances.approvals'])->findOrFail($spp_id);
+        $sppModel = DokumenSpp::with(['tagihan', 'workflowInstances.approvals'])->findOrFail($spp_id);
+        $this->ensureHonorSpp($sppModel);
         $instance = $sppModel->workflowInstances->first();
         
         $myApproval = $instance?->approvals->where('role_code', $roleCode)->first();
@@ -360,5 +378,10 @@ class VerifikasiSppHonorController extends Controller
 
         return redirect()->route('verifikasi-spp.honor.detail', $spp_id)
             ->with('success', 'Dokumen SPP Honorarium telah dikembalikan untuk revisi.');
+    }
+
+    private function ensureHonorSpp(DokumenSpp $spp): void
+    {
+        abort_unless($spp->tagihan?->tipe_tagihan === 'HONORARIUM', 404);
     }
 }

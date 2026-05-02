@@ -332,7 +332,55 @@
                 {{-- Card Aksi / Status Anda --}}
                 <div class="card border-0 shadow-sm rounded-4 mb-3">
                     <div class="card-body p-4">
-                        @if($canAct && $myApproval)
+                        @if($canAct && ($myApprovals ?? collect())->count() > 1)
+                            {{-- === DUAL-ROLE: Tampilkan tombol verifikasi per role === --}}
+                            <h5 class="fw-bold mb-3"><i class="bi bi-gear me-2 text-primary"></i>Aksi Verifikasi</h5>
+                            <div class="alert alert-info border-0 small py-2 mb-3">
+                                <i class="bi bi-people-fill me-1"></i>
+                                Anda memiliki <strong>{{ ($myApprovals ?? collect())->count() }} peran verifikasi</strong> pada tagihan ini.
+                                Silakan verifikasi masing-masing peran secara terpisah.
+                            </div>
+
+                            @foreach(($myApprovals ?? collect()) as $approval)
+                                @php
+                                    $roleName = $roleLabels[$approval->role_code] ?? $approval->role_code;
+                                    $roleColor = $roleColors[$approval->role_code] ?? '#6c757d';
+                                    $approvalIdx = $loop->index;
+                                @endphp
+                                <div class="border rounded-4 p-3 mb-3" style="border-color: {{ $roleColor }}30 !important; background: {{ $roleColor }}08;">
+                                    <div class="d-flex align-items-center gap-2 mb-3">
+                                        <span class="badge rounded-pill px-3 py-2" style="background: {{ $roleColor }};">
+                                            {{ $roleName }}
+                                        </span>
+                                        <span class="badge bg-warning text-dark small">Perlu Tindakan</span>
+                                    </div>
+
+                                    {{-- Approve --}}
+                                    <form action="{{ route('verifikasi-tagihan-kontrak.approve', $tagihan->id) }}" method="POST" class="mb-2"
+                                          onsubmit="return confirm('Setujui tagihan sebagai {{ $roleName }}?');">
+                                        @csrf
+                                        <input type="hidden" name="approval_id" value="{{ $approval->id }}">
+                                        <textarea name="catatan" rows="1" class="form-control form-control-sm mb-2"
+                                                  placeholder="Catatan persetujuan {{ $roleName }} (opsional)..."></textarea>
+                                        <button type="submit" class="btn btn-success w-100 fw-bold btn-sm">
+                                            <i class="bi bi-check-lg me-1"></i>Verifikasi ({{ $roleName }})
+                                        </button>
+                                    </form>
+
+                                    <div class="d-flex gap-2">
+                                        <button type="button" class="btn btn-outline-warning btn-sm flex-fill fw-bold"
+                                                data-bs-toggle="modal" data-bs-target="#modalRevisi{{ $approvalIdx }}">
+                                            <i class="bi bi-arrow-counterclockwise me-1"></i>Revisi
+                                        </button>
+                                        <button type="button" class="btn btn-outline-danger btn-sm flex-fill fw-bold"
+                                                data-bs-toggle="modal" data-bs-target="#modalReject{{ $approvalIdx }}">
+                                            <i class="bi bi-x-lg me-1"></i>Tolak
+                                        </button>
+                                    </div>
+                                </div>
+                            @endforeach
+
+                        @elseif($canAct && $myApproval)
                             <h5 class="fw-bold mb-3"><i class="bi bi-gear me-2 text-primary"></i>Aksi Verifikasi</h5>
                             <div class="alert alert-info border-0 small py-2 mb-3">
                                 Sebagai <strong>{{ $roleLabels[$myApproval->role_code] ?? $myApproval->role_code }}</strong>,
@@ -342,6 +390,7 @@
                             {{-- Approve --}}
                             <form action="{{ route('verifikasi-tagihan-kontrak.approve', $tagihan->id) }}" method="POST" class="mb-3" onsubmit="return confirm('Setujui tagihan ini?');">
                                 @csrf
+                                <input type="hidden" name="approval_id" value="{{ $myApproval->id }}">
                                 <label class="form-label fw-bold small">Catatan (opsional)</label>
                                 <textarea name="catatan" rows="2" class="form-control form-control-sm mb-2" placeholder="Catatan persetujuan..."></textarea>
                                 <button type="submit" class="btn btn-success w-100 fw-bold">
@@ -455,12 +504,63 @@
     </div>
 </div>
 
-@if($canAct && $myApproval)
+@if($canAct && ($myApprovals ?? collect())->count() > 1)
+    {{-- Dual-role modals: satu set modal per role --}}
+    @foreach(($myApprovals ?? collect()) as $approval)
+        @php
+            $roleName = $roleLabels[$approval->role_code] ?? $approval->role_code;
+            $approvalIdx = $loop->index;
+        @endphp
+        {{-- Modal Revisi per role --}}
+        <div class="modal fade" id="modalRevisi{{ $approvalIdx }}" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <form action="{{ route('verifikasi-tagihan-kontrak.revisi', $tagihan->id) }}" method="POST">
+                    @csrf
+                    <input type="hidden" name="approval_id" value="{{ $approval->id }}">
+                    <div class="modal-content">
+                        <div class="modal-header"><h5 class="modal-title">Minta Revisi ({{ $roleName }})</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                        <div class="modal-body">
+                            <label class="form-label fw-bold">Catatan Revisi <span class="text-danger">*</span></label>
+                            <textarea name="catatan" rows="4" class="form-control" placeholder="Tuliskan apa yang perlu diperbaiki..." required></textarea>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
+                            <button type="submit" class="btn btn-warning fw-bold"><i class="bi bi-arrow-counterclockwise me-1"></i>Kirim Revisi ({{ $roleName }})</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        {{-- Modal Reject per role --}}
+        <div class="modal fade" id="modalReject{{ $approvalIdx }}" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <form action="{{ route('verifikasi-tagihan-kontrak.reject', $tagihan->id) }}" method="POST" onsubmit="return confirm('Tolak tagihan sebagai {{ $roleName }}?');">
+                    @csrf
+                    <input type="hidden" name="approval_id" value="{{ $approval->id }}">
+                    <div class="modal-content">
+                        <div class="modal-header"><h5 class="modal-title">Tolak Tagihan ({{ $roleName }})</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                        <div class="modal-body">
+                            <div class="alert alert-danger border-0 small">Penolakan akan menghentikan workflow tagihan secara permanen.</div>
+                            <label class="form-label fw-bold">Alasan Penolakan <span class="text-danger">*</span></label>
+                            <textarea name="catatan" rows="4" class="form-control" placeholder="Tuliskan alasan penolakan..." required></textarea>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
+                            <button type="submit" class="btn btn-danger fw-bold"><i class="bi bi-x-lg me-1"></i>Tolak ({{ $roleName }})</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    @endforeach
+@elseif($canAct && $myApproval)
     {{-- Modal Revisi --}}
     <div class="modal fade" id="modalRevisi" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <form action="{{ route('verifikasi-tagihan-kontrak.revisi', $tagihan->id) }}" method="POST">
                 @csrf
+                <input type="hidden" name="approval_id" value="{{ $myApproval->id }}">
                 <div class="modal-content">
                     <div class="modal-header"><h5 class="modal-title">Minta Revisi</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
                     <div class="modal-body">
@@ -481,6 +581,7 @@
         <div class="modal-dialog modal-dialog-centered">
             <form action="{{ route('verifikasi-tagihan-kontrak.reject', $tagihan->id) }}" method="POST" onsubmit="return confirm('Tolak tagihan ini secara permanen?');">
                 @csrf
+                <input type="hidden" name="approval_id" value="{{ $myApproval->id }}">
                 <div class="modal-content">
                     <div class="modal-header"><h5 class="modal-title">Tolak Tagihan</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
                     <div class="modal-body">

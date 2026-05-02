@@ -116,6 +116,7 @@ class SpmKontrakController extends Controller
 
         $ppspms = User::role('PPSPM')->orderByDisplayName()->get();
         $kasubbagUser = User::role('Kepala Subbagian Keuangan dan Tata Usaha')->orderByDisplayName()->first();
+        $koordinatorUser = User::role('Koordinator Keuangan')->orderByDisplayName()->first();
 
         // Potongan
         $potonganTagihans = collect($tagihan->potonganTagihan ?? []);
@@ -176,17 +177,19 @@ class SpmKontrakController extends Controller
         ])->values();
 
         $readinessIssues = $readinessChecklist->where('status', 'missing')->pluck('hint')->filter()->values();
+        $isChecklistComplete = $readinessIssues->isEmpty();
 
         // Status SPM
         $statusSpm = $spmModel?->status ?? 'Belum Dibuat';
         $canEditSpm = !$spmModel || in_array($spmModel->status, ['DRAFT', DokumenSpm::STATUS_REVISI, '']);
         $canSubmit = $spmModel && in_array($spmModel->status, ['DRAFT', DokumenSpm::STATUS_REVISI]);
-        $isReadyToSubmit = $canSubmit && $readinessIssues->isEmpty();
+        $isReadyToSubmit = $canSubmit && $isChecklistComplete;
 
         // Workflow
         $latestWorkflowInstance = collect($spmModel?->workflowInstances ?? [])->sortByDesc('created_at')->first();
         $ppspmApproval = collect($latestWorkflowInstance?->approvals ?? [])->firstWhere('role_code', 'PPSPM');
         $kasubbagApproval = collect($latestWorkflowInstance?->approvals ?? [])->firstWhere('role_code', 'Kepala Subbagian Keuangan dan Tata Usaha');
+        $koordinatorApproval = collect($latestWorkflowInstance?->approvals ?? [])->firstWhere('role_code', 'Koordinator Keuangan');
 
         // Progress step
         $progressStep = 1;
@@ -237,12 +240,15 @@ class SpmKontrakController extends Controller
             'documentStatuses',
             'readinessChecklist',
             'readinessIssues',
+            'isChecklistComplete',
             'statusSpm',
             'canEditSpm',
             'canSubmit',
             'isReadyToSubmit',
             'ppspmApproval',
             'kasubbagApproval',
+            'koordinatorApproval',
+            'koordinatorUser',
             'progressStep',
             'recentActivities',
             'kasubbagUser',
@@ -260,6 +266,15 @@ class SpmKontrakController extends Controller
             ->findOrFail($spp_id);
 
         $existingSpm = $spp->spm;
+
+        // Verifikator PPSPM otomatis diambil dari verifikator yang dipilih saat pengajuan tagihan.
+        $ppspmIdFromTagihan = $spp->tagihan?->ppspm_user_id;
+        if (!$ppspmIdFromTagihan) {
+            return back()
+                ->withInput()
+                ->withErrors(['ppspm_id' => 'Verifikator PPSPM belum ditentukan pada tagihan. Lengkapi data tagihan terlebih dahulu.']);
+        }
+        $request->merge(['ppspm_id' => $ppspmIdFromTagihan]);
 
         $request->validate([
             'nomor_spm' => [
@@ -343,7 +358,7 @@ class SpmKontrakController extends Controller
 
             $spm->update(['status' => DokumenSpm::STATUS_MENUNGGU_VERIFIKASI]);
 
-            // Start workflow paralel PPSPM + Kasubbag
+            // Start workflow paralel PPSPM + Kasubbag + Koordinator Keuangan
             app(WorkflowService::class)->startWorkflow('SPM_KONTRAK_PPSPM', $spm, $spm->ppspm_id);
 
             LogStatusDokumen::create([
@@ -354,7 +369,7 @@ class SpmKontrakController extends Controller
                 'status_sebelumnya' => $statusSebelumnya,
                 'status_baru' => DokumenSpm::STATUS_MENUNGGU_VERIFIKASI,
                 'aksi' => 'SUBMIT_VERIFIKASI',
-                'catatan' => 'SPM kontrak diajukan untuk verifikasi paralel PPSPM + Kasubbag.',
+                'catatan' => 'SPM kontrak diajukan untuk verifikasi paralel PPSPM + Koordinator Keuangan + Kasubbag.',
                 'ip_address' => request()->ip(),
             ]);
         });
@@ -371,12 +386,23 @@ class SpmKontrakController extends Controller
             ]));
         }
 
+        $koordinatorUsers = User::role('Koordinator Keuangan')->get();
+        if ($koordinatorUsers->isNotEmpty()) {
+            Notification::send($koordinatorUsers, new WorkflowNotification([
+                'title' => 'SPM Kontrak Diajukan',
+                'message' => "SPM Kontrak ({$spm->nomor_spm}) menunggu verifikasi Anda.",
+                'url' => route('verifikasi-koordinator.spm.kontrak.index'),
+                'icon' => 'description',
+                'color' => 'primary',
+            ]));
+        }
+
         $kasubbagUsers = User::role('Kepala Subbagian Keuangan dan Tata Usaha')->get();
         if ($kasubbagUsers->isNotEmpty()) {
             Notification::send($kasubbagUsers, new WorkflowNotification([
                 'title' => 'SPM Kontrak Diajukan',
                 'message' => "SPM Kontrak ({$spm->nomor_spm}) menunggu verifikasi Anda.",
-                'url' => route('verifikasi-kasubag.spm.index'),
+                'url' => route('verifikasi-kasubag.spm.kontrak.index'),
                 'icon' => 'description',
                 'color' => 'primary',
             ]));

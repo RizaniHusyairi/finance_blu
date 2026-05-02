@@ -52,6 +52,14 @@ class PerjaldinVerifikasiController extends Controller
             'approve_route' => 'verifikasi-kasubag.perjaldin.approve',
             'revisi_route' => 'verifikasi-kasubag.perjaldin.revisi',
         ],
+        'koordinator_keuangan' => [
+            'role_code' => 'Koordinator Keuangan',
+            'label' => 'Koordinator Keuangan',
+            'detail_route' => 'verifikasi-koordinator.perjaldin.show',
+            'index_route' => 'verifikasi-koordinator.perjaldin.index',
+            'approve_route' => 'verifikasi-koordinator.perjaldin.approve',
+            'revisi_route' => 'verifikasi-koordinator.perjaldin.revisi',
+        ],
     ];
 
     public function ppkIndex()
@@ -154,6 +162,26 @@ class PerjaldinVerifikasiController extends Controller
         return $this->revisionForRole($request, $id, 'kasubbag', $workflowService);
     }
 
+    public function koordinatorIndex()
+    {
+        return $this->buildWorkflowIndex('koordinator_keuangan');
+    }
+
+    public function koordinatorShow(int $id)
+    {
+        return $this->buildWorkflowShow($id, 'koordinator_keuangan');
+    }
+
+    public function koordinatorApprove(Request $request, int $id, PerjaldinWorkflowService $workflowService)
+    {
+        return $this->approveForRole($request, $id, 'koordinator_keuangan', $workflowService);
+    }
+
+    public function koordinatorRevisi(Request $request, int $id, PerjaldinWorkflowService $workflowService)
+    {
+        return $this->revisionForRole($request, $id, 'koordinator_keuangan', $workflowService);
+    }
+
     private function buildWorkflowIndex(string $roleKey)
     {
         $config = self::ROLE_CONFIG[$roleKey];
@@ -230,6 +258,24 @@ class PerjaldinVerifikasiController extends Controller
 
         $currentApproval = $this->pendingApproval($tagihan, $config['role_code']);
 
+        // Detect dual-role: build array of all role approvals for this user
+        $user = auth()->user();
+        $allRoleApprovals = [];
+        foreach (self::ROLE_CONFIG as $rk => $rc) {
+            if ($user->hasRole($rc['label']) || $user->hasRole($rc['role_code'])) {
+                $pa = $this->pendingApproval($tagihan, $rc['role_code']);
+                if ($pa) {
+                    $allRoleApprovals[] = [
+                        'approval' => $pa,
+                        'roleKey' => $rk,
+                        'label' => $rc['label'],
+                        'approveRoute' => route($rc['approve_route'], $id),
+                        'revisiRoute' => route($rc['revisi_route'], $id),
+                    ];
+                }
+            }
+        }
+
         return view('verifikasi_perjaldin.show', [
             'tagihan' => $tagihan,
             'userRole' => $config['label'],
@@ -238,6 +284,7 @@ class PerjaldinVerifikasiController extends Controller
             'approveRoute' => route($config['approve_route'], $id),
             'revisiRoute' => route($config['revisi_route'], $id),
             'indexRoute' => $config['index_route'],
+            'allRoleApprovals' => $allRoleApprovals,
         ]);
     }
 
@@ -340,6 +387,7 @@ class PerjaldinVerifikasiController extends Controller
             'BENDAHARA_PENERIMAAN' => ['BENDAHARA_PENERIMAAN', 'Bendahara Penerimaan'],
             'BENDAHARA_PENGELUARAN' => ['BENDAHARA_PENGELUARAN', 'Bendahara Pengeluaran'],
             'KASUBBAG' => ['KASUBBAG', 'Kepala Subbagian Keuangan dan Tata Usaha'],
+            'Koordinator Keuangan' => ['Koordinator Keuangan', 'KOORDINATOR_KEUANGAN'],
             default => [$roleCode],
         };
     }
@@ -403,6 +451,7 @@ class PerjaldinVerifikasiController extends Controller
             'BENDAHARA_PENERIMAAN' => 'Bendahara Penerimaan',
             'BENDAHARA_PENGELUARAN' => 'Bendahara Pengeluaran',
             'KASUBBAG' => 'Kepala Subbagian Keuangan dan Tata Usaha',
+            'KOORDINATOR_KEUANGAN' => 'Koordinator Keuangan',
             default => $roleCode,
         };
     }
@@ -414,6 +463,7 @@ class PerjaldinVerifikasiController extends Controller
             'BENDAHARA_PENERIMAAN', 'Bendahara Penerimaan' => route('verifikasi-bendahara-penerimaan.perjaldin.index'),
             'BENDAHARA_PENGELUARAN', 'Bendahara Pengeluaran' => route('verifikasi-bendahara.perjaldin.index'),
             'KASUBBAG', 'Kepala Subbagian Keuangan dan Tata Usaha' => route('verifikasi-kasubag.index'),
+            'KOORDINATOR_KEUANGAN', 'Koordinator Keuangan' => route('verifikasi-koordinator.perjaldin.index'),
             default => route('verifikasi-ppk.perjaldin.index'),
         };
     }

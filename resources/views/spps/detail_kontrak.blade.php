@@ -52,9 +52,17 @@
 
     // Parallel workflow status interpretation
     $ppkStatusLabel = $ppkApproval->status ?? 'Belum diajukan';
+    $koordinatorStatusLabel = $koordinatorApproval->status ?? 'Belum diajukan';
     $kasubbagStatusLabel = $kasubbagApproval->status ?? 'Belum diajukan';
 
     $ppkStatusClass = match($ppkStatusLabel) {
+        'APPROVED' => 'text-success',
+        'PENDING' => 'text-warning',
+        'REVISION', 'REJECTED' => 'text-danger',
+        default => 'text-muted'
+    };
+
+    $koordinatorStatusClass = match($koordinatorStatusLabel) {
         'APPROVED' => 'text-success',
         'PENDING' => 'text-warning',
         'REVISION', 'REJECTED' => 'text-danger',
@@ -185,18 +193,36 @@
                 </div>
             </div>
 
+            @php
+                $sppFullyApproved = $sppModel && in_array($sppModel->status, ['APPROVED', 'DISETUJUI_SPP', 'SPP_TERBIT']);
+            @endphp
             <div class="d-flex flex-column gap-2" style="min-width: 200px;">
                 @if($sppModel)
                     <a href="{{ route('spps.cetak-pdf', $sppModel->id) }}" target="_blank" class="btn btn-outline-danger shadow-sm"><i class="bi bi-file-earmark-pdf me-1"></i> Cetak PDF SPP</a>
                 @endif
-                
-                <button type="button" class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#modalSppKontrak" {{ $canEditSpp ? '' : 'disabled' }}>
-                    <i class="bi bi-pencil-square me-1"></i> {{ $sppModel ? 'Edit Draft SPP' : 'Buat Draft Baru' }}
-                </button>
+
+                @if(!$sppFullyApproved)
+                    <button type="button" class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#modalSppKontrak" {{ $canEditSpp ? '' : 'disabled' }}>
+                        <i class="bi bi-pencil-square me-1"></i> {{ $sppModel ? 'Edit Draft SPP' : 'Buat Draft Baru' }}
+                    </button>
+                @endif
 
                 @if($sppModel)
-                    @if($canSubmitToPpk && $isReadyToSubmit)
-                        <form action="{{ route('spps.kontrak.submit', $tagihan->id) }}" method="POST" onsubmit="return confirm('Ajukan SPP ini untuk verifikasi PPK dan Kasubbag secara paralel?')">
+                    @if($sppFullyApproved)
+                        @hasanyrole('Super Admin|Operator BLU')
+                            <a href="{{ route('spms.kontrak.detail', $sppModel->id) }}" class="btn btn-success shadow-sm w-100">
+                                <i class="bi bi-arrow-right-circle me-1"></i> {{ $sppModel->spm ? 'Lanjutkan SPM' : 'Lanjut Buat SPM' }}
+                            </a>
+                            <div class="small text-success text-center">
+                                <i class="bi bi-check-circle-fill me-1"></i> SPP disetujui seluruh verifikator.
+                            </div>
+                        @else
+                            <div class="alert alert-success border-0 small mb-0 py-2 text-center">
+                                <i class="bi bi-check-circle-fill me-1"></i> SPP telah disetujui seluruh verifikator.
+                            </div>
+                        @endhasanyrole
+                    @elseif($canSubmitToPpk && $isReadyToSubmit)
+                        <form action="{{ route('spps.kontrak.submit', $tagihan->id) }}" method="POST" onsubmit="return confirm('Yakin akan mengajukan SPP ini?')">
                             @csrf
                             <button type="submit" class="btn btn-success shadow-sm w-100"><i class="bi bi-send me-1"></i> Ajukan Verifikasi</button>
                         </form>
@@ -245,39 +271,58 @@
                 </div>
 
                 <div class="col-xl-7">
-                    <!-- TIMELINE PARALEL -->
-                    <div class="timeline-wrapper pt-0">
-                        <div class="timeline-line"></div>
-                        
-                        <!-- Step 1: Draft -->
-                        <div class="timeline-step {{ $progressStep >= 1 ? 'passed' : '' }}">
-                            <div class="timeline-icon"><i class="bi bi-file-earmark-text"></i></div>
-                            <div class="timeline-label">Draft Dibuat</div>
-                            <div class="timeline-sub">{{ $sppModel ? 'Telah disimpan' : 'Belum dimulai' }}</div>
-                        </div>
-
-                        <!-- Step 2: Verifikasi PPK (Parallel) -->
-                        <div class="timeline-step {{ $ppkApproval?->status === 'APPROVED' ? 'passed' : ($ppkApproval?->status === 'REVISION' ? 'revision' : ($progressStep == 2 ? 'active' : '')) }}">
-                            <div class="timeline-icon"><i class="bi bi-person-check"></i></div>
-                            <div class="timeline-label">Verifikasi PPK</div>
-                            <div class="timeline-sub fw-semibold {{ $ppkStatusClass }}">{{ $ppkStatusLabel }}</div>
-                            @if($ppkApproval) <div class="timeline-sub mt-0 opacity-75" style="font-size: 0.7rem;">{{ $sppModel?->ppkVerifikator?->name }}</div> @endif
-                        </div>
-
-                        <!-- Step 2: Verifikasi Kasubbag (Parallel) -->
-                        <div class="timeline-step {{ $kasubbagApproval?->status === 'APPROVED' ? 'passed' : ($kasubbagApproval?->status === 'REVISION' ? 'revision' : ($progressStep == 2 ? 'active' : '')) }}">
-                            <div class="timeline-icon"><i class="bi bi-person-badge"></i></div>
-                            <div class="timeline-label">Verifikasi Kasubbag</div>
-                            <div class="timeline-sub fw-semibold {{ $kasubbagStatusClass }}">{{ $kasubbagStatusLabel }}</div>
-                            <div class="timeline-sub mt-0 opacity-75" style="font-size: 0.7rem;">{{ $kasubbagUser?->name ?? 'Kasubbag Keuangan' }}</div>
-                        </div>
-
-                        <!-- Step 3: Final -->
-                        <div class="timeline-step {{ $progressStep >= 4 ? 'passed' : '' }}">
-                            <div class="timeline-icon"><i class="bi bi-check-all"></i></div>
-                            <div class="timeline-label">Selesai</div>
-                            <div class="timeline-sub">SPP Disetujui</div>
-                        </div>
+                    <div class="bg-white p-3 rounded-3 border shadow-sm h-100">
+                        <h6 class="fw-bold text-secondary mb-3"><i class="bi bi-people me-2"></i> Status Verifikator SPP</h6>
+                        <ul class="list-group mb-0">
+                            <!-- PPK -->
+                            <li class="list-group-item px-3 py-2 border-start-0 border-end-0 border-top-0 border-bottom">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 35px; height: 35px;">
+                                            <i class="bi bi-person-check fs-5"></i>
+                                        </div>
+                                        <div>
+                                            <div class="fw-semibold text-dark">Pejabat Pembuat Komitmen</div>
+                                            <div class="small text-muted">{{ $ppkUser?->name ?? 'Belum Ditentukan' }}</div>
+                                            @if($ppkUser?->nip)<div class="text-muted font-monospace" style="font-size: .72rem;">NIP: {{ $ppkUser->nip }}</div>@endif
+                                        </div>
+                                    </div>
+                                    <span class="badge {{ $ppkStatusClass }}">{{ $ppkStatusLabel }}</span>
+                                </div>
+                            </li>
+                            <!-- Koordinator Keuangan -->
+                            <li class="list-group-item px-3 py-2 border-start-0 border-end-0 border-top-0 border-bottom">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="bg-info bg-opacity-10 text-info rounded-circle d-flex align-items-center justify-content-center" style="width: 35px; height: 35px;">
+                                            <i class="bi bi-person-gear fs-5"></i>
+                                        </div>
+                                        <div>
+                                            <div class="fw-semibold text-dark">Koordinator Keuangan</div>
+                                            <div class="small text-muted">{{ $koordinatorUser?->name ?? 'Belum Ditentukan' }}</div>
+                                            @if($koordinatorUser?->nip)<div class="text-muted font-monospace" style="font-size: .72rem;">NIP: {{ $koordinatorUser->nip }}</div>@endif
+                                        </div>
+                                    </div>
+                                    <span class="badge {{ $koordinatorStatusClass }}">{{ $koordinatorStatusLabel }}</span>
+                                </div>
+                            </li>
+                            <!-- Kasubbag -->
+                            <li class="list-group-item px-3 py-2 border-0">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="bg-warning bg-opacity-10 text-warning rounded-circle d-flex align-items-center justify-content-center" style="width: 35px; height: 35px;">
+                                            <i class="bi bi-person-badge fs-5"></i>
+                                        </div>
+                                        <div>
+                                            <div class="fw-semibold text-dark">Kepala Subbagian Keuangan dan Tata Usaha</div>
+                                            <div class="small text-muted">{{ $kasubbagUser?->name ?? 'Belum Ditentukan' }}</div>
+                                            @if($kasubbagUser?->nip)<div class="text-muted font-monospace" style="font-size: .72rem;">NIP: {{ $kasubbagUser->nip }}</div>@endif
+                                        </div>
+                                    </div>
+                                    <span class="badge {{ $kasubbagStatusClass }}">{{ $kasubbagStatusLabel }}</span>
+                                </div>
+                            </li>
+                        </ul>
                     </div>
                 </div>
             </div>
@@ -503,20 +548,21 @@
                         <div class="spp-modal-section shadow-sm">
                             <h6 class="fw-bold text-primary mb-3"><i class="bi bi-3-circle me-1"></i> Penugasan Verifikator (Paralel)</h6>
                             <div class="alert alert-info border-0 py-2 small mb-3">
-                                <i class="bi bi-info-circle me-1"></i> Mode verifikasi paralel aktif. Dokumen ini akan diperiksa oleh PPK dan Kasubbag secara bersamaan saat diajukan.
+                                <i class="bi bi-info-circle me-1"></i> Mode verifikasi paralel aktif. Dokumen ini akan diperiksa oleh PPK, Koordinator Keuangan, dan Kasubbag secara bersamaan saat diajukan.
                             </div>
-                            <div class="row g-4">
-                                <div class="col-md-6 border-end">
-                                    <label class="form-label fw-semibold text-dark">Verifikator PPK <span class="text-danger">*</span></label>
-                                    <select name="ppk_verifikator_id" class="form-select" required>
-                                        <option value="">-- Pilih PPK --</option>
-                                        @foreach($ppkUsers as $ppkUser)
-                                            <option value="{{ $ppkUser->id }}" {{ (string) $oldPpkVerifikator === (string) $ppkUser->id ? 'selected' : '' }}>{{ $ppkUser->name }}</option>
-                                        @endforeach
-                                    </select>
-                                    <div class="form-text">Pilih PPK yang berwenang atas pekerjaan ini.</div>
+                        <div class="row g-4">
+                                <div class="col-md-4">
+                                    <label class="form-label fw-semibold text-dark">Verifikator PPK</label>
+                                    <input type="text" class="form-control bg-light" value="{{ $ppkUser->name ?? 'PPK Tidak Tersedia (Otomatis)' }}" readonly>
+                                    <input type="hidden" name="ppk_verifikator_id" value="{{ $ppkUser->id ?? '' }}">
+                                    <div class="form-text">Otomatis berdasarkan verifikator tagihan.</div>
                                 </div>
-                                <div class="col-md-6">
+                                <div class="col-md-4">
+                                    <label class="form-label fw-semibold text-dark">Koordinator Keuangan</label>
+                                    <input type="text" class="form-control bg-light" value="{{ $koordinatorUser->name ?? 'Koordinator Keuangan Tidak Tersedia (Otomatis)' }}" readonly>
+                                    <div class="form-text">Koordinator Keuangan otomatis ditentukan oleh sistem.</div>
+                                </div>
+                                <div class="col-md-4">
                                     <label class="form-label fw-semibold text-dark">Verifikator Kasubbag</label>
                                     <input type="text" class="form-control bg-light" value="{{ $kasubbagUser->name ?? 'Kasubbag Tidak Tersedia (Otomatis)' }}" readonly>
                                     <div class="form-text">Kasubbag otomatis ditentukan oleh sistem berdasarkan otoritas.</div>
@@ -610,7 +656,7 @@
         wrapper.innerHTML = `
             <div class="col-md-3">
                 <label class="form-label small fw-bold">Jenis Pajak</label>
-                <select class="form-select" name="pajak[${rowId}][id]" id="pajak_spp_sel_${rowId}" onchange="hitungPajakRowSpp(${rowId})" required>
+                <select class="form-select" name="pajak[${rowId}][id]" id="pajak_spp_sel_${rowId}" onchange="hitungPajakRowSpp(${rowId}, null, true)" required>
                     ${optionsHtml}
                 </select>
             </div>
@@ -653,11 +699,22 @@
         hitungPajakRowSpp(id);
     }
 
-    function hitungPajakRowSpp(id, presetNominal = null) {
+    function hitungPajakRowSpp(id, presetNominal = null, isUserSelection = false) {
         const select = document.getElementById(`pajak_spp_sel_${id}`);
         const selected = select?.options[select.selectedIndex];
         const tarif = parseFloat(selected?.getAttribute('data-tarif') || 0);
-        const dpp = parseFloat(document.getElementById(`dpp_spp_val_${id}`)?.value || 0);
+        
+        let dppInput = document.getElementById(`dpp_spp_val_${id}`);
+        let dppDisplay = document.getElementById(`dpp_spp_display_${id}`);
+        let dpp = parseFloat(dppInput?.value || 0);
+
+        // Auto-fill DPP dengan nilai Bruto jika user baru memilih pajak dan DPP masih 0
+        if (isUserSelection && dpp === 0 && tarif > 0) {
+            dpp = brutoSpp;
+            if (dppInput) dppInput.value = dpp;
+            if (dppDisplay) dppDisplay.value = formatRupiahCustom(Math.round(dpp));
+        }
+
         const hasil = presetNominal !== null ? parseFloat(presetNominal) || 0 : (dpp * tarif / 100);
 
         document.getElementById(`potongan_spp_val_${id}`).value = hasil;

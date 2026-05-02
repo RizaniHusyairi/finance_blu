@@ -182,6 +182,31 @@
                             <input type="hidden" name="kasubbag_nip_snapshot" value="{{ $kasubbagNip }}">
                         </div>
                     </div>
+
+                    <!-- Koordinator Keuangan -->
+                    <div class="col-md-6 col-xl mb-3">
+                        <h6 class="text-muted mb-3">Koordinator Keuangan</h6>
+                        <div class="mb-2">
+                            <label class="form-label">Pilih User Koordinator Keuangan <span class="text-danger">*</span></label>
+                            <select name="koordinator_keuangan_user_id" class="form-select select2" id="koorKeuanganUserId" required>
+                                <option value="">-- Pilih User Koordinator --</option>
+                                @foreach($koorKeuanganUsers as $user)
+                                    <option value="{{ $user->id }}" data-nip="{{ optional($user->pegawai)->nip }}" data-nama="{{ $user->name }}" {{ old('koordinator_keuangan_user_id', $tagihan->koordinator_keuangan_user_id) == $user->id ? 'selected' : '' }}>
+                                        {{ $user->name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            <small class="text-muted d-block mt-1">Pilih untuk auto-fill Nama & NIP di bawah ini</small>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label">Nama Koordinator Keuangan <span class="text-danger">*</span></label>
+                            <input type="text" name="koordinator_keuangan_nama_snapshot" id="koorKeuanganNamaSnapshot" class="form-control" required value="{{ old('koordinator_keuangan_nama_snapshot', $tagihan->koordinator_keuangan_nama_snapshot) }}">
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label">NIP Koordinator Keuangan</label>
+                            <input type="text" name="koordinator_keuangan_nip_snapshot" id="koorKeuanganNipSnapshot" class="form-control" value="{{ old('koordinator_keuangan_nip_snapshot', $tagihan->koordinator_keuangan_nip_snapshot) }}">
+                        </div>
+                    </div>
                 </div>
 
                                 <!-- SECTION C: DAFTAR NOMINATIF PEGAWAI -->
@@ -209,7 +234,7 @@
                     @endphp
 
                     @foreach($oldPeserta as $index => $row)
-                        @include('perjaldins.partials.peserta-card', ['index' => $index, 'row' => $row, 'masterProvinsi' => $masterProvinsi, 'isCreate' => false])
+                        @include('perjaldins.partials.peserta-card', ['index' => $index, 'row' => $row, 'masterProvinsi' => $masterProvinsi, 'masterPegawai' => $masterPegawai, 'isCreate' => false])
                     @endforeach
                 </div>
 
@@ -329,6 +354,15 @@
                 }
             });
 
+            // Auto-fill Koordinator Keuangan
+            $('#koorKeuanganUserId').change(function() {
+                let selected = $(this).find(':selected');
+                if(selected.val() !== '') {
+                    $('#koorKeuanganNamaSnapshot').val(selected.data('nama'));
+                    $('#koorKeuanganNipSnapshot').val(selected.data('nip'));
+                }
+            });
+
             // Add Row Check
             $(document).on('click', '.btn-add-row-trigger', function (e) {
                 e.preventDefault();
@@ -342,6 +376,9 @@
                 newRow.find('.summary-total').text('0');
                 newRow.find('.file-existing-notice').remove();
                 newRow.find('.file-status-badge').removeClass('bg-success').addClass('bg-secondary').html('<i class="bi bi-paperclip"></i> SPT Kosong');
+                newRow.find('.nip-input').val('').prop('readonly', true);
+                newRow.find('.rekening-input').val('').prop('readonly', false);
+                newRow.find('.rek-hint').addClass('d-none');
 
                 // Adjust Collapse id
                 let collapseId = 'collapsePeserta' + rowIdx;
@@ -386,10 +423,33 @@
                 calculateUangHarian($(this).closest('.item-row'));
             });
 
-            // Update Summary Name & Tujuan Live
-            $(document).on('input', '.input-nama', function() {
-                $(this).closest('.item-row').find('.summary-nama').text($(this).val() || '-');
+            // Auto-fill pegawai (NIP, Rekening, Summary)
+            $(document).on('change', '.pegawai-select', function() {
+                let card = $(this).closest('.item-row');
+                let selected = $(this).find(':selected');
+                let nama = selected.data('nama') || '';
+                let nip = selected.data('nip') || '';
+                let rek = selected.data('rek') || '';
+
+                card.find('.input-nama-hidden').val(nama);
+                card.find('.nip-input').val(nip);
+
+                if (rek) {
+                    card.find('.rekening-input').val(rek).prop('readonly', false);
+                    card.find('.rek-hint').addClass('d-none');
+                } else {
+                    card.find('.rekening-input').val('').prop('readonly', false);
+                    if (selected.val() !== '') {
+                        card.find('.rek-hint').removeClass('d-none');
+                    } else {
+                        card.find('.rek-hint').addClass('d-none');
+                    }
+                }
+
+                card.find('.summary-nama').text(nama || '-');
             });
+
+            // Update Summary Tujuan Live
             $(document).on('input', '.input-tujuan', function() {
                 $(this).closest('.item-row').find('.summary-tujuan').text($(this).val() || '-');
             });

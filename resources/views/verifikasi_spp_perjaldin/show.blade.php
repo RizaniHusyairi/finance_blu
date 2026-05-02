@@ -374,70 +374,152 @@
             </div>
 
             {{-- Panel Aksi Verifikasi --}}
-            @if($canAct)
-            <div class="card border-0 shadow-sm bg-light">
-                <div class="card-body text-center py-4">
-                    <h5 class="fw-bold mb-3">Aksi Verifikasi</h5>
-                    <p class="text-muted small mb-4">Pastikan data SPP Perjaldin sudah sesuai sebelum memberikan persetujuan.</p>
-
-                    <button type="button" class="btn btn-success w-100 mb-2 py-2 fs-6 fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#modalApprove">
-                        <i class="bi bi-check-circle me-1"></i> Setujui SPP
-                    </button>
-                    <button type="button" class="btn btn-outline-danger w-100 py-2 fw-bold" data-bs-toggle="modal" data-bs-target="#modalRevisi">
-                        <i class="bi bi-x-circle me-1"></i> Minta Revisi
-                    </button>
+            @if(isset($activeRoleApprovals) && count($activeRoleApprovals) > 1)
+                <div class="card border-0 shadow-sm bg-light mb-4">
+                    <div class="card-body py-4">
+                        <div class="alert alert-primary mb-3 small">
+                            <i class="bi bi-people-fill me-2"></i> Anda memiliki <strong>{{ count($activeRoleApprovals) }} peran verifikasi</strong> pada SPP ini.
+                        </div>
+                        
+                        <div class="d-flex flex-column gap-3">
+                            @foreach($activeRoleApprovals as $idx => $roleApproval)
+                                <div class="border rounded bg-white p-3 shadow-sm">
+                                    <h6 class="fw-bold mb-3">Aksi ({{ $roleApproval['role'] }})</h6>
+                                    <div class="d-flex gap-2">
+                                        <button type="button" class="btn btn-outline-danger flex-fill fw-bold" data-bs-toggle="modal" data-bs-target="#modalRevisi{{ $idx }}">
+                                            <i class="bi bi-x-circle me-1"></i> Revisi
+                                        </button>
+                                        <button type="button" class="btn btn-success flex-fill fw-bold" data-bs-toggle="modal" data-bs-target="#modalApprove{{ $idx }}">
+                                            <i class="bi bi-check-circle me-1"></i> Setujui
+                                        </button>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
                 </div>
-            </div>
 
-            {{-- Modal Approve --}}
-            <div class="modal fade" id="modalApprove" tabindex="-1" aria-hidden="true">
-                <div class="modal-dialog modal-dialog-centered">
-                    <div class="modal-content">
-                        <div class="modal-header bg-success text-white">
-                            <h5 class="modal-title text-white">Konfirmasi Persetujuan</h5>
-                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                {{-- Modal Dual Role --}}
+                @foreach($activeRoleApprovals as $idx => $roleApproval)
+                    {{-- Modal Approve --}}
+                    <div class="modal fade" id="modalApprove{{ $idx }}" tabindex="-1" aria-hidden="true">
+                        <div class="modal-dialog modal-dialog-centered">
+                            <div class="modal-content">
+                                <div class="modal-header bg-success text-white">
+                                    <h5 class="modal-title text-white">Konfirmasi Persetujuan ({{ $roleApproval['role'] }})</h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body text-center py-4">
+                                    <i class="bi bi-check-circle text-success" style="font-size: 4rem;"></i>
+                                    <h4 class="mt-3 mb-2">Apakah Anda yakin?</h4>
+                                    <p class="text-muted mb-0">Anda akan memberikan persetujuan sebagai <strong>{{ $roleApproval['role'] }}</strong> untuk SPP <strong>{{ $spp->nomor_spp }}</strong>.</p>
+                                </div>
+                                <div class="modal-footer justify-content-center border-0 pb-4">
+                                    <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Batal</button>
+                                    <form action="{{ $roleApproval['approveRoute'] }}" method="POST">
+                                        @csrf
+                                        <input type="hidden" name="approval_id" value="{{ $roleApproval['approval_id'] }}">
+                                        <button type="submit" class="btn btn-success px-4 fw-bold">Teruskan Proses</button>
+                                    </form>
+                                </div>
+                            </div>
                         </div>
-                        <div class="modal-body text-center py-4">
-                            <i class="bi bi-check-circle text-success" style="font-size: 4rem;"></i>
-                            <h4 class="mt-3 mb-2">Apakah Anda yakin?</h4>
-                            <p class="text-muted mb-0">Anda akan memberikan persetujuan sebagai <strong>{{ $roleLabel }}</strong> untuk SPP <strong>{{ $spp->nomor_spp }}</strong>.</p>
+                    </div>
+
+                    {{-- Modal Revisi --}}
+                    <div class="modal fade" id="modalRevisi{{ $idx }}" tabindex="-1" aria-hidden="true">
+                        <div class="modal-dialog modal-dialog-centered">
+                            <div class="modal-content">
+                                <div class="modal-header bg-danger text-white">
+                                    <h5 class="modal-title text-white">Kembalikan untuk Revisi ({{ $roleApproval['role'] }})</h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                </div>
+                                <form action="{{ $roleApproval['revisiRoute'] }}" method="POST">
+                                    @csrf
+                                    <input type="hidden" name="approval_id" value="{{ $roleApproval['approval_id'] }}">
+                                    <div class="modal-body">
+                                        <p class="text-muted small">SPP ini akan dikembalikan ke Operator BLU. Operator harus memperbaiki dan mensubmit ulang SPP ini.</p>
+                                        <div class="mb-3 mt-3 text-start">
+                                            <label class="form-label fw-bold">Catatan / Alasan Revisi <span class="text-danger">*</span></label>
+                                            <textarea name="catatan_revisi" class="form-control" rows="4" required placeholder="Jelaskan apa yang harus diperbaiki..."></textarea>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer bg-light">
+                                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Batal</button>
+                                        <button type="submit" class="btn btn-danger fw-bold">Kembalikan ke Operator</button>
+                                    </div>
+                                </form>
+                            </div>
                         </div>
-                        <div class="modal-footer justify-content-center border-0 pb-4">
-                            <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Batal</button>
-                            <form action="{{ route($approveRoute, $spp->id) }}" method="POST">
+                    </div>
+                @endforeach
+
+            @elseif($canAct)
+                <div class="card border-0 shadow-sm bg-light">
+                    <div class="card-body text-center py-4">
+                        <h5 class="fw-bold mb-3">Aksi Verifikasi</h5>
+                        <p class="text-muted small mb-4">Pastikan data SPP Perjaldin sudah sesuai sebelum memberikan persetujuan.</p>
+
+                        <button type="button" class="btn btn-success w-100 mb-2 py-2 fs-6 fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#modalApprove">
+                            <i class="bi bi-check-circle me-1"></i> Setujui SPP
+                        </button>
+                        <button type="button" class="btn btn-outline-danger w-100 py-2 fw-bold" data-bs-toggle="modal" data-bs-target="#modalRevisi">
+                            <i class="bi bi-x-circle me-1"></i> Minta Revisi
+                        </button>
+                    </div>
+                </div>
+
+                {{-- Modal Approve --}}
+                <div class="modal fade" id="modalApprove" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content">
+                            <div class="modal-header bg-success text-white">
+                                <h5 class="modal-title text-white">Konfirmasi Persetujuan</h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body text-center py-4">
+                                <i class="bi bi-check-circle text-success" style="font-size: 4rem;"></i>
+                                <h4 class="mt-3 mb-2">Apakah Anda yakin?</h4>
+                                <p class="text-muted mb-0">Anda akan memberikan persetujuan sebagai <strong>{{ $roleLabel }}</strong> untuk SPP <strong>{{ $spp->nomor_spp }}</strong>.</p>
+                            </div>
+                            <div class="modal-footer justify-content-center border-0 pb-4">
+                                <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Batal</button>
+                                <form action="{{ route($approveRoute, $spp->id) }}" method="POST">
+                                    @csrf
+                                    <input type="hidden" name="approval_id" value="{{ count($activeRoleApprovals) === 1 ? $activeRoleApprovals[0]['approval_id'] : ($myApproval->id ?? '') }}">
+                                    <button type="submit" class="btn btn-success px-4 fw-bold">Teruskan Proses</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Modal Revisi --}}
+                <div class="modal fade" id="modalRevisi" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content">
+                            <div class="modal-header bg-danger text-white">
+                                <h5 class="modal-title text-white">Kembalikan untuk Revisi</h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <form action="{{ route($revisiRoute, $spp->id) }}" method="POST">
                                 @csrf
-                                <button type="submit" class="btn btn-success px-4 fw-bold">Teruskan Proses</button>
+                                <input type="hidden" name="approval_id" value="{{ count($activeRoleApprovals) === 1 ? $activeRoleApprovals[0]['approval_id'] : ($myApproval->id ?? '') }}">
+                                <div class="modal-body">
+                                    <p class="text-muted small">SPP ini akan dikembalikan ke Operator BLU. Operator harus memperbaiki dan mensubmit ulang SPP ini.</p>
+                                    <div class="mb-3 mt-3 text-start">
+                                        <label class="form-label fw-bold">Catatan / Alasan Revisi <span class="text-danger">*</span></label>
+                                        <textarea name="catatan_revisi" class="form-control" rows="4" required placeholder="Jelaskan apa yang harus diperbaiki..."></textarea>
+                                    </div>
+                                </div>
+                                <div class="modal-footer bg-light">
+                                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Batal</button>
+                                    <button type="submit" class="btn btn-danger fw-bold">Kembalikan ke Operator</button>
+                                </div>
                             </form>
                         </div>
                     </div>
                 </div>
-            </div>
-
-            {{-- Modal Revisi --}}
-            <div class="modal fade" id="modalRevisi" tabindex="-1" aria-hidden="true">
-                <div class="modal-dialog modal-dialog-centered">
-                    <div class="modal-content">
-                        <div class="modal-header bg-danger text-white">
-                            <h5 class="modal-title text-white">Kembalikan untuk Revisi</h5>
-                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                        </div>
-                        <form action="{{ route($revisiRoute, $spp->id) }}" method="POST">
-                            @csrf
-                            <div class="modal-body">
-                                <p class="text-muted small">SPP ini akan dikembalikan ke Operator BLU. Operator harus memperbaiki dan mensubmit ulang SPP ini.</p>
-                                <div class="mb-3 mt-3 text-start">
-                                    <label class="form-label fw-bold">Catatan / Alasan Revisi <span class="text-danger">*</span></label>
-                                    <textarea name="catatan_revisi" class="form-control" rows="4" required placeholder="Jelaskan apa yang harus diperbaiki..."></textarea>
-                                </div>
-                            </div>
-                            <div class="modal-footer bg-light">
-                                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Batal</button>
-                                <button type="submit" class="btn btn-danger fw-bold">Kembalikan ke Operator</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            </div>
             @endif
         </div>
     </div>

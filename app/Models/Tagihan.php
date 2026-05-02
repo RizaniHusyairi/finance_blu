@@ -115,4 +115,9 @@ class Tagihan extends Model
 
         return optional($log)->created_at;
     }
+
+    public function realisasiAnggaran()
+    {
+        return $this->morphMany(RealisasiAnggaran::class, 'sourceable');
+    }
 }

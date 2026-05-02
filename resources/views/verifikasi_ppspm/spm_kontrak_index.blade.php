@@ -65,9 +65,9 @@
     <!-- Filter Bar -->
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-body p-3">
-            <form action="{{ route('verifikasi-ppspm.spm.kontrak.index') }}" method="GET" class="row g-3 align-items-center">
+            <form action="{{ route(($routePrefix ?? 'verifikasi-ppspm.spm.kontrak') . '.index') }}" method="GET" class="row g-3 align-items-center">
                 <div class="col-md-3">
-                    <label class="form-label mb-0 small text-muted">Status Saya (PPSPM)</label>
+                    <label class="form-label mb-0 small text-muted">Status Saya ({{ $currentRole ?? 'PPSPM' }})</label>
                     <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
                         <option value="Semua" {{ request('status') == 'Semua' ? 'selected' : '' }}>Semua Status</option>
                         <option value="Pending" {{ request('status') == 'Pending' ? 'selected' : '' }}>Pending</option>
@@ -93,7 +93,7 @@
                 </div>
                 <div class="col-md-2 text-end">
                     <label class="form-label mb-0 small d-block">&nbsp;</label>
-                    <a href="{{ route('verifikasi-ppspm.spm.kontrak.index') }}" class="btn btn-sm btn-light border">Reset Filter</a>
+                    <a href="{{ route(($routePrefix ?? 'verifikasi-ppspm.spm.kontrak') . '.index') }}" class="btn btn-sm btn-light border">Reset Filter</a>
                 </div>
             </form>
         </div>
@@ -113,6 +113,7 @@
                             <th>Nilai SPM</th>
                             <th>Status PPSPM</th>
                             <th>Status Kasubbag</th>
+                            <th>Status Koordinator</th>
                             <th>Status Final</th>
                             <th class="text-center">Aksi</th>
                         </tr>
@@ -158,6 +159,17 @@
                                 @endif
                             </td>
                             <td class="text-center">
+                                @if($spm->koordinatorApprovalStatus === 'PENDING')
+                                    <span class="badge bg-warning text-dark">Pending</span>
+                                @elseif($spm->koordinatorApprovalStatus === 'APPROVED')
+                                    <span class="badge bg-success">Approved</span>
+                                @elseif($spm->koordinatorApprovalStatus === 'REVISION')
+                                    <span class="badge bg-danger">Revisi</span>
+                                @else
+                                    <span class="badge bg-secondary">{{ $spm->koordinatorApprovalStatus }}</span>
+                                @endif
+                            </td>
+                            <td class="text-center">
                                 @if($spm->kasubbagApprovalStatus === 'PENDING')
                                     <span class="badge bg-warning text-dark">Pending</span>
                                 @elseif($spm->kasubbagApprovalStatus === 'APPROVED')
@@ -173,18 +185,18 @@
                                     $fs = $spm->statusFinal;
                                     $badgeClass = 'bg-secondary';
                                     if(in_array($fs, ['Selesai Diverifikasi', 'APPROVED'])) $badgeClass = 'bg-success';
-                                    if(in_array($fs, ['Menunggu Verifikasi', 'Menunggu PPSPM', 'Menunggu Kasubbag'])) $badgeClass = 'bg-info text-dark';
+                                    if(in_array($fs, ['Menunggu Verifikasi', 'Menunggu PPSPM', 'Menunggu Kasubbag', 'Menunggu Koordinator'])) $badgeClass = 'bg-info text-dark';
                                     if(in_array($fs, ['Perlu Revisi', 'REVISION', 'REJECTED'])) $badgeClass = 'bg-danger';
                                 @endphp
                                 <span class="badge {{ $badgeClass }}">{{ $fs }}</span>
                             </td>
                             <td class="text-center">
                                 @if($spm->canAct)
-                                    <a href="{{ route('verifikasi-ppspm.spm.kontrak.show', $spm->id) }}" class="btn btn-sm btn-primary">
+                                    <a href="{{ route(($routePrefix ?? 'verifikasi-ppspm.spm.kontrak') . '.show', $spm->id) }}" class="btn btn-sm btn-primary">
                                         <i class="bi bi-pencil-square"></i> Verifikasi
                                     </a>
                                 @else
-                                    <a href="{{ route('verifikasi-ppspm.spm.kontrak.show', $spm->id) }}" class="btn btn-sm btn-outline-secondary">
+                                    <a href="{{ route(($routePrefix ?? 'verifikasi-ppspm.spm.kontrak') . '.show', $spm->id) }}" class="btn btn-sm btn-outline-secondary">
                                         <i class="bi bi-eye"></i> Lihat Detail
                                     </a>
                                 @endif
@@ -192,7 +204,7 @@
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="9" class="text-center text-muted py-4">Tidak ada data untuk filter yang dipilih.</td>
+                            <td colspan="10" class="text-center text-muted py-4">Tidak ada data untuk filter yang dipilih.</td>
                         </tr>
                         @endforelse
                     </tbody>

@@ -5,6 +5,8 @@
     $benpenStatus = $benpenApproval?->status ?? 'N/A';
     $ppkStatus = $ppkApproval?->status ?? 'N/A';
     $kasubbagStatus = $kasubbagApproval?->status ?? 'N/A';
+    $koordinatorStatus = $koordinatorApproval?->status ?? 'N/A';
+    $currentUserStatus = $currentUserApproval?->status ?? 'N/A';
 
     $badgeClass = fn($s) => match($s) {
         'APPROVED' => 'bg-success',
@@ -65,10 +67,11 @@
                     <span class="badge {{ $badgeClass($benpenStatus) }}" title="Bendahara Penerimaan">BenPen: {{ $benpenStatus }}</span>
                     <span class="badge {{ $badgeClass($ppkStatus) }}" title="PPK">PPK: {{ $ppkStatus }}</span>
                     <span class="badge {{ $badgeClass($kasubbagStatus) }}" title="Kasubbag">KSB: {{ $kasubbagStatus }}</span>
+                    <span class="badge {{ $badgeClass($koordinatorStatus) }}" title="Koordinator Keuangan">Koor: {{ $koordinatorStatus }}</span>
                     <span class="badge {{ $finalBadge }}">{{ $statusFinal }}</span>
                 </div>
 
-                <a href="{{ route('verifikasi-ppk.npi.kontrak.index') }}" class="btn btn-outline-secondary btn-sm">
+                <a href="{{ route(($routePrefix ?? 'verifikasi-ppk.npi.kontrak') . '.index') }}" class="btn btn-outline-secondary btn-sm">
                     <i class="material-icons-outlined" style="font-size:14px; vertical-align: middle;">arrow_back</i> Kembali ke Antrean
                 </a>
 
@@ -128,6 +131,17 @@
                     <span class="badge {{ $badgeClass($kasubbagStatus) }}">{{ $kasubbagStatus }}</span>
                     @if($kasubbagApproval?->acted_at)
                         <div class="mt-1" style="font-size: 10px; color: #6c757d;">{{ \Carbon\Carbon::parse($kasubbagApproval->acted_at)->format('d M Y H:i') }}</div>
+                    @endif
+                </div>
+            </div>
+            {{-- Koordinator Keuangan --}}
+            <div class="col-6 col-lg-3">
+                <div class="border rounded p-3 text-center h-100 {{ $koordinatorStatus === 'APPROVED' ? 'border-success bg-success bg-opacity-10' : ($koordinatorStatus === 'PENDING' ? 'border-warning bg-warning bg-opacity-10' : (in_array($koordinatorStatus, ['REVISION','REJECTED']) ? 'border-danger bg-danger bg-opacity-10' : '')) }}">
+                    <div class="fw-bold mb-1" style="font-size: 13px;">Koordinator</div>
+                    <div class="text-muted mb-2" style="font-size: 11px;">{{ $koordinatorApproval?->assignedUser?->name ?? '-' }}</div>
+                    <span class="badge {{ $badgeClass($koordinatorStatus) }}">{{ $koordinatorStatus }}</span>
+                    @if($koordinatorApproval?->acted_at)
+                        <div class="mt-1" style="font-size: 10px; color: #6c757d;">{{ \Carbon\Carbon::parse($koordinatorApproval->acted_at)->format('d M Y H:i') }}</div>
                     @endif
                 </div>
             </div>
@@ -285,41 +299,104 @@
     </div>
 </div>
 
-{{-- PANEL KEPUTUSAN --}}
-@if($canApprove)
-    <div class="card border-0 shadow-sm mb-4 border-top border-4 border-warning">
-        <div class="card-body p-4 text-center">
-            <h5 class="fw-bold mb-2"><i class="material-icons-outlined align-middle text-warning me-1">gavel</i> Keputusan Anda</h5>
-            <p class="text-muted mb-3">NPI ini menunggu tindakan verifikasi dari Anda sebagai PPK.</p>
-            <div class="d-flex gap-3 justify-content-center">
-                <button type="button" class="btn btn-success px-4" data-bs-toggle="modal" data-bs-target="#modalApprove">
-                    <i class="material-icons-outlined" style="font-size:16px; vertical-align: middle;">check_circle</i> Setujui NPI
-                </button>
-                <button type="button" class="btn btn-outline-danger px-4" data-bs-toggle="modal" data-bs-target="#modalRevisi">
-                    <i class="material-icons-outlined" style="font-size:16px; vertical-align: middle;">replay</i> Minta Revisi
-                </button>
+{{-- PANEL KEPUTUSAN DUAL ROLE --}}
+@if(isset($activeRoleApprovals) && count($activeRoleApprovals) > 0)
+    @foreach($activeRoleApprovals as $index => $approval)
+        @php
+            $roleName = $approval['role'];
+            $approvalId = $approval['approval_id'];
+            $approveRouteDynamic = $approval['approveRoute'];
+            $revisiRouteDynamic = $approval['revisiRoute'];
+            $modalSuffix = \Illuminate\Support\Str::slug($roleName) . '_' . $approvalId;
+        @endphp
+        <div class="card border-0 shadow-sm mb-4 border-top border-4 border-warning">
+            <div class="card-body p-4 text-center">
+                <h5 class="fw-bold mb-2"><i class="material-icons-outlined align-middle text-warning me-1">gavel</i> Keputusan Anda ({{ $roleName }})</h5>
+                <p class="text-muted mb-3">NPI ini menunggu tindakan verifikasi dari Anda sebagai {{ $roleName }}.</p>
+                <div class="d-flex gap-3 justify-content-center">
+                    <button type="button" class="btn btn-success px-4" data-bs-toggle="modal" data-bs-target="#modalApprove_{{ $modalSuffix }}">
+                        <i class="material-icons-outlined" style="font-size:16px; vertical-align: middle;">check_circle</i> Setujui NPI ({{ $roleName }})
+                    </button>
+                    <button type="button" class="btn btn-outline-danger px-4" data-bs-toggle="modal" data-bs-target="#modalRevisi_{{ $modalSuffix }}">
+                        <i class="material-icons-outlined" style="font-size:16px; vertical-align: middle;">replay</i> Minta Revisi ({{ $roleName }})
+                    </button>
+                </div>
             </div>
         </div>
+
+        {{-- MODAL APPROVE --}}
+        <div class="modal fade" id="modalApprove_{{ $modalSuffix }}" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow">
+                    <form action="{{ $approveRouteDynamic }}" method="POST">
+                        @csrf
+                        <input type="hidden" name="approval_id" value="{{ $approvalId }}">
+                        <div class="modal-header bg-success text-white border-0">
+                            <h5 class="modal-title fw-bold"><i class="material-icons-outlined me-1">check_circle</i> Setujui NPI ini ({{ $roleName }})?</h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <p>Tindakan ini akan menyelesaikan verifikasi {{ $roleName }} untuk dokumen <strong>{{ $npi->nomor_npi }}</strong>.</p>
+                            <div class="mb-3">
+                                <label class="form-label">Catatan (Opsional)</label>
+                                <textarea name="catatan" class="form-control" rows="2" placeholder="Tulis catatan jika ada..."></textarea>
+                            </div>
+                        </div>
+                        <div class="modal-footer border-0">
+                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
+                            <button type="submit" class="btn btn-success px-4">Ya, Setujui</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        {{-- MODAL REVISI --}}
+        <div class="modal fade" id="modalRevisi_{{ $modalSuffix }}" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow">
+                    <form action="{{ $revisiRouteDynamic }}" method="POST">
+                        @csrf
+                        <input type="hidden" name="approval_id" value="{{ $approvalId }}">
+                        <div class="modal-header bg-danger text-white border-0">
+                            <h5 class="modal-title fw-bold"><i class="material-icons-outlined me-1">replay</i> Minta Revisi NPI ({{ $roleName }})</h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <p>Dokumen <strong>{{ $npi->nomor_npi }}</strong> akan dikembalikan ke Bendahara Pengeluaran untuk diperbaiki.</p>
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Catatan Revisi <span class="text-danger">*</span></label>
+                                <textarea name="catatan_revisi" class="form-control" rows="3" required placeholder="Jelaskan apa yang perlu diperbaiki..."></textarea>
+                            </div>
+                        </div>
+                        <div class="modal-footer border-0">
+                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
+                            <button type="submit" class="btn btn-danger px-4">Kirim Revisi</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    @endforeach
+@elseif(isset($canApprove) && $canApprove)
+    <div class="alert alert-warning text-center">
+        Tombol aksi tidak tersedia. Terjadi kesalahan pada konfigurasi multi-role.
     </div>
-@elseif($ppkStatus === 'APPROVED')
+@elseif($currentUserStatus === 'APPROVED')
     <div class="card border-0 shadow-sm mb-4 border-top border-4 border-success">
         <div class="card-body p-4 text-center">
             <i class="material-icons-outlined text-success" style="font-size: 48px;">verified</i>
             <h5 class="fw-bold mt-2">Anda telah menyetujui dokumen ini</h5>
-            <p class="text-muted mb-0">Disetujui pada {{ $ppkApproval?->acted_at ? \Carbon\Carbon::parse($ppkApproval->acted_at)->format('d M Y H:i') : '-' }}</p>
-            <div class="mt-3 d-flex gap-2 justify-content-center">
-                <span class="badge {{ $badgeClass($benpenStatus) }}">BenPen: {{ $benpenStatus }}</span>
-                <span class="badge {{ $badgeClass($kasubbagStatus) }}">Kasubbag: {{ $kasubbagStatus }}</span>
-            </div>
+            <p class="text-muted mb-0">Disetujui pada {{ $currentUserApproval?->acted_at ? \Carbon\Carbon::parse($currentUserApproval->acted_at)->format('d M Y H:i') : '-' }}</p>
         </div>
     </div>
-@elseif(in_array($ppkStatus, ['REVISION', 'REJECTED']))
+@elseif(in_array($currentUserStatus, ['REVISION', 'REJECTED']))
     <div class="card border-0 shadow-sm mb-4 border-top border-4 border-danger">
         <div class="card-body p-4 text-center">
             <i class="material-icons-outlined text-danger" style="font-size: 48px;">replay</i>
             <h5 class="fw-bold mt-2">Anda mengembalikan dokumen ini untuk revisi</h5>
-            @if($ppkApproval?->catatan)
-                <p class="text-muted fst-italic">"{{ $ppkApproval->catatan }}"</p>
+            @if($currentUserApproval?->catatan)
+                <p class="text-muted fst-italic">"{{ $currentUserApproval->catatan }}"</p>
             @endif
         </div>
     </div>
@@ -347,60 +424,4 @@
         </div>
     </div>
 @endif
-
-{{-- MODAL APPROVE --}}
-<div class="modal fade" id="modalApprove" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow">
-            <form action="{{ route('verifikasi-ppk.npi.kontrak.approve', $npi->id) }}" method="POST">
-                @csrf
-                <div class="modal-header bg-success text-white border-0">
-                    <h5 class="modal-title fw-bold"><i class="material-icons-outlined me-1">check_circle</i> Setujui NPI ini?</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <p>Tindakan ini akan menyelesaikan verifikasi PPK untuk dokumen <strong>{{ $npi->nomor_npi }}</strong>.</p>
-                    <div class="alert alert-info border-0 py-2 small">
-                        <i class="material-icons-outlined align-middle me-1" style="font-size:16px;">info</i>
-                        Verifikasi dari Bendahara Penerimaan dan Kasubbag berjalan secara paralel. Persetujuan Anda tidak tergantung pada mereka.
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Catatan (Opsional)</label>
-                        <textarea name="catatan" class="form-control" rows="2" placeholder="Tulis catatan jika ada..."></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer border-0">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
-                    <button type="submit" class="btn btn-success px-4">Ya, Setujui</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-{{-- MODAL REVISI --}}
-<div class="modal fade" id="modalRevisi" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow">
-            <form action="{{ route('verifikasi-ppk.npi.kontrak.revisi', $npi->id) }}" method="POST">
-                @csrf
-                <div class="modal-header bg-danger text-white border-0">
-                    <h5 class="modal-title fw-bold"><i class="material-icons-outlined me-1">replay</i> Minta Revisi NPI</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <p>Dokumen <strong>{{ $npi->nomor_npi }}</strong> akan dikembalikan ke Bendahara Pengeluaran untuk diperbaiki.</p>
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">Catatan Revisi <span class="text-danger">*</span></label>
-                        <textarea name="catatan_revisi" class="form-control" rows="3" required placeholder="Jelaskan apa yang perlu diperbaiki..."></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer border-0">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
-                    <button type="submit" class="btn btn-danger px-4">Kirim Revisi</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
 @endsection
