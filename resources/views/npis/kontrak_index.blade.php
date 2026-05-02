@@ -138,6 +138,7 @@
                             $bpStatus = $approvals->firstWhere('role_code', 'Bendahara Penerimaan')?->status ?? '-';
                             $ppkStatus = $approvals->firstWhere('role_code', 'PPK')?->status ?? '-';
                             $kasStatus = $approvals->firstWhere('role_code', 'Kepala Subbagian Keuangan dan Tata Usaha')?->status ?? '-';
+                            $koorStatus = $approvals->firstWhere('role_code', 'Koordinator Keuangan')?->status ?? '-';
                         @endphp
                         <tr>
                             <td>{{ $index + 1 }}</td>
@@ -196,6 +197,9 @@
                                             </span>
                                             <span class="badge {{ $kasStatus == 'APPROVED' ? 'bg-success' : ($kasStatus == 'REVISION' ? 'bg-danger' : 'bg-light text-dark border') }} w-100 text-start" style="font-size: 10px;">
                                                 KASUBBAG: {{ $kasStatus }}
+                                            </span>
+                                            <span class="badge {{ $koorStatus == 'APPROVED' ? 'bg-success' : ($koorStatus == 'REVISION' ? 'bg-danger' : 'bg-light text-dark border') }} w-100 text-start" style="font-size: 10px;">
+                                                KOOR: {{ $koorStatus }}
                                             </span>
                                         </div>
                                     @endif

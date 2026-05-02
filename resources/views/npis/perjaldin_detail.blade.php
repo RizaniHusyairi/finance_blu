@@ -157,24 +157,27 @@
                             
                             <div class="col-md-12">
                                 <label class="form-label">Bendahara Penerimaan <span class="text-danger">*</span></label>
-                                <select name="bendahara_penerimaan_id" class="form-select single-select" required>
-                                    <option value="">-- Pilih Bendahara Penerimaan --</option>
-                                    @foreach($bendaharaPenerimaans as $user)
-                                        <option value="{{ $user->id }}" {{ old('bendahara_penerimaan_id', $npiModel?->bendahara_penerimaan_id) == $user->id ? 'selected' : '' }}>
-                                            {{ $user->name }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                                <small class="text-muted">Target setoran pemindahbukuan internal.</small>
+                                <input type="hidden" name="bendahara_penerimaan_id" value="{{ $bendaharaPenerimaanTagihan?->id }}">
+                                <input type="text" class="form-control bg-light" value="{{ $bendaharaPenerimaanTagihan?->name ?? $tagihan?->bendahara_penerimaan_nama_snapshot ?? 'Belum ditentukan pada tagihan' }}" readonly>
+                                <small class="text-muted">Diwariskan dari verifikator Bendahara Penerimaan yang dipilih saat tagihan diajukan.</small>
+                                @if(!$bendaharaPenerimaanTagihan)
+                                    <div class="text-danger small mt-1">Verifikator Bendahara Penerimaan belum ada pada tagihan sumber.</div>
+                                @endif
                             </div>
 
-                            <div class="col-md-6">
+                            <div class="col-md-4">
                                 <label class="form-label">Verifikator PPK</label>
                                 <input type="text" class="form-control bg-light" value="{{ $ppkSpp?->name ?? 'Belum Ditentukan' }}" readonly>
                                 <small class="text-muted">Diwariskan dari SPP.</small>
                             </div>
 
-                            <div class="col-md-6">
+                            <div class="col-md-4">
+                                <label class="form-label">Koordinator Keuangan</label>
+                                <input type="text" class="form-control bg-light" value="{{ $koordinatorKeuanganUser?->name ?? $tagihan?->koordinator_keuangan_nama_snapshot ?? 'Belum Ditentukan' }}" readonly>
+                                <small class="text-muted">Verifikator Koordinator.</small>
+                            </div>
+
+                            <div class="col-md-4">
                                 <label class="form-label">Verifikator Kasubbag</label>
                                 <input type="text" class="form-control bg-light" value="{{ $kasubbagUser?->name ?? 'Belum Ditentukan' }}" readonly>
                                 <small class="text-muted">Terisi Otomatis.</small>
@@ -204,11 +207,15 @@
                             <label class="form-label text-muted mb-0">Bendahara Penerimaan</label>
                             <div class="fw-bold border-bottom pb-1">{{ $npiModel->bendaharaPenerimaan?->name ?? '-' }}</div>
                         </div>
-                        <div class="col-md-6 mt-2">
+                        <div class="col-md-4 mt-2">
                             <label class="form-label text-muted mb-0">Verifikator PPK</label>
                             <div class="fw-bold border-bottom pb-1">{{ $ppkSpp?->name ?? '-' }}</div>
                         </div>
-                        <div class="col-md-6 mt-2">
+                        <div class="col-md-4 mt-2">
+                            <label class="form-label text-muted mb-0">Koordinator Keuangan</label>
+                            <div class="fw-bold border-bottom pb-1">{{ $koordinatorKeuanganUser?->name ?? '-' }}</div>
+                        </div>
+                        <div class="col-md-4 mt-2">
                             <label class="form-label text-muted mb-0">Verifikator Kasubbag</label>
                             <div class="fw-bold border-bottom pb-1">{{ $kasubbagUser?->name ?? '-' }}</div>
                         </div>
@@ -268,7 +275,7 @@
                     
                     <div class="row g-3">
                         <!-- Bendahara Penerimaan -->
-                        <div class="col-12 col-md-4">
+                        <div class="col-12 col-md-6 col-xl-3">
                             <div class="border rounded p-3 h-100 text-center @if($benpenApproval?->status == 'APPROVED') border-success bg-light-success @elseif($benpenApproval?->status == 'REVISION') border-danger bg-light-danger @elseif($benpenApproval?->status == 'PENDING') border-warning bg-light-warning @endif">
                                 <div class="badge bg-secondary mb-2 d-inline-block">URUTAN 1</div>
                                 <h6 class="mb-1 fw-bold">Bendahara Penerimaan</h6>
@@ -290,7 +297,7 @@
                         </div>
 
                         <!-- PPK -->
-                        <div class="col-12 col-md-4">
+                        <div class="col-12 col-md-6 col-xl-3">
                             <div class="border rounded p-3 h-100 text-center @if($ppkApproval?->status == 'APPROVED') border-success bg-light-success @elseif($ppkApproval?->status == 'REVISION') border-danger bg-light-danger @elseif($ppkApproval?->status == 'PENDING') border-warning bg-light-warning @endif">
                                 <div class="badge bg-secondary mb-2 d-inline-block">URUTAN 1</div>
                                 <h6 class="mb-1 fw-bold">PPK</h6>
@@ -311,8 +318,30 @@
                             </div>
                         </div>
 
+                        <!-- Koordinator Keuangan -->
+                        <div class="col-12 col-md-6 col-xl-3">
+                            <div class="border rounded p-3 h-100 text-center @if($koordinatorApproval?->status == 'APPROVED') border-success bg-light-success @elseif($koordinatorApproval?->status == 'REVISION') border-danger bg-light-danger @elseif($koordinatorApproval?->status == 'PENDING') border-warning bg-light-warning @endif">
+                                <div class="badge bg-secondary mb-2 d-inline-block">URUTAN 1</div>
+                                <h6 class="mb-1 fw-bold">Koordinator Keuangan</h6>
+                                <p class="mb-2 text-muted font-12" style="height: 35px; overflow: hidden;">{{ $koordinatorApproval?->assignedUser?->name ?? $koordinatorKeuanganUser?->name ?? 'Semua Koordinator' }}</p>
+
+                                <span class="badge @if($koordinatorApproval?->status == 'APPROVED') bg-success @elseif($koordinatorApproval?->status == 'REVISION') bg-danger @elseif($koordinatorApproval?->status == 'PENDING') bg-warning text-dark @else bg-light text-dark border @endif d-block px-2 py-2">
+                                    {{ $koordinatorApproval?->status ?? 'WAITING' }}
+                                </span>
+
+                                @if($koordinatorApproval?->catatan)
+                                    <div class="mt-2 text-start font-11 text-muted border-top pt-2">
+                                        <i class="material-icons-outlined" style="font-size: 12px;">chat</i> "{{ $koordinatorApproval->catatan }}"
+                                    </div>
+                                @endif
+                                @if($koordinatorApproval?->acted_at)
+                                    <small class="d-block mt-2 font-10 text-muted">{{ \Carbon\Carbon::parse($koordinatorApproval->acted_at)->format('d M Y H:i') }}</small>
+                                @endif
+                            </div>
+                        </div>
+
                         <!-- Kasubbag -->
-                        <div class="col-12 col-md-4">
+                        <div class="col-12 col-md-6 col-xl-3">
                             <div class="border rounded p-3 h-100 text-center @if($kasubbagApproval?->status == 'APPROVED') border-success bg-light-success @elseif($kasubbagApproval?->status == 'REVISION') border-danger bg-light-danger @elseif($kasubbagApproval?->status == 'PENDING') border-warning bg-light-warning @endif">
                                 <div class="badge bg-secondary mb-2 d-inline-block">URUTAN 1</div>
                                 <h6 class="mb-1 fw-bold">Kasubbag</h6>

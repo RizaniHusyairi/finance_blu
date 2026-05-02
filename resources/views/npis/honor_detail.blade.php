@@ -18,6 +18,7 @@
 
     $benpenStatusLabel = $benpenApproval?->status ?? 'Belum diajukan';
     $ppkStatusLabel = $ppkApproval?->status ?? 'Belum diajukan';
+    $koordinatorStatusLabel = $koordinatorApproval?->status ?? 'Belum diajukan';
     $kasubbagStatusLabel = $kasubbagApproval?->status ?? 'Belum diajukan';
 
     $statusClassMap = [
@@ -26,6 +27,7 @@
     
     $benpenStatusClass = $statusClassMap[$benpenStatusLabel] ?? 'text-muted';
     $ppkStatusClass = $statusClassMap[$ppkStatusLabel] ?? 'text-muted';
+    $koordinatorStatusClass = $statusClassMap[$koordinatorStatusLabel] ?? 'text-muted';
     $kasubbagStatusClass = $statusClassMap[$kasubbagStatusLabel] ?? 'text-muted';
 
     $progressStep = 3; 
@@ -144,6 +146,13 @@
                     <div class="timeline-label">PPK</div>
                     <div class="timeline-sub fw-semibold {{ $ppkStatusClass }}">{{ $ppkStatusLabel }}</div>
                     <div class="timeline-sub mt-0 opacity-75" style="font-size: 0.7rem;">{{ $ppkApproval?->actedByUser?->name ?? $ppkApproval?->assignedUser?->name ?? $ppkSpp?->name ?? 'PPK' }}</div>
+                </div>
+                {{-- Step 2: Verifikasi Koordinator Keuangan --}}
+                <div class="timeline-step {{ $koordinatorApproval?->status === 'APPROVED' ? 'passed' : ($koordinatorApproval?->status === 'REVISION' ? 'revision' : ($progressStep == 3 ? 'active' : '')) }}">
+                    <div class="timeline-icon"><i class="bi bi-diagram-3"></i></div>
+                    <div class="timeline-label">Koord. Keuangan</div>
+                    <div class="timeline-sub fw-semibold {{ $koordinatorStatusClass }}">{{ $koordinatorStatusLabel }}</div>
+                    <div class="timeline-sub mt-0 opacity-75" style="font-size: 0.7rem;">{{ $koordinatorApproval?->actedByUser?->name ?? $koordinatorApproval?->assignedUser?->name ?? $koordinatorKeuanganUser?->name ?? 'Koordinator' }}</div>
                 </div>
                 {{-- Step 2: Verifikasi Kasubbag --}}
                 <div class="timeline-step {{ $kasubbagApproval?->status === 'APPROVED' ? 'passed' : ($kasubbagApproval?->status === 'REVISION' ? 'revision' : ($progressStep == 3 ? 'active' : '')) }}">
@@ -283,14 +292,17 @@
                                     </div>
                                     <div class="col-12">
                                         <label class="form-label small fw-semibold text-dark">Bendahara Penerimaan Tujuan <span class="text-danger">*</span></label>
-                                        <select name="bendahara_penerimaan_id" class="form-select border-primary" required>
-                                            <option value="">-- Pilih Bendahara Penerimaan --</option>
-                                            @foreach($bendaharaPenerimaans as $userObj)
-                                                <option value="{{ $userObj->id }}" {{ (old('bendahara_penerimaan_id', $npiModel?->bendahara_penerimaan_id) == $userObj->id) ? 'selected' : '' }}>
-                                                    {{ $userObj->name }}
-                                                </option>
-                                            @endforeach
-                                        </select>
+                                        <input type="hidden" name="bendahara_penerimaan_id" value="{{ $bendaharaPenerimaanTagihan?->id }}">
+                                        <input type="text" class="form-control bg-light border-primary" value="{{ $bendaharaPenerimaanTagihan?->name ?? $tagihan?->bendahara_penerimaan_nama_snapshot ?? 'Belum ditentukan pada tagihan' }}" readonly>
+                                        <small class="text-muted">Diwariskan dari verifikator Bendahara Penerimaan yang dipilih saat tagihan diajukan.</small>
+                                        @if(!$bendaharaPenerimaanTagihan)
+                                            <div class="text-danger small mt-1">Verifikator Bendahara Penerimaan belum ada pada tagihan sumber.</div>
+                                        @endif
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label small fw-semibold text-dark">Koordinator Keuangan</label>
+                                        <input type="text" class="form-control bg-light" value="{{ $koordinatorKeuanganUser?->name ?? $tagihan?->koordinator_keuangan_nama_snapshot ?? 'Belum Ditentukan' }}" readonly>
+                                        <small class="text-muted">Verifikator Koordinator Keuangan.</small>
                                     </div>
                                     <div class="col-12">
                                         <label class="form-label small fw-semibold text-dark">Uraian / Tujuan NPI</label>
@@ -307,7 +319,7 @@
                                 @if($isReadyToSubmit)
                                     <form action="{{ route('npis.honor.submit', $spmModel->id) }}" method="POST">
                                         @csrf
-                                        <button class="btn btn-success w-100 py-3 fw-bold fs-6 shadow-sm" onclick="return confirm('Mengajukan NPI Honorarium ini akan mengunci draf form NPI ini, dan segera memanggil verifikasi ganda Paralel dari Kasubbag, Bendahara Penerimaan, dan PPK secara bersamaan. Lanjutkan?')">
+                                        <button class="btn btn-success w-100 py-3 fw-bold fs-6 shadow-sm" onclick="return confirm('Mengajukan NPI Honorarium ini akan mengunci draf form NPI ini, dan segera memanggil verifikasi paralel dari Kasubbag, Bendahara Penerimaan, Koordinator Keuangan, dan PPK secara bersamaan. Lanjutkan?')">
                                             <i class="bi bi-send me-1"></i> AJUKAN UNTUK VERIFIKASI
                                         </button>
                                     </form>

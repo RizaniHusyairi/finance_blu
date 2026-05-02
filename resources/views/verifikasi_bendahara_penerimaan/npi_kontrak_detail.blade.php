@@ -5,6 +5,7 @@
     $benpenStatus = $benpenApproval?->status ?? 'N/A';
     $ppkStatus = $ppkApproval?->status ?? 'N/A';
     $kasubbagStatus = $kasubbagApproval?->status ?? 'N/A';
+    $koordinatorStatus = $koordinatorApproval?->status ?? 'N/A';
 
     $badgeClass = fn($s) => match($s) {
         'APPROVED' => 'bg-success',
@@ -65,6 +66,7 @@
                     <span class="badge {{ $badgeClass($benpenStatus) }}" title="Bendahara Penerimaan">BenPen: {{ $benpenStatus }}</span>
                     <span class="badge {{ $badgeClass($ppkStatus) }}" title="PPK">PPK: {{ $ppkStatus }}</span>
                     <span class="badge {{ $badgeClass($kasubbagStatus) }}" title="Kasubbag">KSB: {{ $kasubbagStatus }}</span>
+                    <span class="badge {{ $badgeClass($koordinatorStatus) }}" title="Koordinator Keuangan">Koor: {{ $koordinatorStatus }}</span>
                     <span class="badge {{ $finalBadge }}">{{ $statusFinal }}</span>
                 </div>
 
@@ -124,10 +126,21 @@
             <div class="col-6 col-lg-3">
                 <div class="border rounded p-3 text-center h-100 {{ $kasubbagStatus === 'APPROVED' ? 'border-success bg-success bg-opacity-10' : ($kasubbagStatus === 'PENDING' ? 'border-warning bg-warning bg-opacity-10' : (in_array($kasubbagStatus, ['REVISION','REJECTED']) ? 'border-danger bg-danger bg-opacity-10' : '')) }}">
                     <div class="fw-bold mb-1" style="font-size: 13px;">Kasubbag</div>
-                    <div class="text-muted mb-2" style="font-size: 11px;">{{ $kasubbagApproval?->assignedUser?->name ?? '-' }}</div>
+                    <div class="text-muted mb-2" style="font-size: 11px;">{{ $kasubbagApproval?->assignedUser?->name ?? \App\Models\User::role('Kepala Subbagian Keuangan dan Tata Usaha')->first()?->name ?? '-' }}</div>
                     <span class="badge {{ $badgeClass($kasubbagStatus) }}">{{ $kasubbagStatus }}</span>
                     @if($kasubbagApproval?->acted_at)
                         <div class="mt-1" style="font-size: 10px; color: #6c757d;">{{ \Carbon\Carbon::parse($kasubbagApproval->acted_at)->format('d M Y H:i') }}</div>
+                    @endif
+                </div>
+            </div>
+            {{-- Koordinator Keuangan --}}
+            <div class="col-6 col-lg-3 mt-3 mt-lg-0">
+                <div class="border rounded p-3 text-center h-100 {{ $koordinatorStatus === 'APPROVED' ? 'border-success bg-success bg-opacity-10' : ($koordinatorStatus === 'PENDING' ? 'border-warning bg-warning bg-opacity-10' : (in_array($koordinatorStatus, ['REVISION','REJECTED']) ? 'border-danger bg-danger bg-opacity-10' : '')) }}">
+                    <div class="fw-bold mb-1" style="font-size: 13px;">Koordinator</div>
+                    <div class="text-muted mb-2" style="font-size: 11px;">{{ $koordinatorApproval?->assignedUser?->name ?? \App\Models\User::role('Koordinator Keuangan')->first()?->name ?? '-' }}</div>
+                    <span class="badge {{ $badgeClass($koordinatorStatus) }}">{{ $koordinatorStatus }}</span>
+                    @if($koordinatorApproval?->acted_at)
+                        <div class="mt-1" style="font-size: 10px; color: #6c757d;">{{ \Carbon\Carbon::parse($koordinatorApproval->acted_at)->format('d M Y H:i') }}</div>
                     @endif
                 </div>
             </div>

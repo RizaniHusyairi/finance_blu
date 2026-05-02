@@ -211,6 +211,9 @@ class VerifikasiNpiPerjaldinController extends Controller
         if ($myApproval?->assigned_user_id && $myApproval->assigned_user_id !== $user->id) {
             abort(403, 'Anda tidak berhak melihat Dokumen NPI ini.');
         }
+        if ($roleCode === 'Bendahara Penerimaan' && (int) $npi->bendahara_penerimaan_id !== (int) $user->id) {
+            abort(403, 'NPI ini bukan tugas Bendahara Penerimaan Anda.');
+        }
 
         $canAct = (
             $myApproval
@@ -254,6 +257,9 @@ class VerifikasiNpiPerjaldinController extends Controller
         
         if ($myApproval->assigned_user_id && $myApproval->assigned_user_id !== $user->id) {
             abort(403, 'Anda bukan verifikator spesifik untuk dokumen ini.');
+        }
+        if ($roleCode === 'Bendahara Penerimaan' && (int) $npi->bendahara_penerimaan_id !== (int) $user->id) {
+            abort(403, 'NPI ini bukan tugas Bendahara Penerimaan Anda.');
         }
 
         DB::beginTransaction();
@@ -319,6 +325,12 @@ class VerifikasiNpiPerjaldinController extends Controller
 
         $myApproval = $wf->approvals->where('role_code', $roleCode)->first();
         abort_unless($myApproval && $myApproval->status === 'PENDING', 403, 'Anda tidak memiliki antrean menunggu pada Dokumen NPI ini.');
+        if ($myApproval->assigned_user_id && $myApproval->assigned_user_id !== $user->id) {
+            abort(403, 'Anda bukan verifikator spesifik untuk dokumen ini.');
+        }
+        if ($roleCode === 'Bendahara Penerimaan' && (int) $npi->bendahara_penerimaan_id !== (int) $user->id) {
+            abort(403, 'NPI ini bukan tugas Bendahara Penerimaan Anda.');
+        }
 
         DB::beginTransaction();
         try {

@@ -36,6 +36,7 @@ class KasubbagNpiKontrakVerifikasiController extends Controller
             $npi->_workflowInstance = $latestInstance;
             $npi->_benpenApproval = $approvals->firstWhere('role_code', 'Bendahara Penerimaan');
             $npi->_ppkApproval = $approvals->firstWhere('role_code', 'PPK');
+            $npi->_koordinatorApproval = $approvals->firstWhere('role_code', 'Koordinator Keuangan');
             $npi->_kasubbagApproval = $approvals->firstWhere('role_code', 'Kepala Subbagian Keuangan dan Tata Usaha');
 
             $allApproved = $approvals->every(fn ($a) => $a->status === 'APPROVED') && $approvals->isNotEmpty();
@@ -53,6 +54,7 @@ class KasubbagNpiKontrakVerifikasiController extends Controller
                     $pendingRoles = $pending->pluck('role_code')->map(fn ($role) => match($role) {
                         'Bendahara Penerimaan' => 'BenPen',
                         'PPK' => 'PPK',
+                        'Koordinator Keuangan' => 'Koordinator',
                         'Kepala Subbagian Keuangan dan Tata Usaha' => 'Kasubbag',
                         default => $role,
                     });
@@ -151,6 +153,7 @@ class KasubbagNpiKontrakVerifikasiController extends Controller
 
         $benpenApproval = $approvals->firstWhere('role_code', 'Bendahara Penerimaan');
         $ppkApproval = $approvals->firstWhere('role_code', 'PPK');
+        $koordinatorApproval = $approvals->firstWhere('role_code', 'Koordinator Keuangan');
         $kasubbagApproval = $approvals->firstWhere('role_code', 'Kepala Subbagian Keuangan dan Tata Usaha');
         $currentUserApproval = $kasubbagApproval;
 
@@ -215,6 +218,7 @@ class KasubbagNpiKontrakVerifikasiController extends Controller
             'activeWorkflowInstance',
             'benpenApproval',
             'ppkApproval',
+            'koordinatorApproval',
             'kasubbagApproval',
             'currentUserApproval',
             'canApprove',

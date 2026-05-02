@@ -26,36 +26,42 @@ class NpiController extends Controller
             ->latest()
             ->get();
 
-        $bendaharaPenerimaans = User::role('Bendahara Penerimaan')->get();
-
-        return view('npis.index', compact('perjaldins', 'bendaharaPenerimaans'));
+        return view('npis.index', compact('perjaldins'));
     }
 
     public function detail($perjaldin_id)
     {
-        $perjaldin = Perjaldin::with(['pejabats', 'spps.spm.npi.bendaharaPenerimaan'])->findOrFail($perjaldin_id);
-        $bendaharaPenerimaans = User::role('Bendahara Penerimaan')->get();
-
-        return view('npis.detail_perjaldin', compact('perjaldin', 'bendaharaPenerimaans'));
+        $perjaldin = Perjaldin::with([
+            'pejabats',
+            'spps.tagihan.bendaharaPenerimaanUser',
+            'spps.spm.npi.bendaharaPenerimaan',
+        ])->findOrFail($perjaldin_id);
+        return view('npis.detail_perjaldin', compact('perjaldin'));
     }
 
     public function store(Request $request, $spm_id)
     {
-        $spm = \App\Models\DokumenSpm::with(['spp', 'npi'])->findOrFail($spm_id);
+        $spm = \App\Models\DokumenSpm::with(['spp.tagihan.bendaharaPenerimaanUser', 'npi'])->findOrFail($spm_id);
+        $bendaharaPenerimaan = $spm->spp?->tagihan?->bendaharaPenerimaanUser;
+
+        if (!$bendaharaPenerimaan || !$bendaharaPenerimaan->hasRole('Bendahara Penerimaan')) {
+            return back()
+                ->withInput()
+                ->withErrors(['bendahara_penerimaan_id' => 'Verifikator Bendahara Penerimaan belum ditentukan pada tagihan. Lengkapi data tagihan terlebih dahulu.']);
+        }
 
         $request->validate([
             'nomor_npi' => 'required|string|max:100',
             'tanggal_npi' => 'required|date',
-            'bendahara_penerimaan_id' => 'required|exists:users,id',
         ]);
 
-        DB::transaction(function () use ($request, $spm) {
+        DB::transaction(function () use ($request, $spm, $bendaharaPenerimaan) {
             $npi = $spm->npi()->updateOrCreate(
                 ['spm_id' => $spm->id],
                 [
                     'nomor_npi' => $request->nomor_npi,
                     'tanggal_npi' => $request->tanggal_npi,
-                    'bendahara_penerimaan_id' => $request->bendahara_penerimaan_id,
+                    'bendahara_penerimaan_id' => $bendaharaPenerimaan->id,
                     'status' => DokumenNpi::STATUS_SUBMITTED_BENPEN,
                 ]
             );
@@ -68,12 +74,13 @@ class NpiController extends Controller
                 'Draft NPI diajukan ke Bendahara Penerimaan.'
             );
 
-            $this->notifyRoles(
-                ['Bendahara Penerimaan'],
-                'NPI Menunggu Verifikasi',
-                "NPI {$npi->nomor_npi} menunggu verifikasi Bendahara Penerimaan.",
-                route('verifikasi-bendahara-penerimaan.npi.index')
-            );
+            Notification::send($bendaharaPenerimaan, new WorkflowNotification([
+                'title' => 'NPI Menunggu Verifikasi',
+                'message' => "NPI {$npi->nomor_npi} menunggu verifikasi Bendahara Penerimaan.",
+                'url' => route('verifikasi-bendahara-penerimaan.npi.index'),
+                'icon' => 'receipt_long',
+                'color' => 'primary',
+            ]));
         });
 
         return back()->with('success', 'NPI berhasil dibuat dan dikirim ke Bendahara Penerimaan.');
@@ -88,6 +95,9 @@ class NpiController extends Controller
                 DokumenNpi::STATUS_SUBMITTED_KASUBAG,
                 DokumenNpi::STATUS_APPROVED_KASUBAG,
             ])
+            ->when(auth()->user()?->hasRole('Bendahara Penerimaan'), function ($query) {
+                $query->where('bendahara_penerimaan_id', auth()->id());
+            })
             ->orderByRaw(
                 "CASE WHEN status = ? THEN 1 ELSE 2 END",
                 [DokumenNpi::STATUS_SUBMITTED_BENPEN]
@@ -111,6 +121,11 @@ class NpiController extends Controller
     public function approvePenerimaan($npi_id)
     {
         $npi = DokumenNpi::findOrFail($npi_id);
+
+        if (auth()->user()?->hasRole('Bendahara Penerimaan')) {
+            abort_unless((int) $npi->bendahara_penerimaan_id === (int) auth()->id(), 403, 'NPI ini bukan tugas Bendahara Penerimaan Anda.');
+        }
+
         $statusSebelumnya = $npi->status;
 
         $npi->update([
@@ -139,6 +154,11 @@ class NpiController extends Controller
     {
         $request->validate(['catatan_revisi' => 'required|string|max:1000']);
         $npi = DokumenNpi::findOrFail($npi_id);
+
+        if (auth()->user()?->hasRole('Bendahara Penerimaan')) {
+            abort_unless((int) $npi->bendahara_penerimaan_id === (int) auth()->id(), 403, 'NPI ini bukan tugas Bendahara Penerimaan Anda.');
+        }
+
         $statusSebelumnya = $npi->status;
 
         $npi->update([
