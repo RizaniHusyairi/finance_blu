@@ -146,12 +146,12 @@
                     <tr>
                         <td style="border: none; width: 35%; padding: 0;">Jatuh Tempo</td>
                         <td style="border: none; width: 5%; padding: 0;">:</td>
-                        <td style="border: none; width: 60%; padding: 0;">{{ $spp->jatuh_tempo }}</td>
+                        <td style="border: none; width: 60%; padding: 0;">{{ $spp->jatuh_tempo ?? 'Segera' }}</td>
                     </tr>
                     <tr>
                         <td style="border: none; padding: 0;">Cara Bayar</td>
                         <td style="border: none; padding: 0;">:</td>
-                        <td style="border: none; padding: 0;">{{ $spp->cara_bayar }}</td>
+                        <td style="border: none; padding: 0;">{{ $spp->cara_bayar ?? 'SP2D BLU - TRF' }}</td>
                     </tr>
                 </table>
             </td>

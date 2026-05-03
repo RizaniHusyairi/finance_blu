@@ -188,8 +188,12 @@
 
                     <div class="row mb-3">
                         <div class="col-md-6">
-                            <label class="form-label fw-bold">Tahun Anggaran</label>
-                            <input type="text" name="tahun_anggaran" class="form-control" value="{{ $spp->tahun_anggaran ?? date('Y') }}" required {{ $isReadOnly ? 'disabled' : '' }}>
+                            <label class="form-label fw-bold">Jenis Tagihan</label>
+                            <select name="jenis_tagihan" class="form-select" {{ $isReadOnly ? 'disabled' : '' }}>
+                                <option value="NON REMUNERASI" {{ ($spp?->jenis_tagihan ?? 'NON REMUNERASI') === 'NON REMUNERASI' ? 'selected' : '' }}>NON REMUNERASI</option>
+                                <option value="REMUNERASI" {{ ($spp?->jenis_tagihan ?? '') === 'REMUNERASI' ? 'selected' : '' }}>REMUNERASI</option>
+                            </select>
+                            <div class="form-text">Kategori tagihan pada PDF SPP & SPM.</div>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-bold text-success">COA / MAK Terpilih</label>

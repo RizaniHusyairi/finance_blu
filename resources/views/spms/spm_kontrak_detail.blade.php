@@ -347,10 +347,6 @@
                         </div>
                         <div class="spm-info-block mb-2"><div class="label">Nomor SPM</div><div class="value">{{ $spmModel?->nomor_spm ?? '-' }}</div></div>
                         <div class="spm-info-block mb-2"><div class="label">Tanggal SPM</div><div class="value">{{ optional($spmModel?->tanggal_spm)->format('d F Y') ?? '-' }}</div></div>
-                        <div class="spm-info-block mb-2"><div class="label">Tahun Anggaran</div><div class="value">{{ $spmModel?->tahun_anggaran ?? date('Y') }}</div></div>
-                        <div class="spm-info-block mb-2"><div class="label">Jenis Tagihan</div><div class="value">{{ $spmModel?->jenis_tagihan ?? 'NON REMUNERASI' }}</div></div>
-                        <div class="spm-info-block mb-2"><div class="label">Jatuh Tempo</div><div class="value">{{ $spmModel?->jatuh_tempo ?? 'Segera' }}</div></div>
-                        <div class="spm-info-block mb-2"><div class="label">Cara Bayar</div><div class="value">{{ $spmModel?->cara_bayar ?? 'SP2D BLU - TRF' }}</div></div>
                         <div class="spm-info-block mb-3"><div class="label">Nilai SPM</div><div class="value text-primary fs-5">Rp {{ number_format($nominalSpm, 0, ',', '.') }}</div></div>
                         <div class="p-2 bg-light rounded text-center small text-muted">Mode Dokumen: {{ $workflowLockLabel }}</div>
                     </div>
@@ -438,25 +434,6 @@
                                 <div class="col-md-6">
                                     <label class="form-label fw-semibold">Tanggal SPM <span class="text-danger">*</span></label>
                                     <input type="date" name="tanggal_spm" class="form-control" required value="{{ old('tanggal_spm', optional($spmModel?->tanggal_spm)->format('Y-m-d') ?? now()->format('Y-m-d')) }}">
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label fw-semibold">Tahun Anggaran</label>
-                                    <input type="text" name="tahun_anggaran" class="form-control" value="{{ old('tahun_anggaran', $spmModel?->tahun_anggaran ?? date('Y')) }}">
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label fw-semibold">Jenis Tagihan</label>
-                                    <select name="jenis_tagihan" class="form-select">
-                                        <option value="NON REMUNERASI" {{ old('jenis_tagihan', $spmModel?->jenis_tagihan) === 'NON REMUNERASI' ? 'selected' : '' }}>NON REMUNERASI</option>
-                                        <option value="REMUNERASI" {{ old('jenis_tagihan', $spmModel?->jenis_tagihan) === 'REMUNERASI' ? 'selected' : '' }}>REMUNERASI</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label fw-semibold">Jatuh Tempo</label>
-                                    <input type="text" name="jatuh_tempo" class="form-control" value="{{ old('jatuh_tempo', $spmModel?->jatuh_tempo ?? 'Segera') }}">
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label fw-semibold">Cara Bayar</label>
-                                    <input type="text" name="cara_bayar" class="form-control" value="{{ old('cara_bayar', $spmModel?->cara_bayar ?? 'SP2D BLU - TRF') }}">
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label fw-semibold">Nilai SPM (Otomatis dari SPP)</label>

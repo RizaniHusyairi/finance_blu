@@ -521,6 +521,14 @@
                                     <label class="form-label fw-semibold">Uraian SPP</label>
                                     <textarea class="form-control bg-light" rows="2" readonly>{{ $tagihan->deskripsi ?? ($kontrak->nama_pekerjaan ?? '-') }}</textarea>
                                 </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Jenis Tagihan</label>
+                                    <select name="jenis_tagihan" class="form-select">
+                                        <option value="NON REMUNERASI" {{ old('jenis_tagihan', $sppModel?->jenis_tagihan) === 'NON REMUNERASI' ? 'selected' : '' }}>NON REMUNERASI</option>
+                                        <option value="REMUNERASI" {{ old('jenis_tagihan', $sppModel?->jenis_tagihan) === 'REMUNERASI' ? 'selected' : '' }}>REMUNERASI</option>
+                                    </select>
+                                    <div class="form-text">Kategori tagihan yang akan ditampilkan pada PDF SPP & SPM.</div>
+                                </div>
                             </div>
                         </div>
 

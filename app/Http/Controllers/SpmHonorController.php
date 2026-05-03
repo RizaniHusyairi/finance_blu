@@ -263,10 +263,7 @@ class SpmHonorController extends Controller
             ],
             'tanggal_spm' => 'required|date',
             'ppspm_id' => 'required|exists:users,id',
-            'tahun_anggaran' => 'nullable|string|max:10',
-            'jenis_tagihan' => 'nullable|string|max:50',
-            'jatuh_tempo' => 'nullable|string|max:50',
-            'cara_bayar' => 'nullable|string|max:50',
+
         ]);
 
         DB::transaction(function () use ($request, $spp, $existingSpm) {
@@ -280,11 +277,11 @@ class SpmHonorController extends Controller
                     'tanggal_spm' => $request->tanggal_spm,
                     'ppspm_id' => $request->ppspm_id,
                     'dipa_revision_item_id' => $spp->dipa_revision_item_id,
-                    'tahun_anggaran' => $request->tahun_anggaran ?? date('Y'),
-                    'jenis_tagihan' => $request->jenis_tagihan ?? 'NON REMUNERASI',
-                    'jatuh_tempo' => $request->jatuh_tempo ?? 'Segera',
-                    'cara_bayar' => $request->cara_bayar ?? 'SP2D BLU - TRF',
-                    'nominal_spm' => $nominalSpm, // Menguasakan nilai Netto
+                    'tahun_anggaran' => $spp->dipaRevisionItem?->revision?->dipa?->tahun_anggaran ?? date('Y'),
+                    'jenis_tagihan' => $spp->jenis_tagihan ?? 'NON REMUNERASI',
+                    'jatuh_tempo' => 'Segera',
+                    'cara_bayar' => 'SP2D BLU - TRF',
+                    'nominal_spm' => $nominalSpm,
                     'dibuat_oleh_id' => auth()->id(),
                     'status' => $existingSpm && $existingSpm->status === DokumenSpm::STATUS_REVISI
                         ? DokumenSpm::STATUS_REVISI
