@@ -36,6 +36,8 @@ class LoginController extends Controller
         'PPABP',
         'Operator Perjaldin',
         'Koordinator Keuangan',
+        'Admin Jasa',
+        'Koordinator Jasa',
     ];
 
     /**

@@ -27,7 +27,7 @@ Route::get('/', function () {
         : redirect()->route('dashboard');
 });
 
-$internalRoles = 'Super Admin|KPA|Kepala Subbagian Keuangan dan Tata Usaha|Kepala Seksi Pelayanan dan Kerjasama|PPK|PPSPM|Bendahara Pengeluaran|Bendahara Penerimaan|Pejabat Pengadaan|Operator BLU|PPABP|Operator Perjaldin|Koordinator Keuangan';
+$internalRoles = 'Super Admin|KPA|Kepala Subbagian Keuangan dan Tata Usaha|Kepala Seksi Pelayanan dan Kerjasama|PPK|PPSPM|Bendahara Pengeluaran|Bendahara Penerimaan|Pejabat Pengadaan|Operator BLU|PPABP|Operator Perjaldin|Koordinator Keuangan|Admin Jasa|Koordinator Jasa';
 
 Route::middleware('auth')->group(function () use ($internalRoles) {
 
@@ -120,6 +120,22 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
         Route::get('/tagihan/kontrak/{id}/export/{type}', [\App\Http\Controllers\TagihanController::class, 'exportPdfKontrak'])->name('tagihan.kontrak.export-pdf');
     });
 
+    // Tagihan Jasa (PNBP)
+    Route::middleware('role:Super Admin|Admin Jasa|Koordinator Jasa|Kepala Seksi Pelayanan dan Kerjasama|Kepala Subbagian Keuangan dan Tata Usaha|KPA')->group(function () {
+        Route::get('/tagihan-jasa', [\App\Http\Controllers\TagihanJasaController::class, 'index'])->name('tagihan-jasa.index');
+        Route::get('/tagihan-jasa/create', [\App\Http\Controllers\TagihanJasaController::class, 'create'])->name('tagihan-jasa.create');
+        Route::post('/tagihan-jasa', [\App\Http\Controllers\TagihanJasaController::class, 'store'])->name('tagihan-jasa.store');
+        Route::get('/tagihan-jasa/{id}', [\App\Http\Controllers\TagihanJasaController::class, 'show'])->name('tagihan-jasa.show');
+        Route::get('/tagihan-jasa/{id}/pdf', [\App\Http\Controllers\TagihanJasaController::class, 'generateInvoicePdf'])->name('tagihan-jasa.pdf');
+        Route::post('/tagihan-jasa/{id}/publish', [\App\Http\Controllers\TagihanJasaController::class, 'publish'])->name('tagihan-jasa.publish');
+        Route::post('/tagihan-jasa/{id}/mark-lunas', [\App\Http\Controllers\TagihanJasaController::class, 'markAsPaid'])->name('tagihan-jasa.mark-lunas');
+        Route::post('/tagihan-jasa/{id}/auto-approve', [\App\Http\Controllers\TagihanJasaController::class, 'autoApproveAll'])->name('tagihan-jasa.auto-approve');
+
+        // Verifikasi Tagihan Jasa
+        Route::post('/tagihan-jasa/{id}/approve', [\App\Http\Controllers\TagihanJasaVerifikasiController::class, 'approve'])->name('tagihan-jasa.approve');
+        Route::post('/tagihan-jasa/{id}/reject', [\App\Http\Controllers\TagihanJasaVerifikasiController::class, 'reject'])->name('tagihan-jasa.reject');
+    });
+
     // Verifikasi Tagihan Kontrak — multi-role (PPK, PPSPM, Koor.Keu, Bend×2, Kasubbag)
     Route::middleware('role:PPK|PPSPM|Koordinator Keuangan|Bendahara Pengeluaran|Bendahara Penerimaan|Kepala Subbagian Keuangan dan Tata Usaha|Super Admin')->group(function () {
         Route::get('/verifikasi-tagihan-kontrak', [\App\Http\Controllers\TagihanKontrakVerifikasiController::class, 'index'])->name('verifikasi-tagihan-kontrak.index');
@@ -128,6 +144,12 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
         Route::post('/verifikasi-tagihan-kontrak/{id}/approve', [\App\Http\Controllers\TagihanKontrakVerifikasiController::class, 'approve'])->name('verifikasi-tagihan-kontrak.approve');
         Route::post('/verifikasi-tagihan-kontrak/{id}/revisi', [\App\Http\Controllers\TagihanKontrakVerifikasiController::class, 'revisi'])->name('verifikasi-tagihan-kontrak.revisi');
         Route::post('/verifikasi-tagihan-kontrak/{id}/reject', [\App\Http\Controllers\TagihanKontrakVerifikasiController::class, 'reject'])->name('verifikasi-tagihan-kontrak.reject');
+    });
+
+    // Verifikasi Tagihan Jasa - multi-role
+    Route::middleware('role:Super Admin|Koordinator Jasa|Kepala Seksi Pelayanan dan Kerjasama|Kepala Subbagian Keuangan dan Tata Usaha|KPA')->group(function () {
+        Route::get('/verifikasi-tagihan-jasa', [\App\Http\Controllers\TagihanJasaVerifikasiController::class, 'index'])->name('verifikasi-tagihan-jasa.index');
+        Route::get('/verifikasi-tagihan-jasa/{id}', [\App\Http\Controllers\TagihanJasaVerifikasiController::class, 'show'])->name('verifikasi-tagihan-jasa.show');
     });
 
     Route::middleware('role:Super Admin|Pejabat Pengadaan|PPK')->group(function () {

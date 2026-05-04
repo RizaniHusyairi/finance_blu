@@ -130,7 +130,7 @@
         @endhasrole
 
         {{-- Verifikasi Tagihan — seragam untuk SEMUA verifikator (PPK, PPSPM, Koor.Keu, Bendahara×2, Kasubbag) --}}
-        @hasanyrole('PPK|PPSPM|Koordinator Keuangan|Bendahara Pengeluaran|Bendahara Penerimaan|Kepala Subbagian Keuangan dan Tata Usaha')
+        @hasanyrole('PPK|PPSPM|Koordinator Keuangan|Bendahara Pengeluaran|Bendahara Penerimaan|Kepala Subbagian Keuangan dan Tata Usaha|Koordinator Jasa')
         @php
             // Resolusi route Perjaldin & Honorarium berdasarkan role user yang login.
             // Setiap role punya namespace route-nya sendiri; kalau tidak ada → null (link disabled).
@@ -183,7 +183,21 @@
                 </a>
               @endif
             </li>
+            <li>
+              <a href="{{ route('verifikasi-tagihan-jasa.index') }}">
+                <i class="material-icons-outlined">arrow_right</i>PNBP (Jasa)
+              </a>
+            </li>
           </ul>
+        </li>
+        @endhasanyrole
+
+        @hasanyrole('Super Admin|Admin Jasa|Koordinator Keuangan|Kepala Seksi Pelayanan dan Kerjasama|Kepala Subbagian Keuangan dan Tata Usaha|KPA')
+        <li>
+          <a href="{{ route('tagihan-jasa.index') }}">
+            <div class="parent-icon"><i class="material-icons-outlined">receipt_long</i></div>
+            <div class="menu-title">Penagihan PNBP (Jasa)</div>
+          </a>
         </li>
         @endhasanyrole
 

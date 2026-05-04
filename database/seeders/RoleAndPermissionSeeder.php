@@ -34,6 +34,8 @@ class RoleAndPermissionSeeder extends Seeder
             'Operator Perjaldin',
             'Koordinator Keuangan',
             'Mitra',
+            'Admin Jasa',
+            'Koordinator Jasa',
         ];
 
         foreach ($roles as $role) {
@@ -56,6 +58,17 @@ class RoleAndPermissionSeeder extends Seeder
                     'nip'          => '000000000000000001',
                     'nama_lengkap' => 'Super Admin',
                     'jabatan'      => 'System Administrator',
+                    'npwp'         => null,
+                    'status_aktif' => true,
+                ],
+            ],
+            [
+                'email' => 'kpa@sikeren.id',
+                'role'  => 'KPA',
+                'pegawai' => [
+                    'nip'          => '000000000000000002',
+                    'nama_lengkap' => 'KPA',
+                    'jabatan'      => 'Kepala Bandara',
                     'npwp'         => null,
                     'status_aktif' => true,
                 ],
@@ -90,6 +103,17 @@ class RoleAndPermissionSeeder extends Seeder
                     'nama_lengkap' => 'GUNAWAN',
                     'jabatan'      => 'Pejabat Pembuat Komitmen',
                     'npwp'         => '72.234.567.8-901.000',
+                    'status_aktif' => true,
+                ],
+            ],
+            [
+                'email' => 'kasi.jasa@sikeren.id',
+                'role'  => 'Kepala Seksi Pelayanan dan Kerjasama',
+                'pegawai' => [
+                    'nip'          => '198001012010011016',
+                    'nama_lengkap' => 'KASI JASA',
+                    'jabatan'      => 'Kepala Seksi Pelayanan dan Kerjasama',
+                    'npwp'         => '86.234.567.8-901.000',
                     'status_aktif' => true,
                 ],
             ],
@@ -167,6 +191,28 @@ class RoleAndPermissionSeeder extends Seeder
                     'nama_lengkap' => 'RAHMAT HIDAYAT',
                     'jabatan'      => 'Koordinator Keuangan',
                     'npwp'         => '83.234.567.8-901.000',
+                    'status_aktif' => true,
+                ],
+            ],
+            [
+                'email' => 'admin.jasa@sikeren.id',
+                'role'  => 'Admin Jasa',
+                'pegawai' => [
+                    'nip'          => '199501012020011014',
+                    'nama_lengkap' => 'ADMIN JASA',
+                    'jabatan'      => 'Admin Tagihan Jasa',
+                    'npwp'         => '84.234.567.8-901.000',
+                    'status_aktif' => true,
+                ],
+            ],
+            [
+                'email' => 'koordinator.jasa@sikeren.id',
+                'role'  => 'Koordinator Jasa',
+                'pegawai' => [
+                    'nip'          => '198502022020011015',
+                    'nama_lengkap' => 'KOORDINATOR JASA',
+                    'jabatan'      => 'Koordinator Pelayanan Jasa',
+                    'npwp'         => '85.234.567.8-901.000',
                     'status_aktif' => true,
                 ],
             ],
