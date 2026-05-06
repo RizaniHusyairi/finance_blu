@@ -3,14 +3,17 @@
 
 @php
     $canEdit = $canVerify ?? false;
+    $pendingActionApprovals = ($actionableApprovals ?? collect())->values();
 
     $statusClassMap = [
         'PENDING'  => 'text-warning font-monospace fw-bold',
         'APPROVED' => 'text-success fw-bold',
         'REVISION' => 'text-danger fw-bold'
     ];
+    $ppspmStatus = $statusClassMap[$ppspmApproval?->status ?? ''] ?? 'text-secondary fw-bold';
     $ppkStatus = $statusClassMap[$ppkApproval?->status ?? ''] ?? 'text-secondary fw-bold';
     $kasubbagStatus = $statusClassMap[$kasubbagApproval?->status ?? ''] ?? 'text-secondary fw-bold';
+    $koordinatorStatus = $statusClassMap[$koordinatorApproval?->status ?? ''] ?? 'text-secondary fw-bold';
 
     function labelStatusIndo($status) {
         return match($status) {
@@ -208,7 +211,28 @@
                                 <div class="tl-meta">Oleh: {{ $sp2d->bendaharaPengeluaran?->name ?? 'Bendahara Pengeluaran' }}</div>
                             </div>
 
-                            {{-- Step 2. Verifikasi PPK (Paralel A) --}}
+                            {{-- Step 2. Verifikasi PPSPM --}}
+                            @php
+                                $ppspmClass = match($ppspmApproval?->status) {
+                                    'APPROVED' => 'approved',
+                                    'REVISION' => 'rejected',
+                                    default => 'pending'
+                                };
+                            @endphp
+                            <div class="tl-item {{ $ppspmClass }}">
+                                <div class="tl-dot">
+                                    @if($ppspmClass == 'approved') <i class="bi bi-check text-white"></i>
+                                    @elseif($ppspmClass == 'rejected') <i class="bi bi-x text-white"></i>
+                                    @else <i class="bi bi-person text-warning"></i> @endif
+                                </div>
+                                <div class="tl-title">PPSPM</div>
+                                <div class="tl-meta {{ $ppspmStatus }}">STATUS: {{ labelStatusIndo($ppspmApproval?->status) }}</div>
+                                @if($ppspmApproval?->catatan)
+                                    <div class="tl-comment">{{ $ppspmApproval->catatan }}</div>
+                                @endif
+                            </div>
+
+                            {{-- Step 3. Verifikasi PPK --}}
                             @php
                                 $ppkClass = match($ppkApproval?->status) {
                                     'APPROVED' => 'approved',
@@ -229,7 +253,7 @@
                                 @endif
                             </div>
 
-                            {{-- Step 3. Verifikasi Kasubbag (Paralel B) --}}
+                            {{-- Step 4. Verifikasi Kasubbag --}}
                             @php
                                 $kasClass = match($kasubbagApproval?->status) {
                                     'APPROVED' => 'approved',
@@ -250,6 +274,27 @@
                                 @endif
                             </div>
 
+                            {{-- Step 5. Verifikasi Koordinator Keuangan --}}
+                            @php
+                                $koorClass = match($koordinatorApproval?->status) {
+                                    'APPROVED' => 'approved',
+                                    'REVISION' => 'rejected',
+                                    default => 'pending'
+                                };
+                            @endphp
+                            <div class="tl-item {{ $koorClass }}">
+                                <div class="tl-dot">
+                                    @if($koorClass == 'approved') <i class="bi bi-check text-white"></i>
+                                    @elseif($koorClass == 'rejected') <i class="bi bi-x text-white"></i>
+                                    @else <i class="bi bi-person text-warning"></i> @endif
+                                </div>
+                                <div class="tl-title">Koordinator Keuangan</div>
+                                <div class="tl-meta {{ $koordinatorStatus }}">STATUS: {{ labelStatusIndo($koordinatorApproval?->status) }}</div>
+                                @if($koordinatorApproval?->catatan)
+                                    <div class="tl-comment">{{ $koordinatorApproval->catatan }}</div>
+                                @endif
+                            </div>
+
                             {{-- Step Akhir --}}
                             <div class="tl-item {{ in_array($sp2d->status, ['DISETUJUI_FINAL', 'EXECUTED']) ? 'approved' : 'pending' }}">
                                 <div class="tl-dot"><i class="bi bi-flag-fill {{ in_array($sp2d->status, ['DISETUJUI_FINAL', 'EXECUTED']) ? 'text-white' : 'opacity-50' }}"></i></div>
@@ -259,7 +304,7 @@
                     </div>
 
                     {{-- Bila ada Hak Approve --}}
-                    @if($canVerify)
+                    @if($canVerify && $pendingActionApprovals->isNotEmpty())
                     <div class="p-4 bg-light border-top">
                         <div class="d-flex align-items-center mb-3">
                             <span class="badge bg-warning text-dark shadow-sm py-2 px-3 fw-bold w-100 blink-soft" style="font-size: 0.8rem;">
@@ -268,12 +313,20 @@
                         </div>
                         
                         <div class="d-flex flex-column gap-2">
-                            <button type="button" class="btn btn-success fw-bold shadow py-2" data-bs-toggle="modal" data-bs-target="#modalApprove">
-                                <i class="bi bi-check-circle-fill me-1"></i> SAHKAN PENCAIRAN SP2D 
-                            </button>
-                            <button type="button" class="btn btn-danger btn-sm shadow-sm opacity-75 mt-1" data-bs-toggle="modal" data-bs-target="#modalReject">
-                                <i class="bi bi-x-circle me-1"></i> Gagalkan & Turunkan Revisi
-                            </button>
+                            @foreach($pendingActionApprovals as $approval)
+                                <div class="border rounded bg-white p-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <span class="small text-muted">Verifikasi sebagai</span>
+                                        <span class="badge bg-warning text-dark">{{ $approval->role_code }}</span>
+                                    </div>
+                                    <button type="button" class="btn btn-success fw-bold shadow py-2 w-100" data-bs-toggle="modal" data-bs-target="#modalApprove{{ $approval->id }}">
+                                        <i class="bi bi-check-circle-fill me-1"></i> SAHKAN SEBAGAI {{ $approval->role_code }}
+                                    </button>
+                                    <button type="button" class="btn btn-danger btn-sm shadow-sm opacity-75 mt-2 w-100" data-bs-toggle="modal" data-bs-target="#modalReject{{ $approval->id }}">
+                                        <i class="bi bi-x-circle me-1"></i> Revisi sebagai {{ $approval->role_code }}
+                                    </button>
+                                </div>
+                            @endforeach
                         </div>
                     </div>
                     @else
@@ -289,14 +342,15 @@
     </div>
 
     {{-- Modal Afirmasi --}}
-    @if($canVerify)
-    <div class="modal fade" id="modalApprove" tabindex="-1" aria-hidden="true">
+    @foreach($pendingActionApprovals as $approval)
+    <div class="modal fade" id="modalApprove{{ $approval->id }}" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered border-0">
             <div class="modal-content shadow-lg border-0 rounded-4">
                 <form action="{{ route('verifikasi-sp2d.honor.approve', $sp2d->id) }}" method="POST">
                     @csrf
+                    <input type="hidden" name="approval_id" value="{{ $approval->id }}">
                     <div class="modal-header bg-success text-white border-0 py-3 rounded-top-4">
-                        <h6 class="modal-title fw-bold"><i class="bi bi-check2-square me-2"></i> Persetujuan SP2D {{ $roleCode }}</h6>
+                        <h6 class="modal-title fw-bold"><i class="bi bi-check2-square me-2"></i> Persetujuan SP2D {{ $approval->role_code }}</h6>
                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body p-4 bg-light">
@@ -315,13 +369,14 @@
         </div>
     </div>
 
-    <div class="modal fade" id="modalReject" tabindex="-1" aria-hidden="true">
+    <div class="modal fade" id="modalReject{{ $approval->id }}" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered border-0">
             <div class="modal-content shadow-lg border-0 rounded-4">
                 <form action="{{ route('verifikasi-sp2d.honor.reject', $sp2d->id) }}" method="POST">
                     @csrf
+                    <input type="hidden" name="approval_id" value="{{ $approval->id }}">
                     <div class="modal-header bg-danger text-white border-0 py-3 rounded-top-4">
-                        <h6 class="modal-title fw-bold"><i class="bi bi-x-square me-2"></i> Pemblokiran SP2D {{ $roleCode }}</h6>
+                        <h6 class="modal-title fw-bold"><i class="bi bi-x-square me-2"></i> Pemblokiran SP2D {{ $approval->role_code }}</h6>
                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body p-4 bg-light">
@@ -342,5 +397,5 @@
             </div>
         </div>
     </div>
-    @endif
+    @endforeach
 @endsection

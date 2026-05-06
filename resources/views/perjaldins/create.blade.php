@@ -401,7 +401,20 @@
             // Add Row Check
             $(document).on('click', '.btn-add-row-trigger', function (e) {
                 e.preventDefault();
-                let newRow = $('.item-row:first').clone();
+                
+                // Destroy Select2 on the first row before cloning
+                let firstRow = $('.item-row:first');
+                if (firstRow.find('.select2').hasClass('select2-hidden-accessible')) {
+                    firstRow.find('.select2').select2('destroy');
+                }
+
+                let newRow = firstRow.clone();
+
+                // Reinitialize Select2 on the first row
+                firstRow.find('.select2').select2({
+                    theme: 'bootstrap-5',
+                    width: '100%'
+                });
 
                 // Clear values and validation classes
                 newRow.find('input[type="text"], input[type="number"], input[type="date"], input[type="hidden"], input[type="file"], textarea').val('').removeClass('is-invalid');
@@ -414,6 +427,10 @@
                 newRow.find('.nip-input').val('').prop('readonly', true);
                 newRow.find('.rekening-input').val('').prop('readonly', false);
                 newRow.find('.rek-hint').addClass('d-none');
+                
+                // Remove any leftover select2 elements if they were cloned
+                newRow.find('.select2-container').remove();
+                newRow.find('.select2-hidden-accessible').removeClass('select2-hidden-accessible').removeAttr('data-select2-id aria-hidden tabindex');
 
                 // Adjust Collapse id
                 let collapseId = 'collapsePeserta' + rowIdx;
@@ -426,10 +443,18 @@
                         name = name.replace(/\[\d+\]/g, '[' + rowIdx + ']');
                         $(this).attr('name', name);
                     }
+                    $(this).removeAttr('id'); // Remove id to avoid duplicates
                 });
 
                 newRow.find('.btn-delete-row').prop('disabled', false);
                 $('#pesertaRepeater').append(newRow);
+                
+                // Initialize Select2 on the new row
+                newRow.find('.select2').select2({
+                    theme: 'bootstrap-5',
+                    width: '100%'
+                });
+
                 updateRowNumbers();
                 $('.btn-delete-row').prop('disabled', false);
                 rowIdx++;

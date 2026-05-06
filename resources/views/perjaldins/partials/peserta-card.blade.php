@@ -31,7 +31,7 @@
                     <h6 class="text-secondary border-bottom pb-1"><i class="bi bi-person me-1"></i> 1. Informasi Pegawai</h6>
                     <div class="mb-2">
                         <label class="form-label mb-1 small">Nama Pegawai <span class="text-danger">*</span></label>
-                        <select class="form-select form-select-sm pegawai-select @error("peserta.{$index}.nama_pegawai") is-invalid @enderror" name="peserta[{{ $index }}][pegawai_id]" required>
+                        <select class="form-select form-select-sm select2 pegawai-select @error("peserta.{$index}.nama_pegawai") is-invalid @enderror" name="peserta[{{ $index }}][pegawai_id]" required>
                             <option value="">-- Pilih Pegawai --</option>
                             @foreach($masterPegawai as $peg)
                                 <option value="{{ $peg->id }}"

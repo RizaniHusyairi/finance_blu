@@ -28,6 +28,32 @@
     </style>
 </head>
 <body>
+@php
+    $pdfReference = $pdfReference ?? [
+        'primary_label' => 'No. Tagihan',
+        'primary_value' => '-',
+        'primary_date_label' => 'Tgl. Tagihan',
+        'primary_date_value' => '-',
+        'secondary_label' => null,
+        'secondary_value' => null,
+        'secondary_date_label' => null,
+        'secondary_date_value' => null,
+    ];
+    $hasSecondaryReference = !empty($pdfReference['secondary_label']);
+    $dipaInfo = $dipaInfo ?? [
+        'nomor' => $spp->nomor_dipa ?? '-',
+        'tanggal' => $spp->tanggal_dipa ? \Carbon\Carbon::parse($spp->tanggal_dipa)->locale('id')->isoFormat('D MMMM Y') : '-',
+    ];
+    $supplierInfo = $supplierInfo ?? [
+        'nama_supplier' => 'PARA PEGAWAI KANTOR UPBU AJI PANGERAN TUMENGGUNG PRANOTO',
+        'bank_pos' => 'Terlampir',
+        'npwp' => 'Terlampir',
+        'rekening' => 'Terlampir',
+        'alamat' => "Jl. Poros Samarinda - Bontang, Kel. Sunga Siring,\nSamarinda-Kalimantan Timur",
+        'nama_rekening' => 'Terlampir',
+        'uraian' => $uraianSupplier ?? '-',
+    ];
+@endphp
 
     <table class="table-main">
         <!-- HEADER 1 -->
@@ -86,9 +112,9 @@
             <td style="width: 30%; padding: 5px; vertical-align: top;" class="border-bottom-0">
                 <table style="width: 100%; border: none; font-size: 11px;">
                     <tr>
-                        <td style="border: none; width: 35%; padding: 0;">No. Kontrak</td>
-                        <td style="border: none; width: 5%; padding: 0;"></td>
-                        <td style="border: none; width: 60%; padding: 0;"></td>
+                        <td style="border: none; width: 35%; padding: 0;">{{ $pdfReference['primary_label'] }}</td>
+                        <td style="border: none; width: 5%; padding: 0;">:</td>
+                        <td style="border: none; width: 60%; padding: 0;">{{ $pdfReference['primary_value'] }}</td>
                     </tr>
                 </table>
             </td>
@@ -110,35 +136,37 @@
                     <tr>
                         <td style="border: none; width: 20%; padding: 0;">Nomor</td>
                         <td style="border: none; width: 5%; padding: 0;">:</td>
-                        <td style="border: none; width: 75%; padding: 0;">{{ $spp->nomor_dipa }}</td>
+                        <td style="border: none; width: 75%; padding: 0;">{{ $dipaInfo['nomor'] }}</td>
                     </tr>
                     <tr>
                         <td style="border: none; padding: 0;">Tanggal</td>
                         <td style="border: none; padding: 0;">:</td>
-                        <td style="border: none; padding: 0;">{{ \Carbon\Carbon::parse($spp->tanggal_dipa)->locale('id')->isoFormat('D MMMM Y') }}</td>
+                        <td style="border: none; padding: 0;">{{ $dipaInfo['tanggal'] }}</td>
                     </tr>
                 </table>
             </td>
             <td style="padding: 5px; vertical-align: top;" class="border-bottom-0 border-top-0">
                 <table style="width: 100%; border: none; font-size: 11px;">
                     <tr>
-                        <td style="border: none; width: 35%; padding: 0;">Tgl. Kontrak</td>
+                        <td style="border: none; width: 35%; padding: 0;">{{ $pdfReference['primary_date_label'] }}</td>
                         <td style="border: none; width: 5%; padding: 0;">:</td>
-                        <td style="border: none; width: 60%; padding: 0;"></td>
+                        <td style="border: none; width: 60%; padding: 0;">{{ $pdfReference['primary_date_value'] }}</td>
                     </tr>
-                    <tr>
-                        <td style="border: none; padding: 0;">No. BAST</td>
-                        <td style="border: none; padding: 0;">:</td>
-                        <td style="border: none; padding: 0;">{{ $sppable->no_bast ?? '-' }}</td>
-                    </tr>
-                    <tr>
-                        <td colspan="3" style="border: none; padding: 6px 0;"></td>
-                    </tr>
-                    <tr>
-                        <td style="border: none; padding: 0;">Tgl. BAST</td>
-                        <td style="border: none; padding: 0;">:</td>
-                        <td style="border: none; padding: 0;">{{ $sppable->no_bast ? \Carbon\Carbon::parse($spp->tanggal_spp)->format('d/m/Y') : '' }}</td>
-                    </tr>
+                    @if($hasSecondaryReference)
+                        <tr>
+                            <td style="border: none; padding: 0;">{{ $pdfReference['secondary_label'] }}</td>
+                            <td style="border: none; padding: 0;">:</td>
+                            <td style="border: none; padding: 0;">{{ $pdfReference['secondary_value'] }}</td>
+                        </tr>
+                        <tr>
+                            <td colspan="3" style="border: none; padding: 6px 0;"></td>
+                        </tr>
+                        <tr>
+                            <td style="border: none; padding: 0;">{{ $pdfReference['secondary_date_label'] }}</td>
+                            <td style="border: none; padding: 0;">:</td>
+                            <td style="border: none; padding: 0;">{{ $pdfReference['secondary_date_value'] }}</td>
+                        </tr>
+                    @endif
                 </table>
             </td>
             <td colspan="2" style="padding: 5px; vertical-align: top;" class="border-bottom-0 border-top-0">
@@ -171,7 +199,7 @@
         </tr>
         <tr>
             <td colspan="2" style="height: 100px;">
-                {{ $spp->akun_mak }}
+                {{ $kodeCoa ?? '-' }}
             </td>
             <td colspan="2" class="text-right">
                 {{ number_format($jumlahUang, 2, ',', '.') }}
@@ -189,15 +217,19 @@
         </tr>
         <tr>
             <td colspan="2" style="height: 60px;">
-                <!-- Potongan kosong (seperti di format) -->
+                @foreach(($potonganPajak ?? collect()) as $potongan)
+                    {{ $potongan->pajak?->jenis_pajak ?? $potongan->nama_pajak_snapshot ?? $potongan->jenis_potongan }}<br>
+                @endforeach
             </td>
             <td colspan="2" class="text-right">
-                
+                @foreach(($potonganPajak ?? collect()) as $potongan)
+                    {{ number_format($potongan->nominal_potongan, 2, ',', '.') }}<br>
+                @endforeach
             </td>
         </tr>
         <tr>
             <td colspan="2" class="text-right border-right-0" style="padding-right: 20px;">Jumlah Potongan</td>
-            <td colspan="2" class="text-right">0,00</td>
+            <td colspan="2" class="text-right">{{ number_format($jumlahPotonganPajak ?? 0, 2, ',', '.') }}</td>
         </tr>
 
         <!-- TOTAL PEMBAYARAN -->
@@ -213,29 +245,29 @@
                     <tr>
                         <td style="border: none; width: 14%; vertical-align: top; padding: 2px;">Nama Supplier</td>
                         <td style="border: none; width: 2%; vertical-align: top; padding: 2px;">:</td>
-                        <td style="border: none; width: 44%; vertical-align: top; padding: 2px;">PARA PEGAWAI KANTOR UPBU AJI PANGERAN TUMENGGUNG PRANOTO</td>
+                        <td style="border: none; width: 44%; vertical-align: top; padding: 2px;">{{ $supplierInfo['nama_supplier'] }}</td>
                         
                         <td style="border: none; width: 12%; vertical-align: top; padding: 2px;">Bank/Pos</td>
                         <td style="border: none; width: 2%; vertical-align: top; padding: 2px;">:</td>
-                        <td style="border: none; width: 26%; vertical-align: top; padding: 2px;">Terlampir</td>
+                        <td style="border: none; width: 26%; vertical-align: top; padding: 2px;">{{ $supplierInfo['bank_pos'] }}</td>
                     </tr>
                     <tr>
                         <td style="border: none; vertical-align: top; padding: 2px;">NPWP</td>
                         <td style="border: none; vertical-align: top; padding: 2px;">:</td>
-                        <td style="border: none; vertical-align: top; padding: 2px;">Terlampir</td>
+                        <td style="border: none; vertical-align: top; padding: 2px;">{{ $supplierInfo['npwp'] }}</td>
                         
                         <td style="border: none; vertical-align: top; padding: 2px;">Rekening</td>
                         <td style="border: none; vertical-align: top; padding: 2px;">:</td>
-                        <td style="border: none; vertical-align: top; padding: 2px;">Terlampir</td>
+                        <td style="border: none; vertical-align: top; padding: 2px;">{{ $supplierInfo['rekening'] }}</td>
                     </tr>
                     <tr>
                         <td style="border: none; vertical-align: top; padding: 2px;">Alamat</td>
                         <td style="border: none; vertical-align: top; padding: 2px;">:</td>
-                        <td style="border: none; vertical-align: top; padding: 2px;">Jl. Poros Samarinda - Bontang, Kel. Sunga Siring,<br>Samarinda-Kalimantan Timur</td>
+                        <td style="border: none; vertical-align: top; padding: 2px;">{!! nl2br(e($supplierInfo['alamat'])) !!}</td>
                         
                         <td style="border: none; vertical-align: top; padding: 2px;">Nama</td>
                         <td style="border: none; vertical-align: top; padding: 2px;">:</td>
-                        <td style="border: none; vertical-align: top; padding: 2px;">Terlampir</td>
+                        <td style="border: none; vertical-align: top; padding: 2px;">{{ $supplierInfo['nama_rekening'] }}</td>
                     </tr>
                     <tr>
                         <td style="border: none; padding: 2px;"></td>
@@ -244,7 +276,7 @@
                         
                         <td style="border: none; vertical-align: top; padding: 2px;">Uraian</td>
                         <td style="border: none; vertical-align: top; padding: 2px;">:</td>
-                        <td style="border: none; vertical-align: top; padding: 2px;">{{ $uraianSupplier }}</td>
+                        <td style="border: none; vertical-align: top; padding: 2px;">{!! nl2br(e($supplierInfo['uraian'])) !!}</td>
                     </tr>
                 </table>
             </td>

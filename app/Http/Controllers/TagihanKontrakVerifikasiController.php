@@ -7,6 +7,7 @@ use App\Models\WorkflowApproval;
 use App\Services\TagihanKontrakWorkflowService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * Controller verifikasi tagihan kontrak yang melayani semua role:
@@ -154,6 +155,43 @@ class TagihanKontrakVerifikasiController extends Controller
         abort_unless($disk->exists($arsip->path_file), 404);
 
         return $disk->response($arsip->path_file, $arsip->nama_file_asli ?: basename($arsip->path_file));
+    }
+
+    /**
+     * Tampilkan arsip detail tagihan kontrak untuk role verifikator.
+     */
+    public function viewArsip($id, $arsipId)
+    {
+        $allowed = [
+            'BAPP_FINAL_TTD',
+            'BAST_FINAL_TTD',
+            'BAP_FINAL_TTD',
+            'BAPP_GAMBAR_RAB',
+            'INVOICE',
+            'LAMPIRAN_LAINNYA',
+            'FAKTUR_PAJAK',
+        ];
+
+        $tagihan = Tagihan::with(['detailKontrak.arsipDokumen'])->findOrFail($id);
+        abort_unless($tagihan->tipe_tagihan === 'KONTRAK', 404);
+
+        $detailKontrak = $tagihan->detailKontrak;
+        abort_unless($detailKontrak, 404);
+
+        $arsip = $detailKontrak->arsipDokumen
+            ->first(fn ($item) => (int) $item->id === (int) $arsipId
+                && (bool) $item->is_active
+                && in_array($item->jenis_dokumen, $allowed, true));
+
+        abort_unless($arsip, 404);
+
+        $disk = Storage::disk($arsip->disk ?: 'public');
+        abort_unless($disk->exists($arsip->path_file), 404);
+
+        return $disk->response(
+            $arsip->path_file,
+            $arsip->nama_file_asli ?: basename($arsip->path_file)
+        );
     }
 
     public function approve(Request $request, $id, TagihanKontrakWorkflowService $svc)

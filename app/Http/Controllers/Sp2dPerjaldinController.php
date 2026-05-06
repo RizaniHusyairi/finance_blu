@@ -157,13 +157,14 @@ class Sp2dPerjaldinController extends Controller
 
         $ppkApproval = $approvals->firstWhere('role_code', 'PPK');
         $kasubbagApproval = $approvals->firstWhere('role_code', 'Kepala Subbagian Keuangan dan Tata Usaha');
+        $koordinatorApproval = $approvals->firstWhere('role_code', 'Koordinator Keuangan');
         $ppspmApproval = $approvals->firstWhere('role_code', 'PPSPM');
 
         $autoNomorSp2d = \App\Services\DocumentNumberingService::generateDerivedNumber($spp->nomor_spp ?? '', 'SP2D');
 
         return view('sp2ds.perjaldin.detail', compact(
             'npi', 'spm', 'spp', 'tagihan', 'komponen', 'sp2d',
-            'defaultNilai', 'defaultTahun', 'checks', 'isLengkap', 'wf', 'autoNomorSp2d', 'ppkApproval', 'kasubbagApproval', 'ppspmApproval'
+            'defaultNilai', 'defaultTahun', 'checks', 'isLengkap', 'wf', 'autoNomorSp2d', 'ppkApproval', 'kasubbagApproval', 'koordinatorApproval', 'ppspmApproval'
         ));
     }
 
@@ -308,6 +309,16 @@ class Sp2dPerjaldinController extends Controller
                 'title'   => 'Antrean Verifikasi SP2D Perjaldin Baru',
                 'message' => "SP2D Perjaldin dengan Nomor {$sp2d->nomor_sp2d} telah diajukan dan membutuhkan persetujuan Anda.",
                 'url'     => '#',
+                'icon'    => 'inventory',
+                'color'   => 'primary',
+            ]));
+
+            // Notify Koordinator Keuangan
+            $koordinators = User::role('Koordinator Keuangan')->get();
+            Notification::send($koordinators, new WorkflowNotification([
+                'title'   => 'Antrean Verifikasi SP2D Perjaldin Baru',
+                'message' => "SP2D Perjaldin dengan Nomor {$sp2d->nomor_sp2d} telah diajukan dan membutuhkan persetujuan Anda.",
+                'url'     => route('verifikasi-sp2d.perjaldin.index'),
                 'icon'    => 'inventory',
                 'color'   => 'primary',
             ]));

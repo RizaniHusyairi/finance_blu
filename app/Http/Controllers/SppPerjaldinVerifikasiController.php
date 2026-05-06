@@ -208,7 +208,7 @@ class SppPerjaldinVerifikasiController extends Controller
 
     public function approve(Request $request, int $id)
     {
-        $spp = DokumenSpp::with('workflowInstance.approvals')
+        $spp = DokumenSpp::with(['workflowInstance.approvals', 'standingInstruction'])
             ->whereNotNull('tagihan_perjaldin_komponen_id')
             ->findOrFail($id);
 
@@ -222,6 +222,12 @@ class SppPerjaldinVerifikasiController extends Controller
         } else {
             $roleCode = $this->detectRoleCode($user);
             $approval = $instance->approvals->where('role_code', $roleCode)->first();
+        }
+
+        if ($approval && $approval->role_code === 'PPK') {
+            if (!$spp->hasFinalSignedStandingInstruction()) {
+                return back()->with('error', 'File Standing Instruction bertanda tangan wajib diunggah sebelum PPK menyetujui SPP.');
+            }
         }
 
         abort_unless($approval && $approval->status === 'PENDING', 403, 'Anda tidak memiliki aksi yang tersedia.');

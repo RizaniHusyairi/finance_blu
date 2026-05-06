@@ -78,6 +78,9 @@
                         <span class="badge {{ $ppspmApproval?->status === 'APPROVED' ? 'bg-success' : ($ppspmApproval?->status === 'PENDING' ? 'bg-warning text-dark' : (in_array($ppspmApproval?->status, ['REVISION','REJECTED']) ? 'bg-danger' : 'bg-light text-dark border')) }}">
                             PPSPM: {{ $ppspmApproval?->status ?? 'N/A' }}
                         </span>
+                        <span class="badge {{ $koordinatorApproval?->status === 'APPROVED' ? 'bg-success' : ($koordinatorApproval?->status === 'PENDING' ? 'bg-warning text-dark' : (in_array($koordinatorApproval?->status, ['REVISION','REJECTED']) ? 'bg-danger' : 'bg-light text-dark border')) }}">
+                            Koor: {{ $koordinatorApproval?->status ?? 'N/A' }}
+                        </span>
                     @endif
                 </div>
 
@@ -149,6 +152,10 @@
                     <div class="border rounded p-2 text-center {{ $ppspmApproval?->status === 'APPROVED' ? 'border-success bg-success bg-opacity-10' : ($ppspmApproval?->status === 'PENDING' ? 'border-warning bg-warning bg-opacity-10' : (in_array($ppspmApproval?->status, ['REVISION','REJECTED']) ? 'border-danger bg-danger bg-opacity-10' : 'bg-light')) }}" style="flex: 1; min-width: 100px;">
                         <div class="fw-bold" style="font-size: 12px;">PPSPM</div>
                         <div style="font-size: 10px;">{{ $ppspmApproval?->status ?? 'WAITING' }}</div>
+                    </div>
+                    <div class="border rounded p-2 text-center {{ $koordinatorApproval?->status === 'APPROVED' ? 'border-success bg-success bg-opacity-10' : ($koordinatorApproval?->status === 'PENDING' ? 'border-warning bg-warning bg-opacity-10' : (in_array($koordinatorApproval?->status, ['REVISION','REJECTED']) ? 'border-danger bg-danger bg-opacity-10' : 'bg-light')) }}" style="flex: 1; min-width: 100px;">
+                        <div class="fw-bold" style="font-size: 12px;">Koordinator</div>
+                        <div style="font-size: 10px;">{{ $koordinatorApproval?->status ?? 'WAITING' }}</div>
                     </div>
                 </div>
             </div>
@@ -259,9 +266,44 @@
                             <div class="fw-bold text-success fs-5">Rp {{ number_format($nominalSp2d, 0, ',', '.') }}</div>
                         </div>
                         @if($statusSp2d === 'DISETUJUI_FINAL')
-                            <div class="alert alert-success border-0 mb-0 d-flex align-items-center">
-                                <i class="material-icons-outlined me-2">check_circle</i>
-                                Laporan SP2D Telah Diverifikasi.
+                            <div class="alert alert-success border-0 d-flex align-items-start gap-2">
+                                <i class="material-icons-outlined">check_circle</i>
+                                <div>
+                                    <div class="fw-semibold">SP2D telah disetujui final.</div>
+                                    <div class="small">Upload bukti transfer untuk membuat tagihan menjadi SELESAI. Setelah itu penyetoran pajak kontrak akan dibuka.</div>
+                                </div>
+                            </div>
+                            <form action="{{ route('sp2ds.catat-bku', $sp2d->id) }}" method="POST" enctype="multipart/form-data" class="border rounded-3 bg-white p-3">
+                                @csrf
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold">Keterangan Transfer <span class="text-muted">(opsional)</span></label>
+                                    <textarea name="catatan_bku" class="form-control" rows="3" placeholder="Contoh: Transfer pembayaran kontrak {{ $tagihan?->nomor_tagihan }}"></textarea>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold">Bukti Transfer SP2D <span class="text-danger">*</span></label>
+                                    <input type="file" name="bukti_transfer" class="form-control" accept=".pdf,.jpg,.jpeg,.png" required>
+                                    <div class="form-text">PDF / JPG / PNG, maksimal 5MB.</div>
+                                </div>
+                                <button type="submit" class="btn btn-success w-100 fw-semibold" onclick="return confirm('Upload bukti transfer dan selesaikan tagihan ini?')">
+                                    <i class="material-icons-outlined align-middle me-1" style="font-size: 18px;">upload_file</i>
+                                    Upload Bukti Transfer & Selesaikan Tagihan
+                                </button>
+                            </form>
+                        @elseif($statusSp2d === 'EXECUTED')
+                            @php $buktiTransferSp2d = $sp2d?->bukti_transfer; @endphp
+                            <div class="alert alert-primary border-0 mb-0">
+                                <div class="d-flex align-items-start gap-2">
+                                    <i class="material-icons-outlined">task_alt</i>
+                                    <div>
+                                        <div class="fw-semibold">Bukti transfer sudah diunggah dan tagihan sudah SELESAI.</div>
+                                        <div class="small">Lanjutkan penyetoran pajak kontrak. Setelah NTPN lengkap, tagihan akan masuk BKU.</div>
+                                        @if($buktiTransferSp2d)
+                                            <a href="{{ \Illuminate\Support\Facades\Storage::url($buktiTransferSp2d->path_file) }}" target="_blank" class="small fw-semibold text-primary">
+                                                Lihat bukti transfer: {{ $buktiTransferSp2d->nama_file_asli }}
+                                            </a>
+                                        @endif
+                                    </div>
+                                </div>
                             </div>
                         @endif
                     @endif
@@ -341,7 +383,7 @@
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <p>Setelah pengajuan, form SP2D akan dikunci sementara.</p>
+                    <p>Setelah pengajuan, form SP2D akan dikunci sementara dan masuk ke verifikasi PPK, Kasubbag, PPSPM, serta Koordinator Keuangan.</p>
                     <p>Notifikasi verifikasi paralel akan otomatis dikirimkan ke:</p>
                         <li><strong>PPK</strong></li>
                         <li><strong>Kepala Subbagian Keuangan dan Tata Usaha</strong></li>

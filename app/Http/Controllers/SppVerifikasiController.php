@@ -203,11 +203,18 @@ class SppVerifikasiController extends Controller
 
     public function approve(Request $request, $id)
     {
-        $spp = Spp::with('tagihan')->findOrFail($id);
+        $spp = Spp::with(['tagihan', 'standingInstruction'])->findOrFail($id);
         $this->ensureKontrakSpp($spp);
 
         $approvalId = $request->input('approval_id');
         abort_unless($approvalId, 400, 'Approval ID diperlukan.');
+
+        $approval = \App\Models\WorkflowApproval::find($approvalId);
+        if ($approval && $approval->role_code === 'PPK') {
+            if (!$spp->hasFinalSignedStandingInstruction()) {
+                return back()->with('error', 'File Standing Instruction bertanda tangan wajib diunggah sebelum PPK menyetujui SPP.');
+            }
+        }
 
         $workflowFullyApproved = false;
         try {

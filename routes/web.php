@@ -125,6 +125,7 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
         Route::get('/verifikasi-tagihan-kontrak', [\App\Http\Controllers\TagihanKontrakVerifikasiController::class, 'index'])->name('verifikasi-tagihan-kontrak.index');
         Route::get('/verifikasi-tagihan-kontrak/{id}', [\App\Http\Controllers\TagihanKontrakVerifikasiController::class, 'show'])->name('verifikasi-tagihan-kontrak.show');
         Route::get('/verifikasi-tagihan-kontrak/{id}/kontrak-arsip/{jenis}', [\App\Http\Controllers\TagihanKontrakVerifikasiController::class, 'viewKontrakArsip'])->name('verifikasi-tagihan-kontrak.kontrak-arsip');
+        Route::get('/verifikasi-tagihan-kontrak/{id}/arsip/{arsipId}', [\App\Http\Controllers\TagihanKontrakVerifikasiController::class, 'viewArsip'])->name('verifikasi-tagihan-kontrak.arsip');
         Route::post('/verifikasi-tagihan-kontrak/{id}/approve', [\App\Http\Controllers\TagihanKontrakVerifikasiController::class, 'approve'])->name('verifikasi-tagihan-kontrak.approve');
         Route::post('/verifikasi-tagihan-kontrak/{id}/revisi', [\App\Http\Controllers\TagihanKontrakVerifikasiController::class, 'revisi'])->name('verifikasi-tagihan-kontrak.revisi');
         Route::post('/verifikasi-tagihan-kontrak/{id}/reject', [\App\Http\Controllers\TagihanKontrakVerifikasiController::class, 'reject'])->name('verifikasi-tagihan-kontrak.reject');
@@ -336,6 +337,13 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
         Route::post('/verifikasi-koordinator/spp-perjaldin/{id}/revisi', [\App\Http\Controllers\SppPerjaldinVerifikasiController::class, 'revisi'])->name('verifikasi-koordinator.spp-perjaldin.revisi');
     });
 
+    // ==== STANDING INSTRUCTION ====
+    Route::get('/standing-instructions/spp/{spp}/form', [\App\Http\Controllers\StandingInstructionController::class, 'form'])->name('standing-instructions.form');
+    Route::post('/standing-instructions/spp/{spp}/store', [\App\Http\Controllers\StandingInstructionController::class, 'storeOrUpdate'])->name('standing-instructions.store');
+    Route::post('/standing-instructions/spp/{spp}/finalize', [\App\Http\Controllers\StandingInstructionController::class, 'finalize'])->name('standing-instructions.finalize');
+    Route::get('/standing-instructions/spp/{spp}/print', [\App\Http\Controllers\StandingInstructionController::class, 'print'])->name('standing-instructions.print');
+    Route::get('/standing-instructions/spp/{spp}/signed-file', [\App\Http\Controllers\StandingInstructionController::class, 'signedFile'])->name('standing-instructions.signed-file');
+
     // ==== VERIFIKASI SPP KONTRAK, PERJALDIN, HONORARIUM — Terpadu 3 Role (PPK, Koordinator Keuangan, Kasubbag) ====
     Route::middleware('role:Super Admin|PPK|Kepala Subbagian Keuangan dan Tata Usaha|Koordinator Keuangan')->group(function () {
         // Honor
@@ -390,8 +398,8 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
         Route::post('/verifikasi-npi/honor/{id}/revisi', [\App\Http\Controllers\VerifikasiNpiHonorController::class, 'reject'])->name('verifikasi-npi.honor.reject');
     });
 
-    // ==== VERIFIKASI SP2D PERJALDIN — Terpadu 2 Role ====
-    Route::middleware('role:Super Admin|PPK|Kepala Subbagian Keuangan dan Tata Usaha|Koordinator Keuangan')->group(function () {
+    // ==== VERIFIKASI SP2D PERJALDIN — Terpadu 4 Role ====
+    Route::middleware('role:Super Admin|PPK|PPSPM|Kepala Subbagian Keuangan dan Tata Usaha|Koordinator Keuangan')->group(function () {
         Route::get('/verifikasi-sp2d/perjaldin', [\App\Http\Controllers\VerifikasiSp2dPerjaldinController::class, 'index'])->name('verifikasi-sp2d.perjaldin.index');
         Route::get('/verifikasi-sp2d/perjaldin/{id}/detail', [\App\Http\Controllers\VerifikasiSp2dPerjaldinController::class, 'show'])->name('verifikasi-sp2d.perjaldin.detail');
         Route::post('/verifikasi-sp2d/perjaldin/{id}/approve', [\App\Http\Controllers\VerifikasiSp2dPerjaldinController::class, 'approve'])->name('verifikasi-sp2d.perjaldin.approve');
@@ -489,6 +497,12 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
         Route::get('/verifikasi-ppspm/spm/kontrak/{id}', [\App\Http\Controllers\PpspmSpmKontrakVerifikasiController::class, 'show'])->name('verifikasi-ppspm.spm.kontrak.show');
         Route::post('/verifikasi-ppspm/spm/kontrak/{id}/approve', [\App\Http\Controllers\PpspmSpmKontrakVerifikasiController::class, 'approve'])->name('verifikasi-ppspm.spm.kontrak.approve');
         Route::post('/verifikasi-ppspm/spm/kontrak/{id}/revisi', [\App\Http\Controllers\PpspmSpmKontrakVerifikasiController::class, 'revisi'])->name('verifikasi-ppspm.spm.kontrak.revisi');
+
+        // Verifikasi SP2D Kontrak
+        Route::get('/verifikasi-ppspm/sp2d/kontrak', [\App\Http\Controllers\PpkSp2dKontrakVerifikasiController::class, 'index'])->name('verifikasi-ppspm.sp2d.kontrak.index');
+        Route::get('/verifikasi-ppspm/sp2d/kontrak/{id}', [\App\Http\Controllers\PpkSp2dKontrakVerifikasiController::class, 'show'])->name('verifikasi-ppspm.sp2d.kontrak.show');
+        Route::post('/verifikasi-ppspm/sp2d/kontrak/{id}/approve', [\App\Http\Controllers\PpkSp2dKontrakVerifikasiController::class, 'approve'])->name('verifikasi-ppspm.sp2d.kontrak.approve');
+        Route::post('/verifikasi-ppspm/sp2d/kontrak/{id}/revisi', [\App\Http\Controllers\PpkSp2dKontrakVerifikasiController::class, 'revisi'])->name('verifikasi-ppspm.sp2d.kontrak.revisi');
     });
 
     Route::middleware('role:Super Admin|Kepala Subbagian Keuangan dan Tata Usaha')->group(function () {

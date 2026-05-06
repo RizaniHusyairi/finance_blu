@@ -313,7 +313,7 @@
                 </div>
 
                 <!-- Submit Button -->
-                <form action="{{ route('sp2ds.perjaldin.submit', $npi->id) }}" method="POST" id="form-submit-sp2d" onsubmit="return confirm('Apakah Anda yakin ingin mengajukan pencairan SP2D ini ke tahap verifikasi?')">
+                <form action="{{ route('sp2ds.perjaldin.submit', $npi->id) }}" method="POST" id="form-submit-sp2d" onsubmit="return confirm('Apakah Anda yakin ingin mengajukan pencairan SP2D ini ke tahap verifikasi PPK, Kasubbag, PPSPM, dan Koordinator Keuangan?')">
                     @csrf
                     <button type="submit" class="btn btn-success fw-bold w-100" 
                         {{ (!$isLengkap || ($sp2d && !in_array($sp2d->status, [\App\Models\DokumenSp2d::STATUS_DRAFT, \App\Models\DokumenSp2d::STATUS_REVISI]))) ? 'disabled' : '' }}>

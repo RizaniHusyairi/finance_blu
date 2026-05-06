@@ -183,7 +183,11 @@
     <!-- KOLOM PENILAIAN / AKSI KANAN -->
     <div class="col-12 col-xl-4">
         
-        @if($canAct)
+        @php
+            $pendingActionApprovals = ($actionableApprovals ?? collect())->values();
+        @endphp
+
+        @if($canAct && $pendingActionApprovals->isNotEmpty())
             <!-- Panel Aksi Verifikasi Aktif -->
             <div class="card radius-10 shadow border-0 border-top border-4 border-warning mb-4 sticky-top" style="top: 80px; z-index: 10;">
                 <div class="card-header bg-light-warning border-bottom px-4 py-3">
@@ -192,26 +196,41 @@
                         Status: Menunggu Aksi Anda
                     </h6>
                 </div>
-                <div class="card-body text-center py-4">
+                <div class="card-body py-4">
                     <div class="alert alert-info border-0 bg-light-info py-2 px-3 align-items-center d-flex mb-4 text-start">
                         <i class="material-icons-outlined text-info me-2">info</i>
-                        <span class="font-12">Anda berperan sebagai verifikator <strong>{{ $roleCode }}</strong> pada dokumen SP2D ini.</span>
+                        <span class="font-12">
+                            Anda memiliki <strong>{{ $pendingActionApprovals->count() }}</strong> peran verifikasi aktif pada dokumen SP2D ini.
+                        </span>
                     </div>
 
-                    <h5 class="fw-bold mb-3">Tentukan Keputusan</h5>
-                    <p class="text-muted small mb-4">Pastikan rincian dokumen di halaman samping sesuai dan sah.</p>
+                    <h5 class="fw-bold mb-2 text-center">Tentukan Keputusan</h5>
+                    <p class="text-muted small mb-4 text-center">Pastikan rincian dokumen di halaman samping sesuai dan sah.</p>
 
-                    <button type="button" class="btn btn-success w-100 mb-3 py-2 fs-6 fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#modalApprove">
-                        <i class="material-icons-outlined me-1" style="font-size: 18px; vertical-align: middle;">check_circle</i> Setujui SP2D
-                    </button>
-                    <button type="button" class="btn btn-outline-danger w-100 py-2 fw-bold" data-bs-toggle="modal" data-bs-target="#modalRevisi">
-                        <i class="material-icons-outlined me-1" style="font-size: 18px; vertical-align: middle;">assignment_return</i> Kembalikan untuk Revisi
-                    </button>
+                    @foreach($pendingActionApprovals as $approval)
+                        <div class="border rounded p-3 mb-3 bg-white">
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <div>
+                                    <div class="text-muted font-11">Verifikasi sebagai</div>
+                                    <div class="fw-bold text-dark">{{ $approval->role_code }}</div>
+                                </div>
+                                <span class="badge bg-warning text-dark">PENDING</span>
+                            </div>
+
+                            <button type="button" class="btn btn-success w-100 mb-2 py-2 fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#modalApprove{{ $approval->id }}">
+                                <i class="material-icons-outlined me-1" style="font-size: 18px; vertical-align: middle;">check_circle</i> Setujui sebagai {{ $approval->role_code }}
+                            </button>
+                            <button type="button" class="btn btn-outline-danger w-100 py-2 fw-bold" data-bs-toggle="modal" data-bs-target="#modalRevisi{{ $approval->id }}">
+                                <i class="material-icons-outlined me-1" style="font-size: 18px; vertical-align: middle;">assignment_return</i> Revisi sebagai {{ $approval->role_code }}
+                            </button>
+                        </div>
+                    @endforeach
                 </div>
             </div>
 
+            @foreach($pendingActionApprovals as $approval)
             <!-- Modal Approve -->
-            <div class="modal fade" id="modalApprove" tabindex="-1" aria-hidden="true">
+            <div class="modal fade" id="modalApprove{{ $approval->id }}" tabindex="-1" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered">
                     <div class="modal-content">
                         <div class="modal-header bg-success text-white border-0">
@@ -220,10 +239,11 @@
                         </div>
                         <form action="{{ route('verifikasi-sp2d.perjaldin.approve', $sp2d->id) }}" method="POST">
                             @csrf
+                            <input type="hidden" name="approval_id" value="{{ $approval->id }}">
                             <div class="modal-body text-center py-4 px-4 bg-light">
                                 <i class="material-icons-outlined text-success" style="font-size: 4rem;">check_circle</i>
-                                <h5 class="mt-3 mb-2 fw-bold">Setujui Dokumen</h5>
-                                <p class="text-muted mb-3 font-13">Anda menyetujui SP2D Perjaldin Nomor <strong>{{ $sp2d->nomor_sp2d }}</strong>. Jika penugasan paralel selesai, SP2D akan beralih ke status final.</p>
+                                <h5 class="mt-3 mb-2 fw-bold">Setujui sebagai {{ $approval->role_code }}</h5>
+                                <p class="text-muted mb-3 font-13">Anda menyetujui SP2D Perjaldin Nomor <strong>{{ $sp2d->nomor_sp2d }}</strong> sebagai <strong>{{ $approval->role_code }}</strong>. Jika penugasan paralel selesai, SP2D akan beralih ke status final.</p>
                                 
                                 <div class="text-start mt-3">
                                     <label class="form-label fw-bold small text-dark">Catatan Persetujuan (Opsional)</label>
@@ -240,7 +260,7 @@
             </div>
 
             <!-- Modal Revisi -->
-            <div class="modal fade" id="modalRevisi" tabindex="-1" aria-hidden="true">
+            <div class="modal fade" id="modalRevisi{{ $approval->id }}" tabindex="-1" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered">
                     <div class="modal-content">
                         <div class="modal-header bg-danger text-white border-0">
@@ -249,9 +269,10 @@
                         </div>
                         <form action="{{ route('verifikasi-sp2d.perjaldin.reject', $sp2d->id) }}" method="POST">
                             @csrf
+                            <input type="hidden" name="approval_id" value="{{ $approval->id }}">
                             <div class="modal-body bg-light">
                                 <div class="alert alert-warning border-0 p-2 font-11 mb-3">
-                                    Status SP2D akan dikembalikan ke Bendahara Pengeluaran (Draft / Revisi).
+                                    Status SP2D akan dikembalikan ke Bendahara Pengeluaran oleh {{ $approval->role_code }}.
                                 </div>
                                 <div class="mb-2 text-start">
                                     <label class="form-label fw-bold text-dark font-13">Alasan Revisi / Kesalahan <span class="text-danger">*</span></label>
@@ -266,6 +287,7 @@
                     </div>
                 </div>
             </div>
+            @endforeach
         @else
             <!-- Panel Info No Action -->
             <div class="card radius-10 mb-4 shadow-sm border-0 bg-light">

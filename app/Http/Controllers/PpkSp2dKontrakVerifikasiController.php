@@ -13,18 +13,73 @@ use Illuminate\Support\Facades\Notification;
 
 class PpkSp2dKontrakVerifikasiController extends Controller
 {
+    private function activeRoleCodes(?User $user = null): array
+    {
+        $user ??= auth()->user();
+
+        return collect([
+            'PPSPM',
+            'PPK',
+            'Kepala Subbagian Keuangan dan Tata Usaha',
+            'Koordinator Keuangan',
+        ])->filter(fn ($roleCode) => $user?->hasRole($roleCode))->values()->all();
+    }
+
     private function activeRoleCode(): string
     {
-        return request()->routeIs('verifikasi-koordinator.*')
-            ? 'Koordinator Keuangan'
-            : 'PPK';
+        return $this->activeRoleCodes()[0] ?? '';
     }
 
     private function routePrefix(): string
     {
-        return $this->activeRoleCode() === 'Koordinator Keuangan'
-            ? 'verifikasi-koordinator.sp2d.kontrak'
-            : 'verifikasi-ppk.sp2d.kontrak';
+        if (request()->routeIs('verifikasi-koordinator.*')) {
+            return 'verifikasi-koordinator.sp2d.kontrak';
+        }
+
+        if (request()->routeIs('verifikasi-ppspm.*')) {
+            return 'verifikasi-ppspm.sp2d.kontrak';
+        }
+
+        return 'verifikasi-ppk.sp2d.kontrak';
+    }
+
+    private function roleLabel(array $roleCodes): string
+    {
+        return implode(' / ', $roleCodes);
+    }
+
+    private function approvalAccessibleToUser($approval, array $roleCodes, User $user): bool
+    {
+        return $approval
+            && in_array($approval->role_code, $roleCodes, true)
+            && (!$approval->assigned_user_id || (int) $approval->assigned_user_id === (int) $user->id);
+    }
+
+    private function authorizedApprovals($approvals, array $roleCodes, User $user)
+    {
+        return collect($approvals)
+            ->filter(fn ($approval) => $this->approvalAccessibleToUser($approval, $roleCodes, $user))
+            ->values();
+    }
+
+    private function actionableApprovals($instance, array $roleCodes, User $user)
+    {
+        return $this->authorizedApprovals($instance?->approvals ?? collect(), $roleCodes, $user)
+            ->filter(fn ($approval) => $approval->status === 'PENDING'
+                && $instance?->status === 'IN_PROGRESS'
+                && (int) $instance?->step_saat_ini === (int) $approval->urutan_step)
+            ->values();
+    }
+
+    private function resolveApprovalForAction($instance, array $roleCodes, User $user, $approvalId = null)
+    {
+        $actionableApprovals = $this->actionableApprovals($instance, $roleCodes, $user);
+
+        if ($approvalId) {
+            return $actionableApprovals->firstWhere('id', (int) $approvalId);
+        }
+
+        return $actionableApprovals->count() === 1 ? $actionableApprovals->first() : null;
     }
 
     /**
@@ -32,7 +87,11 @@ class PpkSp2dKontrakVerifikasiController extends Controller
      */
     public function index(Request $request)
     {
-        $currentRole = $this->activeRoleCode();
+        $user = $request->user();
+        $roleCodes = $this->activeRoleCodes($user);
+        abort_unless(count($roleCodes) > 0, 403, 'Akses ditolak.');
+
+        $currentRole = $this->roleLabel($roleCodes);
         $routePrefix = $this->routePrefix();
 
         $sp2dQuery = DokumenSp2d::with([
@@ -46,15 +105,17 @@ class PpkSp2dKontrakVerifikasiController extends Controller
         ->latest()
         ->get();
 
-        $sp2dList = $sp2dQuery->map(function ($sp2d) {
+        $sp2dList = $sp2dQuery->map(function ($sp2d) use ($roleCodes, $user) {
             $latestInstance = $sp2d->workflowInstances->sortByDesc('created_at')->first();
             $approvals = collect($latestInstance?->approvals ?? []);
 
             $sp2d->_workflowInstance = $latestInstance;
+            $sp2d->_ppspmApproval = $approvals->firstWhere('role_code', 'PPSPM');
             $sp2d->_ppkApproval = $approvals->firstWhere('role_code', 'PPK');
             $sp2d->_kasubbagApproval = $approvals->firstWhere('role_code', 'Kepala Subbagian Keuangan dan Tata Usaha');
             $sp2d->_koordinatorApproval = $approvals->firstWhere('role_code', 'Koordinator Keuangan');
-            $sp2d->_currentApproval = $approvals->firstWhere('role_code', $this->activeRoleCode());
+            $sp2d->_currentApprovals = $this->authorizedApprovals($approvals, $roleCodes, $user);
+            $sp2d->_currentApproval = $sp2d->_currentApprovals->firstWhere('status', 'PENDING') ?: $sp2d->_currentApprovals->first();
 
             $allApproved = $approvals->every(fn ($a) => $a->status === 'APPROVED') && $approvals->isNotEmpty();
             $anyRevision = $approvals->contains(fn ($a) => in_array($a->status, ['REVISION', 'REJECTED']));
@@ -69,6 +130,7 @@ class PpkSp2dKontrakVerifikasiController extends Controller
                     $sp2d->_statusFinal = 'Menunggu Verifikasi';
                 } else {
                     $pendingRoles = $pending->pluck('role_code')->map(fn ($role) => match($role) {
+                        'PPSPM' => 'PPSPM',
                         'PPK' => 'PPK',
                         'Kepala Subbagian Keuangan dan Tata Usaha' => 'Kasubbag',
                         'Koordinator Keuangan' => 'Koordinator',
@@ -117,9 +179,9 @@ class PpkSp2dKontrakVerifikasiController extends Controller
         }
 
         $summary = [
-            'pending' => $sp2dList->filter(fn ($n) => $n->_currentApproval?->status === 'PENDING')->count(),
-            'approved' => $sp2dList->filter(fn ($n) => $n->_currentApproval?->status === 'APPROVED')->count(),
-            'revision' => $sp2dList->filter(fn ($n) => in_array($n->_currentApproval?->status, ['REVISION', 'REJECTED'])
+            'pending' => $sp2dList->filter(fn ($n) => $n->_currentApprovals?->contains('status', 'PENDING'))->count(),
+            'approved' => $sp2dList->filter(fn ($n) => $n->_currentApprovals?->contains('status', 'APPROVED'))->count(),
+            'revision' => $sp2dList->filter(fn ($n) => $n->_currentApprovals?->contains(fn ($a) => in_array($a->status, ['REVISION', 'REJECTED']))
                 || $n->_workflowInstance?->status === 'REVISION')->count(),
             'selesai' => $sp2dList->filter(fn ($n) => $n->_statusFinal === 'Selesai Diverifikasi')->count(),
         ];
@@ -140,7 +202,11 @@ class PpkSp2dKontrakVerifikasiController extends Controller
      */
     public function show($sp2d_id)
     {
-        $currentRole = $this->activeRoleCode();
+        $user = request()->user();
+        $roleCodes = $this->activeRoleCodes($user);
+        abort_unless(count($roleCodes) > 0, 403, 'Akses ditolak.');
+
+        $currentRole = $this->roleLabel($roleCodes);
         $routePrefix = $this->routePrefix();
 
         $sp2d = DokumenSp2d::with([
@@ -169,12 +235,15 @@ class PpkSp2dKontrakVerifikasiController extends Controller
         $activeWorkflowInstance = $sp2d->workflowInstances->sortByDesc('created_at')->first();
         $approvals = collect($activeWorkflowInstance?->approvals ?? []);
 
+        $ppspmApproval = $approvals->firstWhere('role_code', 'PPSPM');
         $ppkApproval = $approvals->firstWhere('role_code', 'PPK');
         $kasubbagApproval = $approvals->firstWhere('role_code', 'Kepala Subbagian Keuangan dan Tata Usaha');
         $koordinatorApproval = $approvals->firstWhere('role_code', 'Koordinator Keuangan');
-        $currentUserApproval = $approvals->firstWhere('role_code', $currentRole);
+        $activeRoleApprovals = $this->authorizedApprovals($approvals, $roleCodes, $user);
+        $actionableApprovals = $this->actionableApprovals($activeWorkflowInstance, $roleCodes, $user);
+        $currentUserApproval = $actionableApprovals->first() ?: $activeRoleApprovals->firstWhere('status', 'PENDING') ?: $activeRoleApprovals->first();
 
-        $canApprove = $currentUserApproval && $currentUserApproval->status === 'PENDING';
+        $canApprove = $actionableApprovals->isNotEmpty();
         $canRequestRevision = $canApprove;
 
         $allApproved = $approvals->every(fn ($a) => $a->status === 'APPROVED') && $approvals->isNotEmpty();
@@ -225,10 +294,13 @@ class PpkSp2dKontrakVerifikasiController extends Controller
             'rekening' => $rekening,
             'nominalSp2d' => $nominalSp2d,
             'activeWorkflowInstance' => $activeWorkflowInstance,
+            'ppspmApproval' => $ppspmApproval,
             'ppkApproval' => $ppkApproval,
             'kasubbagApproval' => $kasubbagApproval,
             'koordinatorApproval' => $koordinatorApproval,
             'currentUserApproval' => $currentUserApproval,
+            'activeRoleApprovals' => $activeRoleApprovals,
+            'actionableApprovals' => $actionableApprovals,
             'canApprove' => $canApprove,
             'canRequestRevision' => $canRequestRevision,
             'statusFinal' => $statusFinal,
@@ -244,13 +316,31 @@ class PpkSp2dKontrakVerifikasiController extends Controller
      */
     public function approve(Request $request, $sp2d_id)
     {
-        $sp2d = DokumenSp2d::findOrFail($sp2d_id);
-        $currentRole = $this->activeRoleCode();
+        $request->validate([
+            'approval_id' => 'nullable|integer',
+            'catatan' => 'nullable|string',
+        ]);
+
+        $user = $request->user();
+        $roleCodes = $this->activeRoleCodes($user);
+        abort_unless(count($roleCodes) > 0, 403, 'Akses ditolak.');
+
+        $sp2d = DokumenSp2d::with([
+            'workflowInstances' => fn ($q) => $q->latest()->limit(1),
+            'workflowInstances.approvals',
+        ])->findOrFail($sp2d_id);
+        $instance = $sp2d->workflowInstances->first();
+        $myApproval = $this->resolveApprovalForAction($instance, $roleCodes, $user, $request->input('approval_id'));
+        if (!$myApproval) {
+            return back()->with('error', 'Anda tidak memiliki approval aktif untuk tindakan ini.');
+        }
+
+        $currentRole = $myApproval->role_code;
         $routePrefix = $this->routePrefix();
 
-        DB::transaction(function () use ($sp2d, $request, $currentRole) {
+        DB::transaction(function () use ($sp2d, $request, $currentRole, $myApproval) {
             $workflowService = app(WorkflowService::class);
-            $instance = $workflowService->approveCurrentStep($sp2d, auth()->id(), $request->input('catatan'));
+            $instance = $workflowService->approveCurrentStep($sp2d, auth()->id(), $request->input('catatan'), $myApproval->id);
 
             LogStatusDokumen::create([
                 'dokumen_type' => DokumenSp2d::class,
@@ -279,16 +369,30 @@ class PpkSp2dKontrakVerifikasiController extends Controller
     public function revisi(Request $request, $sp2d_id)
     {
         $request->validate([
+            'approval_id' => 'nullable|integer',
             'catatan_revisi' => 'required|string|max:1000',
         ]);
 
-        $sp2d = DokumenSp2d::findOrFail($sp2d_id);
-        $currentRole = $this->activeRoleCode();
+        $user = $request->user();
+        $roleCodes = $this->activeRoleCodes($user);
+        abort_unless(count($roleCodes) > 0, 403, 'Akses ditolak.');
+
+        $sp2d = DokumenSp2d::with([
+            'workflowInstances' => fn ($q) => $q->latest()->limit(1),
+            'workflowInstances.approvals',
+        ])->findOrFail($sp2d_id);
+        $instance = $sp2d->workflowInstances->first();
+        $myApproval = $this->resolveApprovalForAction($instance, $roleCodes, $user, $request->input('approval_id'));
+        if (!$myApproval) {
+            return back()->with('error', 'Anda tidak memiliki approval aktif untuk tindakan ini.');
+        }
+
+        $currentRole = $myApproval->role_code;
         $routePrefix = $this->routePrefix();
 
-        DB::transaction(function () use ($sp2d, $request, $currentRole) {
+        DB::transaction(function () use ($sp2d, $request, $currentRole, $myApproval) {
             $workflowService = app(WorkflowService::class);
-            $workflowService->requestRevision($sp2d, auth()->id(), $request->catatan_revisi);
+            $workflowService->requestRevision($sp2d, auth()->id(), $request->catatan_revisi, $myApproval->id);
 
             $sp2d->update(['status' => DokumenSp2d::STATUS_REVISI]);
 

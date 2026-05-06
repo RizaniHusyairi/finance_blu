@@ -179,7 +179,7 @@
                                 <div class="row g-3">
                                     <div class="col-md-4">
                                         <label class="form-label fw-bold small">Nama Pemeriksa <span class="text-danger">*</span></label>
-                                        <select class="form-select" name="nama_pemeriksa" id="namaPemeriksaSelect" required>
+                                        <select class="form-select select2" name="nama_pemeriksa" id="namaPemeriksaSelect" required>
                                             <option value="">-- Pilih Pegawai --</option>
                                             @foreach($pegawaiList as $peg)
                                                 <option
@@ -502,28 +502,28 @@
     });
 
     // Auto-fill NIP & Jabatan saat memilih Nama Pemeriksa dari dropdown pegawai
-    document.addEventListener('DOMContentLoaded', function () {
-        const namaSelect = document.getElementById('namaPemeriksaSelect');
-        const nipInput = document.getElementById('nipPemeriksaInput');
-        const jabatanInput = document.getElementById('jabatanPemeriksaInput');
+    $(document).ready(function () {
+        const $namaSelect = $('#namaPemeriksaSelect');
+        const $nipInput = $('#nipPemeriksaInput');
+        const $jabatanInput = $('#jabatanPemeriksaInput');
 
-        if (!namaSelect || !nipInput || !jabatanInput) return;
+        if (!$namaSelect.length || !$nipInput.length || !$jabatanInput.length) return;
 
         function syncPemeriksa() {
-            const opt = namaSelect.options[namaSelect.selectedIndex];
-            if (!opt || !opt.value) {
-                nipInput.value = '';
-                jabatanInput.value = '';
+            const $opt = $namaSelect.find(':selected');
+            if (!$opt.val()) {
+                $nipInput.val('');
+                $jabatanInput.val('');
                 return;
             }
-            nipInput.value = opt.dataset.nip || '';
-            jabatanInput.value = opt.dataset.jabatan || '';
+            $nipInput.val($opt.data('nip') || '');
+            $jabatanInput.val($opt.data('jabatan') || '');
         }
 
-        namaSelect.addEventListener('change', syncPemeriksa);
+        $namaSelect.on('change', syncPemeriksa);
 
         // Inisialisasi (mis. setelah validasi gagal & old() mengembalikan pilihan)
-        if (namaSelect.value) syncPemeriksa();
+        if ($namaSelect.val()) syncPemeriksa();
     });
 </script>
 @endpush

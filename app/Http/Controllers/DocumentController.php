@@ -80,13 +80,14 @@ class DocumentController extends Controller
     public function printSpp(DokumenSpp $spp)
     {
         $spp->load(['tagihan']);
+        $tagihan = $spp->tagihan;
 
         $pdf = Pdf::loadView('spps.pdf', [
             'spp' => $spp,
-            'sppable' => $spp->tagihan,
+            'sppable' => $tagihan,
             'jumlahUang' => $spp->nominal_spp,
             'terbilang' => terbilang_rupiah((float) $spp->nominal_spp),
-            'uraianSupplier' => $spp->uraian,
+            'uraianSupplier' => $tagihan?->deskripsi ?: ($spp->uraian ?? null),
         ]);
         $pdf->setPaper('a4', 'portrait');
 
@@ -97,14 +98,15 @@ class DocumentController extends Controller
     {
         $spm->load(['spp.tagihan', 'ppspm']);
         $spp = $spm->spp;
+        $tagihan = $spp?->tagihan;
 
         $pdf = Pdf::loadView('spms.pdf', [
             'spm' => $spm,
             'spp' => $spp,
-            'sppable' => $spp?->tagihan,
+            'sppable' => $tagihan,
             'jumlahUang' => $spp?->nominal_spp,
             'terbilang' => terbilang_rupiah((float) ($spp?->nominal_spp ?? 0)),
-            'uraianSupplier' => $spp?->uraian,
+            'uraianSupplier' => $tagihan?->deskripsi ?: ($spp?->uraian ?? null),
         ]);
         $pdf->setPaper('a4', 'portrait');
 

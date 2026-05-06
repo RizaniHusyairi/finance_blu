@@ -79,6 +79,14 @@
                         </div>
                         <div class="row g-3 mt-1">
                             <div class="col-md-12">
+                                <label class="form-label fw-semibold">Nama Supplier SPP/SPM <span class="text-danger">*</span></label>
+                                <input type="text" name="nama_supplier" id="inp_nama_supplier" class="form-control" required
+                                    value="{{ old('nama_supplier', $tagihan->nama_supplier) }}" placeholder="Contoh: PARA PEGAWAI KANTOR UPBU AJI PANGERAN TUMENGGUNG PRANOTO">
+                                <div class="form-text">Nama ini akan tampil pada kolom Nama Supplier di PDF SPP dan SPM honorarium.</div>
+                            </div>
+                        </div>
+                        <div class="row g-3 mt-1">
+                            <div class="col-md-12">
                                 @include('partials.dipa-item-grouped-select', [
                                     'budgetGroups' => $budgetGroups,
                                     'fieldName' => 'dipa_revision_item_id',
@@ -235,6 +243,10 @@
                             <div class="checklist-item" id="chk_deskripsi">
                                 <i class="bi bi-x-circle-fill checklist-fail"></i>
                                 <span>Deskripsi kegiatan diisi</span>
+                            </div>
+                            <div class="checklist-item" id="chk_supplier">
+                                <i class="bi bi-x-circle-fill checklist-fail"></i>
+                                <span>Nama supplier diisi</span>
                             </div>
                             <div class="checklist-item" id="chk_dipa">
                                 <i class="bi bi-x-circle-fill checklist-fail"></i>
@@ -415,6 +427,7 @@
     function updateChecklist() {
         const checks = {
             chk_deskripsi: document.getElementById('inp_deskripsi')?.value.trim().length > 0,
+            chk_supplier: document.getElementById('inp_nama_supplier')?.value.trim().length > 0,
             chk_dipa: document.getElementById('dipa_revision_item_id')?.value.length > 0,
             chk_ppk: document.getElementById('inp_ppk')?.value.length > 0,
             chk_bendahara: document.getElementById('inp_bendahara')?.value.length > 0,
@@ -459,6 +472,7 @@
             updateChecklist();
         }
         if (e.target.id === 'inp_deskripsi') updateChecklist();
+        if (e.target.id === 'inp_nama_supplier') updateChecklist();
     });
 
     document.addEventListener('change', function (e) {

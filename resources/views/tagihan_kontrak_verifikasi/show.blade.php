@@ -259,7 +259,7 @@
                         @foreach(['BAPP_FINAL_TTD' => 'BAPP', 'BAST_FINAL_TTD' => 'BAST', 'BAP_FINAL_TTD' => 'BAP', 'INVOICE' => 'Invoice'] as $jenis => $label)
                             @php $f = $tagihan->detailKontrak->arsipDokumen->where('is_active', true)->firstWhere('jenis_dokumen', $jenis); @endphp
                             @if($f)
-                                <a href="{{ route('tagihan.kontrak.view-arsip', [$tagihan->id, $f->id]) }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                <a href="{{ route('verifikasi-tagihan-kontrak.arsip', [$tagihan->id, $f->id]) }}" target="_blank" class="btn btn-sm btn-outline-primary">
                                     <i class="bi bi-file-earmark-text me-1"></i>{{ $label }}
                                 </a>
                             @endif

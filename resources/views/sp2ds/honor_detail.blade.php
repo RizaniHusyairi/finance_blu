@@ -19,6 +19,8 @@
     ];
     $ppkStatusLabel = $ppkApproval?->status ?? 'Belum ada';
     $kasubbagStatusLabel = $kasubbagApproval?->status ?? 'Belum ada';
+    $ppspmStatusLabel = $ppspmApproval?->status ?? 'Belum ada';
+    $koordinatorStatusLabel = $koordinatorApproval?->status ?? 'Belum ada';
 @endphp
 
 @push('css')
@@ -138,10 +140,10 @@
                 <div class="progression-label">Pencatatan Draf</div>
                 <div class="text-muted small">Bendahara Pengeluaran</div>
             </div>
-            <div class="progression-step {{ $progressStep >= 2 ? ($ppkApproval?->status == 'APPROVED' && $kasubbagApproval?->status == 'APPROVED' && $ppspmApproval?->status == 'APPROVED' ? 'passed' : ($ppkApproval?->status == 'REVISION' || $kasubbagApproval?->status == 'REVISION' || $ppspmApproval?->status == 'REVISION' ? 'fail' : 'active')) : '' }}">
+            <div class="progression-step {{ $progressStep >= 2 ? ($ppkApproval?->status == 'APPROVED' && $kasubbagApproval?->status == 'APPROVED' && $ppspmApproval?->status == 'APPROVED' && $koordinatorApproval?->status == 'APPROVED' ? 'passed' : ($ppkApproval?->status == 'REVISION' || $kasubbagApproval?->status == 'REVISION' || $ppspmApproval?->status == 'REVISION' || $koordinatorApproval?->status == 'REVISION' ? 'fail' : 'active')) : '' }}">
                 <div class="progression-icon"><i class="bi bi-shield-check"></i></div>
                 <div class="progression-label">Validasi Keuangan</div>
-                <div class="text-muted small">PPK, Kasubbag, PPSPM</div>
+                <div class="text-muted small">PPK, Kasubbag, PPSPM, Koordinator</div>
             </div>
             <div class="progression-step {{ $progressStep == 3 ? 'passed' : '' }}">
                 <div class="progression-icon"><i class="bi bi-check-all"></i></div>
@@ -150,6 +152,30 @@
             </div>
         </div>
     </div>
+
+    @if($sp2d && $workflow)
+    <div class="card-custom mb-4 p-4">
+        <h6 class="fw-bold text-dark mb-3"><i class="bi bi-person-check text-primary me-2"></i> Status Verifikator SP2D</h6>
+        <div class="row g-2">
+            @foreach([
+                'PPK' => $ppkApproval,
+                'Kasubbag' => $kasubbagApproval,
+                'PPSPM' => $ppspmApproval,
+                'Koordinator Keuangan' => $koordinatorApproval,
+            ] as $label => $approval)
+                <div class="col-md-3 col-6">
+                    <div class="border rounded p-3 h-100 text-center {{ $approval?->status === 'APPROVED' ? 'border-success bg-success bg-opacity-10' : ($approval?->status === 'PENDING' ? 'border-warning bg-warning bg-opacity-10' : (in_array($approval?->status, ['REVISION','REJECTED']) ? 'border-danger bg-danger bg-opacity-10' : 'bg-light')) }}">
+                        <div class="fw-bold small">{{ $label }}</div>
+                        <div class="text-muted" style="font-size: .72rem;">{{ $approval?->assignedUser?->name ?? 'Verifikator role' }}</div>
+                        <span class="badge mt-2 {{ $approval?->status === 'APPROVED' ? 'bg-success' : ($approval?->status === 'PENDING' ? 'bg-warning text-dark' : (in_array($approval?->status, ['REVISION','REJECTED']) ? 'bg-danger' : 'bg-light text-dark border')) }}">
+                            {{ $approval?->status ?? 'WAITING' }}
+                        </span>
+                    </div>
+                </div>
+            @endforeach
+        </div>
+    </div>
+    @endif
 
     <div class="row g-4">
         {{-- C. KIRI (Sumber Data) --}}
@@ -291,7 +317,7 @@
                         
                         <hr class="my-4 border-dashed opacity-25">
 
-                        <form action="{{ route('sp2ds.honor.submit', $npi->id) }}" method="POST" onsubmit="return confirm('Pengajuan akan mengunci Draf dan mengoper SP2D ini ke Verifikator (PPK, Kasubbag & PPSPM). Lanjutkan?');">
+                        <form action="{{ route('sp2ds.honor.submit', $npi->id) }}" method="POST" onsubmit="return confirm('Pengajuan akan mengunci Draf dan mengoper SP2D ini ke Verifikator (PPK, Kasubbag, PPSPM, dan Koordinator Keuangan). Lanjutkan?');">
                             @csrf
                             <button type="submit" class="btn btn-success fw-bold w-100 shadow py-2" {{ !$checks['sp2d_valid'] ? 'disabled' : '' }}>
                                 <i class="bi bi-send-check-fill me-1"></i> AJUKAN VERIFIKASI SP2D SEKARANG

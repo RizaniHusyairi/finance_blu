@@ -2,9 +2,11 @@
 @section('title', 'Detail Verifikasi SP2D Kontrak — ' . $currentRole)
 
 @php
+    $ppspmStatus = $ppspmApproval?->status ?? 'N/A';
     $ppkStatus = $ppkApproval?->status ?? 'N/A';
     $kasubbagStatus = $kasubbagApproval?->status ?? 'N/A';
     $koordinatorStatus = $koordinatorApproval?->status ?? 'N/A';
+    $pendingActionApprovals = ($actionableApprovals ?? collect())->values();
 
     $badgeClass = fn($s) => match($s) {
         'APPROVED' => 'bg-success',
@@ -63,6 +65,7 @@
             <div class="d-flex flex-column gap-2" style="min-width: 200px;">
                 <div class="d-flex flex-wrap gap-1 justify-content-end mb-2">
                     <span class="badge bg-secondary" title="Status SP2D">SP2D: {{ $sp2d->status }}</span>
+                    <span class="badge {{ $badgeClass($ppspmStatus) }}" title="PPSPM">PPSPM: {{ $ppspmStatus }}</span>
                     <span class="badge {{ $badgeClass($ppkStatus) }}" title="PPK">PPK: {{ $ppkStatus }}</span>
                     <span class="badge {{ $badgeClass($kasubbagStatus) }}" title="Kasubbag">KSB: {{ $kasubbagStatus }}</span>
                     <span class="badge {{ $badgeClass($koordinatorStatus) }}" title="Koordinator Keuangan">Koor: {{ $koordinatorStatus }}</span>
@@ -76,13 +79,15 @@
                     <i class="material-icons-outlined" style="font-size:14px; vertical-align: middle;">print</i> Cetak PDF
                 </a>
 
-                @if($canApprove)
-                    <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#modalApprove">
-                        <i class="material-icons-outlined" style="font-size:14px; vertical-align: middle;">check_circle</i> Setujui
-                    </button>
-                    <button type="button" class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#modalRevisi">
-                        <i class="material-icons-outlined" style="font-size:14px; vertical-align: middle;">replay</i> Minta Revisi
-                    </button>
+                @if($canApprove && $pendingActionApprovals->isNotEmpty())
+                    @foreach($pendingActionApprovals as $approval)
+                        <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#modalApprove{{ $approval->id }}">
+                            <i class="material-icons-outlined" style="font-size:14px; vertical-align: middle;">check_circle</i> Setujui {{ $approval->role_code }}
+                        </button>
+                        <button type="button" class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#modalRevisi{{ $approval->id }}">
+                            <i class="material-icons-outlined" style="font-size:14px; vertical-align: middle;">replay</i> Revisi {{ $approval->role_code }}
+                        </button>
+                    @endforeach
                 @endif
             </div>
         </div>
@@ -108,8 +113,20 @@
 
             <div class="col-8">
                 <div class="row h-100 g-3">
+                    {{-- PPSPM --}}
+                    <div class="col-sm-3">
+                        <div class="border rounded p-3 text-center h-100 {{ $ppspmStatus === 'APPROVED' ? 'border-success bg-success bg-opacity-10' : ($ppspmStatus === 'PENDING' ? 'border-warning bg-warning bg-opacity-10' : (in_array($ppspmStatus, ['REVISION','REJECTED']) ? 'border-danger bg-danger bg-opacity-10' : '')) }}">
+                            <div class="fw-bold mb-1" style="font-size: 13px;">PPSPM</div>
+                            <div class="text-muted mb-2" style="font-size: 11px;">{{ $ppspmApproval?->assignedUser?->name ?? 'Verifikator PPSPM' }}</div>
+                            <span class="badge {{ $badgeClass($ppspmStatus) }}">{{ $ppspmStatus }}</span>
+                            @if($ppspmApproval?->acted_at)
+                                <div class="mt-2" style="font-size: 11px; color: #6c757d;">{{ \Carbon\Carbon::parse($ppspmApproval->acted_at)->format('d M Y H:i') }}</div>
+                            @endif
+                        </div>
+                    </div>
+
                     {{-- PPK --}}
-                    <div class="col-sm-4">
+                    <div class="col-sm-3">
                         <div class="border rounded p-3 text-center h-100 {{ $ppkStatus === 'APPROVED' ? 'border-success bg-success bg-opacity-10' : ($ppkStatus === 'PENDING' ? 'border-warning bg-warning bg-opacity-10' : (in_array($ppkStatus, ['REVISION','REJECTED']) ? 'border-danger bg-danger bg-opacity-10' : '')) }}">
                             <div class="fw-bold mb-1" style="font-size: 13px;">PPK</div>
                             <div class="text-muted mb-2" style="font-size: 11px;">{{ $ppkApproval?->assignedUser?->name ?? 'Verifikator PPK' }}</div>
@@ -121,7 +138,7 @@
                     </div>
 
                     {{-- Kasubbag --}}
-                    <div class="col-sm-4">
+                    <div class="col-sm-3">
                         <div class="border rounded p-3 text-center h-100 {{ $kasubbagStatus === 'APPROVED' ? 'border-success bg-success bg-opacity-10' : ($kasubbagStatus === 'PENDING' ? 'border-warning bg-warning bg-opacity-10' : (in_array($kasubbagStatus, ['REVISION','REJECTED']) ? 'border-danger bg-danger bg-opacity-10' : '')) }}">
                             <div class="fw-bold mb-1" style="font-size: 13px;">Kasubbag</div>
                             <div class="text-muted mb-2" style="font-size: 11px;">{{ $kasubbagApproval?->assignedUser?->name ?? 'Verifikator Kasubbag' }}</div>
@@ -132,7 +149,7 @@
                         </div>
                     </div>
                     {{-- Koordinator Keuangan --}}
-                    <div class="col-sm-4">
+                    <div class="col-sm-3">
                         <div class="border rounded p-3 text-center h-100 {{ $koordinatorStatus === 'APPROVED' ? 'border-success bg-success bg-opacity-10' : ($koordinatorStatus === 'PENDING' ? 'border-warning bg-warning bg-opacity-10' : (in_array($koordinatorStatus, ['REVISION','REJECTED']) ? 'border-danger bg-danger bg-opacity-10' : '')) }}">
                             <div class="fw-bold mb-1" style="font-size: 13px;">Koordinator</div>
                             <div class="text-muted mb-2" style="font-size: 11px;">{{ $koordinatorApproval?->assignedUser?->name ?? 'Verifikator Koordinator' }}</div>
@@ -286,22 +303,30 @@
 </div>
 
 {{-- PANEL KEPUTUSAN BAWAH --}}
-@if($canApprove)
+@if($canApprove && $pendingActionApprovals->isNotEmpty())
     <div class="card border-0 shadow-lg mb-4 border-top border-4 border-warning position-sticky" style="bottom: 1rem; z-index: 10;">
         <div class="card-body p-4">
-            <div class="d-flex flex-column flex-md-row justify-content-between align-items-center gap-3">
+            <div class="d-flex flex-column gap-3">
                 <div>
-                    <h5 class="fw-bold mb-1"><i class="material-icons-outlined align-middle text-warning me-1">fact_check</i> Keputusan Verifikasi: {{ $currentRole }}</h5>
+                    <h5 class="fw-bold mb-1"><i class="material-icons-outlined align-middle text-warning me-1">fact_check</i> Keputusan Verifikasi</h5>
                     <p class="text-muted mb-0" style="font-size: 14px;">Tentukan persetujuan Anda setelah memeriksa kesesuaian dokumen SP2D Kontrak ini.</p>
                 </div>
-                <div class="d-flex gap-2">
-                    <button type="button" class="btn btn-outline-danger px-4" data-bs-toggle="modal" data-bs-target="#modalRevisi">
-                        <i class="material-icons-outlined" style="font-size:18px; vertical-align: middle;">replay</i> Minta Revisi
-                    </button>
-                    <button type="button" class="btn btn-success px-5 fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#modalApprove">
-                        <i class="material-icons-outlined" style="font-size:18px; vertical-align: middle;">check_circle</i> Setujui SP2D
-                    </button>
-                </div>
+                @foreach($pendingActionApprovals as $approval)
+                    <div class="border rounded p-3 bg-light d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                        <div>
+                            <div class="text-muted small">Verifikasi sebagai</div>
+                            <div class="fw-bold text-dark">{{ $approval->role_code }}</div>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-outline-danger px-4" data-bs-toggle="modal" data-bs-target="#modalRevisi{{ $approval->id }}">
+                                <i class="material-icons-outlined" style="font-size:18px; vertical-align: middle;">replay</i> Minta Revisi
+                            </button>
+                            <button type="button" class="btn btn-success px-5 fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#modalApprove{{ $approval->id }}">
+                                <i class="material-icons-outlined" style="font-size:18px; vertical-align: middle;">check_circle</i> Setujui SP2D
+                            </button>
+                        </div>
+                    </div>
+                @endforeach
             </div>
         </div>
     </div>
@@ -312,6 +337,7 @@
             <h5 class="fw-bold mt-2">Anda telah menyetujui dokumen SP2D ini</h5>
             <p class="text-muted mb-0">Disetujui pada {{ $currentUserApproval?->acted_at ? \Carbon\Carbon::parse($currentUserApproval->acted_at)->format('d M Y H:i') : '-' }}</p>
             <div class="mt-3 d-flex gap-2 justify-content-center">
+                <span class="badge {{ $badgeClass($ppspmStatus) }}">PPSPM: {{ $ppspmStatus }}</span>
                 <span class="badge {{ $badgeClass($ppkStatus) }}">PPK: {{ $ppkStatus }}</span>
                 <span class="badge {{ $badgeClass($kasubbagStatus) }}">Kasubbag: {{ $kasubbagStatus }}</span>
                 <span class="badge {{ $badgeClass($koordinatorStatus) }}">Koordinator: {{ $koordinatorStatus }}</span>
@@ -330,12 +356,14 @@
     </div>
 @endif
 
+@foreach($pendingActionApprovals as $approval)
 {{-- MODAL APPROVE --}}
-<div class="modal fade" id="modalApprove" tabindex="-1">
+<div class="modal fade" id="modalApprove{{ $approval->id }}" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow">
             <form action="{{ route($routePrefix . '.approve', $sp2d->id) }}" method="POST">
                 @csrf
+                <input type="hidden" name="approval_id" value="{{ $approval->id }}">
                 <div class="modal-header bg-success text-white border-0">
                     <h5 class="modal-title fw-bold"><i class="material-icons-outlined me-1">check_circle</i> Setujui SP2D Kontrak?</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
@@ -344,7 +372,7 @@
                     <p>Anda akan memverifikasi dan menyetujui SP2D Nomor <strong>{{ $sp2d->nomor_sp2d }}</strong> dengan nilai pencairan <strong>Rp {{ number_format($nominalSp2d, 0, ',', '.') }}</strong>.</p>
                     <div class="alert alert-info border-0 py-3 small">
                         <i class="material-icons-outlined align-middle me-1 mb-1" style="font-size:24px;">info</i>
-                        Tindakan ini akan menandai persetujuan Anda sebagai <strong>{{ $currentRole }}</strong>. Dokumen hanya akan sepenuhnya terbit menjadi SP2D Selesai apabila seluruh verifikator telah menyetujuinya.
+                        Tindakan ini akan menandai persetujuan Anda sebagai <strong>{{ $approval->role_code }}</strong>. Dokumen hanya akan sepenuhnya terbit menjadi SP2D Selesai apabila seluruh verifikator telah menyetujuinya.
                     </div>
                 </div>
                 <div class="modal-footer border-0">
@@ -357,11 +385,12 @@
 </div>
 
 {{-- MODAL REVISI --}}
-<div class="modal fade" id="modalRevisi" tabindex="-1">
+<div class="modal fade" id="modalRevisi{{ $approval->id }}" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow">
             <form action="{{ route($routePrefix . '.revisi', $sp2d->id) }}" method="POST">
                 @csrf
+                <input type="hidden" name="approval_id" value="{{ $approval->id }}">
                 <div class="modal-header bg-danger text-white border-0">
                     <h5 class="modal-title fw-bold"><i class="material-icons-outlined me-1">replay</i> Minta Revisi SP2D Kontrak</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
@@ -381,4 +410,5 @@
         </div>
     </div>
 </div>
+@endforeach
 @endsection

@@ -398,20 +398,20 @@
         </li>
         @endhasrole
 
-        {{-- Verifikasi SP2D — hanya Koordinator Keuangan --}}
-        @hasrole('Koordinator Keuangan')
+        {{-- Verifikasi SP2D — PPSPM dan/atau Koordinator Keuangan --}}
+        @hasanyrole('PPSPM|Koordinator Keuangan')
         <li>
           <a href="javascript:;" class="has-arrow">
             <div class="parent-icon"><i class="material-icons-outlined">account_balance</i></div>
             <div class="menu-title">Verifikasi SP2D</div>
           </a>
           <ul>
-            <li><a href="{{ route('verifikasi-koordinator.sp2d.kontrak.index') }}"><i class="material-icons-outlined">arrow_right</i>Kontrak</a></li>
+            <li><a href="{{ route(auth()->user()?->hasRole('PPSPM') ? 'verifikasi-ppspm.sp2d.kontrak.index' : 'verifikasi-koordinator.sp2d.kontrak.index') }}"><i class="material-icons-outlined">arrow_right</i>Kontrak</a></li>
             <li><a href="{{ route('verifikasi-sp2d.perjaldin.index') }}"><i class="material-icons-outlined">arrow_right</i>Perjaldin</a></li>
             <li><a href="{{ route('verifikasi-sp2d.honor.index') }}"><i class="material-icons-outlined">arrow_right</i>Honor</a></li>
           </ul>
         </li>
-        @endhasrole
+        @endhasanyrole
 
         @endhasanyrole
         @hasrole('Bendahara Pengeluaran')

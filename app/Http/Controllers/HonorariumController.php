@@ -58,6 +58,7 @@ class HonorariumController extends Controller
 
         $request->validate([
             'deskripsi' => 'required|string|max:255',
+            'nama_supplier' => 'required|string|max:150',
             'dipa_revision_item_id' => 'required|exists:dipa_revision_items,id',
             'items' => 'required|array|min:1',
             'items.*.nama_personel' => 'required|string|max:255',
@@ -98,6 +99,7 @@ class HonorariumController extends Controller
                 'master_dipa_id' => $selectedItem->dipaRevision->master_dipa_id,
                 'dipa_revision_item_id' => $selectedItem->id,
                 'deskripsi' => $request->deskripsi,
+                'nama_supplier' => $request->nama_supplier,
                 'total_bruto' => $totalBruto,
                 'total_potongan' => $totalPph,
                 'total_netto' => $totalNetto,
@@ -225,6 +227,7 @@ class HonorariumController extends Controller
 
         $request->validate([
             'deskripsi' => 'required|string|max:255',
+            'nama_supplier' => 'required|string|max:150',
             'dipa_revision_item_id' => 'required|exists:dipa_revision_items,id',
             'items' => 'required|array|min:1',
             'items.*.nama_personel' => 'required|string|max:255',
@@ -260,6 +263,7 @@ class HonorariumController extends Controller
                 'master_dipa_id' => $selectedItem->dipaRevision->master_dipa_id,
                 'dipa_revision_item_id' => $selectedItem->id,
                 'deskripsi' => $request->deskripsi,
+                'nama_supplier' => $request->nama_supplier,
                 'total_bruto' => $totalBruto,
                 'total_potongan' => $totalPph,
                 'total_netto' => $totalNetto,
@@ -505,4 +509,3 @@ class HonorariumController extends Controller
         ]));
     }
 }
-

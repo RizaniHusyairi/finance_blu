@@ -1,0 +1,322 @@
+<mxfile host="app.diagrams.net" modified="2026-05-04T00:00:00.000Z" agent="Codex" version="24.7.17" type="device">
+  <diagram id="perjaldin-process-flow" name="Alur Proses Perjaldin">
+    <mxGraphModel dx="1800" dy="1200" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2200" pageHeight="1500" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="title" value="Peta Alur Proses Perjaldin" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=28;fontStyle=1;fontColor=#0F172A;" vertex="1" parent="1">
+          <mxGeometry x="40" y="20" width="2120" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="subtitle" value="Ringkasan end-to-end dari Tagihan PERJALDIN sampai SP2D. Jalur revisi selalu kembali ke pembuat dokumen untuk diperbaiki lalu disubmit ulang." style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=14;fontColor=#475569;" vertex="1" parent="1">
+          <mxGeometry x="300" y="70" width="1600" height="34" as="geometry" />
+        </mxCell>
+
+        <mxCell id="legendNormal" value="Alur normal / approve" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DCFCE7;strokeColor=#16A34A;fontColor=#14532D;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="40" y="118" width="180" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="legendRevision" value="Revisi / reject" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FEE2E2;strokeColor=#DC2626;fontColor=#7F1D1D;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="230" y="118" width="160" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="legendDraft" value="Draft / input operator" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E0F2FE;strokeColor=#0284C7;fontColor=#0C4A6E;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="400" y="118" width="180" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="legendWorkflow" value="Workflow approval" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F5F3FF;strokeColor=#7C3AED;fontColor=#4C1D95;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="590" y="118" width="170" height="36" as="geometry" />
+        </mxCell>
+
+        <mxCell id="lane1" value="1. Tagihan Perjaldin" style="swimlane;html=1;horizontal=0;startSize=34;fillColor=#F8FAFC;strokeColor=#CBD5E1;fontColor=#334155;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="180" width="330" height="1120" as="geometry" />
+        </mxCell>
+        <mxCell id="lane2" value="2. Verifikasi Tagihan" style="swimlane;html=1;horizontal=0;startSize=34;fillColor=#F8FAFC;strokeColor=#CBD5E1;fontColor=#334155;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="370" y="180" width="380" height="1120" as="geometry" />
+        </mxCell>
+        <mxCell id="lane3" value="3. SPP per Komponen" style="swimlane;html=1;horizontal=0;startSize=34;fillColor=#F8FAFC;strokeColor=#CBD5E1;fontColor=#334155;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="750" y="180" width="340" height="1120" as="geometry" />
+        </mxCell>
+        <mxCell id="lane4" value="4. SPM" style="swimlane;html=1;horizontal=0;startSize=34;fillColor=#F8FAFC;strokeColor=#CBD5E1;fontColor=#334155;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1090" y="180" width="340" height="1120" as="geometry" />
+        </mxCell>
+        <mxCell id="lane5" value="5. NPI" style="swimlane;html=1;horizontal=0;startSize=34;fillColor=#F8FAFC;strokeColor=#CBD5E1;fontColor=#334155;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1430" y="180" width="340" height="1120" as="geometry" />
+        </mxCell>
+        <mxCell id="lane6" value="6. SP2D" style="swimlane;html=1;horizontal=0;startSize=34;fillColor=#F8FAFC;strokeColor=#CBD5E1;fontColor=#334155;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1770" y="180" width="390" height="1120" as="geometry" />
+        </mxCell>
+
+        <mxCell id="start" value="Mulai" style="ellipse;whiteSpace=wrap;html=1;fillColor=#DCFCE7;strokeColor=#16A34A;fontColor=#14532D;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="135" y="230" width="140" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="createTagihan" value="Operator Perjaldin&lt;br&gt;membuat Tagihan PERJALDIN&lt;br&gt;status: DRAFT" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E0F2FE;strokeColor=#0284C7;fontColor=#0C4A6E;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="85" y="320" width="240" height="82" as="geometry" />
+        </mxCell>
+        <mxCell id="inputData" value="Input data pokok&lt;br&gt;peserta, komponen biaya,&lt;br&gt;dokumen SPT, dan verifikator" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E0F2FE;strokeColor=#0284C7;fontColor=#0C4A6E;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="85" y="430" width="240" height="78" as="geometry" />
+        </mxCell>
+        <mxCell id="submitTagihan" value="Submit workflow&lt;br&gt;kode: PERJALDIN&lt;br&gt;status: PENDING_*" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F5F3FF;strokeColor=#7C3AED;fontColor=#4C1D95;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="85" y="540" width="240" height="78" as="geometry" />
+        </mxCell>
+
+        <mxCell id="verifyTagihanStep1" value="Step 1 paralel&lt;br&gt;PPSPM&lt;br&gt;Bendahara Penerimaan&lt;br&gt;Bendahara Pengeluaran&lt;br&gt;PPK&lt;br&gt;Koordinator Keuangan" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F5F3FF;strokeColor=#7C3AED;fontColor=#4C1D95;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="430" y="260" width="260" height="122" as="geometry" />
+        </mxCell>
+        <mxCell id="decisionTagihanStep1" value="Semua approve?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FEF9C3;strokeColor=#CA8A04;fontColor=#713F12;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="495" y="415" width="130" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="verifyTagihanStep2" value="Step 2 final&lt;br&gt;Kasubbag menyetujui&lt;br&gt;atau meminta revisi" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F5F3FF;strokeColor=#7C3AED;fontColor=#4C1D95;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="430" y="545" width="260" height="82" as="geometry" />
+        </mxCell>
+        <mxCell id="decisionTagihanFinal" value="Kasubbag approve?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FEF9C3;strokeColor=#CA8A04;fontColor=#713F12;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="495" y="665" width="130" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="approvedTagihan" value="Tagihan disetujui&lt;br&gt;status: DISETUJUI_PERJALDIN&lt;br&gt;siap dibuat SPP" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DCFCE7;strokeColor=#16A34A;fontColor=#14532D;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="430" y="790" width="260" height="78" as="geometry" />
+        </mxCell>
+        <mxCell id="reviseTagihan" value="Revisi Tagihan&lt;br&gt;status: REVISI_* / DITOLAK_*&lt;br&gt;Operator Perjaldin perbaiki dan submit ulang" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FEE2E2;strokeColor=#DC2626;fontColor=#7F1D1D;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="85" y="720" width="240" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="coaKomponen" value="Komponen Perjaldin&lt;br&gt;MENUNGGU_COA -&gt; SIAP_BUAT_SPP&lt;br&gt;COA diisi per komponen" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E0F2FE;strokeColor=#0284C7;fontColor=#0C4A6E;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="800" y="250" width="240" height="88" as="geometry" />
+        </mxCell>
+        <mxCell id="createSpp" value="Operator BLU membuat&lt;br&gt;SPP per komponen biaya&lt;br&gt;status: DRAFT / SPP_DRAFT" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E0F2FE;strokeColor=#0284C7;fontColor=#0C4A6E;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="800" y="380" width="240" height="88" as="geometry" />
+        </mxCell>
+        <mxCell id="submitSpp" value="Submit workflow&lt;br&gt;kode: SPP_PERJALDIN&lt;br&gt;status: PENDING_*" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F5F3FF;strokeColor=#7C3AED;fontColor=#4C1D95;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="800" y="510" width="240" height="78" as="geometry" />
+        </mxCell>
+        <mxCell id="verifySpp" value="Verifikasi SPP paralel&lt;br&gt;PPK&lt;br&gt;Koordinator Keuangan&lt;br&gt;Kasubbag" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F5F3FF;strokeColor=#7C3AED;fontColor=#4C1D95;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="800" y="630" width="240" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="decisionSpp" value="Semua approve?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FEF9C3;strokeColor=#CA8A04;fontColor=#713F12;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="855" y="765" width="130" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="approvedSpp" value="SPP final&lt;br&gt;status: DISETUJUI_SPP&lt;br&gt;komponen: LANJUT_SPM" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DCFCE7;strokeColor=#16A34A;fontColor=#14532D;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="800" y="900" width="240" height="78" as="geometry" />
+        </mxCell>
+        <mxCell id="reviseSpp" value="Revisi SPP&lt;br&gt;status: REVISI_*&lt;br&gt;perbaiki draft SPP lalu submit ulang" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FEE2E2;strokeColor=#DC2626;fontColor=#7F1D1D;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="800" y="1040" width="240" height="78" as="geometry" />
+        </mxCell>
+
+        <mxCell id="createSpm" value="Operator BLU membuat SPM&lt;br&gt;dari SPP final&lt;br&gt;status: DRAFT / Revisi" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E0F2FE;strokeColor=#0284C7;fontColor=#0C4A6E;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="1140" y="280" width="240" height="86" as="geometry" />
+        </mxCell>
+        <mxCell id="submitSpm" value="Submit workflow&lt;br&gt;kode: SPM_PERJALDIN_PPSPM&lt;br&gt;status: Menunggu Verifikasi" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F5F3FF;strokeColor=#7C3AED;fontColor=#4C1D95;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="1140" y="410" width="240" height="86" as="geometry" />
+        </mxCell>
+        <mxCell id="verifySpm" value="Verifikasi SPM paralel&lt;br&gt;PPSPM&lt;br&gt;Koordinator Keuangan&lt;br&gt;Kasubbag&lt;br&gt;&lt;font style=&quot;font-size: 10px;&quot;&gt;sesuai workflow definition aktif&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F5F3FF;strokeColor=#7C3AED;fontColor=#4C1D95;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="1140" y="540" width="240" height="112" as="geometry" />
+        </mxCell>
+        <mxCell id="decisionSpm" value="Semua approve?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FEF9C3;strokeColor=#CA8A04;fontColor=#713F12;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1195" y="690" width="130" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="approvedSpm" value="SPM final&lt;br&gt;status: Disetujui Final&lt;br&gt;siap dibuat NPI" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DCFCE7;strokeColor=#16A34A;fontColor=#14532D;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1140" y="825" width="240" height="78" as="geometry" />
+        </mxCell>
+        <mxCell id="reviseSpm" value="Revisi SPM&lt;br&gt;status: Revisi&lt;br&gt;perbaiki SPM lalu submit ulang" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FEE2E2;strokeColor=#DC2626;fontColor=#7F1D1D;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="1140" y="1040" width="240" height="78" as="geometry" />
+        </mxCell>
+
+        <mxCell id="createNpi" value="Bendahara Pengeluaran&lt;br&gt;membuat NPI dari SPM final&lt;br&gt;status: DRAFT / REVISI" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E0F2FE;strokeColor=#0284C7;fontColor=#0C4A6E;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="1480" y="280" width="240" height="86" as="geometry" />
+        </mxCell>
+        <mxCell id="submitNpi" value="Submit workflow&lt;br&gt;kode: NPI_PERJALDIN&lt;br&gt;status: MENUNGGU_VERIFIKASI" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F5F3FF;strokeColor=#7C3AED;fontColor=#4C1D95;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="1480" y="410" width="240" height="86" as="geometry" />
+        </mxCell>
+        <mxCell id="verifyNpi" value="Verifikasi NPI paralel&lt;br&gt;Bendahara Penerimaan&lt;br&gt;PPK&lt;br&gt;Kasubbag&lt;br&gt;Koordinator Keuangan" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F5F3FF;strokeColor=#7C3AED;fontColor=#4C1D95;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="1480" y="540" width="240" height="112" as="geometry" />
+        </mxCell>
+        <mxCell id="decisionNpi" value="Semua approve?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FEF9C3;strokeColor=#CA8A04;fontColor=#713F12;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1535" y="690" width="130" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="approvedNpi" value="NPI final&lt;br&gt;status: DISETUJUI_FINAL&lt;br&gt;siap dibuat SP2D" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DCFCE7;strokeColor=#16A34A;fontColor=#14532D;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1480" y="825" width="240" height="78" as="geometry" />
+        </mxCell>
+        <mxCell id="reviseNpi" value="Revisi NPI&lt;br&gt;status: REVISI&lt;br&gt;perbaiki NPI lalu submit ulang" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FEE2E2;strokeColor=#DC2626;fontColor=#7F1D1D;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="1480" y="1040" width="240" height="78" as="geometry" />
+        </mxCell>
+
+        <mxCell id="createSp2d" value="Bendahara Pengeluaran&lt;br&gt;membuat SP2D dari NPI final&lt;br&gt;status: DRAFT / REVISI" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E0F2FE;strokeColor=#0284C7;fontColor=#0C4A6E;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="1835" y="280" width="250" height="86" as="geometry" />
+        </mxCell>
+        <mxCell id="submitSp2d" value="Submit workflow&lt;br&gt;kode: SP2D_PERJALDIN&lt;br&gt;status: MENUNGGU_VERIFIKASI" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F5F3FF;strokeColor=#7C3AED;fontColor=#4C1D95;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="1835" y="410" width="250" height="86" as="geometry" />
+        </mxCell>
+        <mxCell id="verifySp2d" value="Verifikasi SP2D paralel&lt;br&gt;PPSPM&lt;br&gt;PPK&lt;br&gt;Kasubbag&lt;br&gt;Koordinator Keuangan" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F5F3FF;strokeColor=#7C3AED;fontColor=#4C1D95;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="1835" y="540" width="250" height="112" as="geometry" />
+        </mxCell>
+        <mxCell id="decisionSp2d" value="Semua approve?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FEF9C3;strokeColor=#CA8A04;fontColor=#713F12;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1895" y="690" width="130" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="approvedSp2d" value="SP2D final&lt;br&gt;status: DISETUJUI_FINAL&lt;br&gt;opsional: EXECUTED / Lunas" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DCFCE7;strokeColor=#16A34A;fontColor=#14532D;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1835" y="825" width="250" height="82" as="geometry" />
+        </mxCell>
+        <mxCell id="end" value="Selesai&lt;br&gt;pembayaran dan arsip dokumen" style="ellipse;whiteSpace=wrap;html=1;fillColor=#DCFCE7;strokeColor=#16A34A;fontColor=#14532D;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1875" y="965" width="170" height="64" as="geometry" />
+        </mxCell>
+        <mxCell id="reviseSp2d" value="Revisi SP2D&lt;br&gt;status: REVISI&lt;br&gt;perbaiki SP2D lalu submit ulang" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FEE2E2;strokeColor=#DC2626;fontColor=#7F1D1D;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="1835" y="1080" width="250" height="78" as="geometry" />
+        </mxCell>
+
+        <mxCell id="noteStatus" value="Catatan status utama:&lt;br&gt;Tagihan: DRAFT, PENDING_*, REVISI_*, DISETUJUI_PERJALDIN&lt;br&gt;SPP: DRAFT, PENDING_*, REVISI_*, DISETUJUI_SPP&lt;br&gt;SPM: DRAFT, Menunggu Verifikasi, Revisi, Disetujui Final&lt;br&gt;NPI/SP2D: DRAFT, MENUNGGU_VERIFIKASI, REVISI, DISETUJUI_FINAL" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF7ED;strokeColor=#EA580C;fontColor=#7C2D12;fontSize=12;align=left;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="85" y="1165" width="730" height="88" as="geometry" />
+        </mxCell>
+        <mxCell id="noteRefs" value="Referensi kode:&lt;br&gt;PerjaldinController, PerjaldinWorkflowService&lt;br&gt;SppController::storeFromPerjaldinKomponen, SppPerjaldinWorkflowService&lt;br&gt;SpmPerjaldinController, NpiPerjaldinController, Sp2dPerjaldinController&lt;br&gt;WorkflowDefinitionSeeder dan SppPerjaldinWorkflowSeeder" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F8FAFC;strokeColor=#94A3B8;fontColor=#334155;fontSize=12;align=left;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="870" y="1165" width="830" height="88" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#16A34A;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="start" target="createTagihan">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#16A34A;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="createTagihan" target="inputData">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#16A34A;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="inputData" target="submitTagihan">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e4" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#16A34A;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="submitTagihan" target="verifyTagihanStep1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e5" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#16A34A;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="verifyTagihanStep1" target="decisionTagihanStep1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e6" value="Ya" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#16A34A;strokeWidth=2;endArrow=block;endFill=1;fontColor=#14532D;" edge="1" parent="1" source="decisionTagihanStep1" target="verifyTagihanStep2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e7" value="Tidak / revisi" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#DC2626;strokeWidth=2;dashed=1;endArrow=block;endFill=1;fontColor=#7F1D1D;" edge="1" parent="1" source="decisionTagihanStep1" target="reviseTagihan">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e8" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#16A34A;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="verifyTagihanStep2" target="decisionTagihanFinal">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e9" value="Ya" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#16A34A;strokeWidth=2;endArrow=block;endFill=1;fontColor=#14532D;" edge="1" parent="1" source="decisionTagihanFinal" target="approvedTagihan">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e10" value="Tidak / revisi" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#DC2626;strokeWidth=2;dashed=1;endArrow=block;endFill=1;fontColor=#7F1D1D;" edge="1" parent="1" source="decisionTagihanFinal" target="reviseTagihan">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e11" value="resubmit" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#DC2626;strokeWidth=2;dashed=1;endArrow=block;endFill=1;fontColor=#7F1D1D;" edge="1" parent="1" source="reviseTagihan" target="submitTagihan">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="205" y="650" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e12" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#16A34A;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="approvedTagihan" target="coaKomponen">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e13" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#16A34A;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="coaKomponen" target="createSpp">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e14" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#16A34A;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="createSpp" target="submitSpp">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e15" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#16A34A;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="submitSpp" target="verifySpp">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e16" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#16A34A;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="verifySpp" target="decisionSpp">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e17" value="Ya" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#16A34A;strokeWidth=2;endArrow=block;endFill=1;fontColor=#14532D;" edge="1" parent="1" source="decisionSpp" target="approvedSpp">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e18" value="Tidak / revisi" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#DC2626;strokeWidth=2;dashed=1;endArrow=block;endFill=1;fontColor=#7F1D1D;" edge="1" parent="1" source="decisionSpp" target="reviseSpp">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e19" value="resubmit" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#DC2626;strokeWidth=2;dashed=1;endArrow=block;endFill=1;fontColor=#7F1D1D;" edge="1" parent="1" source="reviseSpp" target="submitSpp">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1060" y="1080" />
+              <mxPoint x="1060" y="550" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e20" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#16A34A;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="approvedSpp" target="createSpm">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e21" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#16A34A;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="createSpm" target="submitSpm">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e22" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#16A34A;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="submitSpm" target="verifySpm">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e23" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#16A34A;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="verifySpm" target="decisionSpm">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e24" value="Ya" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#16A34A;strokeWidth=2;endArrow=block;endFill=1;fontColor=#14532D;" edge="1" parent="1" source="decisionSpm" target="approvedSpm">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e25" value="Tidak / revisi" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#DC2626;strokeWidth=2;dashed=1;endArrow=block;endFill=1;fontColor=#7F1D1D;" edge="1" parent="1" source="decisionSpm" target="reviseSpm">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e26" value="resubmit" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#DC2626;strokeWidth=2;dashed=1;endArrow=block;endFill=1;fontColor=#7F1D1D;" edge="1" parent="1" source="reviseSpm" target="submitSpm">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1400" y="1080" />
+              <mxPoint x="1400" y="455" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e27" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#16A34A;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="approvedSpm" target="createNpi">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e28" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#16A34A;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="createNpi" target="submitNpi">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e29" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#16A34A;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="submitNpi" target="verifyNpi">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e30" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#16A34A;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="verifyNpi" target="decisionNpi">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e31" value="Ya" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#16A34A;strokeWidth=2;endArrow=block;endFill=1;fontColor=#14532D;" edge="1" parent="1" source="decisionNpi" target="approvedNpi">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e32" value="Tidak / revisi" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#DC2626;strokeWidth=2;dashed=1;endArrow=block;endFill=1;fontColor=#7F1D1D;" edge="1" parent="1" source="decisionNpi" target="reviseNpi">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e33" value="resubmit" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#DC2626;strokeWidth=2;dashed=1;endArrow=block;endFill=1;fontColor=#7F1D1D;" edge="1" parent="1" source="reviseNpi" target="submitNpi">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1740" y="1080" />
+              <mxPoint x="1740" y="455" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e34" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#16A34A;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="approvedNpi" target="createSp2d">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e35" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#16A34A;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="createSp2d" target="submitSp2d">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e36" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#16A34A;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="submitSp2d" target="verifySp2d">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e37" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#16A34A;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="verifySp2d" target="decisionSp2d">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e38" value="Ya" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#16A34A;strokeWidth=2;endArrow=block;endFill=1;fontColor=#14532D;" edge="1" parent="1" source="decisionSp2d" target="approvedSp2d">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e39" value="Tidak / revisi" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#DC2626;strokeWidth=2;dashed=1;endArrow=block;endFill=1;fontColor=#7F1D1D;" edge="1" parent="1" source="decisionSp2d" target="reviseSp2d">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e40" value="resubmit" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#DC2626;strokeWidth=2;dashed=1;endArrow=block;endFill=1;fontColor=#7F1D1D;" edge="1" parent="1" source="reviseSp2d" target="submitSp2d">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2105" y="1120" />
+              <mxPoint x="2105" y="455" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e41" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#16A34A;strokeWidth=2;endArrow=block;endFill=1;" edge="1" parent="1" source="approvedSp2d" target="end">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
