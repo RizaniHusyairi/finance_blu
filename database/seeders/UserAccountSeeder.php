@@ -70,6 +70,16 @@ class UserAccountSeeder extends Seeder
                 'nama' => 'KARTIKA FALITA',
                 'email' => 'operator@sikeren.id',
                 'roles' => ['Operator BLU'],
+            ],
+            [
+                'nama' => 'MUHAMMAD KEMAL HIKMA',
+                'email' => 'admin.jasa@sikeren.id',
+                'roles' => ['Admin Jasa'],
+            ],
+            [
+                'nama' => 'MUHAMMAD KEMAL HIKMA',
+                'email' => 'koordinator.jasa@sikeren.id',
+                'roles' => ['Koordinator Jasa'],
             ]
         ];
 
