@@ -356,10 +356,10 @@ class SpmPerjaldinVerifikasiController extends Controller
             $instance->refresh();
             
             $isFullyApproved = $instance->status === 'APPROVED';
-            $statusBaru = $isFullyApproved ? DokumenSpm::STATUS_DISETUJUI_FINAL : DokumenSpm::STATUS_MENUNGGU_VERIFIKASI;
+            $statusBaru = $isFullyApproved ? DokumenSpm::STATUS_MENUNGGU_UPLOAD : DokumenSpm::STATUS_MENUNGGU_VERIFIKASI;
 
-            if ($isFullyApproved && $spm->status !== DokumenSpm::STATUS_DISETUJUI_FINAL) {
-                $spm->update(['status' => DokumenSpm::STATUS_DISETUJUI_FINAL]);
+            if ($isFullyApproved && $spm->status !== DokumenSpm::STATUS_MENUNGGU_UPLOAD) {
+                $spm->update(['status' => DokumenSpm::STATUS_MENUNGGU_UPLOAD]);
             }
 
             LogStatusDokumen::create([
@@ -378,9 +378,9 @@ class SpmPerjaldinVerifikasiController extends Controller
 
             $operators = User::role('Operator BLU')->get();
             Notification::send($operators, new WorkflowNotification([
-                'title'   => $isFullyApproved ? 'SPM Perjaldin Disetujui Final' : 'SPM Perjaldin Disetujui ' . $roleCode,
+                'title'   => $isFullyApproved ? 'SPM Perjaldin Menunggu Upload' : 'SPM Perjaldin Disetujui ' . $roleCode,
                 'message' => $isFullyApproved
-                    ? "SPM {$spm->nomor_spm} telah disetujui oleh semua pihak dan siap lanjut ke NPI."
+                    ? "SPM {$spm->nomor_spm} telah disetujui oleh semua pihak. Silakan cetak, tandatangani, dan upload scan SPM."
                     : "SPM {$spm->nomor_spm} telah disetujui oleh {$roleCode}.",
                 'url'     => route('spms.perjaldin.detail', $spm->spp_id),
                 'icon'    => 'verified',

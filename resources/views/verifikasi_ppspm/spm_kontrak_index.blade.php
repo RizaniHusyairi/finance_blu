@@ -159,17 +159,6 @@
                                 @endif
                             </td>
                             <td class="text-center">
-                                @if($spm->koordinatorApprovalStatus === 'PENDING')
-                                    <span class="badge bg-warning text-dark">Pending</span>
-                                @elseif($spm->koordinatorApprovalStatus === 'APPROVED')
-                                    <span class="badge bg-success">Approved</span>
-                                @elseif($spm->koordinatorApprovalStatus === 'REVISION')
-                                    <span class="badge bg-danger">Revisi</span>
-                                @else
-                                    <span class="badge bg-secondary">{{ $spm->koordinatorApprovalStatus }}</span>
-                                @endif
-                            </td>
-                            <td class="text-center">
                                 @if($spm->kasubbagApprovalStatus === 'PENDING')
                                     <span class="badge bg-warning text-dark">Pending</span>
                                 @elseif($spm->kasubbagApprovalStatus === 'APPROVED')
@@ -178,6 +167,17 @@
                                     <span class="badge bg-danger">Revisi</span>
                                 @else
                                     <span class="badge bg-secondary">{{ $spm->kasubbagApprovalStatus }}</span>
+                                @endif
+                            </td>
+                            <td class="text-center">
+                                @if($spm->koordinatorApprovalStatus === 'PENDING')
+                                    <span class="badge bg-warning text-dark">Pending</span>
+                                @elseif($spm->koordinatorApprovalStatus === 'APPROVED')
+                                    <span class="badge bg-success">Approved</span>
+                                @elseif($spm->koordinatorApprovalStatus === 'REVISION')
+                                    <span class="badge bg-danger">Revisi</span>
+                                @else
+                                    <span class="badge bg-secondary">{{ $spm->koordinatorApprovalStatus }}</span>
                                 @endif
                             </td>
                             <td class="text-center">

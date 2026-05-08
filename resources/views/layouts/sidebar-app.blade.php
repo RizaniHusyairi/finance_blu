@@ -116,19 +116,6 @@
             </ul>
           </li>
           @endhasanyrole
-        @hasrole('PPK')
-        {{-- 1. Verifikasi SPMK (khusus PPK) --}}
-        <li>
-          <a href="javascript:;" class="has-arrow">
-            <div class="parent-icon"><i class="material-icons-outlined">draw</i></div>
-            <div class="menu-title">Verifikasi SPMK</div>
-          </a>
-          <ul>
-            <li><a href="{{ route('contracts.verifikasi') }}"><i class="material-icons-outlined">arrow_right</i>Draft Kontrak & SPMK</a></li>
-          </ul>
-        </li>
-        @endhasrole
-
         {{-- Verifikasi Tagihan — seragam untuk SEMUA verifikator (PPK, PPSPM, Koor.Keu, Bendahara×2, Kasubbag) --}}
         @hasanyrole('PPK|PPSPM|Koordinator Keuangan|Bendahara Pengeluaran|Bendahara Penerimaan|Kepala Subbagian Keuangan dan Tata Usaha')
         @php
@@ -163,20 +150,41 @@
                 <i class="material-icons-outlined">arrow_right</i>Kontrak
               </a>
             </li>
-            @forelse($perjaldinLinks as $pLink)
+            @if(count($perjaldinLinks) > 0)
+            @php
+                $combinedRoute = $perjaldinLinks[0]['route'];
+                $combinedBadges = collect($perjaldinLinks)->pluck('badge')->join(' & ');
+            @endphp
             <li>
-              <a href="{{ route($pLink['route']) }}">
+              <a href="{{ route($combinedRoute) }}">
                 <i class="material-icons-outlined">arrow_right</i>Perjaldin
-                @if($showBadge)<small class="badge bg-info ms-1" style="font-size:9px">{{ $pLink['badge'] }}</small>@endif
+                @if(count($perjaldinLinks) > 1)
+                  <small class="badge bg-info ms-1" style="font-size:9px" title="{{ $combinedBadges }}">{{ count($perjaldinLinks) }} Peran</small>
+                @endif
               </a>
             </li>
-            @empty
+            @else
             <li>
               <a href="javascript:;" class="text-muted" style="cursor: not-allowed;">
                 <i class="material-icons-outlined">arrow_right</i>Perjaldin <small class="badge bg-secondary ms-1">soon</small>
               </a>
             </li>
-            @endforelse
+            @endif
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
             @forelse($honorariumLinks as $hLink)
             <li>
               <a href="{{ route($hLink['route']) }}">

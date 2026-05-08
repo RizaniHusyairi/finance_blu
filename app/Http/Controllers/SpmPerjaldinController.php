@@ -30,8 +30,10 @@ class SpmPerjaldinController extends Controller
 
         $query = DokumenSpp::whereNotNull('tagihan_perjaldin_komponen_id')
             ->where(function ($q) use ($approvedSppStatuses) {
-                $q->whereIn('status', $approvedSppStatuses)
-                  ->orWhereHas('spm');
+                $q->where(function ($sq) use ($approvedSppStatuses) {
+                    $sq->whereIn('status', $approvedSppStatuses)
+                       ->has('signedSppArsip');
+                })->orWhereHas('spm');
             })
             ->with([
                 'tagihan.detailPerjaldin',
@@ -54,7 +56,7 @@ class SpmPerjaldinController extends Controller
         } elseif ($statusFilter === 'menunggu') {
             $query->whereHas('spm', fn ($q) => $q->where('status', DokumenSpm::STATUS_MENUNGGU_VERIFIKASI));
         } elseif ($statusFilter === 'selesai') {
-            $query->whereHas('spm', fn ($q) => $q->where('status', DokumenSpm::STATUS_DISETUJUI_FINAL));
+            $query->whereHas('spm', fn ($q) => $q->whereIn('status', [DokumenSpm::STATUS_DISETUJUI_FINAL, DokumenSpm::STATUS_MENUNGGU_UPLOAD, DokumenSpm::STATUS_SPM_TERBIT]));
         }
 
         // Search
@@ -73,7 +75,7 @@ class SpmPerjaldinController extends Controller
             'belum_dibuat' => $sppList->filter(fn ($spp) => !$spp->spm)->count(),
             'draft_revisi' => $sppList->filter(fn ($spp) => $spp->spm && in_array($spp->spm->status, ['DRAFT', DokumenSpm::STATUS_REVISI]))->count(),
             'menunggu'     => $sppList->filter(fn ($spp) => $spp->spm && $spp->spm->status === DokumenSpm::STATUS_MENUNGGU_VERIFIKASI)->count(),
-            'selesai'      => $sppList->filter(fn ($spp) => $spp->spm && $spp->spm->status === DokumenSpm::STATUS_DISETUJUI_FINAL)->count(),
+            'selesai'      => $sppList->filter(fn ($spp) => $spp->spm && in_array($spp->spm->status, [DokumenSpm::STATUS_DISETUJUI_FINAL, DokumenSpm::STATUS_MENUNGGU_UPLOAD, DokumenSpm::STATUS_SPM_TERBIT]))->count(),
         ];
 
         return view('spms.spm_perjaldin_index', compact('sppList', 'summary', 'statusFilter', 'search'));
@@ -98,6 +100,7 @@ class SpmPerjaldinController extends Controller
             'spm.workflowInstances.approvals.actedByUser',
             'spm.logs.user',
             'logs.user',
+            'signedSppArsip',
         ])
         ->whereNotNull('tagihan_perjaldin_komponen_id')
         ->findOrFail($spp_id);
@@ -129,6 +132,7 @@ class SpmPerjaldinController extends Controller
                     ? 'SPP Perjaldin sudah disetujui dan siap jadi dasar SPM.'
                     : 'SPP belum dalam status disetujui.',
             ],
+
             [
                 'label'  => 'Item DIPA / COA valid',
                 'status' => filled($selectedBudgetItem?->coa) ? 'ready' : 'missing',
@@ -171,9 +175,14 @@ class SpmPerjaldinController extends Controller
         $progressStep = 1;
         if ($spmModel && in_array($spmModel->status, [DokumenSpm::STATUS_MENUNGGU_VERIFIKASI, DokumenSpm::STATUS_REVISI])) {
             $progressStep = 2;
-        } elseif ($spmModel && $spmModel->status === DokumenSpm::STATUS_DISETUJUI_FINAL) {
+        } elseif ($spmModel && $spmModel->status === DokumenSpm::STATUS_MENUNGGU_UPLOAD) {
+            $progressStep = 3;
+        } elseif ($spmModel && in_array($spmModel->status, [DokumenSpm::STATUS_SPM_TERBIT, DokumenSpm::STATUS_DISETUJUI_FINAL])) {
             $progressStep = 4;
         }
+
+        // Signed SPM file check
+        $hasSignedSpmFile = $spmModel?->hasSignedSpmFile() ?? false;
 
         // Recent activities
         $recentActivities = collect($spmModel?->logs ?? [])
@@ -221,7 +230,8 @@ class SpmPerjaldinController extends Controller
             'progressStep',
             'recentActivities',
             'oldPpspmId',
-            'autoNomorSpm'
+            'autoNomorSpm',
+            'hasSignedSpmFile'
         ));
     }
 
@@ -368,5 +378,68 @@ class SpmPerjaldinController extends Controller
         }
 
         return redirect()->route('spms.perjaldin.detail', $spm->spp_id)->with('success', 'SPM Perjaldin berhasil diajukan untuk verifikasi.');
+    }
+
+    /**
+     * Upload file SPM Bertandatangan.
+     */
+    public function uploadSignedSpm(Request $request, $spm_id)
+    {
+        $spm = DokumenSpm::findOrFail($spm_id);
+
+        if (!in_array($spm->status, [DokumenSpm::STATUS_MENUNGGU_UPLOAD, DokumenSpm::STATUS_SPM_TERBIT, DokumenSpm::STATUS_DISETUJUI_FINAL])) {
+            return back()->withErrors(['error' => 'SPM belum disetujui oleh semua verifikator.']);
+        }
+
+        $request->validate([
+            'file_spm_ttd' => 'required|file|mimes:pdf,jpg,jpeg,png|max:10240',
+        ], [
+            'file_spm_ttd.required' => 'File SPM Bertandatangan wajib diunggah.',
+            'file_spm_ttd.mimes' => 'File harus berformat PDF, JPG, atau PNG.',
+            'file_spm_ttd.max' => 'Ukuran file maksimal 10MB.',
+        ]);
+
+        DB::transaction(function () use ($request, $spm) {
+            $file = $request->file('file_spm_ttd');
+            $namaAsli = $file->getClientOriginalName();
+            $path = $file->store('arsip_spm_signed/' . date('Y'), 'public');
+
+            $spm->arsipDokumen()
+                ->where('jenis_dokumen', DokumenSpm::SPM_SIGNED_ARCHIVE_TYPE)
+                ->where('is_active', true)
+                ->update(['is_active' => false]);
+
+            $spm->arsipDokumen()->create([
+                'jenis_dokumen' => DokumenSpm::SPM_SIGNED_ARCHIVE_TYPE,
+                'nama_file_asli' => $namaAsli,
+                'path_file' => $path,
+                'mime_type' => $file->getMimeType(),
+                'ukuran_file' => $file->getSize(),
+                'uploaded_by' => auth()->id(),
+                'uploaded_at' => now(),
+                'is_active' => true,
+            ]);
+
+            $statusLama = $spm->status;
+            $spm->update(['status' => DokumenSpm::STATUS_SPM_TERBIT]);
+
+            if ($spm->spp && $spm->spp->tagihan) {
+                $spm->spp->tagihan->update(['status' => 'SPM_TERBIT']);
+            }
+
+            LogStatusDokumen::create([
+                'dokumen_type' => DokumenSpm::class,
+                'dokumen_id' => $spm->id,
+                'user_id' => auth()->id(),
+                'role_saat_itu' => auth()->user()?->getRoleNames()->first() ?? 'Operator BLU',
+                'status_sebelumnya' => $statusLama,
+                'status_baru' => DokumenSpm::STATUS_SPM_TERBIT,
+                'aksi' => 'UPLOAD_SPM_BERTANDATANGAN',
+                'catatan' => "File SPM Bertandatangan diunggah: {$namaAsli}. Status SPM berubah menjadi SPM Terbit.",
+                'ip_address' => request()->ip(),
+            ]);
+        });
+
+        return back()->with('success', 'File SPM Bertandatangan berhasil diunggah. Status SPM telah berubah menjadi SPM Terbit.');
     }
 }

@@ -111,9 +111,9 @@
                                 $vendorNama = $kontrak?->vendor?->nama_pihak
                                     ?? $spp->tagihan?->pihak?->nama_pihak
                                     ?? '-';
-                                $uraian     = $termin?->keterangan_termin
-                                    ?? $kontrak?->nama_pekerjaan
+                                $uraian     = $kontrak?->nama_pekerjaan
                                     ?? $spp->tagihan?->deskripsi
+                                    ?? $termin?->keterangan_termin
                                     ?? '-';
                                 $coa        = $spp->dipaRevisionItem?->coa
                                     ?? $spp->tagihan?->dipaRevisionItem?->coa;

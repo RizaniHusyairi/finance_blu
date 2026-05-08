@@ -269,6 +269,57 @@
                     </div>
                 @endif
 
+                @if(in_array($statusNpi, [\App\Models\DokumenNpi::STATUS_MENUNGGU_UPLOAD, \App\Models\DokumenNpi::STATUS_NPI_TERBIT, \App\Models\DokumenNpi::STATUS_DISETUJUI_FINAL]))
+                    <hr>
+                    <h6 class="fw-bold mb-3 text-success"><i class="material-icons-outlined text-success" style="font-size: 16px; margin-bottom: -3px;">upload_file</i> Upload NPI Bertandatangan</h6>
+                    
+                    <div class="card bg-light border-0 shadow-none mb-4">
+                        <div class="card-body">
+                            @if($npiModel->hasSignedNpiFile())
+                                <div class="alert alert-success border-0 d-flex align-items-center mb-3">
+                                    <i class="material-icons-outlined fs-3 me-3">check_circle</i>
+                                    <div>
+                                        <h6 class="alert-heading fw-bold mb-1">NPI Telah Terbit</h6>
+                                        <span class="font-13">File NPI fisik bertandatangan telah diunggah dan disimpan.</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="d-flex align-items-center mb-3 bg-white p-3 rounded border">
+                                    <i class="material-icons-outlined text-danger fs-1 me-3">picture_as_pdf</i>
+                                    <div class="flex-grow-1">
+                                        <h6 class="mb-0 fw-bold">{{ $npiModel->signedNpiArsip->nama_file_asli ?? 'Dokumen NPI' }}</h6>
+                                        <small class="text-muted">Diunggah pada {{ $npiModel->signedNpiArsip->created_at->format('d M Y H:i') }}</small>
+                                    </div>
+                                    <a href="{{ Storage::url($npiModel->signedNpiArsip->path_file) }}" target="_blank" class="btn btn-primary btn-sm px-3"><i class="material-icons-outlined" style="font-size: 16px; margin-bottom: -3px;">download</i> Unduh</a>
+                                </div>
+                                
+                                <hr class="border-dashed">
+                                <p class="mb-2 fw-bold font-13 text-muted">Upload Ulang File NPI Fisik (Opsional)</p>
+                            @else
+                                <div class="alert alert-warning border-0 d-flex align-items-center mb-3">
+                                    <i class="material-icons-outlined fs-3 me-3">warning</i>
+                                    <div>
+                                        <h6 class="alert-heading fw-bold mb-1">Menunggu Upload Fisik</h6>
+                                        <span class="font-13">NPI telah diverifikasi penuh. Silakan cetak, tandatangani, dan unggah scan/foto dokumen NPI untuk menerbitkan NPI dan bisa digunakan sebagai dasar SP2D.</span>
+                                    </div>
+                                </div>
+                            @endif
+                            
+                            <form action="{{ route('npis.perjaldin.upload-signed-npi', $npiModel->id) }}" method="POST" enctype="multipart/form-data">
+                                @csrf
+                                <div class="input-group">
+                                    <input type="file" class="form-control" name="file_npi_ttd" accept=".pdf,.jpg,.jpeg,.png" required>
+                                    <button class="btn btn-success px-4 fw-bold" type="submit"><i class="material-icons-outlined" style="font-size: 16px; margin-bottom: -3px;">upload</i> Unggah</button>
+                                </div>
+                                <small class="text-muted mt-2 d-block">Format: PDF/JPG/PNG. Maks: 10MB.</small>
+                                @error('file_npi_ttd')
+                                    <span class="text-danger small mt-1 d-block"><i class="material-icons-outlined" style="font-size: 14px;">error</i> {{ $message }}</span>
+                                @enderror
+                            </form>
+                        </div>
+                    </div>
+                @endif
+
                 @if(!in_array($statusNpi, ['DRAFT', 'Belum Dibuat', '']))
                     <hr>
                     <h6 class="fw-bold mb-3"><i class="material-icons-outlined text-primary" style="font-size: 16px; margin-bottom: -3px;">account_tree</i> Progress Persetujuan (Paralel)</h6>

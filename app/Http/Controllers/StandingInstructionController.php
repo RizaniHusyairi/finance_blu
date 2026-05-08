@@ -109,10 +109,16 @@ class StandingInstructionController extends Controller
         ]);
 
         $returnUrl = $this->resolveReturnUrl($request, $spp);
+        $action = $request->input('action', 'save');
 
-        return redirect()
-            ->route('standing-instructions.form', ['spp' => $spp->id, 'return_to' => $returnUrl])
-            ->with('success', 'Standing Instruction berhasil disimpan/diperbarui.');
+        if ($action === 'preview') {
+            return redirect()
+                ->route('standing-instructions.form', ['spp' => $spp->id, 'return_to' => $returnUrl])
+                ->with('success', 'Draft tersimpan. Menampilkan preview PDF.');
+        } else {
+            return redirect($returnUrl)
+                ->with('success', 'Standing Instruction berhasil disimpan/diperbarui.');
+        }
     }
 
     public function finalize(Request $request, DokumenSpp $spp)

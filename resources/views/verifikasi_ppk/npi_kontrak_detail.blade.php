@@ -299,9 +299,9 @@
     </div>
 </div>
 
-{{-- PANEL KEPUTUSAN DUAL ROLE --}}
+{{-- MODALS FOR DUAL ROLE --}}
 @if(isset($activeRoleApprovals) && count($activeRoleApprovals) > 0)
-    @foreach($activeRoleApprovals as $index => $approval)
+    @foreach($activeRoleApprovals as $approval)
         @php
             $roleName = $approval['role'];
             $approvalId = $approval['approval_id'];
@@ -309,20 +309,6 @@
             $revisiRouteDynamic = $approval['revisiRoute'];
             $modalSuffix = \Illuminate\Support\Str::slug($roleName) . '_' . $approvalId;
         @endphp
-        <div class="card border-0 shadow-sm mb-4 border-top border-4 border-warning">
-            <div class="card-body p-4 text-center">
-                <h5 class="fw-bold mb-2"><i class="material-icons-outlined align-middle text-warning me-1">gavel</i> Keputusan Anda ({{ $roleName }})</h5>
-                <p class="text-muted mb-3">NPI ini menunggu tindakan verifikasi dari Anda sebagai {{ $roleName }}.</p>
-                <div class="d-flex gap-3 justify-content-center">
-                    <button type="button" class="btn btn-success px-4" data-bs-toggle="modal" data-bs-target="#modalApprove_{{ $modalSuffix }}">
-                        <i class="material-icons-outlined" style="font-size:16px; vertical-align: middle;">check_circle</i> Setujui NPI ({{ $roleName }})
-                    </button>
-                    <button type="button" class="btn btn-outline-danger px-4" data-bs-toggle="modal" data-bs-target="#modalRevisi_{{ $modalSuffix }}">
-                        <i class="material-icons-outlined" style="font-size:16px; vertical-align: middle;">replay</i> Minta Revisi ({{ $roleName }})
-                    </button>
-                </div>
-            </div>
-        </div>
 
         {{-- MODAL APPROVE --}}
         <div class="modal fade" id="modalApprove_{{ $modalSuffix }}" tabindex="-1">
@@ -378,6 +364,32 @@
             </div>
         </div>
     @endforeach
+
+    {{-- FIXED BOTTOM ACTION BAR --}}
+    <div class="npi-fixed-action-bar">
+        <div class="container-fluid">
+            <div class="d-flex align-items-center justify-content-between gap-3 flex-wrap">
+                <div class="d-flex align-items-center gap-2 text-white">
+                    <i class="material-icons-outlined" style="font-size: 22px;">verified</i>
+                    <div>
+                        <div class="fw-bold" style="font-size: 0.9rem;">NPI Kontrak: {{ $npi->nomor_npi ?? '-' }}</div>
+                        <div style="font-size: 0.75rem; opacity: 0.8;">Rp {{ number_format($nominalNpi, 0, ',', '.') }} &bull; {{ $kontrak?->nama_pekerjaan ?? '-' }}</div>
+                    </div>
+                </div>
+                <div class="d-flex gap-2 flex-wrap">
+                    @foreach($activeRoleApprovals as $approval)
+                        @php $modalSuffix = \Illuminate\Support\Str::slug($approval['role']) . '_' . $approval['approval_id']; @endphp
+                        <button type="button" class="btn btn-light fw-bold px-3 py-2 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalRevisi_{{ $modalSuffix }}">
+                            <i class="material-icons-outlined me-1" style="font-size: 16px; vertical-align: middle;">replay</i> Revisi ({{ $approval['role'] }})
+                        </button>
+                        <button type="button" class="btn btn-success fw-bold px-3 py-2 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalApprove_{{ $modalSuffix }}">
+                            <i class="material-icons-outlined me-1" style="font-size: 16px; vertical-align: middle;">check_circle</i> Setujui ({{ $approval['role'] }})
+                        </button>
+                    @endforeach
+                </div>
+            </div>
+        </div>
+    </div>
 @elseif(isset($canApprove) && $canApprove)
     <div class="alert alert-warning text-center">
         Tombol aksi tidak tersedia. Terjadi kesalahan pada konfigurasi multi-role.
@@ -425,3 +437,39 @@
     </div>
 @endif
 @endsection
+
+@push('css')
+<style>
+    .npi-fixed-action-bar {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 1050;
+        background: linear-gradient(135deg, #1e293b, #334155);
+        border-top: 3px solid #10b981;
+        padding: 0.85rem 1.5rem;
+        box-shadow: 0 -4px 20px rgba(0,0,0,0.2);
+        animation: slideUpBar 0.4s ease-out;
+    }
+    @keyframes slideUpBar {
+        from { transform: translateY(100%); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
+    .npi-fixed-action-bar .btn-success {
+        background: linear-gradient(135deg, #10b981, #059669);
+        border: none;
+    }
+    .npi-fixed-action-bar .btn-success:hover {
+        background: linear-gradient(135deg, #059669, #047857);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(16,185,129,0.4);
+    }
+    .npi-fixed-action-bar .btn-light:hover {
+        background: #fee2e2;
+        color: #dc2626;
+        border-color: #fca5a5;
+    }
+    body { padding-bottom: 90px; }
+</style>
+@endpush

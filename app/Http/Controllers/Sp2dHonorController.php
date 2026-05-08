@@ -38,7 +38,8 @@ class Sp2dHonorController extends Controller
         })
         ->whereIn('status', [
             DokumenNpi::STATUS_DISETUJUI_FINAL,
-            DokumenNpi::STATUS_APPROVED_KASUBAG 
+            DokumenNpi::STATUS_APPROVED_KASUBAG,
+            DokumenNpi::STATUS_NPI_TERBIT
         ]);
 
         $allNpis = $query->latest()->get();
@@ -121,7 +122,7 @@ class Sp2dHonorController extends Controller
         ->whereHas('spm.spp.tagihan', function($q) {
             $q->where('tipe_tagihan', 'HONORARIUM');
         })
-        ->whereIn('status', [DokumenNpi::STATUS_DISETUJUI_FINAL, DokumenNpi::STATUS_APPROVED_KASUBAG])
+        ->whereIn('status', [DokumenNpi::STATUS_DISETUJUI_FINAL, DokumenNpi::STATUS_APPROVED_KASUBAG, DokumenNpi::STATUS_NPI_TERBIT])
         ->findOrFail($npiId);
 
         $spm = $npi->spm;

@@ -6,6 +6,7 @@ use App\Models\Tagihan;
 use App\Models\LogStatusDokumen;
 use App\Models\User;
 use App\Notifications\WorkflowNotification;
+use App\Services\TagihanReadyForSppNotificationService;
 use App\Services\WorkflowService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -198,6 +199,7 @@ class PpkHonorariumVerifikasiController extends Controller
         $tagihan = Tagihan::findOrFail($id);
 
         DB::transaction(function () use ($tagihan, $request) {
+            $statusSebelumnya = $tagihan->status;
             $workflowService = app(WorkflowService::class);
             $instance = $workflowService->approveCurrentStep($tagihan, auth()->id(), $request->input('catatan'));
 
@@ -206,7 +208,7 @@ class PpkHonorariumVerifikasiController extends Controller
                 'dokumen_id' => $tagihan->id,
                 'user_id' => auth()->id(),
                 'role_saat_itu' => $this->activeRoleCode(),
-                'status_sebelumnya' => $tagihan->status,
+                'status_sebelumnya' => $statusSebelumnya,
                 'status_baru' => $instance->status === 'APPROVED' ? 'DISETUJUI' : $tagihan->status,
                 'aksi' => 'APPROVE_' . strtoupper(str_replace(' ', '_', $this->activeRoleCode())),
                 'catatan' => $request->input('catatan', 'Honorarium disetujui ' . $this->activeRoleCode() . '.'),
@@ -215,6 +217,7 @@ class PpkHonorariumVerifikasiController extends Controller
 
             if ($instance->status === 'APPROVED') {
                 $tagihan->update(['status' => 'DISETUJUI']);
+                app(TagihanReadyForSppNotificationService::class)->notifyIfNewlyReady($tagihan, $statusSebelumnya);
             }
         });
 

@@ -81,6 +81,19 @@ class PaymentPdfReference
         };
     }
 
+    public static function uraianForTagihan(?Tagihan $tagihan, ?string $fallbackUraian = null): string
+    {
+        if (! $tagihan) {
+            return self::valueOrDash($fallbackUraian);
+        }
+
+        if ($tagihan->tipe_tagihan === 'KONTRAK') {
+            return self::contractUraian($tagihan, $fallbackUraian);
+        }
+
+        return self::valueOrDash(self::firstFilled($tagihan->deskripsi, $fallbackUraian));
+    }
+
     private static function contractReference(Tagihan $tagihan): array
     {
         $detail = $tagihan->detailKontrak;
@@ -138,13 +151,22 @@ class PaymentPdfReference
             'rekening' => self::valueOrDash($rekening?->nomor_rekening),
             'alamat' => self::valueOrDash($vendor?->alamat),
             'nama_rekening' => self::valueOrDash($rekening?->nama_rekening ?? $vendor?->nama_pihak),
-            'uraian' => self::valueOrDash(self::firstFilled(
-                $tagihan->deskripsi,
-                $fallbackUraian,
-                $termin?->keterangan_termin,
-                $kontrak?->nama_pekerjaan
-            )),
+            'uraian' => self::contractUraian($tagihan, $fallbackUraian),
         ];
+    }
+
+    private static function contractUraian(Tagihan $tagihan, ?string $fallbackUraian): string
+    {
+        $detail = $tagihan->detailKontrak;
+        $termin = $detail?->kontrakTermin;
+        $kontrak = $termin?->kontrak;
+
+        return self::valueOrDash(self::firstFilled(
+            $kontrak?->nama_pekerjaan,
+            $fallbackUraian,
+            $tagihan->deskripsi,
+            $termin?->keterangan_termin
+        ));
     }
 
     private static function attachedSupplier(?string $uraian = null, ?string $namaSupplier = null): array

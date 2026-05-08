@@ -24,7 +24,7 @@ class NpiPerjaldinController extends Controller
         $query = DokumenSpm::whereHas('spp', function($q) {
                 $q->whereNotNull('tagihan_perjaldin_komponen_id');
             })
-            ->whereIn('status', [DokumenSpm::STATUS_DISETUJUI_FINAL, DokumenSpm::STATUS_APPROVED_KASUBAG])
+            ->whereIn('status', [DokumenSpm::STATUS_SPM_TERBIT, DokumenSpm::STATUS_DISETUJUI_FINAL, DokumenSpm::STATUS_APPROVED_KASUBAG])
             ->with([
                 'npi',
                 'npi.workflowInstances.approvals',
@@ -316,5 +316,69 @@ class NpiPerjaldinController extends Controller
         }
 
         return redirect()->route('npis.perjaldin.detail', $spm->id)->with('success', 'NPI berhasil diajukan untuk verifikasi paralel.');
+    }
+
+    /**
+     * Upload file NPI Bertandatangan.
+     */
+    public function uploadSignedNpi(Request $request, $npi_id)
+    {
+        $npi = DokumenNpi::findOrFail($npi_id);
+
+        if (!in_array($npi->status, [DokumenNpi::STATUS_MENUNGGU_UPLOAD, DokumenNpi::STATUS_NPI_TERBIT, DokumenNpi::STATUS_DISETUJUI_FINAL])) {
+            return back()->withErrors(['error' => 'NPI belum disetujui oleh semua verifikator.']);
+        }
+
+        $request->validate([
+            'file_npi_ttd' => 'required|file|mimes:pdf,jpg,jpeg,png|max:10240',
+        ], [
+            'file_npi_ttd.required' => 'File NPI Bertandatangan wajib diunggah.',
+            'file_npi_ttd.mimes' => 'File harus berformat PDF, JPG, atau PNG.',
+            'file_npi_ttd.max' => 'Ukuran file maksimal 10MB.',
+        ]);
+
+        DB::transaction(function () use ($request, $npi) {
+            $file = $request->file('file_npi_ttd');
+            $namaAsli = $file->getClientOriginalName();
+            $path = $file->store('arsip_npi_signed/' . date('Y'), 'public');
+
+            // Nonaktifkan arsip lama (jika ada re-upload)
+            $npi->arsipDokumen()
+                ->where('jenis_dokumen', DokumenNpi::NPI_SIGNED_ARCHIVE_TYPE)
+                ->where('is_active', true)
+                ->update(['is_active' => false]);
+
+            // Buat arsip baru
+            $npi->arsipDokumen()->create([
+                'jenis_dokumen' => DokumenNpi::NPI_SIGNED_ARCHIVE_TYPE,
+                'nama_file_asli' => $namaAsli,
+                'path_file' => $path,
+                'mime_type' => $file->getMimeType(),
+                'ukuran_file' => $file->getSize(),
+                'uploaded_by' => auth()->id(),
+                'uploaded_at' => now(),
+                'is_active' => true,
+            ]);
+
+            // Update status ke NPI_TERBIT
+            if ($npi->status !== DokumenNpi::STATUS_NPI_TERBIT) {
+                $statusSebelumnya = $npi->status;
+                $npi->update(['status' => DokumenNpi::STATUS_NPI_TERBIT]);
+
+                LogStatusDokumen::create([
+                    'dokumen_type' => DokumenNpi::class,
+                    'dokumen_id' => $npi->id,
+                    'user_id' => auth()->id(),
+                    'role_saat_itu' => auth()->user()?->getRoleNames()->first() ?? 'Bendahara Pengeluaran',
+                    'status_sebelumnya' => $statusSebelumnya,
+                    'status_baru' => DokumenNpi::STATUS_NPI_TERBIT,
+                    'aksi' => 'UPLOAD_SIGNED_NPI',
+                    'catatan' => 'File fisik NPI yang telah ditandatangani berhasil diunggah.',
+                    'ip_address' => request()->ip(),
+                ]);
+            }
+        });
+
+        return back()->with('success', 'File NPI Bertandatangan berhasil diunggah dan NPI resmi terbit.');
     }
 }

@@ -323,10 +323,10 @@ class PpspmSpmKontrakVerifikasiController extends Controller
 
             if ($workflowFullyApproved) {
                 // Jika semua workflow (termasuk kasubbag) sudah approve, SPM -> Final
-                $spm->update(['status' => DokumenSpm::STATUS_DISETUJUI_FINAL]);
+                $spm->update(['status' => DokumenSpm::STATUS_MENUNGGU_UPLOAD]);
             }
 
-            $statusBaru = $workflowFullyApproved ? DokumenSpm::STATUS_DISETUJUI_FINAL : "Disetujui {$roleName}";
+            $statusBaru = $workflowFullyApproved ? DokumenSpm::STATUS_MENUNGGU_UPLOAD : "Disetujui {$roleName}";
 
             LogStatusDokumen::create([
                 'dokumen_type' => DokumenSpm::class,
@@ -345,8 +345,8 @@ class PpspmSpmKontrakVerifikasiController extends Controller
             if ($workflowFullyApproved) {
                 $operators = User::role('Operator BLU')->get();
                 Notification::send($operators, new WorkflowNotification([
-                    'title' => 'SPM Kontrak Disetujui Final',
-                    'message' => "SPM {$spm->nomor_spm} telah disetujui oleh semua pihak dan disahkan.",
+                    'title' => 'SPM Kontrak Menunggu Upload',
+                    'message' => "SPM {$spm->nomor_spm} telah disetujui oleh semua pihak. Silakan cetak, tandatangani, dan upload scan SPM.",
                     'url' => route('spms.kontrak.detail', $spm->spp_id),
                     'icon' => 'verified',
                     'color' => 'success'

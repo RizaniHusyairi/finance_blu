@@ -161,6 +161,7 @@ class KasubbagSpmKontrakVerifikasiController extends Controller
 
         $ppspmApproval = $wf->approvals->where('role_code', 'PPSPM')->first();
         $kasubbagApproval = $wf->approvals->where('role_code', 'Kepala Subbagian Keuangan dan Tata Usaha')->first();
+        $koordinatorApproval = $wf->approvals->where('role_code', 'Koordinator Keuangan')->first();
         $operatorApproval = collect(['status' => 'APPROVED', 'acted_by_user_id' => $spmModel->dibuat_oleh_id, 'acted_at' => $spmModel->created_at]);
 
         if ($wf->status === 'REVISION') {
@@ -208,6 +209,7 @@ class KasubbagSpmKontrakVerifikasiController extends Controller
             'wf',
             'ppspmApproval',
             'kasubbagApproval',
+            'koordinatorApproval',
             'operatorApproval',
             'statusFinal',
             'canAct',
@@ -231,10 +233,10 @@ class KasubbagSpmKontrakVerifikasiController extends Controller
 
             if ($workflowFullyApproved) {
                 // Jika semua workflow (termasuk PPSPM) sudah approve, SPM -> Final
-                $spm->update(['status' => DokumenSpm::STATUS_DISETUJUI_FINAL]);
+                $spm->update(['status' => DokumenSpm::STATUS_MENUNGGU_UPLOAD]);
             }
 
-            $statusBaru = $workflowFullyApproved ? DokumenSpm::STATUS_DISETUJUI_FINAL : 'Disetujui Kasubbag';
+            $statusBaru = $workflowFullyApproved ? DokumenSpm::STATUS_MENUNGGU_UPLOAD : 'Disetujui Kasubbag';
 
             // Catat log
             // Cek log status terbaru untuk menghindari duplicate log jika tidak perlu - tapi lebih baik catat saja
@@ -256,8 +258,8 @@ class KasubbagSpmKontrakVerifikasiController extends Controller
                 // Notif semua sudah selesai
                 $operators = User::role('Operator BLU')->get();
                 Notification::send($operators, new WorkflowNotification([
-                    'title' => 'SPM Kontrak Disetujui Final',
-                    'message' => "SPM {$spm->nomor_spm} telah disetujui oleh semua pihak dan disahkan.",
+                    'title' => 'SPM Kontrak Menunggu Upload',
+                    'message' => "SPM {$spm->nomor_spm} telah disetujui oleh semua pihak. Silakan cetak, tandatangani, dan upload scan SPM.",
                     'url' => route('spms.kontrak.detail', $spm->spp_id),
                     'icon' => 'verified',
                     'color' => 'success'

@@ -42,7 +42,8 @@ class Sp2dPerjaldinController extends Controller
         })
         ->whereIn('status', [
             DokumenNpi::STATUS_DISETUJUI_FINAL,
-            DokumenNpi::STATUS_APPROVED_KASUBAG // fallback legacy
+            DokumenNpi::STATUS_APPROVED_KASUBAG, // fallback legacy
+            DokumenNpi::STATUS_NPI_TERBIT
         ]);
 
         $allNpis = $query->latest()->get();
@@ -126,7 +127,7 @@ class Sp2dPerjaldinController extends Controller
         ->whereHas('spm.spp', function($q) {
             $q->whereNotNull('tagihan_perjaldin_komponen_id');
         })
-        ->whereIn('status', [DokumenNpi::STATUS_DISETUJUI_FINAL, DokumenNpi::STATUS_APPROVED_KASUBAG])
+        ->whereIn('status', [DokumenNpi::STATUS_DISETUJUI_FINAL, DokumenNpi::STATUS_APPROVED_KASUBAG, DokumenNpi::STATUS_NPI_TERBIT])
         ->findOrFail($npiId);
 
         $spm = $npi->spm;
@@ -182,7 +183,7 @@ class Sp2dPerjaldinController extends Controller
         $npi = DokumenNpi::whereHas('spm.spp', function($q) {
             $q->whereNotNull('tagihan_perjaldin_komponen_id');
         })
-        ->whereIn('status', [DokumenNpi::STATUS_DISETUJUI_FINAL, DokumenNpi::STATUS_APPROVED_KASUBAG])
+        ->whereIn('status', [DokumenNpi::STATUS_DISETUJUI_FINAL, DokumenNpi::STATUS_APPROVED_KASUBAG, DokumenNpi::STATUS_NPI_TERBIT])
         ->findOrFail($npiId);
 
         $sp2d = $npi->sp2d;

@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Support\PaymentPdfReference;
+
 class Spp extends DokumenSpp
 {
     public function getMorphClass()
@@ -23,6 +25,10 @@ class Spp extends DokumenSpp
 
     public function getUraianAttribute()
     {
+        if ($this->tagihan?->tipe_tagihan === 'KONTRAK') {
+            return PaymentPdfReference::uraianForTagihan($this->tagihan, $this->attributes['uraian'] ?? null);
+        }
+
         return $this->attributes['uraian']
             ?? optional($this->tagihan)->deskripsi
             ?? 'Belanja Perjalanan Dinas';

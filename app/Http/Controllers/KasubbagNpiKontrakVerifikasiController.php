@@ -248,14 +248,14 @@ class KasubbagNpiKontrakVerifikasiController extends Controller
                 'user_id' => auth()->id(),
                 'role_saat_itu' => 'Kepala Subbagian Keuangan dan Tata Usaha',
                 'status_sebelumnya' => $npi->status,
-                'status_baru' => $instance->status === 'APPROVED' ? DokumenNpi::STATUS_DISETUJUI_FINAL : $npi->status,
+                'status_baru' => $instance->status === 'APPROVED' ? DokumenNpi::STATUS_MENUNGGU_UPLOAD : $npi->status,
                 'aksi' => 'APPROVE_KASUBBAG_NPI',
-                'catatan' => $request->input('catatan', 'NPI disetujui Kasubbag.'),
+                'catatan' => $request->input('catatan', 'NPI disetujui Kasubbag. Menunggu Upload Fisik NPI.'),
                 'ip_address' => request()->ip(),
             ]);
 
             if ($instance->status === 'APPROVED') {
-                $npi->update(['status' => DokumenNpi::STATUS_DISETUJUI_FINAL]);
+                $npi->update(['status' => DokumenNpi::STATUS_MENUNGGU_UPLOAD]);
             }
         });
 

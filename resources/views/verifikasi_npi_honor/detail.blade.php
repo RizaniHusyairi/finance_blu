@@ -257,34 +257,14 @@
 
         {{-- D. KOLOM KANAN (Aksi & Log) --}}
         <div class="col-xl-5">
-            <div class="sticky-top" style="top: 1.5rem; z-index: 1;">
 
-                {{-- PANEL AKSI VERIFIKASI (JIKA BISA BERTINDAK) --}}
+                {{-- STATUS NOTICE --}}
                 @if($canVerify)
-                    <div class="card action-card mb-4">
-                        <div class="card-header bg-success bg-gradient text-white p-3 rounded-top-3 border-0">
-                            <h6 class="mb-0 fw-bold"><i class="bi bi-shield-check me-2"></i> Eksekusi Verifikasi Anda ({{ $roleCode }})</h6>
-                        </div>
-                        <div class="card-body p-4 bg-white rounded-bottom-3">
-                            <form action="{{ route('verifikasi-npi.honor.approve', $npi->id) }}" method="POST" class="mb-3" onsubmit="return confirm('Apakah Anda yakin menyetujui form NPI Honorarium ini?');">
-                                @csrf
-                                <div class="mb-3">
-                                    <label class="form-label small fw-semibold text-dark">Catatan Persetujuan (Opsional)</label>
-                                    <textarea name="catatan" class="form-control form-control-sm" rows="2" placeholder="Sampaikan pesan mufakat NPI..."></textarea>
-                                </div>
-                                <button type="submit" class="btn btn-success w-100 fw-bold py-2 shadow-sm"><i class="bi bi-check-circle me-1"></i> SETUJUI NPI HONOARIUM</button>
-                            </form>
-
-                            <hr class="my-4 border-secondary border-dashed opacity-25">
-                            
-                            <form action="{{ route('verifikasi-npi.honor.reject', $npi->id) }}" method="POST" onsubmit="return confirm('NPI ini akan langsung dikembalikan menjadi Revisi. Lanjutkan penolakan?');">
-                                @csrf
-                                <div class="mb-3">
-                                    <label class="form-label small fw-semibold text-dark">Catatan Penolakan / Revisi <span class="text-danger">*</span></label>
-                                    <textarea name="catatan" class="form-control form-control-sm border-danger border-opacity-50" rows="2" required placeholder="Jelaskan secara tajam alasan berkas wajib direvisi ulang..."></textarea>
-                                </div>
-                                <button type="submit" class="btn btn-outline-danger w-100 fw-bold"><i class="bi bi-x-circle me-1"></i> TOLAK & MINTA REVISI DRAF NPI</button>
-                            </form>
+                    <div class="alert alert-warning border-0 shadow-sm d-flex align-items-center gap-2 mb-4 py-3 px-4">
+                        <span class="spinner-grow spinner-grow-sm text-warning" role="status" aria-hidden="true"></span>
+                        <div>
+                            <div class="fw-bold text-dark">Menunggu Aksi Anda ({{ $roleCode }})</div>
+                            <div class="small text-muted">Gunakan tombol di bawah layar untuk memberikan keputusan.</div>
                         </div>
                     </div>
                 @else
@@ -320,7 +300,123 @@
                     </div>
                 </div>
 
+        </div>
+    </div>
+
+{{-- MODALS --}}
+@if($canVerify)
+    {{-- Modal Approve --}}
+    <div class="modal fade" id="modalApproveHonor" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header bg-success text-white border-0">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-check-circle me-1"></i> Setujui NPI Honorarium?</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form action="{{ route('verifikasi-npi.honor.approve', $npi->id) }}" method="POST">
+                    @csrf
+                    <div class="modal-body">
+                        <p>Anda akan menyetujui NPI Honorarium <strong>{{ $npi->nomor_npi ?? 'DRAFT' }}</strong> sebagai <strong>{{ $roleCode }}</strong>.</p>
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Catatan Persetujuan (Opsional)</label>
+                            <textarea name="catatan" class="form-control" rows="2" placeholder="Sampaikan pesan mufakat NPI..."></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer border-0">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
+                        <button type="submit" class="btn btn-success px-4 fw-bold">Ya, Setujui NPI</button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
+
+    {{-- Modal Revisi --}}
+    <div class="modal fade" id="modalRevisiHonor" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header bg-danger text-white border-0">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-x-circle me-1"></i> Tolak & Minta Revisi?</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form action="{{ route('verifikasi-npi.honor.reject', $npi->id) }}" method="POST">
+                    @csrf
+                    <div class="modal-body">
+                        <p class="text-muted small">NPI <strong>{{ $npi->nomor_npi ?? 'DRAFT' }}</strong> akan dikembalikan untuk diperbaiki oleh Bendahara Pengeluaran.</p>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Catatan Revisi <span class="text-danger">*</span></label>
+                            <textarea name="catatan" class="form-control border-danger border-opacity-50" rows="3" required placeholder="Jelaskan secara detail apa yang harus diperbaiki..."></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer border-0">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
+                        <button type="submit" class="btn btn-danger px-4 fw-bold">Kembalikan NPI</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+@endif
+
+{{-- FIXED BOTTOM ACTION BAR --}}
+@if($canVerify)
+<div class="npi-fixed-action-bar">
+    <div class="container-fluid">
+        <div class="d-flex align-items-center justify-content-between gap-3 flex-wrap">
+            <div class="d-flex align-items-center gap-2 text-white">
+                <i class="bi bi-shield-check" style="font-size: 22px;"></i>
+                <div>
+                    <div class="fw-bold" style="font-size: 0.9rem;">NPI Honorarium: {{ $npi->nomor_npi ?? 'DRAFT' }}</div>
+                    <div style="font-size: 0.75rem; opacity: 0.8;">Rp {{ number_format($spm->nominal_spm ?? $tagihan?->total_netto ?? 0, 0, ',', '.') }} &bull; {{ $roleCode }}</div>
+                </div>
+            </div>
+            <div class="d-flex gap-2 flex-wrap">
+                <button type="button" class="btn btn-light fw-bold px-4 py-2 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalRevisiHonor">
+                    <i class="bi bi-x-circle me-1"></i> Revisi
+                </button>
+                <button type="button" class="btn btn-success fw-bold px-4 py-2 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalApproveHonor">
+                    <i class="bi bi-check-circle me-1"></i> Setujui NPI Honorarium
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+@endif
+
 @endsection
+
+@push('css')
+<style>
+    .npi-fixed-action-bar {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 1050;
+        background: linear-gradient(135deg, #1e293b, #334155);
+        border-top: 3px solid #10b981;
+        padding: 0.85rem 1.5rem;
+        box-shadow: 0 -4px 20px rgba(0,0,0,0.2);
+        animation: slideUpBar 0.4s ease-out;
+    }
+    @keyframes slideUpBar {
+        from { transform: translateY(100%); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
+    .npi-fixed-action-bar .btn-success {
+        background: linear-gradient(135deg, #10b981, #059669);
+        border: none;
+    }
+    .npi-fixed-action-bar .btn-success:hover {
+        background: linear-gradient(135deg, #059669, #047857);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(16,185,129,0.4);
+    }
+    .npi-fixed-action-bar .btn-light:hover {
+        background: #fee2e2;
+        color: #dc2626;
+        border-color: #fca5a5;
+    }
+    body { padding-bottom: 90px; }
+</style>
+@endpush

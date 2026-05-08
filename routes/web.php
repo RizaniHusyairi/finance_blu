@@ -440,6 +440,9 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
         Route::get('/spps/kontrak/{contract}/detail', [\App\Http\Controllers\SppController::class, 'detailKontrak'])->name('spps.kontrak.detail');
         Route::post('/spps/kontrak/{contract}', [\App\Http\Controllers\SppController::class, 'storeKontrak'])->name('spps.kontrak.store');
         Route::post('/spps/kontrak/{contract}/submit', [\App\Http\Controllers\SppController::class, 'submitKontrakToPpk'])->name('spps.kontrak.submit');
+
+        // Upload SPP Bertandatangan (shared across all SPP types)
+        Route::post('/spps/{spp}/upload-signed', [\App\Http\Controllers\SppController::class, 'uploadSignedSpp'])->name('spps.upload-signed');
     });
 
     // Cetak PDF SPP/SPM/NPI bisa diakses oleh berbagai role terkait
@@ -461,18 +464,21 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
         Route::get('/spms/perjaldin/{spp}/detail', [\App\Http\Controllers\SpmPerjaldinController::class, 'show'])->name('spms.perjaldin.detail');
         Route::post('/spms/perjaldin/{spp}/store', [\App\Http\Controllers\SpmPerjaldinController::class, 'store'])->name('spms.perjaldin.store');
         Route::post('/spms/perjaldin/{spp}/submit', [\App\Http\Controllers\SpmPerjaldinController::class, 'submit'])->name('spms.perjaldin.submit');
+        Route::post('/spms/perjaldin/{spm}/upload-signed-spm', [\App\Http\Controllers\SpmPerjaldinController::class, 'uploadSignedSpm'])->name('spms.perjaldin.upload-signed-spm');
 
         // SPM Kontrak
         Route::get('/spms/kontrak', [\App\Http\Controllers\SpmKontrakController::class, 'index'])->name('spms.kontrak.index');
         Route::get('/spms/kontrak/{spp}/detail', [\App\Http\Controllers\SpmKontrakController::class, 'show'])->name('spms.kontrak.detail');
         Route::post('/spms/kontrak/{spp}/store', [\App\Http\Controllers\SpmKontrakController::class, 'store'])->name('spms.kontrak.store');
         Route::post('/spms/kontrak/{spp}/submit', [\App\Http\Controllers\SpmKontrakController::class, 'submit'])->name('spms.kontrak.submit');
+        Route::post('/spms/kontrak/{spm}/upload-signed-spm', [\App\Http\Controllers\SpmKontrakController::class, 'uploadSignedSpm'])->name('spms.kontrak.upload-signed-spm');
 
         // SPM Honorarium
         Route::get('/spms/honor', [\App\Http\Controllers\SpmHonorController::class, 'index'])->name('spms.honor.index');
         Route::get('/spms/honor/{spp}/detail', [\App\Http\Controllers\SpmHonorController::class, 'show'])->name('spms.honor.detail');
         Route::post('/spms/honor/{spp}/store', [\App\Http\Controllers\SpmHonorController::class, 'store'])->name('spms.honor.store');
         Route::post('/spms/honor/{spp}/submit', [\App\Http\Controllers\SpmHonorController::class, 'submit'])->name('spms.honor.submit');
+        Route::post('/spms/honor/{spm}/upload-signed-spm', [\App\Http\Controllers\SpmHonorController::class, 'uploadSignedSpm'])->name('spms.honor.upload-signed-spm');
     });
 
     // ==== MODUL VERIFIKASI SPM (PPSPM) ====
@@ -539,12 +545,14 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
         Route::get('/npis/perjaldin/{id}/detail', [\App\Http\Controllers\NpiPerjaldinController::class, 'show'])->name('npis.perjaldin.detail');
         Route::post('/npis/perjaldin/{id}/store', [\App\Http\Controllers\NpiPerjaldinController::class, 'store'])->name('npis.perjaldin.store');
         Route::post('/npis/perjaldin/{id}/submit', [\App\Http\Controllers\NpiPerjaldinController::class, 'submit'])->name('npis.perjaldin.submit');
+        Route::post('/npis/perjaldin/{npi}/upload-signed-npi', [\App\Http\Controllers\NpiPerjaldinController::class, 'uploadSignedNpi'])->name('npis.perjaldin.upload-signed-npi');
 
         // NPI Honorarium
         Route::get('/npis/honor', [\App\Http\Controllers\NpiHonorController::class, 'index'])->name('npis.honor.index');
         Route::get('/npis/honor/{spm}/detail', [\App\Http\Controllers\NpiHonorController::class, 'show'])->name('npis.honor.detail');
         Route::post('/npis/honor/{spm}/store', [\App\Http\Controllers\NpiHonorController::class, 'store'])->name('npis.honor.store');
         Route::post('/npis/honor/{spm}/submit', [\App\Http\Controllers\NpiHonorController::class, 'submit'])->name('npis.honor.submit');
+        Route::post('/npis/honor/{npi}/upload-signed-npi', [\App\Http\Controllers\NpiHonorController::class, 'uploadSignedNpi'])->name('npis.honor.upload-signed-npi');
 
         // NPI Legacy (if needed)
         Route::get('/npis', [\App\Http\Controllers\NpiController::class, 'index'])->name('npis.index');
@@ -555,6 +563,7 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
         Route::get('/npis/kontrak/{spm}/detail', [\App\Http\Controllers\NpiKontrakController::class, 'show'])->name('npis.kontrak.detail');
         Route::post('/npis/kontrak/{spm}/store', [\App\Http\Controllers\NpiKontrakController::class, 'store'])->name('npis.kontrak.store');
         Route::post('/npis/kontrak/{spm}/submit', [\App\Http\Controllers\NpiKontrakController::class, 'submit'])->name('npis.kontrak.submit');
+        Route::post('/npis/kontrak/{npi}/upload-signed-npi', [\App\Http\Controllers\NpiKontrakController::class, 'uploadSignedNpi'])->name('npis.kontrak.upload-signed-npi');
     });
 
     // ==== MODUL SP2D & BKU — Bendahara Pengeluaran ====

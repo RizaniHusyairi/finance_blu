@@ -95,7 +95,7 @@ class VerifikasiSpmHonorController extends Controller
                 return true;
             });
             
-            if ($spm->status === DokumenSpm::STATUS_DISETUJUI_FINAL) {
+            if (in_array($spm->status, [DokumenSpm::STATUS_DISETUJUI_FINAL, DokumenSpm::STATUS_MENUNGGU_UPLOAD, DokumenSpm::STATUS_SPM_TERBIT])) {
                 $summary['selesai']++;
             } elseif ($myApprovals->contains('status', 'PENDING')) {
                 $summary['pending']++;
@@ -127,9 +127,9 @@ class VerifikasiSpmHonorController extends Controller
             });
 
             if ($statusFilter === 'selesai') {
-                 $query->where('status', DokumenSpm::STATUS_DISETUJUI_FINAL);
+                 $query->whereIn('status', [DokumenSpm::STATUS_DISETUJUI_FINAL, DokumenSpm::STATUS_MENUNGGU_UPLOAD, DokumenSpm::STATUS_SPM_TERBIT]);
             } elseif ($statusFilter === 'pending') {
-                 $query->where('status', '!=', DokumenSpm::STATUS_DISETUJUI_FINAL);
+                 $query->whereNotIn('status', [DokumenSpm::STATUS_DISETUJUI_FINAL, DokumenSpm::STATUS_MENUNGGU_UPLOAD, DokumenSpm::STATUS_SPM_TERBIT]);
             }
         }
 
@@ -204,6 +204,7 @@ class VerifikasiSpmHonorController extends Controller
 
         $ppspmApproval = $baseApprovals->firstWhere('role_code', 'PPSPM');
         $kasubbagApproval = $baseApprovals->firstWhere('role_code', 'Kepala Subbagian Keuangan dan Tata Usaha');
+        $koordinatorApproval = $baseApprovals->firstWhere('role_code', 'Koordinator Keuangan');
         
         $myApproval = $baseApprovals->firstWhere('role_code', $roleCode);
         
@@ -278,11 +279,8 @@ class VerifikasiSpmHonorController extends Controller
                 // Do nothing, biar yang nolak aja yg update main status SPM
             } elseif ($semuaDisetujui) {
                 $statusLama = $spm->status;
-                $spm->update(['status' => DokumenSpm::STATUS_DISETUJUI_FINAL]);
+                $spm->update(['status' => DokumenSpm::STATUS_MENUNGGU_UPLOAD]);
                 $instance->update(['status' => 'APPROVED']);
-
-                // Menaikkan Status Asli Tagihan sesuai Open Questions (Opsional tp penting)
-                $spm->spp->tagihan->update(['status' => 'SPM_TERBIT']);
 
                 LogStatusDokumen::create([
                     'dokumen_type' => DokumenSpm::class,
@@ -290,9 +288,9 @@ class VerifikasiSpmHonorController extends Controller
                     'user_id' => $user->id,
                     'role_saat_itu' => 'Sistem Verifikasi',
                     'status_sebelumnya' => $statusLama,
-                    'status_baru' => DokumenSpm::STATUS_DISETUJUI_FINAL,
-                    'aksi' => 'SPM_DISETUJUI_FINAL',
-                    'catatan' => 'Verifikasi SPM diotorisasi sepenuhnya oleh seluruh Verifikator Paralel.',
+                    'status_baru' => DokumenSpm::STATUS_MENUNGGU_UPLOAD,
+                    'aksi' => 'SPM_MENUNGGU_UPLOAD',
+                    'catatan' => 'Verifikasi SPM diotorisasi sepenuhnya. Menunggu operator upload dokumen SPM.',
                     'ip_address' => request()->ip()
                 ]);
             }

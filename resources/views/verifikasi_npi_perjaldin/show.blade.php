@@ -161,29 +161,12 @@
     <div class="col-12 col-lg-5">
 
         @if($canAct)
-            <!-- Panel Aksi Verifikasi Aktif -->
-            <div class="card radius-10 shadow border-0 border-top border-4 border-warning mb-4">
-                <div class="card-header bg-light-warning border-bottom px-4 py-3">
-                    <h6 class="mb-0 fw-bold text-dark d-flex align-items-center">
-                        <span class="spinner-grow spinner-grow-sm text-warning me-2" role="status" aria-hidden="true"></span>
-                        Aksi Verifikator: {{ $roleCode }}
-                    </h6>
-                </div>
-                <div class="card-body text-center py-4">
-                    <div class="alert alert-info border-0 bg-light-info py-2 px-3 align-items-center d-flex mb-4 text-start">
-                        <i class="material-icons-outlined text-info me-2">info</i>
-                        <span class="font-12">Dokumen NPI telah melengkapi syarat dan <strong>membutuhkan aksi Anda</strong>.</span>
-                    </div>
-
-                    <h5 class="fw-bold mb-3">Tentukan Keputusan</h5>
-                    <p class="text-muted small mb-4">Pastikan seluruh data dan rincian dokumen NPI Perjaldin telah diperiksa dengan saksama.</p>
-
-                    <button type="button" class="btn btn-success w-100 mb-2 py-2 fs-6 fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#modalApprove">
-                        <i class="material-icons-outlined me-1" style="font-size: 18px; vertical-align: middle;">check_circle</i> Setujui NPI Perjaldin
-                    </button>
-                    <button type="button" class="btn btn-outline-danger w-100 py-2 fw-bold" data-bs-toggle="modal" data-bs-target="#modalRevisi">
-                        <i class="material-icons-outlined me-1" style="font-size: 18px; vertical-align: middle;">assignment_return</i> Kembalikan untuk Revisi
-                    </button>
+            <!-- Notice: Aksi diperlukan -->
+            <div class="alert alert-warning border-0 shadow-sm d-flex align-items-center gap-2 mb-4 py-3 px-4">
+                <span class="spinner-grow spinner-grow-sm text-warning" role="status" aria-hidden="true"></span>
+                <div>
+                    <div class="fw-bold text-dark">Menunggu Aksi Anda ({{ $roleCode }})</div>
+                    <div class="font-12 text-muted">Gunakan tombol di bawah layar untuk memberikan keputusan.</div>
                 </div>
             </div>
 
@@ -365,8 +348,70 @@
                 </div>
             </div>
         @endif
-        
+
     </div>
 </div>
 
+{{-- FIXED BOTTOM ACTION BAR --}}
+@if($canAct)
+<div class="npi-fixed-action-bar" id="npiFixedBar">
+    <div class="container-fluid">
+        <div class="d-flex align-items-center justify-content-between gap-3 flex-wrap">
+            <div class="d-flex align-items-center gap-2 text-white">
+                <i class="material-icons-outlined" style="font-size: 22px;">verified</i>
+                <div>
+                    <div class="fw-bold" style="font-size: 0.9rem;">NPI Perjaldin: {{ $npi->nomor_npi }}</div>
+                    <div style="font-size: 0.75rem; opacity: 0.8;">Rp {{ number_format($spm?->nominal_spm ?? 0, 0, ',', '.') }} &bull; {{ $roleCode }}</div>
+                </div>
+            </div>
+            <div class="d-flex gap-2 flex-wrap">
+                <button type="button" class="btn btn-light fw-bold px-4 py-2 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalRevisi">
+                    <i class="material-icons-outlined me-1" style="font-size: 18px; vertical-align: middle;">assignment_return</i> Revisi
+                </button>
+                <button type="button" class="btn btn-success fw-bold px-4 py-2 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalApprove">
+                    <i class="material-icons-outlined me-1" style="font-size: 18px; vertical-align: middle;">check_circle</i> Setujui NPI Perjaldin
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+@endif
+
 @endsection
+
+@push('css')
+<style>
+    .npi-fixed-action-bar {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 1050;
+        background: linear-gradient(135deg, #1e293b, #334155);
+        border-top: 3px solid #10b981;
+        padding: 0.85rem 1.5rem;
+        box-shadow: 0 -4px 20px rgba(0,0,0,0.2);
+        animation: slideUpBar 0.4s ease-out;
+    }
+    @keyframes slideUpBar {
+        from { transform: translateY(100%); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
+    .npi-fixed-action-bar .btn-success {
+        background: linear-gradient(135deg, #10b981, #059669);
+        border: none;
+    }
+    .npi-fixed-action-bar .btn-success:hover {
+        background: linear-gradient(135deg, #059669, #047857);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(16,185,129,0.4);
+    }
+    .npi-fixed-action-bar .btn-light:hover {
+        background: #fee2e2;
+        color: #dc2626;
+        border-color: #fca5a5;
+    }
+    /* Add bottom padding to page content so it doesn't hide behind the fixed bar */
+    body { padding-bottom: 90px; }
+</style>
+@endpush

@@ -192,18 +192,28 @@
 
                 @if($sppModel)
                     @if($sppFullyApproved)
-                        @hasanyrole('Super Admin|Operator BLU')
-                            <a href="{{ route('spms.honor.detail', $sppModel->id) }}" class="btn btn-success shadow-sm w-100">
-                                <i class="bi bi-arrow-right-circle me-1"></i> {{ $sppModel->spm ? 'Lanjutkan SPM' : 'Lanjut Buat SPM' }}
-                            </a>
-                            <div class="small text-success text-center">
-                                <i class="bi bi-check-circle-fill me-1"></i> SPP disetujui seluruh verifikator.
-                            </div>
+                        <button type="button" class="btn btn-outline-primary shadow-sm w-100" data-bs-toggle="modal" data-bs-target="#modalUploadSignedSpp">
+                            <i class="bi bi-upload me-1"></i> {{ $sppModel->hasSignedSppFile() ? 'Upload Ulang SPP Scan' : 'Upload Scan SPP' }}
+                        </button>
+                        
+                        @if($sppModel->hasSignedSppFile())
+                            @hasanyrole('Super Admin|Operator BLU')
+                                <a href="{{ route('spms.honor.detail', $sppModel->id) }}" class="btn btn-success shadow-sm w-100 mt-1">
+                                    <i class="bi bi-arrow-right-circle me-1"></i> {{ $sppModel->spm ? 'Lanjutkan SPM' : 'Lanjut Buat SPM' }}
+                                </a>
+                                <div class="small text-success text-center mt-1">
+                                    <i class="bi bi-check-circle-fill me-1"></i> SPP disetujui & scan diunggah.
+                                </div>
+                            @else
+                                <div class="alert alert-success border-0 small mb-0 py-2 text-center mt-1">
+                                    <i class="bi bi-check-circle-fill me-1"></i> SPP telah disetujui & scan diunggah.
+                                </div>
+                            @endhasanyrole
                         @else
-                            <div class="alert alert-success border-0 small mb-0 py-2 text-center">
-                                <i class="bi bi-check-circle-fill me-1"></i> SPP telah disetujui seluruh verifikator.
+                            <div class="small text-danger text-center mt-1">
+                                <i class="bi bi-exclamation-triangle-fill me-1"></i> Wajib upload SPP scan untuk lanjut.
                             </div>
-                        @endhasanyrole
+                        @endif
                     @elseif($canSubmitToPpk && $isReadyToSubmit)
                         <form action="{{ route('spps.honor.submit', $tagihan->id) }}" method="POST" onsubmit="return confirm('Ajukan SPP ini untuk verifikasi PPK dan Kasubbag secara paralel?')">
                             @csrf
@@ -411,6 +421,8 @@
                     </div>
                 </div>
 
+
+
                 <!-- HIGHLIGHT: HASIL DRAFT SPP -->
                 <div class="card spp-section-card mb-4 border-primary shadow-sm">
                     <div class="card-header bg-primary text-white p-3">
@@ -542,6 +554,49 @@
             </form>
         </div>
     </div>
+    @if($sppModel && in_array($sppModel->status, ['APPROVED', 'DISETUJUI_SPP', 'Disetujui PPK', 'SPP_TERBIT']))
+    <!-- Modal Upload Scan SPP -->
+    <div class="modal fade" id="modalUploadSignedSpp" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+        <div class="modal-dialog">
+            <form action="{{ route('spps.upload-signed', $sppModel->id) }}" method="POST" enctype="multipart/form-data" class="modal-content border-0 shadow">
+                @csrf
+                <div class="modal-header bg-primary text-white border-0">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-upload me-2"></i> Upload Scan SPP</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4 bg-light">
+                    <div class="alert alert-info border-0 p-3 mb-4 small shadow-sm">
+                        <i class="bi bi-info-circle-fill me-1"></i> Silakan unggah dokumen SPP yang telah dicetak dan ditandatangani basah oleh seluruh pihak terkait.
+                    </div>
+                    @if($sppModel->hasSignedSppFile())
+                        <div class="d-flex align-items-center justify-content-between mb-4 p-3 bg-success bg-opacity-10 border border-success rounded shadow-sm">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="bg-success text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                    <i class="bi bi-check-lg fs-5"></i>
+                                </div>
+                                <div>
+                                    <div class="fw-bold text-success mb-0">File Terunggah</div>
+                                    <div class="small text-muted">{{ $sppModel->signedSppArsip?->nama_file_asli ?? 'Dokumen SPP Final' }}</div>
+                                </div>
+                            </div>
+                            <a href="{{ \Illuminate\Support\Facades\Storage::url($sppModel->signedSppArsip?->path_file) }}" target="_blank" class="btn btn-sm btn-outline-success">
+                                <i class="bi bi-search"></i> Lihat
+                            </a>
+                        </div>
+                    @endif
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Pilih File Scan (PDF/JPG/PNG) <span class="text-danger">*</span></label>
+                        <input type="file" name="file_spp_ttd" class="form-control" accept=".pdf,.jpg,.jpeg,.png" required>
+                    </div>
+                </div>
+                <div class="modal-footer bg-white border-top">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary px-4"><i class="bi bi-upload me-1"></i> {{ $sppModel->hasSignedSppFile() ? 'Timpa File' : 'Unggah File' }}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    @endif
 @endsection
 
 @push('script')

@@ -143,9 +143,25 @@ class BudgetRealizationService
             'sourceable_id' => $source->id,
             'sourceable_type' => get_class($source),
             'tanggal_pencairan' => $tanggal,
+            'nomor_bukti' => $this->resolveNomorBukti($sp2d, $source),
             'nominal_cair' => $nominal,
             'status' => 'TERCATAT',
             'created_by' => auth()->id() ?? 1,
         ]);
+    }
+
+    private function resolveNomorBukti($sp2d, $source): string
+    {
+        $nomorBukti = trim((string) ($sp2d->nomor_sp2d ?? ''));
+
+        if ($nomorBukti === '' && isset($source->nomor_tagihan)) {
+            $nomorBukti = trim((string) $source->nomor_tagihan);
+        }
+
+        if ($nomorBukti === '') {
+            $nomorBukti = 'SP2D-' . $sp2d->id;
+        }
+
+        return substr($nomorBukti, 0, 100);
     }
 }

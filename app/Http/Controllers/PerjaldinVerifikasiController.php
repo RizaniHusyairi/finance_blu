@@ -185,12 +185,30 @@ class PerjaldinVerifikasiController extends Controller
     private function buildWorkflowIndex(string $roleKey)
     {
         $config = self::ROLE_CONFIG[$roleKey];
-        $roleCodes = $this->roleCodeVariants($config['role_code']);
+        $user = auth()->user();
+
+        // Kumpulkan semua role user yang relevan untuk verifikasi Perjaldin
+        $activeRoleCodes = [];
+        $activeLabels = [];
+        foreach (self::ROLE_CONFIG as $rk => $rc) {
+            if ($user->hasRole($rc['label']) || $user->hasRole($rc['role_code'])) {
+                $activeRoleCodes = array_merge($activeRoleCodes, $this->roleCodeVariants($rc['role_code']));
+                $activeLabels[] = $rc['label'];
+            }
+        }
+
+        // Jika kosong (fallback), gunakan default dari roleKey
+        if (empty($activeRoleCodes)) {
+            $activeRoleCodes = $this->roleCodeVariants($config['role_code']);
+            $activeLabels[] = $config['label'];
+        }
+        $activeRoleCodes = array_unique($activeRoleCodes);
+
         $search = request('search');
         $periode = request('periode');
 
         $query = Tagihan::where('tipe_tagihan', 'PERJALDIN')
-            ->whereHas('workflowInstances.approvals', fn ($q) => $q->whereIn('role_code', $roleCodes))
+            ->whereHas('workflowInstances.approvals', fn ($q) => $q->whereIn('role_code', $activeRoleCodes))
             ->with([
                 'detailPerjaldin.pegawai',
                 'logs' => fn ($q) => $q->latest(),
@@ -218,16 +236,18 @@ class PerjaldinVerifikasiController extends Controller
 
         $tagihans = $query->get();
         $tagihansPerlu = $tagihans->filter(
-            fn (Tagihan $tagihan) => $this->pendingApproval($tagihan, $config['role_code']) !== null
+            fn (Tagihan $tagihan) => $this->anyPendingApprovalForUser($tagihan, $activeRoleCodes) !== null
         )->values();
         $tagihansRiwayat = $tagihans->filter(
-            fn (Tagihan $tagihan) => $this->roleHasActed($tagihan, $config['role_code'])
+            fn (Tagihan $tagihan) => $this->anyRoleHasActedForUser($tagihan, $activeRoleCodes)
         )->values();
         $visibleTagihans = $tagihansPerlu->merge($tagihansRiwayat)->unique('id')->values();
 
         $pendingStatuses = $tagihansPerlu->pluck('status')->unique()->values()->all();
         $revisiStatuses = $visibleTagihans->pluck('status')->filter(fn ($status) => str_starts_with((string) $status, 'REVISI_'))->unique()->values()->all();
         $selesaiStatuses = ['DISETUJUI_PERJALDIN'];
+
+        $userRoleLabel = count($activeLabels) > 1 ? implode(' & ', array_unique($activeLabels)) : $activeLabels[0];
 
         return view('verifikasi_perjaldin.index', [
             'tagihans' => $visibleTagihans,
@@ -236,7 +256,7 @@ class PerjaldinVerifikasiController extends Controller
             'pendingStatuses' => $pendingStatuses,
             'revisiStatuses' => $revisiStatuses,
             'selesaiStatuses' => $selesaiStatuses,
-            'userRole' => $config['label'],
+            'userRole' => $userRoleLabel,
             'detailRoute' => $config['detail_route'],
         ]);
     }
@@ -375,6 +395,35 @@ class PerjaldinVerifikasiController extends Controller
         return $tagihan->workflowInstances
             ->flatMap(fn ($instance) => $instance->approvals)
             ->contains(fn ($approval) => in_array($approval->role_code, $roleCodes, true)
+                && in_array($approval->status, ['APPROVED', 'REVISION', 'REJECTED'], true)
+                && ($approval->assigned_user_id === null
+                    || (int) $approval->assigned_user_id === (int) $currentUserId
+                    || (int) $approval->acted_by_user_id === (int) $currentUserId));
+    }
+
+    private function anyPendingApprovalForUser(Tagihan $tagihan, array $activeRoleCodes): ?WorkflowApproval
+    {
+        $instance = $tagihan->workflowInstances->first() ?? $tagihan->workflowInstance;
+        if (!$instance || $instance->status !== 'IN_PROGRESS') {
+            return null;
+        }
+
+        $currentUserId = auth()->id();
+
+        return $instance->approvals
+            ->first(fn ($approval) => (int) $approval->urutan_step === (int) $instance->step_saat_ini
+                && $approval->status === 'PENDING'
+                && in_array($approval->role_code, $activeRoleCodes, true)
+                && ($approval->assigned_user_id === null || (int) $approval->assigned_user_id === (int) $currentUserId));
+    }
+
+    private function anyRoleHasActedForUser(Tagihan $tagihan, array $activeRoleCodes): bool
+    {
+        $currentUserId = auth()->id();
+
+        return $tagihan->workflowInstances
+            ->flatMap(fn ($instance) => $instance->approvals)
+            ->contains(fn ($approval) => in_array($approval->role_code, $activeRoleCodes, true)
                 && in_array($approval->status, ['APPROVED', 'REVISION', 'REJECTED'], true)
                 && ($approval->assigned_user_id === null
                     || (int) $approval->assigned_user_id === (int) $currentUserId

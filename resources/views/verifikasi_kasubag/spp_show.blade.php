@@ -190,7 +190,7 @@
                     </div>
                     <div class="row mb-3">
                         <div class="col-sm-4 text-muted">Uraian / Termin Pekerjaan</div>
-                        <div class="col-sm-8">{{ $spp->tagihan?->detailKontrak?->kontrakTermin?->keterangan_termin ?? $spp->tagihan?->detailKontrak?->kontrakTermin?->kontrak?->nama_pekerjaan ?? $spp->tagihan?->deskripsi ?? '-' }}</div>
+                        <div class="col-sm-8">{{ $spp->tagihan?->detailKontrak?->kontrakTermin?->kontrak?->nama_pekerjaan ?? $spp->tagihan?->deskripsi ?? $spp->tagihan?->detailKontrak?->kontrakTermin?->keterangan_termin ?? '-' }}</div>
                     </div>
                     <div class="row mb-3">
                         <div class="col-sm-4 text-muted">Beban Anggaran (COA)</div>

@@ -342,6 +342,57 @@
                     </div>
                 @endif
                 
+                @if(in_array($statusNpi, [\App\Models\DokumenNpi::STATUS_MENUNGGU_UPLOAD, \App\Models\DokumenNpi::STATUS_NPI_TERBIT, \App\Models\DokumenNpi::STATUS_DISETUJUI_FINAL]))
+                <div class="card action-card mb-4 border-success">
+                    <div class="card-header bg-success text-white p-3 rounded-top-3 border-0">
+                        <h6 class="mb-0 fw-bold"><i class="bi bi-upload me-2"></i> Upload NPI Bertandatangan</h6>
+                    </div>
+                    <div class="card-body p-4 bg-white rounded-bottom-3">
+                        @if($npiModel->hasSignedNpiFile())
+                            <div class="alert alert-success d-flex align-items-center mb-3 border-0">
+                                <i class='bi bi-check-circle fs-3 me-3'></i>
+                                <div>
+                                    <h6 class="alert-heading fw-bold mb-1">NPI Telah Terbit</h6>
+                                    <span class="font-13">File NPI fisik bertandatangan telah diunggah dan disimpan.</span>
+                                </div>
+                            </div>
+                            
+                            <div class="d-flex align-items-center mb-3 bg-light p-3 rounded">
+                                <i class='bi bi-file-earmark-pdf text-danger fs-1 me-3'></i>
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-0 fw-bold">{{ $npiModel->signedNpiArsip->nama_file_asli ?? 'Dokumen NPI' }}</h6>
+                                    <small class="text-muted">Diunggah pada {{ $npiModel->signedNpiArsip->created_at->format('d M Y H:i') }}</small>
+                                </div>
+                                <a href="{{ Storage::url($npiModel->signedNpiArsip->path_file) }}" target="_blank" class="btn btn-primary btn-sm px-3"><i class='bi bi-download me-1'></i> Unduh File</a>
+                            </div>
+                            
+                            <hr class="border-dashed">
+                            <p class="mb-2 fw-bold font-13 text-muted">Upload Ulang File NPI Fisik (Opsional)</p>
+                        @else
+                            <div class="alert alert-warning d-flex align-items-center mb-4 border-0">
+                                <i class='bi bi-exclamation-triangle fs-3 me-3'></i>
+                                <div>
+                                    <h6 class="alert-heading fw-bold mb-1">Menunggu Upload Fisik</h6>
+                                    <span class="font-13">NPI telah diverifikasi penuh. Silakan cetak, tandatangani, dan unggah scan/foto dokumen NPI untuk menerbitkan NPI dan bisa digunakan sebagai dasar SP2D.</span>
+                                </div>
+                            </div>
+                        @endif
+                        
+                        <form action="{{ route('npis.honor.upload-signed-npi', $npiModel->id) }}" method="POST" enctype="multipart/form-data">
+                            @csrf
+                            <div class="input-group">
+                                <input type="file" class="form-control" name="file_npi_ttd" accept=".pdf,.jpg,.jpeg,.png" required>
+                                <button class="btn btn-success px-4 fw-bold" type="submit"><i class='bi bi-upload me-1'></i> Unggah & Terbitkan NPI</button>
+                            </div>
+                            <small class="text-muted mt-2 d-block">Format: PDF/JPG/PNG. Maks: 10MB.</small>
+                            @error('file_npi_ttd')
+                                <span class="text-danger small mt-1 d-block"><i class='bi bi-x-circle'></i> {{ $message }}</span>
+                            @enderror
+                        </form>
+                    </div>
+                </div>
+                @endif
+                
                 {{-- Aktivitas Workflow --}}
                 <div class="card npi-section-card mb-4 border-0">
                     <div class="card-body p-4 bg-white">

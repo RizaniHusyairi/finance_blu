@@ -200,7 +200,7 @@
         </tr>
         <tr>
             <td colspan="2" style="height: 100px;">
-                {{ $spp->akun_mak }}
+                {{ $kodeCoa ?? '-' }}
             </td>
             <td colspan="2" class="text-right">
                 {{ number_format($jumlahUang, 2, ',', '.') }}
@@ -218,15 +218,19 @@
         </tr>
         <tr>
             <td colspan="2" style="height: 60px;">
-                <!-- Potongan kosong (seperti di format) -->
+                @foreach(($potonganPajak ?? collect()) as $potongan)
+                    {{ $potongan->pajak?->jenis_pajak ?? $potongan->nama_pajak_snapshot ?? $potongan->jenis_potongan }}<br>
+                @endforeach
             </td>
             <td colspan="2" class="text-right">
-                
+                @foreach(($potonganPajak ?? collect()) as $potongan)
+                    {{ number_format($potongan->nominal_potongan, 2, ',', '.') }}<br>
+                @endforeach
             </td>
         </tr>
         <tr>
             <td colspan="2" class="text-right border-right-0" style="padding-right: 20px;">Jumlah Potongan</td>
-            <td colspan="2" class="text-right">0,00</td>
+            <td colspan="2" class="text-right">{{ number_format($jumlahPotonganPajak ?? 0, 2, ',', '.') }}</td>
         </tr>
 
         <!-- TOTAL PEMBAYARAN -->

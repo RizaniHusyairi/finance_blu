@@ -8,6 +8,7 @@ use App\Models\DokumenSp2d;
 use App\Models\DokumenSpp;
 use App\Models\DokumenSpm;
 use App\Services\DocumentArchiveService;
+use App\Support\PaymentPdfReference;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
@@ -79,15 +80,16 @@ class DocumentController extends Controller
 
     public function printSpp(DokumenSpp $spp)
     {
-        $spp->load(['tagihan']);
+        $spp->load(['tagihan.detailKontrak.kontrakTermin.kontrak.vendor.rekening']);
         $tagihan = $spp->tagihan;
+        $uraianSupplier = PaymentPdfReference::uraianForTagihan($tagihan, $spp->uraian ?? null);
 
         $pdf = Pdf::loadView('spps.pdf', [
             'spp' => $spp,
             'sppable' => $tagihan,
             'jumlahUang' => $spp->nominal_spp,
             'terbilang' => terbilang_rupiah((float) $spp->nominal_spp),
-            'uraianSupplier' => $tagihan?->deskripsi ?: ($spp->uraian ?? null),
+            'uraianSupplier' => $uraianSupplier,
         ]);
         $pdf->setPaper('a4', 'portrait');
 
@@ -96,9 +98,25 @@ class DocumentController extends Controller
 
     public function printSpm(DokumenSpm $spm)
     {
-        $spm->load(['spp.tagihan', 'ppspm']);
+        $spm->load([
+            'spp.dipaRevisionItem.coa',
+            'spp.tagihan.detailKontrak.kontrakTermin.kontrak.vendor.rekening',
+            'spp.tagihan.dipaRevisionItem.coa',
+            'spp.tagihan.potonganTagihan.pajak',
+            'spp.tagihan.potonganTagihan.akunPotongan',
+            'ppspm',
+        ]);
         $spp = $spm->spp;
         $tagihan = $spp?->tagihan;
+        $uraianSupplier = PaymentPdfReference::uraianForTagihan($tagihan, $spp?->uraian ?? null);
+        $kodeCoa = $spp?->dipaRevisionItem?->coa?->kode_mak_lengkap
+            ?? $tagihan?->dipaRevisionItem?->coa?->kode_mak_lengkap
+            ?? $spp?->akun_mak
+            ?? '-';
+        $potonganPajak = collect($tagihan?->potonganTagihan ?? [])
+            ->filter(fn ($potongan) => $potongan->jenis_potongan !== 'ANGSURAN_UANG_MUKA')
+            ->values();
+        $jumlahPotonganPajak = $potonganPajak->sum('nominal_potongan');
 
         $pdf = Pdf::loadView('spms.pdf', [
             'spm' => $spm,
@@ -106,7 +124,10 @@ class DocumentController extends Controller
             'sppable' => $tagihan,
             'jumlahUang' => $spp?->nominal_spp,
             'terbilang' => terbilang_rupiah((float) ($spp?->nominal_spp ?? 0)),
-            'uraianSupplier' => $tagihan?->deskripsi ?: ($spp?->uraian ?? null),
+            'uraianSupplier' => $uraianSupplier,
+            'kodeCoa' => $kodeCoa,
+            'potonganPajak' => $potonganPajak,
+            'jumlahPotonganPajak' => $jumlahPotonganPajak,
         ]);
         $pdf->setPaper('a4', 'portrait');
 

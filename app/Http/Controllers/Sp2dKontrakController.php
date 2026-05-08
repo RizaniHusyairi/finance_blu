@@ -31,7 +31,7 @@ class Sp2dKontrakController extends Controller
         ])
         ->whereHas('spm.spp.tagihan', fn($q) => $q->where('tipe_tagihan', 'KONTRAK'))
         ->where(function ($q) {
-            $q->where('status', DokumenNpi::STATUS_DISETUJUI_FINAL)
+            $q->whereIn('status', [DokumenNpi::STATUS_DISETUJUI_FINAL, DokumenNpi::STATUS_NPI_TERBIT])
               ->orWhereHas('sp2d');
         });
 

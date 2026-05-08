@@ -95,15 +95,8 @@
                 @endif
 
                 @if($canSubmit)
-                    <button type="button" class="btn btn-success btn-sm mt-2" data-bs-toggle="modal" data-bs-target="#modalDraftSave" onclick="$('#submitFormFlag').val('0')">
-                        <i class="material-icons-outlined" style="font-size:14px; vertical-align: middle;">save</i> Simpan Draft
-                    </button>
                     <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalSubmit">
                         <i class="material-icons-outlined" style="font-size:14px; vertical-align: middle;">publish</i> Ajukan Verifikasi
-                    </button>
-                @elseif($isEditable)
-                    <button type="button" class="btn btn-success btn-sm mt-2" data-bs-toggle="modal" data-bs-target="#modalDraftSave" onclick="$('#submitFormFlag').val('0')">
-                        <i class="material-icons-outlined" style="font-size:14px; vertical-align: middle;">save</i> Simpan Draft
                     </button>
                 @endif
             </div>
@@ -227,30 +220,22 @@
                 </div>
                 <div class="card-body bg-light">
                     @if($isEditable)
-                        <form id="formDraftSp2d" action="{{ route('sp2ds.kontrak.store', $npi->id) }}" method="POST">
-                            @csrf
-                            <input type="hidden" id="submitFormFlag" name="is_submit" value="0">
-                            
-                            <div class="mb-3">
-                                <label class="form-label fw-semibold">Nomor SP2D <span class="text-danger">*</span></label>
-                                <input type="text" name="nomor_sp2d" class="form-control fw-bold text-primary bg-light" required value="{{ old('nomor_sp2d', $sp2d?->nomor_sp2d ?? $autoNomorSp2d) }}" placeholder="Contoh: 1234/SP2D/2026">
-                                <small class="text-muted"><i class="bi bi-info-circle me-1"></i>Nomor di atas diturunkan dari SPP, ubah jika perlu.</small>
-                            </div>
-
-                            <div class="mb-3">
-                                <label class="form-label fw-semibold">Tanggal SP2D <span class="text-danger">*</span></label>
-                                <input type="date" name="tanggal_sp2d" class="form-control" required value="{{ old('tanggal_sp2d', $sp2d?->tanggal_sp2d ? \Carbon\Carbon::parse($sp2d->tanggal_sp2d)->format('Y-m-d') : '') }}">
-                            </div>
-
-                            <div class="mb-3">
-                                <label class="form-label fw-semibold">Nominal NPI/SP2D Sah</label>
-                                <input type="text" class="form-control bg-white" readonly value="Rp {{ number_format($nominalSp2d, 0, ',', '.') }}">
-                                <div class="form-text text-muted">Nilai ini mengambil dari tagihan netto disetujui, tidak dapat diubah di sini.</div>
-                            </div>
-                        
-                            <!-- Ini form dummy-submit buat disambar sama JS -->
-                            <button type="submit" class="d-none" id="btnHiddenSubmit"></button>
-                        </form>
+                        {{-- Read-Only Summary + Edit Button --}}
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold text-muted">Nomor SP2D</label>
+                            <div class="fw-bold fs-5 text-primary">{{ $sp2d?->nomor_sp2d ?? '[ BELUM DIISI ]' }}</div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold text-muted">Tanggal SP2D</label>
+                            <div class="fw-bold">{{ $sp2d?->tanggal_sp2d ? \Carbon\Carbon::parse($sp2d->tanggal_sp2d)->format('d M Y') : '[ BELUM DIISI ]' }}</div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold text-muted">Nominal SP2D</label>
+                            <div class="fw-bold text-success fs-5">Rp {{ number_format($nominalSp2d, 0, ',', '.') }}</div>
+                        </div>
+                        <button type="button" class="btn btn-warning fw-bold w-100 shadow-sm border border-warning" data-bs-toggle="modal" data-bs-target="#modalDraftSave">
+                            <i class="material-icons-outlined me-1" style="font-size: 16px; vertical-align: middle;">edit</i> Edit Draft SP2D
+                        </button>
                     @else
                         {{-- Mode Read-Only --}}
                         <div class="mb-3">
@@ -354,18 +339,46 @@
 @if($isEditable)
 <div class="modal fade" id="modalDraftSave" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow">
-            <div class="modal-header border-0 bg-success text-white">
-                <h5 class="modal-title fw-bold">Simpan SP2D sebagai Draft?</h5>
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 1rem; overflow: hidden;">
+            <div class="modal-header border-0 text-white p-4" style="background: linear-gradient(135deg, #1e293b, #334155);">
+                <div>
+                    <h5 class="modal-title fw-bold mb-1"><i class="material-icons-outlined me-1" style="font-size: 20px; vertical-align: middle;">edit</i> Edit Draft SP2D</h5>
+                    <div class="small opacity-75">Kontrak &mdash; {{ $kontrak?->nama_pekerjaan ?? 'Pencairan SP2D' }}</div>
+                </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body">
-                Data SP2D akan disimpan. Dokumen belum akan diajukan untuk diverifikasi, sehingga belum terlihat oleh PPK atau Kasubbag.
-            </div>
-            <div class="modal-footer border-0">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
-                <button type="button" class="btn btn-success px-4" onclick="$('#btnHiddenSubmit').click()">Simpan Form</button>
-            </div>
+            <form id="formDraftSp2d" action="{{ route('sp2ds.kontrak.store', $npi->id) }}" method="POST">
+                @csrf
+                <input type="hidden" id="submitFormFlag" name="is_submit" value="0">
+                <div class="modal-body p-4">
+                    <div class="alert alert-info border-0 py-2 d-flex align-items-center gap-2 mb-4" style="font-size: 0.85rem;">
+                        <i class="material-icons-outlined" style="font-size: 18px;">info</i>
+                        <span>Isi data pencatatan SP2D. Setelah disimpan, Anda dapat mengajukan verifikasi.</span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Nomor SP2D <span class="text-danger">*</span></label>
+                        <input type="text" name="nomor_sp2d" class="form-control fw-bold text-primary bg-light" required value="{{ old('nomor_sp2d', $sp2d?->nomor_sp2d ?? $autoNomorSp2d) }}" placeholder="Contoh: 1234/SP2D/2026">
+                        <small class="text-muted"><i class="bi bi-info-circle me-1"></i>Nomor di atas diturunkan dari SPP, ubah jika perlu.</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Tanggal SP2D <span class="text-danger">*</span></label>
+                        <input type="date" name="tanggal_sp2d" class="form-control" required value="{{ old('tanggal_sp2d', $sp2d?->tanggal_sp2d ? \Carbon\Carbon::parse($sp2d->tanggal_sp2d)->format('Y-m-d') : date('Y-m-d')) }}">
+                    </div>
+
+                    <div class="bg-light rounded p-3 border d-flex justify-content-between align-items-center">
+                        <div class="small text-muted fw-semibold">Nilai Netto SP2D</div>
+                        <div class="fw-bold text-success fs-5">Rp {{ number_format($nominalSp2d, 0, ',', '.') }}</div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 bg-light px-4 py-3">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-warning fw-bold px-4 shadow-sm border border-warning">
+                        <i class="material-icons-outlined me-1" style="font-size: 16px; vertical-align: middle;">save</i> Simpan Draft SP2D
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
@@ -375,24 +388,43 @@
 @if($canSubmit)
 <div class="modal fade" id="modalSubmit" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 1rem; overflow: hidden;">
             <form action="{{ route('sp2ds.kontrak.submit', $npi->id) }}" method="POST">
                 @csrf
-                <div class="modal-header border-0 bg-primary text-white">
-                    <h5 class="modal-title fw-bold"><i class="material-icons-outlined me-1">publish</i> Ajukan Verifikasi SP2D?</h5>
+                <div class="modal-header border-0 text-white p-4" style="background: linear-gradient(135deg, #1d4ed8, #3b82f6);">
+                    <div>
+                        <h5 class="modal-title fw-bold mb-1"><i class="material-icons-outlined me-1" style="font-size: 20px; vertical-align: middle;">publish</i> Ajukan Verifikasi SP2D</h5>
+                        <div class="small opacity-75">{{ $sp2d?->nomor_sp2d ?? '-' }} &bull; {{ $kontrak?->nama_pekerjaan ?? 'Kontrak' }}</div>
+                    </div>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body">
-                    <p>Setelah pengajuan, form SP2D akan dikunci sementara dan masuk ke verifikasi PPK, Kasubbag, PPSPM, serta Koordinator Keuangan.</p>
-                    <p>Notifikasi verifikasi paralel akan otomatis dikirimkan ke:</p>
-                        <li><strong>PPK</strong></li>
-                        <li><strong>Kepala Subbagian Keuangan dan Tata Usaha</strong></li>
-                        <li><strong>PPSPM</strong></li>
+                <div class="modal-body p-4">
+                    <div class="alert alert-warning border-0 py-2 d-flex align-items-start gap-2 mb-4" style="font-size: 0.85rem;">
+                        <i class="material-icons-outlined mt-1" style="font-size: 18px;">warning</i>
+                        <span>Setelah pengajuan, draft SP2D akan <strong>dikunci sementara</strong> dan masuk ke proses verifikasi paralel.</span>
+                    </div>
+
+                    <div class="bg-light rounded p-3 border mb-4">
+                        <div class="row g-2" style="font-size: 13px;">
+                            <div class="col-6"><span class="text-muted d-block">Nomor SP2D</span><strong class="text-primary">{{ $sp2d?->nomor_sp2d ?? '-' }}</strong></div>
+                            <div class="col-6"><span class="text-muted d-block">Tanggal SP2D</span><strong>{{ $sp2d?->tanggal_sp2d ? \Carbon\Carbon::parse($sp2d->tanggal_sp2d)->format('d M Y') : '-' }}</strong></div>
+                            <div class="col-12 mt-1"><span class="text-muted d-block">Nominal</span><strong class="text-success fs-6">Rp {{ number_format($nominalSp2d, 0, ',', '.') }}</strong></div>
+                        </div>
+                    </div>
+
+                    <div class="fw-semibold small mb-2">Notifikasi verifikasi akan dikirim ke:</div>
+                    <ul class="list-unstyled mb-0" style="font-size: 13px;">
+                        <li class="d-flex align-items-center gap-2 mb-2"><i class="material-icons-outlined text-primary" style="font-size: 16px;">person</i> <strong>PPK</strong></li>
+                        <li class="d-flex align-items-center gap-2 mb-2"><i class="material-icons-outlined text-primary" style="font-size: 16px;">person</i> <strong>Kepala Subbagian Keuangan dan Tata Usaha</strong></li>
+                        <li class="d-flex align-items-center gap-2 mb-2"><i class="material-icons-outlined text-primary" style="font-size: 16px;">person</i> <strong>PPSPM</strong></li>
+                        <li class="d-flex align-items-center gap-2"><i class="material-icons-outlined text-primary" style="font-size: 16px;">person</i> <strong>Koordinator Keuangan</strong></li>
                     </ul>
                 </div>
-                <div class="modal-footer border-0">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Tutup</button>
-                    <button type="submit" class="btn btn-primary px-4">Ajukan Sekarang</button>
+                <div class="modal-footer border-0 bg-light px-4 py-3">
+                    <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary fw-bold px-4 shadow-sm">
+                        <i class="material-icons-outlined me-1" style="font-size: 16px; vertical-align: middle;">send</i> Ajukan Sekarang
+                    </button>
                 </div>
             </form>
         </div>

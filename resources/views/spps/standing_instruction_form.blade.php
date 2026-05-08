@@ -105,7 +105,8 @@
                         </div>
 
                         <div class="d-grid gap-2">
-                            <button type="submit" class="btn btn-primary fw-bold"><i class="bi bi-save me-1"></i> Simpan Draft Standing Instruction</button>
+                            <button type="submit" name="action" value="preview" class="btn btn-secondary fw-bold"><i class="bi bi-eye me-1"></i> Lihat Preview PDF</button>
+                            <button type="submit" name="action" value="save" class="btn btn-primary fw-bold"><i class="bi bi-save me-1"></i> Simpan Draft Standing Instruction</button>
                         </div>
                     </form>
                 </div>

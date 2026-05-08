@@ -1082,7 +1082,7 @@ class SppController extends Controller
             $spp = $dokumenSpp;
             $sppable = $dokumenSpp->tagihan;
             $jumlahUang = $spp->nominal_spp;
-            $uraianSupplier = $sppable?->deskripsi ?: ($spp->uraian ?? null);
+            $uraianSupplier = PaymentPdfReference::uraianForTagihan($sppable, $spp->uraian ?? null);
             $kodeCoa = $spp->dipaRevisionItem?->coa?->kode_mak_lengkap
                 ?? $sppable?->dipaRevisionItem?->coa?->kode_mak_lengkap
                 ?? $spp->akun_mak
@@ -1135,7 +1135,7 @@ class SppController extends Controller
         $sppable = $spp->sppable;
         
         $jumlahUang = $spp->jumlah_uang;
-        $uraianSupplier = $sppable?->deskripsi ?: ($spp->uraian ?? null);
+        $uraianSupplier = PaymentPdfReference::uraianForTagihan($sppable, $spp->uraian ?? null);
         $kodeCoa = $spp->dipaRevisionItem?->coa?->kode_mak_lengkap
             ?? $spp->tagihan?->dipaRevisionItem?->coa?->kode_mak_lengkap
             ?? $spp->akun_mak
@@ -1180,5 +1180,71 @@ class SppController extends Controller
                 ];
             })
             ->values();
+    }
+
+    // ===================================================================
+    // UPLOAD FILE SPP BERTANDATANGAN
+    // ===================================================================
+
+    /**
+     * Upload file SPP Bertandatangan (PDF scan bertanda tangan basah).
+     * Dipanggil dari halaman SPM (sebelum SPM bisa dibuat).
+     */
+    public function uploadSignedSpp(Request $request, $spp_id)
+    {
+        $spp = DokumenSpp::findOrFail($spp_id);
+
+        // Hanya boleh upload jika SPP sudah disetujui
+        $approvedStatuses = ['APPROVED', 'DISETUJUI_SPP', 'Disetujui PPK', 'SPP_TERBIT'];
+        if (!in_array($spp->status, $approvedStatuses)) {
+            return back()->withErrors(['error' => 'SPP belum disetujui oleh semua verifikator.']);
+        }
+
+        $request->validate([
+            'file_spp_ttd' => 'required|file|mimes:pdf,jpg,jpeg,png|max:10240',
+        ], [
+            'file_spp_ttd.required' => 'File SPP Bertandatangan wajib diunggah.',
+            'file_spp_ttd.mimes' => 'File harus berformat PDF, JPG, atau PNG.',
+            'file_spp_ttd.max' => 'Ukuran file maksimal 10MB.',
+        ]);
+
+        DB::transaction(function () use ($request, $spp) {
+            $file = $request->file('file_spp_ttd');
+            $namaAsli = $file->getClientOriginalName();
+            $path = $file->store('arsip_spp_signed/' . date('Y'), 'public');
+
+            // Nonaktifkan arsip lama (jika ada re-upload)
+            $spp->arsipDokumen()
+                ->where('jenis_dokumen', DokumenSpp::SPP_SIGNED_ARCHIVE_TYPE)
+                ->where('is_active', true)
+                ->update(['is_active' => false]);
+
+            // Buat arsip baru
+            $spp->arsipDokumen()->create([
+                'jenis_dokumen' => DokumenSpp::SPP_SIGNED_ARCHIVE_TYPE,
+                'nama_file_asli' => $namaAsli,
+                'path_file' => $path,
+                'mime_type' => $file->getMimeType(),
+                'ukuran_file' => $file->getSize(),
+                'uploaded_by' => auth()->id(),
+                'uploaded_at' => now(),
+                'is_active' => true,
+            ]);
+
+            // Log
+            LogStatusDokumen::create([
+                'dokumen_type' => DokumenSpp::class,
+                'dokumen_id' => $spp->id,
+                'user_id' => auth()->id(),
+                'role_saat_itu' => auth()->user()?->getRoleNames()->first() ?? 'Operator BLU',
+                'status_sebelumnya' => $spp->status,
+                'status_baru' => $spp->status,
+                'aksi' => 'UPLOAD_SPP_BERTANDATANGAN',
+                'catatan' => "File SPP Bertandatangan diunggah: {$namaAsli}",
+                'ip_address' => request()->ip(),
+            ]);
+        });
+
+        return back()->with('success', 'File SPP Bertandatangan berhasil diunggah. Anda sekarang dapat membuat draft SPM.');
     }
 }

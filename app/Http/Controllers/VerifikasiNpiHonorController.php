@@ -239,15 +239,15 @@ class VerifikasiNpiHonorController extends Controller
             $isFinished = $wf->status === 'APPROVED';
 
             if ($isFinished) {
-                $npi->update(['status' => DokumenNpi::STATUS_DISETUJUI_FINAL]);
+                $npi->update(['status' => DokumenNpi::STATUS_MENUNGGU_UPLOAD]);
                 LogStatusDokumen::create([
                     'dokumen_type' => DokumenNpi::class,
                     'dokumen_id' => $npi->id,
                     'user_id' => $user->id,
                     'role_saat_itu' => 'Sistem Verifikasi',
-                    'status_baru' => DokumenNpi::STATUS_DISETUJUI_FINAL,
+                    'status_baru' => DokumenNpi::STATUS_MENUNGGU_UPLOAD,
                     'aksi' => 'NPI_FINAL_APPROVED',
-                    'catatan' => 'Form NPI Honorarium disetujui secara mufakat dan berstatus Rilis (Terbit).',
+                    'catatan' => 'Form NPI Honorarium disetujui secara mufakat dan berstatus Menunggu Upload Fisik NPI.',
                     'ip_address' => request()->ip()
                 ]);
             }

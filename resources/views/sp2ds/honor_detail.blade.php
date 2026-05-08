@@ -289,50 +289,35 @@
                     </div>
                 </div>
 
-                {{-- FORMULIR PEMBUATAN/PENGIRIMAN SP2D --}}
+                {{-- PANEL RINGKASAN SP2D --}}
                 <div class="card-custom shadow">
                     <div class="card-header bg-dark text-white p-3 border-0 rounded-top-3 text-center">
                         <h6 class="mb-0 fw-bold"><i class="bi bi-card-text me-2"></i> PENCATATAN SP2D HONORARIUM</h6>
                     </div>
                     <div class="card-body p-4 bg-white rounded-bottom-3">
+                        {{-- Ringkasan Data SP2D --}}
+                        <div class="mb-3 info-cell px-0"><span class="label">Nomor SP2D</span><span class="value font-monospace text-primary">{{ $sp2d?->nomor_sp2d ?? '[ BELUM DIISI ]' }}</span></div>
+                        <div class="mb-3 info-cell px-0"><span class="label">Tanggal SP2D</span><span class="value">{{ $sp2d?->tanggal_sp2d ? optional($sp2d->tanggal_sp2d)->format('d M Y') : '[ BELUM DIISI ]' }}</span></div>
+                        <div class="mb-3 info-cell px-0"><span class="label">Nilai Netto</span><span class="value text-success fw-bold">Rp {{ number_format($defaultNilai, 0, ',', '.') }}</span></div>
+
                         @if($canEdit)
-                        <form action="{{ route('sp2ds.honor.store', $npi->id) }}" method="POST" id="formDraftSp2d">
-                            @csrf
-                            <div class="mb-3">
-                                <label class="form-label small fw-bold text-dark">Nomor SP2D *</label>
-                                <input type="text" name="nomor_sp2d" class="form-control font-monospace text-primary border-primary border-opacity-25 bg-light fw-bold" value="{{ old('nomor_sp2d', $sp2d?->nomor_sp2d ?? $autoNomorSp2d) }}" required placeholder="Contoh: 001/SP2D/2026">
-                                <small class="text-muted"><i class="bi bi-info-circle me-1"></i>Nomor di atas diturunkan dari SPP, ubah jika perlu.</small>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label small fw-bold text-dark">Tanggal SP2D *</label>
-                                <input type="date" name="tanggal_sp2d" class="form-control" value="{{ old('tanggal_sp2d', $sp2d?->tanggal_sp2d?->format('Y-m-d') ?? date('Y-m-d')) }}" required>
-                            </div>
-                            <div class="mb-4">
-                                <label class="form-label small fw-bold text-dark">Catatan Bendahara (Opsional)</label>
-                                <textarea name="catatan" class="form-control form-control-sm" rows="3" placeholder="Informasi tambahan atas pencatatan pengeluaran SP2D ini.">{{ old('catatan', '') }}</textarea>
-                            </div>
-
-                            <button type="submit" class="btn btn-warning fw-bold w-100 shadow-sm border border-warning"><i class="bi bi-save me-1"></i> SIMPAN DRAF SP2D</button>
-                        </form>
-                        
-                        <hr class="my-4 border-dashed opacity-25">
-
-                        <form action="{{ route('sp2ds.honor.submit', $npi->id) }}" method="POST" onsubmit="return confirm('Pengajuan akan mengunci Draf dan mengoper SP2D ini ke Verifikator (PPK, Kasubbag, PPSPM, dan Koordinator Keuangan). Lanjutkan?');">
-                            @csrf
-                            <button type="submit" class="btn btn-success fw-bold w-100 shadow py-2" {{ !$checks['sp2d_valid'] ? 'disabled' : '' }}>
-                                <i class="bi bi-send-check-fill me-1"></i> AJUKAN VERIFIKASI SP2D SEKARANG
+                            {{-- Tombol Edit Draft --}}
+                            <button type="button" class="btn btn-warning fw-bold w-100 shadow-sm border border-warning mb-3" data-bs-toggle="modal" data-bs-target="#modalEditDraftSp2d">
+                                <i class="bi bi-pencil-square me-1"></i> Edit Draft SP2D
                             </button>
-                            @if(!$checks['sp2d_valid'])
-                             <div class="text-danger small mt-2 text-center text-decoration-underline">Rekam/Simpan Draf-nya di tombol kuning atas terlebih dahulu!</div>
-                            @endif
-                        </form>
 
+                            <form action="{{ route('sp2ds.honor.submit', $npi->id) }}" method="POST" onsubmit="return confirm('Pengajuan akan mengunci Draf dan mengoper SP2D ini ke Verifikator (PPK, Kasubbag, PPSPM, dan Koordinator Keuangan). Lanjutkan?');">
+                                @csrf
+                                <button type="submit" class="btn btn-success fw-bold w-100 shadow py-2" {{ !$checks['sp2d_valid'] ? 'disabled' : '' }}>
+                                    <i class="bi bi-send-check-fill me-1"></i> AJUKAN VERIFIKASI SP2D SEKARANG
+                                </button>
+                                @if(!$checks['sp2d_valid'])
+                                 <div class="text-danger small mt-2 text-center text-decoration-underline">Rekam/Simpan Draf-nya terlebih dahulu melalui tombol kuning di atas!</div>
+                                @endif
+                            </form>
                         @else
                             {{-- State ketika sudah dikunci (Diajukan / Selesai) --}}
-                            <div class="mb-3 info-cell px-0"><span class="label">Nomor SP2D</span><span class="value font-monospace text-primary">{{ $sp2d->nomor_sp2d }}</span></div>
-                            <div class="mb-3 info-cell px-0"><span class="label">Tanggal SP2D</span><span class="value">{{ optional($sp2d->tanggal_sp2d)->format('d M Y') }}</span></div>
-                            
-                            <div class="alert alert-secondary mt-4 border-0 d-flex gap-3 align-items-center mb-0">
+                            <div class="alert alert-secondary mt-3 border-0 d-flex gap-3 align-items-center mb-0">
                                 <i class="bi bi-lock-fill fs-3 text-secondary opacity-75"></i>
                                 <div><div class="fw-bold small">Draf Telah Terkunci (Read-only)</div><div class="text-muted" style="font-size:0.75rem;">Form SP2D sudah dalam lajur persetujuan dan tak dapat dimodifikasi.</div></div>
                             </div>
@@ -343,4 +328,55 @@
             </div>
         </div>
     </div>
+@if($canEdit)
+{{-- MODAL EDIT DRAFT SP2D --}}
+<div class="modal fade" id="modalEditDraftSp2d" tabindex="-1" aria-labelledby="modalEditDraftSp2dLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 1rem; overflow: hidden;">
+            <div class="modal-header border-0 text-white p-4" style="background: linear-gradient(135deg, #1e293b, #334155);">
+                <div>
+                    <h5 class="modal-title fw-bold mb-1" id="modalEditDraftSp2dLabel"><i class="bi bi-pencil-square me-2"></i>Edit Draft SP2D</h5>
+                    <div class="small opacity-75">Honorarium &mdash; {{ $tagihan?->deskripsi ?? 'Pencairan SP2D' }}</div>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ route('sp2ds.honor.store', $npi->id) }}" method="POST" id="formDraftSp2d">
+                @csrf
+                <div class="modal-body p-4">
+                    <div class="alert alert-info border-0 py-2 d-flex align-items-center gap-2 mb-4" style="font-size: 0.85rem;">
+                        <i class="bi bi-info-circle-fill"></i>
+                        <span>Isi data pencatatan SP2D. Setelah disimpan, Anda dapat langsung mengajukan verifikasi.</span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-dark">Nomor SP2D <span class="text-danger">*</span></label>
+                        <input type="text" name="nomor_sp2d" class="form-control font-monospace text-primary border-primary border-opacity-25 bg-light fw-bold" value="{{ old('nomor_sp2d', $sp2d?->nomor_sp2d ?? $autoNomorSp2d) }}" required placeholder="Contoh: 001/SP2D/2026">
+                        <small class="text-muted"><i class="bi bi-info-circle me-1"></i>Nomor di atas diturunkan dari SPP, ubah jika perlu.</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-dark">Tanggal SP2D <span class="text-danger">*</span></label>
+                        <input type="date" name="tanggal_sp2d" class="form-control" value="{{ old('tanggal_sp2d', $sp2d?->tanggal_sp2d?->format('Y-m-d') ?? date('Y-m-d')) }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-dark">Catatan Bendahara (Opsional)</label>
+                        <textarea name="catatan" class="form-control form-control-sm" rows="3" placeholder="Informasi tambahan atas pencatatan pengeluaran SP2D ini.">{{ old('catatan', '') }}</textarea>
+                    </div>
+
+                    <div class="bg-light rounded p-3 border d-flex justify-content-between align-items-center">
+                        <div class="small text-muted fw-semibold">Nilai Netto SP2D</div>
+                        <div class="fw-bold text-success fs-5">Rp {{ number_format($defaultNilai, 0, ',', '.') }}</div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 bg-light px-4 py-3">
+                    <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-warning fw-bold px-4 shadow-sm border border-warning">
+                        <i class="bi bi-save me-1"></i> Simpan Draft SP2D
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+@endif
+
 @endsection

@@ -79,16 +79,7 @@
                     <i class="material-icons-outlined" style="font-size:14px; vertical-align: middle;">print</i> Cetak PDF
                 </a>
 
-                @if($canApprove && $pendingActionApprovals->isNotEmpty())
-                    @foreach($pendingActionApprovals as $approval)
-                        <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#modalApprove{{ $approval->id }}">
-                            <i class="material-icons-outlined" style="font-size:14px; vertical-align: middle;">check_circle</i> Setujui {{ $approval->role_code }}
-                        </button>
-                        <button type="button" class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#modalRevisi{{ $approval->id }}">
-                            <i class="material-icons-outlined" style="font-size:14px; vertical-align: middle;">replay</i> Revisi {{ $approval->role_code }}
-                        </button>
-                    @endforeach
-                @endif
+                
             </div>
         </div>
     </div>

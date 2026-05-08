@@ -13,10 +13,14 @@
 
     $ppspmStatusLabel = $ppspmApproval?->status ?? 'Belum diajukan';
     $kasubbagStatusLabel = $kasubbagApproval?->status ?? 'Belum diajukan';
+    $koordinatorStatusLabel = $koordinatorApproval?->status ?? 'Belum diajukan';
     $ppspmStatusClass = match($ppspmStatusLabel) {
         'APPROVED' => 'text-success', 'PENDING' => 'text-warning', 'REVISION','REJECTED' => 'text-danger', default => 'text-muted'
     };
     $kasubbagStatusClass = match($kasubbagStatusLabel) {
+        'APPROVED' => 'text-success', 'PENDING' => 'text-warning', 'REVISION','REJECTED' => 'text-danger', default => 'text-muted'
+    };
+    $koordinatorStatusClass = match($koordinatorStatusLabel) {
         'APPROVED' => 'text-success', 'PENDING' => 'text-warning', 'REVISION','REJECTED' => 'text-danger', default => 'text-muted'
     };
 
@@ -154,6 +158,13 @@
                             <div class="timeline-label">Verifikasi PPSPM</div>
                             <div class="timeline-sub fw-semibold {{ $ppspmStatusClass }}">{{ $ppspmStatusLabel }}</div>
                             @if($ppspmApproval) <div class="timeline-sub mt-0 opacity-75" style="font-size: 0.7rem;">{{ $ppspmApproval->assignedUser?->name ?? 'All Ppspm' }}</div> @endif
+                        </div>
+                        {{-- Step 2: Verifikasi Koordinator Keuangan --}}
+                        <div class="timeline-step {{ $koordinatorApproval?->status === 'APPROVED' ? 'passed' : ($koordinatorApproval?->status === 'REVISION' ? 'revision' : ($progressStep == 2 ? 'active' : '')) }}">
+                            <div class="timeline-icon"><i class="bi bi-person-gear"></i></div>
+                            <div class="timeline-label">Verifikasi Koordinator Keuangan</div>
+                            <div class="timeline-sub fw-semibold {{ $koordinatorStatusClass }}">{{ $koordinatorStatusLabel }}</div>
+                            @if($koordinatorApproval) <div class="timeline-sub mt-0 opacity-75" style="font-size: 0.7rem;">{{ $koordinatorApproval->assignedUser?->name ?? 'Koordinator' }}</div> @endif
                         </div>
                         {{-- Step 2: Verifikasi Kasubbag --}}
                         <div class="timeline-step {{ $kasubbagApproval?->status === 'APPROVED' ? 'passed' : ($kasubbagApproval?->status === 'REVISION' ? 'revision' : ($progressStep == 2 ? 'active' : '')) }}">
