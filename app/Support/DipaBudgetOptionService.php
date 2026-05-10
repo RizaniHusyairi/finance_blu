@@ -60,11 +60,13 @@ class DipaBudgetOptionService
                                     'nama_akun' => $item->coa->nama_akun,
                                     'jenis_akun' => $item->coa->jenis_akun,
                                     'nilai_pagu' => (float) $item->nilai_pagu,
+                                    'sisa_pagu' => (float) $item->sisa_pagu,
                                     'option_label' => sprintf(
-                                        '%s | %s | Pagu Rp %s',
+                                        '%s | %s | Pagu Rp %s | Sisa Rp %s',
                                         $item->coa->kode_mak_lengkap,
                                         $item->coa->nama_akun,
-                                        number_format((float) $item->nilai_pagu, 0, ',', '.')
+                                        number_format((float) $item->nilai_pagu, 0, ',', '.'),
+                                        number_format((float) $item->sisa_pagu, 0, ',', '.')
                                     ),
                                 ];
                             })

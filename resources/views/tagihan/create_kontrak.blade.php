@@ -424,14 +424,14 @@
         const tanggalBast = document.getElementById('tanggal_bast');
         const fileBast = document.getElementById('file_bast');
 
-        bastWrapper.style.display = isPelunasan ? 'block' : 'none';
-        bastFileWrapper.style.display = isPelunasan ? 'block' : 'none';
-        tanggalBast.required = isPelunasan;
-        fileBast.required = isPelunasan;
+        if (bastWrapper) bastWrapper.style.display = isPelunasan ? 'block' : 'none';
+        if (bastFileWrapper) bastFileWrapper.style.display = isPelunasan ? 'block' : 'none';
+        if (tanggalBast) tanggalBast.required = isPelunasan;
+        if (fileBast) fileBast.required = isPelunasan;
 
         if (!isPelunasan) {
-            tanggalBast.value = '';
-            fileBast.value = '';
+            if (tanggalBast) tanggalBast.value = '';
+            if (fileBast) fileBast.value = '';
         }
     }
 

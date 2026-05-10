@@ -102,4 +102,20 @@ class DokumenSp2d extends Model
             ->latest()
             ->first();
     }
+
+    public function unlockNextTerminKontrak()
+    {
+        $terminInfo = $this->npi?->spm?->spp?->tagihan?->detailKontrak?->kontrakTermin;
+        
+        if ($terminInfo) {
+            $nextTermin = \App\Models\KontrakTermin::where('kontrak_pengadaan_id', $terminInfo->kontrak_pengadaan_id)
+                ->where('termin_ke', '>', $terminInfo->termin_ke)
+                ->orderBy('termin_ke', 'asc')
+                ->first();
+                
+            if ($nextTermin && $nextTermin->status_termin === 'LOCKED') {
+                $nextTermin->update(['status_termin' => 'READY_TO_BILL']);
+            }
+        }
+    }
 }

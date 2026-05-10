@@ -30,6 +30,7 @@
                     data-nama-akun="{{ $item['nama_akun'] }}"
                     data-jenis-akun="{{ $item['jenis_akun'] }}"
                     data-nilai-pagu="{{ $item['nilai_pagu'] }}"
+                    data-sisa-pagu="{{ $item['sisa_pagu'] }}"
                     {{ (string) $selectedValue === (string) $item['id'] ? 'selected' : '' }}
                 >
                     &nbsp;&nbsp;&nbsp;{{ $item['option_label'] }}

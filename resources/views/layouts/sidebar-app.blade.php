@@ -46,8 +46,7 @@
             
            
             @hasanyrole('Super Admin|Pejabat Pengadaan')
-            <li><a href="{{ route('suppliers.index') }}"><i class="material-icons-outlined">arrow_right</i>Supplier /
-                Mitra</a>
+            <li><a href="{{ route('suppliers.index') }}"><i class="material-icons-outlined">arrow_right</i>Vendor</a>
             </li>
             @endhasanyrole
             @hasanyrole('Super Admin|KPA|Operator BLU|Kepala Subbagian Keuangan dan Tata Usaha|Kepala Seksi Pelayanan dan Kerjasama')

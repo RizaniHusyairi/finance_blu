@@ -180,6 +180,7 @@
                                 <label class="form-label fw-bold">Nilai Total Kontrak (Rp) <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control rupiah-input" id="nilai_total_kontrak_display" placeholder="Misal: 100.000.000" value="{{ old('nilai_total_kontrak', $kontrak->nilai_total_kontrak) }}" required>
                                 <input type="hidden" name="nilai_total_kontrak" id="nilai_total_kontrak_value" value="{{ old('nilai_total_kontrak', $kontrak->nilai_total_kontrak) }}">
+                                <small class="text-danger mt-1 fw-bold d-none" id="pagu_error"></small>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-bold d-block">Metode Pembayaran <span class="text-danger">*</span></label>
@@ -394,18 +395,29 @@
             if(hiddenInput.value && hiddenInput.value > 0) {
                 input.value = formatRupiah(hiddenInput.value);
             }
-            input.addEventListener('keyup', function(e) {
+            input.addEventListener('input', function(e) {
                 let cleanValue = this.value.replace(/[^,\d]/g, '');
                 hiddenInput.value = cleanValue;
                 this.value = formatRupiah(cleanValue);
                 if (this.id === 'nilai_total_kontrak_display') {
                     validasiUangMuka();
+                    validasiSisaPagu();
+                    kalkulasiTotalTermin();
+                } else if (this.id === 'nilai_uang_muka_display') {
+                    validasiUangMuka();
+                    kalkulasiTotalTermin();
                 }
             });
         });
+        
+        $('#dipa_revision_item_id').on('change', function() {
+            validasiSisaPagu();
+        });
+
         toggleTerminWrapper();
         updateNomorTermin();
         kalkulasiTotalTermin();
+        validasiSisaPagu();
     });
 
     function formatRupiah(angka, prefix = 'Rp '){
@@ -465,6 +477,41 @@
             errEl.classList.remove('d-none');
         } else {
             errEl.classList.add('d-none');
+        }
+    }
+
+    function validasiSisaPagu() {
+        let selectCoa = document.getElementById('dipa_revision_item_id');
+        let selectedOption = selectCoa.options[selectCoa.selectedIndex];
+        let total = parseFloat(document.getElementById('nilai_total_kontrak_value').value) || 0;
+        let sisaPagu = selectedOption ? parseFloat(selectedOption.getAttribute('data-sisa-pagu')) || 0 : 0;
+        let btnSubmit = document.querySelector('button[type="submit"]');
+        let errPaguEl = document.getElementById('pagu_error');
+
+        // Untuk edit, tambahkan pagu_tersimpan kembali ke sisaPagu karena sisa pagu sekarang sudah terpotong nilai kontrak lama
+        let nilaiKontrakLama = {{ $kontrak->nilai_total_kontrak }};
+        let paguTersedia = sisaPagu;
+        
+        // Cek apakah option yang dipilih sama dengan coa lama
+        let isSameCoa = selectedOption && selectedOption.value == "{{ $kontrak->dipa_revision_item_id }}";
+        if (isSameCoa) {
+            paguTersedia = sisaPagu + nilaiKontrakLama;
+        }
+
+        if (total > 0 && selectedOption && selectedOption.value !== "") {
+            if (total > paguTersedia) {
+                if (errPaguEl) {
+                    errPaguEl.classList.remove('d-none');
+                    errPaguEl.innerText = "Peringatan: Nilai Kontrak (Rp " + formatRupiah(total.toString(), '') + ") melebihi sisa pagu COA yang tersedia (Rp " + formatRupiah(paguTersedia.toString(), '') + ").";
+                }
+                btnSubmit.disabled = true;
+            } else {
+                if (errPaguEl) errPaguEl.classList.add('d-none');
+                btnSubmit.disabled = false;
+            }
+        } else {
+            if (errPaguEl) errPaguEl.classList.add('d-none');
+            btnSubmit.disabled = false;
         }
     }
 
@@ -669,9 +716,7 @@
         document.getElementById('pelunasan_nilai_display').innerText = formatRupiah(Math.round(Math.max(pelunasanNilai, 0)).toString(), 'Rp ');
     }
 
-    document.getElementById('nilai_total_kontrak_display').addEventListener('keyup', function() {
-        kalkulasiTotalTermin();
-    });
+
     document.getElementById('gunakan_retensi').addEventListener('change', function() {
         toggleRetensiFields();
         kalkulasiTotalTermin();

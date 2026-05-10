@@ -183,16 +183,13 @@ class ContractController extends Controller
             $nomorSpk = $documentNumberService->generateByKey('SPK');
             $nomorSpmk = $documentNumberService->generateByKey('SPMK');
             
-            // Cek sisa pagu DIPA
-            $terpakai = \App\Models\KontrakPengadaan::where('master_dipa_id', $dipa->id)
-                ->where('status_kontrak', '!=', 'DIBATALKAN')
-                ->sum('nilai_total_kontrak');
-            $sisaPagu = $dipa->total_pagu - $terpakai;
+            // Cek sisa pagu COA
+            $sisaPagu = $selectedItem->sisa_pagu;
 
             if ($validated['nilai_total_kontrak'] > $sisaPagu) {
                 return back()->withInput()->withErrors([
                     'error' => "Gagal disimpan: Nilai Kontrak (Rp " . number_format($validated['nilai_total_kontrak'],0,',','.') . 
-                               ") melebihi sisa pagu anggaran DIPA yang tersedia (Rp " . number_format($sisaPagu,0,',','.') . ")."
+                               ") melebihi sisa pagu COA yang tersedia (Rp " . number_format($sisaPagu,0,',','.') . ")."
                 ]);
             }
 
@@ -434,17 +431,16 @@ class ContractController extends Controller
             $dipa = $selectedItem->dipaRevision->masterDipa;
             $selectedPpk = $this->resolvePpkUser((int) $validated['ppk_user_id']);
             
-            // Cek sisa pagu DIPA (exclude this contract itself)
-            $terpakai = \App\Models\KontrakPengadaan::where('master_dipa_id', $dipa->id)
-                ->whereNotIn('status_kontrak', ['DIBATALKAN', 'DRAFT', 'DRAFT'])
-                ->where('id', '!=', $kontrak->id)
-                ->sum('nilai_total_kontrak');
-            $sisaPagu = $dipa->total_pagu - $terpakai;
+            // Cek sisa pagu COA
+            $sisaPagu = $selectedItem->sisa_pagu;
+            if ($kontrak->dipa_revision_item_id == $selectedItem->id) {
+                $sisaPagu += $kontrak->nilai_total_kontrak;
+            }
 
             if ($validated['nilai_total_kontrak'] > $sisaPagu) {
                 return back()->withInput()->withErrors([
                     'error' => "Gagal disimpan: Nilai Kontrak (Rp " . number_format($validated['nilai_total_kontrak'],0,',','.') . 
-                               ") melebihi sisa pagu anggaran DIPA yang tersedia (Rp " . number_format($sisaPagu,0,',','.') . ")."
+                               ") melebihi sisa pagu COA yang tersedia (Rp " . number_format($sisaPagu,0,',','.') . ")."
                 ]);
             }
 

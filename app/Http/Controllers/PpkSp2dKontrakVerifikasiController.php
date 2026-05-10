@@ -356,6 +356,7 @@ class PpkSp2dKontrakVerifikasiController extends Controller
 
             if ($instance->status === 'APPROVED') {
                 $sp2d->update(['status' => DokumenSp2d::STATUS_DISETUJUI_FINAL]);
+                $sp2d->unlockNextTerminKontrak();
             }
         });
 

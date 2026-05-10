@@ -106,16 +106,16 @@
                                     <input type="date" class="form-control" id="tanggal_mulai" name="tanggal_mulai" value="{{ old('tanggal_mulai') }}" required onchange="hitungTanggalSelesai()">
                                 </div>
                                 <div class="col-md-3">
+                                    <label class="form-label fw-bold">Jangka Waktu <span class="text-danger">*</span></label>
+                                    <input type="number" class="form-control" id="jangka_waktu" name="jangka_waktu" value="{{ old('jangka_waktu') }}" min="1" required oninput="hitungTanggalSelesai()">
+                                </div>
+                                <div class="col-md-3">
                                     <label class="form-label fw-bold">Satuan Waktu <span class="text-danger">*</span></label>
                                     <select class="form-select" id="satuan_waktu" name="satuan_waktu" required onchange="hitungTanggalSelesai()">
                                         <option value="HARI" {{ old('satuan_waktu') == 'HARI' ? 'selected' : '' }}>Hari</option>
                                         <option value="MINGGU" {{ old('satuan_waktu') == 'MINGGU' ? 'selected' : '' }}>Minggu</option>
                                         <option value="BULAN" {{ old('satuan_waktu') == 'BULAN' ? 'selected' : '' }}>Bulan</option>
                                     </select>
-                                </div>
-                                <div class="col-md-3">
-                                    <label class="form-label fw-bold">Jangka Waktu <span class="text-danger">*</span></label>
-                                    <input type="number" class="form-control" id="jangka_waktu" name="jangka_waktu" value="{{ old('jangka_waktu') }}" min="1" required oninput="hitungTanggalSelesai()">
                                 </div>
                                 <div class="col-md-3">
                                     <label class="form-label fw-bold">Tanggal Selesai Pekerjaan <span class="text-danger">*</span></label>
@@ -178,6 +178,7 @@
                                 <label class="form-label fw-bold">Nilai Total Kontrak (Rp) <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control rupiah-input" id="nilai_total_kontrak_display" placeholder="Misal: 100.000.000" value="{{ old('nilai_total_kontrak') }}" required>
                                 <input type="hidden" name="nilai_total_kontrak" id="nilai_total_kontrak_value" value="{{ old('nilai_total_kontrak') }}">
+                                <small class="text-danger mt-1 fw-bold d-none" id="pagu_error"></small>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-bold d-block">Metode Pembayaran <span class="text-danger">*</span></label>
@@ -427,7 +428,6 @@
         // Toggle Uang Muka On Load
         toggleUangMuka();
 
-        // Input Mask Rupiah (untuk display dan hidden real value)
         document.querySelectorAll('.rupiah-input').forEach(input => {
             // Inisialisasi awal jika ada error server / old value
             let hiddenInput = document.getElementById(input.id.replace('_display', '_value'));
@@ -435,14 +435,23 @@
                 input.value = formatRupiah(hiddenInput.value);
             }
 
-            input.addEventListener('keyup', function(e) {
+            input.addEventListener('input', function(e) {
                 let cleanValue = this.value.replace(/[^,\d]/g, '');
                 hiddenInput.value = cleanValue;
                 this.value = formatRupiah(cleanValue);
                 if (this.id === 'nilai_total_kontrak_display') {
                     validasiUangMuka();
+                    validasiSisaPagu();
+                    kalkulasiTotalTermin();
+                } else if (this.id === 'nilai_uang_muka_display') {
+                    validasiUangMuka();
+                    kalkulasiTotalTermin();
                 }
             });
+        });
+
+        $('#dipa_revision_item_id').on('change', function() {
+            validasiSisaPagu();
         });
     });
 
@@ -508,6 +517,31 @@
             errEl.classList.remove('d-none');
         } else {
             errEl.classList.add('d-none');
+        }
+    }
+
+    function validasiSisaPagu() {
+        let selectCoa = document.getElementById('dipa_revision_item_id');
+        let selectedOption = selectCoa.options[selectCoa.selectedIndex];
+        let total = parseFloat(document.getElementById('nilai_total_kontrak_value').value) || 0;
+        let sisaPagu = selectedOption ? parseFloat(selectedOption.getAttribute('data-sisa-pagu')) || 0 : 0;
+        let btnSubmit = document.querySelector('button[type="submit"]');
+        let errPaguEl = document.getElementById('pagu_error');
+
+        if (total > 0 && selectedOption && selectedOption.value !== "") {
+            if (total > sisaPagu) {
+                if (errPaguEl) {
+                    errPaguEl.classList.remove('d-none');
+                    errPaguEl.innerText = "Peringatan: Nilai Kontrak (Rp " + formatRupiah(total.toString(), '') + ") melebihi sisa pagu COA yang tersedia (Rp " + formatRupiah(sisaPagu.toString(), '') + ").";
+                }
+                btnSubmit.disabled = true;
+            } else {
+                if (errPaguEl) errPaguEl.classList.add('d-none');
+                btnSubmit.disabled = false;
+            }
+        } else {
+            if (errPaguEl) errPaguEl.classList.add('d-none');
+            btnSubmit.disabled = false;
         }
     }
 
@@ -750,12 +784,6 @@
         }
     }
 
-    document.getElementById('nilai_total_kontrak_display').addEventListener('keyup', function() {
-        kalkulasiTotalTermin();
-    });
-    document.getElementById('nilai_uang_muka_display').addEventListener('keyup', function() {
-        kalkulasiTotalTermin();
-    });
     document.getElementById('gunakan_retensi').addEventListener('change', function() {
         toggleRetensiFields();
         kalkulasiTotalTermin();
@@ -766,5 +794,6 @@
     updateNomorTermin();
     hitungTanggalSelesaiPemeliharaan();
     kalkulasiTotalTermin();
+    validasiSisaPagu();
 </script>
 @endpush

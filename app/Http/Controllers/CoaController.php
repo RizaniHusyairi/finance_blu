@@ -3,7 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\MasterCoa;
+use App\Models\Tagihan;
+use App\Models\TransaksiPenerimaan;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Validation\Rule;
 
 class CoaController extends Controller
@@ -106,7 +109,7 @@ class CoaController extends Controller
     {
         $coa->load([
             'dipaRevisionItems' => function ($query) {
-                $query->with(['dipaRevision.masterDipa'])
+                $query->with(['dipaRevision.masterDipa', 'realisasiAnggarans'])
                     ->orderByDesc('updated_at');
             },
         ]);
@@ -125,14 +128,28 @@ class CoaController extends Controller
             ->filter()
             ->unique();
 
+        $totalNilaiPagu = (float) $usageItems->sum('nilai_pagu');
+        $totalRealisasi = (float) $usageItems->sum(fn ($item) => (float) $item->total_realisasi);
+
         $statistics = [
             'jumlah_item_dipa' => $usageItems->count(),
             'jumlah_revisi_dipa' => $uniqueRevisions->count(),
             'jumlah_dipa' => $uniqueDipas->count(),
-            'total_nilai_pagu' => (float) $usageItems->sum('nilai_pagu'),
+            'total_nilai_pagu' => $totalNilaiPagu,
+            'total_realisasi' => $totalRealisasi,
+            'total_sisa_pagu' => $totalNilaiPagu - $totalRealisasi,
         ];
 
-        return view('coas.show', compact('coa', 'usageItems', 'statistics'));
+        $billingUsages = $this->billingUsageRows($coa);
+
+        $billingStatistics = [
+            'jumlah_tagihan' => $billingUsages->count(),
+            'jumlah_pengeluaran' => $billingUsages->where('kategori', 'Pengeluaran')->count(),
+            'jumlah_penerimaan' => $billingUsages->where('kategori', 'Penerimaan')->count(),
+            'total_nominal' => (float) $billingUsages->sum('nominal'),
+        ];
+
+        return view('coas.show', compact('coa', 'usageItems', 'statistics', 'billingUsages', 'billingStatistics'));
     }
 
     public function edit(MasterCoa $coa)
@@ -208,6 +225,170 @@ class CoaController extends Controller
         return redirect()
             ->route('coas.index')
             ->with('success', 'COA ' . $label . ' berhasil dihapus.');
+    }
+
+    private function billingUsageRows(MasterCoa $coa)
+    {
+        $pengeluaranRows = Tagihan::query()
+            ->with([
+                'pihak',
+                'dipaRevisionItem.dipaRevision.masterDipa',
+                'detailKontrak.termin.kontrak.vendor',
+                'spps.dipaRevisionItem',
+                'komponenPerjaldin.dipaRevisionItem',
+            ])
+            ->where(function ($query) use ($coa) {
+                $query->whereHas('dipaRevisionItem', fn ($itemQuery) => $itemQuery->where('coa_id', $coa->id))
+                    ->orWhereHas('spps.dipaRevisionItem', fn ($itemQuery) => $itemQuery->where('coa_id', $coa->id))
+                    ->orWhereHas('komponenPerjaldin.dipaRevisionItem', fn ($itemQuery) => $itemQuery->where('coa_id', $coa->id));
+            })
+            ->latest()
+            ->get()
+            ->map(fn (Tagihan $tagihan) => $this->mapTagihanUsage($tagihan, $coa));
+
+        $penerimaanRows = TransaksiPenerimaan::query()
+            ->with('mitra')
+            ->where('coa_id', $coa->id)
+            ->orderByDesc('tanggal_invoice')
+            ->orderByDesc('id')
+            ->get()
+            ->map(fn (TransaksiPenerimaan $penerimaan) => [
+                'kategori' => 'Penerimaan',
+                'tipe' => 'PIUTANG',
+                'nomor' => $penerimaan->nomor_invoice ?: 'INV-' . $penerimaan->id,
+                'tanggal' => $penerimaan->tanggal_invoice ?? $penerimaan->created_at,
+                'uraian' => $penerimaan->keterangan ?: 'Tagihan penerimaan / piutang',
+                'pihak' => $penerimaan->mitra?->nama_pihak ?: '-',
+                'referensi' => null,
+                'nominal' => (float) $penerimaan->nominal_tagihan,
+                'status' => $penerimaan->status_pembayaran ?: '-',
+                'detail_url' => null,
+            ]);
+
+        return $pengeluaranRows
+            ->merge($penerimaanRows)
+            ->sortByDesc(fn ($row) => optional($row['tanggal'])->timestamp ?? 0)
+            ->values();
+    }
+
+    private function mapTagihanUsage(Tagihan $tagihan, MasterCoa $coa): array
+    {
+        $matchingSpps = $tagihan->spps
+            ->filter(fn ($spp) => (int) ($spp->dipaRevisionItem?->coa_id) === (int) $coa->id)
+            ->values();
+
+        $matchingComponents = $tagihan->komponenPerjaldin
+            ->filter(fn ($component) => (int) ($component->dipaRevisionItem?->coa_id) === (int) $coa->id)
+            ->values();
+
+        $references = collect()
+            ->merge($matchingComponents->pluck('nama_komponen')->filter())
+            ->merge($matchingSpps->map(function ($spp) {
+                return $spp->komponen_biaya
+                    ? $spp->komponen_biaya . ' / ' . $spp->nomor_spp
+                    : $spp->nomor_spp;
+            })->filter())
+            ->unique()
+            ->values();
+
+        $nominal = match (true) {
+            $matchingSpps->isNotEmpty() => (float) $matchingSpps->sum('nominal_spp'),
+            $matchingComponents->isNotEmpty() => (float) $matchingComponents->sum('total_nominal'),
+            default => (float) ($tagihan->total_netto ?? $tagihan->total_bruto ?? 0),
+        };
+
+        return [
+            'kategori' => 'Pengeluaran',
+            'tipe' => $tagihan->tipe_tagihan ?: '-',
+            'nomor' => $tagihan->nomor_tagihan ?: 'TAG-' . $tagihan->id,
+            'tanggal' => $tagihan->detailKontrak?->tanggal_invoice ?? $tagihan->created_at,
+            'uraian' => $tagihan->deskripsi ?: '-',
+            'pihak' => $tagihan->pihak?->nama_pihak
+                ?: $tagihan->detailKontrak?->termin?->kontrak?->vendor?->nama_pihak
+                ?: '-',
+            'referensi' => $references->isNotEmpty() ? $references->implode(', ') : 'Tagihan utama',
+            'nominal' => $nominal,
+            'status' => $tagihan->status ?: '-',
+            'detail_url' => $this->tagihanDetailUrl($tagihan),
+        ];
+    }
+
+    private function tagihanDetailUrl(Tagihan $tagihan): ?string
+    {
+        $user = auth()->user();
+
+        if ($user?->hasRole('Kepala Subbagian Keuangan dan Tata Usaha')) {
+            return match ($tagihan->tipe_tagihan) {
+                'KONTRAK' => $this->routeIfExists('verifikasi-tagihan-kontrak.show', $tagihan->id),
+                'PERJALDIN' => $this->routeIfExists('verifikasi-kasubag.perjaldin.show', $tagihan->id),
+                'HONORARIUM' => $this->latestSppRouteIfExists($tagihan, 'verifikasi-spp.honor.detail'),
+                default => null,
+            };
+        }
+
+        if ($user?->hasRole('Koordinator Keuangan')) {
+            return match ($tagihan->tipe_tagihan) {
+                'KONTRAK' => $this->routeIfExists('verifikasi-tagihan-kontrak.show', $tagihan->id),
+                'PERJALDIN' => $this->routeIfExists('verifikasi-koordinator.perjaldin.show', $tagihan->id),
+                'HONORARIUM' => $this->routeIfExists('verifikasi-koordinator.honorarium.show', $tagihan->id),
+                default => null,
+            };
+        }
+
+        if ($user?->hasRole('Bendahara Pengeluaran')) {
+            return match ($tagihan->tipe_tagihan) {
+                'KONTRAK' => $this->routeIfExists('verifikasi-tagihan-kontrak.show', $tagihan->id),
+                'PERJALDIN' => $this->routeIfExists('verifikasi-bendahara.perjaldin.show', $tagihan->id),
+                'HONORARIUM' => $this->routeIfExists('verifikasi-bendahara.honorarium.show', $tagihan->id),
+                default => null,
+            };
+        }
+
+        if ($user?->hasRole('Bendahara Penerimaan')) {
+            return match ($tagihan->tipe_tagihan) {
+                'KONTRAK' => $this->routeIfExists('verifikasi-tagihan-kontrak.show', $tagihan->id),
+                'PERJALDIN' => $this->routeIfExists('verifikasi-bendahara-penerimaan.perjaldin.show', $tagihan->id),
+                default => null,
+            };
+        }
+
+        if ($user?->hasRole('PPSPM')) {
+            return match ($tagihan->tipe_tagihan) {
+                'KONTRAK' => $this->routeIfExists('verifikasi-tagihan-kontrak.show', $tagihan->id),
+                'PERJALDIN' => $this->routeIfExists('verifikasi-ppspm.perjaldin.show', $tagihan->id),
+                default => null,
+            };
+        }
+
+        if ($user?->hasRole('PPK')) {
+            return match ($tagihan->tipe_tagihan) {
+                'KONTRAK' => $this->routeIfExists('tagihan.kontrak.show', $tagihan->id),
+                'PERJALDIN' => $this->routeIfExists('verifikasi-ppk.perjaldin.show', $tagihan->id),
+                'HONORARIUM' => $this->routeIfExists('verifikasi-ppk.honorarium.show', $tagihan->id),
+                default => null,
+            };
+        }
+
+        return match ($tagihan->tipe_tagihan) {
+            'KONTRAK' => $this->routeIfExists('tagihan.kontrak.show', $tagihan->id),
+            'HONORARIUM' => $this->routeIfExists('honorarium.show', $tagihan->id),
+            'PERJALDIN' => $this->routeIfExists('perjaldins.show', $tagihan->id),
+            default => null,
+        };
+    }
+
+    private function latestSppRouteIfExists(Tagihan $tagihan, string $routeName): ?string
+    {
+        $spp = $tagihan->relationLoaded('spps')
+            ? $tagihan->spps->sortByDesc('created_at')->first()
+            : $tagihan->spps()->latest()->first();
+
+        return $spp ? $this->routeIfExists($routeName, $spp->id) : null;
+    }
+
+    private function routeIfExists(string $routeName, mixed $parameters = []): ?string
+    {
+        return Route::has($routeName) ? route($routeName, $parameters) : null;
     }
 
     private function buildKodeMakLengkap(array $payload): string
