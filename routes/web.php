@@ -129,6 +129,14 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
         Route::post('/verifikasi-tagihan-kontrak/{id}/approve', [\App\Http\Controllers\TagihanKontrakVerifikasiController::class, 'approve'])->name('verifikasi-tagihan-kontrak.approve');
         Route::post('/verifikasi-tagihan-kontrak/{id}/revisi', [\App\Http\Controllers\TagihanKontrakVerifikasiController::class, 'revisi'])->name('verifikasi-tagihan-kontrak.revisi');
         Route::post('/verifikasi-tagihan-kontrak/{id}/reject', [\App\Http\Controllers\TagihanKontrakVerifikasiController::class, 'reject'])->name('verifikasi-tagihan-kontrak.reject');
+
+        // Verifikasi Tagihan Honorarium — multi-role (pola sama dengan Kontrak)
+        Route::get('/verifikasi-tagihan-honorarium', [\App\Http\Controllers\TagihanHonorariumVerifikasiController::class, 'index'])->name('verifikasi-tagihan-honorarium.index');
+        Route::get('/verifikasi-tagihan-honorarium/{id}', [\App\Http\Controllers\TagihanHonorariumVerifikasiController::class, 'show'])->name('verifikasi-tagihan-honorarium.show');
+        Route::get('/verifikasi-tagihan-honorarium/{id}/arsip/{arsipId}', [\App\Http\Controllers\TagihanHonorariumVerifikasiController::class, 'viewArsip'])->name('verifikasi-tagihan-honorarium.arsip');
+        Route::post('/verifikasi-tagihan-honorarium/{id}/approve', [\App\Http\Controllers\TagihanHonorariumVerifikasiController::class, 'approve'])->name('verifikasi-tagihan-honorarium.approve');
+        Route::post('/verifikasi-tagihan-honorarium/{id}/revisi', [\App\Http\Controllers\TagihanHonorariumVerifikasiController::class, 'revisi'])->name('verifikasi-tagihan-honorarium.revisi');
+        Route::post('/verifikasi-tagihan-honorarium/{id}/reject', [\App\Http\Controllers\TagihanHonorariumVerifikasiController::class, 'reject'])->name('verifikasi-tagihan-honorarium.reject');
     });
 
     Route::middleware('role:Super Admin|Pejabat Pengadaan|PPK')->group(function () {
