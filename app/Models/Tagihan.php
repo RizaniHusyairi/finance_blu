@@ -12,6 +12,30 @@ class Tagihan extends Model
     protected $table = 'tagihan';
     protected $guarded = ['id'];
 
+    protected $casts = [
+        'mekanisme_pembayaran' => \App\Enums\MekanismePembayaran::class,
+    ];
+
+    protected static function booted(): void
+    {
+        static::updating(function (Tagihan $tagihan) {
+            // Kunci mekanisme_pembayaran setelah tagihan keluar dari status DRAFT/REVISI.
+            // Perubahan hanya boleh via aksi revisi workflow (yang akan set status kembali ke DRAFT/REVISI).
+            if (! $tagihan->isDirty('mekanisme_pembayaran')) {
+                return;
+            }
+
+            $statusLama = $tagihan->getOriginal('status');
+            if (! in_array($statusLama, ['DRAFT', 'REVISI', null], true)
+                && ! str_starts_with((string) $statusLama, 'REVISI_')
+            ) {
+                throw new \RuntimeException(
+                    'Mekanisme pembayaran tidak dapat diubah setelah tagihan disubmit. Gunakan aksi revisi oleh PPK.'
+                );
+            }
+        });
+    }
+
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');

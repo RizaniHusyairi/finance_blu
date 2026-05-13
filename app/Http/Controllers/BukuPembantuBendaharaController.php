@@ -15,14 +15,14 @@ class BukuPembantuBendaharaController extends Controller
     public function index(Request $request)
     {
         return view('pembukuan.bendahara.index', $this->pembukuanService->buildBendaharaIndexData(
-            $request->only(['start_date', 'end_date', 'rekening_bank_id', 'jenis_transaksi', 'tagihan_id'])
+            $request->only(['start_date', 'end_date', 'rekening_bank_id', 'jenis_transaksi', 'tagihan_id', 'mekanisme_pembayaran'])
         ));
     }
 
     public function pdf(Request $request)
     {
         $data = $this->pembukuanService->buildBendaharaIndexData(
-            $request->only(['start_date', 'end_date', 'rekening_bank_id', 'jenis_transaksi', 'tagihan_id'])
+            $request->only(['start_date', 'end_date', 'rekening_bank_id', 'jenis_transaksi', 'tagihan_id', 'mekanisme_pembayaran'])
         );
 
         return $this->pembukuanService->streamPdf(

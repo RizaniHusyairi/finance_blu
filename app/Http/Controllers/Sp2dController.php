@@ -110,9 +110,21 @@ class Sp2dController extends Controller
         $tagihanSumber = optional(optional(optional($sp2d->npi)->spm)->spp)->tagihan;
         if (
             $tagihanSumber?->tipe_tagihan === 'KONTRAK'
-            && ! in_array($sp2d->status, [DokumenSp2d::STATUS_DISETUJUI_FINAL, DokumenSp2d::STATUS_APPROVED], true)
+            && ! in_array($sp2d->status, [
+                DokumenSp2d::STATUS_SP2D_TERBIT,
+                DokumenSp2d::STATUS_DISETUJUI_FINAL,
+                DokumenSp2d::STATUS_APPROVED,
+            ], true)
         ) {
             return back()->with('error', 'SP2D kontrak harus disetujui final sebelum bukti transfer diunggah.');
+        }
+
+        // Untuk SP2D kontrak, file SP2D bertandatangan wajib diunggah terlebih dulu
+        if (
+            $tagihanSumber?->tipe_tagihan === 'KONTRAK'
+            && ! $sp2d->has_signed_file
+        ) {
+            return back()->with('error', 'Unggah file SP2D bertandatangan terlebih dahulu sebelum bukti transfer.');
         }
 
         $request->validate([

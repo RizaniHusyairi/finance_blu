@@ -9,8 +9,8 @@
     <div class="book-hero">
         <div class="d-flex flex-column flex-lg-row justify-content-between gap-3 align-items-lg-center">
             <div>
-                <h4 class="mb-1 fw-bold text-dark">Buku Pembantu Bendahara</h4>
-                <div class="text-muted">Ledger operasional turunan dari BKU dengan fokus saldo awal, penerimaan, pengeluaran, dan referensi dokumen bendahara.</div>
+                <h4 class="mb-1 fw-bold text-dark">Buku Pembantu LS Bendahara</h4>
+                <div class="text-muted">Ledger operasional turunan dari BKU untuk pembayaran LS yang melewati rekening Bendahara Pengeluaran. Secara default hanya menampilkan tagihan dengan mekanisme <strong>LS - Via Bendahara</strong>.</div>
             </div>
             <div>
                 <a href="{{ route('pembukuan.bendahara.pdf', request()->query()) }}" target="_blank" class="btn btn-outline-danger">
@@ -57,6 +57,17 @@
                     <option value="">Semua</option>
                     <option value="penerimaan" @selected($filters['jenis_transaksi'] === 'penerimaan')>Penerimaan</option>
                     <option value="pengeluaran" @selected($filters['jenis_transaksi'] === 'pengeluaran')>Pengeluaran</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-semibold">Mekanisme</label>
+                @php
+                    $mekAktif = $filters['mekanisme_pembayaran'] ?? \App\Enums\MekanismePembayaran::LS_BENDAHARA->value;
+                @endphp
+                <select name="mekanisme_pembayaran" class="form-select">
+                    <option value="{{ \App\Enums\MekanismePembayaran::LS_BENDAHARA->value }}" @selected($mekAktif === \App\Enums\MekanismePembayaran::LS_BENDAHARA->value)>LS - Via Bendahara</option>
+                    <option value="{{ \App\Enums\MekanismePembayaran::LS_PIHAK_3->value }}" @selected($mekAktif === \App\Enums\MekanismePembayaran::LS_PIHAK_3->value)>LS - Pihak Ketiga</option>
+                    <option value="all" @selected($mekAktif === 'all')>Semua Mekanisme</option>
                 </select>
             </div>
             <div class="col-md-3">

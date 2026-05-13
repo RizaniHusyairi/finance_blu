@@ -149,6 +149,15 @@ class PerjaldinController extends Controller
             'koordinator_keuangan_nama_snapshot' => 'nullable|string|max:150',
             'koordinator_keuangan_nip_snapshot' => 'nullable|string|max:100',
 
+            'mekanisme_pembayaran' => [
+                'nullable',
+                'string',
+                \Illuminate\Validation\Rule::in([
+                    \App\Enums\MekanismePembayaran::LS_PIHAK_3->value,
+                    \App\Enums\MekanismePembayaran::LS_BENDAHARA->value,
+                ]),
+            ],
+
             'peserta' => 'required|array|min:1',
             'peserta.*.nama_pegawai' => 'required|string|max:150',
             'peserta.*.nip' => 'nullable|string|max:100',
@@ -203,6 +212,10 @@ class PerjaldinController extends Controller
                 'total_bruto' => $totalBruto,
                 'total_potongan' => 0,
                 'total_netto' => $totalBruto,
+                'mekanisme_pembayaran' => $request->input(
+                    'mekanisme_pembayaran',
+                    \App\Enums\MekanismePembayaran::defaultFor('PERJALDIN')->value
+                ),
                 'status' => 'DRAFT',
                 'created_by' => auth()->id(),
             ]);
@@ -405,6 +418,15 @@ class PerjaldinController extends Controller
             'koordinator_keuangan_nama_snapshot' => 'nullable|string|max:150',
             'koordinator_keuangan_nip_snapshot' => 'nullable|string|max:100',
 
+            'mekanisme_pembayaran' => [
+                'nullable',
+                'string',
+                \Illuminate\Validation\Rule::in([
+                    \App\Enums\MekanismePembayaran::LS_PIHAK_3->value,
+                    \App\Enums\MekanismePembayaran::LS_BENDAHARA->value,
+                ]),
+            ],
+
             'peserta' => 'required|array|min:1',
             'peserta.*.detail_id' => 'nullable|exists:detail_perjaldin,id',
             'peserta.*.nama_pegawai' => 'required|string|max:150',
@@ -460,6 +482,11 @@ class PerjaldinController extends Controller
                 'koordinator_keuangan_nip_snapshot' => $request->koordinator_keuangan_nip_snapshot,
                 'total_bruto' => $totalBruto,
                 'total_netto' => $totalBruto - $tagihan->total_potongan,
+                'mekanisme_pembayaran' => $request->input(
+                    'mekanisme_pembayaran',
+                    optional($tagihan->mekanisme_pembayaran)->value
+                        ?? \App\Enums\MekanismePembayaran::defaultFor('PERJALDIN')->value
+                ),
                 'status' => 'DRAFT', // Reset ke draft saat diedit
             ]);
 

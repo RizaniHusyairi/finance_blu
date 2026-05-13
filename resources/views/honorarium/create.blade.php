@@ -111,24 +111,38 @@
                         </div>
                     </div>
                     <div class="card-body p-4">
+                        @php
+                            $verifikatorRoles = [
+                                'ppk'                   => ['label' => 'Pejabat Pembuat Komitmen (PPK)', 'input' => 'ppk_id',                   'id' => 'inp_ppk'],
+                                'ppspm'                 => ['label' => 'PPSPM',                         'input' => 'ppspm_id',                 'id' => 'inp_ppspm'],
+                                'koordinator_keuangan'  => ['label' => 'Koordinator Keuangan',          'input' => 'koordinator_keuangan_id',  'id' => 'inp_koordinator_keuangan'],
+                                'bendahara_pengeluaran' => ['label' => 'Bendahara Pengeluaran',         'input' => 'bendahara_pengeluaran_id', 'id' => 'inp_bendahara'],
+                                'bendahara_penerimaan'  => ['label' => 'Bendahara Penerimaan',          'input' => 'bendahara_penerimaan_id',  'id' => 'inp_bendahara_penerimaan'],
+                                'kasubbag'              => ['label' => 'Kasubbag Keuangan & TU',        'input' => 'kasubbag_id',              'id' => 'inp_kasubbag'],
+                            ];
+                        @endphp
                         <div class="row g-3">
-                            <div class="col-md-6">
-                                <label class="form-label fw-semibold">Pejabat Pembuat Komitmen (PPK) <span class="text-danger">*</span></label>
-                                <select name="ppk_id" id="inp_ppk" class="form-select select2" required>
-                                    <option value="">-- Pilih PPK --</option>
-                                    @foreach($ppkUsers as $ppk)
-                                        <option value="{{ $ppk->id }}" {{ old('ppk_id') == $ppk->id ? 'selected' : '' }}>{{ $ppk->name }}</option>
+                            @foreach($verifikatorRoles as $key => $meta)
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">{{ $meta['label'] }} <span class="text-danger">*</span></label>
+                                    <select name="{{ $meta['input'] }}" id="{{ $meta['id'] }}" class="form-select select2" required>
+                                        <option value="">-- Pilih {{ $meta['label'] }} --</option>
+                                        @foreach($verifikatorOptions[$key] ?? [] as $u)
+                                            <option value="{{ $u['id'] }}" {{ old($meta['input']) == $u['id'] ? 'selected' : '' }}>
+                                                {{ $u['name'] }} @if($u['nip'] !== '-')- {{ $u['nip'] }}@endif
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            @endforeach
+                            <div class="col-md-12">
+                                <label class="form-label fw-semibold">Mekanisme Pembayaran <span class="text-danger">*</span></label>
+                                <select name="mekanisme_pembayaran" class="form-select" required>
+                                    @foreach(\App\Enums\MekanismePembayaran::optionsFor('HONORARIUM') as $val => $lbl)
+                                        <option value="{{ $val }}" {{ old('mekanisme_pembayaran', \App\Enums\MekanismePembayaran::defaultFor('HONORARIUM')->value) === $val ? 'selected' : '' }}>{{ $lbl }}</option>
                                     @endforeach
                                 </select>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label fw-semibold">Bendahara Pengeluaran <span class="text-danger">*</span></label>
-                                <select name="bendahara_pengeluaran_id" id="inp_bendahara" class="form-select select2" required>
-                                    <option value="">-- Pilih Bendahara Pengeluaran --</option>
-                                    @foreach($bendaharaUsers as $bendahara)
-                                        <option value="{{ $bendahara->id }}" {{ old('bendahara_pengeluaran_id') == $bendahara->id ? 'selected' : '' }}>{{ $bendahara->name }}</option>
-                                    @endforeach
-                                </select>
+                                <div class="form-text">LS - Pihak Ketiga: dibayar langsung ke rekening masing-masing penerima. LS - Via Bendahara: diteruskan melalui Bendahara Pengeluaran.</div>
                             </div>
                         </div>
                     </div>

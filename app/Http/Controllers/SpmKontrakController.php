@@ -300,6 +300,7 @@ class SpmKontrakController extends Controller
 
         DB::transaction(function () use ($request, $spp, $existingSpm) {
             $nominalSpm = (float) $spp->nominal_spp;
+            $mekanismeTagihan = optional($spp->tagihan)->mekanisme_pembayaran;
 
             $spm = DokumenSpm::updateOrCreate(
                 ['id' => $existingSpm?->id],
@@ -312,7 +313,7 @@ class SpmKontrakController extends Controller
                     'tahun_anggaran' => $spp->dipaRevisionItem?->revision?->dipa?->tahun_anggaran ?? date('Y'),
                     'jenis_tagihan' => $spp->jenis_tagihan ?? 'NON REMUNERASI',
                     'jatuh_tempo' => 'Segera',
-                    'cara_bayar' => 'SP2D BLU - TRF',
+                    'cara_bayar' => optional($mekanismeTagihan)->spmCaraBayar() ?? 'SP2D BLU - TRF',
                     'nominal_spm' => $nominalSpm,
                     'dibuat_oleh_id' => auth()->id(),
                     'status' => $existingSpm && $existingSpm->status === DokumenSpm::STATUS_REVISI

@@ -175,6 +175,13 @@
                             <div class="text-muted small">Total Netto</div>
                             <div class="fw-bold fs-5 text-success">Rp {{ number_format($tagihan->total_netto, 0, ',', '.') }}</div>
                         </div>
+                        <div class="col-md-12">
+                            <div class="text-muted small">Mekanisme Pembayaran</div>
+                            <span class="badge bg-primary-subtle text-primary fs-6 px-3 py-2">
+                                <i class="bi bi-bank me-1"></i>{{ optional($tagihan->mekanisme_pembayaran)->label() ?? 'LS - Pihak Ketiga' }}
+                            </span>
+                            <div class="small text-muted mt-1">Kontrak selalu dibayar secara LS - Pihak Ketiga.</div>
+                        </div>
                     </div>
                 </div>
             </div>

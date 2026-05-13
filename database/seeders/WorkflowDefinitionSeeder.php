@@ -433,33 +433,17 @@ class WorkflowDefinitionSeeder extends Seeder
             ],
             [
                 'kode' => 'TAGIHAN_HONORARIUM',
-                'nama' => 'Verifikasi Tagihan Honorarium',
+                'nama' => 'Verifikasi Tagihan Honorarium (Multi-Verifikator)',
                 'target_type' => 'App\Models\Tagihan',
                 'steps' => [
-                    [
-                        'urutan_step' => 1,
-                        'nama_step' => 'Verifikasi PPK',
-                        'role_code' => 'PPK',
-                        'is_required' => true,
-                        'can_reject' => true,
-                        'can_request_revision' => true,
-                    ],
-                    [
-                        'urutan_step' => 1,
-                        'nama_step' => 'Verifikasi Bendahara Pengeluaran',
-                        'role_code' => 'Bendahara Pengeluaran',
-                        'is_required' => true,
-                        'can_reject' => true,
-                        'can_request_revision' => true,
-                    ],
-                    [
-                        'urutan_step' => 1,
-                        'nama_step' => 'Verifikasi Koordinator Keuangan',
-                        'role_code' => 'Koordinator Keuangan',
-                        'is_required' => true,
-                        'can_reject' => true,
-                        'can_request_revision' => true,
-                    ],
+                    // === STEP 1 (paralel) — 5 verifikator, semua wajib approve ===
+                    ['urutan_step' => 1, 'nama_step' => 'Verifikasi PPK',                  'role_code' => 'PPK',                   'is_required' => true, 'can_reject' => true, 'can_request_revision' => true],
+                    ['urutan_step' => 1, 'nama_step' => 'Verifikasi PPSPM',                'role_code' => 'PPSPM',                 'is_required' => true, 'can_reject' => true, 'can_request_revision' => true],
+                    ['urutan_step' => 1, 'nama_step' => 'Verifikasi Koordinator Keuangan', 'role_code' => 'KOORDINATOR_KEUANGAN',  'is_required' => true, 'can_reject' => true, 'can_request_revision' => true],
+                    ['urutan_step' => 1, 'nama_step' => 'Verifikasi Bendahara Pengeluaran','role_code' => 'BENDAHARA_PENGELUARAN', 'is_required' => true, 'can_reject' => true, 'can_request_revision' => true],
+                    ['urutan_step' => 1, 'nama_step' => 'Verifikasi Bendahara Penerimaan', 'role_code' => 'BENDAHARA_PENERIMAAN',  'is_required' => true, 'can_reject' => true, 'can_request_revision' => true],
+                    // === STEP 2 — finalisasi Kasubbag ===
+                    ['urutan_step' => 2, 'nama_step' => 'Persetujuan Kasubbag',            'role_code' => 'KASUBBAG',              'is_required' => true, 'can_reject' => true, 'can_request_revision' => true],
                 ],
             ],
         ];

@@ -19,9 +19,13 @@ class DokumenSp2d extends Model
     public const STATUS_DRAFT = 'DRAFT';
     public const STATUS_MENUNGGU_VERIFIKASI = 'MENUNGGU_VERIFIKASI';
     public const STATUS_DISETUJUI_FINAL = 'DISETUJUI_FINAL';
+    public const STATUS_MENUNGGU_UPLOAD = 'MENUNGGU_UPLOAD';
+    public const STATUS_SP2D_TERBIT = 'SP2D_TERBIT';
     public const STATUS_REVISI = 'REVISI';
     public const STATUS_APPROVED = 'APPROVED'; // Legacy
     public const STATUS_EXECUTED = 'EXECUTED';
+
+    public const SP2D_SIGNED_ARCHIVE_TYPE = 'SP2D_BERTANDATANGAN';
 
     public function npi()
     {
@@ -79,6 +83,7 @@ class DokumenSp2d extends Model
         return match ($this->status) {
             self::STATUS_DRAFT => 'SP2D Draft',
             self::STATUS_APPROVED => 'SP2D Terbit',
+            self::STATUS_SP2D_TERBIT => 'SP2D Terbit',
             self::STATUS_EXECUTED => 'Lunas',
             default => 'SP2D Draft',
         };
@@ -101,6 +106,20 @@ class DokumenSp2d extends Model
             ->where('is_active', true)
             ->latest()
             ->first();
+    }
+
+    public function getSignedArsipAttribute()
+    {
+        return $this->arsipDokumen()
+            ->where('jenis_dokumen', self::SP2D_SIGNED_ARCHIVE_TYPE)
+            ->where('is_active', true)
+            ->latest()
+            ->first();
+    }
+
+    public function getHasSignedFileAttribute(): bool
+    {
+        return $this->signed_arsip !== null;
     }
 
     public function unlockNextTerminKontrak()

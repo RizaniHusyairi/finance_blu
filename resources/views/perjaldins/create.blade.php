@@ -55,6 +55,15 @@
                         <label class="form-label">Tanggal TTD <span class="text-danger">*</span></label>
                         <input type="date" name="tanggal_ttd" class="form-control" required value="{{ old('tanggal_ttd', date('Y-m-d')) }}">
                     </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Mekanisme Pembayaran <span class="text-danger">*</span></label>
+                        <select name="mekanisme_pembayaran" class="form-select" required>
+                            @foreach(\App\Enums\MekanismePembayaran::optionsFor('PERJALDIN') as $val => $lbl)
+                                <option value="{{ $val }}" {{ old('mekanisme_pembayaran', \App\Enums\MekanismePembayaran::defaultFor('PERJALDIN')->value) === $val ? 'selected' : '' }}>{{ $lbl }}</option>
+                            @endforeach
+                        </select>
+                        <div class="form-text">LS - Pihak Ketiga: ditransfer langsung ke rekening masing-masing peserta. LS - Via Bendahara: diteruskan melalui Bendahara Pengeluaran.</div>
+                    </div>
                 </div>
 
                 <!-- SECTION B: VERIFIKATOR DOKUMEN -->

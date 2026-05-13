@@ -192,7 +192,7 @@ class PerjaldinKomponenService
             'tagihan_perjaldin_komponen_id' => $komponen->id,
             'komponen_biaya' => $komponen->kode_komponen,
             'dipa_revision_item_id' => $komponen->dipa_revision_item_id,
-            'kategori_pembayaran' => 'SP2D BLU - TRF',
+            'kategori_pembayaran' => optional($tagihan?->mekanisme_pembayaran)->sppKategoriPembayaran() ?? 'SP2D BLU - TRF',
             'jenis_tagihan' => 'NON REMUNERASI',
             'nominal_spp' => $komponen->total_nominal,
             'nomor_spp' => $nomorSpp,

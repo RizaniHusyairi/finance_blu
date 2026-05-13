@@ -515,12 +515,12 @@
                         {{-- Action button --}}
                         @if($isReadyToSubmit && $verifikatorLengkap)
                             <div class="alert alert-success border-0 small mb-3 py-2">
-                                <i class="bi bi-check-circle me-1"></i> Tagihan siap diajukan ke PPK.
+                                <i class="bi bi-check-circle me-1"></i> Tagihan siap diajukan.
                             </div>
                             <form action="{{ route('tagihan.kontrak.submit', $tagihan->id) }}" method="POST">
                                 @csrf
                                 <button type="submit" class="btn btn-success w-100 fw-bold py-2 shadow-sm">
-                                    <i class="bi bi-send me-1"></i> Ajukan Tagihan ke PPK
+                                    <i class="bi bi-send me-1"></i> Ajukan Tagihan
                                 </button>
                             </form>
                         @else
@@ -533,7 +533,7 @@
                                 @endif
                             </div>
                             <button type="button" class="btn btn-secondary w-100 fw-bold py-2" disabled>
-                                <i class="bi bi-send me-1"></i> Ajukan Tagihan ke PPK
+                                <i class="bi bi-send me-1"></i> Ajukan Tagihan
                             </button>
                         @endif
                     @else

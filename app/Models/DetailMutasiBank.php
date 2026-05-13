@@ -14,6 +14,7 @@ class DetailMutasiBank extends Model
         'debit' => 'decimal:2',
         'kredit' => 'decimal:2',
         'saldo' => 'decimal:2',
+        'kategori_mutasi' => \App\Enums\KategoriMutasiBank::class,
     ];
 
     public function importMutasiBank()

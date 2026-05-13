@@ -152,6 +152,9 @@ class TagihanController extends Controller
                 'kasubbag'             => (int) $validated['kasubbag_user_id'],
             ]);
 
+            // Kontrak selalu LS Pihak Ketiga (dikunci oleh kebijakan).
+            $mekanismePembayaran = \App\Enums\MekanismePembayaran::LS_PIHAK_3;
+
             $tagihan = Tagihan::create(array_merge([
                 'nomor_tagihan' => $nomorTagihan,
                 'tipe_tagihan' => 'KONTRAK',
@@ -162,6 +165,7 @@ class TagihanController extends Controller
                 'total_bruto' => $totalBruto,
                 'total_potongan' => $totalPotongan,
                 'total_netto' => $totalNetto,
+                'mekanisme_pembayaran' => $mekanismePembayaran->value,
                 'status' => 'DRAFT',
                 'created_by' => Auth::id(),
             ], $verifikatorSnapshots));

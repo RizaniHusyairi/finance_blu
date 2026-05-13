@@ -8,6 +8,8 @@
         'REVISI' => 'bg-danger',
         'MENUNGGU_VERIFIKASI' => 'bg-info text-dark',
         'DISETUJUI_FINAL' => 'bg-success',
+        'MENUNGGU_UPLOAD' => 'bg-success',
+        'SP2D_TERBIT' => 'bg-success',
         'EXECUTED' => 'bg-primary',
         default => 'bg-light text-dark'
     };
@@ -17,7 +19,9 @@
         'DRAFT' => 'Draft',
         'REVISI' => 'Draft Revisi',
         'MENUNGGU_VERIFIKASI' => 'Menunggu Verifikasi',
-        'DISETUJUI_FINAL' => 'Selesai / Terbit',
+        'DISETUJUI_FINAL' => 'Disetujui Final',
+        'MENUNGGU_UPLOAD' => 'Menunggu Upload SP2D',
+        'SP2D_TERBIT' => 'SP2D Terbit',
         'EXECUTED' => 'Lunas / BKU',
         default => $status
     };
@@ -88,7 +92,7 @@
                     <i class="material-icons-outlined" style="font-size:14px; vertical-align: middle;">arrow_back</i> Kembali
                 </a>
 
-                @if($statusSp2d === 'DISETUJUI_FINAL' || $statusSp2d === 'EXECUTED')
+                @if(in_array($statusSp2d, ['DISETUJUI_FINAL', 'MENUNGGU_UPLOAD', 'SP2D_TERBIT', 'EXECUTED']))
                     <a href="{{ route('sp2ds.cetak-pdf', $sp2d->id) }}" target="_blank" class="btn btn-outline-primary btn-sm">
                         <i class="material-icons-outlined" style="font-size:14px; vertical-align: middle;">print</i> Cetak PDF
                     </a>
@@ -250,14 +254,54 @@
                             <label class="form-label fw-semibold text-muted">Nominal SP2D</label>
                             <div class="fw-bold text-success fs-5">Rp {{ number_format($nominalSp2d, 0, ',', '.') }}</div>
                         </div>
+                        @php $signedSp2dArsip = $sp2d?->signed_arsip; @endphp
+
                         @if($statusSp2d === 'DISETUJUI_FINAL')
                             <div class="alert alert-success border-0 d-flex align-items-start gap-2">
                                 <i class="material-icons-outlined">check_circle</i>
                                 <div>
-                                    <div class="fw-semibold">SP2D telah disetujui final.</div>
-                                    <div class="small">Upload bukti transfer untuk membuat tagihan menjadi SELESAI. Setelah itu penyetoran pajak kontrak akan dibuka.</div>
+                                    <div class="fw-semibold">SP2D telah disetujui seluruh verifikator.</div>
+                                    <div class="small">Unggah file SP2D bertandatangan terlebih dahulu, kemudian lanjutkan upload bukti transfer.</div>
                                 </div>
                             </div>
+                            <form action="{{ route('sp2ds.kontrak.upload-signed-sp2d', $sp2d->id) }}" method="POST" enctype="multipart/form-data" class="border rounded-3 bg-white p-3">
+                                @csrf
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold">File SP2D Bertandatangan <span class="text-danger">*</span></label>
+                                    <input type="file" name="file_sp2d_ttd" class="form-control" accept=".pdf,.jpg,.jpeg,.png" required>
+                                    <div class="form-text">PDF / JPG / PNG, maksimal 10MB.</div>
+                                </div>
+                                <button type="submit" class="btn btn-primary w-100 fw-semibold" onclick="return confirm('Unggah file SP2D bertandatangan sekarang?')">
+                                    <i class="material-icons-outlined align-middle me-1" style="font-size: 18px;">upload_file</i>
+                                    Unggah SP2D Bertandatangan
+                                </button>
+                            </form>
+                        @elseif(in_array($statusSp2d, ['SP2D_TERBIT', 'MENUNGGU_UPLOAD']))
+                            <div class="alert alert-success border-0 d-flex align-items-start gap-2">
+                                <i class="material-icons-outlined">check_circle</i>
+                                <div>
+                                    <div class="fw-semibold">SP2D bertandatangan sudah diunggah.</div>
+                                    @if($signedSp2dArsip)
+                                        <a href="{{ \Illuminate\Support\Facades\Storage::url($signedSp2dArsip->path_file) }}" target="_blank" class="small fw-semibold text-primary d-block">
+                                            Lihat file SP2D: {{ $signedSp2dArsip->nama_file_asli }}
+                                        </a>
+                                    @endif
+                                    <div class="small mt-1">Selanjutnya upload bukti transfer untuk menyelesaikan tagihan.</div>
+                                </div>
+                            </div>
+
+                            <form action="{{ route('sp2ds.kontrak.upload-signed-sp2d', $sp2d->id) }}" method="POST" enctype="multipart/form-data" class="border rounded-3 bg-light p-3 mb-3">
+                                @csrf
+                                <div class="mb-2">
+                                    <label class="form-label fw-semibold small">Ganti File SP2D Bertandatangan <span class="text-muted">(opsional)</span></label>
+                                    <input type="file" name="file_sp2d_ttd" class="form-control form-control-sm" accept=".pdf,.jpg,.jpeg,.png">
+                                </div>
+                                <button type="submit" class="btn btn-outline-secondary btn-sm" onclick="return confirm('Ganti file SP2D bertandatangan?')">
+                                    <i class="material-icons-outlined align-middle me-1" style="font-size: 14px;">refresh</i>
+                                    Ganti File
+                                </button>
+                            </form>
+
                             <form action="{{ route('sp2ds.catat-bku', $sp2d->id) }}" method="POST" enctype="multipart/form-data" class="border rounded-3 bg-white p-3">
                                 @csrf
                                 <div class="mb-3">
@@ -282,8 +326,13 @@
                                     <div>
                                         <div class="fw-semibold">Bukti transfer sudah diunggah dan tagihan sudah SELESAI.</div>
                                         <div class="small">Lanjutkan penyetoran pajak kontrak. Setelah NTPN lengkap, tagihan akan masuk BKU.</div>
+                                        @if($signedSp2dArsip)
+                                            <a href="{{ \Illuminate\Support\Facades\Storage::url($signedSp2dArsip->path_file) }}" target="_blank" class="small fw-semibold text-primary d-block">
+                                                Lihat SP2D bertandatangan: {{ $signedSp2dArsip->nama_file_asli }}
+                                            </a>
+                                        @endif
                                         @if($buktiTransferSp2d)
-                                            <a href="{{ \Illuminate\Support\Facades\Storage::url($buktiTransferSp2d->path_file) }}" target="_blank" class="small fw-semibold text-primary">
+                                            <a href="{{ \Illuminate\Support\Facades\Storage::url($buktiTransferSp2d->path_file) }}" target="_blank" class="small fw-semibold text-primary d-block">
                                                 Lihat bukti transfer: {{ $buktiTransferSp2d->nama_file_asli }}
                                             </a>
                                         @endif

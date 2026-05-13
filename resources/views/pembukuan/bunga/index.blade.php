@@ -6,11 +6,35 @@
 @section('content')
     <x-page-title title="Pembukuan" subtitle="Buku Pembantu Bunga Rekening" />
 
+    @php
+        $periodeLabel = '';
+        if (!empty($filters['start_date']) || !empty($filters['end_date'])) {
+            $start = $filters['start_date'] ? \Carbon\Carbon::parse($filters['start_date'])->format('d M Y') : '—';
+            $end   = $filters['end_date']   ? \Carbon\Carbon::parse($filters['end_date'])->format('d M Y')   : '—';
+            $periodeLabel = $start . ' s.d ' . $end;
+        }
+
+        $rekeningAktif = null;
+        if (!empty($filters['rekening_bank_id'])) {
+            $rekeningAktif = $rekeningOptions->firstWhere('id', (int) $filters['rekening_bank_id']);
+        }
+
+        $saldoAwal = (float) ($summary['saldo_awal'] ?? 0);
+        $saldoAkhir = (float) ($summary['saldo_akhir'] ?? 0);
+        $totalPenerimaan = (float) ($summary['total_penerimaan'] ?? 0);
+        $totalPengeluaran = (float) ($summary['total_pengeluaran'] ?? 0);
+    @endphp
+
     <div class="book-hero">
         <div class="d-flex flex-column flex-lg-row justify-content-between gap-3 align-items-lg-center">
             <div>
-                <h4 class="mb-1 fw-bold text-dark">Buku Pembantu Bunga Rekening</h4>
-                <div class="text-muted">Laporan turunan mutasi bank untuk transaksi bunga rekening yang terklasifikasi dari deskripsi mutasi sistem existing.</div>
+                <div class="text-muted small fw-semibold">BLU Kantor UPBU A.P.T. Pranoto Samarinda</div>
+                <h4 class="mb-1 fw-bold text-dark">BUKU PEMBANTU BUNGA REKENING</h4>
+                <div class="text-muted small">
+                    <span class="me-3"><strong>Kode Buku:</strong> 9</span>
+                    @if($periodeLabel)<span class="me-3"><strong>Periode:</strong> {{ $periodeLabel }}</span>@endif
+                    @if($rekeningAktif)<span><strong>Rekening:</strong> {{ $rekeningAktif->nama_bank }} - {{ $rekeningAktif->nomor_rekening }}</span>@endif
+                </div>
             </div>
             <div>
                 <a href="{{ route('pembukuan.bunga.pdf', request()->query()) }}" target="_blank" class="btn btn-outline-danger">
@@ -22,10 +46,10 @@
 
     @php
         $cards = [
-            ['label' => 'Bunga Bulan Ini', 'value' => 'Rp ' . number_format($summary['bulan_ini'] ?? 0, 0, ',', '.'), 'class' => 'text-success'],
-            ['label' => 'Bunga Tahun Berjalan', 'value' => 'Rp ' . number_format($summary['tahun_berjalan'] ?? 0, 0, ',', '.'), 'class' => 'text-primary'],
-            ['label' => 'Jumlah Transaksi', 'value' => number_format($summary['jumlah_transaksi'] ?? 0, 0, ',', '.'), 'class' => 'text-dark'],
-            ['label' => 'Catatan', 'value' => 'Klasifikasi dari deskripsi mutasi', 'class' => 'fs-6 text-muted'],
+            ['label' => 'Saldo Awal',       'value' => 'Rp ' . number_format($saldoAwal, 2, ',', '.'),       'class' => 'text-secondary'],
+            ['label' => 'Total Penerimaan', 'value' => 'Rp ' . number_format($totalPenerimaan, 2, ',', '.'),  'class' => 'text-success'],
+            ['label' => 'Total Pengeluaran','value' => 'Rp ' . number_format($totalPengeluaran, 2, ',', '.'), 'class' => 'text-danger'],
+            ['label' => 'Saldo Akhir',      'value' => 'Rp ' . number_format($saldoAkhir, 2, ',', '.'),       'class' => 'text-primary'],
         ];
     @endphp
     @include('pembukuan.partials.summary-cards', ['cards' => $cards])
@@ -59,38 +83,68 @@
     </div>
 
     <div class="card book-card">
-        <div class="card-header"><h6 class="mb-0 fw-bold">Daftar Transaksi Bunga Rekening</h6></div>
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h6 class="mb-0 fw-bold">Ledger Bunga Rekening</h6>
+            <span class="small text-muted">{{ $summary['jumlah_transaksi'] ?? 0 }} transaksi pada periode ini</span>
+        </div>
         <div class="card-body p-0">
-            @if($entries->isEmpty())
-                @include('pembukuan.partials.empty-state', ['title' => 'Belum ada transaksi bunga', 'message' => 'Tidak ditemukan mutasi dengan kata kunci bunga / jasa giro pada filter ini.'])
-            @else
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0 book-table">
-                        <thead class="table-light">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0 book-table">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="min-width: 110px;">Tanggal</th>
+                            <th>No Bukti</th>
+                            <th>Uraian Transaksi</th>
+                            <th class="text-end" style="min-width: 150px;">Penerimaan</th>
+                            <th class="text-end" style="min-width: 150px;">Pengeluaran</th>
+                            <th class="text-end" style="min-width: 150px;">Saldo</th>
+                            <th style="min-width: 130px;">Status BKU</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{-- Baris Saldo Awal --}}
+                        <tr class="table-light fw-semibold">
+                            <td>{{ $filters['start_date'] ? \Carbon\Carbon::parse($filters['start_date'])->format('d M Y') : '-' }}</td>
+                            <td>—</td>
+                            <td>SALDO AWAL BULAN BERJALAN</td>
+                            <td class="text-end text-success">Rp {{ number_format($saldoAwal, 2, ',', '.') }}</td>
+                            <td class="text-end">—</td>
+                            <td class="text-end">Rp {{ number_format($saldoAwal, 2, ',', '.') }}</td>
+                            <td>—</td>
+                        </tr>
+
+                        @if($entries->isEmpty())
                             <tr>
-                                <th>Tanggal</th>
-                                <th>Rekening Bank</th>
-                                <th>Deskripsi Mutasi</th>
-                                <th>Referensi Bank</th>
-                                <th class="text-end">Nominal Bunga</th>
-                                <th>Status Rekonsiliasi</th>
-                                <th>Status BKU</th>
-                                <th>Catatan</th>
+                                <td colspan="7" class="text-center text-muted py-4">
+                                    Tidak ada mutasi bunga pada filter yang dipilih.
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody>
+                        @else
                             @foreach($entries as $entry)
-                                @php $matchedBku = $matchedBkuMap[$entry->id] ?? null; @endphp
+                                @php
+                                    $matchedBku = $matchedBkuMap[$entry->id] ?? null;
+                                    $kategori = $entry->kategori_mutasi instanceof \App\Enums\KategoriMutasiBank
+                                        ? $entry->kategori_mutasi->label()
+                                        : null;
+                                @endphp
                                 <tr>
                                     <td>{{ optional($entry->tanggal_transaksi)->format('d M Y') }}</td>
+                                    <td class="font-monospace small">{{ $entry->nomor_referensi_bank ?? '—' }}</td>
                                     <td>
-                                        <div>{{ $entry->importMutasiBank?->rekeningBank?->nama_bank ?? '-' }}</div>
-                                        <div class="small text-muted">{{ $entry->importMutasiBank?->rekeningBank?->nomor_rekening ?? '-' }}</div>
+                                        <div>{{ $entry->deskripsi ?? '-' }}</div>
+                                        <div class="small text-muted">
+                                            {{ $entry->importMutasiBank?->rekeningBank?->nama_bank ?? '' }}
+                                            @if($entry->importMutasiBank?->rekeningBank?->nomor_rekening) · {{ $entry->importMutasiBank->rekeningBank->nomor_rekening }}@endif
+                                            @if($kategori) · <span class="badge bg-light text-dark border">{{ $kategori }}</span>@endif
+                                        </div>
                                     </td>
-                                    <td>{{ $entry->deskripsi ?? '-' }}</td>
-                                    <td>{{ $entry->nomor_referensi_bank ?? '-' }}</td>
-                                    <td class="text-end fw-bold text-success">Rp {{ number_format($entry->debit, 0, ',', '.') }}</td>
-                                    <td>@include('pembukuan.partials.status-badge', ['value' => $entry->status_rekonsiliasi])</td>
+                                    <td class="text-end text-success">
+                                        {{ $entry->nominal_penerimaan > 0 ? 'Rp ' . number_format($entry->nominal_penerimaan, 2, ',', '.') : '—' }}
+                                    </td>
+                                    <td class="text-end text-danger">
+                                        {{ $entry->nominal_pengeluaran > 0 ? 'Rp ' . number_format($entry->nominal_pengeluaran, 2, ',', '.') : '—' }}
+                                    </td>
+                                    <td class="text-end fw-bold">Rp {{ number_format($entry->saldo_berjalan, 2, ',', '.') }}</td>
                                     <td>
                                         @if($matchedBku)
                                             @include('pembukuan.partials.status-badge', ['value' => 'SUDAH_MASUK_BKU'])
@@ -98,19 +152,21 @@
                                             @include('pembukuan.partials.status-badge', ['value' => 'BELUM_MASUK_BKU'])
                                         @endif
                                     </td>
-                                    <td class="small text-muted">
-                                        @if($matchedBku)
-                                            Tercocokkan ke BKU {{ $matchedBku->nomor_bukti ?? '-' }}
-                                        @else
-                                            Belum ditemukan pencatatan BKU yang sepadan.
-                                        @endif
-                                    </td>
                                 </tr>
                             @endforeach
-                        </tbody>
-                    </table>
-                </div>
-            @endif
+                        @endif
+                    </tbody>
+                    <tfoot class="table-light">
+                        <tr class="fw-bold">
+                            <td colspan="3" class="text-end">TOTAL</td>
+                            <td class="text-end text-success">Rp {{ number_format($totalPenerimaan, 2, ',', '.') }}</td>
+                            <td class="text-end text-danger">Rp {{ number_format($totalPengeluaran, 2, ',', '.') }}</td>
+                            <td class="text-end">Rp {{ number_format($saldoAkhir, 2, ',', '.') }}</td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
         </div>
     </div>
 @endsection

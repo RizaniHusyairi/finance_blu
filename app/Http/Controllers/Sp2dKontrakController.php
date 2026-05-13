@@ -47,6 +47,8 @@ class Sp2dKontrakController extends Controller
         } elseif ($statusFilter === 'selesai') {
             $query->whereHas('sp2d', fn($q) => $q->whereIn('status', [
                 DokumenSp2d::STATUS_DISETUJUI_FINAL,
+                DokumenSp2d::STATUS_MENUNGGU_UPLOAD,
+                DokumenSp2d::STATUS_SP2D_TERBIT,
                 DokumenSp2d::STATUS_EXECUTED,
             ]));
         }
@@ -117,6 +119,10 @@ class Sp2dKontrakController extends Controller
                     $summary['menunggu']++;
                 } elseif ($sp2d->status === DokumenSp2d::STATUS_DISETUJUI_FINAL) {
                     $statusBadge = 'Disetujui Final';
+                    $statusClass = 'bg-success';
+                    $summary['selesai']++;
+                } elseif ($sp2d->status === DokumenSp2d::STATUS_SP2D_TERBIT) {
+                    $statusBadge = 'SP2D Terbit';
                     $statusClass = 'bg-success';
                     $summary['selesai']++;
                 } elseif ($sp2d->status === DokumenSp2d::STATUS_EXECUTED) {
@@ -359,5 +365,69 @@ class Sp2dKontrakController extends Controller
             'catatan' => $catatan,
             'ip_address' => request()->ip(),
         ]);
+    }
+
+    /**
+     * Upload file SP2D Bertandatangan.
+     * Hanya tersedia setelah seluruh verifikator menyetujui (status DISETUJUI_FINAL).
+     * Setelah diunggah, status berubah ke SP2D_TERBIT dan bukti transfer dapat diunggah.
+     */
+    public function uploadSignedSp2d(Request $request, $sp2d_id)
+    {
+        $sp2d = DokumenSp2d::findOrFail($sp2d_id);
+
+        if (! in_array($sp2d->status, [
+            DokumenSp2d::STATUS_DISETUJUI_FINAL,
+            DokumenSp2d::STATUS_MENUNGGU_UPLOAD,
+            DokumenSp2d::STATUS_SP2D_TERBIT,
+            DokumenSp2d::STATUS_APPROVED, // legacy tolerance
+        ], true)) {
+            return back()->withErrors(['error' => 'SP2D belum disetujui oleh semua verifikator.']);
+        }
+
+        $request->validate([
+            'file_sp2d_ttd' => 'required|file|mimes:pdf,jpg,jpeg,png|max:10240',
+        ], [
+            'file_sp2d_ttd.required' => 'File SP2D Bertandatangan wajib diunggah.',
+            'file_sp2d_ttd.mimes' => 'File harus berformat PDF, JPG, atau PNG.',
+            'file_sp2d_ttd.max' => 'Ukuran file maksimal 10MB.',
+        ]);
+
+        DB::transaction(function () use ($request, $sp2d) {
+            $file = $request->file('file_sp2d_ttd');
+            $namaAsli = $file->getClientOriginalName();
+            $path = $file->store('arsip_sp2d_signed/' . date('Y'), 'public');
+
+            // Nonaktifkan arsip lama (re-upload)
+            $sp2d->arsipDokumen()
+                ->where('jenis_dokumen', DokumenSp2d::SP2D_SIGNED_ARCHIVE_TYPE)
+                ->where('is_active', true)
+                ->update(['is_active' => false]);
+
+            $sp2d->arsipDokumen()->create([
+                'jenis_dokumen' => DokumenSp2d::SP2D_SIGNED_ARCHIVE_TYPE,
+                'nama_file_asli' => $namaAsli,
+                'path_file' => $path,
+                'disk' => 'public',
+                'mime_type' => $file->getMimeType(),
+                'ukuran_file' => $file->getSize(),
+                'uploaded_by' => Auth::id(),
+                'uploaded_at' => now(),
+                'is_active' => true,
+            ]);
+
+            $statusLama = $sp2d->status;
+            $sp2d->update(['status' => DokumenSp2d::STATUS_SP2D_TERBIT]);
+
+            $this->logStatus(
+                $sp2d,
+                $statusLama,
+                DokumenSp2d::STATUS_SP2D_TERBIT,
+                'UPLOAD_SP2D_BERTANDATANGAN',
+                "File SP2D Bertandatangan diunggah: {$namaAsli}. Status SP2D berubah menjadi SP2D Terbit."
+            );
+        });
+
+        return back()->with('success', 'File SP2D Bertandatangan berhasil diunggah. Silakan lanjutkan upload bukti transfer.');
     }
 }
