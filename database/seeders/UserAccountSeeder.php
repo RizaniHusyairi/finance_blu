@@ -72,7 +72,7 @@ class UserAccountSeeder extends Seeder
                 'roles' => ['Operator BLU'],
             ],
             [
-                'nama' => 'MUHAMMAD KEMAL HIKMA',
+                'nama' => 'DIAH DESTIANA',
                 'email' => 'admin.jasa@sikeren.id',
                 'roles' => ['Admin Jasa'],
             ],
@@ -92,16 +92,28 @@ class UserAccountSeeder extends Seeder
                 continue;
             }
 
-            // Buat atau update user
-            $user = User::updateOrCreate(
-                ['email' => $account['email']],
-                [
+            // Cari user berdasarkan profilable (pegawai), fallback ke email
+            $user = User::where('profilable_type', MasterPegawai::class)
+                ->where('profilable_id', $pegawai->id)
+                ->first();
+
+            if ($user) {
+                $user->update([
+                    'email' => $account['email'],
                     'password' => Hash::make('password'),
-                    'profilable_type' => MasterPegawai::class,
-                    'profilable_id' => $pegawai->id,
                     'email_verified_at' => now(),
-                ]
-            );
+                ]);
+            } else {
+                $user = User::updateOrCreate(
+                    ['email' => $account['email']],
+                    [
+                        'password' => Hash::make('password'),
+                        'profilable_type' => MasterPegawai::class,
+                        'profilable_id' => $pegawai->id,
+                        'email_verified_at' => now(),
+                    ]
+                );
+            }
 
             // Sinkronisasi role (syncRoles menghapus role lama, assign yang baru)
             $user->syncRoles($account['roles']);

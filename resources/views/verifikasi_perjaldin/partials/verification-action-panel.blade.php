@@ -4,8 +4,10 @@
     $status = $tagihan->status;
     $currentApproval = $currentApproval ?? null;
     $allRoleApprovals = $allRoleApprovals ?? [];
+    $hasRoleSpecificActions = count($allRoleApprovals) > 0;
     $isDualRole = count($allRoleApprovals) > 1;
-    $canAct = $isDualRole ? true : (bool) $currentApproval;
+    $useRoleSpecificActions = $hasRoleSpecificActions && (!$currentApproval || $isDualRole);
+    $canAct = $useRoleSpecificActions ? true : (bool) $currentApproval;
 
     $panelClass = $canAct ? 'border-primary' : 'border-secondary';
     $headerClass = $canAct ? 'bg-primary text-white' : 'bg-light text-secondary';
@@ -36,12 +38,16 @@
         </h6>
     </div>
     <div class="card-body py-3">
-        @if($isDualRole)
-            {{-- === DUAL-ROLE MODE: Tampilkan tombol verifikasi per role === --}}
+        @if($useRoleSpecificActions)
+            {{-- === ROLE-SPECIFIC MODE: Tampilkan tombol sesuai approval pending user === --}}
             <div class="alert alert-primary border-0 py-2 mb-3 rounded-3 small">
-                <i class="bi bi-people-fill me-1"></i>
-                Anda memiliki <strong>{{ count($allRoleApprovals) }} peran verifikasi</strong> pada dokumen ini.
-                Silakan verifikasi masing-masing peran secara terpisah.
+                <i class="bi {{ $isDualRole ? 'bi-people-fill' : 'bi-person-check-fill' }} me-1"></i>
+                @if($isDualRole)
+                    Anda memiliki <strong>{{ count($allRoleApprovals) }} peran verifikasi</strong> pada dokumen ini.
+                    Silakan verifikasi masing-masing peran secara terpisah.
+                @else
+                    Dokumen ini masih menunggu verifikasi <strong>{{ $allRoleApprovals[0]['label'] }}</strong>.
+                @endif
             </div>
 
             {{-- Previous revision note if any --}}

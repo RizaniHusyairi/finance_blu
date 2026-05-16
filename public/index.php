@@ -2,6 +2,10 @@
 
 use Illuminate\Http\Request;
 
+// Sembunyikan deprecation notice (mis. PDO::MYSQL_ATTR_SSL_CA pada PHP 8.5)
+// agar tidak bocor ke response HTML/PDF.
+error_reporting(error_reporting() & ~E_DEPRECATED & ~E_USER_DEPRECATED);
+
 define('LARAVEL_START', microtime(true));
 
 // Determine if the application is in maintenance mode...

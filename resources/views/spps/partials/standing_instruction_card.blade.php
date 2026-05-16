@@ -1,4 +1,9 @@
 @php
+    $spp = $spp ?? ($sppModel ?? null);
+@endphp
+
+@if($spp)
+@php
     $si = $spp->standingInstruction;
     $isPpk = Auth::user()->hasRole('PPK') || Auth::user()->hasRole('Super Admin');
     $warningNominal = false;
@@ -120,3 +125,4 @@
         </div>
     </div>
 </div>
+@endif

@@ -62,7 +62,7 @@ class HonorariumController extends Controller
         $options = [];
         foreach ($roles as $key => $roleName) {
             try {
-                $users = User::role($roleName)->with('profilable')->orderBy('name')->get();
+                $users = User::role($roleName)->with('profilable')->orderByDisplayName()->get();
             } catch (\Exception $e) {
                 $users = collect();
             }
@@ -251,7 +251,7 @@ class HonorariumController extends Controller
         $ppkApproval = $approvals->firstWhere('role_code', 'PPK');
         $bendaharaApproval = $approvals->firstWhere('role_code', 'Bendahara Pengeluaran');
 
-        return view('honorarium.show', compact('tagihan', 'ppkApproval', 'bendaharaApproval'));
+        return view('honorarium.show', compact('tagihan', 'ppkApproval', 'bendaharaApproval', 'activeWorkflowInstance'));
     }
 
     public function edit($id)
@@ -484,6 +484,56 @@ class HonorariumController extends Controller
             );
 
             return redirect()->back()->with('success', "Dokumen {$request->jenis_dokumen} berhasil diunggah.");
+        } catch (\Exception $e) {
+            return redirect()->back()->withErrors(['error' => 'Gagal mengunggah dokumen: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Upload dua dokumen wajib (Daftar Nominatif & Dokumen Honorarium) sekaligus
+     * untuk PPABP saat melengkapi syarat pengajuan verifikasi.
+     */
+    public function uploadDokumenWajib(Request $request, $id)
+    {
+        $tagihan = Tagihan::where('tipe_tagihan', 'HONORARIUM')->findOrFail($id);
+
+        if ($tagihan->status !== 'DRAFT') {
+            return redirect()->back()->withErrors(['error' => 'Dokumen hanya bisa diunggah pada saat status DRAFT.']);
+        }
+
+        $uploadedTypes = $tagihan->arsipDokumen->pluck('jenis_dokumen')->toArray();
+        $needsNominatif = ! in_array('Daftar Nominatif Bertandatangan', $uploadedTypes, true);
+        $needsHonorarium = ! in_array('Dokumen Honorarium Bertandatangan', $uploadedTypes, true);
+
+        $rules = [];
+        if ($needsNominatif)  $rules['file_nominatif']  = 'required|file|mimes:pdf|max:10240';
+        if ($needsHonorarium) $rules['file_honorarium'] = 'required|file|mimes:pdf|max:10240';
+        $request->validate($rules);
+
+        $docService = app(DocumentArchiveService::class);
+        $directory = 'arsip-dokumen/Tagihan/' . $tagihan->nomor_tagihan;
+        $uploaded = [];
+
+        try {
+            if ($needsNominatif && $request->hasFile('file_nominatif')) {
+                $docService->upload($tagihan, 'Daftar Nominatif Bertandatangan', $request->file('file_nominatif'), [
+                    'directory'   => $directory,
+                    'uploaded_by' => Auth::id(),
+                    'keterangan'  => 'Diunggah oleh PPABP',
+                ]);
+                $uploaded[] = 'Daftar Nominatif';
+            }
+
+            if ($needsHonorarium && $request->hasFile('file_honorarium')) {
+                $docService->upload($tagihan, 'Dokumen Honorarium Bertandatangan', $request->file('file_honorarium'), [
+                    'directory'   => $directory,
+                    'uploaded_by' => Auth::id(),
+                    'keterangan'  => 'Diunggah oleh PPABP',
+                ]);
+                $uploaded[] = 'Dokumen Honorarium';
+            }
+
+            return redirect()->back()->with('success', 'Dokumen berhasil diunggah: ' . implode(', ', $uploaded) . '.');
         } catch (\Exception $e) {
             return redirect()->back()->withErrors(['error' => 'Gagal mengunggah dokumen: ' . $e->getMessage()]);
         }

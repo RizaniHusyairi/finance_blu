@@ -21,7 +21,7 @@ class PerjaldinController extends Controller
     private function normalizePesertaNominals(array $peserta): array
     {
         foreach ($peserta as &$p) {
-            foreach (['biaya_tiket', 'biaya_transport', 'biaya_penginapan', 'uang_harian', 'uang_representasi'] as $field) {
+            foreach (['biaya_tiket', 'biaya_transport', 'biaya_penginapan', 'uang_harian', 'uang_representasi', 'uang_rapat'] as $field) {
                 if (isset($p[$field])) {
                     $p[$field] = str_replace(',', '', $p[$field]);
                 }
@@ -37,7 +37,7 @@ class PerjaldinController extends Controller
     {
         return ($p['biaya_tiket'] ?? 0) + ($p['biaya_transport'] ?? 0)
              + ($p['biaya_penginapan'] ?? 0) + ($p['uang_harian'] ?? 0)
-             + ($p['uang_representasi'] ?? 0);
+             + ($p['uang_representasi'] ?? 0) + ($p['uang_rapat'] ?? 0);
     }
 
     /**
@@ -50,6 +50,84 @@ class PerjaldinController extends Controller
             $total += $this->calculatePesertaRowTotal($p);
         }
         return $total;
+    }
+
+    /**
+     * Helper: Hitung total per kode komponen biaya (TIKET, TRANSPORT, PENGINAPAN, UANG_HARIAN).
+     * Dipakai untuk validasi conditional COA wajib jika komponen punya nilai.
+     */
+    private function aggregateKomponenTotals(array $peserta): array
+    {
+        $totals = [
+            'TIKET' => 0.0,
+            'TRANSPORT' => 0.0,
+            'PENGINAPAN' => 0.0,
+            'UANG_HARIAN' => 0.0,
+        ];
+        foreach ($peserta as $p) {
+            $totals['TIKET'] += (float) ($p['biaya_tiket'] ?? 0);
+            $totals['TRANSPORT'] += (float) ($p['biaya_transport'] ?? 0);
+            $totals['PENGINAPAN'] += (float) ($p['biaya_penginapan'] ?? 0);
+            // UANG_HARIAN menggabungkan uang_harian + uang_representasi + uang_rapat
+            $totals['UANG_HARIAN'] += (float) ($p['uang_harian'] ?? 0)
+                + (float) ($p['uang_representasi'] ?? 0)
+                + (float) ($p['uang_rapat'] ?? 0);
+        }
+        return $totals;
+    }
+
+    /**
+     * Helper: Validasi sisa pagu COA untuk tiap komponen biaya yang dipilih.
+     * Throw ValidationException jika ada komponen yang totalnya melebihi sisa pagu COA-nya.
+     */
+    private function validateCoaPagu(Request $request, array $komponenTotals): void
+    {
+        $errors = [];
+        foreach (['TIKET', 'TRANSPORT', 'PENGINAPAN', 'UANG_HARIAN'] as $kode) {
+            $coaId = $request->input("komponen_coa.{$kode}");
+            if (! $coaId) {
+                continue;
+            }
+            $item = \App\Models\DetailDipa::with('coa')->find($coaId);
+            if (! $item) {
+                continue;
+            }
+            $totalKomp = (float) ($komponenTotals[$kode] ?? 0);
+            $sisa = (float) $item->sisa_pagu;
+            if ($sisa < $totalKomp) {
+                $kodeMak = $item->coa->kode_mak_lengkap ?? '-';
+                $errors["komponen_coa.{$kode}"] = sprintf(
+                    'Sisa pagu COA %s (Rp %s) tidak mencukupi total komponen %s sebesar Rp %s.',
+                    $kodeMak,
+                    number_format($sisa, 0, ',', '.'),
+                    $kode,
+                    number_format($totalKomp, 0, ',', '.')
+                );
+            }
+        }
+        if (! empty($errors)) {
+            throw \Illuminate\Validation\ValidationException::withMessages($errors);
+        }
+    }
+
+    /**
+     * Helper: Terapkan pilihan COA dari form ke komponen perjaldin.
+     * Lewati komponen yang sudah punya dokumen turunan (SPP/SPM/NPI/SP2D).
+     */
+    private function syncKomponenCoaFromRequest(Tagihan $tagihan, Request $request): void
+    {
+        $service = app(PerjaldinKomponenService::class);
+        foreach (['TIKET', 'TRANSPORT', 'PENGINAPAN', 'UANG_HARIAN'] as $kode) {
+            $coaId = $request->input("komponen_coa.{$kode}");
+            if (! $coaId) {
+                continue;
+            }
+            $komponen = $tagihan->komponenPerjaldin()->where('kode_komponen', $kode)->first();
+            if (! $komponen || $komponen->hasDokumenTurunan()) {
+                continue;
+            }
+            $service->updateKomponenCoa($komponen, (int) $coaId);
+        }
     }
 
     /**
@@ -123,6 +201,8 @@ class PerjaldinController extends Controller
             $request->merge($input);
         }
 
+        $komponenTotals = $this->aggregateKomponenTotals($request->peserta ?? []);
+
         $request->validate([
             'deskripsi' => 'required|string|max:255',
             'nomor_perjaldin' => 'required|string|max:100',
@@ -166,6 +246,7 @@ class PerjaldinController extends Controller
             'peserta.*.provinsi_id' => 'required|exists:master_uang_harian_perjaldins,id',
             'peserta.*.tipe_perjalanan' => 'required|string|in:luar_kota,dalam_kota_lebih_8_jam,diklat',
             'peserta.*.spt_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
+            'peserta.*.tiket_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
             'peserta.*.tujuan' => 'nullable|string|max:255',
             'peserta.*.rekening' => 'nullable|string|max:100',
             'peserta.*.tgl_berangkat' => 'required|date',
@@ -175,7 +256,19 @@ class PerjaldinController extends Controller
             'peserta.*.biaya_penginapan' => 'nullable|numeric|min:0',
             'peserta.*.uang_harian' => 'nullable|numeric|min:0',
             'peserta.*.uang_representasi' => 'nullable|numeric|min:0',
+            'peserta.*.uang_rapat' => 'nullable|numeric|min:0',
+
+            'komponen_coa' => 'nullable|array',
+            'komponen_coa.TIKET' => [\Illuminate\Validation\Rule::requiredIf($komponenTotals['TIKET'] > 0), 'nullable', 'exists:dipa_revision_items,id'],
+            'komponen_coa.TRANSPORT' => [\Illuminate\Validation\Rule::requiredIf($komponenTotals['TRANSPORT'] > 0), 'nullable', 'exists:dipa_revision_items,id'],
+            'komponen_coa.PENGINAPAN' => [\Illuminate\Validation\Rule::requiredIf($komponenTotals['PENGINAPAN'] > 0), 'nullable', 'exists:dipa_revision_items,id'],
+            'komponen_coa.UANG_HARIAN' => [\Illuminate\Validation\Rule::requiredIf($komponenTotals['UANG_HARIAN'] > 0), 'nullable', 'exists:dipa_revision_items,id'],
+        ], [
+            'komponen_coa.*.required' => 'COA wajib dipilih untuk komponen yang memiliki nilai.',
         ]);
+
+        // Validasi sisa pagu pada COA yang dipilih
+        $this->validateCoaPagu($request, $komponenTotals);
 
         try {
             DB::beginTransaction();
@@ -225,11 +318,19 @@ class PerjaldinController extends Controller
                 // Upload file handler
                 $sptFilePath = null;
                 $sptFileName = null;
-                
+                $tiketFilePath = null;
+                $tiketFileName = null;
+
                 if ($request->hasFile("peserta.{$index}.spt_file")) {
                     $file = $request->file("peserta.{$index}.spt_file");
                     $sptFileName = $file->getClientOriginalName();
                     $sptFilePath = $file->store('perjaldin/spt', 'public');
+                }
+
+                if ($request->hasFile("peserta.{$index}.tiket_file")) {
+                    $file = $request->file("peserta.{$index}.tiket_file");
+                    $tiketFileName = $file->getClientOriginalName();
+                    $tiketFilePath = $file->store('perjaldin/tiket', 'public');
                 }
 
                 DetailPerjaldin::create([
@@ -249,8 +350,11 @@ class PerjaldinController extends Controller
                     'biaya_penginapan' => $pesertaData['biaya_penginapan'] ?? 0,
                     'uang_harian' => $pesertaData['uang_harian'] ?? 0,
                     'uang_representasi' => $pesertaData['uang_representasi'] ?? 0,
+                    'uang_rapat' => $pesertaData['uang_rapat'] ?? 0,
                     'spt_file_path' => $sptFilePath,
                     'spt_file_name' => $sptFileName,
+                    'tiket_file_path' => $tiketFilePath,
+                    'tiket_file_name' => $tiketFileName,
                 ]);
             }
 
@@ -259,6 +363,9 @@ class PerjaldinController extends Controller
 
             // Rebuild rekap komponen otomatis
             app(PerjaldinKomponenService::class)->rebuildFromTagihan($tagihan);
+
+            // Terapkan pilihan COA dari operator (Bagian D)
+            $this->syncKomponenCoaFromRequest($tagihan->fresh(), $request);
 
             DB::commit();
             return redirect()->route('perjaldins.index')->with('success', 'Data Perjaldin berhasil ditambahkan.');
@@ -392,6 +499,8 @@ class PerjaldinController extends Controller
             $request->merge($input);
         }
 
+        $komponenTotals = $this->aggregateKomponenTotals($request->peserta ?? []);
+
         $request->validate([
             'deskripsi' => 'required|string|max:255',
             'nomor_perjaldin' => 'required|string|max:100',
@@ -436,6 +545,7 @@ class PerjaldinController extends Controller
             'peserta.*.provinsi_id' => 'required|exists:master_uang_harian_perjaldins,id',
             'peserta.*.tipe_perjalanan' => 'required|string|in:luar_kota,dalam_kota_lebih_8_jam,diklat',
             'peserta.*.spt_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
+            'peserta.*.tiket_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
             'peserta.*.tujuan' => 'nullable|string|max:255',
             'peserta.*.rekening' => 'nullable|string|max:100',
             'peserta.*.tgl_berangkat' => 'required|date',
@@ -445,7 +555,19 @@ class PerjaldinController extends Controller
             'peserta.*.biaya_penginapan' => 'nullable|numeric|min:0',
             'peserta.*.uang_harian' => 'nullable|numeric|min:0',
             'peserta.*.uang_representasi' => 'nullable|numeric|min:0',
+            'peserta.*.uang_rapat' => 'nullable|numeric|min:0',
+
+            'komponen_coa' => 'nullable|array',
+            'komponen_coa.TIKET' => [\Illuminate\Validation\Rule::requiredIf($komponenTotals['TIKET'] > 0), 'nullable', 'exists:dipa_revision_items,id'],
+            'komponen_coa.TRANSPORT' => [\Illuminate\Validation\Rule::requiredIf($komponenTotals['TRANSPORT'] > 0), 'nullable', 'exists:dipa_revision_items,id'],
+            'komponen_coa.PENGINAPAN' => [\Illuminate\Validation\Rule::requiredIf($komponenTotals['PENGINAPAN'] > 0), 'nullable', 'exists:dipa_revision_items,id'],
+            'komponen_coa.UANG_HARIAN' => [\Illuminate\Validation\Rule::requiredIf($komponenTotals['UANG_HARIAN'] > 0), 'nullable', 'exists:dipa_revision_items,id'],
+        ], [
+            'komponen_coa.*.required' => 'COA wajib dipilih untuk komponen yang memiliki nilai.',
         ]);
+
+        // Validasi sisa pagu pada COA yang dipilih
+        $this->validateCoaPagu($request, $komponenTotals);
 
         try {
             DB::beginTransaction();
@@ -496,8 +618,13 @@ class PerjaldinController extends Controller
             
             // Hapus file fisik dari detail yang di-remove user
             foreach ($oldDetails as $oldId => $oldDetail) {
-                if (!in_array($oldId, $keptDetailIds) && $oldDetail->spt_file_path) {
-                    \Illuminate\Support\Facades\Storage::disk('public')->delete($oldDetail->spt_file_path);
+                if (!in_array($oldId, $keptDetailIds)) {
+                    if ($oldDetail->spt_file_path) {
+                        \Illuminate\Support\Facades\Storage::disk('public')->delete($oldDetail->spt_file_path);
+                    }
+                    if ($oldDetail->tiket_file_path) {
+                        \Illuminate\Support\Facades\Storage::disk('public')->delete($oldDetail->tiket_file_path);
+                    }
                 }
             }
 
@@ -507,22 +634,43 @@ class PerjaldinController extends Controller
             foreach ($request->peserta as $index => $pesertaData) {
                 $sptFilePath = null;
                 $sptFileName = null;
+                $tiketFilePath = null;
+                $tiketFileName = null;
                 $oldExisting = null;
 
                 if (!empty($pesertaData['detail_id']) && $oldDetails->has($pesertaData['detail_id'])) {
                     $oldExisting = $oldDetails->get($pesertaData['detail_id']);
                     $sptFilePath = $oldExisting->spt_file_path;
                     $sptFileName = $oldExisting->spt_file_name;
+                    $tiketFilePath = $oldExisting->tiket_file_path;
+                    $tiketFileName = $oldExisting->tiket_file_name;
                 }
 
                 if ($request->hasFile("peserta.{$index}.spt_file")) {
                     $file = $request->file("peserta.{$index}.spt_file");
                     $sptFileName = $file->getClientOriginalName();
                     $sptFilePath = $file->store('perjaldin/spt', 'public');
-                    
+
                     if ($oldExisting && $oldExisting->spt_file_path) {
                         \Illuminate\Support\Facades\Storage::disk('public')->delete($oldExisting->spt_file_path);
                     }
+                }
+
+                if ($request->hasFile("peserta.{$index}.tiket_file")) {
+                    $file = $request->file("peserta.{$index}.tiket_file");
+                    $tiketFileName = $file->getClientOriginalName();
+                    $tiketFilePath = $file->store('perjaldin/tiket', 'public');
+
+                    if ($oldExisting && $oldExisting->tiket_file_path) {
+                        \Illuminate\Support\Facades\Storage::disk('public')->delete($oldExisting->tiket_file_path);
+                    }
+                }
+
+                // Hapus file tiket lama jika nilai biaya_tiket di-zero-kan
+                if (($pesertaData['biaya_tiket'] ?? 0) <= 0 && $tiketFilePath) {
+                    \Illuminate\Support\Facades\Storage::disk('public')->delete($tiketFilePath);
+                    $tiketFilePath = null;
+                    $tiketFileName = null;
                 }
 
                 DetailPerjaldin::create([
@@ -542,8 +690,11 @@ class PerjaldinController extends Controller
                     'biaya_penginapan' => $pesertaData['biaya_penginapan'] ?? 0,
                     'uang_harian' => $pesertaData['uang_harian'] ?? 0,
                     'uang_representasi' => $pesertaData['uang_representasi'] ?? 0,
+                    'uang_rapat' => $pesertaData['uang_rapat'] ?? 0,
                     'spt_file_path' => $sptFilePath,
                     'spt_file_name' => $sptFileName,
+                    'tiket_file_path' => $tiketFilePath,
+                    'tiket_file_name' => $tiketFileName,
                 ]);
             }
 
@@ -552,6 +703,9 @@ class PerjaldinController extends Controller
 
             // Rebuild rekap komponen otomatis
             app(PerjaldinKomponenService::class)->rebuildFromTagihan($tagihan);
+
+            // Terapkan pilihan COA dari operator (Bagian D)
+            $this->syncKomponenCoaFromRequest($tagihan->fresh(), $request);
 
             DB::commit();
             return redirect()->route('perjaldins.index')->with('success', 'Data Perjaldin berhasil diperbarui.');

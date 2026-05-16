@@ -284,7 +284,7 @@
                 @endif
                 
                 <!-- Standing Instruction -->
-                @include('spps.partials.standing_instruction_card')
+                @include('spps.partials.standing_instruction_card', ['spp' => $sppModel])
 
                 <div class="card spp-section-card mb-4 bg-light border-0 shadow-sm">
                     <div class="card-body p-4">

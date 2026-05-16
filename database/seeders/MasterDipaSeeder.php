@@ -117,15 +117,17 @@ class MasterDipaSeeder extends Seeder
 
         $dipa->update(['revisi_aktif_ke' => 0]);
 
-        DetailDipa::where('dipa_revision_id', $revision->id)->delete();
-
         foreach ($items as $item) {
-            DetailDipa::create([
-                'dipa_revision_id' => $revision->id,
-                'coa_id' => $coaMap[$item['kode']],
-                'nilai_pagu' => $item['nilai_pagu'],
-                'status_aktif' => $item['status_aktif'],
-            ]);
+            DetailDipa::updateOrCreate(
+                [
+                    'dipa_revision_id' => $revision->id,
+                    'coa_id' => $coaMap[$item['kode']],
+                ],
+                [
+                    'nilai_pagu' => $item['nilai_pagu'],
+                    'status_aktif' => $item['status_aktif'],
+                ]
+            );
         }
     }
 }

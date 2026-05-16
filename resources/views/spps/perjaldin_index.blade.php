@@ -4,8 +4,52 @@
 @push('css')
     <link href="{{ URL::asset('build/plugins/datatable/css/dataTables.bootstrap5.min.css') }}" rel="stylesheet" />
     <style>
-        .table-custom-hover tbody tr:hover {
-            background-color: #f8f9fa;
+        .table-custom-hover tbody tr:hover { background-color: #f8f9fa; }
+        .stat-card {
+            transition: transform .2s ease, box-shadow .2s ease;
+            min-height: 175px;
+        }
+        .stat-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 .75rem 1.25rem rgba(0,0,0,.08) !important;
+        }
+        .stat-icon {
+            width: 44px; height: 44px;
+            border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+            font-size: 1.25rem;
+        }
+        .stat-value {
+            font-size: 1.65rem;
+            line-height: 1.2;
+            letter-spacing: -.5px;
+        }
+        .stat-deco {
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            height: 60px;
+            overflow: hidden;
+            pointer-events: none;
+        }
+        .stat-wave {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 200%;
+            height: 100%;
+        }
+        .stat-wave-1 { opacity: .18; animation: stat-wave-scroll 9s linear infinite; }
+        .stat-wave-2 { opacity: .28; animation: stat-wave-scroll 13s linear infinite reverse; }
+        .stat-wave-3 { opacity: .40; animation: stat-wave-scroll 17s linear infinite; }
+        @keyframes stat-wave-scroll {
+            from { transform: translate3d(0, 0, 0); }
+            to   { transform: translate3d(-50%, 0, 0); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .stat-wave-1, .stat-wave-2, .stat-wave-3 { animation: none; }
         }
     </style>
 @endpush
@@ -34,7 +78,7 @@
             <h6 class="mb-0 fw-bold"><i class="bi bi-list-check me-2 text-primary"></i>Daftar Tagihan Perjaldin Siap SPP</h6>
         </div>
         <div class="card-body p-0">
-            <div class="table-responsive">
+            <div class="table-responsive p-2">
                 <table id="example" class="table table-custom-hover align-middle mb-0" style="width:100%">
                     <thead class="table-light">
                         <tr>
@@ -50,13 +94,10 @@
                             @php
                                 $komponens = $perjaldin->komponenPerjaldin->where('total_nominal', '>', 0);
                                 $jmlAktif = $komponens->count();
-                                $jmlCoa = $komponens->whereNotNull('dipa_revision_item_id')->count();
                                 $jmlSpp = $komponens->filter(fn($x) => $x->hasDokumenTurunan())->count();
-                                
+
                                 if($jmlAktif == 0) {
                                     $progressStatus = ['text' => 'Kosong', 'bg' => 'bg-secondary', 'icon' => 'bi-dash-circle'];
-                                } elseif($jmlCoa < $jmlAktif) {
-                                    $progressStatus = ['text' => 'Menunggu COA', 'bg' => 'bg-warning text-dark', 'icon' => 'bi-tag'];
                                 } elseif($jmlSpp < $jmlAktif) {
                                     $progressStatus = ['text' => 'Siap Buat SPP', 'bg' => 'bg-primary', 'icon' => 'bi-file-earmark-plus'];
                                 } elseif($jmlSpp == $jmlAktif) {
@@ -84,7 +125,6 @@
                                     @if($jmlAktif > 0)
                                         <div class="d-flex flex-column gap-1">
                                             <div class="small"><strong>{{ $jmlAktif }}</strong> Item Biaya</div>
-                                            <div class="small text-muted"><i class="bi bi-tag-fill me-1 text-secondary"></i>{{ $jmlCoa }} punya COA</div>
                                             <div class="small text-muted"><i class="bi bi-file-text-fill me-1 text-primary"></i>{{ $jmlSpp }} draft SPP</div>
                                         </div>
                                     @else
@@ -105,8 +145,9 @@
                         @empty
                             <tr>
                                 <td colspan="5" class="text-center py-5">
-                                    <img src="{{ URL::asset('build/images/no-data.svg') }}" alt="No Data" class="mb-3" style="width: 120px; opacity: 0.5;">
-                                    <h6 class="text-muted fw-normal">Belum ada dokumen Perjaldin yang siap diproses SPP.</h6>
+                                    <i class="bi bi-folder2-open text-muted" style="font-size: 3rem;"></i>
+                                    <h6 class="mt-3 fw-bold">Belum Ada Dokumen Perjaldin Siap SPP</h6>
+                                    <p class="text-muted small mb-0">Tagihan perjaldin yang telah diverifikasi akan muncul di sini.</p>
                                 </td>
                             </tr>
                         @endforelse

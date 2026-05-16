@@ -94,10 +94,7 @@
                                         @endforeach
                                     </select>
                                 </div>
-                                <div class="mb-2">
-                                    <label class="form-label font-12 mb-1">Nama <span class="text-danger">*</span></label>
-                                    <input type="text" name="ppk_nama_snapshot" id="ppkNamaSnapshot" class="form-control form-control-sm" required value="{{ old('ppk_nama_snapshot') }}">
-                                </div>
+                                <input type="hidden" name="ppk_nama_snapshot" id="ppkNamaSnapshot" value="{{ old('ppk_nama_snapshot') }}">
                                 <div class="mb-0">
                                     <label class="form-label font-12 mb-1">NIP <span class="text-danger">*</span></label>
                                     <input type="text" name="ppk_nip_snapshot" id="ppkNipSnapshot" class="form-control form-control-sm" required value="{{ old('ppk_nip_snapshot') }}">
@@ -124,10 +121,7 @@
                                         @endforeach
                                     </select>
                                 </div>
-                                <div class="mb-2">
-                                    <label class="form-label font-12 mb-1">Nama <span class="text-danger">*</span></label>
-                                    <input type="text" name="ppspm_nama_snapshot" id="ppspmNamaSnapshot" class="form-control form-control-sm" required value="{{ old('ppspm_nama_snapshot') }}">
-                                </div>
+                                <input type="hidden" name="ppspm_nama_snapshot" id="ppspmNamaSnapshot" value="{{ old('ppspm_nama_snapshot') }}">
                                 <div class="mb-0">
                                     <label class="form-label font-12 mb-1">NIP</label>
                                     <input type="text" name="ppspm_nip_snapshot" id="ppspmNipSnapshot" class="form-control form-control-sm" value="{{ old('ppspm_nip_snapshot') }}">
@@ -154,10 +148,7 @@
                                         @endforeach
                                     </select>
                                 </div>
-                                <div class="mb-2">
-                                    <label class="form-label font-12 mb-1">Nama <span class="text-danger">*</span></label>
-                                    <input type="text" name="koordinator_keuangan_nama_snapshot" id="koorKeuanganNamaSnapshot" class="form-control form-control-sm" required value="{{ old('koordinator_keuangan_nama_snapshot') }}">
-                                </div>
+                                <input type="hidden" name="koordinator_keuangan_nama_snapshot" id="koorKeuanganNamaSnapshot" value="{{ old('koordinator_keuangan_nama_snapshot') }}">
                                 <div class="mb-0">
                                     <label class="form-label font-12 mb-1">NIP</label>
                                     <input type="text" name="koordinator_keuangan_nip_snapshot" id="koorKeuanganNipSnapshot" class="form-control form-control-sm" value="{{ old('koordinator_keuangan_nip_snapshot') }}">
@@ -187,10 +178,7 @@
                                         @endforeach
                                     </select>
                                 </div>
-                                <div class="mb-2">
-                                    <label class="form-label font-12 mb-1">Nama <span class="text-danger">*</span></label>
-                                    <input type="text" name="bendahara_penerimaan_nama_snapshot" id="bendaharaPenerimaanNamaSnapshot" class="form-control form-control-sm" required value="{{ old('bendahara_penerimaan_nama_snapshot') }}">
-                                </div>
+                                <input type="hidden" name="bendahara_penerimaan_nama_snapshot" id="bendaharaPenerimaanNamaSnapshot" value="{{ old('bendahara_penerimaan_nama_snapshot') }}">
                                 <div class="mb-0">
                                     <label class="form-label font-12 mb-1">NIP</label>
                                     <input type="text" name="bendahara_penerimaan_nip_snapshot" id="bendaharaPenerimaanNipSnapshot" class="form-control form-control-sm" value="{{ old('bendahara_penerimaan_nip_snapshot') }}">
@@ -217,10 +205,7 @@
                                         @endforeach
                                     </select>
                                 </div>
-                                <div class="mb-2">
-                                    <label class="form-label font-12 mb-1">Nama <span class="text-danger">*</span></label>
-                                    <input type="text" name="bendahara_pengeluaran_nama_snapshot" id="bendaharaNamaSnapshot" class="form-control form-control-sm" required value="{{ old('bendahara_pengeluaran_nama_snapshot') }}">
-                                </div>
+                                <input type="hidden" name="bendahara_pengeluaran_nama_snapshot" id="bendaharaNamaSnapshot" value="{{ old('bendahara_pengeluaran_nama_snapshot') }}">
                                 <div class="mb-0">
                                     <label class="form-label font-12 mb-1">NIP <span class="text-danger">*</span></label>
                                     <input type="text" name="bendahara_pengeluaran_nip_snapshot" id="bendaharaNipSnapshot" class="form-control form-control-sm" required value="{{ old('bendahara_pengeluaran_nip_snapshot') }}">
@@ -286,6 +271,63 @@
                     <button type="button" class="btn btn-dark btn-sm btn-add-row-trigger"><i class="bi bi-plus-circle"></i> Tambah Baris Peserta</button>
                 </div>
 
+                <!-- SECTION D: PEMILIHAN COA PER KOMPONEN BIAYA -->
+                @php
+                    $komponenList = [
+                        ['kode' => 'TIKET', 'label' => 'Biaya Tiket', 'icon' => 'bi-ticket-detailed'],
+                        ['kode' => 'TRANSPORT', 'label' => 'Biaya Transport', 'icon' => 'bi-car-front'],
+                        ['kode' => 'PENGINAPAN', 'label' => 'Biaya Penginapan', 'icon' => 'bi-building'],
+                        ['kode' => 'UANG_HARIAN', 'label' => 'Uang Harian', 'icon' => 'bi-wallet2'],
+                    ];
+                @endphp
+                <h5 class="mb-3 border-bottom pb-2 text-primary mt-5"><i class="bi bi-bank"></i> Bagian D: Pemilihan COA per Komponen Biaya</h5>
+                <div id="komponenCoaSection">
+                    <div class="alert alert-warning border-0 shadow-sm py-2 px-3 mb-3 small komponen-coa-empty">
+                        <i class="bi bi-info-circle me-1"></i> Belum ada komponen biaya bernilai. Isi rincian biaya peserta dulu, baris pemilihan COA akan muncul otomatis.
+                    </div>
+                    @foreach($komponenList as $k)
+                        <div class="card border shadow-sm mb-2 komponen-coa-row d-none" data-kode="{{ $k['kode'] }}">
+                            <div class="card-body py-2 px-3">
+                                <div class="row g-2 align-items-center">
+                                    <div class="col-md-3">
+                                        <div class="d-flex align-items-center">
+                                            <div class="bg-primary bg-opacity-10 text-primary p-2 rounded-circle me-2">
+                                                <i class="bi {{ $k['icon'] }}"></i>
+                                            </div>
+                                            <div>
+                                                <div class="fw-bold small">{{ $k['label'] }}</div>
+                                                <small class="text-muted" style="font-size: 0.7rem;">Kode: {{ $k['kode'] }}</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <small class="text-muted d-block" style="font-size: 0.7rem;">Total Komponen</small>
+                                        <span class="fw-bold text-dark">Rp <span class="komponen-coa-total">0</span></span>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label mb-1 small fw-semibold">Pilih COA <span class="text-danger">*</span></label>
+                                        <select name="komponen_coa[{{ $k['kode'] }}]" class="form-select form-select-sm komponen-coa-select @error('komponen_coa.' . $k['kode']) is-invalid @enderror">
+                                            <option value="">-- Pilih COA --</option>
+                                            @foreach($budgetGroups as $group)
+                                                <optgroup label="{{ $group['label'] }}">
+                                                    @foreach($group['items'] as $item)
+                                                        <option value="{{ $item['id'] }}" data-sisa-pagu="{{ $item['sisa_pagu'] }}" {{ (string) old('komponen_coa.' . $k['kode']) === (string) $item['id'] ? 'selected' : '' }}>
+                                                            {{ $item['option_label'] }}
+                                                        </option>
+                                                    @endforeach
+                                                </optgroup>
+                                            @endforeach
+                                        </select>
+                                        <small class="d-none text-danger mt-1 komponen-coa-warning" style="font-size: 0.7rem;">
+                                            <i class="bi bi-exclamation-triangle-fill me-1"></i><span class="komponen-coa-warning-text"></span>
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+
                 <div class="mt-5 border-top pt-3 text-end">
                     <a href="{{ route('perjaldins.index') }}" class="btn btn-light"><i class="bi bi-x-circle"></i> Batal</a>
                     <button type="submit" class="btn btn-primary px-4"><i class="bi bi-save"></i> Simpan Dokumen Rekap Perjalanan Dinas</button>
@@ -304,6 +346,89 @@
             return n.toString().replace(/\D/g, "").replace(/\B(?=(\d{3})+(?!\d))/g, ",");
         }
 
+        // Toggle visibility of input file tiket berdasarkan nilai biaya_tiket.
+        // Dipanggil onkeyup dari .tiket-amount-input dan saat init / clone row.
+        window.toggleTiketFile = function (element) {
+            let card = $(element).closest('.item-row');
+            let val = parseFloat(String($(element).val()).replace(/,/g, '')) || 0;
+            let wrapper = card.find('.tiket-file-wrapper');
+            if (val > 0) {
+                wrapper.removeClass('d-none');
+            } else {
+                wrapper.addClass('d-none');
+                wrapper.find('.tiket-file-input').val('');
+                wrapper.find('.tiket-existing-notice').remove();
+            }
+        };
+
+        // Hitung total tampilan grup Uang Harian (Harian + Representasi + Rapat)
+        function calculateUangHarianGroup(card) {
+            let total = 0;
+            card.find('.uang-harian-component').each(function () {
+                let num = parseFloat(String($(this).val()).replace(/,/g, ''));
+                if (!isNaN(num)) total += num;
+            });
+            card.find('.uang-harian-total').text(formatNumber(total));
+        }
+
+        // Cek sisa pagu COA terpilih vs total komponen, tampilkan warning bila kurang.
+        function evaluateCoaPagu(row, total) {
+            let select = row.find('.komponen-coa-select');
+            let warning = row.find('.komponen-coa-warning');
+            let warningText = row.find('.komponen-coa-warning-text');
+            let selectedOpt = select.find('option:selected');
+            let sisa = parseFloat(selectedOpt.data('sisa-pagu'));
+            if (!selectedOpt.val() || isNaN(sisa)) {
+                warning.addClass('d-none');
+                select.removeClass('is-invalid');
+                return;
+            }
+            if (sisa < total) {
+                warningText.text('Sisa pagu COA (Rp ' + formatNumber(Math.round(sisa)) + ') tidak mencukupi total komponen (Rp ' + formatNumber(total) + ').');
+                warning.removeClass('d-none');
+                select.addClass('is-invalid');
+            } else {
+                warning.addClass('d-none');
+                select.removeClass('is-invalid');
+            }
+        }
+
+        // Hitung total per kode komponen biaya (lintas semua peserta) dan show/hide baris COA
+        function recalcKomponenCoaSection() {
+            let totals = { TIKET: 0, TRANSPORT: 0, PENGINAPAN: 0, UANG_HARIAN: 0 };
+            $('.komponen-input').each(function () {
+                let kode = $(this).data('kode');
+                if (!(kode in totals)) return;
+                let num = parseFloat(String($(this).val()).replace(/,/g, ''));
+                if (!isNaN(num)) totals[kode] += num;
+            });
+            let anyVisible = false;
+            $('.komponen-coa-row').each(function () {
+                let row = $(this);
+                let kode = row.data('kode');
+                let total = totals[kode] || 0;
+                row.find('.komponen-coa-total').text(formatNumber(total));
+                let select = row.find('.komponen-coa-select');
+                if (total > 0) {
+                    row.removeClass('d-none');
+                    select.prop('required', true);
+                    anyVisible = true;
+                } else {
+                    row.addClass('d-none');
+                    select.prop('required', false).val('');
+                }
+                evaluateCoaPagu(row, total);
+            });
+            $('.komponen-coa-empty').toggleClass('d-none', anyVisible);
+        }
+
+        // Live re-cek pagu saat user ganti COA
+        $(document).on('change', '.komponen-coa-select', function () {
+            let row = $(this).closest('.komponen-coa-row');
+            let total = parseFloat(String(row.find('.komponen-coa-total').text()).replace(/,/g, '')) || 0;
+            evaluateCoaPagu(row, total);
+        });
+
         // Auto calculate per row and grand total
         window.calculateJumlah = function (element) {
             let val = $(element).val();
@@ -319,7 +444,9 @@
             });
             card.find('.row-jumlah').val(formatNumber(total));
             card.find('.summary-total').text(formatNumber(total)); // update header card summary
+            calculateUangHarianGroup(card);
             calculateGrandTotal();
+            recalcKomponenCoaSection();
         }
 
         function calculateGrandTotal() {
@@ -359,7 +486,12 @@
 
             // Initialize formatting for old inputs
             $('.biaya-input').each(function() {
-               calculateJumlah(this); 
+               calculateJumlah(this);
+            });
+
+            // Initialize toggle file tiket based on initial biaya_tiket value
+            $('.tiket-amount-input').each(function() {
+                toggleTiketFile(this);
             });
 
             // Auto-fill PPK
@@ -431,7 +563,10 @@
                 newRow.find('.row-jumlah').val('0');
                 newRow.find('.summary-nama, .summary-tujuan').text('-');
                 newRow.find('.summary-total').text('0');
+                newRow.find('.uang-harian-total').text('0');
                 newRow.find('.file-existing-notice').remove();
+                newRow.find('.tiket-existing-notice').remove();
+                newRow.find('.tiket-file-wrapper').addClass('d-none');
                 newRow.find('.file-status-badge').removeClass('bg-success').addClass('bg-secondary').html('<i class="bi bi-paperclip"></i> SPT Kosong');
                 newRow.find('.nip-input').val('').prop('readonly', true);
                 newRow.find('.rekening-input').val('').prop('readonly', false);
@@ -477,6 +612,7 @@
                     $(this).closest('.item-row').remove();
                     updateRowNumbers();
                     calculateGrandTotal();
+                    recalcKomponenCoaSection();
                     if ($('.item-row').length === 1) {
                         $('.btn-delete-row').prop('disabled', true);
                     }

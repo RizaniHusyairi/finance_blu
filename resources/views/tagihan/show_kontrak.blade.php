@@ -125,6 +125,9 @@
             </div>
         </div>
         <div class="d-flex gap-2">
+            <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalAktivitasTagihan">
+                <i class="bi bi-activity me-1"></i> Lihat Aktivitas
+            </button>
             <a href="{{ route('contracts.index') }}" class="btn btn-outline-secondary">
                 <i class="bi bi-arrow-left me-1"></i> Kembali
             </a>
@@ -643,6 +646,9 @@
         </div>
     </div>
 </div>
+
+{{-- Modal Lihat Aktivitas Tagihan --}}
+@include('tagihan.partials.aktivitas-modal')
 
 {{-- Modals for Uploads --}}
 @include('tagihan.partials.modal_upload_arsip', ['id' => 'modalBappGambarRab', 'title' => 'Unggah Gambar RAB (BAPP)', 'jenis' => 'BAPP_GAMBAR_RAB', 'mimes' => '.jpg,.jpeg,.png'])

@@ -17,6 +17,11 @@ use App\Http\Controllers\MasterTarifPajakController;
 
 Auth::routes();
 
+// Route publik (signed URL) untuk scan QR di PDF SPP — menampilkan aktivitas tagihan
+Route::get('/aktivitas-tagihan/{id}', [\App\Http\Controllers\PublicTagihanActivityController::class, 'show'])
+    ->middleware('signed')
+    ->name('public.tagihan.aktivitas');
+
 Route::get('/', function () {
     if (!Auth::check()) {
         return redirect()->route('login');
@@ -184,6 +189,7 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
         Route::put('/honorarium/{id}', [HonorariumController::class, 'update'])->name('honorarium.update');
         Route::delete('/honorarium/{id}', [HonorariumController::class, 'destroy'])->name('honorarium.destroy');
         Route::post('/honorarium/{id}/dokumen-upload', [HonorariumController::class, 'uploadDokumen'])->name('honorarium.dokumen.upload');
+        Route::post('/honorarium/{id}/dokumen-upload-wajib', [HonorariumController::class, 'uploadDokumenWajib'])->name('honorarium.dokumen.upload-wajib');
         Route::delete('/honorarium/{id}/dokumen-delete/{arsip_id}', [HonorariumController::class, 'deleteDokumen'])->name('honorarium.dokumen.delete');
         Route::post('/honorarium/{id}/submit-verifikasi', [HonorariumController::class, 'submitVerifikasi'])->name('honorarium.submit-verifikasi');
         Route::get('/honorarium/{id}/pdf', [HonorariumController::class, 'exportPdf'])->name('honorarium.pdf');

@@ -270,6 +270,15 @@ class TagihanController extends Controller
             'potonganTagihan',
             'workflowInstance.approvals.actedByUser',
             'workflowInstance.approvals.assignedUser',
+            // Eager load rantai dokumen + workflow untuk modal "Lihat Aktivitas"
+            'spps.workflowInstance.approvals.actedByUser',
+            'spps.workflowInstance.approvals.assignedUser',
+            'spps.spm.workflowInstance.approvals.actedByUser',
+            'spps.spm.workflowInstance.approvals.assignedUser',
+            'spps.spm.npi.workflowInstance.approvals.actedByUser',
+            'spps.spm.npi.workflowInstance.approvals.assignedUser',
+            'spps.spm.npi.sp2d.workflowInstance.approvals.actedByUser',
+            'spps.spm.npi.sp2d.workflowInstance.approvals.assignedUser',
         ])->findOrFail($id);
 
         if ($tagihan->tipe_tagihan !== 'KONTRAK') {

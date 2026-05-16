@@ -224,6 +224,7 @@
                 'currentApproval' => $currentApproval ?? null,
                 'approveRoute' => $approveRoute,
                 'revisiRoute'  => $revisiRoute,
+                'allRoleApprovals' => $allRoleApprovals ?? [],
             ])
 
             {{-- Info Dokumen Ringkas --}}

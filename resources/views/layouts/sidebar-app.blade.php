@@ -118,25 +118,24 @@
         {{-- Verifikasi Tagihan — seragam untuk SEMUA verifikator (PPK, PPSPM, Koor.Keu, Bendahara×2, Kasubbag) --}}
         @hasanyrole('PPK|PPSPM|Koordinator Keuangan|Bendahara Pengeluaran|Bendahara Penerimaan|Kepala Subbagian Keuangan dan Tata Usaha')
         @php
-            // Kumpulkan SEMUA route verifikasi tagihan untuk setiap role aktif user.
-            // Tidak lagi pakai elseif agar multi-role user (PPSPM + Koordinator) tetap melihat semua link.
+            // Perjaldin masih memakai route per-role. Honorarium sudah disatukan ke endpoint terpadu
+            // `verifikasi-tagihan-honorarium.*` yang dapat melayani 6 role + user dual-role dalam satu halaman.
             $u = auth()->user();
             $roleRouteMap = [
-                'PPK' => ['perjaldin' => 'verifikasi-ppk.perjaldin.index', 'honorarium' => 'verifikasi-ppk.honorarium.index', 'badge' => 'PPK'],
-                'PPSPM' => ['perjaldin' => 'verifikasi-ppspm.perjaldin.index', 'honorarium' => 'verifikasi-ppspm.honorarium.index', 'badge' => 'PPSPM'],
-                'Koordinator Keuangan' => ['perjaldin' => 'verifikasi-koordinator.perjaldin.index', 'honorarium' => 'verifikasi-koordinator.honorarium.index', 'badge' => 'Koordinator'],
-                'Bendahara Pengeluaran' => ['perjaldin' => 'verifikasi-bendahara.perjaldin.index', 'honorarium' => 'verifikasi-bendahara.honorarium.index', 'badge' => 'Bend. Keluar'],
-                'Bendahara Penerimaan' => ['perjaldin' => 'verifikasi-bendahara-penerimaan.perjaldin.index', 'honorarium' => 'verifikasi-bendahara-penerimaan.honorarium.index', 'badge' => 'Bend. Terima'],
-                'Kepala Subbagian Keuangan dan Tata Usaha' => ['perjaldin' => 'verifikasi-kasubag.index', 'honorarium' => 'verifikasi-kasubag.honorarium.index', 'badge' => 'Kasubbag'],
+                'PPK' => ['perjaldin' => 'verifikasi-ppk.perjaldin.index', 'badge' => 'PPK'],
+                'PPSPM' => ['perjaldin' => 'verifikasi-ppspm.perjaldin.index', 'badge' => 'PPSPM'],
+                'Koordinator Keuangan' => ['perjaldin' => 'verifikasi-koordinator.perjaldin.index', 'badge' => 'Koordinator'],
+                'Bendahara Pengeluaran' => ['perjaldin' => 'verifikasi-bendahara.perjaldin.index', 'badge' => 'Bend. Keluar'],
+                'Bendahara Penerimaan' => ['perjaldin' => 'verifikasi-bendahara-penerimaan.perjaldin.index', 'badge' => 'Bend. Terima'],
+                'Kepala Subbagian Keuangan dan Tata Usaha' => ['perjaldin' => 'verifikasi-kasubag.index', 'badge' => 'Kasubbag'],
             ];
-            $perjaldinLinks = []; $honorariumLinks = [];
+            $perjaldinLinks = [];
             foreach ($roleRouteMap as $role => $cfg) {
                 if ($u?->hasRole($role)) {
                     if (Route::has($cfg['perjaldin']))  $perjaldinLinks[]  = ['route' => $cfg['perjaldin'],  'badge' => $cfg['badge']];
-                    if (Route::has($cfg['honorarium'])) $honorariumLinks[] = ['route' => $cfg['honorarium'], 'badge' => $cfg['badge']];
                 }
             }
-            $showBadge = count($perjaldinLinks) > 1 || count($honorariumLinks) > 1;
+            $showBadge = count($perjaldinLinks) > 1;
         @endphp
         <li>
           <a href="javascript:;" class="has-arrow">
@@ -184,20 +183,11 @@
 
 
 
-            @forelse($honorariumLinks as $hLink)
             <li>
-              <a href="{{ route($hLink['route']) }}">
+              <a href="{{ route('verifikasi-tagihan-honorarium.index') }}">
                 <i class="material-icons-outlined">arrow_right</i>Honorarium
-                @if($showBadge)<small class="badge bg-info ms-1" style="font-size:9px">{{ $hLink['badge'] }}</small>@endif
               </a>
             </li>
-            @empty
-            <li>
-              <a href="javascript:;" class="text-muted" style="cursor: not-allowed;">
-                <i class="material-icons-outlined">arrow_right</i>Honorarium <small class="badge bg-secondary ms-1">soon</small>
-              </a>
-            </li>
-            @endforelse
           </ul>
         </li>
         @endhasanyrole

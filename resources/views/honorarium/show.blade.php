@@ -2,6 +2,52 @@
 
 @section('title', 'Detail Honorarium')
 
+@push('css')
+<style>
+    .verifikator-avatar {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        font-weight: 700;
+        font-size: .9rem;
+        flex-shrink: 0;
+        text-shadow: 0 1px 1px rgba(0,0,0,.15);
+    }
+    .verifikator-card {
+        transition: all .15s ease;
+        border-left: 4px solid transparent;
+        position: relative;
+    }
+    .verifikator-card.is-filled { border-left-color: var(--bs-success); }
+    .verifikator-card.is-empty  { border-left-color: var(--bs-warning); background: #fff8e1; }
+    .verifikator-step-no {
+        position: absolute;
+        top: -10px; left: -10px;
+        width: 26px; height: 26px;
+        border-radius: 50%;
+        background: #fff;
+        border: 2px solid var(--bs-primary);
+        color: var(--bs-primary);
+        font-size: .75rem;
+        font-weight: 700;
+        display: flex; align-items: center; justify-content: center;
+        z-index: 2;
+        box-shadow: 0 2px 4px rgba(0,0,0,.08);
+    }
+    .role-chip {
+        font-size: .68rem;
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-weight: 600;
+        letter-spacing: .3px;
+    }
+</style>
+@endpush
+
 @section('content')
 <x-page-title title="Manajemen Honor" subtitle="Detail Honorarium" />
 
@@ -222,58 +268,114 @@
 {{-- PANEL PROGRESS VERIFIKASI PARALEL --}}
 @if($tagihan->status !== 'DRAFT')
     @php
-        $ppkStatus = $ppkApproval?->status ?? 'N/A';
-        $bendaharaStatus = $bendaharaApproval?->status ?? 'N/A';
-        $badgeClass = fn($s) => match($s) {
-            'APPROVED' => 'bg-success',
-            'PENDING' => 'bg-warning text-dark',
-            'REVISION', 'REJECTED' => 'bg-danger',
-            default => 'bg-light text-dark border',
+        $approvalStatusByRole = collect();
+        if ($activeWorkflowInstance ?? null) {
+            $approvalStatusByRole = collect($activeWorkflowInstance->approvals ?? [])
+                ->keyBy(fn ($a) => strtoupper(str_replace([' ', '-'], '_', $a->role_code)));
+        }
+
+        $approvalMeta = [
+            'PENDING'  => ['cls' => 'pending',  'icon' => 'hourglass-split',         'label' => 'Menunggu',   'color' => 'warning'],
+            'APPROVED' => ['cls' => 'approved', 'icon' => 'check-circle-fill',       'label' => 'Disetujui',  'color' => 'success'],
+            'REVISION' => ['cls' => 'revision', 'icon' => 'arrow-counterclockwise',  'label' => 'Revisi',     'color' => 'danger'],
+            'REJECTED' => ['cls' => 'rejected', 'icon' => 'x-circle-fill',           'label' => 'Ditolak',    'color' => 'danger'],
+            'WAITING'  => ['cls' => 'waiting',  'icon' => 'clock-history',           'label' => 'Belum aktif','color' => 'secondary'],
+        ];
+
+        $verifikatorList = [
+            ['key' => 'ppk',                  'role_code' => 'PPK',                  'label' => 'Pejabat Pembuat Komitmen',                 'short' => 'PPK',          'color' => '#0d6efd', 'nama' => $tagihan->ppk_nama_snapshot,                  'nip' => $tagihan->ppk_nip_snapshot],
+            ['key' => 'ppspm',                'role_code' => 'PPSPM',                'label' => 'PPSPM',                                    'short' => 'PPSPM',        'color' => '#6610f2', 'nama' => $tagihan->ppspm_nama_snapshot,                'nip' => $tagihan->ppspm_nip_snapshot],
+            ['key' => 'bendahara_pengeluaran','role_code' => 'BENDAHARA_PENGELUARAN','label' => 'Bendahara Pengeluaran',                    'short' => 'BEND. KELUAR', 'color' => '#d63384', 'nama' => $tagihan->bendahara_pengeluaran_nama_snapshot,'nip' => $tagihan->bendahara_pengeluaran_nip_snapshot],
+            ['key' => 'bendahara_penerimaan', 'role_code' => 'BENDAHARA_PENERIMAAN', 'label' => 'Bendahara Penerimaan',                     'short' => 'BEND. TERIMA', 'color' => '#fd7e14', 'nama' => $tagihan->bendahara_penerimaan_nama_snapshot, 'nip' => $tagihan->bendahara_penerimaan_nip_snapshot],
+            ['key' => 'koordinator_keuangan', 'role_code' => 'KOORDINATOR_KEUANGAN', 'label' => 'Koordinator Keuangan',                     'short' => 'KOOR. KEU',    'color' => '#198754', 'nama' => $tagihan->koordinator_keuangan_nama_snapshot, 'nip' => $tagihan->koordinator_keuangan_nip_snapshot],
+            ['key' => 'kasubbag',             'role_code' => 'KASUBBAG',             'label' => 'Kepala Subbagian Keuangan dan Tata Usaha', 'short' => 'KASUBBAG',     'color' => '#0dcaf0', 'nama' => $tagihan->kasubbag_nama_snapshot,             'nip' => $tagihan->kasubbag_nip_snapshot],
+        ];
+
+        $initials = function ($name) {
+            $name = trim((string) $name);
+            if ($name === '') return '?';
+            $parts = preg_split('/\s+/', $name);
+            $first = mb_substr($parts[0] ?? '', 0, 1);
+            $last  = count($parts) > 1 ? mb_substr(end($parts), 0, 1) : '';
+            return mb_strtoupper($first . $last);
         };
+
+        $step1Approvals = collect($activeWorkflowInstance?->approvals ?? [])->where('urutan_step', 1);
+        $step1Total = $step1Approvals->count();
+        $step1Approved = $step1Approvals->where('status', 'APPROVED')->count();
     @endphp
-    <div class="card mb-4 shadow-sm border-0">
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
+        <div class="card-header bg-white border-bottom pt-4 px-4 pb-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
+            <div>
+                <h5 class="fw-bold mb-0 text-primary"><i class="bi bi-diagram-3 me-2"></i>Progress Verifikasi (Paralel)</h5>
+                <p class="text-muted small mb-0 mt-1">Daftar pejabat penanda tangan dokumen — diurutkan sesuai alur verifikasi</p>
+            </div>
+            @if($step1Total > 0)
+                <div class="text-end">
+                    <span class="badge {{ $step1Approved === $step1Total ? 'bg-success' : 'bg-info' }} fs-6">
+                        <i class="bi bi-{{ $step1Approved === $step1Total ? 'check-circle' : 'people-fill' }} me-1"></i>
+                        {{ $step1Approved }}/{{ $step1Total }} Step 1 disetujui
+                    </span>
+                </div>
+            @endif
+        </div>
         <div class="card-body p-4">
-            <h6 class="fw-bold text-primary mb-3"><i class="bi bi-diagram-3 me-2"></i> Progress Verifikasi (Paralel)</h6>
-            <div class="row justify-content-center border py-4 rounded bg-light">
-                {{-- PPABP (Submitter) --}}
-                <div class="col-4 position-relative">
-                    <div class="text-center rounded mx-auto border-success bg-success bg-opacity-10 d-flex flex-column justify-content-center p-3" style="max-width: 280px; height: 100%;">
-                        <div class="fw-bold text-success mb-1" style="font-size: 14px;">Operator PPABP</div>
-                        <div class="text-muted mb-2" style="font-size: 12px;">{{ $tagihan->creator?->name ?? 'SYSTEM' }}</div>
-                        <span class="badge bg-success mx-auto">DIAJUKAN</span>
-                    </div>
-                    <div class="position-absolute align-items-center d-flex fw-bold text-success" style="right: -10px; top: 50%; transform: translateY(-50%); font-size:24px;">
-                        <i class="bi bi-arrow-right"></i>
-                    </div>
+            @if($step1Total > 0 && $step1Approved < $step1Total)
+                <div class="progress mb-4" style="height: 6px;">
+                    <div class="progress-bar bg-info" style="width: {{ round(($step1Approved / $step1Total) * 100) }}%"></div>
                 </div>
+            @endif
 
-                <div class="col-8">
-                    <div class="row h-100 g-3">
-                        {{-- PPK --}}
-                        <div class="col-sm-6">
-                            <div class="border rounded p-3 text-center h-100 {{ $ppkStatus === 'APPROVED' ? 'border-success bg-success bg-opacity-10' : ($ppkStatus === 'PENDING' ? 'border-warning bg-warning bg-opacity-10' : (in_array($ppkStatus, ['REVISION','REJECTED']) ? 'border-danger bg-danger bg-opacity-10' : '')) }}">
-                                <div class="fw-bold mb-1" style="font-size: 13px;">Pejabat Pembuat Komitmen</div>
-                                <div class="text-muted mb-2" style="font-size: 11px;">{{ $ppkApproval?->assignedUser?->name ?? 'Verifikator PPK' }}</div>
-                                <span class="badge {{ $badgeClass($ppkStatus) }}">{{ str_replace('_', ' ', $ppkStatus) }}</span>
-                                @if($ppkApproval?->acted_at)
-                                    <div class="mt-2" style="font-size: 11px; color: #6c757d;">{{ \Carbon\Carbon::parse($ppkApproval->acted_at)->format('d M Y H:i') }}</div>
-                                @endif
+            <div class="row g-3">
+                @foreach($verifikatorList as $idx => $v)
+                    @php
+                        $filled = !empty($v['nama']);
+                        $approval = $approvalStatusByRole->get($v['role_code']);
+                        $apvMeta = $approval ? ($approvalMeta[$approval->status] ?? null) : null;
+                    @endphp
+                    <div class="col-md-6 col-xl-4">
+                        <div class="verifikator-card border rounded-3 p-3 h-100 {{ $filled ? 'is-filled' : 'is-empty' }}">
+                            <span class="verifikator-step-no" style="border-color: {{ $v['color'] }}; color: {{ $v['color'] }};">{{ $idx + 1 }}</span>
+
+                            @if($apvMeta)
+                                <span class="badge bg-{{ $apvMeta['color'] }} position-absolute" style="top: -8px; right: 8px;">
+                                    <i class="bi bi-{{ $apvMeta['icon'] }} me-1"></i>{{ $apvMeta['label'] }}
+                                </span>
+                            @endif
+
+                            <div class="d-flex align-items-start gap-3">
+                                <div class="verifikator-avatar" style="background: {{ $v['color'] }};">
+                                    {{ $initials($v['nama']) }}
+                                </div>
+                                <div class="flex-grow-1 min-width-0">
+                                    <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+                                        <span class="role-chip" style="background: {{ $v['color'] }}1a; color: {{ $v['color'] }};">{{ $v['short'] }}</span>
+                                        @if($v['key'] === 'kasubbag')
+                                            <span class="role-chip" style="background: #e9ecef; color: #495057;" title="Verifikasi final setelah Step 1 selesai">
+                                                <i class="bi bi-shield-check"></i> final
+                                            </span>
+                                        @endif
+                                    </div>
+                                    <div class="fw-bold text-truncate" title="{{ $v['nama'] }}">{{ $v['nama'] ?: '— belum dipilih —' }}</div>
+                                    @if($v['nip'])
+                                        <div class="small text-muted font-monospace">NIP: {{ $v['nip'] }}</div>
+                                    @else
+                                        <div class="small text-muted fst-italic">NIP belum tersedia</div>
+                                    @endif
+                                    <div class="small text-muted mt-1" title="{{ $v['label'] }}">{{ \Illuminate\Support\Str::limit($v['label'], 38) }}</div>
+                                    @if($approval && $approval->acted_at)
+                                        <div class="small text-muted mt-1">
+                                            <i class="bi bi-clock me-1"></i>{{ \Carbon\Carbon::parse($approval->acted_at)->format('d M Y H:i') }}
+                                            @if($approval->catatan)
+                                                · <span class="fst-italic">"{{ \Illuminate\Support\Str::limit($approval->catatan, 40) }}"</span>
+                                            @endif
+                                        </div>
+                                    @endif
+                                </div>
                             </div>
                         </div>
-
-                        {{-- Bendahara --}}
-                        <div class="col-sm-6">
-                            <div class="border rounded p-3 text-center h-100 {{ $bendaharaStatus === 'APPROVED' ? 'border-success bg-success bg-opacity-10' : ($bendaharaStatus === 'PENDING' ? 'border-warning bg-warning bg-opacity-10' : (in_array($bendaharaStatus, ['REVISION','REJECTED']) ? 'border-danger bg-danger bg-opacity-10' : '')) }}">
-                                <div class="fw-bold mb-1" style="font-size: 13px;">Bendahara Pengeluaran</div>
-                                <div class="text-muted mb-2" style="font-size: 11px;">{{ $bendaharaApproval?->assignedUser?->name ?? 'Verifikator Bendahara' }}</div>
-                                <span class="badge {{ $badgeClass($bendaharaStatus) }}">{{ str_replace('_', ' ', $bendaharaStatus) }}</span>
-                                @if($bendaharaApproval?->acted_at)
-                                    <div class="mt-2" style="font-size: 11px; color: #6c757d;">{{ \Carbon\Carbon::parse($bendaharaApproval->acted_at)->format('d M Y H:i') }}</div>
-                                @endif
-                            </div>
-                        </div>
                     </div>
-                </div>
+                @endforeach
             </div>
         </div>
     </div>
@@ -304,37 +406,56 @@
             <div class="card border border-primary shadow-sm mb-4">
                 <div class="card-body">
                     <h6 class="fw-bold mb-3 text-primary"><i class="bi bi-cloud-upload"></i> Form Upload Dokumen Wajib</h6>
-                    <div class="row g-4">
-                        @if(!$hasDaftarNominatif)
-                        <div class="col-md-6">
-                            <form action="{{ route('honorarium.dokumen.upload', $tagihan->id) }}" method="POST" enctype="multipart/form-data">
-                                @csrf
-                                <input type="hidden" name="jenis_dokumen" value="Daftar Nominatif Bertandatangan">
+                    <form action="{{ route('honorarium.dokumen.upload-wajib', $tagihan->id) }}" method="POST" enctype="multipart/form-data" id="formUploadWajib">
+                        @csrf
+                        <div class="row g-3">
+                            <div class="col-md-6">
                                 <label class="form-label fw-semibold text-primary">1. Daftar Nominatif Bertandatangan</label>
-                                <div class="input-group input-group-sm">
-                                    <input type="file" name="file_dokumen" class="form-control" accept=".pdf" required>
-                                    <button type="submit" class="btn btn-primary fw-bold"><i class="bi bi-upload"></i> Unggah</button>
-                                </div>
-                                <small class="text-muted d-block mt-1"><i class="bi bi-info-circle"></i> Format PDF (Maks 10MB)</small>
-                            </form>
-                        </div>
-                        @endif
+                                @if($hasDaftarNominatif)
+                                    <div class="form-control bg-success bg-opacity-10 text-success fw-semibold d-flex align-items-center gap-2">
+                                        <i class="bi bi-check-circle-fill"></i> Sudah diunggah
+                                    </div>
+                                @else
+                                    <input type="file" name="file_nominatif" id="fileNominatif" accept=".pdf" class="form-control upload-wajib-input" required>
+                                    <small class="text-muted d-block mt-1"><i class="bi bi-info-circle"></i> Format PDF (Maks 10MB)</small>
+                                @endif
+                            </div>
 
-                        @if(!$hasDokumenHonorarium)
-                        <div class="col-md-6">
-                            <form action="{{ route('honorarium.dokumen.upload', $tagihan->id) }}" method="POST" enctype="multipart/form-data">
-                                @csrf
-                                <input type="hidden" name="jenis_dokumen" value="Dokumen Honorarium Bertandatangan">
+                            <div class="col-md-6">
                                 <label class="form-label fw-semibold text-primary">2. Dokumen Honorarium Bertandatangan</label>
-                                <div class="input-group input-group-sm">
-                                    <input type="file" name="file_dokumen" class="form-control" accept=".pdf" required>
-                                    <button type="submit" class="btn btn-primary fw-bold"><i class="bi bi-upload"></i> Unggah</button>
-                                </div>
-                                <small class="text-muted d-block mt-1"><i class="bi bi-info-circle"></i> Format PDF (Maks 10MB)</small>
-                            </form>
+                                @if($hasDokumenHonorarium)
+                                    <div class="form-control bg-success bg-opacity-10 text-success fw-semibold d-flex align-items-center gap-2">
+                                        <i class="bi bi-check-circle-fill"></i> Sudah diunggah
+                                    </div>
+                                @else
+                                    <input type="file" name="file_honorarium" id="fileHonorarium" accept=".pdf" class="form-control upload-wajib-input" required>
+                                    <small class="text-muted d-block mt-1"><i class="bi bi-info-circle"></i> Format PDF (Maks 10MB)</small>
+                                @endif
+                            </div>
+
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-primary fw-bold w-100" id="btnUploadWajib" disabled>
+                                    <i class="bi bi-upload me-1"></i> Unggah Dokumen Wajib
+                                </button>
+                            </div>
                         </div>
-                        @endif
-                    </div>
+                    </form>
+
+                    <script>
+                    (function () {
+                        const inputs = document.querySelectorAll('.upload-wajib-input');
+                        const btn = document.getElementById('btnUploadWajib');
+                        if (!btn) return;
+
+                        function toggle() {
+                            const allFilled = Array.from(inputs).every(i => i.files && i.files.length > 0);
+                            btn.disabled = !allFilled;
+                        }
+
+                        inputs.forEach(i => i.addEventListener('change', toggle));
+                        toggle();
+                    })();
+                    </script>
                 </div>
             </div>
             @endif
