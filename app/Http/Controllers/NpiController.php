@@ -354,7 +354,7 @@ class NpiController extends Controller
 
     public function cetakPdf($npi_id)
     {
-        $npi = DokumenNpi::with(['spm.spp', 'bendaharaPenerimaan'])->findOrFail($npi_id);
+        $npi = DokumenNpi::with(['spm.spp', 'bendaharaPenerimaan.profilable'])->findOrFail($npi_id);
         $spm = $npi->spm;
         $spp = $spm?->spp;
 
@@ -369,14 +369,15 @@ class NpiController extends Controller
         $jumlahUang = (float) ($spp?->nominal_spp ?? 0);
         $terbilang = terbilang_rupiah($jumlahUang);
 
-        $bendaharaPengeluaran = User::role('Bendahara Pengeluaran')->first();
-        $bendaharaPenerimaan = $npi->bendaharaPenerimaan ?: User::role('Bendahara Penerimaan')->first();
-        $ppk = User::role('PPK')->first();
+        $bendaharaPengeluaran = User::role('Bendahara Pengeluaran')->with('profilable')->first();
+        $bendaharaPenerimaan = $npi->bendaharaPenerimaan ?: User::role('Bendahara Penerimaan')->with('profilable')->first();
+        $ppk = User::role('PPK')->with('profilable')->first();
 
         $penandatanganPengeluaran = $bendaharaPengeluaran->name ?? 'BENDAHARA PENGELUARAN';
-        $nipPengeluaran = '-';
+        $nipPengeluaran = $bendaharaPengeluaran?->pegawai?->nip ?: '-';
         $penandatanganPenerimaan = $bendaharaPenerimaan->name ?? 'BENDAHARA PENERIMAAN';
-        $nipPenerimaan = '-';
+        $nipPenerimaan = $bendaharaPenerimaan?->pegawai?->nip ?: '-';
+        $nipPpk = $ppk?->pegawai?->nip ?: '-';
 
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('npis.pdf', compact(
             'spp',
@@ -388,7 +389,8 @@ class NpiController extends Controller
             'nipPengeluaran',
             'penandatanganPenerimaan',
             'nipPenerimaan',
-            'ppk'
+            'ppk',
+            'nipPpk'
         ));
         $pdf->setPaper('a4', 'portrait');
 

@@ -491,15 +491,7 @@
           </ul>
         </li>
         @endhasrole
-        @hasanyrole('Super Admin|KPA|Kepala Subbagian Keuangan dan Tata Usaha|Kepala Seksi Pelayanan dan Kerjasama|PPK')
-        <li>
-          <a href="{{ route('reports.bku') }}">
-            <div class="parent-icon"><i class="material-icons-outlined">summarize</i>
-            </div>
-            <div class="menu-title">Laporan BKU</div>
-          </a>
-        </li>
-        @endhasanyrole
+        
       @endauth
       <!--end navigation-->
   </div>

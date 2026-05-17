@@ -35,6 +35,28 @@
     </style>
 </head>
 <body>
+@php
+    // QR code: signed URL ke halaman aktivitas tagihan terkait NPI ini.
+    // DomPDF tidak handle inline <svg> dari simple-qrcode dengan stabil,
+    // jadi kita tulis ke file SVG temp dan reference via <img src="{absolute_path}">.
+    $qrTagihanId = ($spp ?? null)?->tagihan_id ?? optional(($spp ?? null)?->tagihan)->id;
+    $qrFilePath = null;
+    $qrUrl = null;
+    if ($qrTagihanId) {
+        $qrUrl = \Illuminate\Support\Facades\URL::signedRoute('public.tagihan.aktivitas', ['id' => $qrTagihanId]);
+        $qrCacheDir = storage_path('app/qr-cache');
+        if (! is_dir($qrCacheDir)) {
+            @mkdir($qrCacheDir, 0775, true);
+        }
+        $qrFilePath = $qrCacheDir . DIRECTORY_SEPARATOR . 'tagihan_' . $qrTagihanId . '_' . md5($qrUrl) . '.svg';
+        if (! file_exists($qrFilePath)) {
+            $qrSvg = (string) \SimpleSoftwareIO\QrCode\Facades\QrCode::format('svg')
+                ->size(300)->margin(1)->errorCorrection('M')->generate($qrUrl);
+            file_put_contents($qrFilePath, $qrSvg);
+        }
+        $qrFilePath = str_replace('\\', '/', $qrFilePath);
+    }
+@endphp
 
 <table class="table-main">
 
@@ -142,7 +164,7 @@
                         <p style="margin: 0 0 4px 0;">Samarinda, {{ $npi->tanggal_npi ? \Carbon\Carbon::parse($npi->tanggal_npi)->locale('id')->isoFormat('D MMMM Y') : \Carbon\Carbon::now()->locale('id')->isoFormat('D MMMM Y') }}</p>
                         <p style="margin: 0 0 60px 0;">Pejabat Pembuat Komitmen</p>
                         <p style="margin: 0;"><span style="text-decoration: underline; font-weight: bold;">{{ strtoupper($ppk->name ?? 'PPK') }}</span></p>
-                        <p style="margin: 2px 0;">NIP -</p>
+                        <p style="margin: 2px 0;">NIP {{ $nipPpk ?? '-' }}</p>
                     </td>
                 </tr>
 
@@ -156,7 +178,21 @@
                                     <p style="margin: 0;"><span style="text-decoration: underline; font-weight: bold;">{{ strtoupper($penandatanganPengeluaran ?? 'BENDAHARA PENGELUARAN') }}</span></p>
                                     <p style="margin: 2px 0;">NIP {{ $nipPengeluaran ?? '-' }}</p>
                                 </td>
-                                <td style="border: none; width: 67%;"></td>
+                                <td style="border: none; width: 67%; vertical-align: top; padding-left: 20px;">
+                                    @if($qrFilePath)
+                                        <table style="width: 100%; border: none;">
+                                            <tr>
+                                                <td style="border: none; width: 90px; vertical-align: top; padding: 0;">
+                                                    <img src="{{ $qrFilePath }}" alt="QR Aktivitas Tagihan" style="width: 90px; height: 90px;">
+                                                </td>
+                                                <td style="border: none; vertical-align: top; padding: 4px 0 0 10px; font-size: 9px; color: #333;">
+                                                    <strong>Scan untuk lihat aktivitas tagihan</strong><br>
+                                                    Status verifikasi, SPP, SPM, NPI, hingga SP2D — beserta verifikator di tiap tahap.
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    @endif
+                                </td>
                             </tr>
                         </table>
                     </td>

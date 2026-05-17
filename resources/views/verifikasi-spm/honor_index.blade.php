@@ -15,7 +15,7 @@
     <div class="d-flex justify-content-between align-items-center mb-0">
         <x-page-title title="Verifikasi SPM" subtitle="Honorarium" />
     </div>
-    <div class="text-muted small mb-4">Periksa dan verifikasi SPM honorarium yang diajukan Operator BLU. Role Anda saat ini: <strong>{{ $roleCode }}</strong>.</div>
+    <div class="text-muted small mb-4">Periksa dan verifikasi SPM honorarium yang diajukan Operator BLU. Role Anda saat ini: <strong>{{ !empty($roleCodes) ? implode(', ', $roleCodes) : '-' }}</strong>.</div>
 
     @if(session('success'))
         <div class="alert alert-success border-0 bg-success text-white alert-dismissible fade show">
@@ -30,37 +30,78 @@
         </div>
     @endif
 
+    <style>
+        .stat-card {
+            background: #fff;
+            border: 1px solid #e9ecef;
+            border-left: 4px solid var(--accent, #6c757d);
+            border-radius: .5rem;
+            transition: transform .15s ease, box-shadow .15s ease;
+        }
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 .5rem 1rem rgba(0,0,0,.075) !important;
+        }
+        .stat-card .stat-icon {
+            width: 36px; height: 36px;
+            display: inline-flex; align-items: center; justify-content: center;
+            border-radius: .5rem;
+            background: var(--accent-bg, rgba(108,117,125,.1));
+            color: var(--accent, #6c757d);
+            font-size: 1.1rem;
+        }
+        .stat-card .stat-label { font-size: .8rem; color: #6c757d; text-transform: uppercase; letter-spacing: .03em; font-weight: 600; }
+        .stat-card .stat-value { font-size: 1.85rem; font-weight: 700; line-height: 1.1; color: #212529; }
+        .stat-card .stat-sub   { font-size: .75rem; color: #adb5bd; }
+    </style>
+
     {{-- Summary Cards --}}
     <div class="row row-cols-1 row-cols-md-2 row-cols-xl-4 g-3 mb-4 mt-2">
         <div class="col">
-            <div class="card h-100 border-0 shadow-sm bg-warning text-dark">
+            <div class="card stat-card h-100 shadow-sm" style="--accent: #f59f00; --accent-bg: rgba(245,159,0,.12);">
                 <div class="card-body p-3">
-                    <h6 class="card-title fw-medium mb-1">Menunggu Aksi Saya</h6>
-                    <h3 class="fw-bold mb-0">{{ $summary['pending'] }}</h3>
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <span class="stat-icon"><i class="bi bi-hourglass-split"></i></span>
+                        <span class="stat-label">Menunggu Aksi Saya</span>
+                    </div>
+                    <div class="stat-value">{{ $summary['pending'] }}</div>
+                    <div class="stat-sub mt-1">SPM honor siap dicek</div>
                 </div>
             </div>
         </div>
         <div class="col">
-            <div class="card h-100 border-0 shadow-sm text-white" style="background-color: #0d6efd;">
+            <div class="card stat-card h-100 shadow-sm" style="--accent: #1c7ed6; --accent-bg: rgba(28,126,214,.12);">
                 <div class="card-body p-3">
-                    <h6 class="card-title fw-medium mb-1">Sudah Saya Setujui</h6>
-                    <h3 class="fw-bold mb-0">{{ $summary['approved'] }}</h3>
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <span class="stat-icon"><i class="bi bi-check2-circle"></i></span>
+                        <span class="stat-label">Sudah Saya Setujui</span>
+                    </div>
+                    <div class="stat-value">{{ $summary['approved'] }}</div>
+                    <div class="stat-sub mt-1">Lanjut ke tahap berikutnya</div>
                 </div>
             </div>
         </div>
         <div class="col">
-            <div class="card h-100 border-0 shadow-sm text-white bg-danger">
+            <div class="card stat-card h-100 shadow-sm" style="--accent: #e03131; --accent-bg: rgba(224,49,49,.12);">
                 <div class="card-body p-3">
-                    <h6 class="card-title fw-medium mb-1">Perlu Revisi</h6>
-                    <h3 class="fw-bold mb-0">{{ $summary['revisi'] }}</h3>
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <span class="stat-icon"><i class="bi bi-arrow-counterclockwise"></i></span>
+                        <span class="stat-label">Perlu Revisi</span>
+                    </div>
+                    <div class="stat-value">{{ $summary['revisi'] }}</div>
+                    <div class="stat-sub mt-1">Dikembalikan ke operator</div>
                 </div>
             </div>
         </div>
         <div class="col">
-            <div class="card h-100 border-0 shadow-sm text-white bg-success">
+            <div class="card stat-card h-100 shadow-sm" style="--accent: #20c997; --accent-bg: rgba(32,201,151,.12);">
                 <div class="card-body p-3">
-                    <h6 class="card-title fw-medium mb-1">Selesai (Final)</h6>
-                    <h3 class="fw-bold mb-0 text-white">{{ $summary['selesai'] }}</h3>
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <span class="stat-icon"><i class="bi bi-check2-all"></i></span>
+                        <span class="stat-label">Selesai (Final)</span>
+                    </div>
+                    <div class="stat-value">{{ $summary['selesai'] }}</div>
+                    <div class="stat-sub mt-1">SPM terbit, siap NPI</div>
                 </div>
             </div>
         </div>
@@ -107,7 +148,7 @@
                                 $coa = $spm->dipaRevisionItem?->coa;
                                 
                                 $instance = $spm->workflowInstances->first();
-                                $myApproval = collect($instance?->approvals ?? [])->firstWhere('role_code', $roleCode);
+                                $myApproval = collect($instance?->approvals ?? [])->first(fn($app) => in_array($app->role_code, $roleCodes ?? []));
                                 
                                 $statusSpmClass = match($spm->status) {
                                     'DRAFT' => 'bg-warning text-dark',
