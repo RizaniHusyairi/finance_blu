@@ -207,6 +207,10 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
         Route::put('/perjaldins/{id}', [\App\Http\Controllers\PerjaldinController::class, 'updatePerjaldin'])->name('perjaldins.update-perjaldin');
         Route::delete('/perjaldins/{id}', [\App\Http\Controllers\PerjaldinController::class, 'destroyPerjaldin'])->name('perjaldins.destroy-perjaldin');
         Route::get('/perjaldins/{id}/pdf', [\App\Http\Controllers\PerjaldinController::class, 'exportPdf'])->name('perjaldins.pdf');
+        Route::get('/perjaldins/{id}/pdf/nominatif', [\App\Http\Controllers\PerjaldinController::class, 'exportPdfNominatif'])->name('perjaldins.pdf-nominatif');
+        Route::get('/perjaldins/{id}/pdf/lampiran', [\App\Http\Controllers\PerjaldinController::class, 'exportPdfLampiran'])->name('perjaldins.pdf-lampiran');
+        Route::post('/perjaldins/{id}/upload-nominatif-ttd', [\App\Http\Controllers\PerjaldinController::class, 'uploadNominatifTtd'])->name('perjaldins.upload-nominatif-ttd');
+        Route::get('/perjaldins/{id}/nominatif-ttd/{arsipId}', [\App\Http\Controllers\PerjaldinController::class, 'viewNominatifTtd'])->name('perjaldins.view-nominatif-ttd');
 
         // Master Data Uang Harian Perjaldin
         Route::resource('master-uang-harian-perjaldin', \App\Http\Controllers\MasterUangHarianPerjaldinController::class)

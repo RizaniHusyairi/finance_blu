@@ -464,6 +464,10 @@ class PerjaldinVerifikasiController extends Controller
             }
 
             if ($tagihan->status === 'DISETUJUI_PERJALDIN') {
+                // Notifikasi ke Operator BLU dipindah ke tahap setelah Operator Perjaldin
+                // menyelesaikan upload kedua dokumen Nominatif TTD (PerjaldinController::uploadNominatifTtd).
+                // Di tahap ini status seharusnya MENUNGGU_UPLOAD_NOMINATIF_TTD, jadi blok ini
+                // praktis tidak akan tereksekusi setelah perubahan workflow tersebut.
                 $operators = \App\Models\User::role('Operator BLU')->get();
                 Notification::send($operators, new WorkflowNotification([
                     'title' => 'Perjaldin Siap SPP',
@@ -471,6 +475,18 @@ class PerjaldinVerifikasiController extends Controller
                     'url' => route('spps.perjaldin.index'),
                     'icon' => 'receipt_long',
                     'color' => 'success',
+                ]));
+            }
+
+            // Saat tagihan menunggu upload nominatif TTD, beri notifikasi ke Operator Perjaldin.
+            if ($tagihan->status === 'MENUNGGU_UPLOAD_NOMINATIF_TTD') {
+                $operatorPerjaldin = \App\Models\User::role('Operator Perjaldin')->get();
+                Notification::send($operatorPerjaldin, new WorkflowNotification([
+                    'title' => 'Upload Nominatif Bertandatangan',
+                    'message' => "Perjaldin '{$tagihan->deskripsi}' telah disetujui Kasubbag. Silakan unggah Nominatif & Daftar Nominatif Pembayaran yang sudah ditandatangani.",
+                    'url' => route('perjaldins.show', $tagihan->id),
+                    'icon' => 'upload_file',
+                    'color' => 'warning',
                 ]));
             }
         } catch (\Exception $e) {

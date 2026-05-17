@@ -151,7 +151,7 @@ class ContractController extends Controller
             'satuan_waktu' => 'required|in:HARI,MINGGU,BULAN',
             'jangka_waktu' => 'required|integer|min:1',
             'tanggal_selesai' => 'required|date|after_or_equal:tanggal_mulai',
-            'masa_pemeliharaan_hari' => 'nullable|integer|min:0',
+            'masa_pemeliharaan_hari' => 'nullable|integer|min:0|required_if:gunakan_retensi,1',
             'tanggal_mulai_pemeliharaan' => 'nullable|date',
             'tanggal_selesai_pemeliharaan' => 'nullable|date|after_or_equal:tanggal_mulai_pemeliharaan',
             'ketentuan_denda' => 'nullable|string',
@@ -171,7 +171,17 @@ class ContractController extends Controller
             'gunakan_retensi' => 'nullable|boolean',
             'retensi_keterangan' => 'nullable|required_if:gunakan_retensi,1|string|max:255',
             'retensi_persentase' => 'nullable|required_if:gunakan_retensi,1|numeric|min:0.0001|max:100',
+        ], [
+            'masa_pemeliharaan_hari.required_if' => 'Masa pemeliharaan wajib diisi (minimal 1 hari) ketika kontrak menggunakan retensi.',
+            'retensi_persentase.required_if' => 'Persentase retensi wajib diisi saat opsi retensi diaktifkan.',
+            'retensi_keterangan.required_if' => 'Keterangan retensi wajib diisi saat opsi retensi diaktifkan.',
         ]);
+
+        if ($request->boolean('gunakan_retensi') && (int) ($validated['masa_pemeliharaan_hari'] ?? 0) < 1) {
+            return back()->withInput()->withErrors([
+                'masa_pemeliharaan_hari' => 'Masa pemeliharaan minimal 1 hari karena kontrak menggunakan retensi.',
+            ]);
+        }
 
         try {
             DB::beginTransaction();
@@ -402,7 +412,7 @@ class ContractController extends Controller
             'satuan_waktu' => 'required|in:HARI,MINGGU,BULAN',
             'jangka_waktu' => 'required|integer|min:1',
             'tanggal_selesai' => 'required|date|after_or_equal:tanggal_mulai',
-            'masa_pemeliharaan_hari' => 'nullable|integer|min:0',
+            'masa_pemeliharaan_hari' => 'nullable|integer|min:0|required_if:gunakan_retensi,1',
             'tanggal_mulai_pemeliharaan' => 'nullable|date',
             'tanggal_selesai_pemeliharaan' => 'nullable|date|after_or_equal:tanggal_mulai_pemeliharaan',
             'ketentuan_denda' => 'nullable|string',
@@ -422,7 +432,17 @@ class ContractController extends Controller
             'gunakan_retensi' => 'nullable|boolean',
             'retensi_keterangan' => 'nullable|required_if:gunakan_retensi,1|string|max:255',
             'retensi_persentase' => 'nullable|required_if:gunakan_retensi,1|numeric|min:0.0001|max:100',
+        ], [
+            'masa_pemeliharaan_hari.required_if' => 'Masa pemeliharaan wajib diisi (minimal 1 hari) ketika kontrak menggunakan retensi.',
+            'retensi_persentase.required_if' => 'Persentase retensi wajib diisi saat opsi retensi diaktifkan.',
+            'retensi_keterangan.required_if' => 'Keterangan retensi wajib diisi saat opsi retensi diaktifkan.',
         ]);
+
+        if ($request->boolean('gunakan_retensi') && (int) ($validated['masa_pemeliharaan_hari'] ?? 0) < 1) {
+            return back()->withInput()->withErrors([
+                'masa_pemeliharaan_hari' => 'Masa pemeliharaan minimal 1 hari karena kontrak menggunakan retensi.',
+            ]);
+        }
 
         try {
             DB::beginTransaction();

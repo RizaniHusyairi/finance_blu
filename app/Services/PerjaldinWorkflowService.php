@@ -276,13 +276,42 @@ class PerjaldinWorkflowService
                 $mappedStatus = "DITOLAK_{$rolePrefix}";
                 break;
             case 'APPROVED':
-                $mappedStatus = "DISETUJUI_PERJALDIN";
+                // Untuk Perjaldin: setelah seluruh verifikator (Kasubbag final) approve,
+                // tagihan masih HARUS menunggu Operator Perjaldin mengunggah dua file
+                // bertandatangan (Nominatif + Daftar Nominatif Pembayaran) sebelum
+                // boleh diteruskan ke Operator BLU untuk dibuatkan SPP.
+                if ($tagihan->tipe_tagihan === 'PERJALDIN') {
+                    $mappedStatus = $this->hasNominatifTtdComplete($tagihan)
+                        ? 'DISETUJUI_PERJALDIN'
+                        : 'MENUNGGU_UPLOAD_NOMINATIF_TTD';
+                } else {
+                    $mappedStatus = 'DISETUJUI_PERJALDIN';
+                }
                 break;
             default:
                 $mappedStatus = $instance->status;
         }
 
         $tagihan->update(['status' => $mappedStatus]);
+    }
+
+    /**
+     * Apakah dua arsip Nominatif bertandatangan sudah lengkap.
+     */
+    public function hasNominatifTtdComplete(Tagihan $tagihan): bool
+    {
+        $jenis = [
+            'NOMINATIF_PERJALDIN_TTD',
+            'DAFTAR_NOMINATIF_PEMBAYARAN_PERJALDIN_TTD',
+        ];
+
+        $found = $tagihan->arsipDokumen()
+            ->whereIn('jenis_dokumen', $jenis)
+            ->where('is_active', true)
+            ->pluck('jenis_dokumen')
+            ->unique();
+
+        return $found->count() === count($jenis);
     }
 
     public function pendingApprovalForRole(Tagihan $tagihan, string $roleCode): ?WorkflowApproval

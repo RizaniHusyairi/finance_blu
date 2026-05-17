@@ -734,7 +734,7 @@ class PerjaldinController extends Controller
         return redirect()->route('perjaldins.index')->with('success', 'Perjaldin beserta seluruh datanya berhasil dihapus.');
     }
 
-    public function exportPdf($id)
+    public function exportPdfNominatif($id)
     {
         $tagihan = Tagihan::where('tipe_tagihan', 'PERJALDIN')
             ->with(['detailPerjaldin.pegawai', 'detailPerjaldin.provinsi'])
@@ -742,13 +742,146 @@ class PerjaldinController extends Controller
 
         $data = [
             'tagihan' => $tagihan,
-            'details' => $tagihan->detailPerjaldin
+            'details' => $tagihan->detailPerjaldin,
         ];
 
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('perjaldins.pdf', $data);
-        $pdf->setPaper('a4', 'landscape');
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('perjaldins.pdf_nominatif', $data);
+        $pdf->setPaper('a4', 'portrait');
 
         return $pdf->stream('Nominatif_Perjaldin_' . \Illuminate\Support\Str::slug($tagihan->nomor_tagihan, '_') . '.pdf');
+    }
+
+    public function exportPdfLampiran($id)
+    {
+        $tagihan = Tagihan::where('tipe_tagihan', 'PERJALDIN')
+            ->with(['detailPerjaldin.pegawai', 'detailPerjaldin.provinsi'])
+            ->findOrFail($id);
+
+        $data = [
+            'tagihan' => $tagihan,
+            'details' => $tagihan->detailPerjaldin,
+        ];
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('perjaldins.pdf_lampiran', $data);
+        $pdf->setPaper('a4', 'landscape');
+
+        return $pdf->stream('Daftar_Nominatif_Pembayaran_Perjaldin_' . \Illuminate\Support\Str::slug($tagihan->nomor_tagihan, '_') . '.pdf');
+    }
+
+    /**
+     * Operator Perjaldin mengunggah file Nominatif Perjaldin Bertandatangan dan/atau
+     * Daftar Nominatif Pembayaran Perjaldin Bertandatangan setelah Kasubbag approve.
+     *
+     * Bila kedua dokumen sudah lengkap → status tagihan menjadi DISETUJUI_PERJALDIN
+     * dan Operator BLU dinotifikasi bahwa tagihan siap dibuatkan SPP.
+     */
+    public function uploadNominatifTtd(Request $request, $id)
+    {
+        $tagihan = Tagihan::where('tipe_tagihan', 'PERJALDIN')->findOrFail($id);
+
+        if (! in_array($tagihan->status, [
+            'MENUNGGU_UPLOAD_NOMINATIF_TTD',
+            'DISETUJUI_PERJALDIN', // tetap izinkan re-upload selama belum lanjut
+        ], true)) {
+            return back()->withErrors([
+                'error' => 'Upload nominatif bertandatangan hanya dapat dilakukan setelah Kasubbag menyetujui tagihan.',
+            ]);
+        }
+
+        $request->validate([
+            'jenis_dokumen' => 'required|in:NOMINATIF_PERJALDIN_TTD,DAFTAR_NOMINATIF_PEMBAYARAN_PERJALDIN_TTD',
+            'file' => 'required|file|mimes:pdf,jpg,jpeg,png|max:10240',
+        ], [
+            'file.required' => 'File wajib diunggah.',
+            'file.mimes' => 'Format file harus PDF/JPG/PNG.',
+            'file.max' => 'Ukuran file maksimal 10MB.',
+        ]);
+
+        $jenis = $request->input('jenis_dokumen');
+        $file = $request->file('file');
+
+        DB::transaction(function () use ($tagihan, $jenis, $file, $request) {
+            // Nonaktifkan arsip lama untuk jenis dokumen yang sama.
+            $tagihan->arsipDokumen()
+                ->where('jenis_dokumen', $jenis)
+                ->where('is_active', true)
+                ->update(['is_active' => false]);
+
+            $path = $file->store('perjaldin/nominatif-ttd/' . date('Y'), 'public');
+
+            $tagihan->arsipDokumen()->create([
+                'jenis_dokumen' => $jenis,
+                'nama_file_asli' => $file->getClientOriginalName(),
+                'path_file' => $path,
+                'disk' => 'public',
+                'mime_type' => $file->getMimeType(),
+                'ukuran_file' => $file->getSize(),
+                'uploaded_by' => auth()->id(),
+                'uploaded_at' => now(),
+                'is_active' => true,
+            ]);
+
+            $statusSebelumnya = $tagihan->status;
+            $svc = app(\App\Services\PerjaldinWorkflowService::class);
+            $isComplete = $svc->hasNominatifTtdComplete($tagihan);
+
+            if ($isComplete && $tagihan->status !== 'DISETUJUI_PERJALDIN') {
+                $tagihan->update(['status' => 'DISETUJUI_PERJALDIN']);
+            }
+
+            LogStatusDokumen::create([
+                'dokumen_type' => Tagihan::class,
+                'dokumen_id' => $tagihan->id,
+                'user_id' => auth()->id(),
+                'role_saat_itu' => auth()->user()?->getRoleNames()->first() ?? 'Operator Perjaldin',
+                'status_sebelumnya' => $statusSebelumnya,
+                'status_baru' => $tagihan->status,
+                'aksi' => 'UPLOAD_' . $jenis,
+                'catatan' => 'Operator Perjaldin mengunggah ' . $jenis . ': ' . $file->getClientOriginalName()
+                    . ($isComplete ? '. Semua nominatif bertandatangan lengkap, tagihan siap dibuatkan SPP.' : '.'),
+                'ip_address' => $request->ip(),
+            ]);
+
+            // Notifikasi ke Operator BLU saat seluruh dokumen TTD lengkap dan
+            // tagihan baru saja berubah ke DISETUJUI_PERJALDIN.
+            if ($isComplete) {
+                app(\App\Services\TagihanReadyForSppNotificationService::class)
+                    ->notifyIfNewlyReady($tagihan->refresh(), $statusSebelumnya);
+            }
+        });
+
+        return back()->with('success', 'File ' . $jenis . ' berhasil diunggah.');
+    }
+
+    /**
+     * Tampilkan / unduh arsip Nominatif TTD.
+     */
+    public function viewNominatifTtd($id, $arsipId)
+    {
+        $tagihan = Tagihan::where('tipe_tagihan', 'PERJALDIN')->findOrFail($id);
+
+        $arsip = $tagihan->arsipDokumen()
+            ->where('id', $arsipId)
+            ->whereIn('jenis_dokumen', [
+                'NOMINATIF_PERJALDIN_TTD',
+                'DAFTAR_NOMINATIF_PEMBAYARAN_PERJALDIN_TTD',
+            ])
+            ->where('is_active', true)
+            ->firstOrFail();
+
+        $disk = \Illuminate\Support\Facades\Storage::disk($arsip->disk ?: 'public');
+        abort_unless($disk->exists($arsip->path_file), 404);
+
+        return $disk->response($arsip->path_file, $arsip->nama_file_asli ?: basename($arsip->path_file));
+    }
+
+    /**
+     * @deprecated  Pakai exportPdfNominatif() / exportPdfLampiran(). Method ini
+     *  hanya tersisa untuk back-compat route lama dan default ke versi nominatif.
+     */
+    public function exportPdf($id)
+    {
+        return $this->exportPdfNominatif($id);
     }
 
     private function editablePerjaldinStatuses(): array

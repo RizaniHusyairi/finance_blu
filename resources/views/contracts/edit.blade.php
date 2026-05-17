@@ -272,16 +272,18 @@
                                             <div class="form-check form-switch">
                                                 <input class="form-check-input" type="checkbox" id="gunakan_retensi" name="gunakan_retensi" value="1" {{ $oldGunakanRetensi ? 'checked' : '' }} onchange="toggleRetensiFields()">
                                                 <label class="form-check-label fw-bold" for="gunakan_retensi">Kontrak ini menggunakan retensi?</label>
+                                                <div class="form-text small">Standar Perpres 12/2021: 5% dari nilai kontrak, ditahan sampai masa pemeliharaan selesai. Retensi berkaitan dengan masa pemeliharaan di Bagian 3.</div>
                                             </div>
                                         </div>
                                     </div>
-                                    <div class="row g-3 mt-1" id="wrapper_retensi_fields">
+                                    <div class="row g-3 mt-1" id="wrapper_retensi_fields" style="{{ $oldGunakanRetensi ? '' : 'display: none;' }}">
                                         <div class="col-lg-4">
                                             <label class="form-label fw-bold">Retensi (%) <span class="text-danger">*</span></label>
                                             <div class="input-group">
-                                                <input type="number" class="form-control text-center" id="retensi_persentase" name="retensi_persentase" placeholder="Contoh: 5" min="0.01" max="100" step="0.0001" value="{{ $oldRetensiPersentase }}" oninput="kalkulasiTotalTermin()">
+                                                <input type="number" class="form-control text-center" id="retensi_persentase" name="retensi_persentase" placeholder="5" min="0.01" max="100" step="0.0001" value="{{ $oldRetensiPersentase }}" oninput="kalkulasiTotalTermin(); validasiRangeRetensi();">
                                                 <span class="input-group-text">%</span>
                                             </div>
+                                            <small class="text-warning d-none mt-1" id="retensi_warning"><i class="bi bi-exclamation-triangle-fill me-1"></i>Retensi umumnya 5–10% dari nilai kontrak. Pastikan angka ini sesuai kebijakan unit Anda.</small>
                                         </div>
                                         <div class="col-lg-4">
                                             <label class="form-label fw-bold">Keterangan Retensi <span class="text-danger">*</span></label>
@@ -596,12 +598,28 @@
             retensiInput.required = true;
             retensiKeterangan.required = true;
             retensiPreviewRow.classList.remove('d-none');
+            // Auto-fill 5% (default Perpres 12/2021) jika field kosong agar user tinggal konfirmasi.
+            if (! retensiInput.value || parseFloat(retensiInput.value) <= 0) {
+                retensiInput.value = '5';
+                kalkulasiTotalTermin();
+            }
         } else {
             wrapperRetensiFields.style.display = 'none';
             retensiInput.required = false;
             retensiKeterangan.required = false;
             retensiInput.value = '';
             retensiPreviewRow.classList.add('d-none');
+        }
+        validasiRangeRetensi();
+    }
+
+    function validasiRangeRetensi() {
+        let warning = document.getElementById('retensi_warning');
+        let gunakanRetensi = document.getElementById('gunakan_retensi').checked;
+        let nilai = parseFloat(document.getElementById('retensi_persentase').value) || 0;
+
+        if (warning) {
+            warning.classList.toggle('d-none', !(gunakanRetensi && nilai > 10));
         }
     }
 

@@ -113,8 +113,12 @@
         <i class="bi bi-arrow-left me-1"></i>Kembali
     </a>
 
-    <a href="{{ route('perjaldins.pdf', $tagihan->id) }}" target="_blank" class="btn btn-outline-danger bg-white">
-        <i class="bi bi-file-earmark-pdf me-1"></i>Cetak PDF Nominatif & Lampiran
+    <a href="{{ route('perjaldins.pdf-nominatif', $tagihan->id) }}" target="_blank" class="btn btn-outline-danger bg-white">
+        <i class="bi bi-file-earmark-pdf me-1"></i>Cetak PDF Nominatif
+    </a>
+
+    <a href="{{ route('perjaldins.pdf-lampiran', $tagihan->id) }}" target="_blank" class="btn btn-outline-danger bg-white">
+        <i class="bi bi-file-earmark-spreadsheet me-1"></i>Cetak PDF Daftar Nominatif Pembayaran
     </a>
 
     @if($isOperatorPerjaldin && $canEdit)
@@ -138,6 +142,12 @@
             <i class="bi bi-check-circle-fill me-1"></i>Diteruskan ke Proses Berikutnya
         </span>
     @endif
+
+    @if($status === 'MENUNGGU_UPLOAD_NOMINATIF_TTD')
+        <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-3 d-flex align-items-center" style="font-size:0.82rem;">
+            <i class="bi bi-cloud-upload-fill me-1"></i>Menunggu Upload Nominatif Bertandatangan
+        </span>
+    @endif
 </div>
 
 {{-- ═══ SECTION 3: INFORMASI DOKUMEN ═══ --}}
@@ -151,6 +161,104 @@
 
 {{-- ═══ SECTION 5: DAFTAR PESERTA ═══ --}}
 @include('perjaldins.partials.peserta-list', ['tagihan' => $tagihan])
+
+{{-- ═══ SECTION 5.5: UPLOAD NOMINATIF BERTANDATANGAN ═══ --}}
+@php
+    $waitingNominatifTtd = $status === 'MENUNGGU_UPLOAD_NOMINATIF_TTD';
+    $arsipNominatif = $tagihan->arsipDokumen()
+        ->whereIn('jenis_dokumen', ['NOMINATIF_PERJALDIN_TTD', 'DAFTAR_NOMINATIF_PEMBAYARAN_PERJALDIN_TTD'])
+        ->where('is_active', true)
+        ->get()
+        ->keyBy('jenis_dokumen');
+    $hasNominatif = isset($arsipNominatif['NOMINATIF_PERJALDIN_TTD']);
+    $hasDaftarNominatif = isset($arsipNominatif['DAFTAR_NOMINATIF_PEMBAYARAN_PERJALDIN_TTD']);
+@endphp
+
+@if($waitingNominatifTtd || $hasNominatif || $hasDaftarNominatif)
+<div class="card border-0 shadow-sm mb-4 rounded-4
+    {{ $waitingNominatifTtd ? 'border-start border-4 border-warning' : '' }}">
+    <div class="card-header bg-white border-bottom py-3">
+        <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-cloud-upload-fill fs-4 text-warning"></i>
+            <div>
+                <h6 class="fw-bold mb-0">Upload Nominatif Bertandatangan</h6>
+                <div class="small text-muted">Wajib diunggah oleh Operator Perjaldin setelah Kasubbag menyetujui tagihan.</div>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        @if($waitingNominatifTtd)
+            <div class="alert alert-warning border-0 small">
+                Tagihan telah disetujui Kasubbag. Silakan unggah <strong>Nominatif Perjalanan Dinas</strong> dan
+                <strong>Daftar Nominatif Pembayaran Perjalanan Dinas</strong> yang sudah ditandatangani.
+                Setelah keduanya lengkap, Operator BLU akan diberi notifikasi untuk membuat SPP.
+            </div>
+        @elseif($status === 'DISETUJUI_PERJALDIN' || $isApprovedPerjaldin)
+            <div class="alert alert-success border-0 small">
+                Kedua dokumen bertandatangan sudah lengkap. Tagihan sudah diteruskan ke Operator BLU untuk dibuatkan SPP.
+            </div>
+        @endif
+
+        <div class="row g-3">
+            @php
+                $slots = [
+                    [
+                        'jenis' => 'NOMINATIF_PERJALDIN_TTD',
+                        'label' => 'Nominatif Perjalanan Dinas (TTD)',
+                        'desc'  => 'A4 portrait — sumber dari tombol "Cetak PDF Nominatif".',
+                    ],
+                    [
+                        'jenis' => 'DAFTAR_NOMINATIF_PEMBAYARAN_PERJALDIN_TTD',
+                        'label' => 'Daftar Nominatif Pembayaran Perjaldin (TTD)',
+                        'desc'  => 'A4 landscape — sumber dari tombol "Cetak PDF Daftar Nominatif Pembayaran".',
+                    ],
+                ];
+                $canUploadNominatif = $isOperatorPerjaldin && in_array($status, ['MENUNGGU_UPLOAD_NOMINATIF_TTD', 'DISETUJUI_PERJALDIN'], true);
+            @endphp
+            @foreach($slots as $slot)
+                @php $arsip = $arsipNominatif[$slot['jenis']] ?? null; @endphp
+                <div class="col-md-6">
+                    <div class="border rounded-3 p-3 h-100 {{ $arsip ? 'border-success bg-success bg-opacity-10' : '' }}">
+                        <div class="d-flex justify-content-between align-items-start mb-2 gap-2">
+                            <div>
+                                <div class="fw-semibold">{{ $slot['label'] }}</div>
+                                <div class="small text-muted">{{ $slot['desc'] }}</div>
+                            </div>
+                            @if($arsip)
+                                <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Tersedia</span>
+                            @else
+                                <span class="badge bg-secondary"><i class="bi bi-clock-history me-1"></i>Belum diunggah</span>
+                            @endif
+                        </div>
+
+                        @if($arsip)
+                            <div class="d-flex gap-2 align-items-center small mb-2">
+                                <i class="bi bi-file-earmark-pdf-fill text-danger"></i>
+                                <a href="{{ route('perjaldins.view-nominatif-ttd', [$tagihan->id, $arsip->id]) }}" target="_blank"
+                                   class="text-decoration-none">{{ $arsip->nama_file_asli }}</a>
+                            </div>
+                        @endif
+
+                        @if($canUploadNominatif)
+                            <form action="{{ route('perjaldins.upload-nominatif-ttd', $tagihan->id) }}" method="POST" enctype="multipart/form-data" class="mt-2">
+                                @csrf
+                                <input type="hidden" name="jenis_dokumen" value="{{ $slot['jenis'] }}">
+                                <div class="input-group input-group-sm">
+                                    <input type="file" name="file" class="form-control" accept=".pdf,.jpg,.jpeg,.png" required>
+                                    <button type="submit" class="btn btn-warning fw-semibold">
+                                        <i class="bi bi-upload me-1"></i>{{ $arsip ? 'Ganti' : 'Unggah' }}
+                                    </button>
+                                </div>
+                                <div class="form-text small">PDF / JPG / PNG, maksimal 10MB.</div>
+                            </form>
+                        @endif
+                    </div>
+                </div>
+            @endforeach
+        </div>
+    </div>
+</div>
+@endif
 
 {{-- ═══ SECTION 6: AREA PROSES LANJUTAN OPERATOR BLU (Tersembunyi / Collapsed) ═══ --}}
 @if($tagihan->komponenPerjaldin?->where('total_nominal', '>', 0)->isNotEmpty())
