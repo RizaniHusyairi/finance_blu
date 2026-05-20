@@ -8,6 +8,7 @@ use App\Models\MasterCoa;
 use App\Models\DetailDipa;
 use App\Models\KontrakPengadaan;
 use App\Models\Tagihan;
+use App\Models\DetailPerjaldin;
 use App\Models\MasterMitraVendor;
 use App\Models\DokumenSpp;
 use Illuminate\Http\Request;
@@ -29,6 +30,9 @@ class DashboardController extends Controller
         }
         if (Auth::user()->hasRole('PPABP')) {
             return $this->ppabp();
+        }
+        if (Auth::user()->hasRole('Operator Perjaldin')) {
+            return $this->operatorPerjaldin();
         }
         if (Auth::user()->hasRole('Bendahara Penerimaan')) {
             return redirect()->route('dashboard.bendahara-penerimaan');
@@ -551,6 +555,165 @@ class DashboardController extends Controller
         });
 
         return view('dashboard.ppabp', $data);
+    }
+
+    /**
+     * Dashboard khusus Role Operator Perjaldin
+     */
+    private function operatorPerjaldin()
+    {
+        $userId = Auth::id();
+
+        $data = \Illuminate\Support\Facades\Cache::remember('dash_operator_perjaldin_' . $userId, 60, function () use ($userId) {
+            $now = now();
+            $tahun = $now->year;
+            $bulan = $now->month;
+
+            // ============================================================
+            // STATUS BUCKETING
+            // ============================================================
+            $draftStatuses = ['DRAFT'];
+            $revisiStatuses = [
+                'DITOLAK_PPK', 'DITOLAK_PPSPM', 'DITOLAK_KOORDINATOR_KEUANGAN',
+                'DITOLAK_BENDAHARA_PENGELUARAN', 'DITOLAK_BENDAHARA_PENERIMAAN', 'DITOLAK_KASUBBAG',
+                'REVISI_PPK', 'REVISI_PPSPM', 'REVISI_KOORDINATOR_KEUANGAN',
+                'REVISI_BENDAHARA_PENGELUARAN', 'REVISI_BENDAHARA_PENERIMAAN', 'REVISI_KASUBBAG',
+            ];
+            $verifikasiStatuses = [
+                'PENDING_VERIFIKASI_PERJALDIN', 'PENDING_KASUBBAG', 'PENDING_PPK', 'PENDING_PPSPM',
+                'PENDING_KOORDINATOR_KEUANGAN', 'PENDING_BENDAHARA_PENGELUARAN', 'PENDING_BENDAHARA_PENERIMAAN',
+            ];
+            $menungguTtdStatuses = ['MENUNGGU_UPLOAD_NOMINATIF_TTD'];
+            $selesaiStatuses = ['DISETUJUI_PERJALDIN', 'PROSES_SPP', 'SPP_TERBIT', 'SEBAGIAN_SPP_TERBIT', 'SPP_LENGKAP', 'SELESAI', 'CAIR', 'SP2D'];
+
+            $baseQuery = fn () => Tagihan::where('tipe_tagihan', 'PERJALDIN');
+
+            // ============================================================
+            // KPI CARDS
+            // ============================================================
+            $kpiDraft = (clone $baseQuery())->whereIn('status', $draftStatuses)->count();
+            $kpiRevisi = (clone $baseQuery())->whereIn('status', $revisiStatuses)->count();
+            $kpiVerifikasi = (clone $baseQuery())->whereIn('status', $verifikasiStatuses)->count();
+            $kpiMenungguTtd = (clone $baseQuery())->whereIn('status', $menungguTtdStatuses)->count();
+            $kpiSelesai = (clone $baseQuery())->whereIn('status', $selesaiStatuses)->count();
+
+            $totalNominalDraft = (clone $baseQuery())->whereIn('status', $draftStatuses)->sum('total_bruto');
+            $totalNominalVerifikasi = (clone $baseQuery())->whereIn('status', $verifikasiStatuses)->sum('total_bruto');
+            $totalNominalSelesai = (clone $baseQuery())->whereIn('status', $selesaiStatuses)->sum('total_bruto');
+
+            // Total bulan ini (dibuat bulan ini)
+            $tagihanBulanIni = (clone $baseQuery())
+                ->whereYear('created_at', $tahun)
+                ->whereMonth('created_at', $bulan)
+                ->count();
+            $nominalBulanIni = (clone $baseQuery())
+                ->whereYear('created_at', $tahun)
+                ->whereMonth('created_at', $bulan)
+                ->sum('total_bruto');
+
+            // ============================================================
+            // CHART: Tren Tagihan Perjaldin 6 Bulan Terakhir
+            // ============================================================
+            $trenLabels = [];
+            $trenJumlah = [];
+            $trenNominal = [];
+            for ($i = 5; $i >= 0; $i--) {
+                $month = $now->copy()->subMonths($i);
+                $trenLabels[] = $month->isoFormat('MMM YY');
+                $trenJumlah[] = (clone $baseQuery())
+                    ->whereYear('created_at', $month->year)
+                    ->whereMonth('created_at', $month->month)
+                    ->count();
+                $trenNominal[] = (float) (clone $baseQuery())
+                    ->whereYear('created_at', $month->year)
+                    ->whereMonth('created_at', $month->month)
+                    ->sum('total_bruto');
+            }
+
+            // ============================================================
+            // CHART: Distribusi Biaya Komponen
+            // ============================================================
+            $components = DB::table('detail_perjaldin')
+                ->join('tagihan', 'detail_perjaldin.tagihan_id', '=', 'tagihan.id')
+                ->where('tagihan.tipe_tagihan', 'PERJALDIN')
+                ->whereNull('tagihan.deleted_at')
+                ->select([
+                    DB::raw('SUM(detail_perjaldin.biaya_tiket) as tiket'),
+                    DB::raw('SUM(detail_perjaldin.biaya_transport) as transport'),
+                    DB::raw('SUM(detail_perjaldin.biaya_penginapan) as penginapan'),
+                    DB::raw('SUM(detail_perjaldin.uang_harian + detail_perjaldin.uang_representasi + detail_perjaldin.uang_rapat) as uang_harian_representasi_rapat')
+                ])
+                ->first();
+
+            $komponenData = [
+                'Tiket Pesawat' => (float) ($components->tiket ?? 0),
+                'Transportasi' => (float) ($components->transport ?? 0),
+                'Penginapan' => (float) ($components->penginapan ?? 0),
+                'Uang Harian & Rapat' => (float) ($components->uang_harian_representasi_rapat ?? 0),
+            ];
+
+            // ============================================================
+            // TABEL DATA
+            // ============================================================
+            // 1. Tagihan Butuh Tindakan (Draft & Revisi)
+            $needsActionStatuses = array_merge($draftStatuses, $revisiStatuses);
+            $perluTindakan = (clone $baseQuery())
+                ->whereIn('status', $needsActionStatuses)
+                ->with(['logs' => fn ($q) => $q->latest()])
+                ->latest('updated_at')
+                ->take(10)
+                ->get();
+
+            // 2. Tagihan Menunggu Upload TTD
+            $menungguTtd = (clone $baseQuery())
+                ->whereIn('status', $menungguTtdStatuses)
+                ->with(['arsipDokumen'])
+                ->latest('updated_at')
+                ->take(5)
+                ->get();
+
+            // 3. Tagihan Dalam Verifikasi (dengan approvals)
+            $dalamVerifikasi = (clone $baseQuery())
+                ->whereIn('status', $verifikasiStatuses)
+                ->with(['workflowInstances.approvals.actedByUser', 'logs'])
+                ->latest('updated_at')
+                ->take(10)
+                ->get();
+
+            // 4. Tagihan Selesai Terbaru
+            $selesaiTerbaru = (clone $baseQuery())
+                ->whereIn('status', $selesaiStatuses)
+                ->latest('updated_at')
+                ->take(5)
+                ->get();
+
+            return [
+                'kpi' => [
+                    'draft' => $kpiDraft,
+                    'revisi' => $kpiRevisi,
+                    'verifikasi' => $kpiVerifikasi,
+                    'menunggu_ttd' => $kpiMenungguTtd,
+                    'selesai' => $kpiSelesai,
+                    'nominal_draft' => $totalNominalDraft,
+                    'nominal_verifikasi' => $totalNominalVerifikasi,
+                    'nominal_selesai' => $totalNominalSelesai,
+                    'tagihan_bulan_ini' => $tagihanBulanIni,
+                    'nominal_bulan_ini' => $nominalBulanIni,
+                ],
+                'tren_labels' => $trenLabels,
+                'tren_jumlah' => $trenJumlah,
+                'tren_nominal' => $trenNominal,
+                'komponen_labels' => array_keys($komponenData),
+                'komponen_data' => array_values($komponenData),
+                'perlu_tindakan' => $perluTindakan,
+                'menunggu_ttd' => $menungguTtd,
+                'dalam_verifikasi' => $dalamVerifikasi,
+                'selesai_terbaru' => $selesaiTerbaru,
+                'tahun' => $tahun,
+            ];
+        });
+
+        return view('dashboard.operator_perjaldin', $data);
     }
 }
 

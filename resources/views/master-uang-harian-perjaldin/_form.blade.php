@@ -1,50 +1,90 @@
 @csrf
-<div class="row mb-3">
-    <label for="provinsi" class="col-sm-3 col-form-label">Provinsi <span class="text-danger">*</span></label>
-    <div class="col-sm-9">
-        <input type="text" class="form-control @error('provinsi') is-invalid @enderror" id="provinsi" name="provinsi" value="{{ old('provinsi', $data->provinsi ?? '') }}" required>
-        @error('provinsi') <div class="invalid-feedback">{{ $message }}</div> @enderror
+<div class="row g-4">
+    <!-- Provinsi Input -->
+    <div class="col-12 col-lg-6">
+        <div class="form-group-premium animate-fade-in-up delay-1">
+            <label for="provinsi" class="label-premium">
+                <i class="bi bi-geo-alt-fill text-primary"></i> Provinsi <span class="text-danger">*</span>
+            </label>
+            <input type="text" class="form-control input-premium @error('provinsi') is-invalid @enderror" 
+                   id="provinsi" name="provinsi" placeholder="Contoh: DKI JAKARTA" 
+                   value="{{ old('provinsi', $data->provinsi ?? '') }}" required>
+            <span class="form-desc-text">Ketik nama provinsi dengan huruf kapital lengkap</span>
+            @error('provinsi') 
+                <div class="invalid-feedback mt-2 fw-semibold">{{ $message }}</div> 
+            @enderror
+        </div>
     </div>
-</div>
-<div class="row mb-3">
-    <label for="luar_kota_input" class="col-sm-3 col-form-label">Luar Kota <span class="text-danger">*</span></label>
-    <div class="col-sm-9">
-        <div class="input-group">
-            <span class="input-group-text">Rp</span>
-            <input type="text" class="form-control currency-input @error('luar_kota') is-invalid @enderror" id="luar_kota_input" value="{{ old('luar_kota', isset($data) ? $data->luar_kota : '') }}" required>
+
+    <!-- Luar Kota Input -->
+    <div class="col-12 col-lg-6">
+        <div class="form-group-premium animate-fade-in-up delay-1">
+            <label for="luar_kota_input" class="label-premium">
+                <i class="bi bi-airplane-engines-fill text-teal"></i> Uang Harian Luar Kota <span class="text-danger">*</span>
+            </label>
+            <div class="input-group-premium input-group-teal">
+                <span class="input-group-text-premium">Rp</span>
+                <input type="text" class="form-control input-premium currency-input @error('luar_kota') is-invalid @enderror" 
+                       id="luar_kota_input" placeholder="0" 
+                       value="{{ old('luar_kota', isset($data) ? $data->luar_kota : '') }}" required>
+            </div>
             <input type="hidden" name="luar_kota" id="luar_kota" value="{{ old('luar_kota', isset($data) ? $data->luar_kota : '') }}">
-            @error('luar_kota') <div class="invalid-feedback">{{ $message }}</div> @enderror
+            <span class="form-desc-text">Besaran uang harian perjalanan dinas ke luar wilayah provinsi asal</span>
+            @error('luar_kota') 
+                <div class="invalid-feedback mt-2 fw-semibold">{{ $message }}</div> 
+            @enderror
         </div>
     </div>
-</div>
-<div class="row mb-3">
-    <label for="dalam_kota_lebih_8_jam_input" class="col-sm-3 col-form-label">Dalam Kota > 8 Jam <span class="text-danger">*</span></label>
-    <div class="col-sm-9">
-        <div class="input-group">
-            <span class="input-group-text">Rp</span>
-            <input type="text" class="form-control currency-input @error('dalam_kota_lebih_8_jam') is-invalid @enderror" id="dalam_kota_lebih_8_jam_input" value="{{ old('dalam_kota_lebih_8_jam', isset($data) ? $data->dalam_kota_lebih_8_jam : '') }}" required>
+
+    <!-- Dalam Kota Lebih 8 Jam Input -->
+    <div class="col-12 col-lg-6">
+        <div class="form-group-premium animate-fade-in-up delay-2">
+            <label for="dalam_kota_lebih_8_jam_input" class="label-premium">
+                <i class="bi bi-car-front-fill text-primary"></i> Dalam Kota > 8 Jam <span class="text-danger">*</span>
+            </label>
+            <div class="input-group-premium input-group-blue">
+                <span class="input-group-text-premium">Rp</span>
+                <input type="text" class="form-control input-premium currency-input @error('dalam_kota_lebih_8_jam') is-invalid @enderror" 
+                       id="dalam_kota_lebih_8_jam_input" placeholder="0" 
+                       value="{{ old('dalam_kota_lebih_8_jam', isset($data) ? $data->dalam_kota_lebih_8_jam : '') }}" required>
+            </div>
             <input type="hidden" name="dalam_kota_lebih_8_jam" id="dalam_kota_lebih_8_jam" value="{{ old('dalam_kota_lebih_8_jam', isset($data) ? $data->dalam_kota_lebih_8_jam : '') }}">
-            @error('dalam_kota_lebih_8_jam') <div class="invalid-feedback">{{ $message }}</div> @enderror
+            <span class="form-desc-text">Besaran uang harian dinas dalam kota dengan durasi lebih dari 8 jam</span>
+            @error('dalam_kota_lebih_8_jam') 
+                <div class="invalid-feedback mt-2 fw-semibold">{{ $message }}</div> 
+            @enderror
         </div>
     </div>
-</div>
-<div class="row mb-3">
-    <label for="diklat_input" class="col-sm-3 col-form-label">Diklat</label>
-    <div class="col-sm-9">
-        <div class="input-group">
-            <span class="input-group-text">Rp</span>
-            <input type="text" class="form-control currency-input @error('diklat') is-invalid @enderror" id="diklat_input" value="{{ old('diklat', isset($data) ? $data->diklat : '') }}">
+
+    <!-- Diklat Input -->
+    <div class="col-12 col-lg-6">
+        <div class="form-group-premium animate-fade-in-up delay-2">
+            <label for="diklat_input" class="label-premium">
+                <i class="bi bi-mortarboard-fill text-warning"></i> Kegiatan Diklat
+            </label>
+            <div class="input-group-premium input-group-amber">
+                <span class="input-group-text-premium">Rp</span>
+                <input type="text" class="form-control input-premium currency-input @error('diklat') is-invalid @enderror" 
+                       id="diklat_input" placeholder="0" 
+                       value="{{ old('diklat', isset($data) ? $data->diklat : '') }}">
+            </div>
             <input type="hidden" name="diklat" id="diklat" value="{{ old('diklat', isset($data) ? $data->diklat : '') }}">
-            @error('diklat') <div class="invalid-feedback">{{ $message }}</div> @enderror
+            <span class="form-desc-text">Besaran uang harian khusus keikutsertaan kegiatan pendidikan/pelatihan (opsional)</span>
+            @error('diklat') 
+                <div class="invalid-feedback mt-2 fw-semibold">{{ $message }}</div> 
+            @enderror
         </div>
     </div>
 </div>
-<div class="row">
-    <label class="col-sm-3 col-form-label"></label>
-    <div class="col-sm-9">
-        <button type="submit" class="btn btn-primary px-4">Simpan</button>
-        <a href="{{ route('master-uang-harian-perjaldin.index') }}" class="btn btn-secondary px-4">Batal</a>
-    </div>
+
+<!-- Form Actions -->
+<div class="d-flex align-items-center gap-3 mt-5 pt-4 border-top border-light animate-fade-in-up delay-2">
+    <button type="submit" class="btn-save-premium">
+        <i class="bi bi-check-circle-fill"></i> Simpan Data
+    </button>
+    <a href="{{ route('master-uang-harian-perjaldin.index') }}" class="btn-cancel-premium">
+        <i class="bi bi-x-circle-fill"></i> Batal
+    </a>
 </div>
 
 @push('script')

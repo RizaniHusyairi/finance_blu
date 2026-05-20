@@ -8,23 +8,24 @@
     ];
 @endphp
 
-<div class="card border-0 shadow-sm mb-4">
+<div class="card info-doc-card shadow-sm mb-4">
     <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
-        <h6 class="mb-0 fw-bold"><i class="bi bi-people text-primary me-2"></i>Daftar Peserta</h6>
+        <h6 class="mb-0 fw-bold text-dark"><i class="bi bi-people text-primary me-2"></i>Daftar Peserta</h6>
         <div class="d-flex gap-2">
-            <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3">
+            <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3 py-2 d-flex align-items-center gap-1">
+                <i class="bi bi-person-fill" style="font-size: 0.7rem;"></i>
                 {{ $tagihan->detailPerjaldin->count() }} Orang
             </span>
-            <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3">
+            <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-2 font-mono-premium">
                 Rp {{ number_format($tagihan->total_bruto, 0, ',', '.') }}
             </span>
         </div>
     </div>
     <div class="card-body py-3 px-3">
         @if($tagihan->detailPerjaldin->isEmpty())
-            <div class="text-center text-muted py-4">
-                <i class="bi bi-person-x display-6 d-block mb-2"></i>
-                <small>Belum ada peserta terdaftar.</small>
+            <div class="text-center text-muted py-5">
+                <i class="bi bi-person-x display-5 d-block mb-3 text-secondary"></i>
+                <p class="small mb-0">Belum ada peserta terdaftar.</p>
             </div>
         @else
             <div class="accordion accordion-flush" id="pesertaVerifikasiAccordion">
@@ -40,97 +41,127 @@
                         $tipeLabel = $tipeMap[$detail->tipe_perjalanan ?? ''] ?? ($detail->tipe_perjalanan ?? '-');
                         $hasFile   = !empty($detail->spt_file_path);
                     @endphp
-                    <div class="accordion-item border rounded-3 mb-2 overflow-hidden">
+                    <div class="peserta-accordion-item accordion-item overflow-hidden">
                         <h2 class="accordion-header">
                             <button class="accordion-button {{ $idx > 0 ? 'collapsed' : '' }} bg-white py-3 px-3 fw-semibold"
                                     type="button" data-bs-toggle="collapse"
                                     data-bs-target="#verPeserta{{ $idx }}">
                                 <div class="d-flex align-items-center gap-3 w-100 me-3">
-                                    <span class="badge bg-primary rounded-circle d-flex align-items-center justify-content-center"
-                                          style="width:28px;height:28px;font-size:0.75rem;flex-shrink:0;">{{ $idx+1 }}</span>
-                                    <div class="flex-fill">
-                                        <span class="text-dark">{{ $namaLabel }}</span>
-                                        @if($nipLabel)<span class="text-muted small ms-2">— {{ $nipLabel }}</span>@endif
+                                    {{-- Number Badge --}}
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-circle d-flex align-items-center justify-content-center fw-bold"
+                                          style="width:30px;height:30px;font-size:0.75rem;flex-shrink:0;">{{ $idx+1 }}</span>
+                                    {{-- Name & NIP --}}
+                                    <div class="flex-fill" style="min-width: 0;">
+                                        <span class="text-dark fw-semibold">{{ $namaLabel }}</span>
+                                        @if($nipLabel)<span class="text-muted small ms-2 font-mono-premium" style="font-size: 0.72rem;">— {{ $nipLabel }}</span>@endif
                                     </div>
-                                    <div class="d-none d-md-flex gap-2 align-items-center me-2">
+                                    {{-- Right Side Badges --}}
+                                    <div class="d-none d-md-flex gap-2 align-items-center me-2 flex-shrink-0">
                                         @if($hasFile)
-                                            <span class="badge bg-success-subtle text-success border border-success-subtle small">
-                                                <i class="bi bi-paperclip"></i> Ada SPT
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle small rounded-pill px-2 py-1">
+                                                <i class="bi bi-paperclip me-1"></i>Ada SPT
                                             </span>
                                         @else
-                                            <span class="badge bg-secondary-subtle text-secondary border small">
-                                                <i class="bi bi-x-circle"></i> Tanpa SPT
+                                            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle small rounded-pill px-2 py-1">
+                                                <i class="bi bi-x-circle me-1"></i>Tanpa SPT
                                             </span>
                                         @endif
-                                        <span class="fw-semibold text-success small">Rp {{ number_format($sub, 0, ',', '.') }}</span>
+                                        <span class="fw-bold text-success font-mono-premium" style="font-size: 0.82rem;">Rp {{ number_format($sub, 0, ',', '.') }}</span>
                                     </div>
                                 </div>
                             </button>
                         </h2>
                         <div id="verPeserta{{ $idx }}" class="accordion-collapse collapse {{ $idx === 0 ? 'show' : '' }}">
                             <div class="accordion-body pt-0 pb-4 px-3">
-                                <hr class="mt-0 mb-3">
+                                <hr class="mt-0 mb-3 opacity-10">
+                                {{-- Detail Parameter Grid --}}
                                 <div class="row g-3 mb-3">
                                     <div class="col-6 col-md-3">
-                                        <label class="text-muted d-block mb-1" style="font-size:.72rem;">No. SPT</label>
-                                        <span class="fw-semibold small">{{ $detail->no_spt ?? '-' }}</span>
+                                        <div class="info-item-box">
+                                            <div class="info-label"><i class="bi bi-file-earmark-text me-1"></i>No. SPT</div>
+                                            <div class="info-value font-mono-premium small">{{ $detail->no_spt ?? '-' }}</div>
+                                        </div>
                                     </div>
                                     <div class="col-6 col-md-3">
-                                        <label class="text-muted d-block mb-1" style="font-size:.72rem;">No. SPPD</label>
-                                        <span class="fw-semibold small">{{ $detail->no_sppd ?? '-' }}</span>
+                                        <div class="info-item-box">
+                                            <div class="info-label"><i class="bi bi-file-earmark-ruled me-1"></i>No. SPPD</div>
+                                            <div class="info-value font-mono-premium small">{{ $detail->no_sppd ?? '-' }}</div>
+                                        </div>
                                     </div>
                                     <div class="col-6 col-md-3">
-                                        <label class="text-muted d-block mb-1" style="font-size:.72rem;">Tujuan</label>
-                                        <span class="fw-semibold small">{{ $detail->tujuan ?? '-' }}</span>
+                                        <div class="info-item-box">
+                                            <div class="info-label"><i class="bi bi-geo-alt me-1"></i>Tujuan</div>
+                                            <div class="info-value small">{{ $detail->tujuan ?? '-' }}</div>
+                                        </div>
                                     </div>
                                     <div class="col-6 col-md-3">
-                                        <label class="text-muted d-block mb-1" style="font-size:.72rem;">Provinsi / Tipe</label>
-                                        <span class="fw-semibold small">{{ $detail->provinsi?->provinsi ?? '-' }}</span>
-                                        <span class="badge bg-light text-secondary border ms-1 small">{{ $tipeLabel }}</span>
+                                        <div class="info-item-box">
+                                            <div class="info-label"><i class="bi bi-map me-1"></i>Provinsi / Tipe</div>
+                                            <div class="info-value small">
+                                                {{ $detail->provinsi?->provinsi ?? '-' }}
+                                                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle rounded-pill ms-1" style="font-size: 0.62rem;">{{ $tipeLabel }}</span>
+                                            </div>
+                                        </div>
                                     </div>
                                     <div class="col-6 col-md-3">
-                                        <label class="text-muted d-block mb-1" style="font-size:.72rem;">Tgl Berangkat</label>
-                                        <span class="fw-semibold small">{{ isset($detail->tgl_berangkat) ? \Carbon\Carbon::parse($detail->tgl_berangkat)->format('d M Y') : '-' }}</span>
+                                        <div class="info-item-box">
+                                            <div class="info-label"><i class="bi bi-calendar-event me-1"></i>Tgl Berangkat</div>
+                                            <div class="info-value font-mono-premium small">{{ isset($detail->tgl_berangkat) ? \Carbon\Carbon::parse($detail->tgl_berangkat)->format('d M Y') : '-' }}</div>
+                                        </div>
                                     </div>
                                     <div class="col-6 col-md-3">
-                                        <label class="text-muted d-block mb-1" style="font-size:.72rem;">Lama Hari</label>
-                                        <span class="fw-semibold small">{{ $detail->lama_hari ?? 0 }} Hari</span>
+                                        <div class="info-item-box">
+                                            <div class="info-label"><i class="bi bi-clock-history me-1"></i>Lama Hari</div>
+                                            <div class="info-value font-mono-premium small">{{ $detail->lama_hari ?? 0 }} Hari</div>
+                                        </div>
                                     </div>
                                     <div class="col-6 col-md-3">
-                                        <label class="text-muted d-block mb-1" style="font-size:.72rem;">Rekening</label>
-                                        <span class="fw-semibold small">{{ $detail->rekening ?? '-' }}</span>
+                                        <div class="info-item-box">
+                                            <div class="info-label"><i class="bi bi-credit-card me-1"></i>Rekening</div>
+                                            <div class="info-value font-mono-premium small">{{ $detail->rekening ?? '-' }}</div>
+                                        </div>
                                     </div>
                                     <div class="col-6 col-md-3">
-                                        <label class="text-muted d-block mb-1" style="font-size:.72rem;">Lampiran SPT</label>
-                                        @if($hasFile)
-                                            <a href="{{ Storage::url($detail->spt_file_path) }}" target="_blank" class="btn btn-sm btn-outline-success py-0 px-2">
-                                                <i class="bi bi-eye"></i> Lihat
-                                            </a>
-                                        @else
-                                            <span class="text-muted small">Tidak ada</span>
-                                        @endif
+                                        <div class="info-item-box">
+                                            <div class="info-label"><i class="bi bi-paperclip me-1"></i>Lampiran SPT</div>
+                                            @if($hasFile)
+                                                <a href="{{ Storage::url($detail->spt_file_path) }}" target="_blank"
+                                                   class="btn btn-sm btn-outline-success rounded-pill py-0 px-3 d-inline-flex align-items-center gap-1" style="font-size: 0.75rem;">
+                                                    <i class="bi bi-eye"></i> Lihat
+                                                </a>
+                                            @else
+                                                <span class="text-muted small">Tidak ada</span>
+                                            @endif
+                                        </div>
                                     </div>
                                 </div>
 
-                                {{-- Rincian Biaya --}}
-                                <div class="bg-light rounded-3 p-3">
-                                    <div class="small fw-semibold text-muted mb-2"><i class="bi bi-cash-coin me-1"></i>Rincian Biaya</div>
+                                {{-- Rincian Biaya Board --}}
+                                <div class="biaya-board">
+                                    <div class="small fw-bold text-muted mb-3 d-flex align-items-center gap-2">
+                                        <i class="bi bi-cash-coin text-primary"></i>
+                                        <span>Rincian Biaya</span>
+                                    </div>
                                     <div class="row g-2 align-items-end">
                                         @foreach([
-                                            ['Tiket', $detail->biaya_tiket],
-                                            ['Transport', $detail->biaya_transport],
-                                            ['Penginapan', $detail->biaya_penginapan],
-                                            ['Uang Harian', $detail->uang_harian],
-                                            ['Representasi', $detail->uang_representasi],
-                                        ] as [$bl, $bv])
+                                            ['Tiket', $detail->biaya_tiket, 'bi-airplane'],
+                                            ['Transport', $detail->biaya_transport, 'bi-bus-front'],
+                                            ['Penginapan', $detail->biaya_penginapan, 'bi-building'],
+                                            ['Uang Harian', $detail->uang_harian, 'bi-wallet2'],
+                                            ['Representasi', $detail->uang_representasi, 'bi-briefcase'],
+                                        ] as [$bl, $bv, $bIcon])
                                             <div class="col-6 col-md">
-                                                <div class="text-muted" style="font-size:.70rem;">{{ $bl }}</div>
-                                                <div class="fw-semibold small">Rp {{ number_format((float)($bv ?? 0), 0, ',', '.') }}</div>
+                                                <div class="text-muted d-flex align-items-center gap-1" style="font-size:.68rem;">
+                                                    <i class="bi {{ $bIcon }}"></i> {{ $bl }}
+                                                </div>
+                                                <div class="fw-semibold font-mono-premium" style="font-size: 0.82rem;">Rp {{ number_format((float)($bv ?? 0), 0, ',', '.') }}</div>
                                             </div>
                                         @endforeach
-                                        <div class="col-6 col-md border-start border-2 border-success">
-                                            <div class="text-muted" style="font-size:.70rem;">Subtotal</div>
-                                            <div class="fw-bold text-success small">Rp {{ number_format($sub, 0, ',', '.') }}</div>
+                                        <div class="col-6 col-md border-start border-3 border-success ps-3">
+                                            <div class="text-muted d-flex align-items-center gap-1" style="font-size:.68rem;">
+                                                <i class="bi bi-calculator"></i> Subtotal
+                                            </div>
+                                            <div class="fw-bold text-success font-mono-premium" style="font-size: 0.92rem;">Rp {{ number_format($sub, 0, ',', '.') }}</div>
                                         </div>
                                     </div>
                                 </div>
