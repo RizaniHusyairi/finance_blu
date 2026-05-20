@@ -205,70 +205,165 @@ class DashboardController extends Controller
      */
     private function pejabatPengadaan()
     {
-        $data = \Illuminate\Support\Facades\Cache::remember('dash_pejabat_pengadaan_' . auth()->id(), 60, function() {
+        $data = \Illuminate\Support\Facades\Cache::remember('dash_pejabat_pengadaan_' . auth()->id(), 60, function () {
             $now = now();
-            
-            // KPI 1: Kontrak Aktif
+            $tahun = $now->year;
+
+            // ============================================================
+            // KPI METRICS
+            // ============================================================
             $kontrakAktif = \App\Models\KontrakPengadaan::where('status_kontrak', 'AKTIF')->count();
+            $kontrakDraft = \App\Models\KontrakPengadaan::where('status_kontrak', 'DRAFT')->count();
+            $kontrakPending = \App\Models\KontrakPengadaan::where('status_kontrak', 'PENDING_REVIEW')->count();
+            $kontrakSelesai = \App\Models\KontrakPengadaan::where('status_kontrak', 'SELESAI')->count();
+            $kontrakDibatalkan = \App\Models\KontrakPengadaan::where('status_kontrak', 'DIBATALKAN')->count();
+            $kontrakTotal = $kontrakAktif + $kontrakDraft + $kontrakPending + $kontrakSelesai + $kontrakDibatalkan;
+
             $selesaiBulanIni = \App\Models\KontrakPengadaan::where('status_kontrak', 'SELESAI')
-                                ->whereMonth('tanggal_selesai', $now->month)
-                                ->whereYear('tanggal_selesai', $now->year)
-                                ->count();
-            
-            // KPI 2: Total Nilai Berjalan
-            $nilaiKontrakAktif = \App\Models\KontrakPengadaan::where('status_kontrak', 'AKTIF')
-                                ->sum('nilai_total_kontrak');
-                                
-            // KPI 3: Tagihan Menunggu (Pending PPK/Bendahara)
+                ->whereMonth('tanggal_selesai', $now->month)
+                ->whereYear('tanggal_selesai', $now->year)
+                ->count();
+
+            $nilaiKontrakAktif = \App\Models\KontrakPengadaan::where('status_kontrak', 'AKTIF')->sum('nilai_total_kontrak');
+            $nilaiKontrakSelesai = \App\Models\KontrakPengadaan::where('status_kontrak', 'SELESAI')->sum('nilai_total_kontrak');
+            $nilaiKontrakDraft = \App\Models\KontrakPengadaan::where('status_kontrak', 'DRAFT')->sum('nilai_total_kontrak');
+            $totalNilaiSemua = $nilaiKontrakAktif + $nilaiKontrakSelesai + $nilaiKontrakDraft;
+
+            // Vendor / Mitra
+            $totalVendor = \App\Models\MasterMitraVendor::count();
+            $vendorAktifIds = \App\Models\KontrakPengadaan::whereIn('status_kontrak', ['AKTIF', 'PENDING_REVIEW'])
+                ->pluck('vendor_id')->unique();
+            $vendorAktif = \App\Models\MasterMitraVendor::whereIn('id', $vendorAktifIds)->count();
+
+            // Tagihan kontrak
             $tagihanMenunggu = \App\Models\Tagihan::whereIn('status', ['PENDING_REVIEW', 'PENDING_BENDAHARA'])->count();
-            
-            // KPI 4: Butuh Perhatian (Ditolak / Revisi)
             $tagihanRevisi = \App\Models\Tagihan::whereIn('status', ['DITOLAK_PPK', 'REVISI_BENDAHARA', 'REVISI'])->count();
 
-            // CHART KIRI: Serapan Anggaran Kontrak (Pagu DIPA vs Kontrak)
+            // ============================================================
+            // CHART: Serapan Anggaran Kontrak
+            // ============================================================
             $totalPaguDipa = \App\Models\RiwayatRevisiDipa::where('is_active', true)->sum('total_pagu');
+            $totalKontrakNonBatal = \App\Models\KontrakPengadaan::where('status_kontrak', '!=', 'DIBATALKAN')->sum('nilai_total_kontrak');
             $chartSerapan = [
-                'Terpakai (Nilai Kontrak)' => \App\Models\KontrakPengadaan::where('status_kontrak', '!=', 'DIBATALKAN')->sum('nilai_total_kontrak'),
-                'Sisa Pagu Khusus' => max(0, $totalPaguDipa - \App\Models\KontrakPengadaan::where('status_kontrak', '!=', 'DIBATALKAN')->sum('nilai_total_kontrak'))
+                'Terpakai Kontrak' => $totalKontrakNonBatal,
+                'Sisa Pagu DIPA'    => max(0, $totalPaguDipa - $totalKontrakNonBatal),
             ];
 
-            // CHART KANAN: Distribusi Status Tagihan
-            $chartStatusTagihan = \App\Models\Tagihan::where('tipe_tagihan', 'KONTRAK')
-                ->select('status', \Illuminate\Support\Facades\DB::raw('count(*) as total'))
-                ->groupBy('status')
-                ->pluck('total', 'status')
-                ->toArray();
+            // ============================================================
+            // CHART: Tren Kontrak Baru 6 Bulan
+            // ============================================================
+            $trenLabels = [];
+            $trenJumlah = [];
+            $trenNilai = [];
+            for ($i = 5; $i >= 0; $i--) {
+                $month = $now->copy()->subMonths($i);
+                $trenLabels[] = $month->isoFormat('MMM YY');
+                $jumlah = \App\Models\KontrakPengadaan::whereYear('created_at', $month->year)
+                    ->whereMonth('created_at', $month->month)
+                    ->count();
+                $nilai = (float) \App\Models\KontrakPengadaan::whereYear('created_at', $month->year)
+                    ->whereMonth('created_at', $month->month)
+                    ->sum('nilai_total_kontrak');
+                $trenJumlah[] = $jumlah;
+                $trenNilai[] = $nilai;
+            }
 
-            // TABEL KIRI: Peringatan Jatuh Tempo (H-14)
+            // ============================================================
+            // CHART: Distribusi Status Kontrak
+            // ============================================================
+            $statusKontrakDistribusi = [
+                'AKTIF' => $kontrakAktif,
+                'PENDING_REVIEW' => $kontrakPending,
+                'DRAFT' => $kontrakDraft,
+                'SELESAI' => $kontrakSelesai,
+                'DIBATALKAN' => $kontrakDibatalkan,
+            ];
+
+            // ============================================================
+            // TABEL: Jatuh Tempo H-14 + Terlambat
+            // ============================================================
             $jatuhTempo = \App\Models\KontrakPengadaan::where('status_kontrak', 'AKTIF')
-                        ->where('tanggal_selesai', '<=', $now->copy()->addDays(14))
-                        ->orderBy('tanggal_selesai', 'asc')
-                        ->take(5)
-                        ->get();
+                ->where('tanggal_selesai', '<=', $now->copy()->addDays(14))
+                ->with('vendor')
+                ->orderBy('tanggal_selesai', 'asc')
+                ->take(6)
+                ->get();
 
-            // TABEL KANAN: Tagihan Dikembalikan / Revisi
+            // ============================================================
+            // TABEL: Kontrak Pending (Butuh tindakan PPK/Anda)
+            // ============================================================
+            $kontrakPendingList = \App\Models\KontrakPengadaan::whereIn('status_kontrak', ['DRAFT', 'PENDING_REVIEW'])
+                ->with('vendor')
+                ->latest('updated_at')
+                ->take(6)
+                ->get();
+
+            // ============================================================
+            // TABEL: Kontrak Aktif Terbaru
+            // ============================================================
+            $kontrakAktifTerbaru = \App\Models\KontrakPengadaan::where('status_kontrak', 'AKTIF')
+                ->with('vendor')
+                ->latest('tanggal_spk')
+                ->take(5)
+                ->get();
+
+            // ============================================================
+            // TABEL: Top Vendor by jumlah kontrak
+            // ============================================================
+            $topVendorRows = \App\Models\KontrakPengadaan::query()
+                ->where('status_kontrak', '!=', 'DIBATALKAN')
+                ->select('vendor_id', \DB::raw('COUNT(*) as total_kontrak'), \DB::raw('SUM(nilai_total_kontrak) as total_nilai_kontrak'))
+                ->groupBy('vendor_id')
+                ->orderByDesc('total_kontrak')
+                ->take(5)
+                ->get();
+            $vendorIds = $topVendorRows->pluck('vendor_id');
+            $vendorMap = \App\Models\MasterMitraVendor::whereIn('id', $vendorIds)->get()->keyBy('id');
+            $topVendor = $topVendorRows->map(function ($row) use ($vendorMap) {
+                $row->vendor = $vendorMap->get($row->vendor_id);
+                return $row;
+            });
+
+            // ============================================================
+            // TABEL: Tagihan Bermasalah
+            // ============================================================
             $tagihanBermasalah = \App\Models\Tagihan::whereIn('status', ['DITOLAK_PPK', 'REVISI_BENDAHARA', 'REVISI'])
-                                ->with(['logs' => function($q) {
-                                    $q->latest()->limit(1); // Ambil log penolakan terakhir
-                                }])
-                                ->latest()
-                                ->take(5)
-                                ->get();
+                ->with(['logs' => fn ($q) => $q->latest()->limit(1)])
+                ->latest()
+                ->take(5)
+                ->get();
 
             return [
                 'kpi' => [
                     'kontrak_aktif' => $kontrakAktif,
+                    'kontrak_draft' => $kontrakDraft,
+                    'kontrak_pending' => $kontrakPending,
+                    'kontrak_selesai' => $kontrakSelesai,
+                    'kontrak_total' => $kontrakTotal,
                     'selesai_bulan_ini' => $selesaiBulanIni,
                     'nilai_kontrak_aktif' => $nilaiKontrakAktif,
+                    'nilai_kontrak_selesai' => $nilaiKontrakSelesai,
+                    'total_nilai_semua' => $totalNilaiSemua,
+                    'total_vendor' => $totalVendor,
+                    'vendor_aktif' => $vendorAktif,
                     'tagihan_menunggu' => $tagihanMenunggu,
                     'tagihan_revisi' => $tagihanRevisi,
+                    'total_pagu_dipa' => $totalPaguDipa,
+                    'serapan_persen' => $totalPaguDipa > 0 ? round(($totalKontrakNonBatal / $totalPaguDipa) * 100, 1) : 0,
                 ],
                 'chart_serapan_labels' => array_keys($chartSerapan),
                 'chart_serapan_data' => array_values($chartSerapan),
-                'chart_status_labels' => array_keys($chartStatusTagihan),
-                'chart_status_data' => array_values($chartStatusTagihan),
+                'chart_status_labels' => array_keys($statusKontrakDistribusi),
+                'chart_status_data' => array_values($statusKontrakDistribusi),
+                'tren_labels' => $trenLabels,
+                'tren_jumlah' => $trenJumlah,
+                'tren_nilai' => $trenNilai,
                 'table_jatuh_tempo' => $jatuhTempo,
+                'kontrak_pending_list' => $kontrakPendingList,
+                'kontrak_aktif_terbaru' => $kontrakAktifTerbaru,
+                'top_vendor' => $topVendor,
                 'table_tagihan_revisi' => $tagihanBermasalah,
+                'tahun' => $tahun,
             ];
         });
 

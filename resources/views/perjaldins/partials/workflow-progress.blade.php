@@ -5,20 +5,8 @@
     $workflow = collect($tagihan->workflowInstances ?? [])->sortByDesc('created_at')->first();
     $approvals = collect($workflow?->approvals ?? [])->sortBy([['urutan_step', 'asc'], ['id', 'asc']])->values();
 
-    $roleLabels = [
-        'PPSPM' => 'PPSPM',
-        'BENDAHARA_PENERIMAAN' => 'Bendahara Penerimaan',
-        'BENDAHARA_PENGELUARAN' => 'Bendahara Pengeluaran',
-        'PPK' => 'PPK',
-        'KASUBBAG' => 'Kepala Subbagian Keuangan dan Tata Usaha',
-        'Kepala Subbagian Keuangan dan Tata Usaha' => 'Kepala Subbagian Keuangan dan Tata Usaha',
-    ];
-
     $stateFromApproval = function ($approval) use ($workflow) {
-        if (!$approval) {
-            return 'pending';
-        }
-
+        if (!$approval) return 'pending';
         return match ($approval->status) {
             'APPROVED' => 'done',
             'REVISION' => 'revision',
@@ -38,15 +26,10 @@
         $allApproved = $step1Approvals->count() > 0 && $step1Approvals->every(fn($a) => $a->status === 'APPROVED');
 
         $paralelState = 'pending';
-        if ($hasRejected) {
-            $paralelState = 'rejected';
-        } elseif ($hasRevision) {
-            $paralelState = 'revision';
-        } elseif ($allApproved) {
-            $paralelState = 'done';
-        } elseif ($workflow && (int) $workflow->step_saat_ini === 1) {
-            $paralelState = 'active';
-        }
+        if ($hasRejected)        $paralelState = 'rejected';
+        elseif ($hasRevision)    $paralelState = 'revision';
+        elseif ($allApproved)    $paralelState = 'done';
+        elseif ($workflow && (int) $workflow->step_saat_ini === 1) $paralelState = 'active';
 
         $latestActedAt = $step1Approvals->max('acted_at');
 
@@ -54,14 +37,14 @@
             [
                 'label' => 'Pengajuan',
                 'sublabel' => 'Operator Perjaldin',
-                'icon' => 'bi-person-fill-up',
+                'icon' => 'bi-send-fill',
                 'state' => 'done',
                 'acted_at' => optional($tagihan->logs->firstWhere('aksi', 'SUBMIT'))->created_at,
             ],
             [
                 'label' => 'Verifikasi Paralel',
-                'sublabel' => 'PPSPM, Bendahara Penerimaan, Bendahara Pengeluaran, PPK',
-                'icon' => 'bi-clipboard2-check',
+                'sublabel' => 'PPSPM, Bend. Penerimaan, Bend. Pengeluaran, PPK',
+                'icon' => 'bi-clipboard2-check-fill',
                 'state' => $paralelState,
                 'acted_at' => $latestActedAt ? \Carbon\Carbon::parse($latestActedAt) : null,
             ],
@@ -69,42 +52,39 @@
 
         if ($kasubbagApproval) {
             $steps->push([
-                'label' => 'Persetujuan Kepala Subbagian Keuangan dan Tata Usaha',
-                'sublabel' => $kasubbagApproval->actedByUser?->name ?? 'Kepala Subbagian Keuangan dan Tata Usaha',
-                'icon' => 'bi-patch-check',
+                'label' => 'Persetujuan Kasubbag',
+                'sublabel' => $kasubbagApproval->actedByUser?->name ?? 'Kepala Subbagian Keu & TU',
+                'icon' => 'bi-patch-check-fill',
                 'state' => $stateFromApproval($kasubbagApproval),
                 'acted_at' => $kasubbagApproval->acted_at ? \Carbon\Carbon::parse($kasubbagApproval->acted_at) : null,
             ]);
         }
     } else {
         $steps = collect([
-            ['label' => 'Pengajuan', 'sublabel' => 'Operator Perjaldin', 'icon' => 'bi-person-fill-up', 'state' => 'done', 'acted_at' => null],
-            ['label' => 'Verifikasi Paralel', 'sublabel' => 'PPSPM, Bendahara Penerimaan, Bendahara Pengeluaran, PPK', 'icon' => 'bi-clipboard2-check', 'state' => str_starts_with($status, 'PENDING_') ? 'active' : 'pending', 'acted_at' => null],
-            ['label' => 'Persetujuan Kepala Subbagian Keuangan dan Tata Usaha', 'sublabel' => 'Kepala Subbagian Keuangan dan Tata Usaha', 'icon' => 'bi-patch-check', 'state' => $status === 'PENDING_KASUBBAG' ? 'active' : ($status === 'DISETUJUI_PERJALDIN' ? 'done' : 'pending'), 'acted_at' => null],
+            ['label' => 'Pengajuan', 'sublabel' => 'Operator Perjaldin', 'icon' => 'bi-send-fill', 'state' => 'done', 'acted_at' => null],
+            ['label' => 'Verifikasi Paralel', 'sublabel' => 'PPSPM, Bend. Penerimaan, Bend. Pengeluaran, PPK', 'icon' => 'bi-clipboard2-check-fill', 'state' => str_starts_with($status, 'PENDING_') ? 'active' : 'pending', 'acted_at' => null],
+            ['label' => 'Persetujuan Kasubbag', 'sublabel' => 'Kepala Subbagian Keu & TU', 'icon' => 'bi-patch-check-fill', 'state' => $status === 'PENDING_KASUBBAG' ? 'active' : ($status === 'DISETUJUI_PERJALDIN' ? 'done' : 'pending'), 'acted_at' => null],
         ]);
     }
 
-    $stateColors = [
-        'done' => ['bg' => 'bg-success', 'text' => 'text-success'],
-        'active' => ['bg' => 'bg-primary', 'text' => 'text-primary'],
-        'revision' => ['bg' => 'bg-warning', 'text' => 'text-warning'],
-        'rejected' => ['bg' => 'bg-danger', 'text' => 'text-danger'],
-        'pending' => ['bg' => 'bg-secondary', 'text' => 'text-secondary'],
-    ];
     $stateLabels = [
         'done' => 'Selesai',
-        'active' => 'Menunggu',
+        'active' => 'Berjalan',
         'revision' => 'Revisi',
         'rejected' => 'Ditolak',
-        'pending' => 'Belum',
+        'pending' => 'Menunggu',
     ];
     $stateIcons = [
-        'done' => 'bi-check-circle-fill',
+        'done' => 'bi-check-lg',
         'active' => 'bi-clock-fill',
         'revision' => 'bi-arrow-counterclockwise',
-        'rejected' => 'bi-x-circle-fill',
+        'rejected' => 'bi-x-lg',
         'pending' => 'bi-circle',
     ];
+
+    $totalSteps = $steps->count();
+    $doneCount = $steps->where('state', 'done')->count();
+    $progressPct = $totalSteps > 0 ? round(($doneCount / $totalSteps) * 100) : 0;
 
     $lastRevisionLog = $tagihan->logs
         ->filter(fn($l) => str_contains(strtolower($l->status_baru ?? ''), 'revisi') || str_contains(strtolower($l->aksi ?? ''), 'revision'))
@@ -112,41 +92,49 @@
         ->first();
 @endphp
 
-<div class="card border-0 shadow-sm mb-4">
-    <div class="card-header bg-white border-bottom py-3">
-        <h6 class="mb-0 fw-bold text-dark">
-            <i class="bi bi-diagram-3 text-primary me-2"></i>Progress Verifikasi
-        </h6>
+<div class="modern-card">
+    <div class="mc-head mc-icon-primary">
+        <div class="mc-head-left">
+            <div class="mc-icon"><i class="bi bi-diagram-3-fill"></i></div>
+            <div>
+                <h6 class="mc-title">Progress Verifikasi</h6>
+                <p class="mc-sub">Alur persetujuan dokumen perjalanan dinas</p>
+            </div>
+        </div>
+        <span class="mc-pill mc-pill-primary">
+            <i class="bi bi-bar-chart-fill"></i> {{ $progressPct }}% ({{ $doneCount }}/{{ $totalSteps }})
+        </span>
     </div>
-    <div class="card-body py-4">
-        <div class="d-flex align-items-start position-relative px-2 flex-wrap gap-3">
+    <div class="mc-body">
+        <div class="wf-stepper">
             @foreach($steps as $step)
-                @php $c = $stateColors[$step['state']]; @endphp
-                <div class="text-center" style="min-width:130px;flex:1">
-                    <div class="d-inline-flex align-items-center justify-content-center rounded-circle text-white {{ $c['bg'] }} shadow-sm mb-2" style="width:40px;height:40px;">
-                        <i class="bi {{ $stateIcons[$step['state']] }} fs-6"></i>
+                <div class="wf-step wf-state-{{ $step['state'] }} {{ $step['state'] === 'active' ? 'is-active' : '' }}">
+                    <div class="wf-circle">
+                        <i class="bi {{ $stateIcons[$step['state']] }}"></i>
                     </div>
-                    <div class="small fw-bold {{ $c['text'] }}">{{ $step['label'] }}</div>
-                    <div style="font-size:0.72rem;" class="text-muted text-truncate px-1">{{ $step['sublabel'] }}</div>
-                    <span class="badge mt-1 {{ $c['bg'] }}" style="font-size:0.68rem;">{{ $stateLabels[$step['state']] }}</span>
+                    <p class="wf-label">{{ $step['label'] }}</p>
+                    <p class="wf-sublabel">{{ \Illuminate\Support\Str::limit($step['sublabel'], 50) }}</p>
+                    <span class="wf-state-pill">
+                        <i class="bi {{ $stateIcons[$step['state']] }}"></i> {{ $stateLabels[$step['state']] }}
+                    </span>
                     @if($step['acted_at'])
-                        <div style="font-size:0.68rem;" class="text-muted mt-1">{{ $step['acted_at']->format('d M, H:i') }}</div>
+                        <div class="wf-time">
+                            <i class="bi bi-clock"></i> {{ $step['acted_at']->isoFormat('D MMM, HH:mm') }}
+                        </div>
                     @endif
                 </div>
             @endforeach
         </div>
 
         @if($lastRevisionLog && str_starts_with($status, 'REVISI_'))
-            <div class="alert alert-warning border-start border-4 border-warning mt-4 mb-0 py-3 rounded-3">
-                <div class="d-flex gap-3 align-items-start">
-                    <i class="bi bi-exclamation-triangle-fill text-warning fs-5 mt-1"></i>
-                    <div>
-                        <div class="fw-bold mb-1">Catatan Revisi</div>
-                        <p class="mb-1 small">{{ $lastRevisionLog->catatan ?? 'Tidak ada catatan khusus.' }}</p>
-                        <small class="text-muted">
-                            <i class="bi bi-clock me-1"></i>{{ $lastRevisionLog->created_at->format('d M Y, H:i') }}
-                        </small>
-                    </div>
+            <div class="wf-revision-callout">
+                <div class="wfr-icon"><i class="bi bi-exclamation-triangle-fill"></i></div>
+                <div>
+                    <p class="wfr-title">Catatan Revisi</p>
+                    <p>{{ $lastRevisionLog->catatan ?? 'Tidak ada catatan khusus.' }}</p>
+                    <small class="text-muted" style="font-size: .72rem;">
+                        <i class="bi bi-clock me-1"></i>{{ $lastRevisionLog->created_at->isoFormat('D MMMM YYYY, HH:mm') }}
+                    </small>
                 </div>
             </div>
         @endif
