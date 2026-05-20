@@ -31,7 +31,8 @@ class Sp2dHonorController extends Controller
         $query = DokumenNpi::with([
             'spm.spp.tagihan.detailHonorarium',
             'bendaharaPenerimaan',
-            'sp2d'
+            'sp2d',
+            'sp2d.workflowInstances.approvals',
         ])
         ->whereHas('spm.spp.tagihan', function($q) {
             $q->where('tipe_tagihan', 'HONORARIUM');

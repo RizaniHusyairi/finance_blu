@@ -27,6 +27,9 @@ class DashboardController extends Controller
         if (Auth::user()->hasRole('PPK')) {
             return $this->ppk();   
         }
+        if (Auth::user()->hasRole('PPABP')) {
+            return $this->ppabp();
+        }
         if (Auth::user()->hasRole('Bendahara Penerimaan')) {
             return redirect()->route('dashboard.bendahara-penerimaan');
         }
@@ -400,6 +403,154 @@ class DashboardController extends Controller
         });
 
         return view('dashboard.ppk', $data);
+    }
+
+    /**
+     * Dashboard khusus Role PPABP (Petugas Pengelola Administrasi Belanja Pegawai)
+     * Fokus: pengelolaan tagihan honorarium — draft, perlu revisi, dalam verifikasi, disetujui.
+     */
+    private function ppabp()
+    {
+        $userId = Auth::id();
+
+        $data = \Illuminate\Support\Facades\Cache::remember('dash_ppabp_' . $userId, 60, function () use ($userId) {
+            $now = now();
+            $tahun = $now->year;
+            $bulan = $now->month;
+
+            // ============================================================
+            // STATUS BUCKETING
+            // ============================================================
+            $draftStatuses = ['DRAFT'];
+            $revisiStatuses = [
+                'DITOLAK_PPK', 'DITOLAK_PPSPM', 'DITOLAK_KOORDINATOR_KEUANGAN',
+                'DITOLAK_BENDAHARA_PENGELUARAN', 'DITOLAK_BENDAHARA_PENERIMAAN', 'DITOLAK_KASUBBAG',
+                'REVISI_PPK', 'REVISI_PPSPM', 'REVISI_KOORDINATOR_KEUANGAN',
+                'REVISI_BENDAHARA_PENGELUARAN', 'REVISI_BENDAHARA_PENERIMAAN', 'REVISI_KASUBBAG',
+            ];
+            $verifikasiStatuses = [
+                'PENDING_VERIFIKASI_HONORARIUM', 'PENDING_KASUBBAG', 'PENDING_PPK', 'PENDING_PPSPM',
+                'PENDING_KOORDINATOR_KEUANGAN', 'PENDING_BENDAHARA_PENGELUARAN', 'PENDING_BENDAHARA_PENERIMAAN',
+            ];
+            $disetujuiStatuses = ['DISETUJUI', 'PROSES_SPP', 'SPP_TERBIT', 'SEBAGIAN_SPP_TERBIT', 'SPP_LENGKAP', 'SELESAI'];
+
+            $baseQuery = fn () => Tagihan::where('tipe_tagihan', 'HONORARIUM');
+
+            // ============================================================
+            // KPI CARDS
+            // ============================================================
+            $kpiDraft = (clone $baseQuery())->whereIn('status', $draftStatuses)->count();
+            $kpiRevisi = (clone $baseQuery())->whereIn('status', $revisiStatuses)->count();
+            $kpiVerifikasi = (clone $baseQuery())->whereIn('status', $verifikasiStatuses)->count();
+            $kpiDisetujui = (clone $baseQuery())->whereIn('status', $disetujuiStatuses)->count();
+
+            $totalNominalDraft = (clone $baseQuery())->whereIn('status', $draftStatuses)->sum('total_bruto');
+            $totalNominalVerifikasi = (clone $baseQuery())->whereIn('status', $verifikasiStatuses)->sum('total_bruto');
+
+            // Total bulan ini (dibuat bulan ini)
+            $tagihanBulanIni = (clone $baseQuery())
+                ->whereYear('created_at', $tahun)
+                ->whereMonth('created_at', $bulan)
+                ->count();
+            $nominalBulanIni = (clone $baseQuery())
+                ->whereYear('created_at', $tahun)
+                ->whereMonth('created_at', $bulan)
+                ->sum('total_bruto');
+
+            // Total Personel Penerima Honor (unique nrp_nip yang dibayar tahun ini)
+            $totalPenerimaTahunIni = DB::table('detail_honorarium')
+                ->join('tagihan', 'detail_honorarium.tagihan_id', '=', 'tagihan.id')
+                ->where('tagihan.tipe_tagihan', 'HONORARIUM')
+                ->whereYear('tagihan.created_at', $tahun)
+                ->whereNull('tagihan.deleted_at')
+                ->whereNull('detail_honorarium.deleted_at')
+                ->distinct('detail_honorarium.nrp_nip')
+                ->count('detail_honorarium.nrp_nip');
+
+            // ============================================================
+            // CHART: Tren Tagihan Honor 6 Bulan Terakhir
+            // ============================================================
+            $trenLabels = [];
+            $trenJumlah = [];
+            $trenNominal = [];
+            for ($i = 5; $i >= 0; $i--) {
+                $month = $now->copy()->subMonths($i);
+                $trenLabels[] = $month->isoFormat('MMM YY');
+                $trenJumlah[] = (clone $baseQuery())
+                    ->whereYear('created_at', $month->year)
+                    ->whereMonth('created_at', $month->month)
+                    ->count();
+                $trenNominal[] = (float) (clone $baseQuery())
+                    ->whereYear('created_at', $month->year)
+                    ->whereMonth('created_at', $month->month)
+                    ->sum('total_bruto');
+            }
+
+            // ============================================================
+            // CHART: Distribusi Status Tagihan Honor (Doughnut)
+            // ============================================================
+            $statusDistribusi = [
+                'Draft' => $kpiDraft,
+                'Perlu Revisi' => $kpiRevisi,
+                'Dalam Verifikasi' => $kpiVerifikasi,
+                'Disetujui / Selesai' => $kpiDisetujui,
+            ];
+
+            // ============================================================
+            // TABEL: Tagihan Perlu Tindakan (Draft + Revisi)
+            // ============================================================
+            $needsActionStatuses = array_merge($draftStatuses, $revisiStatuses);
+            $perluTindakan = (clone $baseQuery())
+                ->whereIn('status', $needsActionStatuses)
+                ->with(['detailHonorarium', 'logs' => fn ($q) => $q->latest()->limit(1)])
+                ->latest('updated_at')
+                ->take(8)
+                ->get();
+
+            // ============================================================
+            // TABEL: Tagihan Dalam Verifikasi (sedang diproses verifikator)
+            // ============================================================
+            $dalamVerifikasi = (clone $baseQuery())
+                ->whereIn('status', $verifikasiStatuses)
+                ->with(['detailHonorarium'])
+                ->latest('updated_at')
+                ->take(5)
+                ->get();
+
+            // ============================================================
+            // TABEL: Honorarium Selesai Terbaru
+            // ============================================================
+            $selesaiTerbaru = (clone $baseQuery())
+                ->whereIn('status', $disetujuiStatuses)
+                ->latest('updated_at')
+                ->take(5)
+                ->get();
+
+            return [
+                'kpi' => [
+                    'draft' => $kpiDraft,
+                    'revisi' => $kpiRevisi,
+                    'verifikasi' => $kpiVerifikasi,
+                    'disetujui' => $kpiDisetujui,
+                    'nominal_draft' => $totalNominalDraft,
+                    'nominal_verifikasi' => $totalNominalVerifikasi,
+                    'tagihan_bulan_ini' => $tagihanBulanIni,
+                    'nominal_bulan_ini' => $nominalBulanIni,
+                    'total_penerima_tahun_ini' => $totalPenerimaTahunIni,
+                ],
+                'tren_labels' => $trenLabels,
+                'tren_jumlah' => $trenJumlah,
+                'tren_nominal' => $trenNominal,
+                'status_labels' => array_keys($statusDistribusi),
+                'status_data' => array_values($statusDistribusi),
+                'perlu_tindakan' => $perluTindakan,
+                'dalam_verifikasi' => $dalamVerifikasi,
+                'selesai_terbaru' => $selesaiTerbaru,
+                'tahun' => $tahun,
+            ];
+        });
+
+        return view('dashboard.ppabp', $data);
     }
 }
 

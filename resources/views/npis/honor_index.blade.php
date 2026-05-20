@@ -1,203 +1,252 @@
 @extends('layouts.app')
-@section('title', 'Pembuatan NPI Honorarium')
-
-@push('css')
-    <link href="{{ URL::asset('build/plugins/datatable/css/dataTables.bootstrap5.min.css') }}" rel="stylesheet" />
-    <style>
-        .filter-bar { background: #f8f9fc; border: 1px solid rgba(15,23,42,.06); border-radius: .75rem; padding: 1rem 1.25rem; }
-        .status-btn { border: 1px solid #dee2e6; background: #fff; border-radius: .5rem; padding: .35rem .85rem; font-size: .82rem; font-weight: 600; color: #475569; transition: all .15s; cursor: pointer; text-decoration: none;}
-        .status-btn:hover { border-color: #0d6efd; color: #0d6efd; }
-        .status-btn.active { background: #0d6efd; border-color: #0d6efd; color: #fff; }
-    </style>
-@endpush
 
 @section('content')
-    <div class="d-flex justify-content-between align-items-center mb-0">
-        <x-page-title title="Pembuatan NPI" subtitle="Honorarium" />
+<!--breadcrumb-->
+<div class="page-breadcrumb d-none d-sm-flex align-items-center mb-3">
+    <div class="breadcrumb-title pe-3">Pembuatan NPI</div>
+    <div class="ps-3">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0 p-0">
+                <li class="breadcrumb-item"><a href="javascript:;"><i class="bx bx-home-alt"></i></a></li>
+                <li class="breadcrumb-item active" aria-current="page">Honorarium (Bendahara Pengeluaran)</li>
+            </ol>
+        </nav>
     </div>
-    <div class="text-muted small mb-4">Buat dan kelola NPI dari SPM Honorarium yang sudah disetujui.</div>
+</div>
+<!--end breadcrumb-->
 
-    @if(session('success'))
-        <div class="alert alert-success border-0 bg-success text-white alert-dismissible fade show">
-            <i class="bi bi-check-circle me-1"></i> {{ session('success') }}
-            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert"></button>
-        </div>
-    @endif
-    @if($errors->any())
-        <div class="alert alert-danger border-0 alert-dismissible fade show">
-            <ul class="mb-0 ps-3">@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    @endif
+@if(session('success'))
+    <div class="alert alert-success border-0 bg-success text-white alert-dismissible fade show">
+        <i class='bx bx-check-circle me-1'></i> {{ session('success') }}
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert"></button>
+    </div>
+@endif
+@if($errors->any())
+    <div class="alert alert-danger border-0 alert-dismissible fade show">
+        <ul class="mb-0 ps-3">@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+@endif
 
-    {{-- Summary Cards --}}
-    <div class="row row-cols-2 row-cols-md-4 row-cols-xl-5 g-3 mb-4 mt-2">
-        <div class="col">
-            <div class="card h-100 border-0 shadow-sm bg-warning text-dark">
-                <div class="card-body p-3">
-                    <h6 class="card-title fw-medium mb-1">Siap Dibuat NPI</h6>
-                    <h3 class="fw-bold mb-0">{{ $summary['belum_dibuat'] }}</h3>
-                </div>
-            </div>
-        </div>
-        <div class="col">
-            <div class="card h-100 border-0 shadow-sm text-white" style="background-color: #6366f1;">
-                <div class="card-body p-3">
-                    <h6 class="card-title fw-medium mb-1">Draft & Revisi</h6>
-                    <h3 class="fw-bold mb-0">{{ $summary['draft_revisi'] }}</h3>
-                </div>
-            </div>
-        </div>
-        <div class="col">
-            <div class="card h-100 border-0 shadow-sm text-white bg-info">
-                <div class="card-body p-3">
-                    <h6 class="card-title fw-medium mb-1 d-flex align-items-center"><i class="bi bi-clock-history me-1"></i> Menunggu</h6>
-                    <h3 class="fw-bold mb-0">{{ $summary['menunggu'] }}</h3>
-                </div>
-            </div>
-        </div>
-        <div class="col">
-            <div class="card h-100 border-0 shadow-sm text-white bg-success">
-                <div class="card-body p-3">
-                    <h6 class="card-title fw-medium mb-1">Selesai (Terbit)</h6>
-                    <h3 class="fw-bold mb-0 text-white">{{ $summary['selesai'] }}</h3>
+<!-- Summary Cards -->
+<div class="row row-cols-1 row-cols-md-2 row-cols-xl-4">
+    <div class="col">
+        <div class="card radius-10 border-start border-0 border-4 border-secondary">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div>
+                        <p class="mb-0 text-secondary">Belum Ada NPI</p>
+                        <h4 class="my-1 text-secondary">{{ $summary['belum_dibuat'] }}</h4>
+                        <p class="mb-0 font-13">SPM honor siap dibuat NPI</p>
+                    </div>
+                    <div class="widgets-icons-2 rounded-circle bg-gradient-scooter text-white ms-auto">
+                        <i class='bx bx-file-blank'></i>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-
-    {{-- Filter Bar --}}
-    <div class="filter-bar mb-4 d-flex flex-wrap gap-3 align-items-center justify-content-between">
-        <div class="d-flex flex-wrap gap-2">
-            <a href="{{ route('npis.honor.index', ['status' => 'semua', 'search' => $search]) }}" class="status-btn {{ $statusFilter === 'semua' ? 'active' : '' }}">Semua</a>
-            <a href="{{ route('npis.honor.index', ['status' => 'belum_dibuat', 'search' => $search]) }}" class="status-btn {{ $statusFilter === 'belum_dibuat' ? 'active' : '' }}">Siap Dibuat NPI</a>
-            <a href="{{ route('npis.honor.index', ['status' => 'draft', 'search' => $search]) }}" class="status-btn {{ $statusFilter === 'draft' ? 'active' : '' }}">Draft NPI</a>
-            <a href="{{ route('npis.honor.index', ['status' => 'menunggu', 'search' => $search]) }}" class="status-btn {{ $statusFilter === 'menunggu' ? 'active' : '' }}">Menunggu Verifikasi</a>
-            <a href="{{ route('npis.honor.index', ['status' => 'revisi', 'search' => $search]) }}" class="status-btn {{ $statusFilter === 'revisi' ? 'active' : '' }}">Revisi</a>
-            <a href="{{ route('npis.honor.index', ['status' => 'selesai', 'search' => $search]) }}" class="status-btn {{ $statusFilter === 'selesai' ? 'active' : '' }}">Selesai</a>
+    <div class="col">
+        <div class="card radius-10 border-start border-0 border-4 border-warning">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div>
+                        <p class="mb-0 text-secondary">Draft / Revisi</p>
+                        <h4 class="my-1 text-warning">{{ $summary['draft_revisi'] }}</h4>
+                        <p class="mb-0 font-13">Perlu dilengkapi / diperbaiki</p>
+                    </div>
+                    <div class="widgets-icons-2 rounded-circle bg-gradient-blooker text-white ms-auto">
+                        <i class='bx bx-edit-alt'></i>
+                    </div>
+                </div>
+            </div>
         </div>
-        <form action="{{ route('npis.honor.index') }}" method="GET" class="d-flex gap-2" style="min-width: 280px;">
-            <input type="hidden" name="status" value="{{ $statusFilter }}">
-            <input type="text" name="search" class="form-control form-control-sm" placeholder="Cari NPI, SPM, SPP, Tagihan..." value="{{ $search }}">
-            @if($search) <a href="{{ route('npis.honor.index', ['status' => $statusFilter]) }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-x"></i></a> @endif
-            <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-search"></i></button>
+    </div>
+    <div class="col">
+        <div class="card radius-10 border-start border-0 border-4 border-info">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div>
+                        <p class="mb-0 text-secondary">Menunggu Verifikasi</p>
+                        <h4 class="my-1 text-info">{{ $summary['menunggu'] }}</h4>
+                        <p class="mb-0 font-13">Proses paralel verifikator</p>
+                    </div>
+                    <div class="widgets-icons-2 rounded-circle bg-gradient-bloody text-white ms-auto">
+                        <i class='bx bx-time-five'></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col">
+        <div class="card radius-10 border-start border-0 border-4 border-success">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div>
+                        <p class="mb-0 text-secondary">Selesai</p>
+                        <h4 class="my-1 text-success">{{ $summary['selesai'] }}</h4>
+                        <p class="mb-0 font-13">NPI siap diproses SP2D</p>
+                    </div>
+                    <div class="widgets-icons-2 rounded-circle bg-gradient-ohhappiness text-white ms-auto">
+                        <i class='bx bx-check-double'></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Data Table Card -->
+<div class="card radius-10">
+    <div class="card-header border-bottom-0 py-3">
+        <!-- Filter Form -->
+        <form action="{{ route('npis.honor.index') }}" method="GET" class="row g-2 align-items-center">
+            <div class="col-md-3">
+                <label for="status" class="form-label d-none">Status NPI</label>
+                <select name="status" id="status" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <option value="semua" {{ $statusFilter == 'semua' ? 'selected' : '' }}>Semua Status</option>
+                    <option value="belum_dibuat" {{ $statusFilter == 'belum_dibuat' ? 'selected' : '' }}>Belum Dibuat</option>
+                    <option value="draft" {{ $statusFilter == 'draft' ? 'selected' : '' }}>Draft</option>
+                    <option value="revisi" {{ $statusFilter == 'revisi' ? 'selected' : '' }}>Revisi</option>
+                    <option value="menunggu" {{ $statusFilter == 'menunggu' ? 'selected' : '' }}>Menunggu Verifikasi</option>
+                    <option value="selesai" {{ $statusFilter == 'selesai' ? 'selected' : '' }}>Selesai / Terbit</option>
+                </select>
+            </div>
+            <div class="col-md-5">
+                <div class="input-group input-group-sm">
+                    <input type="text" name="search" class="form-control" placeholder="Cari NPI/SPM/Tagihan/Deskripsi..." value="{{ $search }}">
+                    <button class="btn btn-outline-secondary" type="submit"><i class='bx bx-search'></i></button>
+                    @if($search)
+                        <a href="{{ route('npis.honor.index') }}" class="btn btn-outline-danger" title="Clear Search"><i class='bx bx-x'></i></a>
+                    @endif
+                </div>
+            </div>
         </form>
     </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table align-middle mb-0 table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th width="5%">No</th>
+                        <th width="15%">No. NPI</th>
+                        <th width="20%">Sumber Dokumen</th>
+                        <th width="25%">Deskripsi & Penerima</th>
+                        <th width="10%">Nilai (Rp)</th>
+                        <th width="15%">Status / Verifikasi</th>
+                        <th width="10%" class="text-center">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($spmList as $index => $spm)
+                        @php
+                            $npi = $spm->npi;
+                            $spp = $spm->spp;
+                            $tagihan = $spp?->tagihan;
+                            $jumlahPenerima = count($tagihan?->detailHonorarium ?? []);
+                            $nilai = $spm->nominal_spm ?? $tagihan?->total_netto ?? 0;
 
-    {{-- Table --}}
-    <div class="card border-0 shadow-sm">
-        <div class="card-body">
-            <div class="table-responsive">
-                <table id="tabelNpiHonor" class="table table-hover table-bordered align-middle" style="width:100%">
-                    <thead class="table-light">
+                            $approvals = collect($npi?->workflowInstances?->first()?->approvals ?? []);
+                            $bpStatus = $approvals->firstWhere('role_code', 'Bendahara Penerimaan')?->status ?? '-';
+                            $ppkStatus = $approvals->firstWhere('role_code', 'PPK')?->status ?? '-';
+                            $kasStatus = $approvals->firstWhere('role_code', 'Kepala Subbagian Keuangan dan Tata Usaha')?->status ?? '-';
+                            $koorStatus = $approvals->firstWhere('role_code', 'Koordinator Keuangan')?->status ?? '-';
+                        @endphp
                         <tr>
-                            <th width="3%">No</th>
-                            <th>Info NPI & SPM</th>
-                            <th>Deskripsi Tagihan Honor</th>
-                            <th>Penerima</th>
-                            <th class="text-end">Nilai Netto (SPM)</th>
-                            <th class="text-center">Status</th>
-                            <th class="text-center" width="10%">Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach ($spmList as $idx => $spm)
-                            @php
-                                $npi = $spm->npi;
-                                $spp = $spm->spp;
-                                $tagihan = $spp?->tagihan;
-                                
-                                $statusSpmClass = match($spm->status) {
-                                    'Disetujui Final' => 'bg-success',
-                                    default => 'bg-secondary',
-                                };
+                            <td>{{ $index + 1 }}</td>
+                            <td>
+                                @if($npi && $npi->nomor_npi)
+                                    <span class="fw-bold text-primary">{{ $npi->nomor_npi }}</span>
+                                    <div class="text-muted small mt-1"><i class='bx bx-calendar'></i> {{ optional($npi->tanggal_npi)->format('d M Y') ?? '-' }}</div>
+                                @else
+                                    <span class="badge bg-secondary">Belum Dibuat</span>
+                                @endif
+                            </td>
+                            <td>
+                                <div class="d-flex flex-column">
+                                    <small class="mb-1"><strong class="text-secondary">SPM:</strong> {{ $spm->nomor_spm }}</small>
+                                    <small class="mb-1"><strong class="text-secondary">SPP:</strong> {{ $spp?->nomor_spp ?? '-' }}</small>
+                                    <small class="mb-1"><strong class="text-secondary">Tagihan:</strong> {{ $tagihan?->nomor_tagihan ?? '-' }}</small>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="text-wrap" style="max-width: 250px;">
+                                    <div class="fw-bold mb-1">{{ \Illuminate\Support\Str::limit($tagihan?->deskripsi ?? '-', 60) }}</div>
+                                    <small class="text-secondary"><i class='bx bx-group'></i> {{ $jumlahPenerima }} Penerima Honor</small>
+                                </div>
+                            </td>
+                            <td class="fw-bold font-14">
+                                {{ number_format($nilai, 0, ',', '.') }}
+                            </td>
+                            <td>
+                                @if(!$npi)
+                                    <span class="badge bg-warning text-dark mb-1">DRAFT REQUIRED</span>
+                                @else
+                                    @php
+                                        $badgeClass = match($npi->status) {
+                                            \App\Models\DokumenNpi::STATUS_DRAFT => 'bg-secondary',
+                                            \App\Models\DokumenNpi::STATUS_REVISI => 'bg-danger',
+                                            \App\Models\DokumenNpi::STATUS_DISETUJUI_FINAL, \App\Models\DokumenNpi::STATUS_APPROVED_KASUBAG => 'bg-success',
+                                            default => 'bg-info'
+                                        };
+                                        $textBadge = match($npi->status) {
+                                            \App\Models\DokumenNpi::STATUS_DISETUJUI_FINAL, \App\Models\DokumenNpi::STATUS_APPROVED_KASUBAG => 'Selesai',
+                                            \App\Models\DokumenNpi::STATUS_DRAFT => 'Draft',
+                                            \App\Models\DokumenNpi::STATUS_REVISI => 'Revisi',
+                                            default => 'Menunggu Verif'
+                                        };
+                                    @endphp
+                                    <span class="badge {{ $badgeClass }} mb-1 d-block w-100 text-start">
+                                        <i class="bx bx-info-circle me-1"></i> {{ $textBadge }}
+                                    </span>
 
-                                $statusNpiLabel = $npi?->status_spp ?? 'Belum Dibuat';
-                                $statusNpiClass = match($npi?->status ?? '') {
-                                    \App\Models\DokumenNpi::STATUS_DRAFT => 'bg-warning text-dark border',
-                                    \App\Models\DokumenNpi::STATUS_REVISI => 'bg-danger text-white',
-                                    \App\Models\DokumenNpi::STATUS_SUBMITTED_KASUBAG,
-                                    \App\Models\DokumenNpi::STATUS_SUBMITTED_PPK,
-                                    \App\Models\DokumenNpi::STATUS_SUBMITTED_BENPEN,
-                                    \App\Models\DokumenNpi::STATUS_MENUNGGU_VERIFIKASI => 'bg-info text-dark',
-                                    \App\Models\DokumenNpi::STATUS_DISETUJUI_FINAL,
-                                    \App\Models\DokumenNpi::STATUS_APPROVED_KASUBAG => 'bg-success text-white',
-                                    default => 'bg-light text-dark border',
-                                };
-                            @endphp
-                            <tr>
-                                <td>{{ $idx + 1 }}</td>
-                                <td>
-                                    @if($npi)
-                                        <div class="fw-bold text-primary mb-1">{{ $npi->nomor_npi ?? 'Draft NPI' }}</div>
-                                        <div class="text-muted small"><i class="bi bi-calendar3"></i> {{ optional($npi->tanggal_npi)->format('d F Y') ?? '-' }}</div>
-                                    @else
-                                        <div class="fw-bold text-muted fst-italic mb-1">Belum Ada NPI</div>
+                                    @if(in_array($npi->status, [\App\Models\DokumenNpi::STATUS_MENUNGGU_VERIFIKASI, \App\Models\DokumenNpi::STATUS_SUBMITTED_BENPEN, \App\Models\DokumenNpi::STATUS_SUBMITTED_PPK, \App\Models\DokumenNpi::STATUS_SUBMITTED_KASUBAG]))
+                                        <div class="d-flex flex-column gap-1 w-100 mt-1">
+                                            <span class="badge {{ $bpStatus == 'APPROVED' ? 'bg-success' : ($bpStatus == 'REVISION' ? 'bg-danger' : 'bg-light text-dark border') }} w-100 text-start" style="font-size: 10px;">
+                                                BENPEN: {{ $bpStatus }}
+                                            </span>
+                                            <span class="badge {{ $ppkStatus == 'APPROVED' ? 'bg-success' : ($ppkStatus == 'REVISION' ? 'bg-danger' : 'bg-light text-dark border') }} w-100 text-start" style="font-size: 10px;">
+                                                PPK: {{ $ppkStatus }}
+                                            </span>
+                                            <span class="badge {{ $kasStatus == 'APPROVED' ? 'bg-success' : ($kasStatus == 'REVISION' ? 'bg-danger' : 'bg-light text-dark border') }} w-100 text-start" style="font-size: 10px;">
+                                                KASUBBAG: {{ $kasStatus }}
+                                            </span>
+                                            <span class="badge {{ $koorStatus == 'APPROVED' ? 'bg-success' : ($koorStatus == 'REVISION' ? 'bg-danger' : 'bg-light text-dark border') }} w-100 text-start" style="font-size: 10px;">
+                                                KOOR: {{ $koorStatus }}
+                                            </span>
+                                        </div>
                                     @endif
-                                    <hr class="my-1 border-secondary">
-                                    <div class="text-dark fw-semibold small">SPM: {{ $spm->nomor_spm ?? '-' }}</div>
-                                </td>
-                                <td>
-                                    <div class="fw-medium text-wrap">{{ Str::limit($tagihan?->deskripsi ?? '-', 70) }}</div>
-                                    <div class="small mt-1 text-muted">No Tagihan: {{ $tagihan?->nomor_tagihan ?? '-' }}</div>
-                                </td>
-                                <td>
-                                    <span class="badge bg-secondary-subtle text-secondary">{{ count($tagihan?->detailHonorarium ?? []) }} Orang</span>
-                                </td>
-                                <td class="text-end fw-bold text-success">
-                                    Rp {{ number_format($spm->nominal_spm ?? $tagihan?->total_netto ?? 0, 0, ',', '.') }}
-                                </td>
-                                <td class="text-center">
-                                    <div class="mb-1">
-                                        <span class="badge {{ $statusNpiClass }} w-100 p-2" style="font-size: 0.75rem;">
-                                            {{ $npi ? $npi->status : 'Siap Dibuat NPI' }}
-                                        </span>
-                                    </div>
-                                    @if($npi && in_array($npi->status, [\App\Models\DokumenNpi::STATUS_REVISI, \App\Models\DokumenNpi::STATUS_DRAFT]))
-                                        <div class="mt-1 small fw-semibold text-warning">Menunggu Aksi Anda</div>
-                                    @endif
-                                </td>
-                                <td class="text-center">
-                                    @if(!$npi || in_array($npi->status, [\App\Models\DokumenNpi::STATUS_DRAFT, \App\Models\DokumenNpi::STATUS_REVISI]))
-                                        <a href="{{ route('npis.honor.detail', $spm->id) }}" class="btn btn-sm btn-primary w-100 shadow-sm mb-1">
-                                            <i class="bi bi-pencil-square me-1"></i> Proses
-                                        </a>
-                                    @else
-                                        <a href="{{ route('npis.honor.detail', $spm->id) }}" class="btn btn-sm btn-outline-secondary w-100 mb-1">
-                                            <i class="bi bi-eye me-1"></i> Detail
-                                        </a>
-                                    @endif
-                                    
-                                    @if($npi && in_array($npi->status, [\App\Models\DokumenNpi::STATUS_DISETUJUI_FINAL, \App\Models\DokumenNpi::STATUS_APPROVED_KASUBAG]))
-                                        <a href="{{ route('npis.cetak-pdf', $npi->id) }}" target="_blank" class="btn btn-sm btn-outline-danger w-100">
-                                            <i class="bi bi-file-pdf"></i> Cetak
-                                        </a>
-                                    @endif
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
+                                @endif
+                            </td>
+                            <td class="text-center">
+                                @if(!$npi || in_array($npi->status, [\App\Models\DokumenNpi::STATUS_DRAFT, \App\Models\DokumenNpi::STATUS_REVISI]))
+                                    <a href="{{ route('npis.honor.detail', $spm->id) }}" class="btn btn-sm btn-primary w-100 mb-1">
+                                        <i class='bx bx-edit'></i> {{ !$npi ? 'Buat NPI' : 'Lanjut Draft' }}
+                                    </a>
+                                @else
+                                    <a href="{{ route('npis.honor.detail', $spm->id) }}" class="btn btn-sm btn-outline-info w-100 mb-1">
+                                        <i class='bx bx-show'></i> Detail
+                                    </a>
+                                @endif
+
+                                @if($npi && in_array($npi->status, [\App\Models\DokumenNpi::STATUS_DISETUJUI_FINAL, \App\Models\DokumenNpi::STATUS_APPROVED_KASUBAG]))
+                                    <a href="{{ route('npis.cetak-pdf', $npi->id) }}" target="_blank" class="btn btn-sm btn-outline-danger w-100">
+                                        <i class='bx bxs-file-pdf'></i> Cetak
+                                    </a>
+                                @endif
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="7" class="text-center py-4">
+                                <div class="text-muted"><i class='bx bx-folder-open font-30'></i></div>
+                                <p class="mb-0">Tidak ada data SPM Honorarium final yang ditemukan.</p>
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
         </div>
     </div>
+</div>
 @endsection
-
-@push('script')
-    <script src="{{ URL::asset('build/plugins/datatable/js/jquery.dataTables.min.js') }}"></script>
-    <script src="{{ URL::asset('build/plugins/datatable/js/dataTables.bootstrap5.min.js') }}"></script>
-    <script>
-        $(document).ready(function() {
-            $('#tabelNpiHonor').DataTable({
-                pageLength: 25,
-                language: {
-                    search: "Pencarian:",
-                    lengthMenu: "Tampilkan _MENU_ data",
-                    info: "Menampilkan _START_ - _END_ dari _TOTAL_ data",
-                    paginate: { previous: "Sebelumnya", next: "Selanjutnya" },
-                    emptyTable: "Tidak ada antrean Pembuatan NPI.",
-                }
-            });
-        });
-    </script>
-@endpush

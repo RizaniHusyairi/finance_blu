@@ -242,7 +242,11 @@ class HonorariumController extends Controller
                 'workflowInstances.definition',
                 'workflowInstances.approvals.assignedUser',
                 'workflowInstances.approvals.actedByUser',
-                'creator'
+                'creator',
+                'dipa',
+                'dipaRevisionItem.coa',
+                'dipaRevisionItem.dipaRevision.masterDipa',
+                'arsipDokumen',
             ])
             ->findOrFail($id);
 

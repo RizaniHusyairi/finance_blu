@@ -14,6 +14,7 @@ use App\Http\Controllers\SupplierController;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\HonorariumController;
 use App\Http\Controllers\MasterTarifPajakController;
+use App\Http\Controllers\PenyetoranPajakHonorController;
 
 Auth::routes();
 
@@ -645,6 +646,22 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
 
         Route::get('/pembukuan/piutang', [\App\Http\Controllers\PengecekanPembayaranPiutangController::class, 'index'])
             ->name('pembukuan.piutang.index');
+
+        // Penyetoran Pajak — Honor (didefinisikan SEBELUM route /pajak-potongan/{potongan}/... agar matching benar)
+        Route::middleware('role:Super Admin|Bendahara Pengeluaran')->group(function () {
+            Route::get('/pajak-potongan/honor', [PenyetoranPajakHonorController::class, 'index'])
+                ->name('pajak-potongan.honor.index');
+            Route::get('/pajak-potongan/honor/bupot/{detail_honorarium}', [PenyetoranPajakHonorController::class, 'bupot'])
+                ->name('pajak-potongan.honor.bupot');
+            Route::get('/pajak-potongan/honor/{potongan}/detail', [PenyetoranPajakHonorController::class, 'show'])
+                ->name('pajak-potongan.honor.detail');
+            Route::post('/pajak-potongan/honor/{potongan}/billing', [PenyetoranPajakHonorController::class, 'storeBilling'])
+                ->name('pajak-potongan.honor.billing');
+            Route::post('/pajak-potongan/honor/{potongan}/ntpn', [PenyetoranPajakHonorController::class, 'storeNtpn'])
+                ->name('pajak-potongan.honor.ntpn');
+            Route::get('/pajak-potongan/honor/{potongan}/cetak', [PenyetoranPajakHonorController::class, 'cetak'])
+                ->name('pajak-potongan.honor.cetak');
+        });
 
         Route::get('/pajak-potongan', [\App\Http\Controllers\PenyetoranPajakController::class, 'index'])->name('pajak-potongan.index');
         Route::get('/pajak-potongan/{potongan}/detail', [\App\Http\Controllers\PenyetoranPajakController::class, 'show'])->name('pajak-potongan.detail');
