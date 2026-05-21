@@ -18,9 +18,10 @@ class RoleAndPermissionSeeder extends Seeder
         // Reset cached roles and permissions
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
-        // 14 roles berdasarkan PRD
+        // 16 roles berdasarkan PRD + Listrik/Air
         $roles = [
             'Super Admin',
+            'Super Admin Jasa',
             'KPA',
             'Kepala Subbagian Keuangan dan Tata Usaha',
             'Kepala Seksi Pelayanan dan Kerjasama',
@@ -34,8 +35,12 @@ class RoleAndPermissionSeeder extends Seeder
             'Operator Perjaldin',
             'Koordinator Keuangan',
             'Mitra',
+            'Mitra Jasa',
             'Admin Jasa',
+            'Admin Konsesi',
             'Koordinator Jasa',
+            'Admin Listrik',
+            'Admin Air',
         ];
 
         foreach ($roles as $role) {
@@ -58,6 +63,17 @@ class RoleAndPermissionSeeder extends Seeder
                     'nip'          => '000000000000000001',
                     'nama_lengkap' => 'Super Admin',
                     'jabatan'      => 'System Administrator',
+                    'npwp'         => null,
+                    'status_aktif' => true,
+                ],
+            ],
+            [
+                'email' => 'superadmin.jasa@sikeren.id',
+                'role'  => 'Super Admin Jasa',
+                'pegawai' => [
+                    'nip'          => '000000000000000017',
+                    'nama_lengkap' => 'SUPER ADMIN JASA',
+                    'jabatan'      => 'Super Admin Jasa',
                     'npwp'         => null,
                     'status_aktif' => true,
                 ],
@@ -206,6 +222,17 @@ class RoleAndPermissionSeeder extends Seeder
                 ],
             ],
             [
+                'email' => 'admin.konsesi@sikeren.id',
+                'role'  => 'Admin Konsesi',
+                'pegawai' => [
+                    'nip'          => '199501012020011016',
+                    'nama_lengkap' => 'ADMIN KONSESI',
+                    'jabatan'      => 'Admin Konsesi',
+                    'npwp'         => '87.234.567.8-901.000',
+                    'status_aktif' => true,
+                ],
+            ],
+            [
                 'email' => 'koordinator.jasa@sikeren.id',
                 'role'  => 'Koordinator Jasa',
                 'pegawai' => [
@@ -213,6 +240,28 @@ class RoleAndPermissionSeeder extends Seeder
                     'nama_lengkap' => 'KOORDINATOR JASA',
                     'jabatan'      => 'Koordinator Pelayanan Jasa',
                     'npwp'         => '85.234.567.8-901.000',
+                    'status_aktif' => true,
+                ],
+            ],
+            [
+                'email' => 'admin.listrik@sikeren.id',
+                'role'  => 'Admin Listrik',
+                'pegawai' => [
+                    'nip'          => '199501012020011017',
+                    'nama_lengkap' => 'ADMIN LISTRIK',
+                    'jabatan'      => 'Admin Pengelolaan Listrik',
+                    'npwp'         => '88.234.567.8-901.000',
+                    'status_aktif' => true,
+                ],
+            ],
+            [
+                'email' => 'admin.air@sikeren.id',
+                'role'  => 'Admin Air',
+                'pegawai' => [
+                    'nip'          => '199501012020011018',
+                    'nama_lengkap' => 'ADMIN AIR',
+                    'jabatan'      => 'Admin Pengelolaan Air',
+                    'npwp'         => '89.234.567.8-901.000',
                     'status_aktif' => true,
                 ],
             ],

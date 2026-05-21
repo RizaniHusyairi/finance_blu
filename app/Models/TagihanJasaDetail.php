@@ -11,6 +11,9 @@ class TagihanJasaDetail extends Model
 
     protected $table = 'tagihan_jasa_details';
     protected $guarded = ['id'];
+    protected $casts = [
+        'calculation_payload' => 'array',
+    ];
 
     public function tagihanJasa()
     {
