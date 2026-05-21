@@ -24,6 +24,7 @@ class LoginController extends Controller
     
     private const INTERNAL_ROLES = [
         'Super Admin',
+        'Super Admin Jasa',
         'KPA',
         'Kepala Subbagian Keuangan dan Tata Usaha',
         'Kepala Seksi Pelayanan dan Kerjasama',
@@ -36,6 +37,11 @@ class LoginController extends Controller
         'PPABP',
         'Operator Perjaldin',
         'Koordinator Keuangan',
+        'Admin Jasa',
+        'Admin Konsesi',
+        'Koordinator Jasa',
+        'Admin Listrik',
+        'Admin Air',
     ];
 
     /**
@@ -51,8 +57,16 @@ class LoginController extends Controller
 
     protected function authenticated(Request $request, $user)
     {
-        if ($user->hasRole('Mitra')) {
+        if ($user->hasAnyRole(['Mitra', 'Mitra Jasa'])) {
             return redirect()->route('mitra.dashboard');
+        }
+
+        if ($user->hasAnyRole(['Admin Listrik', 'Admin Air'])) {
+            return redirect()->route('utilitas.dashboard');
+        }
+
+        if ($user->hasRole('Koordinator Jasa') && ! $user->hasAnyRole(['Super Admin', 'Super Admin Jasa'])) {
+            return redirect()->route('koordinator-jasa.dashboard');
         }
 
         if ($user->hasAnyRole(self::INTERNAL_ROLES)) {

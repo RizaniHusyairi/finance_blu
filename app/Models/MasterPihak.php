@@ -40,6 +40,27 @@ class MasterPihak extends Model
         return $this->morphOne(User::class, 'profilable');
     }
 
+    public function layananJasa()
+    {
+        return $this->belongsToMany(LayananJasa::class, 'mitra_layanan_jasa', 'mitra_id', 'layanan_jasa_id')
+            ->withPivot(['status_aktif', 'tanggal_mulai', 'tanggal_selesai', 'keterangan', 'created_by'])
+            ->withTimestamps();
+    }
+
+    public function layananJasaAktif()
+    {
+        return $this->layananJasa()
+            ->wherePivot('status_aktif', true)
+            ->where(function ($query) {
+                $query->whereNull('mitra_layanan_jasa.tanggal_mulai')
+                    ->orWhereDate('mitra_layanan_jasa.tanggal_mulai', '<=', now()->toDateString());
+            })
+            ->where(function ($query) {
+                $query->whereNull('mitra_layanan_jasa.tanggal_selesai')
+                    ->orWhereDate('mitra_layanan_jasa.tanggal_selesai', '>=', now()->toDateString());
+            });
+    }
+
     public function getNamaPerusahaanAttribute()
     {
         return $this->nama_pihak;

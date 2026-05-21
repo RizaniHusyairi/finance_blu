@@ -55,11 +55,32 @@ class User extends Authenticatable
 
     /**
      * Relasi polymorphic ke profil utama user.
-     * Tepat satu pegawai (MasterPegawai) atau mitra (MasterPihak / MasterMitraVendor).
+     * Tepat satu pegawai, mitra/vendor lama, atau Mitra Jasa.
      */
     public function profilable()
     {
         return $this->morphTo();
+    }
+
+    public function layananJasaDikelola()
+    {
+        return $this->belongsToMany(LayananJasa::class, 'admin_jasa_layanan', 'user_id', 'layanan_jasa_id')
+            ->withPivot(['status_aktif', 'tanggal_mulai', 'tanggal_selesai', 'keterangan', 'created_by'])
+            ->withTimestamps();
+    }
+
+    public function layananJasaDikelolaAktif()
+    {
+        return $this->layananJasaDikelola()
+            ->wherePivot('status_aktif', true)
+            ->where(function ($query) {
+                $query->whereNull('admin_jasa_layanan.tanggal_mulai')
+                    ->orWhereDate('admin_jasa_layanan.tanggal_mulai', '<=', now()->toDateString());
+            })
+            ->where(function ($query) {
+                $query->whereNull('admin_jasa_layanan.tanggal_selesai')
+                    ->orWhereDate('admin_jasa_layanan.tanggal_selesai', '>=', now()->toDateString());
+            });
     }
 
     /**
@@ -79,6 +100,10 @@ class User extends Authenticatable
 
         if ($profile instanceof MasterPihak) {
             return $profile->nama_pihak;
+        }
+
+        if ($profile instanceof MitraJasa) {
+            return $profile->nama_mitra;
         }
 
         return $this->attributes['email'] ?? null;
@@ -101,7 +126,11 @@ class User extends Authenticatable
                 $join->on('master_pihak.id', '=', 'users.profilable_id')
                     ->whereIn('users.profilable_type', [MasterPihak::class, MasterMitraVendor::class]);
             })
-            ->orderByRaw('COALESCE(master_pegawai.nama_lengkap, master_pihak.nama_pihak, users.email) ' . $direction)
+            ->leftJoin('mitra_jasa', function ($join) {
+                $join->on('mitra_jasa.id', '=', 'users.profilable_id')
+                    ->where('users.profilable_type', '=', MitraJasa::class);
+            })
+            ->orderByRaw('COALESCE(master_pegawai.nama_lengkap, master_pihak.nama_pihak, mitra_jasa.nama_mitra, users.email) ' . $direction)
             ->select('users.*');
     }
 
@@ -111,7 +140,7 @@ class User extends Authenticatable
      */
     public static function displayNameSqlExpression(string $alias = 'name'): \Illuminate\Database\Query\Expression
     {
-        return \Illuminate\Support\Facades\DB::raw('COALESCE(master_pegawai.nama_lengkap, master_pihak.nama_pihak, users.email) AS ' . $alias);
+        return \Illuminate\Support\Facades\DB::raw('COALESCE(master_pegawai.nama_lengkap, master_pihak.nama_pihak, mitra_jasa.nama_mitra, users.email) AS ' . $alias);
     }
 
     /**
@@ -126,13 +155,13 @@ class User extends Authenticatable
     }
 
     /**
-     * Accessor: $user->mitra → instance MasterPihak/MasterMitraVendor jika profilnya mitra.
+     * Accessor: $user->mitra -> instance mitra/vendor lama atau MitraJasa jika profilnya mitra.
      */
     public function getMitraAttribute()
     {
         $profile = $this->relationLoaded('profilable') ? $this->getRelation('profilable') : $this->profilable;
 
-        return $profile instanceof MasterPihak ? $profile : null;
+        return $profile instanceof MasterPihak || $profile instanceof MitraJasa ? $profile : null;
     }
 
     protected static function booted(): void
@@ -157,7 +186,7 @@ class User extends Authenticatable
                 throw new \DomainException('User wajib terhubung ke 1 pegawai atau 1 mitra (profilable_type/profilable_id kosong).');
             }
 
-            $allowed = [MasterPegawai::class, MasterPihak::class, MasterMitraVendor::class, MasterPersonelEksternal::class];
+            $allowed = [MasterPegawai::class, MasterPihak::class, MasterMitraVendor::class, MasterPersonelEksternal::class, MitraJasa::class];
             if (! in_array($user->profilable_type, $allowed, true)) {
                 throw new \DomainException('Tipe profilable tidak diizinkan: ' . $user->profilable_type);
             }
@@ -176,7 +205,7 @@ class User extends Authenticatable
                 throw new \DomainException('User tidak boleh dilepas dari pegawai/mitra. profilable_type & profilable_id wajib terisi keduanya.');
             }
 
-            $allowed = [MasterPegawai::class, MasterPihak::class, MasterMitraVendor::class, MasterPersonelEksternal::class];
+            $allowed = [MasterPegawai::class, MasterPihak::class, MasterMitraVendor::class, MasterPersonelEksternal::class, MitraJasa::class];
             if (! in_array($user->profilable_type, $allowed, true)) {
                 throw new \DomainException('Tipe profilable tidak diizinkan: ' . $user->profilable_type);
             }

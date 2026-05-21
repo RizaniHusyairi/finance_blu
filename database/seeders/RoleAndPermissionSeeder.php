@@ -18,9 +18,10 @@ class RoleAndPermissionSeeder extends Seeder
         // Reset cached roles and permissions
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
-        // 14 roles berdasarkan PRD
+        // 16 roles berdasarkan PRD + Listrik/Air
         $roles = [
             'Super Admin',
+            'Super Admin Jasa',
             'KPA',
             'Kepala Subbagian Keuangan dan Tata Usaha',
             'Kepala Seksi Pelayanan dan Kerjasama',
@@ -34,8 +35,12 @@ class RoleAndPermissionSeeder extends Seeder
             'Operator Perjaldin',
             'Koordinator Keuangan',
             'Mitra',
+            'Mitra Jasa',
             'Admin Jasa',
+            'Admin Konsesi',
             'Koordinator Jasa',
+            'Admin Listrik',
+            'Admin Air',
         ];
 
         foreach ($roles as $role) {
