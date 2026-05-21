@@ -100,7 +100,7 @@
             @endhasanyrole
           </ul>
         </li>
-        @hasanyrole('Super Admin|Super Admin Jasa|KPA|Kepala Subbagian Keuangan dan Tata Usaha|Kepala Seksi Pelayanan dan Kerjasama|Pejabat Pengadaan|Operator BLU|Koordinator Keuangan')
+        @hasanyrole('Super Admin||KPA|Kepala Subbagian Keuangan dan Tata Usaha|Kepala Seksi Pelayanan dan Kerjasama|Pejabat Pengadaan|Operator BLU|Koordinator Keuangan')
         <li>
           <a href="javascript:;" class="has-arrow">
             <div class="parent-icon"><i class="material-icons-outlined">folder</i>
@@ -349,17 +349,6 @@
               </a>
             </li>
             @endif
-
-
-
-
-
-
-
-
-
-
-
 
 
 
