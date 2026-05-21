@@ -1,19 +1,60 @@
 @extends('layouts.app')
 @section('title')
-    Tagihan Jasa (PNBP)
+    Penagihan Jasa
 @endsection
 @push('css')
     <link href="{{ URL::asset('build/plugins/datatable/css/dataTables.bootstrap5.min.css') }}" rel="stylesheet" />
+    <style>
+        .soft-table-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            padding: 10px 14px;
+            border-bottom: 1px solid #bfdbfe;
+            background: linear-gradient(90deg, #eff6ff 0%, #f8fbff 58%, #ffffff 100%);
+        }
+        .soft-table-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .soft-table-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 34px;
+            height: 34px;
+            border-radius: 9px;
+            color: #fff;
+            background: #1d4ed8;
+            box-shadow: 0 10px 20px rgba(37, 99, 235, .18);
+        }
+        .soft-table-title h6 {
+            margin: 0;
+            color: #1e3a8a;
+            font-weight: 800;
+        }
+        .soft-table-title small {
+            color: #64748b;
+            font-weight: 700;
+        }
+    </style>
 @endpush
 @section('content')
+    @php
+        $canCreateTagihanJasa = auth()->user()?->hasAnyRole(['Super Admin', 'Super Admin Jasa', 'Admin Jasa', 'Admin Konsesi']) === true;
+    @endphp
     <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
         <div>
-            <h4 class="mb-0 fw-bold">Tagihan Jasa (PNBP)</h4>
-            <p class="mb-0 small">Kelola tagihan jasa dan layanan PNBP</p>
+            <h4 class="mb-0 fw-bold">Penagihan Jasa</h4>
+            <p class="mb-0 small">Kelola seluruh tagihan jasa mitra dalam satu daftar.</p>
         </div>
-        <a href="{{ route('tagihan-jasa.create') }}" class="btn btn-primary shadow-sm fw-bold">
-            <i class="bi bi-plus-lg me-1"></i> Buat Tagihan
+        @if($canCreateTagihanJasa)
+        <a href="{{ route('tagihan-jasa.create', ['mode' => 'konsesi']) }}" class="btn btn-outline-primary fw-bold">
+            <i class="bi bi-percent me-1"></i> Atur Layanan Konsesi
         </a>
+        @endif
     </div>
 
     @if(session('success'))
@@ -29,61 +70,39 @@
         </div>
     @endif
 
-    <div class="card border-0 shadow-sm rounded-4">
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+        <div class="soft-table-header">
+            <div class="soft-table-title">
+                <span class="soft-table-icon"><i class="bi bi-receipt-cutoff"></i></span>
+                <div>
+                    <h6>Daftar Tagihan Jasa</h6>
+                    <small>Tagihan jasa yang sudah dibuat untuk mitra.</small>
+                </div>
+            </div>
+            @if($canCreateTagihanJasa)
+            <div>
+                <a href="{{ route('tagihan-jasa.create') }}" class="btn btn-primary shadow-sm fw-bold">
+                    <i class="bi bi-plus-lg me-1"></i> Buat Tagihan
+                </a>
+            </div>
+            @endif
+        </div>
         <div class="card-body p-4">
             <div class="table-responsive">
                 <table id="tableTagihanJasa" class="table table-hover align-middle w-100">
                     <thead>
                         <tr>
                             <th width="5%" class="text-center">No</th>
-                            <th width="20%">No. Tagihan</th>
+                            <th width="22%">No. Tagihan</th>
                             <th width="20%">Mitra</th>
                             <th width="20%">Total & Tgl Tagihan</th>
-                            <th width="15%">Status</th>
+                            <th width="13%">Status</th>
                             <th width="20%" class="text-center">Aksi</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach($tagihans as $tagihan)
-                            <tr>
-                                <td class="text-center">{{ $loop->iteration }}</td>
-                                <td>
-                                    <span class="fw-bold">{{ $tagihan->nomor_tagihan }}</span><br>
-                                    @if($tagihan->nomor_kontrak)
-                                    <small class="text-muted"><i class="bi bi-file-earmark-text me-1"></i>{{ $tagihan->nomor_kontrak }}</small>
-                                    @endif
-                                </td>
-                                <td>
-                                    <span class="fw-medium">{{ $tagihan->mitra->nama_pihak ?? 'N/A' }}</span>
-                                </td>
-                                <td>
-                                    <span class="fw-bold text-success">Rp {{ number_format($tagihan->total_tagihan, 0, ',', '.') }}</span><br>
-                                    <small ><i class="bi bi-calendar-event me-1"></i>{{ \Carbon\Carbon::parse($tagihan->tanggal_tagihan)->format('d M Y') }}</small>
-                                </td>
-                                <td>
-                                    @php
-                                        $statusClass = match($tagihan->status) {
-                                            'PUBLISHED', 'LUNAS' => 'bg-success',
-                                            'DRAFT' => 'bg-secondary',
-                                            'DITOLAK' => 'bg-danger',
-                                            default => 'bg-warning text-dark',
-                                        };
-                                    @endphp
-                                    <span class="badge {{ $statusClass }}">{{ str_replace('_', ' ', $tagihan->status) }}</span>
-                                </td>
-                                <td class="text-center">
-                                    <div class="d-flex justify-content-center gap-1">
-                                        <a href="{{ route('tagihan-jasa.show', $tagihan->id) }}" class="btn btn-sm btn-light text-info border shadow-sm" title="Detail">
-                                            <i class="bi bi-search"></i> Detail
-                                        </a>
-                                        @if(in_array($tagihan->status, ['PUBLISHED', 'LUNAS', 'VERIFIKASI_KABANDARA']))
-                                        <a href="{{ route('tagihan-jasa.pdf', $tagihan->id) }}" target="_blank" class="btn btn-sm btn-light text-danger border shadow-sm" title="Cetak PDF">
-                                            <i class="bi bi-file-pdf"></i> PDF
-                                        </a>
-                                        @endif
-                                    </div>
-                                </td>
-                            </tr>
+                            @include('tagihan_jasa._row_tagihan', ['tagihan' => $tagihan])
                         @endforeach
                     </tbody>
                 </table>

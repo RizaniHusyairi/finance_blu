@@ -20,6 +20,7 @@
     </style>
 </head>
 <body>
+    @php($mitraTagihan = $tagihan->mitra ?? $tagihan->mitraLegacy)
     <div class="header">
         <h1>INVOICE TAGIHAN JASA (PNBP)</h1>
         <p>Nomor: {{ $tagihan->nomor_tagihan }} | Tanggal: {{ \Carbon\Carbon::parse($tagihan->tanggal_tagihan)->format('d F Y') }}</p>
@@ -28,13 +29,13 @@
     <table class="info-table">
         <tr>
             <td width="15%"><strong>Kepada Yth.</strong></td>
-            <td width="35%">: {{ $tagihan->mitra->nama_pihak }}<br>&nbsp;&nbsp;{{ $tagihan->mitra->alamat ?? '' }}</td>
-            <td width="20%"><strong>Nomor Kontrak</strong></td>
+            <td width="35%">: {{ $mitraTagihan->nama_pihak ?? '-' }}<br>&nbsp;&nbsp;{{ $mitraTagihan->alamat ?? '' }}</td>
+            <td width="20%"><strong>Nomor Dokumen Dasar</strong></td>
             <td width="30%">: {{ $tagihan->nomor_kontrak ?? '-' }}</td>
         </tr>
         <tr>
             <td><strong>NPWP</strong></td>
-            <td>: {{ $tagihan->mitra->npwp ?? '-' }}</td>
+            <td>: {{ $mitraTagihan->npwp ?? '-' }}</td>
             <td><strong>Virtual Account</strong></td>
             <td>: <strong>{{ $tagihan->nomor_va ?? 'BELUM TERSEDIA' }}</strong> (BTN)</td>
         </tr>
@@ -44,26 +45,54 @@
         <thead>
             <tr>
                 <th width="5%" class="text-center">No</th>
-                <th width="45%">Deskripsi Layanan</th>
+                <th width="32%">Deskripsi Layanan</th>
+                <th width="13%">Kode Akun</th>
                 <th width="10%" class="text-center">Qty</th>
-                <th width="20%" class="text-right">Harga Satuan</th>
-                <th width="20%" class="text-right">Jumlah (Rp)</th>
+                <th width="10%" class="text-right">Kurs</th>
+                <th width="17%" class="text-right">Harga Satuan</th>
+                <th width="18%" class="text-right">Jumlah (Rp)</th>
             </tr>
         </thead>
         <tbody>
             @foreach($tagihan->details as $detail)
+            @php
+                $layanan = $detail->layananJasa;
+                $expectedPercentageSubtotal = ((float) $detail->qty * (float) $detail->harga_satuan / 100) * (float) ($detail->kurs ?? 1);
+                $isPercentageDetail = ($layanan?->tipe_layanan === 'KONSESI')
+                    || str_contains((string) ($layanan?->satuan), '%')
+                    || ((bool) ($layanan?->mendukung_konsesi) && abs($expectedPercentageSubtotal - (float) $detail->subtotal) < 0.01);
+            @endphp
             <tr>
                 <td class="text-center">{{ $loop->iteration }}</td>
-                <td>{{ $detail->layananJasa->nama_layanan }}</td>
+                <td>
+                    {{ $detail->layananJasa->nama_lengkap ?? $detail->layananJasa->nama_layanan }}
+                    @if($detail->layananJasa?->satuan)
+                        <br><small>Satuan: {{ $detail->layananJasa->satuan }}</small>
+                    @endif
+                    @if($detail->keterangan && $detail->keterangan !== ($detail->layananJasa->nama_lengkap ?? null))
+                        <br><small>Keterangan: {{ $detail->keterangan }}</small>
+                    @endif
+                    @if(!empty($detail->calculation_payload['formula']))
+                        <br><small>Perhitungan: {{ $detail->calculation_payload['formula'] }}</small>
+                    @endif
+                </td>
+                <td>{{ $detail->kode_akun ?: ($detail->layananJasa->kode_akun ?? '-') }}</td>
                 <td class="text-center">{{ rtrim(rtrim(number_format($detail->qty, 2, ',', '.'), '0'), ',') }}</td>
-                <td class="text-right">{{ number_format($detail->harga_satuan, 0, ',', '.') }}</td>
+                <td class="text-right">{{ number_format((float) ($detail->kurs ?? 1), 4, ',', '.') }}</td>
+                <td class="text-right">
+                    @if($isPercentageDetail)
+                        {{ rtrim(rtrim(number_format((float) $detail->harga_satuan, 4, ',', '.'), '0'), ',') }}%
+                    @else
+                        {{ number_format($detail->harga_satuan, 0, ',', '.') }}
+                    @endif
+                </td>
                 <td class="text-right">{{ number_format($detail->subtotal, 0, ',', '.') }}</td>
             </tr>
             @endforeach
         </tbody>
         <tfoot>
             <tr>
-                <th colspan="4" class="text-right">TOTAL TAGIHAN</th>
+                <th colspan="6" class="text-right">TOTAL TAGIHAN</th>
                 <th class="text-right">{{ number_format($tagihan->total_tagihan, 0, ',', '.') }}</th>
             </tr>
         </tfoot>

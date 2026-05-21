@@ -17,17 +17,21 @@ use App\Http\Controllers\MasterTarifPajakController;
 
 Auth::routes();
 
+Route::post('/integrations/btn/virtual-account/callback', \App\Http\Controllers\BtnPaymentCallbackController::class)
+    ->name('integrations.btn.virtual-account.callback')
+    ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class]);
+
 Route::get('/', function () {
     if (!Auth::check()) {
         return redirect()->route('login');
     }
 
-    return Auth::user()->hasRole('Mitra')
+    return Auth::user()->hasAnyRole(['Mitra', 'Mitra Jasa'])
         ? redirect()->route('mitra.dashboard')
         : redirect()->route('dashboard');
 });
 
-$internalRoles = 'Super Admin|KPA|Kepala Subbagian Keuangan dan Tata Usaha|Kepala Seksi Pelayanan dan Kerjasama|PPK|PPSPM|Bendahara Pengeluaran|Bendahara Penerimaan|Pejabat Pengadaan|Operator BLU|PPABP|Operator Perjaldin|Koordinator Keuangan|Admin Jasa|Koordinator Jasa';
+$internalRoles = 'Super Admin|Super Admin Jasa|KPA|Kepala Subbagian Keuangan dan Tata Usaha|Kepala Seksi Pelayanan dan Kerjasama|PPK|PPSPM|Bendahara Pengeluaran|Bendahara Penerimaan|Pejabat Pengadaan|Operator BLU|PPABP|Operator Perjaldin|Koordinator Keuangan|Admin Jasa|Admin Konsesi|Koordinator Jasa';
 
 Route::middleware('auth')->group(function () use ($internalRoles) {
 
@@ -36,7 +40,27 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
         Route::get('/dashboard', [DashboardController::class, 'internal'])->name('dashboard');
         Route::get('/dashboard/bendahara-penerimaan', [\App\Http\Controllers\BendaharaPenerimaanDashboardController::class, 'index'])->name('dashboard.bendahara-penerimaan');
         Route::get('/dashboard/bendahara-pengeluaran', [\App\Http\Controllers\BendaharaPengeluaranDashboardController::class, 'index'])->name('dashboard.bendahara-pengeluaran');
+        Route::get('/super-admin-jasa/dashboard', [\App\Http\Controllers\SuperAdminJasaDashboardController::class, 'index'])
+            ->middleware('role:Super Admin|Super Admin Jasa')
+            ->name('super-admin-jasa.dashboard');
+        Route::get('/koordinator-jasa', [\App\Http\Controllers\SuperAdminJasaDashboardController::class, 'index'])
+            ->middleware('role:Koordinator Jasa')
+            ->name('koordinator-jasa.dashboard');
     });
+
+    Route::middleware('role:Super Admin|Super Admin Jasa|Koordinator Jasa|Admin Jasa')
+        ->prefix('admin-jasa')
+        ->name('admin-jasa.')
+        ->group(function () {
+            Route::get('/dashboard', [\App\Http\Controllers\AdminJasaDashboardController::class, 'index'])
+                ->name('dashboard');
+            Route::get('/tagihan/log-bulanan', [\App\Http\Controllers\AdminJasaTagihanController::class, 'logBulanan'])
+                ->name('tagihan.log-bulanan');
+            Route::get('/tagihan/jatuh-tempo', [\App\Http\Controllers\AdminJasaTagihanController::class, 'jatuhTempo'])
+                ->name('tagihan.jatuh-tempo');
+            Route::get('/mitra', [\App\Http\Controllers\AdminJasaTagihanController::class, 'mitra'])
+                ->name('mitra');
+        });
 
     // Workflow Engine General Routes
     Route::post('/workflow/approval/{approvalId}/approve', [\App\Http\Controllers\PerjaldinWorkflowController::class, 'approve'])->name('perjaldin.workflow.approve');
@@ -109,6 +133,58 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
         Route::post('/master/pajak/{pajak}/toggle', [MasterTarifPajakController::class, 'toggle'])->name('master-pajak.toggle');
     });
 
+    // Master Data — Layanan Jasa
+    Route::middleware('role:Super Admin|Super Admin Jasa|Operator BLU|Koordinator Keuangan|Admin Jasa|Koordinator Jasa')->group(function () {
+        Route::resource('master-layanan-jasa', \App\Http\Controllers\MasterLayananJasaController::class);
+        Route::get('/layanan-tarif-jasa', [\App\Http\Controllers\TarifLayananController::class, 'index'])->name('tarif-layanan.index');
+        Route::get('/layanan-tarif-jasa/kategori/{kategori}', [\App\Http\Controllers\TarifLayananController::class, 'showKategori'])->name('tarif-layanan.kategori.show');
+        Route::get('/layanan-tarif-jasa/item/{item}', [\App\Http\Controllers\TarifLayananController::class, 'showItem'])->name('tarif-layanan.item.show');
+        Route::resource('/jasa/mitra', \App\Http\Controllers\MitraJasaController::class)->except(['destroy'])->names('jasa.mitra');
+        Route::delete('/jasa/mitra/{mitra}', [\App\Http\Controllers\MitraJasaController::class, 'destroy'])->name('jasa.mitra.destroy');
+        Route::post('/jasa/mitra/{mitra}/account', [\App\Http\Controllers\MitraAccountController::class, 'store'])->name('jasa.mitra.account.store');
+        Route::post('/jasa/mitra/{mitra}/account/reset', [\App\Http\Controllers\MitraAccountController::class, 'reset'])->name('jasa.mitra.account.reset');
+        Route::get('/jasa/mitra/{mitra}/kontrak/create', [\App\Http\Controllers\KontrakMitraJasaController::class, 'create'])->name('jasa.mitra.kontrak.create');
+        Route::post('/jasa/mitra/{mitra}/kontrak', [\App\Http\Controllers\KontrakMitraJasaController::class, 'store'])->name('jasa.mitra.kontrak.store');
+        Route::get('/jasa/mitra/{mitra}/kontrak/{kontrak}', [\App\Http\Controllers\KontrakMitraJasaController::class, 'show'])->name('jasa.mitra.kontrak.show');
+        Route::get('/jasa/mitra/{mitra}/kontrak/{kontrak}/edit', [\App\Http\Controllers\KontrakMitraJasaController::class, 'edit'])->name('jasa.mitra.kontrak.edit');
+        Route::put('/jasa/mitra/{mitra}/kontrak/{kontrak}', [\App\Http\Controllers\KontrakMitraJasaController::class, 'update'])->name('jasa.mitra.kontrak.update');
+        Route::delete('/jasa/mitra/{mitra}/kontrak/{kontrak}', [\App\Http\Controllers\KontrakMitraJasaController::class, 'destroy'])->name('jasa.mitra.kontrak.destroy');
+        Route::get('/jasa/mitra/{mitra}/kontrak/{kontrak}/download', [\App\Http\Controllers\KontrakMitraJasaController::class, 'download'])->name('jasa.mitra.kontrak.download');
+        Route::get('/jasa/konsesi', [\App\Http\Controllers\MitraJasaKonsesiController::class, 'index'])->name('jasa.konsesi.index');
+        Route::get('/jasa/mitra/{mitra}/konsesi/create', [\App\Http\Controllers\MitraJasaKonsesiController::class, 'create'])->name('jasa.mitra.konsesi.create');
+        Route::post('/jasa/mitra/{mitra}/konsesi', [\App\Http\Controllers\MitraJasaKonsesiController::class, 'store'])->name('jasa.mitra.konsesi.store');
+        Route::get('/jasa/mitra/{mitra}/konsesi/{konsesi}/edit', [\App\Http\Controllers\MitraJasaKonsesiController::class, 'edit'])->name('jasa.mitra.konsesi.edit');
+        Route::put('/jasa/mitra/{mitra}/konsesi/{konsesi}', [\App\Http\Controllers\MitraJasaKonsesiController::class, 'update'])->name('jasa.mitra.konsesi.update');
+        Route::patch('/jasa/mitra/{mitra}/konsesi/{konsesi}/deactivate', [\App\Http\Controllers\MitraJasaKonsesiController::class, 'deactivate'])->name('jasa.mitra.konsesi.deactivate');
+        Route::get('/jasa/mitra/{mitra}/pjp2u/create', [\App\Http\Controllers\MitraJasaPjp2uController::class, 'create'])->name('jasa.mitra.pjp2u.create');
+        Route::post('/jasa/mitra/{mitra}/pjp2u', [\App\Http\Controllers\MitraJasaPjp2uController::class, 'store'])->name('jasa.mitra.pjp2u.store');
+        Route::get('/jasa/mitra/{mitra}/pjp2u/{pjp2u}/edit', [\App\Http\Controllers\MitraJasaPjp2uController::class, 'edit'])->name('jasa.mitra.pjp2u.edit');
+        Route::put('/jasa/mitra/{mitra}/pjp2u/{pjp2u}', [\App\Http\Controllers\MitraJasaPjp2uController::class, 'update'])->name('jasa.mitra.pjp2u.update');
+        Route::patch('/jasa/mitra/{mitra}/pjp2u/{pjp2u}/deactivate', [\App\Http\Controllers\MitraJasaPjp2uController::class, 'deactivate'])->name('jasa.mitra.pjp2u.deactivate');
+        Route::get('/jasa/mitra/{mitra}/layanan', [\App\Http\Controllers\MitraLayananController::class, 'edit'])->name('jasa.mitra.layanan.edit');
+        Route::put('/jasa/mitra/{mitra}/layanan', [\App\Http\Controllers\MitraLayananController::class, 'update'])->name('jasa.mitra.layanan.update');
+        Route::resource('/jasa/admin', \App\Http\Controllers\AdminJasaController::class)->except(['destroy'])->parameters(['admin' => 'admin'])->names('jasa.admin');
+        Route::delete('/jasa/admin/{admin}', [\App\Http\Controllers\AdminJasaController::class, 'destroy'])->name('jasa.admin.destroy');
+        Route::get('/jasa/admin/{user}/layanan', [\App\Http\Controllers\AdminJasaLayananController::class, 'edit'])->name('jasa.admin.layanan.edit');
+        Route::put('/jasa/admin/{user}/layanan', [\App\Http\Controllers\AdminJasaLayananController::class, 'update'])->name('jasa.admin.layanan.update');
+        Route::get('/jasa/integrasi', [\App\Http\Controllers\JasaIntegrationSettingController::class, 'index'])->name('jasa.integrasi.index');
+        Route::put('/jasa/integrasi', [\App\Http\Controllers\JasaIntegrationSettingController::class, 'update'])->name('jasa.integrasi.update');
+        Route::post('/jasa/integrasi/whatsapp/test', [\App\Http\Controllers\JasaIntegrationSettingController::class, 'testWhatsapp'])->name('jasa.integrasi.whatsapp.test');
+    });
+
+    Route::middleware('role:Super Admin|Super Admin Jasa|Operator BLU|Koordinator Keuangan|Admin Jasa|Admin Konsesi|Koordinator Jasa')->group(function () {
+        Route::get('/jasa/laporan-penjualan', [\App\Http\Controllers\MitraJasaPenjualanController::class, 'index'])->name('jasa.mitra.penjualan.index');
+        Route::get('/jasa/laporan-pjp2u', [\App\Http\Controllers\MitraJasaPenjualanController::class, 'indexPjp2u'])->name('jasa.mitra.pjp2u.index');
+        Route::get('/jasa/mitra/{mitra}/penjualan/create', [\App\Http\Controllers\MitraJasaPenjualanController::class, 'create'])->name('jasa.mitra.penjualan.create');
+        Route::post('/jasa/mitra/{mitra}/penjualan', [\App\Http\Controllers\MitraJasaPenjualanController::class, 'store'])->name('jasa.mitra.penjualan.store');
+        Route::get('/jasa/mitra/{mitra}/penjualan/{penjualan}', [\App\Http\Controllers\MitraJasaPenjualanController::class, 'show'])->name('jasa.mitra.penjualan.show');
+        Route::get('/jasa/mitra/{mitra}/penjualan/{penjualan}/edit', [\App\Http\Controllers\MitraJasaPenjualanController::class, 'edit'])->name('jasa.mitra.penjualan.edit');
+        Route::put('/jasa/mitra/{mitra}/penjualan/{penjualan}', [\App\Http\Controllers\MitraJasaPenjualanController::class, 'update'])->name('jasa.mitra.penjualan.update');
+        Route::post('/jasa/mitra/{mitra}/penjualan/{penjualan}/submit', [\App\Http\Controllers\MitraJasaPenjualanController::class, 'submit'])->name('jasa.mitra.penjualan.submit');
+        Route::post('/jasa/mitra/{mitra}/penjualan/{penjualan}/verify', [\App\Http\Controllers\MitraJasaPenjualanController::class, 'verify'])->name('jasa.mitra.penjualan.verify');
+        Route::post('/jasa/mitra/{mitra}/penjualan/{penjualan}/reject', [\App\Http\Controllers\MitraJasaPenjualanController::class, 'reject'])->name('jasa.mitra.penjualan.reject');
+    });
+
     // Manajemen Kontrak (Kontrak, Addendum, Termin)
     Route::middleware('role:Super Admin|Pejabat Pengadaan|PPK')->group(function () {
         Route::get('/tagihan/kontrak/create', [\App\Http\Controllers\TagihanController::class, 'createKontrak'])->name('tagihan.kontrak.create');
@@ -121,10 +197,13 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
     });
 
     // Tagihan Jasa (PNBP)
-    Route::middleware('role:Super Admin|Admin Jasa|Koordinator Jasa|Kepala Seksi Pelayanan dan Kerjasama|Kepala Subbagian Keuangan dan Tata Usaha|KPA')->group(function () {
+    Route::middleware('role:Super Admin|Super Admin Jasa|Admin Jasa|Admin Konsesi|Koordinator Jasa|Kepala Seksi Pelayanan dan Kerjasama|Kepala Subbagian Keuangan dan Tata Usaha|KPA')->group(function () {
         Route::get('/tagihan-jasa', [\App\Http\Controllers\TagihanJasaController::class, 'index'])->name('tagihan-jasa.index');
         Route::get('/tagihan-jasa/create', [\App\Http\Controllers\TagihanJasaController::class, 'create'])->name('tagihan-jasa.create');
         Route::post('/tagihan-jasa', [\App\Http\Controllers\TagihanJasaController::class, 'store'])->name('tagihan-jasa.store');
+        Route::get('/tagihan-jasa/{id}/surat-pengantar', [\App\Http\Controllers\TagihanJasaController::class, 'generateSuratPengantarPdf'])->name('tagihan-jasa.surat-pengantar');
+        Route::put('/tagihan-jasa/{id}/surat-pengantar', [\App\Http\Controllers\TagihanJasaController::class, 'updateSuratPengantarDraft'])->name('tagihan-jasa.surat-pengantar.update');
+        Route::post('/tagihan-jasa/{id}/surat-pengantar-final', [\App\Http\Controllers\TagihanJasaController::class, 'uploadSuratPengantarFinal'])->name('tagihan-jasa.surat-pengantar-final.upload');
         Route::get('/tagihan-jasa/{id}', [\App\Http\Controllers\TagihanJasaController::class, 'show'])->name('tagihan-jasa.show');
         Route::get('/tagihan-jasa/{id}/pdf', [\App\Http\Controllers\TagihanJasaController::class, 'generateInvoicePdf'])->name('tagihan-jasa.pdf');
         Route::post('/tagihan-jasa/{id}/publish', [\App\Http\Controllers\TagihanJasaController::class, 'publish'])->name('tagihan-jasa.publish');
@@ -147,7 +226,7 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
     });
 
     // Verifikasi Tagihan Jasa - multi-role
-    Route::middleware('role:Super Admin|Koordinator Jasa|Kepala Seksi Pelayanan dan Kerjasama|Kepala Subbagian Keuangan dan Tata Usaha|KPA')->group(function () {
+    Route::middleware('role:Super Admin|Super Admin Jasa|Koordinator Jasa|Kepala Seksi Pelayanan dan Kerjasama|Kepala Subbagian Keuangan dan Tata Usaha|KPA')->group(function () {
         Route::get('/verifikasi-tagihan-jasa', [\App\Http\Controllers\TagihanJasaVerifikasiController::class, 'index'])->name('verifikasi-tagihan-jasa.index');
         Route::get('/verifikasi-tagihan-jasa/{id}', [\App\Http\Controllers\TagihanJasaVerifikasiController::class, 'show'])->name('verifikasi-tagihan-jasa.show');
     });
@@ -621,9 +700,44 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
         Route::get('/reports/bku/pdf', [\App\Http\Controllers\ReportController::class, 'bkuPdf'])->name('reports.bku.pdf');
     });
 
+    // Admin Listrik & Admin Air Portal
+    Route::middleware('role:Admin Listrik|Admin Air')->group(function () {
+        Route::get('/utilitas/dashboard', [\App\Http\Controllers\UtilitasController::class, 'index'])->name('utilitas.dashboard');
+        Route::get('/utilitas/last-stan-akhir', [\App\Http\Controllers\UtilitasController::class, 'getLastStanAkhir'])->name('utilitas.last-stan-akhir');
+        Route::post('/utilitas/laporan', [\App\Http\Controllers\UtilitasController::class, 'store'])->name('utilitas.store');
+        Route::post('/utilitas/laporan/{id}/submit', [\App\Http\Controllers\UtilitasController::class, 'submit'])->name('utilitas.submit');
+        Route::delete('/utilitas/laporan/{id}', [\App\Http\Controllers\UtilitasController::class, 'destroy'])->name('utilitas.destroy');
+    });
+
+    // Admin Jasa - Verifikasi & Tagihan Utilitas
+    Route::middleware('role:Super Admin Jasa|Admin Jasa')->group(function () {
+        Route::get('/jasa/utilitas', [\App\Http\Controllers\AdminJasaUtilitasController::class, 'index'])->name('jasa.utilitas.index');
+        Route::get('/jasa/utilitas/{id}', [\App\Http\Controllers\AdminJasaUtilitasController::class, 'show'])->name('jasa.utilitas.show');
+        Route::post('/jasa/utilitas/{id}/buat-tagihan', [\App\Http\Controllers\AdminJasaUtilitasController::class, 'buatTagihan'])->name('jasa.utilitas.buat-tagihan');
+        Route::post('/jasa/utilitas/{id}/tolak', [\App\Http\Controllers\AdminJasaUtilitasController::class, 'tolak'])->name('jasa.utilitas.tolak');
+    });
+
     // Mitra Portal
-    Route::middleware('role:Mitra')->group(function () {
+    Route::middleware('role:Mitra|Mitra Jasa')->group(function () {
         Route::get('/mitra', [DashboardController::class, 'mitra'])->name('mitra.dashboard');
+        Route::get('/mitra/profil', [\App\Http\Controllers\MitraPortalController::class, 'profile'])->name('mitra.profile');
+        Route::put('/mitra/profil/password', [\App\Http\Controllers\MitraPortalController::class, 'updatePassword'])->name('mitra.profile.password.update');
+        Route::get('/mitra/layanan-aktif', [\App\Http\Controllers\MitraPortalController::class, 'layananAktif'])->name('mitra.layanan-aktif');
+        Route::get('/mitra/konsesi-penjualan', [\App\Http\Controllers\MitraPortalController::class, 'konsesiPenjualan'])->name('mitra.konsesi-penjualan');
+        Route::get('/mitra/pjp2u-penjualan', [\App\Http\Controllers\MitraPortalController::class, 'pjp2uPenjualan'])->name('mitra.pjp2u-penjualan');
+        Route::get('/mitra/laporan-penjualan/create', [\App\Http\Controllers\MitraPortalController::class, 'createPenjualan'])->name('mitra.penjualan.create');
+        Route::post('/mitra/laporan-penjualan', [\App\Http\Controllers\MitraPortalController::class, 'storePenjualan'])->name('mitra.penjualan.store');
+        Route::get('/mitra/laporan-penjualan/{penjualan}', [\App\Http\Controllers\MitraPortalController::class, 'showPenjualan'])->name('mitra.penjualan.show');
+        Route::delete('/mitra/laporan-penjualan/{penjualan}', [\App\Http\Controllers\MitraPortalController::class, 'destroyPenjualan'])->name('mitra.penjualan.destroy');
+        Route::post('/mitra/laporan-penjualan/{penjualan}/submit', [\App\Http\Controllers\MitraPortalController::class, 'submitPenjualan'])->name('mitra.penjualan.submit');
+
+        // Pax Input for PJP2U
+        Route::get('/mitra/laporan-pax/create', [\App\Http\Controllers\MitraPortalController::class, 'createPax'])->name('mitra.pax.create');
+        Route::post('/mitra/laporan-pax', [\App\Http\Controllers\MitraPortalController::class, 'storePax'])->name('mitra.pax.store');
+        Route::get('/mitra/tagihan-jasa/{id}', [\App\Http\Controllers\MitraPortalController::class, 'showTagihanJasa'])->name('mitra.tagihan-jasa.show');
+        Route::get('/mitra/tagihan-jasa/{id}/pdf', [\App\Http\Controllers\MitraPortalController::class, 'invoiceTagihanJasaPdf'])->name('mitra.tagihan-jasa.pdf');
+        Route::get('/mitra/tagihan-jasa/{id}/surat-pengantar-final', [\App\Http\Controllers\MitraPortalController::class, 'downloadSuratPengantarFinal'])->name('mitra.tagihan-jasa.surat-final');
+        Route::get('/mitra/kontrak-jasa/{kontrak}/download', [\App\Http\Controllers\MitraPortalController::class, 'downloadKontrak'])->name('mitra.kontrak-jasa.download');
     });
 });
 // Template Preview Route

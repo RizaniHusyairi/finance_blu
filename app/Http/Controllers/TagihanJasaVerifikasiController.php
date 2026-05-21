@@ -17,7 +17,7 @@ class TagihanJasaVerifikasiController extends Controller
         $user = Auth::user();
         $workflowService = app(WorkflowService::class);
         
-        $tagihans = TagihanJasa::with(['mitra', 'creator', 'workflowInstance.approvals'])
+        $tagihans = TagihanJasa::with(['mitra', 'mitraLegacy', 'creator', 'workflowInstance.approvals'])
             ->whereHas('workflowInstance', function ($q) use ($user, $workflowService) {
                 $q->where('status', 'IN_PROGRESS')
                   ->whereHas('approvals', function ($q2) use ($user) {
@@ -38,7 +38,13 @@ class TagihanJasaVerifikasiController extends Controller
 
     public function show($id)
     {
-        $tagihan = TagihanJasa::with(['mitra', 'creator', 'details.layananJasa', 'workflowInstance.approvals.actedByUser'])->findOrFail($id);
+        $tagihan = TagihanJasa::with([
+            'mitra',
+            'mitraLegacy',
+            'creator',
+            'details.layananJasa.parent.parent.parent.parent.parent',
+            'workflowInstance.approvals.actedByUser',
+        ])->findOrFail($id);
         return view('tagihan_jasa.show', compact('tagihan'));
     }
 
