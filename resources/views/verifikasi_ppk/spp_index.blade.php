@@ -23,36 +23,77 @@
     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
 </div>
 @endif
+<style>
+    .stat-card {
+        background: #fff;
+        border: 1px solid #e9ecef;
+        border-left: 4px solid var(--accent, #6c757d);
+        border-radius: .5rem;
+        transition: transform .15s ease, box-shadow .15s ease;
+    }
+    .stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 .5rem 1rem rgba(0,0,0,.075) !important;
+    }
+    .stat-card .stat-icon {
+        width: 36px; height: 36px;
+        display: inline-flex; align-items: center; justify-content: center;
+        border-radius: .5rem;
+        background: var(--accent-bg, rgba(108,117,125,.1));
+        color: var(--accent, #6c757d);
+        font-size: 1.1rem;
+    }
+    .stat-card .stat-label { font-size: .8rem; color: #6c757d; text-transform: uppercase; letter-spacing: .03em; font-weight: 600; }
+    .stat-card .stat-value { font-size: 1.85rem; font-weight: 700; line-height: 1.1; color: #212529; }
+    .stat-card .stat-sub   { font-size: .75rem; color: #adb5bd; }
+</style>
+
 <div class="row row-cols-1 row-cols-md-2 row-cols-xl-4 g-3 mb-4 mt-2">
     <div class="col">
-        <div class="card h-100 border-0 shadow-sm text-white" style="background-color: #0dcaf0;">
+        <div class="card stat-card h-100 shadow-sm" style="--accent: #f59f00; --accent-bg: rgba(245,159,0,.12);">
             <div class="card-body p-3">
-                <h6 class="card-title fw-normal mb-1">Menunggu Anda (PPK)</h6>
-                <h3 class="fw-bold mb-0 text-white">{{ $menungguCount }}</h3>
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <span class="stat-icon"><i class="bi bi-hourglass-split"></i></span>
+                    <span class="stat-label">Menunggu Anda (PPK)</span>
+                </div>
+                <div class="stat-value">{{ $menungguCount }}</div>
+                <div class="stat-sub mt-1">SPP perlu direviu</div>
             </div>
         </div>
     </div>
     <div class="col">
-        <div class="card h-100 border-0 shadow-sm bg-white text-dark">
+        <div class="card stat-card h-100 shadow-sm" style="--accent: #20c997; --accent-bg: rgba(32,201,151,.12);">
             <div class="card-body p-3">
-                <h6 class="card-title fw-normal text-muted mb-1">Telah Disetujui (PPK)</h6>
-                <h3 class="fw-bold mb-0">{{ $disetujuiCount }}</h3>
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <span class="stat-icon"><i class="bi bi-check2-circle"></i></span>
+                    <span class="stat-label">Telah Disetujui (PPK)</span>
+                </div>
+                <div class="stat-value">{{ $disetujuiCount }}</div>
+                <div class="stat-sub mt-1">Sudah Anda setujui</div>
             </div>
         </div>
     </div>
     <div class="col">
-        <div class="card h-100 border-0 shadow-sm bg-danger text-white">
+        <div class="card stat-card h-100 shadow-sm" style="--accent: #e03131; --accent-bg: rgba(224,49,49,.12);">
             <div class="card-body p-3">
-                <h6 class="card-title fw-normal mb-1">Dikembalikan (Revisi)</h6>
-                <h3 class="fw-bold mb-0">{{ $revisiCount }}</h3>
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <span class="stat-icon"><i class="bi bi-arrow-counterclockwise"></i></span>
+                    <span class="stat-label">Dikembalikan (Revisi)</span>
+                </div>
+                <div class="stat-value">{{ $revisiCount }}</div>
+                <div class="stat-sub mt-1">Menunggu operator perbaiki</div>
             </div>
         </div>
     </div>
     <div class="col">
-        <div class="card h-100 border-0 shadow-sm text-white" style="background-color: #20c997;">
+        <div class="card stat-card h-100 shadow-sm" style="--accent: #1c7ed6; --accent-bg: rgba(28,126,214,.12);">
             <div class="card-body p-3">
-                <h6 class="card-title fw-normal mb-1">Total Semua SPP Terbit</h6>
-                <h3 class="fw-bold mb-0 text-white">{{ $totalCount }}</h3>
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <span class="stat-icon"><i class="bi bi-files"></i></span>
+                    <span class="stat-label">Total SPP Terbit</span>
+                </div>
+                <div class="stat-value">{{ $totalCount }}</div>
+                <div class="stat-sub mt-1">Semua pengajuan masuk</div>
             </div>
         </div>
     </div>

@@ -250,35 +250,42 @@
         <div class="col-xl-5">
             <div class="sticky-top" style="top: 1.5rem; z-index: 1;">
                 
-                @if($canApprove)
-                    <!-- PANEL AKSI VERIFIKASI (JIKA GILIRAN USER) -->
-                    <div class="auth-approval-panel shadow-sm mb-4">
-                        <div class="d-flex align-items-center gap-2 mb-3">
-                            <i class="bi bi-shield-lock-fill text-primary fs-3"></i>
-                            <div>
-                                <h5 class="fw-bold mb-0 text-primary">Tindakan Verifikasi</h5>
-                                <div class="small text-muted">Menunggu persetujuan Anda sebagai {{ $roleCode }}</div>
+                @if(!empty($activeRoleApprovals))
+                    <!-- PANEL AKSI VERIFIKASI DUAL-ROLE -->
+                    @foreach($activeRoleApprovals as $approvalData)
+                        <div class="auth-approval-panel shadow-sm mb-4">
+                            <div class="d-flex align-items-center gap-2 mb-3">
+                                <i class="bi bi-shield-lock-fill text-primary fs-3"></i>
+                                <div>
+                                    <h5 class="fw-bold mb-0 text-primary">Tindakan Verifikasi</h5>
+                                    <div class="small text-muted">Menunggu persetujuan Anda sebagai <strong>{{ $approvalData['role'] }}</strong></div>
+                                </div>
                             </div>
+
+                            <form action="{{ $approvalData['approveRoute'] }}" method="POST" id="formVerifyApprove_{{ Str::slug($approvalData['role']) }}" onsubmit="return confirm('Apakah Anda yakin menyetujui SPP Honorarium ini sebagai {{ $approvalData['role'] }}?');">
+                                @csrf
+                                <input type="hidden" name="approval_id" value="{{ $approvalData['approval_id'] }}">
+                                <label class="form-label fw-semibold">Catatan Keputusan</label>
+                                <textarea name="catatan" class="form-control mb-3" rows="2" placeholder="(Opsional) Tulis catatan persetujuan Anda..."></textarea>
+                                <button type="submit" class="btn btn-success shadow-sm w-100 mb-2 py-2 fw-bold"><i class="bi bi-check-circle me-1"></i> Setujui sebagai {{ $approvalData['role'] }}</button>
+                            </form>
+
+                            <hr class="text-primary opacity-25">
+
+                            <form action="{{ $approvalData['revisiRoute'] }}" method="POST" id="formVerifyReject_{{ Str::slug($approvalData['role']) }}" onsubmit="return confirm('Apakah Anda yakin mengembalikan SPP Honorarium ini untuk revisi sebagai {{ $approvalData['role'] }}?');">
+                                @csrf
+                                <input type="hidden" name="approval_id" value="{{ $approvalData['approval_id'] }}">
+                                <label class="form-label fw-semibold">Alasan Penolakan / Revisi <span class="text-danger">*</span></label>
+                                <textarea name="catatan" class="form-control mb-3" rows="2" required placeholder="(Wajib) Tulis instruksi revisi untuk Operator..."></textarea>
+                                <button type="submit" class="btn btn-outline-danger w-100 py-2"><i class="bi bi-x-circle me-1"></i> Kembalikan untuk Revisi</button>
+                            </form>
                         </div>
-
-                        <form action="{{ route('verifikasi-spp.honor.approve', $sppModel->id) }}" method="POST" id="formVerifyApprove" onsubmit="return confirm('Apakah Anda yakin menyetujui SPP Honorarium ini?');">
-                            @csrf
-                            <label class="form-label fw-semibold">Catatan Keputusan</label>
-                            <textarea name="catatan" class="form-control mb-3" rows="2" placeholder="(Opsional) Tulis catatan persetujuan Anda..."></textarea>
-                            <button type="submit" class="btn btn-success shadow-sm w-100 mb-2 py-2 fw-bold"><i class="bi bi-check-circle me-1"></i> SETUJUI SPP HONORARIUM</button>
-                        </form>
-
-                        <hr class="text-primary opacity-25">
-
-                        <form action="{{ route('verifikasi-spp.honor.reject', $sppModel->id) }}" method="POST" id="formVerifyReject" onsubmit="return confirm('Apakah Anda yakin mengembalikan SPP Honorarium ini ke Operator BLU?');">
-                            @csrf
-                            <label class="form-label fw-semibold">Alasan Penolakan / Revisi <span class="text-danger">*</span></label>
-                            <textarea name="catatan" class="form-control mb-3" rows="2" required placeholder="(Wajib) Tulis instruksi revisi untuk Operator..."></textarea>
-                            <button type="submit" class="btn btn-outline-danger w-100 py-2"><i class="bi bi-x-circle me-1"></i> Kembalikan untuk Revisi</button>
-                        </form>
-                    </div>
+                    @endforeach
                 @endif
                 
+                <!-- Standing Instruction -->
+                @include('spps.partials.standing_instruction_card', ['spp' => $sppModel])
+
                 <div class="card spp-section-card mb-4 bg-light border-0 shadow-sm">
                     <div class="card-body p-4">
                         <h6 class="fw-bold mb-3"><i class="bi bi-journal-check me-2"></i> Checklist Pemeriksaan Dokumen</h6>

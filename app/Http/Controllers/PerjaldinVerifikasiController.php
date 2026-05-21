@@ -52,6 +52,14 @@ class PerjaldinVerifikasiController extends Controller
             'approve_route' => 'verifikasi-kasubag.perjaldin.approve',
             'revisi_route' => 'verifikasi-kasubag.perjaldin.revisi',
         ],
+        'koordinator_keuangan' => [
+            'role_code' => 'Koordinator Keuangan',
+            'label' => 'Koordinator Keuangan',
+            'detail_route' => 'verifikasi-koordinator.perjaldin.show',
+            'index_route' => 'verifikasi-koordinator.perjaldin.index',
+            'approve_route' => 'verifikasi-koordinator.perjaldin.approve',
+            'revisi_route' => 'verifikasi-koordinator.perjaldin.revisi',
+        ],
     ];
 
     public function ppkIndex()
@@ -154,15 +162,53 @@ class PerjaldinVerifikasiController extends Controller
         return $this->revisionForRole($request, $id, 'kasubbag', $workflowService);
     }
 
+    public function koordinatorIndex()
+    {
+        return $this->buildWorkflowIndex('koordinator_keuangan');
+    }
+
+    public function koordinatorShow(int $id)
+    {
+        return $this->buildWorkflowShow($id, 'koordinator_keuangan');
+    }
+
+    public function koordinatorApprove(Request $request, int $id, PerjaldinWorkflowService $workflowService)
+    {
+        return $this->approveForRole($request, $id, 'koordinator_keuangan', $workflowService);
+    }
+
+    public function koordinatorRevisi(Request $request, int $id, PerjaldinWorkflowService $workflowService)
+    {
+        return $this->revisionForRole($request, $id, 'koordinator_keuangan', $workflowService);
+    }
+
     private function buildWorkflowIndex(string $roleKey)
     {
         $config = self::ROLE_CONFIG[$roleKey];
-        $roleCodes = $this->roleCodeVariants($config['role_code']);
+        $user = auth()->user();
+
+        // Kumpulkan semua role user yang relevan untuk verifikasi Perjaldin
+        $activeRoleCodes = [];
+        $activeLabels = [];
+        foreach (self::ROLE_CONFIG as $rk => $rc) {
+            if ($user->hasRole($rc['label']) || $user->hasRole($rc['role_code'])) {
+                $activeRoleCodes = array_merge($activeRoleCodes, $this->roleCodeVariants($rc['role_code']));
+                $activeLabels[] = $rc['label'];
+            }
+        }
+
+        // Jika kosong (fallback), gunakan default dari roleKey
+        if (empty($activeRoleCodes)) {
+            $activeRoleCodes = $this->roleCodeVariants($config['role_code']);
+            $activeLabels[] = $config['label'];
+        }
+        $activeRoleCodes = array_unique($activeRoleCodes);
+
         $search = request('search');
         $periode = request('periode');
 
         $query = Tagihan::where('tipe_tagihan', 'PERJALDIN')
-            ->whereHas('workflowInstances.approvals', fn ($q) => $q->whereIn('role_code', $roleCodes))
+            ->whereHas('workflowInstances.approvals', fn ($q) => $q->whereIn('role_code', $activeRoleCodes))
             ->with([
                 'detailPerjaldin.pegawai',
                 'logs' => fn ($q) => $q->latest(),
@@ -190,16 +236,18 @@ class PerjaldinVerifikasiController extends Controller
 
         $tagihans = $query->get();
         $tagihansPerlu = $tagihans->filter(
-            fn (Tagihan $tagihan) => $this->pendingApproval($tagihan, $config['role_code']) !== null
+            fn (Tagihan $tagihan) => $this->anyPendingApprovalForUser($tagihan, $activeRoleCodes) !== null
         )->values();
         $tagihansRiwayat = $tagihans->filter(
-            fn (Tagihan $tagihan) => $this->roleHasActed($tagihan, $config['role_code'])
+            fn (Tagihan $tagihan) => $this->anyRoleHasActedForUser($tagihan, $activeRoleCodes)
         )->values();
         $visibleTagihans = $tagihansPerlu->merge($tagihansRiwayat)->unique('id')->values();
 
         $pendingStatuses = $tagihansPerlu->pluck('status')->unique()->values()->all();
         $revisiStatuses = $visibleTagihans->pluck('status')->filter(fn ($status) => str_starts_with((string) $status, 'REVISI_'))->unique()->values()->all();
         $selesaiStatuses = ['DISETUJUI_PERJALDIN'];
+
+        $userRoleLabel = count($activeLabels) > 1 ? implode(' & ', array_unique($activeLabels)) : $activeLabels[0];
 
         return view('verifikasi_perjaldin.index', [
             'tagihans' => $visibleTagihans,
@@ -208,7 +256,7 @@ class PerjaldinVerifikasiController extends Controller
             'pendingStatuses' => $pendingStatuses,
             'revisiStatuses' => $revisiStatuses,
             'selesaiStatuses' => $selesaiStatuses,
-            'userRole' => $config['label'],
+            'userRole' => $userRoleLabel,
             'detailRoute' => $config['detail_route'],
         ]);
     }
@@ -230,6 +278,24 @@ class PerjaldinVerifikasiController extends Controller
 
         $currentApproval = $this->pendingApproval($tagihan, $config['role_code']);
 
+        // Detect dual-role: build array of all role approvals for this user
+        $user = auth()->user();
+        $allRoleApprovals = [];
+        foreach (self::ROLE_CONFIG as $rk => $rc) {
+            if ($user->hasRole($rc['label']) || $user->hasRole($rc['role_code'])) {
+                $pa = $this->pendingApproval($tagihan, $rc['role_code']);
+                if ($pa) {
+                    $allRoleApprovals[] = [
+                        'approval' => $pa,
+                        'roleKey' => $rk,
+                        'label' => $rc['label'],
+                        'approveRoute' => route($rc['approve_route'], $id),
+                        'revisiRoute' => route($rc['revisi_route'], $id),
+                    ];
+                }
+            }
+        }
+
         return view('verifikasi_perjaldin.show', [
             'tagihan' => $tagihan,
             'userRole' => $config['label'],
@@ -238,6 +304,7 @@ class PerjaldinVerifikasiController extends Controller
             'approveRoute' => route($config['approve_route'], $id),
             'revisiRoute' => route($config['revisi_route'], $id),
             'indexRoute' => $config['index_route'],
+            'allRoleApprovals' => $allRoleApprovals,
         ]);
     }
 
@@ -334,12 +401,42 @@ class PerjaldinVerifikasiController extends Controller
                     || (int) $approval->acted_by_user_id === (int) $currentUserId));
     }
 
+    private function anyPendingApprovalForUser(Tagihan $tagihan, array $activeRoleCodes): ?WorkflowApproval
+    {
+        $instance = $tagihan->workflowInstances->first() ?? $tagihan->workflowInstance;
+        if (!$instance || $instance->status !== 'IN_PROGRESS') {
+            return null;
+        }
+
+        $currentUserId = auth()->id();
+
+        return $instance->approvals
+            ->first(fn ($approval) => (int) $approval->urutan_step === (int) $instance->step_saat_ini
+                && $approval->status === 'PENDING'
+                && in_array($approval->role_code, $activeRoleCodes, true)
+                && ($approval->assigned_user_id === null || (int) $approval->assigned_user_id === (int) $currentUserId));
+    }
+
+    private function anyRoleHasActedForUser(Tagihan $tagihan, array $activeRoleCodes): bool
+    {
+        $currentUserId = auth()->id();
+
+        return $tagihan->workflowInstances
+            ->flatMap(fn ($instance) => $instance->approvals)
+            ->contains(fn ($approval) => in_array($approval->role_code, $activeRoleCodes, true)
+                && in_array($approval->status, ['APPROVED', 'REVISION', 'REJECTED'], true)
+                && ($approval->assigned_user_id === null
+                    || (int) $approval->assigned_user_id === (int) $currentUserId
+                    || (int) $approval->acted_by_user_id === (int) $currentUserId));
+    }
+
     private function roleCodeVariants(string $roleCode): array
     {
         return match ($roleCode) {
             'BENDAHARA_PENERIMAAN' => ['BENDAHARA_PENERIMAAN', 'Bendahara Penerimaan'],
             'BENDAHARA_PENGELUARAN' => ['BENDAHARA_PENGELUARAN', 'Bendahara Pengeluaran'],
             'KASUBBAG' => ['KASUBBAG', 'Kepala Subbagian Keuangan dan Tata Usaha'],
+            'Koordinator Keuangan' => ['Koordinator Keuangan', 'KOORDINATOR_KEUANGAN'],
             default => [$roleCode],
         };
     }
@@ -367,6 +464,10 @@ class PerjaldinVerifikasiController extends Controller
             }
 
             if ($tagihan->status === 'DISETUJUI_PERJALDIN') {
+                // Notifikasi ke Operator BLU dipindah ke tahap setelah Operator Perjaldin
+                // menyelesaikan upload kedua dokumen Nominatif TTD (PerjaldinController::uploadNominatifTtd).
+                // Di tahap ini status seharusnya MENUNGGU_UPLOAD_NOMINATIF_TTD, jadi blok ini
+                // praktis tidak akan tereksekusi setelah perubahan workflow tersebut.
                 $operators = \App\Models\User::role('Operator BLU')->get();
                 Notification::send($operators, new WorkflowNotification([
                     'title' => 'Perjaldin Siap SPP',
@@ -374,6 +475,18 @@ class PerjaldinVerifikasiController extends Controller
                     'url' => route('spps.perjaldin.index'),
                     'icon' => 'receipt_long',
                     'color' => 'success',
+                ]));
+            }
+
+            // Saat tagihan menunggu upload nominatif TTD, beri notifikasi ke Operator Perjaldin.
+            if ($tagihan->status === 'MENUNGGU_UPLOAD_NOMINATIF_TTD') {
+                $operatorPerjaldin = \App\Models\User::role('Operator Perjaldin')->get();
+                Notification::send($operatorPerjaldin, new WorkflowNotification([
+                    'title' => 'Upload Nominatif Bertandatangan',
+                    'message' => "Perjaldin '{$tagihan->deskripsi}' telah disetujui Kasubbag. Silakan unggah Nominatif & Daftar Nominatif Pembayaran yang sudah ditandatangani.",
+                    'url' => route('perjaldins.show', $tagihan->id),
+                    'icon' => 'upload_file',
+                    'color' => 'warning',
                 ]));
             }
         } catch (\Exception $e) {
@@ -403,6 +516,7 @@ class PerjaldinVerifikasiController extends Controller
             'BENDAHARA_PENERIMAAN' => 'Bendahara Penerimaan',
             'BENDAHARA_PENGELUARAN' => 'Bendahara Pengeluaran',
             'KASUBBAG' => 'Kepala Subbagian Keuangan dan Tata Usaha',
+            'KOORDINATOR_KEUANGAN' => 'Koordinator Keuangan',
             default => $roleCode,
         };
     }
@@ -414,6 +528,7 @@ class PerjaldinVerifikasiController extends Controller
             'BENDAHARA_PENERIMAAN', 'Bendahara Penerimaan' => route('verifikasi-bendahara-penerimaan.perjaldin.index'),
             'BENDAHARA_PENGELUARAN', 'Bendahara Pengeluaran' => route('verifikasi-bendahara.perjaldin.index'),
             'KASUBBAG', 'Kepala Subbagian Keuangan dan Tata Usaha' => route('verifikasi-kasubag.index'),
+            'KOORDINATOR_KEUANGAN', 'Koordinator Keuangan' => route('verifikasi-koordinator.perjaldin.index'),
             default => route('verifikasi-ppk.perjaldin.index'),
         };
     }

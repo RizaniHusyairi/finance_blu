@@ -31,6 +31,7 @@ class SppPerjaldinWorkflowSeeder extends Seeder
             ['nama_step' => 'Verifikasi Bendahara Penerimaan', 'role_code' => 'BENDAHARA_PENERIMAAN'],
             ['nama_step' => 'Verifikasi Bendahara Pengeluaran', 'role_code' => 'BENDAHARA_PENGELUARAN'],
             ['nama_step' => 'Verifikasi PPK', 'role_code' => 'PPK'],
+            ['nama_step' => 'Verifikasi Koordinator Keuangan', 'role_code' => 'Koordinator Keuangan'],
         ] as $step) {
             WorkflowDefinitionStep::create([
                 'workflow_definition_id' => $wfPerjaldin->id,

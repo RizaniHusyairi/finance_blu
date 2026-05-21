@@ -30,15 +30,52 @@
 <body>
 @php
     $tagihan = $spp?->tagihan;
-    $nomorTagihan = $tagihan?->nomor_tagihan ?? '-';
-    $tanggalTagihanSource = $tagihan?->tanggal_tagihan
-        ?? $tagihan?->tanggal_perjaldin
-        ?? $tagihan?->tanggal_ttd
-        ?? $tagihan?->created_at
-        ?? null;
-    $tanggalTagihan = $tanggalTagihanSource
-        ? \Carbon\Carbon::parse($tanggalTagihanSource)->format('d/m/Y')
-        : '-';
+
+    // QR code: signed URL ke halaman aktivitas tagihan terkait SPM ini.
+    // DomPDF tidak handle inline <svg> dari simple-qrcode dengan stabil,
+    // jadi kita tulis ke file SVG temp dan reference via <img src="{absolute_path}">.
+    $qrTagihanId = $spp?->tagihan_id ?? optional($tagihan)->id;
+    $qrFilePath = null;
+    $qrUrl = null;
+    if ($qrTagihanId) {
+        $qrUrl = \Illuminate\Support\Facades\URL::signedRoute('public.tagihan.aktivitas', ['id' => $qrTagihanId]);
+        $qrCacheDir = storage_path('app/qr-cache');
+        if (! is_dir($qrCacheDir)) {
+            @mkdir($qrCacheDir, 0775, true);
+        }
+        $qrFilePath = $qrCacheDir . DIRECTORY_SEPARATOR . 'tagihan_' . $qrTagihanId . '_' . md5($qrUrl) . '.svg';
+        if (! file_exists($qrFilePath)) {
+            $qrSvg = (string) \SimpleSoftwareIO\QrCode\Facades\QrCode::format('svg')
+                ->size(300)->margin(1)->errorCorrection('M')->generate($qrUrl);
+            file_put_contents($qrFilePath, $qrSvg);
+        }
+        $qrFilePath = str_replace('\\', '/', $qrFilePath);
+    }
+
+    $pdfReference = $pdfReference ?? [
+        'primary_label' => 'No. Tagihan',
+        'primary_value' => '-',
+        'primary_date_label' => 'Tgl. Tagihan',
+        'primary_date_value' => '-',
+        'secondary_label' => null,
+        'secondary_value' => null,
+        'secondary_date_label' => null,
+        'secondary_date_value' => null,
+    ];
+    $hasSecondaryReference = !empty($pdfReference['secondary_label']);
+    $dipaInfo = $dipaInfo ?? [
+        'nomor' => $spp->nomor_dipa ?? '-',
+        'tanggal' => $spp->tanggal_dipa ? \Carbon\Carbon::parse($spp->tanggal_dipa)->locale('id')->isoFormat('D MMMM Y') : '-',
+    ];
+    $supplierInfo = $supplierInfo ?? [
+        'nama_supplier' => 'PARA PEGAWAI KANTOR UPBU AJI PANGERAN TUMENGGUNG PRANOTO',
+        'bank_pos' => 'Terlampir',
+        'npwp' => 'Terlampir',
+        'rekening' => 'Terlampir',
+        'alamat' => "Jl. Poros Samarinda - Bontang, Kel. Sunga Siring,\nSamarinda-Kalimantan Timur",
+        'nama_rekening' => 'Terlampir',
+        'uraian' => $uraianSupplier ?? '-',
+    ];
 @endphp
 
     <table class="table-main">
@@ -98,9 +135,9 @@
             <td style="width: 30%; padding: 5px; vertical-align: top;" class="border-bottom-0">
                 <table style="width: 100%; border: none; font-size: 11px;">
                     <tr>
-                        <td style="border: none; width: 35%; padding: 0;">No. Kontrak</td>
-                        <td style="border: none; width: 5%; padding: 0;"></td>
-                        <td style="border: none; width: 60%; padding: 0;"></td>
+                        <td style="border: none; width: 35%; padding: 0;">{{ $pdfReference['primary_label'] }}</td>
+                        <td style="border: none; width: 5%; padding: 0;">:</td>
+                        <td style="border: none; width: 60%; padding: 0;">{{ $pdfReference['primary_value'] }}</td>
                     </tr>
                 </table>
             </td>
@@ -122,35 +159,37 @@
                     <tr>
                         <td style="border: none; width: 20%; padding: 0;">Nomor</td>
                         <td style="border: none; width: 5%; padding: 0;">:</td>
-                        <td style="border: none; width: 75%; padding: 0;">{{ $spp->nomor_dipa }}</td>
+                        <td style="border: none; width: 75%; padding: 0;">{{ $dipaInfo['nomor'] }}</td>
                     </tr>
                     <tr>
                         <td style="border: none; padding: 0;">Tanggal</td>
                         <td style="border: none; padding: 0;">:</td>
-                        <td style="border: none; padding: 0;">{{ \Carbon\Carbon::parse($spp->tanggal_dipa)->locale('id')->isoFormat('D MMMM Y') }}</td>
+                        <td style="border: none; padding: 0;">{{ $dipaInfo['tanggal'] }}</td>
                     </tr>
                 </table>
             </td>
             <td style="padding: 5px; vertical-align: top;" class="border-bottom-0 border-top-0">
                 <table style="width: 100%; border: none; font-size: 11px;">
                     <tr>
-                        <td style="border: none; width: 35%; padding: 0;">Tgl. Kontrak</td>
+                        <td style="border: none; width: 35%; padding: 0;">{{ $pdfReference['primary_date_label'] }}</td>
                         <td style="border: none; width: 5%; padding: 0;">:</td>
-                        <td style="border: none; width: 60%; padding: 0;"></td>
+                        <td style="border: none; width: 60%; padding: 0;">{{ $pdfReference['primary_date_value'] }}</td>
                     </tr>
-                    <tr>
-                        <td style="border: none; padding: 0;">No. Tagihan</td>
-                        <td style="border: none; padding: 0;">:</td>
-                        <td style="border: none; padding: 0;">{{ $nomorTagihan }}</td>
-                    </tr>
-                    <tr>
-                        <td colspan="3" style="border: none; padding: 6px 0;"></td>
-                    </tr>
-                    <tr>
-                        <td style="border: none; padding: 0;">Tgl. Tagihan</td>
-                        <td style="border: none; padding: 0;">:</td>
-                        <td style="border: none; padding: 0;">{{ $tanggalTagihan }}</td>
-                    </tr>
+                    @if($hasSecondaryReference)
+                        <tr>
+                            <td style="border: none; padding: 0;">{{ $pdfReference['secondary_label'] }}</td>
+                            <td style="border: none; padding: 0;">:</td>
+                            <td style="border: none; padding: 0;">{{ $pdfReference['secondary_value'] }}</td>
+                        </tr>
+                        <tr>
+                            <td colspan="3" style="border: none; padding: 6px 0;"></td>
+                        </tr>
+                        <tr>
+                            <td style="border: none; padding: 0;">{{ $pdfReference['secondary_date_label'] }}</td>
+                            <td style="border: none; padding: 0;">:</td>
+                            <td style="border: none; padding: 0;">{{ $pdfReference['secondary_date_value'] }}</td>
+                        </tr>
+                    @endif
                 </table>
             </td>
             <td colspan="2" style="padding: 5px; vertical-align: top;" class="border-bottom-0 border-top-0">
@@ -158,12 +197,12 @@
                     <tr>
                         <td style="border: none; width: 35%; padding: 0;">Jatuh Tempo</td>
                         <td style="border: none; width: 5%; padding: 0;">:</td>
-                        <td style="border: none; width: 60%; padding: 0;">{{ $spp->jatuh_tempo }}</td>
+                        <td style="border: none; width: 60%; padding: 0;">{{ $spp->jatuh_tempo ?? 'Segera' }}</td>
                     </tr>
                     <tr>
                         <td style="border: none; padding: 0;">Cara Bayar</td>
                         <td style="border: none; padding: 0;">:</td>
-                        <td style="border: none; padding: 0;">{{ $spp->cara_bayar }}</td>
+                        <td style="border: none; padding: 0;">{{ $spp->cara_bayar ?? 'SP2D BLU - TRF' }}</td>
                     </tr>
                 </table>
             </td>
@@ -183,7 +222,7 @@
         </tr>
         <tr>
             <td colspan="2" style="height: 100px;">
-                {{ $spp->akun_mak }}
+                {{ $kodeCoa ?? '-' }}
             </td>
             <td colspan="2" class="text-right">
                 {{ number_format($jumlahUang, 2, ',', '.') }}
@@ -201,15 +240,19 @@
         </tr>
         <tr>
             <td colspan="2" style="height: 60px;">
-                <!-- Potongan kosong (seperti di format) -->
+                @foreach(($potonganPajak ?? collect()) as $potongan)
+                    {{ $potongan->pajak?->jenis_pajak ?? $potongan->nama_pajak_snapshot ?? $potongan->jenis_potongan }}<br>
+                @endforeach
             </td>
             <td colspan="2" class="text-right">
-                
+                @foreach(($potonganPajak ?? collect()) as $potongan)
+                    {{ number_format($potongan->nominal_potongan, 2, ',', '.') }}<br>
+                @endforeach
             </td>
         </tr>
         <tr>
             <td colspan="2" class="text-right border-right-0" style="padding-right: 20px;">Jumlah Potongan</td>
-            <td colspan="2" class="text-right">0,00</td>
+            <td colspan="2" class="text-right">{{ number_format($jumlahPotonganPajak ?? 0, 2, ',', '.') }}</td>
         </tr>
 
         <!-- TOTAL PEMBAYARAN -->
@@ -225,29 +268,29 @@
                     <tr>
                         <td style="border: none; width: 14%; vertical-align: top; padding: 2px;">Nama Supplier</td>
                         <td style="border: none; width: 2%; vertical-align: top; padding: 2px;">:</td>
-                        <td style="border: none; width: 44%; vertical-align: top; padding: 2px;">PARA PEGAWAI KANTOR UPBU AJI PANGERAN TUMENGGUNG PRANOTO</td>
+                        <td style="border: none; width: 44%; vertical-align: top; padding: 2px;">{{ $supplierInfo['nama_supplier'] }}</td>
                         
                         <td style="border: none; width: 12%; vertical-align: top; padding: 2px;">Bank/Pos</td>
                         <td style="border: none; width: 2%; vertical-align: top; padding: 2px;">:</td>
-                        <td style="border: none; width: 26%; vertical-align: top; padding: 2px;">Terlampir</td>
+                        <td style="border: none; width: 26%; vertical-align: top; padding: 2px;">{{ $supplierInfo['bank_pos'] }}</td>
                     </tr>
                     <tr>
                         <td style="border: none; vertical-align: top; padding: 2px;">NPWP</td>
                         <td style="border: none; vertical-align: top; padding: 2px;">:</td>
-                        <td style="border: none; vertical-align: top; padding: 2px;">Terlampir</td>
+                        <td style="border: none; vertical-align: top; padding: 2px;">{{ $supplierInfo['npwp'] }}</td>
                         
                         <td style="border: none; vertical-align: top; padding: 2px;">Rekening</td>
                         <td style="border: none; vertical-align: top; padding: 2px;">:</td>
-                        <td style="border: none; vertical-align: top; padding: 2px;">Terlampir</td>
+                        <td style="border: none; vertical-align: top; padding: 2px;">{{ $supplierInfo['rekening'] }}</td>
                     </tr>
                     <tr>
                         <td style="border: none; vertical-align: top; padding: 2px;">Alamat</td>
                         <td style="border: none; vertical-align: top; padding: 2px;">:</td>
-                        <td style="border: none; vertical-align: top; padding: 2px;">Jl. Poros Samarinda - Bontang, Kel. Sunga Siring,<br>Samarinda-Kalimantan Timur</td>
+                        <td style="border: none; vertical-align: top; padding: 2px;">{!! nl2br(e($supplierInfo['alamat'])) !!}</td>
                         
                         <td style="border: none; vertical-align: top; padding: 2px;">Nama</td>
                         <td style="border: none; vertical-align: top; padding: 2px;">:</td>
-                        <td style="border: none; vertical-align: top; padding: 2px;">Terlampir</td>
+                        <td style="border: none; vertical-align: top; padding: 2px;">{{ $supplierInfo['nama_rekening'] }}</td>
                     </tr>
                     <tr>
                         <td style="border: none; padding: 2px;"></td>
@@ -256,7 +299,7 @@
                         
                         <td style="border: none; vertical-align: top; padding: 2px;">Uraian</td>
                         <td style="border: none; vertical-align: top; padding: 2px;">:</td>
-                        <td style="border: none; vertical-align: top; padding: 2px;">{{ $uraianSupplier }}</td>
+                        <td style="border: none; vertical-align: top; padding: 2px;">{!! nl2br(e($supplierInfo['uraian'])) !!}</td>
                     </tr>
                 </table>
             </td>
@@ -271,6 +314,20 @@
                 ditatausahakan oleh Pejabat Penandatangan SPM. <br><br>
                 Kebenaran perhitungan dan isi yang tertuang dalam SPM ini menjadi tanggung <br>
                 jawab Pejabat Penandatangan SPM.
+
+                @if($qrFilePath)
+                    <table style="width: 100%; border: none; margin-top: 12px;">
+                        <tr>
+                            <td style="border: none; width: 90px; vertical-align: top; padding: 0;">
+                                <img src="{{ $qrFilePath }}" alt="QR Aktivitas Tagihan" style="width: 90px; height: 90px;">
+                            </td>
+                            <td style="border: none; vertical-align: top; padding: 4px 0 0 10px; font-size: 9px; color: #333;">
+                                <strong>Scan untuk lihat aktivitas tagihan</strong><br>
+                                Status verifikasi, SPP, SPM, NPI, hingga SP2D — beserta verifikator di tiap tahap.
+                            </td>
+                        </tr>
+                    </table>
+                @endif
             </td>
             <td colspan="2" style="padding: 10px; width: 40%; vertical-align: top; text-align: center;">
                 Samarinda, {{ $spp->tanggal_spm ? \Carbon\Carbon::parse($spp->tanggal_spm)->locale('id')->isoFormat('D MMMM Y') : \Carbon\Carbon::now()->locale('id')->isoFormat('D MMMM Y') }} <br>

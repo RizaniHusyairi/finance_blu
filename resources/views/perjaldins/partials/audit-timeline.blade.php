@@ -1,68 +1,67 @@
 {{-- partial: audit-timeline.blade.php --}}
 {{-- Variables: $tagihan --}}
 @php
-    $aksiColorMap = [
-        'CREATE' => ['icon' => 'bi-plus-circle-fill', 'color' => 'primary'],
-        'SUBMIT' => ['icon' => 'bi-send-fill', 'color' => 'primary'],
-        'APPROVE' => ['icon' => 'bi-check-circle-fill', 'color' => 'success'],
-        'REVISION' => ['icon' => 'bi-arrow-counterclockwise', 'color' => 'warning'],
-        'REJECT' => ['icon' => 'bi-x-circle-fill', 'color' => 'danger'],
-        'UPDATE' => ['icon' => 'bi-pencil-fill', 'color' => 'info'],
+    $aksiMap = [
+        'CREATE'   => ['icon' => 'bi-plus-circle-fill', 'cls' => 'tm-primary'],
+        'SUBMIT'   => ['icon' => 'bi-send-fill',         'cls' => 'tm-primary'],
+        'APPROVE'  => ['icon' => 'bi-check-circle-fill', 'cls' => 'tm-success'],
+        'REVISION' => ['icon' => 'bi-arrow-counterclockwise', 'cls' => 'tm-warning'],
+        'REJECT'   => ['icon' => 'bi-x-circle-fill',     'cls' => 'tm-danger'],
+        'UPDATE'   => ['icon' => 'bi-pencil-fill',       'cls' => 'tm-info'],
     ];
 @endphp
 
-<div class="card border-0 shadow-sm mb-4">
-    <div class="card-header bg-white border-bottom py-3">
-        <h6 class="mb-0 fw-bold text-dark">
-            <i class="bi bi-clock-history text-primary me-2"></i>Jejak Proses (Audit Trail)
-        </h6>
+<div class="modern-card">
+    <div class="mc-head mc-icon-info">
+        <div class="mc-head-left">
+            <div class="mc-icon"><i class="bi bi-clock-history"></i></div>
+            <div>
+                <h6 class="mc-title">Jejak Proses (Audit Trail)</h6>
+                <p class="mc-sub">Riwayat seluruh aktivitas pada dokumen perjalanan dinas ini</p>
+            </div>
+        </div>
+        <span class="mc-pill mc-pill-info">
+            <i class="bi bi-journal-text"></i> {{ $tagihan->logs->count() }} aktivitas
+        </span>
     </div>
-    <div class="card-body py-3">
+    <div class="mc-body">
         @if($tagihan->logs->isEmpty())
-            <div class="text-center text-muted py-5">
-                <i class="bi bi-clock display-6 d-block mb-2"></i>
-                <small>Belum ada rekaman aktivitas.</small>
+            <div class="empty-state-modern">
+                <i class="bi bi-journal-x"></i>
+                <h6 class="text-secondary fw-bold mb-1">Belum ada aktivitas</h6>
+                <small>Riwayat aktivitas dokumen akan muncul di sini.</small>
             </div>
         @else
-            <div class="position-relative ps-4" style="border-left: 2px solid #dee2e6;">
+            <div class="timeline-modern">
                 @foreach($tagihan->logs as $log)
                     @php
-                        $aksi = strtoupper($log->aksi ?? '');
-                        $meta = $aksiColorMap[$aksi] ?? ['icon' => 'bi-circle-fill', 'color' => 'secondary'];
+                        $aksi = strtoupper($log->aksi ?? 'UPDATE');
+                        $meta = $aksiMap[$aksi] ?? ['icon' => 'bi-circle-fill', 'cls' => 'tm-primary'];
                     @endphp
-                    <div class="position-relative mb-4">
-                        {{-- Circle dot --}}
-                        <span class="position-absolute d-flex align-items-center justify-content-center bg-{{ $meta['color'] }} text-white rounded-circle shadow-sm"
-                              style="width:30px;height:30px;left:-43px;top:0;font-size:0.75rem;">
-                            <i class="bi {{ $meta['icon'] }}"></i>
-                        </span>
-
-                        <div class="card border-0 bg-light rounded-3 px-3 py-2 ms-1">
-                            <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
+                    <div class="tm-item {{ $meta['cls'] }}">
+                        <span class="tm-dot"><i class="bi" style="color:#fff; font-size:.7rem; margin: 6px 0 0 0; display:none;"></i></span>
+                        <div class="tm-card">
+                            <div class="tm-row">
                                 <div>
-                                    <span class="badge bg-{{ $meta['color'] }}-subtle text-{{ $meta['color'] }} border border-{{ $meta['color'] }}-subtle rounded-pill me-2 small">
-                                        {{ $log->aksi ?? 'UPDATE' }}
-                                    </span>
-                                    @if($log->status_sebelumnya)
-                                        <span class="small text-muted">{{ $log->status_sebelumnya }}</span>
-                                        <i class="bi bi-arrow-right small text-muted mx-1"></i>
-                                    @endif
-                                    <span class="fw-semibold text-{{ $meta['color'] }} small">{{ $log->status_baru }}</span>
+                                    <span class="tm-aksi-pill"><i class="bi {{ $meta['icon'] }}"></i> {{ $log->aksi ?? 'UPDATE' }}</span>
                                 </div>
-                                <span class="text-muted small text-nowrap">
-                                    <i class="bi bi-clock me-1"></i>{{ $log->created_at->format('d M Y, H:i') }}
-                                </span>
+                                <span class="tm-time"><i class="bi bi-clock"></i> {{ $log->created_at->isoFormat('D MMM YYYY, HH:mm') }}</span>
+                            </div>
+                            <div class="tm-status-flow mt-1">
+                                @if($log->status_sebelumnya)
+                                    <span class="tm-prev">{{ \Illuminate\Support\Str::title(strtolower(str_replace('_', ' ', $log->status_sebelumnya))) }}</span>
+                                    <i class="bi bi-arrow-right tm-arrow"></i>
+                                @endif
+                                <span class="tm-new">{{ \Illuminate\Support\Str::title(strtolower(str_replace('_', ' ', $log->status_baru))) }}</span>
                             </div>
                             @if($log->catatan)
-                                <div class="mt-2 small text-dark border-start border-3 border-secondary ps-2 bg-white rounded py-1">
-                                    <i class="bi bi-chat-quote text-muted me-1"></i>{{ $log->catatan }}
+                                <div class="tm-note">
+                                    <i class="bi bi-chat-quote-fill"></i>{{ $log->catatan }}
                                 </div>
                             @endif
                             @if($log->user)
-                                <div class="mt-1">
-                                    <small class="text-muted">
-                                        <i class="bi bi-person-circle me-1"></i>{{ $log->user->name ?? '-' }}
-                                    </small>
+                                <div class="tm-user">
+                                    <i class="bi bi-person-circle"></i> {{ $log->user->name ?? '-' }}
                                 </div>
                             @endif
                         </div>

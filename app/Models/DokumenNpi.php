@@ -20,6 +20,10 @@ class DokumenNpi extends Model
     public const STATUS_MENUNGGU_VERIFIKASI = 'MENUNGGU_VERIFIKASI';
     public const STATUS_DISETUJUI_FINAL = 'DISETUJUI_FINAL';
     public const STATUS_REVISI = 'REVISI';
+    public const STATUS_MENUNGGU_UPLOAD = 'MENUNGGU_UPLOAD';
+    public const STATUS_NPI_TERBIT = 'NPI_TERBIT';
+    
+    public const NPI_SIGNED_ARCHIVE_TYPE = 'Signed NPI FIsik';
     
     // Legacy constants (sequential)
     public const STATUS_SUBMITTED_BENPEN = 'SUBMITTED_BENPEN';
@@ -60,9 +64,17 @@ class DokumenNpi extends Model
         return $this->morphMany(WorkflowInstance::class, 'workflowable');
     }
 
+    public function signedNpiArsip()
+    {
+        return $this->morphOne(ArsipDokumen::class, 'documentable')
+            ->where('jenis_dokumen', self::NPI_SIGNED_ARCHIVE_TYPE)
+            ->latestOfMany();
+    }
 
-
-    public function getSppIdAttribute()
+    public function hasSignedNpiFile(): bool
+    {
+        return $this->signedNpiArsip()->exists();
+    }    public function getSppIdAttribute()
     {
         return optional($this->spm)->spp_id;
     }
@@ -94,7 +106,9 @@ class DokumenNpi extends Model
             self::STATUS_REJECTED_PPK => 'Revisi NPI',
             self::STATUS_SUBMITTED_KASUBAG => 'Menunggu Verifikasi Kasubbag',
             self::STATUS_REJECTED_KASUBAG => 'Revisi Kasubbag',
-            self::STATUS_APPROVED_KASUBAG => 'NPI Terbit',
+            self::STATUS_APPROVED_KASUBAG => 'Disetujui Final',
+            self::STATUS_MENUNGGU_UPLOAD => 'Menunggu Upload NPI Bertandatangan',
+            self::STATUS_NPI_TERBIT => 'NPI Terbit',
             default => 'Draft NPI',
         };
     }

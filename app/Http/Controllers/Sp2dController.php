@@ -10,6 +10,7 @@ use App\Models\Perjaldin;
 use App\Models\RealisasiAnggaran;
 use App\Models\User;
 use App\Notifications\WorkflowNotification;
+use App\Services\BkuPostingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -94,10 +95,36 @@ class Sp2dController extends Controller
 
     public function catatBku(Request $request, $sp2d_id)
     {
-        $sp2d = DokumenSp2d::with(['npi.spm.spp.tagihan.detailKontrak', 'npi.spm.spp.dipaRevisionItem', 'arsipDokumen'])->findOrFail($sp2d_id);
+        $sp2d = DokumenSp2d::with([
+            'npi.spm.spp.tagihan.detailKontrak',
+            'npi.spm.spp.tagihan.potonganTagihan',
+            'npi.spm.spp.dipaRevisionItem',
+            'npi.spm.spp.standingInstruction',
+            'arsipDokumen',
+        ])->findOrFail($sp2d_id);
 
         if (! $sp2d->nomor_sp2d || ! $sp2d->tanggal_sp2d) {
             return back()->with('error', 'Nomor dan tanggal SP2D wajib diisi sebelum eksekusi.');
+        }
+
+        $tagihanSumber = optional(optional(optional($sp2d->npi)->spm)->spp)->tagihan;
+        if (
+            $tagihanSumber?->tipe_tagihan === 'KONTRAK'
+            && ! in_array($sp2d->status, [
+                DokumenSp2d::STATUS_SP2D_TERBIT,
+                DokumenSp2d::STATUS_DISETUJUI_FINAL,
+                DokumenSp2d::STATUS_APPROVED,
+            ], true)
+        ) {
+            return back()->with('error', 'SP2D kontrak harus disetujui final sebelum bukti transfer diunggah.');
+        }
+
+        // Untuk SP2D kontrak, file SP2D bertandatangan wajib diunggah terlebih dulu
+        if (
+            $tagihanSumber?->tipe_tagihan === 'KONTRAK'
+            && ! $sp2d->has_signed_file
+        ) {
+            return back()->with('error', 'Unggah file SP2D bertandatangan terlebih dahulu sebelum bukti transfer.');
         }
 
         $request->validate([
@@ -105,7 +132,10 @@ class Sp2dController extends Controller
             'bukti_transfer' => 'required|file|mimes:pdf,jpg,jpeg,png|max:5120',
         ]);
 
-        DB::transaction(function () use ($request, $sp2d) {
+        $deferBkuUntilTax = false;
+        $postedToBku = false;
+
+        DB::transaction(function () use ($request, $sp2d, &$deferBkuUntilTax, &$postedToBku) {
             if ($sp2d->status === DokumenSp2d::STATUS_DRAFT) {
                 $sp2d->update([
                     'status' => DokumenSp2d::STATUS_APPROVED,
@@ -121,6 +151,8 @@ class Sp2dController extends Controller
                 );
             }
 
+            $statusSebelumEksekusi = $sp2d->status;
+
             $sp2d->update([
                 'status' => DokumenSp2d::STATUS_EXECUTED,
                 'bendahara_pengeluaran_id' => $sp2d->bendahara_pengeluaran_id ?: Auth::id(),
@@ -130,12 +162,42 @@ class Sp2dController extends Controller
             $this->syncRealisasiAnggaran($sp2d, $request->catatan_bku);
             $this->syncTagihanStatus($sp2d);
 
+            $tagihan = optional(optional(optional($sp2d->npi)->spm)->spp)->tagihan;
+
+            $hasContractTax = $tagihan
+                && $tagihan->tipe_tagihan === 'KONTRAK'
+                && $tagihan->potonganTagihan()
+                    ->where('jenis_potongan', 'PAJAK')
+                    ->where('nominal_potongan', '>', 0)
+                    ->exists();
+
+            $hasUnsettledContractTax = $hasContractTax
+                && $tagihan->potonganTagihan()
+                    ->where('jenis_potongan', 'PAJAK')
+                    ->where('nominal_potongan', '>', 0)
+                    ->where(function ($q) {
+                        $q->whereNull('ntpn')->orWhere('ntpn', '');
+                    })
+                    ->exists();
+
+            $deferBkuUntilTax = $hasContractTax && $hasUnsettledContractTax;
+
+            if ($tagihan && ! $deferBkuUntilTax) {
+                app(BkuPostingService::class)->postTagihanPengeluaran(
+                    $tagihan,
+                    $sp2d,
+                    $request->catatan_bku ?: null,
+                    $hasContractTax ? (float) ($tagihan->total_bruto ?? $tagihan->total_netto ?? 0) : null
+                );
+                $postedToBku = true;
+            }
+
             $this->logStatus(
                 $sp2d,
-                DokumenSp2d::STATUS_APPROVED,
+                $statusSebelumEksekusi,
                 DokumenSp2d::STATUS_EXECUTED,
                 'EXECUTE_PAYMENT',
-                $request->catatan_bku ?: 'Pencairan dicatat ke BKU dan realisasi anggaran.'
+                $request->catatan_bku ?: 'Bukti transfer SP2D diunggah dan tagihan diselesaikan.'
             );
 
             $this->notifyRoles(
@@ -146,7 +208,13 @@ class Sp2dController extends Controller
             );
         });
 
-        return back()->with('success', 'Eksekusi SP2D selesai. BKU, realisasi anggaran, dan status tagihan sudah diperbarui.');
+        if ($deferBkuUntilTax) {
+            return back()->with('success', 'Bukti transfer SP2D berhasil diunggah. Status tagihan sudah SELESAI. Lanjutkan penyetoran pajak kontrak agar tagihan masuk BKU.');
+        }
+
+        return back()->with('success', $postedToBku
+            ? 'Eksekusi SP2D selesai. Tagihan masuk BKU, realisasi anggaran, dan status tagihan sudah diperbarui.'
+            : 'Eksekusi SP2D selesai. Realisasi anggaran dan status tagihan sudah diperbarui.');
     }
 
     private function syncBuktiTransfer(DokumenSp2d $sp2d, Request $request): void
@@ -179,26 +247,14 @@ class Sp2dController extends Controller
 
     private function syncRealisasiAnggaran(DokumenSp2d $sp2d, ?string $catatanBku = null): void
     {
-        $spp = optional(optional($sp2d->npi)->spm)->spp;
-        $tagihan = optional($spp)->tagihan;
-
-        if (! $spp || ! $tagihan || ! $spp->dipa_revision_item_id) {
-            return;
+        try {
+            $budgetRealizationService = app(\App\Services\BudgetRealizationService::class);
+            $budgetRealizationService->recordFromSp2d($sp2d);
+        } catch (\Exception $e) {
+            \Log::error('Gagal mencatat realisasi anggaran dari SP2D: ' . $e->getMessage());
+            // Optionally, we can rethrow or just log. Since it's critical, maybe rethrow?
+            throw $e;
         }
-
-        RealisasiAnggaran::updateOrCreate(
-            [
-                'tagihan_id' => $tagihan->id,
-                'nomor_bukti' => $sp2d->nomor_sp2d,
-            ],
-            [
-                'dipa_revision_item_id' => $spp->dipa_revision_item_id,
-                'tanggal_pencairan' => $sp2d->tanggal_sp2d,
-                'nominal_cair' => $spp->nominal_spp,
-                'keterangan' => $catatanBku ?: 'Realisasi dari eksekusi SP2D.',
-                'created_by' => Auth::id(),
-            ]
-        );
     }
 
     private function syncTagihanStatus(DokumenSp2d $sp2d): void

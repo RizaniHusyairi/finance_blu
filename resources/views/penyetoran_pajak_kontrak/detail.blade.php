@@ -66,17 +66,17 @@
                 <div class="d-flex flex-wrap gap-2 mb-4 align-items-center">
                     <span class="badge {{ $statusClass }} px-3 py-2">{{ $statusSetor }}</span>
                     <span class="badge bg-light text-dark px-3 py-2 border">Kontrak</span>
-                    @if($isSp2dFinal)
-                        <span class="badge bg-light text-dark px-3 py-2 border"><i class="bi bi-shield-check text-success"></i> SP2D Final</span>
+                    @if($isReadyForPenyetoran)
+                        <span class="badge bg-light text-dark px-3 py-2 border"><i class="bi bi-shield-check text-success"></i> Bukti Transfer SP2D Selesai</span>
                     @else
-                        <span class="badge bg-danger px-3 py-2"><i class="bi bi-exclamation-triangle"></i> SP2D Belum Final</span>
+                        <span class="badge bg-danger px-3 py-2"><i class="bi bi-exclamation-triangle"></i> Menunggu Bukti Transfer SP2D</span>
                     @endif
                 </div>
                 <div class="row g-3">
                     <div class="col-md-3 col-6"><div class="info-tile"><div class="label">Nominal Potongan</div><div class="value text-danger fs-6">Rp {{ number_format($potongan->nominal_potongan, 0, ',', '.') }}</div></div></div>
                     <div class="col-md-3 col-6"><div class="info-tile"><div class="label">DPP</div><div class="value">Rp {{ number_format($potongan->dpp, 0, ',', '.') }}</div></div></div>
                     <div class="col-md-3 col-6"><div class="info-tile"><div class="label">Tarif</div><div class="value">{{ $potongan->persentase_tarif_snapshot ? number_format($potongan->persentase_tarif_snapshot, 2) . '%' : '-' }}</div></div></div>
-                    <div class="col-md-3 col-6"><div class="info-tile"><div class="label">Vendor</div><div class="value">{{ $vendor?->nama ?? '-' }}</div></div></div>
+                    <div class="col-md-3 col-6"><div class="info-tile"><div class="label">Vendor</div><div class="value">{{ $vendorName }}</div></div></div>
                 </div>
             </div>
         </div>
@@ -90,10 +90,11 @@
                 <div class="card-body p-4">
                     <div class="section-heading text-secondary"><i class="bi bi-file-earmark-text"></i> Informasi Kontrak & Tagihan</div>
                     <div class="row g-3">
-                        <div class="col-md-6"><div class="info-block"><div class="label">Nomor Kontrak</div><div class="value">{{ $kontrak?->nomor_kontrak ?? '-' }}</div></div></div>
-                        <div class="col-md-6"><div class="info-block"><div class="label">Judul Kontrak</div><div class="value">{{ $kontrak?->judul_kontrak ?? '-' }}</div></div></div>
-                        <div class="col-md-6"><div class="info-block"><div class="label">Vendor</div><div class="value">{{ $vendor?->nama ?? '-' }}</div></div></div>
-                        <div class="col-md-6"><div class="info-block"><div class="label">Termin</div><div class="value">{{ $kontrakTermin?->nama_termin ?? '-' }}</div></div></div>
+                        <div class="col-md-6"><div class="info-block"><div class="label">Nomor Kontrak</div><div class="value">{{ $nomorKontrak }}</div></div></div>
+                        <div class="col-md-6"><div class="info-block"><div class="label">Vendor</div><div class="value">{{ $vendorName }}</div></div></div>
+                        <div class="col-md-6"><div class="info-block"><div class="label">Judul Kontrak</div><div class="value">{{ $judulKontrak }}</div></div></div>
+                        <div class="col-md-6"><div class="info-block"><div class="label">Termin</div><div class="value">{{ $terminText }}</div></div></div>
+                        <div class="col-12"><div class="info-block"><div class="label">COA</div><div class="value">{{ $coaCode }}@if($coaName)<div class="small text-muted fw-normal">{{ $coaName }}</div>@endif</div></div></div>
                         <div class="col-md-6"><div class="info-block"><div class="label">Nomor Tagihan</div><div class="value">{{ $tagihan?->nomor_tagihan ?? '-' }}</div></div></div>
                         <div class="col-md-6"><div class="info-block"><div class="label">Status Tagihan</div><div class="value"><span class="badge bg-light text-dark border">{{ $tagihan?->status ?? '-' }}</span></div></div></div>
                         <div class="col-md-4"><div class="info-block"><div class="label">Total Bruto</div><div class="value">Rp {{ number_format($tagihan?->total_bruto ?? 0, 0, ',', '.') }}</div></div></div>
@@ -146,12 +147,12 @@
                             <div class="small text-muted">{{ $npi?->nomor_npi ?? '-' }} &bull; {{ $npi?->status ?? '-' }}</div>
                         </div>
                         <div class="pipe-step">
-                            <div class="pipe-dot {{ $isSp2dFinal ? 'done' : ($sp2d ? 'active' : 'pending') }}"></div>
+                            <div class="pipe-dot {{ $isSp2dExecuted ? 'done' : ($sp2d ? 'active' : 'pending') }}"></div>
                             <div class="fw-semibold text-dark">SP2D</div>
                             <div class="small text-muted">{{ $sp2d?->nomor_sp2d ?? '-' }} &bull; {{ $sp2d?->status ?? '-' }}</div>
                         </div>
                         <div class="pipe-step">
-                            <div class="pipe-dot {{ $potongan->kode_billing ? 'done' : ($isSp2dFinal ? 'active' : 'pending') }}"></div>
+                            <div class="pipe-dot {{ $potongan->kode_billing ? 'done' : ($isReadyForPenyetoran ? 'active' : 'pending') }}"></div>
                             <div class="fw-semibold text-dark">Input Billing</div>
                             <div class="small text-muted">{{ $potongan->kode_billing ? 'Terisi' : 'Menunggu' }}</div>
                         </div>
@@ -196,7 +197,8 @@
                             $checks = [
                                 ['label' => 'Tagihan kontrak valid', 'ok' => (bool) $tagihan],
                                 ['label' => 'Potongan pajak valid', 'ok' => $potongan->nominal_potongan > 0],
-                                ['label' => 'SP2D sudah final', 'ok' => $isSp2dFinal],
+                                ['label' => 'Bukti transfer SP2D sudah diunggah', 'ok' => $isSp2dExecuted],
+                                ['label' => 'Tagihan berstatus SELESAI', 'ok' => $isTagihanSelesai],
                                 ['label' => 'Kode Billing', 'ok' => filled($potongan->kode_billing)],
                                 ['label' => 'NTPN', 'ok' => filled($potongan->ntpn)],
                                 ['label' => 'Bukti Setor (BPN)', 'ok' => (bool) $arsipBpn],
@@ -301,13 +303,13 @@
                 </div>
                 @endif
 
-                {{-- Peringatan SP2D belum final --}}
-                @if(!$isSp2dFinal)
+                {{-- Peringatan bukti transfer belum lengkap --}}
+                @if(!$isReadyForPenyetoran)
                 <div class="alert alert-warning border-0 shadow-sm d-flex align-items-center gap-3 p-4 mb-4">
                     <i class="bi bi-exclamation-triangle-fill fs-2 text-warning opacity-75"></i>
                     <div>
-                        <h6 class="fw-bold mb-1">Dokumen Pencairan Belum Final</h6>
-                        <div class="small">SP2D belum berstatus Disetujui Final. Kode Billing dan NTPN tidak dapat diinput.</div>
+                        <h6 class="fw-bold mb-1">Bukti Transfer SP2D Belum Lengkap</h6>
+                        <div class="small">Upload bukti transfer pada menu SP2D terlebih dahulu sampai status SP2D menjadi EXECUTED dan tagihan menjadi SELESAI. Setelah itu Kode Billing dan NTPN dapat diinput.</div>
                     </div>
                 </div>
                 @endif

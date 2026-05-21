@@ -10,6 +10,7 @@ use App\Models\KontrakPengadaan;
 use App\Models\Tagihan;
 use App\Models\TagihanJasa;
 use App\Models\LayananJasa;
+use App\Models\DetailPerjaldin;
 use App\Models\MasterMitraVendor;
 use App\Models\MasterPihak;
 use App\Models\MitraJasa;
@@ -36,6 +37,12 @@ class DashboardController extends Controller
         }
         if (Auth::user()->hasRole('PPK')) {
             return $this->ppk();   
+        }
+        if (Auth::user()->hasRole('PPABP')) {
+            return $this->ppabp();
+        }
+        if (Auth::user()->hasRole('Operator Perjaldin')) {
+            return $this->operatorPerjaldin();
         }
         if (Auth::user()->hasRole('Bendahara Penerimaan')) {
             return redirect()->route('dashboard.bendahara-penerimaan');
@@ -371,70 +378,165 @@ class DashboardController extends Controller
      */
     private function pejabatPengadaan()
     {
-        $data = \Illuminate\Support\Facades\Cache::remember('dash_pejabat_pengadaan_' . auth()->id(), 60, function() {
+        $data = \Illuminate\Support\Facades\Cache::remember('dash_pejabat_pengadaan_' . auth()->id(), 60, function () {
             $now = now();
-            
-            // KPI 1: Kontrak Aktif
+            $tahun = $now->year;
+
+            // ============================================================
+            // KPI METRICS
+            // ============================================================
             $kontrakAktif = \App\Models\KontrakPengadaan::where('status_kontrak', 'AKTIF')->count();
+            $kontrakDraft = \App\Models\KontrakPengadaan::where('status_kontrak', 'DRAFT')->count();
+            $kontrakPending = \App\Models\KontrakPengadaan::where('status_kontrak', 'PENDING_REVIEW')->count();
+            $kontrakSelesai = \App\Models\KontrakPengadaan::where('status_kontrak', 'SELESAI')->count();
+            $kontrakDibatalkan = \App\Models\KontrakPengadaan::where('status_kontrak', 'DIBATALKAN')->count();
+            $kontrakTotal = $kontrakAktif + $kontrakDraft + $kontrakPending + $kontrakSelesai + $kontrakDibatalkan;
+
             $selesaiBulanIni = \App\Models\KontrakPengadaan::where('status_kontrak', 'SELESAI')
-                                ->whereMonth('tanggal_selesai', $now->month)
-                                ->whereYear('tanggal_selesai', $now->year)
-                                ->count();
-            
-            // KPI 2: Total Nilai Berjalan
-            $nilaiKontrakAktif = \App\Models\KontrakPengadaan::where('status_kontrak', 'AKTIF')
-                                ->sum('nilai_total_kontrak');
-                                
-            // KPI 3: Tagihan Menunggu (Pending PPK/Bendahara)
+                ->whereMonth('tanggal_selesai', $now->month)
+                ->whereYear('tanggal_selesai', $now->year)
+                ->count();
+
+            $nilaiKontrakAktif = \App\Models\KontrakPengadaan::where('status_kontrak', 'AKTIF')->sum('nilai_total_kontrak');
+            $nilaiKontrakSelesai = \App\Models\KontrakPengadaan::where('status_kontrak', 'SELESAI')->sum('nilai_total_kontrak');
+            $nilaiKontrakDraft = \App\Models\KontrakPengadaan::where('status_kontrak', 'DRAFT')->sum('nilai_total_kontrak');
+            $totalNilaiSemua = $nilaiKontrakAktif + $nilaiKontrakSelesai + $nilaiKontrakDraft;
+
+            // Vendor / Mitra
+            $totalVendor = \App\Models\MasterMitraVendor::count();
+            $vendorAktifIds = \App\Models\KontrakPengadaan::whereIn('status_kontrak', ['AKTIF', 'PENDING_REVIEW'])
+                ->pluck('vendor_id')->unique();
+            $vendorAktif = \App\Models\MasterMitraVendor::whereIn('id', $vendorAktifIds)->count();
+
+            // Tagihan kontrak
             $tagihanMenunggu = \App\Models\Tagihan::whereIn('status', ['PENDING_REVIEW', 'PENDING_BENDAHARA'])->count();
-            
-            // KPI 4: Butuh Perhatian (Ditolak / Revisi)
             $tagihanRevisi = \App\Models\Tagihan::whereIn('status', ['DITOLAK_PPK', 'REVISI_BENDAHARA', 'REVISI'])->count();
 
-            // CHART KIRI: Serapan Anggaran Kontrak (Pagu DIPA vs Kontrak)
+            // ============================================================
+            // CHART: Serapan Anggaran Kontrak
+            // ============================================================
             $totalPaguDipa = \App\Models\RiwayatRevisiDipa::where('is_active', true)->sum('total_pagu');
+            $totalKontrakNonBatal = \App\Models\KontrakPengadaan::where('status_kontrak', '!=', 'DIBATALKAN')->sum('nilai_total_kontrak');
             $chartSerapan = [
-                'Terpakai (Nilai Kontrak)' => \App\Models\KontrakPengadaan::where('status_kontrak', '!=', 'DIBATALKAN')->sum('nilai_total_kontrak'),
-                'Sisa Pagu Khusus' => max(0, $totalPaguDipa - \App\Models\KontrakPengadaan::where('status_kontrak', '!=', 'DIBATALKAN')->sum('nilai_total_kontrak'))
+                'Terpakai Kontrak' => $totalKontrakNonBatal,
+                'Sisa Pagu DIPA'    => max(0, $totalPaguDipa - $totalKontrakNonBatal),
             ];
 
-            // CHART KANAN: Distribusi Status Tagihan
-            $chartStatusTagihan = \App\Models\Tagihan::where('tipe_tagihan', 'KONTRAK')
-                ->select('status', \Illuminate\Support\Facades\DB::raw('count(*) as total'))
-                ->groupBy('status')
-                ->pluck('total', 'status')
-                ->toArray();
+            // ============================================================
+            // CHART: Tren Kontrak Baru 6 Bulan
+            // ============================================================
+            $trenLabels = [];
+            $trenJumlah = [];
+            $trenNilai = [];
+            for ($i = 5; $i >= 0; $i--) {
+                $month = $now->copy()->subMonths($i);
+                $trenLabels[] = $month->isoFormat('MMM YY');
+                $jumlah = \App\Models\KontrakPengadaan::whereYear('created_at', $month->year)
+                    ->whereMonth('created_at', $month->month)
+                    ->count();
+                $nilai = (float) \App\Models\KontrakPengadaan::whereYear('created_at', $month->year)
+                    ->whereMonth('created_at', $month->month)
+                    ->sum('nilai_total_kontrak');
+                $trenJumlah[] = $jumlah;
+                $trenNilai[] = $nilai;
+            }
 
-            // TABEL KIRI: Peringatan Jatuh Tempo (H-14)
+            // ============================================================
+            // CHART: Distribusi Status Kontrak
+            // ============================================================
+            $statusKontrakDistribusi = [
+                'AKTIF' => $kontrakAktif,
+                'PENDING_REVIEW' => $kontrakPending,
+                'DRAFT' => $kontrakDraft,
+                'SELESAI' => $kontrakSelesai,
+                'DIBATALKAN' => $kontrakDibatalkan,
+            ];
+
+            // ============================================================
+            // TABEL: Jatuh Tempo H-14 + Terlambat
+            // ============================================================
             $jatuhTempo = \App\Models\KontrakPengadaan::where('status_kontrak', 'AKTIF')
-                        ->where('tanggal_selesai', '<=', $now->copy()->addDays(14))
-                        ->orderBy('tanggal_selesai', 'asc')
-                        ->take(5)
-                        ->get();
+                ->where('tanggal_selesai', '<=', $now->copy()->addDays(14))
+                ->with('vendor')
+                ->orderBy('tanggal_selesai', 'asc')
+                ->take(6)
+                ->get();
 
-            // TABEL KANAN: Tagihan Dikembalikan / Revisi
+            // ============================================================
+            // TABEL: Kontrak Pending (Butuh tindakan PPK/Anda)
+            // ============================================================
+            $kontrakPendingList = \App\Models\KontrakPengadaan::whereIn('status_kontrak', ['DRAFT', 'PENDING_REVIEW'])
+                ->with('vendor')
+                ->latest('updated_at')
+                ->take(6)
+                ->get();
+
+            // ============================================================
+            // TABEL: Kontrak Aktif Terbaru
+            // ============================================================
+            $kontrakAktifTerbaru = \App\Models\KontrakPengadaan::where('status_kontrak', 'AKTIF')
+                ->with('vendor')
+                ->latest('tanggal_spk')
+                ->take(5)
+                ->get();
+
+            // ============================================================
+            // TABEL: Top Vendor by jumlah kontrak
+            // ============================================================
+            $topVendorRows = \App\Models\KontrakPengadaan::query()
+                ->where('status_kontrak', '!=', 'DIBATALKAN')
+                ->select('vendor_id', \DB::raw('COUNT(*) as total_kontrak'), \DB::raw('SUM(nilai_total_kontrak) as total_nilai_kontrak'))
+                ->groupBy('vendor_id')
+                ->orderByDesc('total_kontrak')
+                ->take(5)
+                ->get();
+            $vendorIds = $topVendorRows->pluck('vendor_id');
+            $vendorMap = \App\Models\MasterMitraVendor::whereIn('id', $vendorIds)->get()->keyBy('id');
+            $topVendor = $topVendorRows->map(function ($row) use ($vendorMap) {
+                $row->vendor = $vendorMap->get($row->vendor_id);
+                return $row;
+            });
+
+            // ============================================================
+            // TABEL: Tagihan Bermasalah
+            // ============================================================
             $tagihanBermasalah = \App\Models\Tagihan::whereIn('status', ['DITOLAK_PPK', 'REVISI_BENDAHARA', 'REVISI'])
-                                ->with(['logs' => function($q) {
-                                    $q->latest()->limit(1); // Ambil log penolakan terakhir
-                                }])
-                                ->latest()
-                                ->take(5)
-                                ->get();
+                ->with(['logs' => fn ($q) => $q->latest()->limit(1)])
+                ->latest()
+                ->take(5)
+                ->get();
 
             return [
                 'kpi' => [
                     'kontrak_aktif' => $kontrakAktif,
+                    'kontrak_draft' => $kontrakDraft,
+                    'kontrak_pending' => $kontrakPending,
+                    'kontrak_selesai' => $kontrakSelesai,
+                    'kontrak_total' => $kontrakTotal,
                     'selesai_bulan_ini' => $selesaiBulanIni,
                     'nilai_kontrak_aktif' => $nilaiKontrakAktif,
+                    'nilai_kontrak_selesai' => $nilaiKontrakSelesai,
+                    'total_nilai_semua' => $totalNilaiSemua,
+                    'total_vendor' => $totalVendor,
+                    'vendor_aktif' => $vendorAktif,
                     'tagihan_menunggu' => $tagihanMenunggu,
                     'tagihan_revisi' => $tagihanRevisi,
+                    'total_pagu_dipa' => $totalPaguDipa,
+                    'serapan_persen' => $totalPaguDipa > 0 ? round(($totalKontrakNonBatal / $totalPaguDipa) * 100, 1) : 0,
                 ],
                 'chart_serapan_labels' => array_keys($chartSerapan),
                 'chart_serapan_data' => array_values($chartSerapan),
-                'chart_status_labels' => array_keys($chartStatusTagihan),
-                'chart_status_data' => array_values($chartStatusTagihan),
+                'chart_status_labels' => array_keys($statusKontrakDistribusi),
+                'chart_status_data' => array_values($statusKontrakDistribusi),
+                'tren_labels' => $trenLabels,
+                'tren_jumlah' => $trenJumlah,
+                'tren_nilai' => $trenNilai,
                 'table_jatuh_tempo' => $jatuhTempo,
+                'kontrak_pending_list' => $kontrakPendingList,
+                'kontrak_aktif_terbaru' => $kontrakAktifTerbaru,
+                'top_vendor' => $topVendor,
                 'table_tagihan_revisi' => $tagihanBermasalah,
+                'tahun' => $tahun,
             ];
         });
 
@@ -529,7 +631,7 @@ class DashboardController extends Controller
                 ->tap($pembuatJoin)
                 ->select('dokumen_spp.id', 'dokumen_spp.nomor_spp as nomor', 'dokumen_spp.nominal_spp as nilai', $pembuatExpr)
                 ->where('dokumen_spp.status', 'DRAFT')
-                ->get()->map(function($i) { $i->jenis = 'SPP'; $i->prioritas = 'Sedang'; $i->url_reject = route('verifikasi-ppk.spp.revisi', $i->id); $i->url_approve = route('verifikasi-ppk.spp.approve', $i->id); return $i; });
+                ->get()->map(function($i) { $i->jenis = 'SPP'; $i->prioritas = 'Sedang'; $i->url_reject = route('verifikasi-spp.kontrak.revisi', $i->id); $i->url_approve = route('verifikasi-spp.kontrak.approve', $i->id); return $i; });
                 
             $listNpi = DB::table('dokumen_npi')
                 ->join('users', 'dokumen_npi.bendahara_penerimaan_id', '=', 'users.id')
@@ -573,5 +675,312 @@ class DashboardController extends Controller
         });
 
         return view('dashboard.ppk', $data);
+    }
+
+    /**
+     * Dashboard khusus Role PPABP (Petugas Pengelola Administrasi Belanja Pegawai)
+     * Fokus: pengelolaan tagihan honorarium — draft, perlu revisi, dalam verifikasi, disetujui.
+     */
+    private function ppabp()
+    {
+        $userId = Auth::id();
+
+        $data = \Illuminate\Support\Facades\Cache::remember('dash_ppabp_' . $userId, 60, function () use ($userId) {
+            $now = now();
+            $tahun = $now->year;
+            $bulan = $now->month;
+
+            // ============================================================
+            // STATUS BUCKETING
+            // ============================================================
+            $draftStatuses = ['DRAFT'];
+            $revisiStatuses = [
+                'DITOLAK_PPK', 'DITOLAK_PPSPM', 'DITOLAK_KOORDINATOR_KEUANGAN',
+                'DITOLAK_BENDAHARA_PENGELUARAN', 'DITOLAK_BENDAHARA_PENERIMAAN', 'DITOLAK_KASUBBAG',
+                'REVISI_PPK', 'REVISI_PPSPM', 'REVISI_KOORDINATOR_KEUANGAN',
+                'REVISI_BENDAHARA_PENGELUARAN', 'REVISI_BENDAHARA_PENERIMAAN', 'REVISI_KASUBBAG',
+            ];
+            $verifikasiStatuses = [
+                'PENDING_VERIFIKASI_HONORARIUM', 'PENDING_KASUBBAG', 'PENDING_PPK', 'PENDING_PPSPM',
+                'PENDING_KOORDINATOR_KEUANGAN', 'PENDING_BENDAHARA_PENGELUARAN', 'PENDING_BENDAHARA_PENERIMAAN',
+            ];
+            $disetujuiStatuses = ['DISETUJUI', 'PROSES_SPP', 'SPP_TERBIT', 'SEBAGIAN_SPP_TERBIT', 'SPP_LENGKAP', 'SELESAI'];
+
+            $baseQuery = fn () => Tagihan::where('tipe_tagihan', 'HONORARIUM');
+
+            // ============================================================
+            // KPI CARDS
+            // ============================================================
+            $kpiDraft = (clone $baseQuery())->whereIn('status', $draftStatuses)->count();
+            $kpiRevisi = (clone $baseQuery())->whereIn('status', $revisiStatuses)->count();
+            $kpiVerifikasi = (clone $baseQuery())->whereIn('status', $verifikasiStatuses)->count();
+            $kpiDisetujui = (clone $baseQuery())->whereIn('status', $disetujuiStatuses)->count();
+
+            $totalNominalDraft = (clone $baseQuery())->whereIn('status', $draftStatuses)->sum('total_bruto');
+            $totalNominalVerifikasi = (clone $baseQuery())->whereIn('status', $verifikasiStatuses)->sum('total_bruto');
+
+            // Total bulan ini (dibuat bulan ini)
+            $tagihanBulanIni = (clone $baseQuery())
+                ->whereYear('created_at', $tahun)
+                ->whereMonth('created_at', $bulan)
+                ->count();
+            $nominalBulanIni = (clone $baseQuery())
+                ->whereYear('created_at', $tahun)
+                ->whereMonth('created_at', $bulan)
+                ->sum('total_bruto');
+
+            // Total Personel Penerima Honor (unique nrp_nip yang dibayar tahun ini)
+            $totalPenerimaTahunIni = DB::table('detail_honorarium')
+                ->join('tagihan', 'detail_honorarium.tagihan_id', '=', 'tagihan.id')
+                ->where('tagihan.tipe_tagihan', 'HONORARIUM')
+                ->whereYear('tagihan.created_at', $tahun)
+                ->whereNull('tagihan.deleted_at')
+                ->whereNull('detail_honorarium.deleted_at')
+                ->distinct('detail_honorarium.nrp_nip')
+                ->count('detail_honorarium.nrp_nip');
+
+            // ============================================================
+            // CHART: Tren Tagihan Honor 6 Bulan Terakhir
+            // ============================================================
+            $trenLabels = [];
+            $trenJumlah = [];
+            $trenNominal = [];
+            for ($i = 5; $i >= 0; $i--) {
+                $month = $now->copy()->subMonths($i);
+                $trenLabels[] = $month->isoFormat('MMM YY');
+                $trenJumlah[] = (clone $baseQuery())
+                    ->whereYear('created_at', $month->year)
+                    ->whereMonth('created_at', $month->month)
+                    ->count();
+                $trenNominal[] = (float) (clone $baseQuery())
+                    ->whereYear('created_at', $month->year)
+                    ->whereMonth('created_at', $month->month)
+                    ->sum('total_bruto');
+            }
+
+            // ============================================================
+            // CHART: Distribusi Status Tagihan Honor (Doughnut)
+            // ============================================================
+            $statusDistribusi = [
+                'Draft' => $kpiDraft,
+                'Perlu Revisi' => $kpiRevisi,
+                'Dalam Verifikasi' => $kpiVerifikasi,
+                'Disetujui / Selesai' => $kpiDisetujui,
+            ];
+
+            // ============================================================
+            // TABEL: Tagihan Perlu Tindakan (Draft + Revisi)
+            // ============================================================
+            $needsActionStatuses = array_merge($draftStatuses, $revisiStatuses);
+            $perluTindakan = (clone $baseQuery())
+                ->whereIn('status', $needsActionStatuses)
+                ->with(['detailHonorarium', 'logs' => fn ($q) => $q->latest()->limit(1)])
+                ->latest('updated_at')
+                ->take(8)
+                ->get();
+
+            // ============================================================
+            // TABEL: Tagihan Dalam Verifikasi (sedang diproses verifikator)
+            // ============================================================
+            $dalamVerifikasi = (clone $baseQuery())
+                ->whereIn('status', $verifikasiStatuses)
+                ->with(['detailHonorarium'])
+                ->latest('updated_at')
+                ->take(5)
+                ->get();
+
+            // ============================================================
+            // TABEL: Honorarium Selesai Terbaru
+            // ============================================================
+            $selesaiTerbaru = (clone $baseQuery())
+                ->whereIn('status', $disetujuiStatuses)
+                ->latest('updated_at')
+                ->take(5)
+                ->get();
+
+            return [
+                'kpi' => [
+                    'draft' => $kpiDraft,
+                    'revisi' => $kpiRevisi,
+                    'verifikasi' => $kpiVerifikasi,
+                    'disetujui' => $kpiDisetujui,
+                    'nominal_draft' => $totalNominalDraft,
+                    'nominal_verifikasi' => $totalNominalVerifikasi,
+                    'tagihan_bulan_ini' => $tagihanBulanIni,
+                    'nominal_bulan_ini' => $nominalBulanIni,
+                    'total_penerima_tahun_ini' => $totalPenerimaTahunIni,
+                ],
+                'tren_labels' => $trenLabels,
+                'tren_jumlah' => $trenJumlah,
+                'tren_nominal' => $trenNominal,
+                'status_labels' => array_keys($statusDistribusi),
+                'status_data' => array_values($statusDistribusi),
+                'perlu_tindakan' => $perluTindakan,
+                'dalam_verifikasi' => $dalamVerifikasi,
+                'selesai_terbaru' => $selesaiTerbaru,
+                'tahun' => $tahun,
+            ];
+        });
+
+        return view('dashboard.ppabp', $data);
+    }
+
+    /**
+     * Dashboard khusus Role Operator Perjaldin
+     */
+    private function operatorPerjaldin()
+    {
+        $userId = Auth::id();
+
+        $data = \Illuminate\Support\Facades\Cache::remember('dash_operator_perjaldin_' . $userId, 60, function () use ($userId) {
+            $now = now();
+            $tahun = $now->year;
+            $bulan = $now->month;
+
+            // ============================================================
+            // STATUS BUCKETING
+            // ============================================================
+            $draftStatuses = ['DRAFT'];
+            $revisiStatuses = [
+                'DITOLAK_PPK', 'DITOLAK_PPSPM', 'DITOLAK_KOORDINATOR_KEUANGAN',
+                'DITOLAK_BENDAHARA_PENGELUARAN', 'DITOLAK_BENDAHARA_PENERIMAAN', 'DITOLAK_KASUBBAG',
+                'REVISI_PPK', 'REVISI_PPSPM', 'REVISI_KOORDINATOR_KEUANGAN',
+                'REVISI_BENDAHARA_PENGELUARAN', 'REVISI_BENDAHARA_PENERIMAAN', 'REVISI_KASUBBAG',
+            ];
+            $verifikasiStatuses = [
+                'PENDING_VERIFIKASI_PERJALDIN', 'PENDING_KASUBBAG', 'PENDING_PPK', 'PENDING_PPSPM',
+                'PENDING_KOORDINATOR_KEUANGAN', 'PENDING_BENDAHARA_PENGELUARAN', 'PENDING_BENDAHARA_PENERIMAAN',
+            ];
+            $menungguTtdStatuses = ['MENUNGGU_UPLOAD_NOMINATIF_TTD'];
+            $selesaiStatuses = ['DISETUJUI_PERJALDIN', 'PROSES_SPP', 'SPP_TERBIT', 'SEBAGIAN_SPP_TERBIT', 'SPP_LENGKAP', 'SELESAI', 'CAIR', 'SP2D'];
+
+            $baseQuery = fn () => Tagihan::where('tipe_tagihan', 'PERJALDIN');
+
+            // ============================================================
+            // KPI CARDS
+            // ============================================================
+            $kpiDraft = (clone $baseQuery())->whereIn('status', $draftStatuses)->count();
+            $kpiRevisi = (clone $baseQuery())->whereIn('status', $revisiStatuses)->count();
+            $kpiVerifikasi = (clone $baseQuery())->whereIn('status', $verifikasiStatuses)->count();
+            $kpiMenungguTtd = (clone $baseQuery())->whereIn('status', $menungguTtdStatuses)->count();
+            $kpiSelesai = (clone $baseQuery())->whereIn('status', $selesaiStatuses)->count();
+
+            $totalNominalDraft = (clone $baseQuery())->whereIn('status', $draftStatuses)->sum('total_bruto');
+            $totalNominalVerifikasi = (clone $baseQuery())->whereIn('status', $verifikasiStatuses)->sum('total_bruto');
+            $totalNominalSelesai = (clone $baseQuery())->whereIn('status', $selesaiStatuses)->sum('total_bruto');
+
+            // Total bulan ini (dibuat bulan ini)
+            $tagihanBulanIni = (clone $baseQuery())
+                ->whereYear('created_at', $tahun)
+                ->whereMonth('created_at', $bulan)
+                ->count();
+            $nominalBulanIni = (clone $baseQuery())
+                ->whereYear('created_at', $tahun)
+                ->whereMonth('created_at', $bulan)
+                ->sum('total_bruto');
+
+            // ============================================================
+            // CHART: Tren Tagihan Perjaldin 6 Bulan Terakhir
+            // ============================================================
+            $trenLabels = [];
+            $trenJumlah = [];
+            $trenNominal = [];
+            for ($i = 5; $i >= 0; $i--) {
+                $month = $now->copy()->subMonths($i);
+                $trenLabels[] = $month->isoFormat('MMM YY');
+                $trenJumlah[] = (clone $baseQuery())
+                    ->whereYear('created_at', $month->year)
+                    ->whereMonth('created_at', $month->month)
+                    ->count();
+                $trenNominal[] = (float) (clone $baseQuery())
+                    ->whereYear('created_at', $month->year)
+                    ->whereMonth('created_at', $month->month)
+                    ->sum('total_bruto');
+            }
+
+            // ============================================================
+            // CHART: Distribusi Biaya Komponen
+            // ============================================================
+            $components = DB::table('detail_perjaldin')
+                ->join('tagihan', 'detail_perjaldin.tagihan_id', '=', 'tagihan.id')
+                ->where('tagihan.tipe_tagihan', 'PERJALDIN')
+                ->whereNull('tagihan.deleted_at')
+                ->select([
+                    DB::raw('SUM(detail_perjaldin.biaya_tiket) as tiket'),
+                    DB::raw('SUM(detail_perjaldin.biaya_transport) as transport'),
+                    DB::raw('SUM(detail_perjaldin.biaya_penginapan) as penginapan'),
+                    DB::raw('SUM(detail_perjaldin.uang_harian + detail_perjaldin.uang_representasi + detail_perjaldin.uang_rapat) as uang_harian_representasi_rapat')
+                ])
+                ->first();
+
+            $komponenData = [
+                'Tiket Pesawat' => (float) ($components->tiket ?? 0),
+                'Transportasi' => (float) ($components->transport ?? 0),
+                'Penginapan' => (float) ($components->penginapan ?? 0),
+                'Uang Harian & Rapat' => (float) ($components->uang_harian_representasi_rapat ?? 0),
+            ];
+
+            // ============================================================
+            // TABEL DATA
+            // ============================================================
+            // 1. Tagihan Butuh Tindakan (Draft & Revisi)
+            $needsActionStatuses = array_merge($draftStatuses, $revisiStatuses);
+            $perluTindakan = (clone $baseQuery())
+                ->whereIn('status', $needsActionStatuses)
+                ->with(['logs' => fn ($q) => $q->latest()])
+                ->latest('updated_at')
+                ->take(10)
+                ->get();
+
+            // 2. Tagihan Menunggu Upload TTD
+            $menungguTtd = (clone $baseQuery())
+                ->whereIn('status', $menungguTtdStatuses)
+                ->with(['arsipDokumen'])
+                ->latest('updated_at')
+                ->take(5)
+                ->get();
+
+            // 3. Tagihan Dalam Verifikasi (dengan approvals)
+            $dalamVerifikasi = (clone $baseQuery())
+                ->whereIn('status', $verifikasiStatuses)
+                ->with(['workflowInstances.approvals.actedByUser', 'logs'])
+                ->latest('updated_at')
+                ->take(10)
+                ->get();
+
+            // 4. Tagihan Selesai Terbaru
+            $selesaiTerbaru = (clone $baseQuery())
+                ->whereIn('status', $selesaiStatuses)
+                ->latest('updated_at')
+                ->take(5)
+                ->get();
+
+            return [
+                'kpi' => [
+                    'draft' => $kpiDraft,
+                    'revisi' => $kpiRevisi,
+                    'verifikasi' => $kpiVerifikasi,
+                    'menunggu_ttd' => $kpiMenungguTtd,
+                    'selesai' => $kpiSelesai,
+                    'nominal_draft' => $totalNominalDraft,
+                    'nominal_verifikasi' => $totalNominalVerifikasi,
+                    'nominal_selesai' => $totalNominalSelesai,
+                    'tagihan_bulan_ini' => $tagihanBulanIni,
+                    'nominal_bulan_ini' => $nominalBulanIni,
+                ],
+                'tren_labels' => $trenLabels,
+                'tren_jumlah' => $trenJumlah,
+                'tren_nominal' => $trenNominal,
+                'komponen_labels' => array_keys($komponenData),
+                'komponen_data' => array_values($komponenData),
+                'perlu_tindakan' => $perluTindakan,
+                'menunggu_ttd' => $menungguTtd,
+                'dalam_verifikasi' => $dalamVerifikasi,
+                'selesai_terbaru' => $selesaiTerbaru,
+                'tahun' => $tahun,
+            ];
+        });
+
+        return view('dashboard.operator_perjaldin', $data);
     }
 }

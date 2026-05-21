@@ -131,6 +131,7 @@
                         <th class="text-center">BenPen</th>
                         <th class="text-center">PPK</th>
                         <th class="text-center">Kasubbag</th>
+                        <th class="text-center">Koordinator</th>
                         <th class="text-center">Status Final</th>
                         <th class="text-center" style="width: 100px;">Aksi</th>
                     </tr>
@@ -173,6 +174,10 @@
                             <td class="text-center">
                                 @php($ks = $npi->_kasubbagApproval?->status)
                                 <span class="badge {{ $ks === 'APPROVED' ? 'bg-success' : ($ks === 'PENDING' ? 'bg-warning text-dark' : (in_array($ks, ['REVISION', 'REJECTED']) ? 'bg-danger' : 'bg-light text-dark border')) }}">{{ $ks ?? 'N/A' }}</span>
+                            </td>
+                            <td class="text-center">
+                                @php($kos = $npi->_koordinatorApproval?->status)
+                                <span class="badge {{ $kos === 'APPROVED' ? 'bg-success' : ($kos === 'PENDING' ? 'bg-warning text-dark' : (in_array($kos, ['REVISION', 'REJECTED']) ? 'bg-danger' : 'bg-light text-dark border')) }}">{{ $kos ?? 'N/A' }}</span>
                             </td>
                             <td class="text-center">
                                 @php($sf = $npi->_statusFinal)

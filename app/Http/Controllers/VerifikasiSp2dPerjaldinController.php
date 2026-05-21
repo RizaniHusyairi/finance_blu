@@ -21,14 +21,54 @@ class VerifikasiSp2dPerjaldinController extends Controller
     }
 
     /**
-     * Helper to detect which role the controller should act as for the currently logged in user 
+     * Helper to detect all verifier roles for the currently logged in user.
      */
+    private function activeRoleCodes(User $user): array
+    {
+        return collect([
+            'PPSPM',
+            'PPK',
+            'Kepala Subbagian Keuangan dan Tata Usaha',
+            'Koordinator Keuangan',
+        ])->filter(fn ($roleCode) => $user->hasRole($roleCode))->values()->all();
+    }
+
     private function activeRoleCode(User $user): string
     {
-        if ($user->hasRole('PPK')) return 'PPK';
-        if ($user->hasRole('Kepala Subbagian Keuangan dan Tata Usaha')) return 'Kepala Subbagian Keuangan dan Tata Usaha';
-        
-        return '';
+        return $this->activeRoleCodes($user)[0] ?? '';
+    }
+
+    private function authorizedApprovals($approvals, array $roleCodes, User $user)
+    {
+        return $approvals
+            ->whereIn('role_code', $roleCodes)
+            ->filter(fn ($approval) => !$approval->assigned_user_id || (int) $approval->assigned_user_id === (int) $user->id)
+            ->values();
+    }
+
+    private function actionableApproval($approvals, array $roleCodes, User $user)
+    {
+        return $this->actionableApprovals($approvals, $roleCodes, $user)->first();
+    }
+
+    private function actionableApprovals($approvals, array $roleCodes, User $user)
+    {
+        return $this->authorizedApprovals($approvals, $roleCodes, $user)
+            ->filter(fn ($approval) => $approval->status === 'PENDING'
+                && $approval->instance?->status === 'IN_PROGRESS'
+                && (int) $approval->instance?->step_saat_ini === (int) $approval->urutan_step)
+            ->values();
+    }
+
+    private function resolveApprovalForAction($approvals, array $roleCodes, User $user, $approvalId = null)
+    {
+        $actionableApprovals = $this->actionableApprovals($approvals, $roleCodes, $user);
+
+        if ($approvalId) {
+            return $actionableApprovals->firstWhere('id', (int) $approvalId);
+        }
+
+        return $actionableApprovals->count() === 1 ? $actionableApprovals->first() : null;
     }
 
     /**
@@ -37,9 +77,10 @@ class VerifikasiSp2dPerjaldinController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
-        $roleCode = $this->activeRoleCode($user);
+        $roleCodes = $this->activeRoleCodes($user);
+        $roleCode = implode(' / ', $roleCodes);
         
-        abort_unless($roleCode !== '', 403, 'Akses ditolak. Anda tidak memiliki peran verifikator yang valid.');
+        abort_unless(!empty($roleCodes), 403, 'Akses ditolak. Anda tidak memiliki peran verifikator yang valid.');
 
         $query = DokumenSp2d::with([
             'npi.spm.spp.tagihan.detailPerjaldin.pegawai',
@@ -54,9 +95,9 @@ class VerifikasiSp2dPerjaldinController extends Controller
         ->whereNotIn('status', [DokumenSp2d::STATUS_DRAFT]); 
 
         // Filter Spesifik Role
-        if ($roleCode === 'PPK' || $roleCode === 'Kepala Subbagian Keuangan dan Tata Usaha') {
-            $query->whereHas('workflowInstances.approvals', function($q) use ($roleCode, $user) {
-                $q->where('role_code', $roleCode)->where(function($sq) use ($user) {
+        if (!empty($roleCodes)) {
+            $query->whereHas('workflowInstances.approvals', function($q) use ($roleCodes, $user) {
+                $q->whereIn('role_code', $roleCodes)->where(function($sq) use ($user) {
                     $sq->whereNull('assigned_user_id')->orWhere('assigned_user_id', $user->id);
                 });
             });
@@ -69,10 +110,12 @@ class VerifikasiSp2dPerjaldinController extends Controller
             $wf = $sp2d->workflowInstances->first();
             if (!$wf) continue;
 
-            $myApproval = $wf->approvals->where('role_code', $roleCode)->first();
-            if ($myApproval?->assigned_user_id && $myApproval->assigned_user_id !== $user->id) {
+            $myApprovals = $this->authorizedApprovals($wf->approvals, $roleCodes, $user);
+            if ($myApprovals->isEmpty()) {
                 continue;
             }
+
+            $myApproval = $myApprovals->firstWhere('status', 'PENDING') ?? $myApprovals->first();
 
             $sp2d->npiModel = $sp2d->npi;
             $sp2d->spmModel = $sp2d->npi?->spm;
@@ -142,8 +185,8 @@ class VerifikasiSp2dPerjaldinController extends Controller
     public function show(Request $request, $id)
     {
         $user = $request->user();
-        $roleCode = $this->activeRoleCode($user);
-        abort_unless($roleCode !== '', 403, 'Akses ditolak.');
+        $roleCodes = $this->activeRoleCodes($user);
+        abort_unless(!empty($roleCodes), 403, 'Akses ditolak.');
 
         $sp2d = DokumenSp2d::with([
             'npi.spm.spp.tagihan.detailPerjaldin.pegawai',
@@ -164,14 +207,11 @@ class VerifikasiSp2dPerjaldinController extends Controller
         $wf = $sp2d->workflowInstances->first();
         abort_unless($wf, 404, 'Workflow tidak ditemukan untuk SP2D ini.');
 
-        $myApproval = $wf->approvals->where('role_code', $roleCode)->first();
-        $canAct = (
-            $myApproval
-            && $myApproval->status === 'PENDING'
-            && $wf->status === 'IN_PROGRESS'
-            && (int) $wf->step_saat_ini === (int) $myApproval->urutan_step
-            && (!$myApproval->assigned_user_id || $myApproval->assigned_user_id === $user->id)
-        );
+        $activeRoleApprovals = $this->authorizedApprovals($wf->approvals, $roleCodes, $user);
+        $actionableApprovals = $this->actionableApprovals($wf->approvals, $roleCodes, $user);
+        $myApproval = $actionableApprovals->first() ?? $activeRoleApprovals->firstWhere('status', 'PENDING') ?? $activeRoleApprovals->first();
+        $canAct = $actionableApprovals->isNotEmpty();
+        $roleCode = $myApproval?->role_code ?? implode(' / ', $roleCodes);
 
         $npi = $sp2d->npi;
         $spm = $npi?->spm;
@@ -191,7 +231,7 @@ class VerifikasiSp2dPerjaldinController extends Controller
 
         return view('verifikasi_sp2d_perjaldin.show', compact(
             'sp2d', 'npi', 'spm', 'spp', 'tagihan', 'komponen',
-            'wf', 'roleCode', 'canAct', 'checks'
+            'wf', 'roleCode', 'canAct', 'checks', 'activeRoleApprovals', 'actionableApprovals', 'myApproval'
         ));
     }
 
@@ -201,24 +241,33 @@ class VerifikasiSp2dPerjaldinController extends Controller
     public function approve(Request $request, $id)
     {
         $user = $request->user();
-        $roleCode = $this->activeRoleCode($user);
-        abort_unless($roleCode !== '', 403, 'Akses ditolak.');
+        $roleCodes = $this->activeRoleCodes($user);
+        abort_unless(!empty($roleCodes), 403, 'Akses ditolak.');
 
-        $sp2d = DokumenSp2d::with(['workflowInstances' => fn($q) => $q->latest()->limit(1)])->findOrFail($id);
+        $request->validate([
+            'approval_id' => 'nullable|integer',
+            'catatan' => 'nullable|string',
+        ]);
+
+        $sp2d = DokumenSp2d::with([
+            'workflowInstances' => fn($q) => $q->latest()->limit(1),
+            'workflowInstances.approvals',
+        ])->findOrFail($id);
         $wf = $sp2d->workflowInstances->first();
 
         // Security check
-        $myApproval = $wf?->approvals->where('role_code', $roleCode)->where('status', 'PENDING')->first();
-        if (!$myApproval && $wf?->status === 'IN_PROGRESS') {
+        $myApproval = $wf ? $this->resolveApprovalForAction($wf->approvals, $roleCodes, $user, $request->input('approval_id')) : null;
+        if (!$myApproval) {
             return back()->with('error', 'Anda tidak memiliki hak akses atau tindakan ini sudah diselesaikan sebelumnya.');
         }
+        $roleCode = $myApproval?->role_code ?? implode(' / ', $roleCodes);
 
         DB::beginTransaction();
         try {
             $catatan = $request->input('catatan');
 
             // Setujui step workflow (Engine WorkflowService automatically marks it as acted)
-            $this->workflowService->approveCurrentStep($sp2d, $user->id, $catatan, null, $roleCode);
+            $this->workflowService->approveCurrentStep($sp2d, $user->id, $catatan, $myApproval->id);
 
             // Fetch fresh status to see if entirely approved
             $wf->refresh();
@@ -252,29 +301,34 @@ class VerifikasiSp2dPerjaldinController extends Controller
     public function reject(Request $request, $id)
     {
         $user = $request->user();
-        $roleCode = $this->activeRoleCode($user);
-        abort_unless($roleCode !== '', 403, 'Akses ditolak.');
+        $roleCodes = $this->activeRoleCodes($user);
+        abort_unless(!empty($roleCodes), 403, 'Akses ditolak.');
 
         $request->validate([
+            'approval_id' => 'nullable|integer',
             'catatan' => 'required|string|min:5'
         ], [
             'catatan.required' => 'Catatan revisi wajib diisi agar pembuat dokumen tahu apa yang salah.'
         ]);
 
-        $sp2d = DokumenSp2d::with(['workflowInstances' => fn($q) => $q->latest()->limit(1)])->findOrFail($id);
+        $sp2d = DokumenSp2d::with([
+            'workflowInstances' => fn($q) => $q->latest()->limit(1),
+            'workflowInstances.approvals',
+        ])->findOrFail($id);
         $wf = $sp2d->workflowInstances->first();
 
-        $myApproval = $wf?->approvals->where('role_code', $roleCode)->where('status', 'PENDING')->first();
-        if (!$myApproval && $wf?->status === 'IN_PROGRESS') {
+        $myApproval = $wf ? $this->resolveApprovalForAction($wf->approvals, $roleCodes, $user, $request->input('approval_id')) : null;
+        if (!$myApproval) {
             return back()->with('error', 'Tindakan ini sudah ditangani.');
         }
+        $roleCode = $myApproval?->role_code ?? implode(' / ', $roleCodes);
 
         DB::beginTransaction();
         try {
             $catatan = $request->input('catatan');
 
             // Workflow engine transitions status to REVISION
-            $this->workflowService->rejectCurrentStep($sp2d, $user->id, $catatan, $roleCode);
+            $this->workflowService->requestRevision($sp2d, $user->id, $catatan, $myApproval->id);
 
             $statusSblm = $sp2d->status;
             $sp2d->update(['status' => DokumenSp2d::STATUS_REVISI]);

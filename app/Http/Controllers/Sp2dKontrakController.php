@@ -31,7 +31,7 @@ class Sp2dKontrakController extends Controller
         ])
         ->whereHas('spm.spp.tagihan', fn($q) => $q->where('tipe_tagihan', 'KONTRAK'))
         ->where(function ($q) {
-            $q->where('status', DokumenNpi::STATUS_DISETUJUI_FINAL)
+            $q->whereIn('status', [DokumenNpi::STATUS_DISETUJUI_FINAL, DokumenNpi::STATUS_NPI_TERBIT])
               ->orWhereHas('sp2d');
         });
 
@@ -45,7 +45,12 @@ class Sp2dKontrakController extends Controller
         } elseif ($statusFilter === 'menunggu') {
             $query->whereHas('sp2d', fn($q) => $q->where('status', DokumenSp2d::STATUS_MENUNGGU_VERIFIKASI));
         } elseif ($statusFilter === 'selesai') {
-            $query->whereHas('sp2d', fn($q) => $q->where('status', DokumenSp2d::STATUS_DISETUJUI_FINAL));
+            $query->whereHas('sp2d', fn($q) => $q->whereIn('status', [
+                DokumenSp2d::STATUS_DISETUJUI_FINAL,
+                DokumenSp2d::STATUS_MENUNGGU_UPLOAD,
+                DokumenSp2d::STATUS_SP2D_TERBIT,
+                DokumenSp2d::STATUS_EXECUTED,
+            ]));
         }
 
         if ($search) {
@@ -94,6 +99,8 @@ class Sp2dKontrakController extends Controller
             $statusClass = 'bg-warning text-dark';
             $ppkStatus = '-';
             $kasubbagStatus = '-';
+            $ppspmStatus = '-';
+            $koordinatorStatus = '-';
 
             if (!$sp2d) {
                 $summary['belum_dibuat']++;
@@ -114,6 +121,10 @@ class Sp2dKontrakController extends Controller
                     $statusBadge = 'Disetujui Final';
                     $statusClass = 'bg-success';
                     $summary['selesai']++;
+                } elseif ($sp2d->status === DokumenSp2d::STATUS_SP2D_TERBIT) {
+                    $statusBadge = 'SP2D Terbit';
+                    $statusClass = 'bg-success';
+                    $summary['selesai']++;
                 } elseif ($sp2d->status === DokumenSp2d::STATUS_EXECUTED) {
                     $statusBadge = 'Lunas / Executed';
                     $statusClass = 'bg-primary';
@@ -126,9 +137,13 @@ class Sp2dKontrakController extends Controller
                     $approvals = collect($wf->approvals);
                     $ppkApproval = $approvals->firstWhere('role_code', 'PPK');
                     $ksbApproval = $approvals->firstWhere('role_code', 'Kepala Subbagian Keuangan dan Tata Usaha');
+                    $ppspmAppr = $approvals->firstWhere('role_code', 'PPSPM');
+                    $koordinatorAppr = $approvals->firstWhere('role_code', 'Koordinator Keuangan');
                     
                     $ppkStatus = $ppkApproval ? $ppkApproval->status : '-';
                     $kasubbagStatus = $ksbApproval ? $ksbApproval->status : '-';
+                    $ppspmStatus = $ppspmAppr ? $ppspmAppr->status : '-';
+                    $koordinatorStatus = $koordinatorAppr ? $koordinatorAppr->status : '-';
                 }
             }
 
@@ -151,6 +166,8 @@ class Sp2dKontrakController extends Controller
                 'raw_status' => $sp2d?->status,
                 'ppk_status' => $ppkStatus,
                 'kasubbag_status' => $kasubbagStatus,
+                'ppspm_status' => $ppspmStatus,
+                'koordinator_status' => $koordinatorStatus,
             ];
         });
 
@@ -193,6 +210,8 @@ class Sp2dKontrakController extends Controller
 
         $ppkApproval = $approvals->firstWhere('role_code', 'PPK');
         $kasubbagApproval = $approvals->firstWhere('role_code', 'Kepala Subbagian Keuangan dan Tata Usaha');
+        $ppspmApproval = $approvals->firstWhere('role_code', 'PPSPM');
+        $koordinatorApproval = $approvals->firstWhere('role_code', 'Koordinator Keuangan');
 
         $revisionNotes = collect();
         if ($sp2d) {
@@ -213,7 +232,7 @@ class Sp2dKontrakController extends Controller
         return view('sp2ds.kontrak_detail', compact(
             'npi', 'sp2d', 'spm', 'spp', 'tagihan', 'detailKontrak', 'termin', 'kontrak',
             'vendor', 'rekening', 'nominalSp2d', 'statusSp2d', 'isEditable', 'canSubmit',
-            'wf', 'ppkApproval', 'kasubbagApproval', 'revisionNotes', 'autoNomorSp2d'
+            'wf', 'ppkApproval', 'kasubbagApproval', 'ppspmApproval', 'koordinatorApproval', 'revisionNotes', 'autoNomorSp2d'
         ));
     }
 
@@ -288,6 +307,8 @@ class Sp2dKontrakController extends Controller
             $expectedSteps = [
                 'PPK' => 1,
                 'Kepala Subbagian Keuangan dan Tata Usaha' => 1,
+                'PPSPM' => 1,
+                'Koordinator Keuangan' => 1,
             ];
 
             $workflowService->startWorkflow('SP2D_KONTRAK', $sp2d);
@@ -313,7 +334,9 @@ class Sp2dKontrakController extends Controller
             }
 
             $ksbUsers = User::role('Kepala Subbagian Keuangan dan Tata Usaha')->get();
-            $verifiers = $ppkUsers->concat($ksbUsers)->unique('id');
+            $ppspmUsers = User::role('PPSPM')->get();
+            $koordinatorUsers = User::role('Koordinator Keuangan')->get();
+            $verifiers = $ppkUsers->concat($ksbUsers)->concat($ppspmUsers)->concat($koordinatorUsers)->unique('id');
 
             if ($verifiers->isNotEmpty()) {
                 Notification::send($verifiers, new WorkflowNotification([
@@ -342,5 +365,69 @@ class Sp2dKontrakController extends Controller
             'catatan' => $catatan,
             'ip_address' => request()->ip(),
         ]);
+    }
+
+    /**
+     * Upload file SP2D Bertandatangan.
+     * Hanya tersedia setelah seluruh verifikator menyetujui (status DISETUJUI_FINAL).
+     * Setelah diunggah, status berubah ke SP2D_TERBIT dan bukti transfer dapat diunggah.
+     */
+    public function uploadSignedSp2d(Request $request, $sp2d_id)
+    {
+        $sp2d = DokumenSp2d::findOrFail($sp2d_id);
+
+        if (! in_array($sp2d->status, [
+            DokumenSp2d::STATUS_DISETUJUI_FINAL,
+            DokumenSp2d::STATUS_MENUNGGU_UPLOAD,
+            DokumenSp2d::STATUS_SP2D_TERBIT,
+            DokumenSp2d::STATUS_APPROVED, // legacy tolerance
+        ], true)) {
+            return back()->withErrors(['error' => 'SP2D belum disetujui oleh semua verifikator.']);
+        }
+
+        $request->validate([
+            'file_sp2d_ttd' => 'required|file|mimes:pdf,jpg,jpeg,png|max:10240',
+        ], [
+            'file_sp2d_ttd.required' => 'File SP2D Bertandatangan wajib diunggah.',
+            'file_sp2d_ttd.mimes' => 'File harus berformat PDF, JPG, atau PNG.',
+            'file_sp2d_ttd.max' => 'Ukuran file maksimal 10MB.',
+        ]);
+
+        DB::transaction(function () use ($request, $sp2d) {
+            $file = $request->file('file_sp2d_ttd');
+            $namaAsli = $file->getClientOriginalName();
+            $path = $file->store('arsip_sp2d_signed/' . date('Y'), 'public');
+
+            // Nonaktifkan arsip lama (re-upload)
+            $sp2d->arsipDokumen()
+                ->where('jenis_dokumen', DokumenSp2d::SP2D_SIGNED_ARCHIVE_TYPE)
+                ->where('is_active', true)
+                ->update(['is_active' => false]);
+
+            $sp2d->arsipDokumen()->create([
+                'jenis_dokumen' => DokumenSp2d::SP2D_SIGNED_ARCHIVE_TYPE,
+                'nama_file_asli' => $namaAsli,
+                'path_file' => $path,
+                'disk' => 'public',
+                'mime_type' => $file->getMimeType(),
+                'ukuran_file' => $file->getSize(),
+                'uploaded_by' => Auth::id(),
+                'uploaded_at' => now(),
+                'is_active' => true,
+            ]);
+
+            $statusLama = $sp2d->status;
+            $sp2d->update(['status' => DokumenSp2d::STATUS_SP2D_TERBIT]);
+
+            $this->logStatus(
+                $sp2d,
+                $statusLama,
+                DokumenSp2d::STATUS_SP2D_TERBIT,
+                'UPLOAD_SP2D_BERTANDATANGAN',
+                "File SP2D Bertandatangan diunggah: {$namaAsli}. Status SP2D berubah menjadi SP2D Terbit."
+            );
+        });
+
+        return back()->with('success', 'File SP2D Bertandatangan berhasil diunggah. Silakan lanjutkan upload bukti transfer.');
     }
 }

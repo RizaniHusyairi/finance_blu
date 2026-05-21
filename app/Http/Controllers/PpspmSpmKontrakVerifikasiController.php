@@ -13,14 +13,36 @@ use Illuminate\Support\Facades\Notification;
 
 class PpspmSpmKontrakVerifikasiController extends Controller
 {
+    private function activeRoleCodes(): array
+    {
+        $roles = [];
+        if (Auth::user()->hasRole('PPSPM')) {
+            $roles[] = 'PPSPM';
+        }
+        if (Auth::user()->hasRole('Koordinator Keuangan')) {
+            $roles[] = 'Koordinator Keuangan';
+        }
+        return $roles;
+    }
+
+    private function routePrefix(): string
+    {
+        // Tetap gunakan route prefix sesuai URL saat ini untuk redirect kembali
+        return request()->routeIs('verifikasi-koordinator.*')
+            ? 'verifikasi-koordinator.spm.kontrak'
+            : 'verifikasi-ppspm.spm.kontrak';
+    }
+
     /**
      * Tampilkan daftar antrean verifikasi SPM Kontrak untuk PPSPM.
      */
     public function index(Request $request)
     {
-        $roleName = 'PPSPM';
+        $roleCodes = $this->activeRoleCodes();
+        if (empty($roleCodes)) abort(403, 'Akses ditolak.');
+        $routePrefix = $this->routePrefix();
 
-        // Ambil SPM khusus dari SPP Kontrak dan melibatkan workflow dari PPSPM
+        // Ambil SPM khusus dari SPP Kontrak dan melibatkan workflow dari PPSPM/Koordinator
         $spms = DokumenSpm::with([
             'spp.tagihan.pihak',
             'spp.tagihan.detailKontrak.kontrakTermin.kontrak.vendor',
@@ -30,9 +52,9 @@ class PpspmSpmKontrakVerifikasiController extends Controller
             'workflowInstances.approvals'
         ])
             ->whereHas('spp.tagihan', fn ($q) => $q->where('tipe_tagihan', 'KONTRAK'))
-            ->whereHas('workflowInstances', function ($q) use ($roleName) {
-                $q->whereHas('approvals', function ($a) use ($roleName) {
-                    $a->where('role_code', $roleName);
+            ->whereHas('workflowInstances', function ($q) use ($roleCodes) {
+                $q->whereHas('approvals', function ($a) use ($roleCodes) {
+                    $a->whereIn('role_code', $roleCodes);
                 });
             })
             ->latest()
@@ -43,29 +65,41 @@ class PpspmSpmKontrakVerifikasiController extends Controller
             $wf = $spm->workflowInstances->first();
             if (!$wf) continue;
 
-            $ppspmApproval = $wf->approvals->where('role_code', $roleName)->first();
+            $ppspmApproval = $wf->approvals->where('role_code', 'PPSPM')->first();
             $kasubbagApproval = $wf->approvals->where('role_code', 'Kepala Subbagian Keuangan dan Tata Usaha')->first();
+            $koordinatorApproval = $wf->approvals->where('role_code', 'Koordinator Keuangan')->first();
+            $myApprovals = $wf->approvals->whereIn('role_code', $roleCodes);
+            $currentApproval = $myApprovals->where('status', 'PENDING')->first() ?: $myApprovals->first();
 
             if ($wf->status === 'REVISION') {
                 $statusFinal = 'Perlu Revisi';
             } elseif ($wf->status === 'APPROVED') {
                 $statusFinal = 'Selesai Diverifikasi';
             } else {
-                if ($ppspmApproval && $ppspmApproval->status === 'PENDING' && $kasubbagApproval && $kasubbagApproval->status === 'PENDING') {
+                $pendingRoles = $wf->approvals
+                    ->where('status', 'PENDING')
+                    ->pluck('role_code')
+                    ->map(fn ($role) => match ($role) {
+                        'Kepala Subbagian Keuangan dan Tata Usaha' => 'Kasubbag',
+                        'Koordinator Keuangan' => 'Koordinator',
+                        default => $role,
+                    });
+
+                if ($pendingRoles->count() > 1) {
                     $statusFinal = 'Menunggu Verifikasi';
-                } elseif ($ppspmApproval && $ppspmApproval->status === 'PENDING') {
-                    $statusFinal = 'Menunggu PPSPM';
-                } elseif ($kasubbagApproval && $kasubbagApproval->status === 'PENDING') {
-                    $statusFinal = 'Menunggu Kasubbag';
+                } elseif ($pendingRoles->count() === 1) {
+                    $statusFinal = 'Menunggu ' . $pendingRoles->first();
                 } else {
                     $statusFinal = $wf->status;
                 }
             }
 
-            $canAct = ($ppspmApproval && $ppspmApproval->status === 'PENDING' && $wf->status === 'IN_PROGRESS');
+            $canAct = ($currentApproval && $currentApproval->status === 'PENDING' && $wf->status === 'IN_PROGRESS');
 
             $spm->ppspmApprovalStatus = $ppspmApproval ? $ppspmApproval->status : 'N/A';
             $spm->kasubbagApprovalStatus = $kasubbagApproval ? $kasubbagApproval->status : 'N/A';
+            $spm->koordinatorApprovalStatus = $koordinatorApproval ? $koordinatorApproval->status : 'N/A';
+            $spm->currentApprovalStatus = $currentApproval ? $currentApproval->status : 'N/A';
             $spm->statusFinal = $statusFinal;
             $spm->canAct = $canAct;
             $spm->workflow = $wf;
@@ -73,9 +107,9 @@ class PpspmSpmKontrakVerifikasiController extends Controller
             $processedSpms->push($spm);
         }
 
-        $countPending = $processedSpms->where('ppspmApprovalStatus', 'PENDING')->count();
-        $countApprovedMe = $processedSpms->where('ppspmApprovalStatus', 'APPROVED')->count();
-        $countRevisi = $processedSpms->where('ppspmApprovalStatus', 'REVISION')->count();
+        $countPending = $processedSpms->where('currentApprovalStatus', 'PENDING')->count();
+        $countApprovedMe = $processedSpms->where('currentApprovalStatus', 'APPROVED')->count();
+        $countRevisi = $processedSpms->where('currentApprovalStatus', 'REVISION')->count();
         $countSelesai = $processedSpms->where('statusFinal', 'Selesai Diverifikasi')->count();
 
         $viewSpms = $processedSpms;
@@ -83,11 +117,11 @@ class PpspmSpmKontrakVerifikasiController extends Controller
         // Terapkan Filter Status Saya (PPSPM)
         if ($request->has('status') && $request->status !== 'Semua') {
             if ($request->status === 'Pending') {
-                $viewSpms = $viewSpms->where('ppspmApprovalStatus', 'PENDING');
+                $viewSpms = $viewSpms->where('currentApprovalStatus', 'PENDING');
             } elseif ($request->status === 'Approved') {
-                $viewSpms = $viewSpms->where('ppspmApprovalStatus', 'APPROVED');
+                $viewSpms = $viewSpms->where('currentApprovalStatus', 'APPROVED');
             } elseif ($request->status === 'Revisi') {
-                $viewSpms = $viewSpms->where('ppspmApprovalStatus', 'REVISION');
+                $viewSpms = $viewSpms->where('currentApprovalStatus', 'REVISION');
             }
         }
 
@@ -129,7 +163,8 @@ class PpspmSpmKontrakVerifikasiController extends Controller
             'countPending',
             'countApprovedMe',
             'countRevisi',
-            'countSelesai'
+            'countSelesai',
+            'routePrefix'
         ));
     }
 
@@ -138,7 +173,9 @@ class PpspmSpmKontrakVerifikasiController extends Controller
      */
     public function show($id)
     {
-        $roleName = 'PPSPM';
+        $roleCodes = $this->activeRoleCodes();
+        if (empty($roleCodes)) abort(403, 'Akses ditolak.');
+        $routePrefix = $this->routePrefix();
 
         $spmModel = DokumenSpm::with([
             'spp',
@@ -159,8 +196,11 @@ class PpspmSpmKontrakVerifikasiController extends Controller
             return back()->with('error', 'Workflow tidak ditemukan untuk SPM ini.');
         }
 
-        $ppspmApproval = $wf->approvals->where('role_code', $roleName)->first();
+        $ppspmApproval = $wf->approvals->where('role_code', 'PPSPM')->first();
         $kasubbagApproval = $wf->approvals->where('role_code', 'Kepala Subbagian Keuangan dan Tata Usaha')->first();
+        $koordinatorApproval = $wf->approvals->where('role_code', 'Koordinator Keuangan')->first();
+        $myApprovals = $wf->approvals->whereIn('role_code', $roleCodes);
+        $currentApproval = $myApprovals->where('status', 'PENDING')->first() ?: $myApprovals->first();
         $operatorApproval = collect(['status' => 'APPROVED', 'acted_by_user_id' => $spmModel->dibuat_oleh_id, 'acted_at' => $spmModel->created_at]);
 
         if ($wf->status === 'REVISION') {
@@ -168,21 +208,30 @@ class PpspmSpmKontrakVerifikasiController extends Controller
         } elseif ($wf->status === 'APPROVED') {
             $statusFinal = 'Selesai Diverifikasi';
         } else {
-            if ($ppspmApproval && $ppspmApproval->status === 'PENDING' && $kasubbagApproval && $kasubbagApproval->status === 'PENDING') {
+            $pendingRoles = $wf->approvals
+                ->where('status', 'PENDING')
+                ->pluck('role_code')
+                ->map(fn ($role) => match ($role) {
+                    'Kepala Subbagian Keuangan dan Tata Usaha' => 'Kasubbag',
+                    'Koordinator Keuangan' => 'Koordinator',
+                    default => $role,
+                });
+
+            if ($pendingRoles->count() > 1) {
                 $statusFinal = 'Menunggu Verifikasi';
-            } elseif ($ppspmApproval && $ppspmApproval->status === 'PENDING') {
-                $statusFinal = 'Menunggu PPSPM';
-            } elseif ($kasubbagApproval && $kasubbagApproval->status === 'PENDING') {
-                $statusFinal = 'Menunggu Kasubbag';
+            } elseif ($pendingRoles->count() === 1) {
+                $statusFinal = 'Menunggu ' . $pendingRoles->first();
             } else {
                 $statusFinal = $wf->status;
             }
         }
 
-        $canAct = ($ppspmApproval && $ppspmApproval->status === 'PENDING' && $wf->status === 'IN_PROGRESS');
+        $canAct = ($currentApproval && $currentApproval->status === 'PENDING' && $wf->status === 'IN_PROGRESS');
 
-        $latestPpspmRevisionNote = $wf->approvals->where('role_code', $roleName)->where('status', 'REVISION')->sortByDesc('acted_at')->first();
+        $latestPpspmRevisionNote = $wf->approvals->where('role_code', 'PPSPM')->where('status', 'REVISION')->sortByDesc('acted_at')->first();
         $latestKasubbagRevisionNote = $wf->approvals->where('role_code', 'Kepala Subbagian Keuangan dan Tata Usaha')->where('status', 'REVISION')->sortByDesc('acted_at')->first();
+        $latestKoordinatorRevisionNote = $wf->approvals->where('role_code', 'Koordinator Keuangan')->where('status', 'REVISION')->sortByDesc('acted_at')->first();
+        $latestCurrentRevisionNote = $myApprovals->where('status', 'REVISION')->sortByDesc('acted_at')->first();
 
         // Dokumen pendukung mapping (sama seperti logic SpmKontrakController)
         $tagihan = $spmModel->spp?->tagihan;
@@ -203,65 +252,108 @@ class PpspmSpmKontrakVerifikasiController extends Controller
             return array_merge($item, ['status' => $status, 'is_available' => $isAvailable]);
         })->values();
 
+        // Dual-role check: find all active roles the user has that are pending on this SPM
+        $user = auth()->user();
+        $activeRoleApprovals = [];
+        
+        if ($user->hasRole('PPSPM') && $ppspmApproval && $ppspmApproval->status === 'PENDING' && $wf->status === 'IN_PROGRESS') {
+            $activeRoleApprovals[] = [
+                'role' => 'PPSPM',
+                'approval_id' => $ppspmApproval->id,
+                'approveRoute' => route('verifikasi-ppspm.spm.kontrak.approve', $id),
+                'revisiRoute' => route('verifikasi-ppspm.spm.kontrak.revisi', $id)
+            ];
+        }
+        
+        if ($user->hasRole('Koordinator Keuangan') && $koordinatorApproval && $koordinatorApproval->status === 'PENDING' && $wf->status === 'IN_PROGRESS') {
+            $activeRoleApprovals[] = [
+                'role' => 'Koordinator Keuangan',
+                'approval_id' => $koordinatorApproval->id,
+                'approveRoute' => route('verifikasi-koordinator.spm.kontrak.approve', $id),
+                'revisiRoute' => route('verifikasi-koordinator.spm.kontrak.revisi', $id)
+            ];
+        }
+
         return view('verifikasi_ppspm.spm_kontrak_detail', compact(
             'spmModel',
             'wf',
             'ppspmApproval',
             'kasubbagApproval',
+            'koordinatorApproval',
+            'currentApproval',
             'operatorApproval',
             'statusFinal',
             'canAct',
             'latestPpspmRevisionNote',
             'latestKasubbagRevisionNote',
-            'documentStatuses'
+            'latestKoordinatorRevisionNote',
+            'latestCurrentRevisionNote',
+            'documentStatuses',
+            'routePrefix',
+            'activeRoleApprovals'
         ));
     }
 
     /**
      * Proses Setujui oleh PPSPM.
      */
-    public function approve($id)
+    public function approve(Request $request, $id)
     {
         $spm = DokumenSpm::with('spp')->findOrFail($id);
+        $roleCodes = $this->activeRoleCodes();
+        if (empty($roleCodes)) abort(403, 'Akses ditolak.');
+        $routePrefix = $this->routePrefix();
+
+        $wf = $spm->workflowInstances()->latest()->first();
+        if (!$wf) {
+            return back()->with('error', 'Workflow verifikasi tidak ditemukan untuk SPM ini.');
+        }
+
+        $approval = $this->resolveApprovalForAction($wf, $roleCodes, $request->input('approval_id'));
+        if (!$approval) {
+            return back()->with('error', 'Tidak ada langkah verifikasi yang menunggu persetujuan Anda pada SPM ini.');
+        }
+        $approvalId = $approval->id;
+        $roleName = $approval->role_code;
 
         try {
-            app(WorkflowService::class)->approveCurrentStep($spm, Auth::id(), 'Dokumen SPM disetujui oleh PPSPM.');
+            app(WorkflowService::class)->approveCurrentStep($spm, Auth::id(), "Dokumen SPM disetujui oleh {$roleName}.", $approvalId);
 
             $workflowFullyApproved = $this->finalizeWorkflowIfComplete($spm);
 
             if ($workflowFullyApproved) {
                 // Jika semua workflow (termasuk kasubbag) sudah approve, SPM -> Final
-                $spm->update(['status' => DokumenSpm::STATUS_DISETUJUI_FINAL]);
+                $spm->update(['status' => DokumenSpm::STATUS_MENUNGGU_UPLOAD]);
             }
 
-            $statusBaru = $workflowFullyApproved ? DokumenSpm::STATUS_DISETUJUI_FINAL : 'Disetujui PPSPM';
+            $statusBaru = $workflowFullyApproved ? DokumenSpm::STATUS_MENUNGGU_UPLOAD : "Disetujui {$roleName}";
 
             LogStatusDokumen::create([
                 'dokumen_type' => DokumenSpm::class,
                 'dokumen_id' => $spm->id,
                 'user_id' => Auth::id(),
-                'role_saat_itu' => Auth::user()?->getRoleNames()->first() ?? 'PPSPM',
+                'role_saat_itu' => $roleName,
                 'status_sebelumnya' => 'Menunggu Verifikasi',
                 'status_baru' => $statusBaru,
-                'aksi' => 'APPROVE_PPSPM',
+                'aksi' => 'APPROVE_' . str($roleName)->upper()->replace(' ', '_'),
                 'catatan' => $workflowFullyApproved
-                    ? 'Dokumen SPM disetujui PPSPM. Seluruh approver telah menyetujui — SPM disahkan.'
-                    : 'Dokumen SPM disetujui PPSPM.',
+                    ? "Dokumen SPM disetujui {$roleName}. Seluruh approver telah menyetujui - SPM disahkan."
+                    : "Dokumen SPM disetujui {$roleName}.",
                 'ip_address' => request()->ip(),
             ]);
 
             if ($workflowFullyApproved) {
                 $operators = User::role('Operator BLU')->get();
                 Notification::send($operators, new WorkflowNotification([
-                    'title' => 'SPM Kontrak Disetujui Final',
-                    'message' => "SPM {$spm->nomor_spm} telah disetujui oleh semua pihak dan disahkan.",
+                    'title' => 'SPM Kontrak Menunggu Upload',
+                    'message' => "SPM {$spm->nomor_spm} telah disetujui oleh semua pihak. Silakan cetak, tandatangani, dan upload scan SPM.",
                     'url' => route('spms.kontrak.detail', $spm->spp_id),
                     'icon' => 'verified',
                     'color' => 'success'
                 ]));
             }
 
-            return redirect()->route('verifikasi-ppspm.spm.kontrak.index')->with('success', $workflowFullyApproved
+            return redirect()->route($routePrefix . '.index')->with('success', $workflowFullyApproved
                 ? "SPM Nomor {$spm->nomor_spm} telah disetujui oleh semua pihak."
                 : "SPM Nomor {$spm->nomor_spm} berhasil Anda setujui.");
         } catch (\Exception $e) {
@@ -279,9 +371,24 @@ class PpspmSpmKontrakVerifikasiController extends Controller
         ]);
 
         $spm = DokumenSpm::with('spp')->findOrFail($id);
+        $roleCodes = $this->activeRoleCodes();
+        if (empty($roleCodes)) abort(403, 'Akses ditolak.');
+        $routePrefix = $this->routePrefix();
+
+        $wf = $spm->workflowInstances()->latest()->first();
+        if (!$wf) {
+            return back()->with('error', 'Workflow verifikasi tidak ditemukan untuk SPM ini.');
+        }
+
+        $approval = $this->resolveApprovalForAction($wf, $roleCodes, $request->input('approval_id'));
+        if (!$approval) {
+            return back()->with('error', 'Tidak ada langkah verifikasi yang menunggu tindakan Anda pada SPM ini.');
+        }
+        $approvalId = $approval->id;
+        $roleName = $approval->role_code;
 
         try {
-            app(WorkflowService::class)->requestRevision($spm, Auth::id(), $request->catatan_revisi);
+            app(WorkflowService::class)->requestRevision($spm, Auth::id(), $request->catatan_revisi, $approvalId);
 
             $spm->update([
                 'status' => DokumenSpm::STATUS_REVISI,
@@ -291,24 +398,24 @@ class PpspmSpmKontrakVerifikasiController extends Controller
                 'dokumen_type' => DokumenSpm::class,
                 'dokumen_id' => $spm->id,
                 'user_id' => Auth::id(),
-                'role_saat_itu' => Auth::user()?->getRoleNames()->first() ?? 'PPSPM',
+                'role_saat_itu' => $roleName,
                 'status_sebelumnya' => 'Menunggu Verifikasi',
                 'status_baru' => DokumenSpm::STATUS_REVISI,
-                'aksi' => 'REVISI_PPSPM',
+                'aksi' => 'REVISI_' . str($roleName)->upper()->replace(' ', '_'),
                 'catatan' => $request->catatan_revisi,
                 'ip_address' => request()->ip(),
             ]);
 
             $operators = User::role('Operator BLU')->get();
             Notification::send($operators, new WorkflowNotification([
-                'title' => 'SPM Kontrak Direvisi PPSPM',
-                'message' => "SPM {$spm->nomor_spm} perlu revisi. Catatan PPSPM: {$request->catatan_revisi}",
+                'title' => "SPM Kontrak Direvisi {$roleName}",
+                'message' => "SPM {$spm->nomor_spm} perlu revisi. Catatan {$roleName}: {$request->catatan_revisi}",
                 'url' => route('spms.kontrak.detail', $spm->spp_id),
                 'icon' => 'error_outline',
                 'color' => 'danger'
             ]));
 
-            return redirect()->route('verifikasi-ppspm.spm.kontrak.index')->with('warning', "Catatan revisi untuk SPM {$spm->nomor_spm} telah dikirim.");
+            return redirect()->route($routePrefix . '.index')->with('warning', "Catatan revisi untuk SPM {$spm->nomor_spm} telah dikirim.");
         } catch (\Exception $e) {
             return back()->with('error', 'Gagal memproses revisi: ' . $e->getMessage());
         }
@@ -337,5 +444,38 @@ class PpspmSpmKontrakVerifikasiController extends Controller
         }
 
         return $allApproved && !$hasBlockingStatus;
+    }
+
+    /**
+     * Tentukan approval mana yang akan ditindak. Prioritaskan ID eksplisit dari request,
+     * jatuhkan ke approval PENDING milik role aktif user pada URL path saat ini
+     * (mis. Koordinator mengakses via /verifikasi-koordinator/...).
+     */
+    private function resolveApprovalForAction($workflow, array $roleCodes, $approvalId)
+    {
+        if (!empty($approvalId)) {
+            $approval = $workflow->approvals()
+                ->where('id', $approvalId)
+                ->whereIn('role_code', $roleCodes)
+                ->first();
+            if ($approval) {
+                return $approval;
+            }
+        }
+
+        // Fallback: cari approval PENDING milik salah satu role aktif.
+        // Urutkan agar role yang cocok dengan URL path saat ini didahulukan
+        // (mis. /verifikasi-koordinator/* → Koordinator Keuangan).
+        $preferredRole = request()->routeIs('verifikasi-koordinator.*')
+            ? 'Koordinator Keuangan'
+            : 'PPSPM';
+
+        $pending = $workflow->approvals()
+            ->whereIn('role_code', $roleCodes)
+            ->where('status', 'PENDING')
+            ->get();
+
+        return $pending->firstWhere('role_code', $preferredRole)
+            ?? $pending->first();
     }
 }

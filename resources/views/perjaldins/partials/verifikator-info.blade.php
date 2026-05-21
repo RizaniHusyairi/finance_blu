@@ -2,43 +2,28 @@
 @php
     $workflow = collect($tagihan->workflowInstances ?? [])->sortByDesc('created_at')->first();
     $approvals = collect($workflow?->approvals ?? []);
-    
+
     $getVerifierInfo = function($roleCodes, $namaSnapshot) use ($approvals) {
         $roleCodes = (array) $roleCodes;
-        $approval = $approvals->first(function($app) use ($roleCodes) {
-            return in_array($app->role_code, $roleCodes);
-        });
-        
+        $approval = $approvals->first(fn($app) => in_array($app->role_code, $roleCodes));
+
         $statusText = 'Belum Verifikasi';
-        $badgeClass = 'bg-secondary';
-        
+        $statusClass = 'vs-empty';
+        $statusIcon = 'bi-circle';
+
         if ($approval) {
             switch ($approval->status) {
-                case 'APPROVED':
-                    $statusText = 'Sudah Verifikasi';
-                    $badgeClass = 'bg-success';
-                    break;
-                case 'REVISION':
-                    $statusText = 'Revisi';
-                    $badgeClass = 'bg-warning text-dark';
-                    break;
-                case 'REJECTED':
-                    $statusText = 'Ditolak';
-                    $badgeClass = 'bg-danger';
-                    break;
-                case 'PENDING':
-                    $statusText = 'Menunggu';
-                    $badgeClass = 'bg-primary';
-                    break;
+                case 'APPROVED': $statusText = 'Disetujui';  $statusClass = 'vs-approved'; $statusIcon = 'bi-check-circle-fill'; break;
+                case 'REVISION': $statusText = 'Revisi';     $statusClass = 'vs-revision'; $statusIcon = 'bi-arrow-counterclockwise'; break;
+                case 'REJECTED': $statusText = 'Ditolak';    $statusClass = 'vs-rejected'; $statusIcon = 'bi-x-circle-fill'; break;
+                case 'PENDING':  $statusText = 'Menunggu';   $statusClass = 'vs-pending';  $statusIcon = 'bi-hourglass-split'; break;
             }
         }
 
         if (empty($namaSnapshot)) {
-            // Coba dari aksi workflow yang sudah ada
             if ($approval && $approval->actedByUser) {
                 $namaSnapshot = $approval->actedByUser->name;
             } else {
-                // Fallback cari user dengan role tersebut (terutama untuk data lama)
                 $spatieRole = match($roleCodes[0]) {
                     'PPSPM' => 'PPSPM',
                     'BENDAHARA_PENERIMAAN' => 'Bendahara Penerimaan',
@@ -51,37 +36,69 @@
                 $namaSnapshot = $fallbackUser ? $fallbackUser->name : '-';
             }
         }
-        
+
         return [
             'nama' => $namaSnapshot ?: '-',
             'status' => $statusText,
-            'badge_class' => $badgeClass,
+            'status_class' => $statusClass,
+            'status_icon' => $statusIcon,
+            'acted_at' => $approval?->acted_at,
         ];
     };
 
+    $initials = function ($name) {
+        $name = trim((string) $name);
+        if ($name === '' || $name === '-') return '?';
+        $parts = preg_split('/\s+/', $name);
+        $first = mb_substr($parts[0] ?? '', 0, 1);
+        $last  = count($parts) > 1 ? mb_substr(end($parts), 0, 1) : '';
+        return mb_strtoupper($first . $last);
+    };
+
     $verifikators = [
-        'PPK' => $getVerifierInfo('PPK', $tagihan->ppk_nama_snapshot),
-        'PPSPM' => $getVerifierInfo('PPSPM', $tagihan->ppspm_nama_snapshot),
-        'Bendahara Penerimaan' => $getVerifierInfo('BENDAHARA_PENERIMAAN', $tagihan->bendahara_penerimaan_nama_snapshot),
-        'Bendahara Pengeluaran' => $getVerifierInfo('BENDAHARA_PENGELUARAN', $tagihan->bendahara_pengeluaran_nama_snapshot),
-        'Kepala Subbagian Keuangan dan Tata Usaha' => $getVerifierInfo(['KASUBBAG', 'Kepala Subbagian Keuangan dan Tata Usaha'], $tagihan->kasubbag_nama_snapshot),
+        ['short' => 'PPK', 'label' => 'PPK', 'color' => 'vk-primary', 'data' => $getVerifierInfo('PPK', $tagihan->ppk_nama_snapshot)],
+        ['short' => 'PPSPM', 'label' => 'PPSPM', 'color' => 'vk-success', 'data' => $getVerifierInfo('PPSPM', $tagihan->ppspm_nama_snapshot)],
+        ['short' => 'Bend. Penerimaan', 'label' => 'Bendahara Penerimaan', 'color' => 'vk-info', 'data' => $getVerifierInfo('BENDAHARA_PENERIMAAN', $tagihan->bendahara_penerimaan_nama_snapshot)],
+        ['short' => 'Bend. Pengeluaran', 'label' => 'Bendahara Pengeluaran', 'color' => 'vk-danger', 'data' => $getVerifierInfo('BENDAHARA_PENGELUARAN', $tagihan->bendahara_pengeluaran_nama_snapshot)],
+        ['short' => 'Kasubbag', 'label' => 'Kepala Subbagian Keu & TU', 'color' => 'vk-violet', 'data' => $getVerifierInfo(['KASUBBAG', 'Kepala Subbagian Keuangan dan Tata Usaha'], $tagihan->kasubbag_nama_snapshot)],
     ];
+
+    $totalApproved = collect($verifikators)->where('data.status', 'Disetujui')->count();
 @endphp
 
-<div class="card border-0 shadow-sm mb-4">
-    <div class="card-header bg-white border-bottom py-3">
-        <h6 class="mb-0 fw-bold text-dark">
-            <i class="bi bi-people text-info me-2"></i>Informasi Verifikator
-        </h6>
+<div class="modern-card">
+    <div class="mc-head mc-icon-primary">
+        <div class="mc-head-left">
+            <div class="mc-icon"><i class="bi bi-people-fill"></i></div>
+            <div>
+                <h6 class="mc-title">Informasi Verifikator</h6>
+                <p class="mc-sub">Pejabat yang akan memverifikasi & menandatangani dokumen</p>
+            </div>
+        </div>
+        <span class="mc-pill mc-pill-success">
+            <i class="bi bi-check-circle-fill"></i> {{ $totalApproved }}/{{ count($verifikators) }} Disetujui
+        </span>
     </div>
-    <div class="card-body">
-        <div class="row g-3">
-            @foreach($verifikators as $role => $info)
-                <div class="col-md-4 col-sm-6">
-                    <div class="border rounded p-3 h-100">
-                        <div class="small text-muted mb-1">{{ $role }}</div>
-                        <div class="fw-bold mb-2 text-truncate" title="{{ $info['nama'] }}">{{ $info['nama'] }}</div>
-                        <span class="badge {{ $info['badge_class'] }}">{{ $info['status'] }}</span>
+    <div class="mc-body">
+        <div class="vk-grid">
+            @foreach($verifikators as $v)
+                <div class="vk-card {{ $v['color'] }}">
+                    <div class="vk-head">
+                        <div class="vk-avatar">{{ $initials($v['data']['nama']) }}</div>
+                        <div class="flex-grow-1 min-w-0">
+                            <span class="vk-role">{{ $v['short'] }}</span>
+                            <p class="vk-name" title="{{ $v['data']['nama'] }}">{{ $v['data']['nama'] }}</p>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="vk-status {{ $v['data']['status_class'] }}">
+                            <i class="bi {{ $v['data']['status_icon'] }}"></i> {{ $v['data']['status'] }}
+                        </span>
+                        @if($v['data']['acted_at'])
+                            <small class="text-muted" style="font-size: .68rem;">
+                                <i class="bi bi-clock"></i> {{ \Carbon\Carbon::parse($v['data']['acted_at'])->isoFormat('D MMM HH:mm') }}
+                            </small>
+                        @endif
                     </div>
                 </div>
             @endforeach

@@ -14,15 +14,19 @@ class VerifikasiSpmHonorController extends Controller
     /**
      * Dapatkan Role Aktif yang dipakai user untuk memfilter antrean
      */
-    private function getActiveRoleCode()
+    private function activeRoleCodes($user): array
     {
-        $user = Auth::user();
+        $roles = [];
         if ($user->hasRole('PPSPM')) {
-            return 'PPSPM';
-        } elseif ($user->hasRole('Kepala Subbagian Keuangan dan Tata Usaha')) {
-            return 'Kepala Subbagian Keuangan dan Tata Usaha';
+            $roles[] = 'PPSPM';
         }
-        return null;
+        if ($user->hasRole('Kepala Subbagian Keuangan dan Tata Usaha')) {
+            $roles[] = 'Kepala Subbagian Keuangan dan Tata Usaha';
+        }
+        if ($user->hasRole('Koordinator Keuangan')) {
+            $roles[] = 'Koordinator Keuangan';
+        }
+        return $roles;
     }
 
     /**
@@ -31,19 +35,19 @@ class VerifikasiSpmHonorController extends Controller
     public function index(Request $request)
     {
         $user = Auth::user();
-        $roleCode = $this->getActiveRoleCode();
+        $roleCodes = $this->activeRoleCodes($user);
 
-        if (!$roleCode) {
+        if (empty($roleCodes)) {
             abort(403, 'Akses ditolak. Anda bukan Verifikator SPM.');
         }
 
         $query = DokumenSpm::whereHas('spp.tagihan', function ($q) {
                 $q->where('tipe_tagihan', 'HONORARIUM');
             })
-            ->whereHas('workflowInstances', function ($query) use ($roleCode, $user) {
+            ->whereHas('workflowInstances', function ($query) use ($roleCodes, $user) {
                 $query->where('status', '!=', 'DRAFT')
-                      ->whereHas('approvals', function ($sub) use ($roleCode, $user) {
-                          $sub->where('role_code', $roleCode)
+                      ->whereHas('approvals', function ($sub) use ($roleCodes, $user) {
+                          $sub->whereIn('role_code', $roleCodes)
                               ->where(function ($q) use ($user) {
                                   $q->whereNull('assigned_user_id')
                                     ->orWhere('assigned_user_id', $user->id);
@@ -84,25 +88,30 @@ class VerifikasiSpmHonorController extends Controller
 
         foreach ($allSpms as $spm) {
             $instance = $spm->workflowInstances->first();
-            $approval = collect($instance?->approvals ?? [])->firstWhere('role_code', $roleCode);
             
-            if ($spm->status === DokumenSpm::STATUS_DISETUJUI_FINAL) {
+            $myApprovals = collect($instance?->approvals ?? [])->filter(function($app) use ($roleCodes, $user) {
+                if (!in_array($app->role_code, $roleCodes)) return false;
+                if ($app->role_code === 'PPK' && $app->assigned_user_id !== $user->id) return false;
+                return true;
+            });
+            
+            if (in_array($spm->status, [DokumenSpm::STATUS_DISETUJUI_FINAL, DokumenSpm::STATUS_MENUNGGU_UPLOAD, DokumenSpm::STATUS_SPM_TERBIT])) {
                 $summary['selesai']++;
-            } elseif ($approval && $approval->status === 'PENDING') {
+            } elseif ($myApprovals->contains('status', 'PENDING')) {
                 $summary['pending']++;
-            } elseif ($approval && $approval->status === 'APPROVED') {
-                $summary['approved']++;
-            } elseif ($approval && $approval->status === 'REVISION') {
+            } elseif ($myApprovals->contains('status', 'REVISION') || $myApprovals->contains('status', 'REJECTED')) {
                 $summary['revisi']++;
+            } elseif ($myApprovals->contains('status', 'APPROVED')) {
+                $summary['approved']++;
             }
         }
 
         // Filter Status Dashboard
         $statusFilter = $request->input('status', 'semua');
         if ($statusFilter !== 'semua') {
-            $query->whereHas('workflowInstances', function ($wf) use ($roleCode, $user, $statusFilter) {
-                $wf->whereHas('approvals', function ($app) use ($roleCode, $user, $statusFilter) {
-                    $app->where('role_code', $roleCode)
+            $query->whereHas('workflowInstances', function ($wf) use ($roleCodes, $user, $statusFilter) {
+                $wf->whereHas('approvals', function ($app) use ($roleCodes, $user, $statusFilter) {
+                    $app->whereIn('role_code', $roleCodes)
                         ->where(function ($q) use ($user) {
                             $q->whereNull('assigned_user_id')->orWhere('assigned_user_id', $user->id);
                         });
@@ -118,21 +127,21 @@ class VerifikasiSpmHonorController extends Controller
             });
 
             if ($statusFilter === 'selesai') {
-                 $query->where('status', DokumenSpm::STATUS_DISETUJUI_FINAL);
+                 $query->whereIn('status', [DokumenSpm::STATUS_DISETUJUI_FINAL, DokumenSpm::STATUS_MENUNGGU_UPLOAD, DokumenSpm::STATUS_SPM_TERBIT]);
             } elseif ($statusFilter === 'pending') {
-                 $query->where('status', '!=', DokumenSpm::STATUS_DISETUJUI_FINAL);
+                 $query->whereNotIn('status', [DokumenSpm::STATUS_DISETUJUI_FINAL, DokumenSpm::STATUS_MENUNGGU_UPLOAD, DokumenSpm::STATUS_SPM_TERBIT]);
             }
         }
 
         // Sort: Pending milikku diprioritaskan
-        $spmList = $query->latest()->get()->sortByDesc(function($spm) use ($roleCode) {
+        $spmList = $query->latest()->get()->sortByDesc(function($spm) use ($roleCodes) {
             $instance = $spm->workflowInstances->first();
-            $approval = collect($instance?->approvals ?? [])->firstWhere('role_code', $roleCode);
-            return ($approval && $approval->status === 'PENDING') ? 1 : 0;
+            $myApprovals = collect($instance?->approvals ?? [])->whereIn('role_code', $roleCodes);
+            return $myApprovals->contains('status', 'PENDING') ? 1 : 0;
         })->values();
 
         return view('verifikasi-spm.honor_index', compact(
-            'spmList', 'summary', 'statusFilter', 'search', 'roleCode'
+            'spmList', 'summary', 'statusFilter', 'search', 'roleCodes'
         ));
     }
 
@@ -195,6 +204,7 @@ class VerifikasiSpmHonorController extends Controller
 
         $ppspmApproval = $baseApprovals->firstWhere('role_code', 'PPSPM');
         $kasubbagApproval = $baseApprovals->firstWhere('role_code', 'Kepala Subbagian Keuangan dan Tata Usaha');
+        $koordinatorApproval = $baseApprovals->firstWhere('role_code', 'Koordinator Keuangan');
         
         $myApproval = $baseApprovals->firstWhere('role_code', $roleCode);
         
@@ -213,7 +223,7 @@ class VerifikasiSpmHonorController extends Controller
             'spmModel', 'sppModel', 'tagihan', 'dipa', 'selectedBudgetItem',
             'nominalSpm', 'documentStatuses', 'readinessChecklist',
             'workflowInstance', 'ppspmApproval', 'kasubbagApproval',
-            'myApproval', 'isMyPendingApproval', 'activities', 'roleCode'
+            'isMyPendingApproval', 'activities', 'roleCodes', 'activeRoleApprovals', 'koordinatorApproval'
         ));
     }
 
@@ -269,11 +279,8 @@ class VerifikasiSpmHonorController extends Controller
                 // Do nothing, biar yang nolak aja yg update main status SPM
             } elseif ($semuaDisetujui) {
                 $statusLama = $spm->status;
-                $spm->update(['status' => DokumenSpm::STATUS_DISETUJUI_FINAL]);
+                $spm->update(['status' => DokumenSpm::STATUS_MENUNGGU_UPLOAD]);
                 $instance->update(['status' => 'APPROVED']);
-
-                // Menaikkan Status Asli Tagihan sesuai Open Questions (Opsional tp penting)
-                $spm->spp->tagihan->update(['status' => 'SPM_TERBIT']);
 
                 LogStatusDokumen::create([
                     'dokumen_type' => DokumenSpm::class,
@@ -281,9 +288,9 @@ class VerifikasiSpmHonorController extends Controller
                     'user_id' => $user->id,
                     'role_saat_itu' => 'Sistem Verifikasi',
                     'status_sebelumnya' => $statusLama,
-                    'status_baru' => DokumenSpm::STATUS_DISETUJUI_FINAL,
-                    'aksi' => 'SPM_DISETUJUI_FINAL',
-                    'catatan' => 'Verifikasi SPM diotorisasi sepenuhnya oleh seluruh Verifikator Paralel.',
+                    'status_baru' => DokumenSpm::STATUS_MENUNGGU_UPLOAD,
+                    'aksi' => 'SPM_MENUNGGU_UPLOAD',
+                    'catatan' => 'Verifikasi SPM diotorisasi sepenuhnya. Menunggu operator upload dokumen SPM.',
                     'ip_address' => request()->ip()
                 ]);
             }

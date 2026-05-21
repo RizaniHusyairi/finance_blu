@@ -13,10 +13,18 @@
 
     $ppspmStatusLabel = $ppspmApproval?->status ?? 'Belum diajukan';
     $kasubbagStatusLabel = $kasubbagApproval?->status ?? 'Belum diajukan';
+    $koordinatorStatusLabel = $koordinatorApproval?->status ?? 'Belum diajukan';
+    $currentStatusLabel = $currentApproval?->status ?? 'Belum diajukan';
     $ppspmStatusClass = match($ppspmStatusLabel) {
         'APPROVED' => 'text-success', 'PENDING' => 'text-warning text-dark', 'REVISION','REJECTED' => 'text-danger', default => 'text-muted'
     };
     $kasubbagStatusClass = match($kasubbagStatusLabel) {
+        'APPROVED' => 'text-success', 'PENDING' => 'text-warning text-dark', 'REVISION','REJECTED' => 'text-danger', default => 'text-muted'
+    };
+    $koordinatorStatusClass = match($koordinatorStatusLabel) {
+        'APPROVED' => 'text-success', 'PENDING' => 'text-warning text-dark', 'REVISION','REJECTED' => 'text-danger', default => 'text-muted'
+    };
+    $currentStatusClass = match($currentStatusLabel) {
         'APPROVED' => 'text-success', 'PENDING' => 'text-warning text-dark', 'REVISION','REJECTED' => 'text-danger', default => 'text-muted'
     };
 
@@ -54,7 +62,7 @@
 @section('content')
     <div class="d-flex justify-content-between align-items-center mb-3">
         <x-page-title title="Detail Verifikasi SPM" subtitle="Kontrak" />
-        <a href="{{ route('verifikasi-ppspm.spm.kontrak.index') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i> Kembali ke Antrean</a>
+        <a href="{{ route(($routePrefix ?? 'verifikasi-ppspm.spm.kontrak') . '.index') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i> Kembali ke Antrean</a>
     </div>
 
     @if(session('success'))
@@ -76,8 +84,9 @@
                 
                 <div class="row g-3">
                     <div class="col-md-auto"><div class="info-block mb-0"><div class="label">Status SPM</div><div class="value"><span class="badge {{ $statusSpmClass }}">{{ $spmModel->status }}</span></div></div></div>
-                    <div class="col-md-auto ms-md-4"><div class="info-block mb-0"><div class="label">Status Anda (PPSPM)</div><div class="value fw-bold {{ $ppspmStatusClass }}">{{ $ppspmStatusLabel }}</div></div></div>
+                    <div class="col-md-auto ms-md-4"><div class="info-block mb-0"><div class="label">Status Anda ({{ $currentRole ?? 'PPSPM' }})</div><div class="value fw-bold {{ $currentStatusClass }}">{{ $currentStatusLabel }}</div></div></div>
                     <div class="col-md-auto ms-md-4"><div class="info-block mb-0"><div class="label">Status Kasubbag</div><div class="value fw-bold {{ $kasubbagStatusClass }}">{{ $kasubbagStatusLabel }}</div></div></div>
+                    <div class="col-md-auto ms-md-4"><div class="info-block mb-0"><div class="label">Status Koordinator</div><div class="value fw-bold {{ $koordinatorStatusClass }}">{{ $koordinatorStatusLabel }}</div></div></div>
                     <div class="col-md-auto ms-md-4"><div class="info-block mb-0"><div class="label">Workflow Final</div><div class="value"><span class="badge bg-dark">{{ $statusFinal }}</span></div></div></div>
                 </div>
             </div>
@@ -94,25 +103,32 @@
         <div class="card-body p-4">
             <h6 class="fw-bold text-primary mb-4"><i class="bi bi-diagram-3 me-2"></i> Progress Verifikasi Paralel</h6>
             <div class="row g-4 justify-content-center">
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <div class="progress-box bg-white shadow-sm border-success">
                         <div class="mb-2"><i class="bi bi-person-workspace fs-2 text-success"></i></div>
                         <h6 class="fw-bold mb-1">Operator BLU</h6>
                         <span class="badge bg-success">Selesai (Diajukan)</span>
                     </div>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <div class="progress-box bg-white shadow-sm {{ $ppspmApproval?->status === 'APPROVED' ? 'border-success' : ($ppspmApproval?->status === 'REVISION' ? 'border-danger' : 'border-warning') }}">
                         <div class="mb-2"><i class="bi bi-person-check fs-2 {{ $ppspmStatusClass }}"></i></div>
-                        <h6 class="fw-bold mb-1">PPSPM (Anda)</h6>
+                        <h6 class="fw-bold mb-1">PPSPM</h6>
                         <span class="badge {{ match($ppspmApproval?->status) { 'APPROVED' => 'bg-success', 'REVISION' => 'bg-danger', default => 'bg-warning text-dark' } }}">{{ $ppspmStatusLabel }}</span>
                     </div>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <div class="progress-box bg-white shadow-sm {{ $kasubbagApproval?->status === 'APPROVED' ? 'border-success' : ($kasubbagApproval?->status === 'REVISION' ? 'border-danger' : 'border-warning') }}">
                         <div class="mb-2"><i class="bi bi-person-badge fs-2 {{ $kasubbagStatusClass }}"></i></div>
                         <h6 class="fw-bold mb-1">Kasubbag</h6>
                         <span class="badge {{ match($kasubbagApproval?->status) { 'APPROVED' => 'bg-success', 'REVISION' => 'bg-danger', default => 'bg-warning text-dark' } }}">{{ $kasubbagStatusLabel }}</span>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="progress-box bg-white shadow-sm {{ $koordinatorApproval?->status === 'APPROVED' ? 'border-success' : ($koordinatorApproval?->status === 'REVISION' ? 'border-danger' : 'border-warning') }}">
+                        <div class="mb-2"><i class="bi bi-person-check-fill fs-2 {{ $koordinatorStatusClass }}"></i></div>
+                        <h6 class="fw-bold mb-1">Koordinator Keuangan</h6>
+                        <span class="badge {{ match($koordinatorApproval?->status) { 'APPROVED' => 'bg-success', 'REVISION' => 'bg-danger', default => 'bg-warning text-dark' } }}">{{ $koordinatorStatusLabel }}</span>
                     </div>
                 </div>
             </div>
@@ -234,7 +250,7 @@
             </div>
 
             {{-- Card Catatan Resolusi --}}
-            @if($latestPpspmRevisionNote || $latestKasubbagRevisionNote)
+            @if($latestPpspmRevisionNote || $latestKasubbagRevisionNote || $latestKoordinatorRevisionNote)
             <div class="card verif-card mb-4 border-danger border-opacity-50">
                 <div class="card-body p-4">
                     <div class="verif-heading text-danger"><i class="bi bi-exclamation-triangle"></i> Catatan Revisi</div>
@@ -250,6 +266,12 @@
                             {{ $latestKasubbagRevisionNote->catatan ?? '-' }}
                         </div>
                     @endif
+                    @if($latestKoordinatorRevisionNote)
+                        <div class="alert alert-warning mb-0">
+                            <strong class="d-block mb-1">Catatan Koordinator:</strong>
+                            {{ $latestKoordinatorRevisionNote->catatan ?? '-' }}
+                        </div>
+                    @endif
                 </div>
             </div>
             @endif
@@ -258,11 +280,94 @@
     </div>
 
     {{-- C. PANEL KEPUTUSAN BAWAH --}}
-    @if($canAct)
+    {{-- C. PANEL KEPUTUSAN BAWAH --}}
+    @if(isset($activeRoleApprovals) && count($activeRoleApprovals) > 1)
+        {{-- DUAL ROLE MODE --}}
+        <div class="card shadow border-0 bg-white sticky-bottom mb-4" style="bottom: 1rem; z-index: 10;">
+            <div class="card-body p-4">
+                <div class="alert alert-primary mb-3">
+                    <i class="bi bi-people-fill me-2"></i> Anda memiliki <strong>{{ count($activeRoleApprovals) }} peran verifikasi</strong> pada SPM ini.
+                </div>
+                
+                <div class="row g-3">
+                    @foreach($activeRoleApprovals as $idx => $roleApproval)
+                        <div class="col-md-6">
+                            <div class="border rounded-3 p-3">
+                                <h6 class="fw-bold mb-3">Verifikasi ({{ $roleApproval['role'] }})</h6>
+                                <div class="d-flex gap-2">
+                                    <button type="button" class="btn btn-outline-danger flex-fill" data-bs-toggle="modal" data-bs-target="#rejectModal{{ $idx }}">
+                                        <i class="bi bi-x-circle me-1"></i> Revisi
+                                    </button>
+                                    <button type="button" class="btn btn-success flex-fill" data-bs-toggle="modal" data-bs-target="#approveModal{{ $idx }}">
+                                        <i class="bi bi-check-circle me-1"></i> Setujui
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+        </div>
+
+        {{-- DUAL ROLE MODALS --}}
+        @foreach($activeRoleApprovals as $idx => $roleApproval)
+            {{-- MODAL APPROVE DUAL --}}
+            <div class="modal fade" id="approveModal{{ $idx }}" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content border-0">
+                        <div class="modal-header bg-success text-white border-0">
+                            <h5 class="modal-title fw-bold">Setujui SPM ini ({{ $roleApproval['role'] }})?</h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body p-4 text-center">
+                            <i class="bi bi-shield-check text-success" style="font-size: 4rem;"></i>
+                            <h5 class="fw-bold mt-3">Konfirmasi Persetujuan</h5>
+                            <p class="text-muted mb-0">Tindakan ini akan menyelesaikan dan mengunci tahap verifikasi milik {{ $roleApproval['role'] }}.</p>
+                        </div>
+                        <div class="modal-footer border-0 justify-content-center pb-4">
+                            <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Batal</button>
+                            <form action="{{ $roleApproval['approveRoute'] }}" method="POST">
+                                @csrf
+                                <input type="hidden" name="approval_id" value="{{ $roleApproval['approval_id'] ?? '' }}">
+                                <button type="submit" class="btn btn-success px-5 fw-bold">Ya, Setujui Sekarang</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- MODAL REVISI DUAL --}}
+            <div class="modal fade" id="rejectModal{{ $idx }}" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <form action="{{ $roleApproval['revisiRoute'] }}" method="POST" class="modal-content border-0">
+                        @csrf
+                        <input type="hidden" name="approval_id" value="{{ $roleApproval['approval_id'] ?? '' }}">
+                        <div class="modal-header bg-danger text-white border-0">
+                            <h5 class="modal-title fw-bold">Kembalikan untuk Revisi ({{ $roleApproval['role'] }})</h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body p-4">
+                            <p class="text-muted mb-3">Tindakan ini akan mengembalikan dokumen SPM ke tahap pembuatan.</p>
+                            <div class="mb-0">
+                                <label class="form-label fw-bold text-danger">Catatan Revisi <span class="text-danger">*</span></label>
+                                <textarea name="catatan_revisi" class="form-control form-control-lg" rows="4" placeholder="Jelaskan alasan pengembalian secara detail..." required></textarea>
+                            </div>
+                        </div>
+                        <div class="modal-footer border-0 pb-4">
+                            <button type="button" class="btn btn-light" data-bs-dismiss="modal">Batal</button>
+                            <button type="submit" class="btn btn-danger px-4 fw-bold">Konfirmasi Penolakan</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        @endforeach
+
+    @elseif($canAct)
+        {{-- SINGLE ROLE MODE (original behavior) --}}
         <div class="card shadow border-0 bg-white sticky-bottom mb-4" style="bottom: 1rem; z-index: 10;">
             <div class="card-body p-4 d-flex justify-content-between align-items-center">
                 <div>
-                    <h5 class="fw-bold mb-1">Keputusan Anda (PPSPM)</h5>
+                    <h5 class="fw-bold mb-1">Keputusan Anda ({{ $currentRole ?? 'PPSPM' }})</h5>
                     <div class="text-muted small">Berdasarkan hasil verifikasi dokumen.</div>
                 </div>
                 <div class="d-flex gap-3">
@@ -275,28 +380,28 @@
                 </div>
             </div>
         </div>
-    @elseif($ppspmApproval?->status === 'APPROVED')
+    @elseif($currentApproval?->status === 'APPROVED')
         <div class="alert alert-success border-0 shadow-sm p-4 d-flex align-items-center mb-4">
              <i class="bi bi-check-circle-fill fs-1 me-4 text-success"></i>
              <div>
                  <h5 class="fw-bold mb-1 text-success">Anda telah menyetujui dokumen SPM ini.</h5>
-                 <div>Tanggal Tindakan: {{ optional($ppspmApproval->acted_at)->format('d M Y H:i') }}</div>
+                 <div>Tanggal Tindakan: {{ optional($currentApproval->acted_at)->format('d M Y H:i') }}</div>
                  <div class="mt-1 small">Status Kasubbag saat ini: <strong>{{ $kasubbagStatusLabel }}</strong></div>
              </div>
         </div>
-    @elseif($ppspmApproval?->status === 'REVISION')
+    @elseif($currentApproval?->status === 'REVISION')
         <div class="alert alert-danger border-0 shadow-sm p-4 d-flex align-items-center mb-4">
              <i class="bi bi-exclamation-circle-fill fs-1 me-4 text-danger"></i>
              <div>
                  <h5 class="fw-bold mb-1 text-danger">Anda mengembalikan dokumen ini untuk revisi.</h5>
-                 <div>Tanggal Tindakan: {{ optional($ppspmApproval->acted_at)->format('d M Y H:i') }}</div>
-                 <div class="mt-1 text-dark fst-italic">Catatan: "{{ $latestPpspmRevisionNote?->catatan ?? '-' }}"</div>
+                 <div>Tanggal Tindakan: {{ optional($currentApproval->acted_at)->format('d M Y H:i') }}</div>
+                 <div class="mt-1 text-dark fst-italic">Catatan: "{{ $latestCurrentRevisionNote?->catatan ?? '-' }}"</div>
              </div>
         </div>
     @endif
 
-    {{-- MODAL APPROVE --}}
-    @if($canAct)
+    {{-- MODAL APPROVE (SINGLE) --}}
+    @if($canAct && (!isset($activeRoleApprovals) || count($activeRoleApprovals) <= 1))
     <div class="modal fade" id="approveModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0">
@@ -307,12 +412,13 @@
                 <div class="modal-body p-4 text-center">
                     <i class="bi bi-shield-check text-success" style="font-size: 4rem;"></i>
                     <h5 class="fw-bold mt-3">Konfirmasi Persetujuan</h5>
-                    <p class="text-muted mb-0">Tindakan ini akan menyelesaikan dan mengunci tahap verifikasi milik PPSPM. Pastikan Anda telah memeriksa kesesuaian nilai SPM dan Rekening Tujuan.</p>
+                    <p class="text-muted mb-0">Tindakan ini akan menyelesaikan dan mengunci tahap verifikasi milik {{ $currentRole ?? 'PPSPM' }}. Pastikan Anda telah memeriksa kesesuaian nilai SPM dan Rekening Tujuan.</p>
                 </div>
                 <div class="modal-footer border-0 justify-content-center pb-4">
                     <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Batal</button>
-                    <form action="{{ route('verifikasi-ppspm.spm.kontrak.approve', $spmModel->id) }}" method="POST">
+                    <form action="{{ route(($routePrefix ?? 'verifikasi-ppspm.spm.kontrak') . '.approve', $spmModel->id) }}" method="POST">
                         @csrf
+                        <input type="hidden" name="approval_id" value="{{ $activeRoleApprovals[0]['approval_id'] ?? $currentApproval?->id }}">
                         <button type="submit" class="btn btn-success px-5 fw-bold">Ya, Setujui Sekarang</button>
                     </form>
                 </div>
@@ -320,11 +426,12 @@
         </div>
     </div>
 
-    {{-- MODAL REJECT / REVISI --}}
+    {{-- MODAL REJECT / REVISI (SINGLE) --}}
     <div class="modal fade" id="rejectModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
-            <form action="{{ route('verifikasi-ppspm.spm.kontrak.revisi', $spmModel->id) }}" method="POST" class="modal-content border-0">
+            <form action="{{ route(($routePrefix ?? 'verifikasi-ppspm.spm.kontrak') . '.revisi', $spmModel->id) }}" method="POST" class="modal-content border-0">
                 @csrf
+                <input type="hidden" name="approval_id" value="{{ $activeRoleApprovals[0]['approval_id'] ?? $currentApproval?->id }}">
                 <div class="modal-header bg-danger text-white border-0">
                     <h5 class="modal-title fw-bold">Kembalikan untuk Revisi</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>

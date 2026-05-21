@@ -31,6 +31,7 @@ class VerifikasiNpiPerjaldinController extends Controller
         if ($user->hasRole('Bendahara Penerimaan')) return 'Bendahara Penerimaan';
         if ($user->hasRole('PPK')) return 'PPK';
         if ($user->hasRole('Kepala Subbagian Keuangan dan Tata Usaha')) return 'Kepala Subbagian Keuangan dan Tata Usaha';
+        if ($user->hasRole('Koordinator Keuangan')) return 'Koordinator Keuangan';
         
         return '';
     }
@@ -44,6 +45,7 @@ class VerifikasiNpiPerjaldinController extends Controller
             'Bendahara Penerimaan' => 'Bendahara Penerimaan',
             'PPK' => 'Pejabat Pembuat Komitmen',
             'Kepala Subbagian Keuangan dan Tata Usaha' => 'Kasubbag Keuangan & TU',
+            'Koordinator Keuangan' => 'Koordinator Keuangan',
             default => 'Unknown'
         };
     }
@@ -89,7 +91,7 @@ class VerifikasiNpiPerjaldinController extends Controller
                     $sq->whereNull('assigned_user_id')->orWhere('assigned_user_id', $user->id);
                 });
             });
-        } elseif ($roleCode === 'Kepala Subbagian Keuangan dan Tata Usaha') {
+        } elseif (in_array($roleCode, ['Kepala Subbagian Keuangan dan Tata Usaha', 'Koordinator Keuangan'], true)) {
             $query->whereHas('workflowInstances.approvals', function($q) use ($roleCode) {
                 $q->where('role_code', $roleCode);
             });
@@ -209,6 +211,9 @@ class VerifikasiNpiPerjaldinController extends Controller
         if ($myApproval?->assigned_user_id && $myApproval->assigned_user_id !== $user->id) {
             abort(403, 'Anda tidak berhak melihat Dokumen NPI ini.');
         }
+        if ($roleCode === 'Bendahara Penerimaan' && (int) $npi->bendahara_penerimaan_id !== (int) $user->id) {
+            abort(403, 'NPI ini bukan tugas Bendahara Penerimaan Anda.');
+        }
 
         $canAct = (
             $myApproval
@@ -253,6 +258,9 @@ class VerifikasiNpiPerjaldinController extends Controller
         if ($myApproval->assigned_user_id && $myApproval->assigned_user_id !== $user->id) {
             abort(403, 'Anda bukan verifikator spesifik untuk dokumen ini.');
         }
+        if ($roleCode === 'Bendahara Penerimaan' && (int) $npi->bendahara_penerimaan_id !== (int) $user->id) {
+            abort(403, 'NPI ini bukan tugas Bendahara Penerimaan Anda.');
+        }
 
         DB::beginTransaction();
         try {
@@ -269,14 +277,14 @@ class VerifikasiNpiPerjaldinController extends Controller
                 'user_id'           => $user->id,
                 'role_saat_itu'     => $roleCode,
                 'status_sebelumnya' => $npi->status,
-                'status_baru'       => $isFullyApproved ? DokumenNpi::STATUS_DISETUJUI_FINAL : $npi->status,
+                'status_baru'       => $isFullyApproved ? DokumenNpi::STATUS_MENUNGGU_UPLOAD : $npi->status,
                 'aksi'              => 'APPROVE_' . strtoupper(str_replace(' ', '_', $roleCode)),
                 'catatan'           => $catatan,
                 'ip_address'        => $request->ip(),
             ]);
 
-            if ($isFullyApproved && $npi->status !== DokumenNpi::STATUS_DISETUJUI_FINAL) {
-                $npi->update(['status' => DokumenNpi::STATUS_DISETUJUI_FINAL]);
+            if ($isFullyApproved && $npi->status !== DokumenNpi::STATUS_MENUNGGU_UPLOAD) {
+                $npi->update(['status' => DokumenNpi::STATUS_MENUNGGU_UPLOAD]);
 
                 // Notifikasi Final
                 $pengeluaran = User::role('Bendahara Pengeluaran')->get();
@@ -317,6 +325,12 @@ class VerifikasiNpiPerjaldinController extends Controller
 
         $myApproval = $wf->approvals->where('role_code', $roleCode)->first();
         abort_unless($myApproval && $myApproval->status === 'PENDING', 403, 'Anda tidak memiliki antrean menunggu pada Dokumen NPI ini.');
+        if ($myApproval->assigned_user_id && $myApproval->assigned_user_id !== $user->id) {
+            abort(403, 'Anda bukan verifikator spesifik untuk dokumen ini.');
+        }
+        if ($roleCode === 'Bendahara Penerimaan' && (int) $npi->bendahara_penerimaan_id !== (int) $user->id) {
+            abort(403, 'NPI ini bukan tugas Bendahara Penerimaan Anda.');
+        }
 
         DB::beginTransaction();
         try {

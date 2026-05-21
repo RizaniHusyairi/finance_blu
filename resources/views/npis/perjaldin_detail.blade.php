@@ -157,24 +157,27 @@
                             
                             <div class="col-md-12">
                                 <label class="form-label">Bendahara Penerimaan <span class="text-danger">*</span></label>
-                                <select name="bendahara_penerimaan_id" class="form-select single-select" required>
-                                    <option value="">-- Pilih Bendahara Penerimaan --</option>
-                                    @foreach($bendaharaPenerimaans as $user)
-                                        <option value="{{ $user->id }}" {{ old('bendahara_penerimaan_id', $npiModel?->bendahara_penerimaan_id) == $user->id ? 'selected' : '' }}>
-                                            {{ $user->name }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                                <small class="text-muted">Target setoran pemindahbukuan internal.</small>
+                                <input type="hidden" name="bendahara_penerimaan_id" value="{{ $bendaharaPenerimaanTagihan?->id }}">
+                                <input type="text" class="form-control bg-light" value="{{ $bendaharaPenerimaanTagihan?->name ?? $tagihan?->bendahara_penerimaan_nama_snapshot ?? 'Belum ditentukan pada tagihan' }}" readonly>
+                                <small class="text-muted">Diwariskan dari verifikator Bendahara Penerimaan yang dipilih saat tagihan diajukan.</small>
+                                @if(!$bendaharaPenerimaanTagihan)
+                                    <div class="text-danger small mt-1">Verifikator Bendahara Penerimaan belum ada pada tagihan sumber.</div>
+                                @endif
                             </div>
 
-                            <div class="col-md-6">
+                            <div class="col-md-4">
                                 <label class="form-label">Verifikator PPK</label>
                                 <input type="text" class="form-control bg-light" value="{{ $ppkSpp?->name ?? 'Belum Ditentukan' }}" readonly>
                                 <small class="text-muted">Diwariskan dari SPP.</small>
                             </div>
 
-                            <div class="col-md-6">
+                            <div class="col-md-4">
+                                <label class="form-label">Koordinator Keuangan</label>
+                                <input type="text" class="form-control bg-light" value="{{ $koordinatorKeuanganUser?->name ?? $tagihan?->koordinator_keuangan_nama_snapshot ?? 'Belum Ditentukan' }}" readonly>
+                                <small class="text-muted">Verifikator Koordinator.</small>
+                            </div>
+
+                            <div class="col-md-4">
                                 <label class="form-label">Verifikator Kasubbag</label>
                                 <input type="text" class="form-control bg-light" value="{{ $kasubbagUser?->name ?? 'Belum Ditentukan' }}" readonly>
                                 <small class="text-muted">Terisi Otomatis.</small>
@@ -204,11 +207,15 @@
                             <label class="form-label text-muted mb-0">Bendahara Penerimaan</label>
                             <div class="fw-bold border-bottom pb-1">{{ $npiModel->bendaharaPenerimaan?->name ?? '-' }}</div>
                         </div>
-                        <div class="col-md-6 mt-2">
+                        <div class="col-md-4 mt-2">
                             <label class="form-label text-muted mb-0">Verifikator PPK</label>
                             <div class="fw-bold border-bottom pb-1">{{ $ppkSpp?->name ?? '-' }}</div>
                         </div>
-                        <div class="col-md-6 mt-2">
+                        <div class="col-md-4 mt-2">
+                            <label class="form-label text-muted mb-0">Koordinator Keuangan</label>
+                            <div class="fw-bold border-bottom pb-1">{{ $koordinatorKeuanganUser?->name ?? '-' }}</div>
+                        </div>
+                        <div class="col-md-4 mt-2">
                             <label class="form-label text-muted mb-0">Verifikator Kasubbag</label>
                             <div class="fw-bold border-bottom pb-1">{{ $kasubbagUser?->name ?? '-' }}</div>
                         </div>
@@ -262,13 +269,64 @@
                     </div>
                 @endif
 
+                @if(in_array($statusNpi, [\App\Models\DokumenNpi::STATUS_MENUNGGU_UPLOAD, \App\Models\DokumenNpi::STATUS_NPI_TERBIT, \App\Models\DokumenNpi::STATUS_DISETUJUI_FINAL]))
+                    <hr>
+                    <h6 class="fw-bold mb-3 text-success"><i class="material-icons-outlined text-success" style="font-size: 16px; margin-bottom: -3px;">upload_file</i> Upload NPI Bertandatangan</h6>
+                    
+                    <div class="card bg-light border-0 shadow-none mb-4">
+                        <div class="card-body">
+                            @if($npiModel->hasSignedNpiFile())
+                                <div class="alert alert-success border-0 d-flex align-items-center mb-3">
+                                    <i class="material-icons-outlined fs-3 me-3">check_circle</i>
+                                    <div>
+                                        <h6 class="alert-heading fw-bold mb-1">NPI Telah Terbit</h6>
+                                        <span class="font-13">File NPI fisik bertandatangan telah diunggah dan disimpan.</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="d-flex align-items-center mb-3 bg-white p-3 rounded border">
+                                    <i class="material-icons-outlined text-danger fs-1 me-3">picture_as_pdf</i>
+                                    <div class="flex-grow-1">
+                                        <h6 class="mb-0 fw-bold">{{ $npiModel->signedNpiArsip->nama_file_asli ?? 'Dokumen NPI' }}</h6>
+                                        <small class="text-muted">Diunggah pada {{ $npiModel->signedNpiArsip->created_at->format('d M Y H:i') }}</small>
+                                    </div>
+                                    <a href="{{ Storage::url($npiModel->signedNpiArsip->path_file) }}" target="_blank" class="btn btn-primary btn-sm px-3"><i class="material-icons-outlined" style="font-size: 16px; margin-bottom: -3px;">download</i> Unduh</a>
+                                </div>
+                                
+                                <hr class="border-dashed">
+                                <p class="mb-2 fw-bold font-13 text-muted">Upload Ulang File NPI Fisik (Opsional)</p>
+                            @else
+                                <div class="alert alert-warning border-0 d-flex align-items-center mb-3">
+                                    <i class="material-icons-outlined fs-3 me-3">warning</i>
+                                    <div>
+                                        <h6 class="alert-heading fw-bold mb-1">Menunggu Upload Fisik</h6>
+                                        <span class="font-13">NPI telah diverifikasi penuh. Silakan cetak, tandatangani, dan unggah scan/foto dokumen NPI untuk menerbitkan NPI dan bisa digunakan sebagai dasar SP2D.</span>
+                                    </div>
+                                </div>
+                            @endif
+                            
+                            <form action="{{ route('npis.perjaldin.upload-signed-npi', $npiModel->id) }}" method="POST" enctype="multipart/form-data">
+                                @csrf
+                                <div class="input-group">
+                                    <input type="file" class="form-control" name="file_npi_ttd" accept=".pdf,.jpg,.jpeg,.png" required>
+                                    <button class="btn btn-success px-4 fw-bold" type="submit"><i class="material-icons-outlined" style="font-size: 16px; margin-bottom: -3px;">upload</i> Unggah</button>
+                                </div>
+                                <small class="text-muted mt-2 d-block">Format: PDF/JPG/PNG. Maks: 10MB.</small>
+                                @error('file_npi_ttd')
+                                    <span class="text-danger small mt-1 d-block"><i class="material-icons-outlined" style="font-size: 14px;">error</i> {{ $message }}</span>
+                                @enderror
+                            </form>
+                        </div>
+                    </div>
+                @endif
+
                 @if(!in_array($statusNpi, ['DRAFT', 'Belum Dibuat', '']))
                     <hr>
                     <h6 class="fw-bold mb-3"><i class="material-icons-outlined text-primary" style="font-size: 16px; margin-bottom: -3px;">account_tree</i> Progress Persetujuan (Paralel)</h6>
                     
                     <div class="row g-3">
                         <!-- Bendahara Penerimaan -->
-                        <div class="col-12 col-md-4">
+                        <div class="col-12 col-md-6 col-xl-3">
                             <div class="border rounded p-3 h-100 text-center @if($benpenApproval?->status == 'APPROVED') border-success bg-light-success @elseif($benpenApproval?->status == 'REVISION') border-danger bg-light-danger @elseif($benpenApproval?->status == 'PENDING') border-warning bg-light-warning @endif">
                                 <div class="badge bg-secondary mb-2 d-inline-block">URUTAN 1</div>
                                 <h6 class="mb-1 fw-bold">Bendahara Penerimaan</h6>
@@ -290,7 +348,7 @@
                         </div>
 
                         <!-- PPK -->
-                        <div class="col-12 col-md-4">
+                        <div class="col-12 col-md-6 col-xl-3">
                             <div class="border rounded p-3 h-100 text-center @if($ppkApproval?->status == 'APPROVED') border-success bg-light-success @elseif($ppkApproval?->status == 'REVISION') border-danger bg-light-danger @elseif($ppkApproval?->status == 'PENDING') border-warning bg-light-warning @endif">
                                 <div class="badge bg-secondary mb-2 d-inline-block">URUTAN 1</div>
                                 <h6 class="mb-1 fw-bold">PPK</h6>
@@ -311,8 +369,30 @@
                             </div>
                         </div>
 
+                        <!-- Koordinator Keuangan -->
+                        <div class="col-12 col-md-6 col-xl-3">
+                            <div class="border rounded p-3 h-100 text-center @if($koordinatorApproval?->status == 'APPROVED') border-success bg-light-success @elseif($koordinatorApproval?->status == 'REVISION') border-danger bg-light-danger @elseif($koordinatorApproval?->status == 'PENDING') border-warning bg-light-warning @endif">
+                                <div class="badge bg-secondary mb-2 d-inline-block">URUTAN 1</div>
+                                <h6 class="mb-1 fw-bold">Koordinator Keuangan</h6>
+                                <p class="mb-2 text-muted font-12" style="height: 35px; overflow: hidden;">{{ $koordinatorApproval?->assignedUser?->name ?? $koordinatorKeuanganUser?->name ?? 'Semua Koordinator' }}</p>
+
+                                <span class="badge @if($koordinatorApproval?->status == 'APPROVED') bg-success @elseif($koordinatorApproval?->status == 'REVISION') bg-danger @elseif($koordinatorApproval?->status == 'PENDING') bg-warning text-dark @else bg-light text-dark border @endif d-block px-2 py-2">
+                                    {{ $koordinatorApproval?->status ?? 'WAITING' }}
+                                </span>
+
+                                @if($koordinatorApproval?->catatan)
+                                    <div class="mt-2 text-start font-11 text-muted border-top pt-2">
+                                        <i class="material-icons-outlined" style="font-size: 12px;">chat</i> "{{ $koordinatorApproval->catatan }}"
+                                    </div>
+                                @endif
+                                @if($koordinatorApproval?->acted_at)
+                                    <small class="d-block mt-2 font-10 text-muted">{{ \Carbon\Carbon::parse($koordinatorApproval->acted_at)->format('d M Y H:i') }}</small>
+                                @endif
+                            </div>
+                        </div>
+
                         <!-- Kasubbag -->
-                        <div class="col-12 col-md-4">
+                        <div class="col-12 col-md-6 col-xl-3">
                             <div class="border rounded p-3 h-100 text-center @if($kasubbagApproval?->status == 'APPROVED') border-success bg-light-success @elseif($kasubbagApproval?->status == 'REVISION') border-danger bg-light-danger @elseif($kasubbagApproval?->status == 'PENDING') border-warning bg-light-warning @endif">
                                 <div class="badge bg-secondary mb-2 d-inline-block">URUTAN 1</div>
                                 <h6 class="mb-1 fw-bold">Kasubbag</h6>

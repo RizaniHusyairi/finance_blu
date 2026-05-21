@@ -13,10 +13,14 @@
 
     $ppspmStatusLabel = $ppspmApproval?->status ?? 'Belum diajukan';
     $kasubbagStatusLabel = $kasubbagApproval?->status ?? 'Belum diajukan';
+    $koordinatorStatusLabel = $koordinatorApproval?->status ?? 'Belum diajukan';
     $ppspmStatusClass = match($ppspmStatusLabel) {
         'APPROVED' => 'text-success', 'PENDING' => 'text-warning text-dark', 'REVISION','REJECTED' => 'text-danger', default => 'text-muted'
     };
     $kasubbagStatusClass = match($kasubbagStatusLabel) {
+        'APPROVED' => 'text-success', 'PENDING' => 'text-warning text-dark', 'REVISION','REJECTED' => 'text-danger', default => 'text-muted'
+    };
+    $koordinatorStatusClass = match($koordinatorStatusLabel) {
         'APPROVED' => 'text-success', 'PENDING' => 'text-warning text-dark', 'REVISION','REJECTED' => 'text-danger', default => 'text-muted'
     };
 
@@ -78,6 +82,7 @@
                     <div class="col-md-auto"><div class="info-block mb-0"><div class="label">Status SPM</div><div class="value"><span class="badge {{ $statusSpmClass }}">{{ $spmModel->status }}</span></div></div></div>
                     <div class="col-md-auto ms-md-4"><div class="info-block mb-0"><div class="label">Status Anda (Kasubbag)</div><div class="value fw-bold {{ $kasubbagStatusClass }}">{{ $kasubbagStatusLabel }}</div></div></div>
                     <div class="col-md-auto ms-md-4"><div class="info-block mb-0"><div class="label">Status PPSPM</div><div class="value fw-bold {{ $ppspmStatusClass }}">{{ $ppspmStatusLabel }}</div></div></div>
+                    <div class="col-md-auto ms-md-4"><div class="info-block mb-0"><div class="label">Status Koordinator</div><div class="value fw-bold {{ $koordinatorStatusClass }}">{{ $koordinatorStatusLabel }}</div></div></div>
                     <div class="col-md-auto ms-md-4"><div class="info-block mb-0"><div class="label">Workflow Final</div><div class="value"><span class="badge bg-dark">{{ $statusFinal }}</span></div></div></div>
                 </div>
             </div>
@@ -94,21 +99,28 @@
         <div class="card-body p-4">
             <h6 class="fw-bold text-primary mb-4"><i class="bi bi-diagram-3 me-2"></i> Progress Verifikasi Paralel</h6>
             <div class="row g-4 justify-content-center">
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <div class="progress-box bg-white shadow-sm border-success">
                         <div class="mb-2"><i class="bi bi-person-workspace fs-2 text-success"></i></div>
                         <h6 class="fw-bold mb-1">Operator BLU</h6>
                         <span class="badge bg-success">Selesai (Diajukan)</span>
                     </div>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <div class="progress-box bg-white shadow-sm {{ $kasubbagApproval?->status === 'APPROVED' ? 'border-success' : ($kasubbagApproval?->status === 'REVISION' ? 'border-danger' : 'border-warning') }}">
                         <div class="mb-2"><i class="bi bi-person-badge fs-2 {{ $kasubbagStatusClass }}"></i></div>
                         <h6 class="fw-bold mb-1">Kasubbag (Anda)</h6>
                         <span class="badge {{ match($kasubbagApproval?->status) { 'APPROVED' => 'bg-success', 'REVISION' => 'bg-danger', default => 'bg-warning text-dark' } }}">{{ $kasubbagStatusLabel }}</span>
                     </div>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-3">
+                    <div class="progress-box bg-white shadow-sm {{ $koordinatorApproval?->status === 'APPROVED' ? 'border-success' : ($koordinatorApproval?->status === 'REVISION' ? 'border-danger' : 'border-warning') }}">
+                        <div class="mb-2"><i class="bi bi-person-gear fs-2 {{ $koordinatorStatusClass }}"></i></div>
+                        <h6 class="fw-bold mb-1">Koordinator Keuangan</h6>
+                        <span class="badge {{ match($koordinatorApproval?->status) { 'APPROVED' => 'bg-success', 'REVISION' => 'bg-danger', default => 'bg-warning text-dark' } }}">{{ $koordinatorStatusLabel }}</span>
+                    </div>
+                </div>
+                <div class="col-md-3">
                     <div class="progress-box bg-white shadow-sm {{ $ppspmApproval?->status === 'APPROVED' ? 'border-success' : ($ppspmApproval?->status === 'REVISION' ? 'border-danger' : 'border-warning') }}">
                         <div class="mb-2"><i class="bi bi-person-check fs-2 {{ $ppspmStatusClass }}"></i></div>
                         <h6 class="fw-bold mb-1">PPSPM</h6>

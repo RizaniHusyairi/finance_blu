@@ -114,7 +114,10 @@ class TagihanKontrakWorkflowService extends PerjaldinWorkflowService
             default       => $instance->status,
         };
 
+        $previousStatus = $tagihan->status;
         $tagihan->update(['status' => $mappedStatus]);
+
+        app(TagihanReadyForSppNotificationService::class)->notifyIfNewlyReady($tagihan, $previousStatus);
     }
 
     protected function pendingStatusForKontrak(WorkflowInstance $instance, string $rolePrefix): string

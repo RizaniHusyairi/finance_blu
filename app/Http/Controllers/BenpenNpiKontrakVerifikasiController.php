@@ -18,6 +18,8 @@ class BenpenNpiKontrakVerifikasiController extends Controller
      */
     public function index(Request $request)
     {
+        $user = $request->user();
+
         // Ambil semua NPI Kontrak yang sudah punya workflow aktif
         $npiQuery = DokumenNpi::with([
             'spm.spp.tagihan.detailKontrak.kontrakTermin.kontrak.vendor',
@@ -27,6 +29,16 @@ class BenpenNpiKontrakVerifikasiController extends Controller
         ])
         ->whereHas('spm.spp.tagihan', fn ($q) => $q->where('tipe_tagihan', 'KONTRAK'))
         ->whereHas('workflowInstances', fn ($q) => $q->whereIn('status', ['IN_PROGRESS', 'APPROVED', 'REVISION']))
+        ->when($user?->hasRole('Bendahara Penerimaan'), function ($query) use ($user) {
+            $query->where('bendahara_penerimaan_id', $user->id)
+                ->whereHas('workflowInstances.approvals', function ($approvalQuery) use ($user) {
+                    $approvalQuery->where('role_code', 'Bendahara Penerimaan')
+                        ->where(function ($assignedQuery) use ($user) {
+                            $assignedQuery->whereNull('assigned_user_id')
+                                ->orWhere('assigned_user_id', $user->id);
+                        });
+                });
+        })
         ->latest()
         ->get();
 
@@ -38,6 +50,7 @@ class BenpenNpiKontrakVerifikasiController extends Controller
             $npi->_workflowInstance = $latestInstance;
             $npi->_benpenApproval = $approvals->firstWhere('role_code', 'Bendahara Penerimaan');
             $npi->_ppkApproval = $approvals->firstWhere('role_code', 'PPK');
+            $npi->_koordinatorApproval = $approvals->firstWhere('role_code', 'Koordinator Keuangan');
             $npi->_kasubbagApproval = $approvals->firstWhere('role_code', 'Kepala Subbagian Keuangan dan Tata Usaha');
 
             // Status final
@@ -157,10 +170,19 @@ class BenpenNpiKontrakVerifikasiController extends Controller
         
         $benpenApproval = $approvals->firstWhere('role_code', 'Bendahara Penerimaan');
         $ppkApproval = $approvals->firstWhere('role_code', 'PPK');
+        $koordinatorApproval = $approvals->firstWhere('role_code', 'Koordinator Keuangan');
         $kasubbagApproval = $approvals->firstWhere('role_code', 'Kepala Subbagian Keuangan dan Tata Usaha');
         $currentUserApproval = $benpenApproval; // This controller is for Bendahara Penerimaan
 
-        $canApprove = $benpenApproval && $benpenApproval->status === 'PENDING';
+        $user = request()->user();
+        $assignedToCurrentUser = !$benpenApproval?->assigned_user_id || (int) $benpenApproval->assigned_user_id === (int) $user?->id;
+        $npiAssignedToCurrentUser = (int) $npi->bendahara_penerimaan_id === (int) $user?->id;
+
+        if ($user?->hasRole('Bendahara Penerimaan')) {
+            abort_unless($assignedToCurrentUser && $npiAssignedToCurrentUser, 403, 'NPI ini bukan tugas Bendahara Penerimaan Anda.');
+        }
+
+        $canApprove = $benpenApproval && $benpenApproval->status === 'PENDING' && $assignedToCurrentUser && $npiAssignedToCurrentUser;
         $canRequestRevision = $canApprove;
 
         // Status final
@@ -231,6 +253,7 @@ class BenpenNpiKontrakVerifikasiController extends Controller
             'activeWorkflowInstance',
             'benpenApproval',
             'ppkApproval',
+            'koordinatorApproval',
             'kasubbagApproval',
             'currentUserApproval',
             'canApprove',
@@ -249,6 +272,10 @@ class BenpenNpiKontrakVerifikasiController extends Controller
     public function approve(Request $request, $npi_id)
     {
         $npi = DokumenNpi::findOrFail($npi_id);
+
+        if (auth()->user()?->hasRole('Bendahara Penerimaan')) {
+            abort_unless((int) $npi->bendahara_penerimaan_id === (int) auth()->id(), 403, 'NPI ini bukan tugas Bendahara Penerimaan Anda.');
+        }
         
         DB::transaction(function () use ($npi, $request) {
             $workflowService = app(WorkflowService::class);
@@ -287,6 +314,10 @@ class BenpenNpiKontrakVerifikasiController extends Controller
         ]);
 
         $npi = DokumenNpi::findOrFail($npi_id);
+
+        if (auth()->user()?->hasRole('Bendahara Penerimaan')) {
+            abort_unless((int) $npi->bendahara_penerimaan_id === (int) auth()->id(), 403, 'NPI ini bukan tugas Bendahara Penerimaan Anda.');
+        }
 
         DB::transaction(function () use ($npi, $request) {
             $workflowService = app(WorkflowService::class);

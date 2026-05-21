@@ -1,5 +1,12 @@
 @extends('layouts.app')
 @section('title', 'Detail SPP Perjaldin — ' . $roleLabel)
+
+@push('css')
+    <style>
+        .auth-approval-panel { border: 2px dashed #0d6efd; border-radius: 12px; background: #f8fbff; padding: 1.5rem; position: relative;}
+    </style>
+@endpush
+
 @section('content')
     {{-- Header --}}
     <div class="d-flex justify-content-between align-items-center mb-3">
@@ -320,6 +327,9 @@
 
         {{-- Kolom Kanan: Verifikator & Aksi --}}
         <div class="col-xl-4">
+            <!-- Standing Instruction -->
+            @include('spps.partials.standing_instruction_card')
+
             {{-- Info Verifikator --}}
             <div class="card border-0 shadow-sm mb-4">
                 <div class="card-header bg-white py-3">
@@ -374,71 +384,68 @@
             </div>
 
             {{-- Panel Aksi Verifikasi --}}
-            @if($canAct)
-            <div class="card border-0 shadow-sm bg-light">
-                <div class="card-body text-center py-4">
-                    <h5 class="fw-bold mb-3">Aksi Verifikasi</h5>
-                    <p class="text-muted small mb-4">Pastikan data SPP Perjaldin sudah sesuai sebelum memberikan persetujuan.</p>
+            <div class="sticky-top" style="top: 1.5rem; z-index: 1020;">
+            @if(isset($activeRoleApprovals) && count($activeRoleApprovals) > 1)
+                @foreach($activeRoleApprovals as $approvalData)
+                    <div class="auth-approval-panel shadow-sm mb-4">
+                        <div class="d-flex align-items-center gap-2 mb-3">
+                            <i class="bi bi-shield-lock-fill text-primary fs-3"></i>
+                            <div>
+                                <h5 class="fw-bold mb-0 text-primary">Tindakan Verifikasi</h5>
+                                <div class="small text-muted">Menunggu persetujuan Anda sebagai <strong>{{ $approvalData['role'] }}</strong></div>
+                            </div>
+                        </div>
 
-                    <button type="button" class="btn btn-success w-100 mb-2 py-2 fs-6 fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#modalApprove">
-                        <i class="bi bi-check-circle me-1"></i> Setujui SPP
-                    </button>
-                    <button type="button" class="btn btn-outline-danger w-100 py-2 fw-bold" data-bs-toggle="modal" data-bs-target="#modalRevisi">
-                        <i class="bi bi-x-circle me-1"></i> Minta Revisi
-                    </button>
-                </div>
-            </div>
-
-            {{-- Modal Approve --}}
-            <div class="modal fade" id="modalApprove" tabindex="-1" aria-hidden="true">
-                <div class="modal-dialog modal-dialog-centered">
-                    <div class="modal-content">
-                        <div class="modal-header bg-success text-white">
-                            <h5 class="modal-title text-white">Konfirmasi Persetujuan</h5>
-                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                        </div>
-                        <div class="modal-body text-center py-4">
-                            <i class="bi bi-check-circle text-success" style="font-size: 4rem;"></i>
-                            <h4 class="mt-3 mb-2">Apakah Anda yakin?</h4>
-                            <p class="text-muted mb-0">Anda akan memberikan persetujuan sebagai <strong>{{ $roleLabel }}</strong> untuk SPP <strong>{{ $spp->nomor_spp }}</strong>.</p>
-                        </div>
-                        <div class="modal-footer justify-content-center border-0 pb-4">
-                            <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Batal</button>
-                            <form action="{{ route($approveRoute, $spp->id) }}" method="POST">
-                                @csrf
-                                <button type="submit" class="btn btn-success px-4 fw-bold">Teruskan Proses</button>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {{-- Modal Revisi --}}
-            <div class="modal fade" id="modalRevisi" tabindex="-1" aria-hidden="true">
-                <div class="modal-dialog modal-dialog-centered">
-                    <div class="modal-content">
-                        <div class="modal-header bg-danger text-white">
-                            <h5 class="modal-title text-white">Kembalikan untuk Revisi</h5>
-                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                        </div>
-                        <form action="{{ route($revisiRoute, $spp->id) }}" method="POST">
+                        <form action="{{ $approvalData['approveRoute'] }}" method="POST" id="formVerifyApprove_{{ Str::slug($approvalData['role']) }}" onsubmit="return confirm('Apakah Anda yakin menyetujui SPP ini sebagai {{ $approvalData['role'] }}?');">
                             @csrf
-                            <div class="modal-body">
-                                <p class="text-muted small">SPP ini akan dikembalikan ke Operator BLU. Operator harus memperbaiki dan mensubmit ulang SPP ini.</p>
-                                <div class="mb-3 mt-3 text-start">
-                                    <label class="form-label fw-bold">Catatan / Alasan Revisi <span class="text-danger">*</span></label>
-                                    <textarea name="catatan_revisi" class="form-control" rows="4" required placeholder="Jelaskan apa yang harus diperbaiki..."></textarea>
-                                </div>
-                            </div>
-                            <div class="modal-footer bg-light">
-                                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Batal</button>
-                                <button type="submit" class="btn btn-danger fw-bold">Kembalikan ke Operator</button>
-                            </div>
+                            <input type="hidden" name="approval_id" value="{{ $approvalData['approval_id'] }}">
+                            <label class="form-label fw-semibold">Catatan Keputusan</label>
+                            <textarea name="catatan" class="form-control mb-3" rows="2" placeholder="(Opsional) Tulis catatan persetujuan Anda..."></textarea>
+                            <button type="submit" class="btn btn-success shadow-sm w-100 mb-2 py-2 fw-bold"><i class="bi bi-check-circle me-1"></i> Setujui sebagai {{ $approvalData['role'] }}</button>
+                        </form>
+
+                        <hr class="text-primary opacity-25">
+
+                        <form action="{{ $approvalData['revisiRoute'] }}" method="POST" id="formVerifyReject_{{ Str::slug($approvalData['role']) }}" onsubmit="return confirm('Apakah Anda yakin mengembalikan SPP ini untuk revisi sebagai {{ $approvalData['role'] }}?');">
+                            @csrf
+                            <input type="hidden" name="approval_id" value="{{ $approvalData['approval_id'] }}">
+                            <label class="form-label fw-semibold">Alasan Penolakan / Revisi <span class="text-danger">*</span></label>
+                            <textarea name="catatan_revisi" class="form-control mb-3" rows="2" required placeholder="(Wajib) Tulis instruksi revisi untuk Operator..."></textarea>
+                            <button type="submit" class="btn btn-outline-danger w-100 py-2"><i class="bi bi-x-circle me-1"></i> Kembalikan untuk Revisi</button>
                         </form>
                     </div>
+                @endforeach
+
+            @elseif($canAct)
+                <div class="auth-approval-panel shadow-sm mb-4">
+                    <div class="d-flex align-items-center gap-2 mb-3">
+                        <i class="bi bi-shield-lock-fill text-primary fs-3"></i>
+                        <div>
+                            <h5 class="fw-bold mb-0 text-primary">Tindakan Verifikasi</h5>
+                            <div class="small text-muted">Menunggu persetujuan Anda sebagai <strong>{{ $roleLabel }}</strong></div>
+                        </div>
+                    </div>
+
+                    <form action="{{ route($approveRoute, $spp->id) }}" method="POST" onsubmit="return confirm('Apakah Anda yakin menyetujui SPP ini?');">
+                        @csrf
+                        <input type="hidden" name="approval_id" value="{{ count($activeRoleApprovals) === 1 ? $activeRoleApprovals[0]['approval_id'] : ($myApproval->id ?? '') }}">
+                        <label class="form-label fw-semibold">Catatan Keputusan</label>
+                        <textarea name="catatan" class="form-control mb-3" rows="2" placeholder="(Opsional) Tulis catatan persetujuan Anda..."></textarea>
+                        <button type="submit" class="btn btn-success shadow-sm w-100 mb-2 py-2 fw-bold"><i class="bi bi-check-circle me-1"></i> Setujui SPP</button>
+                    </form>
+
+                    <hr class="text-primary opacity-25">
+
+                    <form action="{{ route($revisiRoute, $spp->id) }}" method="POST" onsubmit="return confirm('Apakah Anda yakin mengembalikan SPP ini untuk revisi?');">
+                        @csrf
+                        <input type="hidden" name="approval_id" value="{{ count($activeRoleApprovals) === 1 ? $activeRoleApprovals[0]['approval_id'] : ($myApproval->id ?? '') }}">
+                        <label class="form-label fw-semibold">Alasan Penolakan / Revisi <span class="text-danger">*</span></label>
+                        <textarea name="catatan_revisi" class="form-control mb-3" rows="2" required placeholder="(Wajib) Tulis instruksi revisi untuk Operator..."></textarea>
+                        <button type="submit" class="btn btn-outline-danger w-100 py-2"><i class="bi bi-x-circle me-1"></i> Kembalikan untuk Revisi</button>
+                    </form>
                 </div>
-            </div>
             @endif
+            </div>
         </div>
     </div>
 @endsection

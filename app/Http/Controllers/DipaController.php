@@ -123,6 +123,7 @@ class DipaController extends Controller
     {
         $dipa->load([
             'activeRevision.items.coa',
+            'activeRevision.items.realisasiAnggarans',
             'revisions.items.coa',
         ]);
 

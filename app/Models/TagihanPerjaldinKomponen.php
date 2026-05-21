@@ -45,6 +45,11 @@ class TagihanPerjaldinKomponen extends Model
         return $this->hasOne(DokumenSpp::class, 'tagihan_perjaldin_komponen_id');
     }
 
+    public function realisasiAnggaran()
+    {
+        return $this->morphMany(RealisasiAnggaran::class, 'sourceable');
+    }
+
     // ── Helpers ──────────────────────────────────────────────────────
 
     /**

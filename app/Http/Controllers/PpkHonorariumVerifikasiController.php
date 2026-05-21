@@ -6,6 +6,7 @@ use App\Models\Tagihan;
 use App\Models\LogStatusDokumen;
 use App\Models\User;
 use App\Notifications\WorkflowNotification;
+use App\Services\TagihanReadyForSppNotificationService;
 use App\Services\WorkflowService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -13,6 +14,18 @@ use Illuminate\Support\Facades\Notification;
 
 class PpkHonorariumVerifikasiController extends Controller
 {
+    private function activeRoleCode(): string
+    {
+        return auth()->user()?->hasRole('Koordinator Keuangan') ? 'Koordinator Keuangan' : 'PPK';
+    }
+
+    private function routePrefix(): string
+    {
+        return $this->activeRoleCode() === 'Koordinator Keuangan'
+            ? 'verifikasi-koordinator.honorarium'
+            : 'verifikasi-ppk.honorarium';
+    }
+
     /**
      * Halaman antrean verifikasi Honorarium untuk PPK.
      */
@@ -36,6 +49,8 @@ class PpkHonorariumVerifikasiController extends Controller
             $tagihan->_workflowInstance = $latestInstance;
             $tagihan->_ppkApproval = $approvals->firstWhere('role_code', 'PPK');
             $tagihan->_bendaharaApproval = $approvals->firstWhere('role_code', 'Bendahara Pengeluaran');
+            $tagihan->_koordinatorApproval = $approvals->firstWhere('role_code', 'Koordinator Keuangan');
+            $tagihan->_currentApproval = $approvals->firstWhere('role_code', $this->activeRoleCode());
 
             $allApproved = $approvals->every(fn ($a) => $a->status === 'APPROVED') && $approvals->isNotEmpty();
             $anyRevision = $approvals->contains(fn ($a) => in_array($a->status, ['REVISION', 'REJECTED']));
@@ -84,9 +99,9 @@ class PpkHonorariumVerifikasiController extends Controller
         }
 
         $summary = [
-            'pending' => $tagihanList->filter(fn ($n) => $n->_ppkApproval?->status === 'PENDING')->count(),
-            'approved' => $tagihanList->filter(fn ($n) => $n->_ppkApproval?->status === 'APPROVED')->count(),
-            'revision' => $tagihanList->filter(fn ($n) => in_array($n->_ppkApproval?->status, ['REVISION', 'REJECTED'])
+            'pending' => $tagihanList->filter(fn ($n) => $n->_currentApproval?->status === 'PENDING')->count(),
+            'approved' => $tagihanList->filter(fn ($n) => $n->_currentApproval?->status === 'APPROVED')->count(),
+            'revision' => $tagihanList->filter(fn ($n) => in_array($n->_currentApproval?->status, ['REVISION', 'REJECTED'])
                 || $n->_workflowInstance?->status === 'REVISION')->count(),
             'selesai' => $tagihanList->filter(fn ($n) => $n->_statusFinal === 'Selesai Diverifikasi')->count(),
         ];
@@ -97,8 +112,8 @@ class PpkHonorariumVerifikasiController extends Controller
             'filterPpk' => $filterPpk,
             'filterBendahara' => $filterBendahara,
             'search' => $search,
-            'currentRole' => 'PPK',
-            'routePrefix' => 'verifikasi-ppk.honorarium',
+            'currentRole' => $this->activeRoleCode(),
+            'routePrefix' => $this->routePrefix(),
         ]);
     }
 
@@ -123,9 +138,10 @@ class PpkHonorariumVerifikasiController extends Controller
 
         $ppkApproval = $approvals->firstWhere('role_code', 'PPK');
         $bendaharaApproval = $approvals->firstWhere('role_code', 'Bendahara Pengeluaran');
-        $currentUserApproval = $ppkApproval;
+        $koordinatorApproval = $approvals->firstWhere('role_code', 'Koordinator Keuangan');
+        $currentUserApproval = $approvals->firstWhere('role_code', $this->activeRoleCode());
 
-        $canApprove = $ppkApproval && $ppkApproval->status === 'PENDING';
+        $canApprove = $currentUserApproval && $currentUserApproval->status === 'PENDING';
         $canRequestRevision = $canApprove;
 
         $allApproved = $approvals->every(fn ($a) => $a->status === 'APPROVED') && $approvals->isNotEmpty();
@@ -163,14 +179,15 @@ class PpkHonorariumVerifikasiController extends Controller
             'activeWorkflowInstance' => $activeWorkflowInstance,
             'ppkApproval' => $ppkApproval,
             'bendaharaApproval' => $bendaharaApproval,
+            'koordinatorApproval' => $koordinatorApproval,
             'currentUserApproval' => $currentUserApproval,
             'canApprove' => $canApprove,
             'canRequestRevision' => $canRequestRevision,
             'statusFinal' => $statusFinal,
             'revisionNotes' => $revisionNotes,
             'documentStatuses' => $documentStatuses,
-            'currentRole' => 'PPK',
-            'routePrefix' => 'verifikasi-ppk.honorarium',
+            'currentRole' => $this->activeRoleCode(),
+            'routePrefix' => $this->routePrefix(),
         ]);
     }
 
@@ -182,6 +199,7 @@ class PpkHonorariumVerifikasiController extends Controller
         $tagihan = Tagihan::findOrFail($id);
 
         DB::transaction(function () use ($tagihan, $request) {
+            $statusSebelumnya = $tagihan->status;
             $workflowService = app(WorkflowService::class);
             $instance = $workflowService->approveCurrentStep($tagihan, auth()->id(), $request->input('catatan'));
 
@@ -189,20 +207,21 @@ class PpkHonorariumVerifikasiController extends Controller
                 'dokumen_type' => Tagihan::class,
                 'dokumen_id' => $tagihan->id,
                 'user_id' => auth()->id(),
-                'role_saat_itu' => 'PPK',
-                'status_sebelumnya' => $tagihan->status,
+                'role_saat_itu' => $this->activeRoleCode(),
+                'status_sebelumnya' => $statusSebelumnya,
                 'status_baru' => $instance->status === 'APPROVED' ? 'DISETUJUI' : $tagihan->status,
-                'aksi' => 'APPROVE_PPK',
-                'catatan' => $request->input('catatan', 'Honorarium disetujui PPK.'),
+                'aksi' => 'APPROVE_' . strtoupper(str_replace(' ', '_', $this->activeRoleCode())),
+                'catatan' => $request->input('catatan', 'Honorarium disetujui ' . $this->activeRoleCode() . '.'),
                 'ip_address' => request()->ip(),
             ]);
 
             if ($instance->status === 'APPROVED') {
                 $tagihan->update(['status' => 'DISETUJUI']);
+                app(TagihanReadyForSppNotificationService::class)->notifyIfNewlyReady($tagihan, $statusSebelumnya);
             }
         });
 
-        return redirect()->route('verifikasi-ppk.honorarium.show', $id)
+        return redirect()->route($this->routePrefix() . '.show', $id)
             ->with('success', 'Honorarium berhasil disetujui.');
     }
 
@@ -227,10 +246,10 @@ class PpkHonorariumVerifikasiController extends Controller
                 'dokumen_type' => Tagihan::class,
                 'dokumen_id' => $tagihan->id,
                 'user_id' => auth()->id(),
-                'role_saat_itu' => 'PPK',
+                'role_saat_itu' => $this->activeRoleCode(),
                 'status_sebelumnya' => $tagihan->status,
                 'status_baru' => 'DRAFT',
-                'aksi' => 'REVISI_PPK',
+                'aksi' => 'REVISI_' . strtoupper(str_replace(' ', '_', $this->activeRoleCode())),
                 'catatan' => $request->catatan_revisi,
                 'ip_address' => request()->ip(),
             ]);
@@ -239,7 +258,7 @@ class PpkHonorariumVerifikasiController extends Controller
             if ($ppabpUsers->isNotEmpty()) {
                 Notification::send($ppabpUsers, new WorkflowNotification([
                     'title' => 'Honorarium Dikembalikan',
-                    'message' => "Honorarium {$tagihan->nomor_tagihan} dikembalikan oleh PPK: {$request->catatan_revisi}",
+                    'message' => "Honorarium {$tagihan->nomor_tagihan} dikembalikan oleh {$this->activeRoleCode()}: {$request->catatan_revisi}",
                     'url' => route('honorarium.index'),
                     'icon' => 'reply',
                     'color' => 'warning',
@@ -247,7 +266,7 @@ class PpkHonorariumVerifikasiController extends Controller
             }
         });
 
-        return redirect()->route('verifikasi-ppk.honorarium.show', $id)
+        return redirect()->route($this->routePrefix() . '.show', $id)
             ->with('success', 'Honorarium dikembalikan untuk revisi.');
     }
 }

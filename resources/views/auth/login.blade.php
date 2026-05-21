@@ -55,11 +55,7 @@
                                             id="email" name="email" placeholder="Enter your email"
                                             value="{{ old('email') }}" required autocomplete="email" autofocus>
 
-                                        @error('email')
-                                            <span class="invalid-feedback" role="alert">
-                                                <strong>{{ $message }}</strong>
-                                            </span>
-                                        @enderror
+                                        
                                     </div>
                                     <div class="col-12">
                                         <label for="password" class="form-label">Password <span
@@ -108,25 +104,7 @@
     </div>
 @endsection
 @push('script')
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    @if ($errors->any())
-        <script>
-            document.addEventListener('DOMContentLoaded', function() {
-                if (typeof Swal !== 'undefined') {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Login Gagal',
-                        html: @json($errors->first()),
-                        confirmButtonText: 'Coba Lagi',
-                        customClass: {
-                            confirmButton: 'btn btn-grd-primary text-white px-4'
-                        },
-                        buttonsStyling: false
-                    });
-                }
-            });
-        </script>
-    @endif
+    
     <script>
         $(document).ready(function() {
             $("#show_hide_password a").on('click', function(event) {

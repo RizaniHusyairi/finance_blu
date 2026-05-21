@@ -152,6 +152,9 @@ class TagihanController extends Controller
                 'kasubbag'             => (int) $validated['kasubbag_user_id'],
             ]);
 
+            // Kontrak selalu LS Pihak Ketiga (dikunci oleh kebijakan).
+            $mekanismePembayaran = \App\Enums\MekanismePembayaran::LS_PIHAK_3;
+
             $tagihan = Tagihan::create(array_merge([
                 'nomor_tagihan' => $nomorTagihan,
                 'tipe_tagihan' => 'KONTRAK',
@@ -162,6 +165,7 @@ class TagihanController extends Controller
                 'total_bruto' => $totalBruto,
                 'total_potongan' => $totalPotongan,
                 'total_netto' => $totalNetto,
+                'mekanisme_pembayaran' => $mekanismePembayaran->value,
                 'status' => 'DRAFT',
                 'created_by' => Auth::id(),
             ], $verifikatorSnapshots));
@@ -266,6 +270,15 @@ class TagihanController extends Controller
             'potonganTagihan',
             'workflowInstance.approvals.actedByUser',
             'workflowInstance.approvals.assignedUser',
+            // Eager load rantai dokumen + workflow untuk modal "Lihat Aktivitas"
+            'spps.workflowInstance.approvals.actedByUser',
+            'spps.workflowInstance.approvals.assignedUser',
+            'spps.spm.workflowInstance.approvals.actedByUser',
+            'spps.spm.workflowInstance.approvals.assignedUser',
+            'spps.spm.npi.workflowInstance.approvals.actedByUser',
+            'spps.spm.npi.workflowInstance.approvals.assignedUser',
+            'spps.spm.npi.sp2d.workflowInstance.approvals.actedByUser',
+            'spps.spm.npi.sp2d.workflowInstance.approvals.assignedUser',
         ])->findOrFail($id);
 
         if ($tagihan->tipe_tagihan !== 'KONTRAK') {

@@ -180,6 +180,7 @@
                                 <label class="form-label fw-bold">Nilai Total Kontrak (Rp) <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control rupiah-input" id="nilai_total_kontrak_display" placeholder="Misal: 100.000.000" value="{{ old('nilai_total_kontrak', $kontrak->nilai_total_kontrak) }}" required>
                                 <input type="hidden" name="nilai_total_kontrak" id="nilai_total_kontrak_value" value="{{ old('nilai_total_kontrak', $kontrak->nilai_total_kontrak) }}">
+                                <small class="text-danger mt-1 fw-bold d-none" id="pagu_error"></small>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-bold d-block">Metode Pembayaran <span class="text-danger">*</span></label>
@@ -271,16 +272,18 @@
                                             <div class="form-check form-switch">
                                                 <input class="form-check-input" type="checkbox" id="gunakan_retensi" name="gunakan_retensi" value="1" {{ $oldGunakanRetensi ? 'checked' : '' }} onchange="toggleRetensiFields()">
                                                 <label class="form-check-label fw-bold" for="gunakan_retensi">Kontrak ini menggunakan retensi?</label>
+                                                <div class="form-text small">Standar Perpres 12/2021: 5% dari nilai kontrak, ditahan sampai masa pemeliharaan selesai. Retensi berkaitan dengan masa pemeliharaan di Bagian 3.</div>
                                             </div>
                                         </div>
                                     </div>
-                                    <div class="row g-3 mt-1" id="wrapper_retensi_fields">
+                                    <div class="row g-3 mt-1" id="wrapper_retensi_fields" style="{{ $oldGunakanRetensi ? '' : 'display: none;' }}">
                                         <div class="col-lg-4">
                                             <label class="form-label fw-bold">Retensi (%) <span class="text-danger">*</span></label>
                                             <div class="input-group">
-                                                <input type="number" class="form-control text-center" id="retensi_persentase" name="retensi_persentase" placeholder="Contoh: 5" min="0.01" max="100" step="0.0001" value="{{ $oldRetensiPersentase }}" oninput="kalkulasiTotalTermin()">
+                                                <input type="number" class="form-control text-center" id="retensi_persentase" name="retensi_persentase" placeholder="5" min="0.01" max="100" step="0.0001" value="{{ $oldRetensiPersentase }}" oninput="kalkulasiTotalTermin(); validasiRangeRetensi();">
                                                 <span class="input-group-text">%</span>
                                             </div>
+                                            <small class="text-warning d-none mt-1" id="retensi_warning"><i class="bi bi-exclamation-triangle-fill me-1"></i>Retensi umumnya 5–10% dari nilai kontrak. Pastikan angka ini sesuai kebijakan unit Anda.</small>
                                         </div>
                                         <div class="col-lg-4">
                                             <label class="form-label fw-bold">Keterangan Retensi <span class="text-danger">*</span></label>
@@ -394,18 +397,29 @@
             if(hiddenInput.value && hiddenInput.value > 0) {
                 input.value = formatRupiah(hiddenInput.value);
             }
-            input.addEventListener('keyup', function(e) {
+            input.addEventListener('input', function(e) {
                 let cleanValue = this.value.replace(/[^,\d]/g, '');
                 hiddenInput.value = cleanValue;
                 this.value = formatRupiah(cleanValue);
                 if (this.id === 'nilai_total_kontrak_display') {
                     validasiUangMuka();
+                    validasiSisaPagu();
+                    kalkulasiTotalTermin();
+                } else if (this.id === 'nilai_uang_muka_display') {
+                    validasiUangMuka();
+                    kalkulasiTotalTermin();
                 }
             });
         });
+        
+        $('#dipa_revision_item_id').on('change', function() {
+            validasiSisaPagu();
+        });
+
         toggleTerminWrapper();
         updateNomorTermin();
         kalkulasiTotalTermin();
+        validasiSisaPagu();
     });
 
     function formatRupiah(angka, prefix = 'Rp '){
@@ -465,6 +479,41 @@
             errEl.classList.remove('d-none');
         } else {
             errEl.classList.add('d-none');
+        }
+    }
+
+    function validasiSisaPagu() {
+        let selectCoa = document.getElementById('dipa_revision_item_id');
+        let selectedOption = selectCoa.options[selectCoa.selectedIndex];
+        let total = parseFloat(document.getElementById('nilai_total_kontrak_value').value) || 0;
+        let sisaPagu = selectedOption ? parseFloat(selectedOption.getAttribute('data-sisa-pagu')) || 0 : 0;
+        let btnSubmit = document.querySelector('button[type="submit"]');
+        let errPaguEl = document.getElementById('pagu_error');
+
+        // Untuk edit, tambahkan pagu_tersimpan kembali ke sisaPagu karena sisa pagu sekarang sudah terpotong nilai kontrak lama
+        let nilaiKontrakLama = {{ $kontrak->nilai_total_kontrak }};
+        let paguTersedia = sisaPagu;
+        
+        // Cek apakah option yang dipilih sama dengan coa lama
+        let isSameCoa = selectedOption && selectedOption.value == "{{ $kontrak->dipa_revision_item_id }}";
+        if (isSameCoa) {
+            paguTersedia = sisaPagu + nilaiKontrakLama;
+        }
+
+        if (total > 0 && selectedOption && selectedOption.value !== "") {
+            if (total > paguTersedia) {
+                if (errPaguEl) {
+                    errPaguEl.classList.remove('d-none');
+                    errPaguEl.innerText = "Peringatan: Nilai Kontrak (Rp " + formatRupiah(total.toString(), '') + ") melebihi sisa pagu COA yang tersedia (Rp " + formatRupiah(paguTersedia.toString(), '') + ").";
+                }
+                btnSubmit.disabled = true;
+            } else {
+                if (errPaguEl) errPaguEl.classList.add('d-none');
+                btnSubmit.disabled = false;
+            }
+        } else {
+            if (errPaguEl) errPaguEl.classList.add('d-none');
+            btnSubmit.disabled = false;
         }
     }
 
@@ -549,12 +598,28 @@
             retensiInput.required = true;
             retensiKeterangan.required = true;
             retensiPreviewRow.classList.remove('d-none');
+            // Auto-fill 5% (default Perpres 12/2021) jika field kosong agar user tinggal konfirmasi.
+            if (! retensiInput.value || parseFloat(retensiInput.value) <= 0) {
+                retensiInput.value = '5';
+                kalkulasiTotalTermin();
+            }
         } else {
             wrapperRetensiFields.style.display = 'none';
             retensiInput.required = false;
             retensiKeterangan.required = false;
             retensiInput.value = '';
             retensiPreviewRow.classList.add('d-none');
+        }
+        validasiRangeRetensi();
+    }
+
+    function validasiRangeRetensi() {
+        let warning = document.getElementById('retensi_warning');
+        let gunakanRetensi = document.getElementById('gunakan_retensi').checked;
+        let nilai = parseFloat(document.getElementById('retensi_persentase').value) || 0;
+
+        if (warning) {
+            warning.classList.toggle('d-none', !(gunakanRetensi && nilai > 10));
         }
     }
 
@@ -669,9 +734,7 @@
         document.getElementById('pelunasan_nilai_display').innerText = formatRupiah(Math.round(Math.max(pelunasanNilai, 0)).toString(), 'Rp ');
     }
 
-    document.getElementById('nilai_total_kontrak_display').addEventListener('keyup', function() {
-        kalkulasiTotalTermin();
-    });
+
     document.getElementById('gunakan_retensi').addEventListener('change', function() {
         toggleRetensiFields();
         kalkulasiTotalTermin();

@@ -9,6 +9,8 @@ class DokumenSpm extends Model
 {
     use SoftDeletes;
 
+    public const SPM_SIGNED_ARCHIVE_TYPE = 'SPM_BERTANDATANGAN';
+
     protected $table = 'dokumen_spm';
     protected $guarded = ['id'];
 
@@ -29,6 +31,8 @@ class DokumenSpm extends Model
     public const STATUS_MENUNGGU_VERIFIKASI = 'Menunggu Verifikasi';
     public const STATUS_REVISI = 'Revisi';
     public const STATUS_DISETUJUI_FINAL = 'Disetujui Final';
+    public const STATUS_MENUNGGU_UPLOAD = 'Menunggu Upload SPM';
+    public const STATUS_SPM_TERBIT = 'SPM_TERBIT';
 
     public function spp()
     {
@@ -75,6 +79,32 @@ class DokumenSpm extends Model
         return $this->morphMany(ArsipDokumen::class, 'documentable');
     }
 
+    /**
+     * Relasi ke arsip dokumen SPM Bertandatangan.
+     */
+    public function signedSpmArsip()
+    {
+        return $this->morphOne(ArsipDokumen::class, 'documentable')
+            ->where('jenis_dokumen', self::SPM_SIGNED_ARCHIVE_TYPE)
+            ->where('is_active', true)
+            ->latestOfMany('uploaded_at');
+    }
+
+    /**
+     * Cek apakah file SPM Bertandatangan sudah diupload.
+     */
+    public function hasSignedSpmFile(): bool
+    {
+        if ($this->relationLoaded('signedSpmArsip')) {
+            return $this->signedSpmArsip !== null;
+        }
+
+        return $this->arsipDokumen()
+            ->where('jenis_dokumen', self::SPM_SIGNED_ARCHIVE_TYPE)
+            ->where('is_active', true)
+            ->exists();
+    }
+
     public function getTagihanAttribute()
     {
         return optional($this->spp)->tagihan;
@@ -101,6 +131,8 @@ class DokumenSpm extends Model
             self::STATUS_MENUNGGU_VERIFIKASI => 'Menunggu Verifikasi',
             self::STATUS_REVISI => 'Revisi',
             self::STATUS_DISETUJUI_FINAL => 'Disetujui Final',
+            self::STATUS_MENUNGGU_UPLOAD => 'Menunggu Upload SPM',
+            self::STATUS_SPM_TERBIT => 'SPM Terbit',
             default => 'Draft SPM',
         };
     }

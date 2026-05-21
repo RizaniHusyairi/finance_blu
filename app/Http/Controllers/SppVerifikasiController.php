@@ -15,107 +15,125 @@ use App\Services\WorkflowService;
 
 class SppVerifikasiController extends Controller
 {
-    /**
-     * Tampilkan daftar SPP yang perlu diverifikasi PPK.
-     * Menggunakan tampilan & data yang sama dengan halaman Kasubbag (multi-verifikator paralel).
-     */
-    public function sppIndex(Request $request)
+    private const SPP_KONTRAK_WORKFLOW = 'SPP_KONTRAK_PPK';
+
+    private function activeRoleCodes(User $user): array
     {
-        $roleName = 'PPK';
+        $roles = [];
+        if ($user->hasRole('PPK')) $roles[] = 'PPK';
+        if ($user->hasRole('Koordinator Keuangan')) $roles[] = 'Koordinator Keuangan';
+        if ($user->hasRole('Kepala Subbagian Keuangan dan Tata Usaha')) $roles[] = 'Kepala Subbagian Keuangan dan Tata Usaha';
+        
+        return $roles;
+    }
 
-        $spps = Spp::with([
-                'tagihan.pihak',
-                'tagihan.detailKontrak.kontrakTermin.kontrak.vendor',
-                'tagihan.dipaRevisionItem.coa',
-                'dipaRevisionItem.coa',
-                'workflowInstances' => function ($q) {
-                    $q->latest()->limit(1);
-                },
-                'workflowInstances.approvals',
-            ])
-            ->whereHas('workflowInstances.approvals', function ($q) use ($roleName) {
-                $q->where('role_code', $roleName)
-                  ->where('assigned_user_id', Auth::id());
-            })
-            ->latest()
-            ->get();
+    public function index(Request $request)
+    {
+        $user = $request->user();
+        $roleCodes = $this->activeRoleCodes($user);
+        
+        abort_unless(count($roleCodes) > 0, 403, 'Akses ditolak.');
 
-        $processedSpps = collect();
-        foreach ($spps as $spp) {
+        $query = Spp::with([
+            'tagihan.pihak',
+            'tagihan.detailKontrak.kontrakTermin.kontrak.vendor',
+            'tagihan.dipaRevisionItem.coa',
+            'dipaRevisionItem.coa',
+            'dibuatOleh',
+            'workflowInstances' => fn($q) => $q->latest()->limit(1),
+            'workflowInstances.approvals.actedByUser'
+        ])
+        ->whereHas('tagihan', fn ($q) => $q->where('tipe_tagihan', 'KONTRAK'))
+        ->whereHas('workflowInstances.definition', fn ($q) => $q->where('kode', self::SPP_KONTRAK_WORKFLOW))
+        ->whereNotIn('status', ['DRAFT']);
+
+        // Filter berdasarkan Assigned Role/User
+        $query->whereHas('workflowInstances', function ($q) use ($roleCodes, $user) {
+            $q->whereHas('approvals', function ($q2) use ($roleCodes, $user) {
+                $q2->whereIn('role_code', $roleCodes)
+                   ->where(function ($q3) use ($user) {
+                       $q3->whereNull('assigned_user_id')
+                          ->orWhere('assigned_user_id', $user->id);
+                   });
+            });
+        });
+
+        $allSpps = $query->latest()->get();
+
+        $listMenunggu = collect();
+        $listDisetujui = collect();
+        $listRevisi = collect();
+        $listSelesai = collect();
+
+        foreach ($allSpps as $spp) {
             $wf = $spp->workflowInstances->first();
             if (!$wf) continue;
 
-            $ppkApproval         = $wf->approvals->where('role_code', 'PPK')
-                                                 ->where('assigned_user_id', Auth::id())
-                                                 ->first();
-            $kasubbagApproval    = $wf->approvals->where('role_code', 'Kepala Subbagian Keuangan dan Tata Usaha')->first();
-            $koordinatorApproval = $wf->approvals->where('role_code', 'Koordinator Keuangan')->first();
+            $myApprovals = $wf->approvals->whereIn('role_code', $roleCodes);
+            if ($myApprovals->isEmpty()) continue;
+
+            // Jika ada multi-role, kita utamakan yang PENDING
+            $approval = $myApprovals->where('status', 'PENDING')->first() ?? $myApprovals->first();
 
             if ($wf->status === 'REVISION') {
                 $statusFinal = 'Perlu Revisi';
             } elseif ($wf->status === 'APPROVED') {
                 $statusFinal = 'Selesai Diverifikasi';
             } else {
-                $pending = $wf->approvals->where('status', 'PENDING');
-                $statusFinal = $pending->count() > 1 ? 'Menunggu Verifikasi' : 'Dalam Proses';
+                $pendingCount = $wf->approvals->where('status', 'PENDING')->count();
+                $statusFinal = $pendingCount > 1 ? 'Menunggu Verifikasi' : 'Dalam Proses';
             }
 
-            $canAct = (
-                $ppkApproval
-                && $ppkApproval->status === 'PENDING'
-                && $wf->status === 'IN_PROGRESS'
-                && (int) $wf->step_saat_ini === (int) $ppkApproval->urutan_step
-            );
+            $spp->statusFinal = $statusFinal;
+            $spp->myApprovalStatus = $approval->status;
+            
+            // For view compatibility
+            $spp->ppkApprovalStatus = $wf->approvals->where('role_code', 'PPK')->first()?->status ?? 'N/A';
+            $spp->kasubbagApprovalStatus = $wf->approvals->where('role_code', 'Kepala Subbagian Keuangan dan Tata Usaha')->first()?->status ?? 'N/A';
+            $spp->koordinatorApprovalStatus = $wf->approvals->where('role_code', 'Koordinator Keuangan')->first()?->status ?? 'N/A';
 
-            $spp->ppkApprovalStatus         = $ppkApproval?->status ?? 'N/A';
-            $spp->kasubbagApprovalStatus    = $kasubbagApproval?->status ?? 'N/A';
-            $spp->koordinatorApprovalStatus = $koordinatorApproval?->status ?? 'N/A';
-            $spp->statusFinal               = $statusFinal;
-            $spp->canAct                    = $canAct;
-            $spp->workflow                  = $wf;
+            if ($approval->status === 'PENDING') {
+                $listMenunggu->push($spp);
+            } elseif ($approval->status === 'APPROVED') {
+                $listDisetujui->push($spp);
+            } elseif ($approval->status === 'REVISION') {
+                $listRevisi->push($spp);
+            }
 
-            $processedSpps->push($spp);
+            if ($statusFinal === 'Selesai Diverifikasi') {
+                $listSelesai->push($spp);
+            }
         }
 
-        $countPending    = $processedSpps->where('ppkApprovalStatus', 'PENDING')->count();
-        $countApprovedMe = $processedSpps->where('ppkApprovalStatus', 'APPROVED')->count();
-        $countRevisi     = $processedSpps->where('ppkApprovalStatus', 'REVISION')->count();
-        $countSelesai    = $processedSpps->where('statusFinal', 'Selesai Diverifikasi')->count();
-
-        $viewSpps = $processedSpps;
-        if ($request->has('status') && $request->status !== 'Semua') {
-            $viewSpps = match ($request->status) {
-                'Pending'  => $viewSpps->where('ppkApprovalStatus', 'PENDING'),
-                'Approved' => $viewSpps->where('ppkApprovalStatus', 'APPROVED'),
-                'Revisi'   => $viewSpps->where('ppkApprovalStatus', 'REVISION'),
-                default    => $viewSpps,
-            };
+        $viewSpps = match($request->get('status', 'Semua')) {
+            'Pending' => $listMenunggu,
+            'Approved' => $listDisetujui,
+            'Revisi' => $listRevisi,
+            default => $allSpps
+        };
+        if ($request->get('status', 'Semua') == 'Semua') {
+             $viewSpps = $allSpps;
         }
 
-        $roleSlug   = 'ppk';
-        $indexRoute = 'verifikasi-ppk.spp.index';
-        $showRoute  = 'verifikasi-ppk.spp.show';
-        $roleLabel  = 'PPK';
-
-        return view('verifikasi_kasubag.spp_index', compact(
-            'viewSpps',
-            'countPending',
-            'countApprovedMe',
-            'countRevisi',
-            'countSelesai',
-            'roleSlug',
-            'indexRoute',
-            'showRoute',
-            'roleLabel'
-        ));
+        return view('verifikasi_kasubag.spp_index', [
+            'viewSpps' => $viewSpps,
+            'countPending' => $listMenunggu->count(),
+            'countApprovedMe' => $listDisetujui->count(),
+            'countRevisi' => $listRevisi->count(),
+            'countSelesai' => $listSelesai->unique('id')->count(),
+            'roleLabel' => 'Verifikator SPP Kontrak',
+            'indexRoute' => 'verifikasi-spp.kontrak.index',
+            'showRoute' => 'verifikasi-spp.kontrak.show',
+            'roleSlug' => 'verifikator'
+        ]);
     }
 
-    /**
-     * Halaman detail verifikasi SPP untuk PPK (memakai view yang sama dengan Kasubbag).
-     */
-    public function sppShow($id)
+    public function show($id)
     {
-        $roleName = 'PPK';
+        $user = Auth::user();
+        $roleCodes = $this->activeRoleCodes($user);
+
+        abort_unless(count($roleCodes) > 0, 403, 'Akses ditolak.');
 
         $spp = Spp::with([
             'tagihan.pihak',
@@ -125,192 +143,153 @@ class SppVerifikasiController extends Controller
             'tagihan.potonganTagihan.akunPotongan',
             'dipaRevisionItem.coa',
             'arsipDokumen',
-            'workflowInstances' => function ($q) {
-                $q->latest()->limit(1);
-            },
-            'workflowInstances.approvals',
+            'workflowInstances' => fn($q) => $q->latest()->limit(1),
+            'workflowInstances.approvals.actedByUser'
         ])->findOrFail($id);
+        $this->ensureKontrakSpp($spp);
 
         $wf = $spp->workflowInstances->first();
-        if (!$wf) {
-            return back()->with('error', 'Workflow tidak ditemukan untuk dokumen ini.');
+        abort_unless($wf, 404, 'Workflow tidak ditemukan untuk dokumen ini.');
+
+        $activeRoleApprovals = [];
+        
+        // Populate activeRoleApprovals based on user's active roles
+        foreach ($roleCodes as $rc) {
+            $approval = $wf->approvals->where('role_code', $rc)->first();
+            if ($approval && $approval->status === 'PENDING' && $wf->status === 'IN_PROGRESS' && (int)$wf->step_saat_ini === (int)$approval->urutan_step) {
+                $activeRoleApprovals[] = [
+                    'role' => $rc,
+                    'approval_id' => $approval->id,
+                    'approveRoute' => route('verifikasi-spp.kontrak.approve', $id),
+                    'revisiRoute' => route('verifikasi-spp.kontrak.revisi', $id)
+                ];
+            }
         }
 
-        $ppkApproval         = $wf->approvals->where('role_code', 'PPK')
-                                             ->where('assigned_user_id', Auth::id())
-                                             ->first();
-        $kasubbagApproval    = $wf->approvals->where('role_code', 'Kepala Subbagian Keuangan dan Tata Usaha')->first();
-        $koordinatorApproval = $wf->approvals->where('role_code', 'Koordinator Keuangan')->first();
-        $operatorApproval    = collect(['status' => 'APPROVED', 'acted_by_user_id' => $spp->dibuat_oleh_id, 'acted_at' => $spp->created_at]);
+        $latestRevisionNote = $wf->approvals->where('status', 'REVISION')->sortByDesc('acted_at')->first();
 
+        // Status overall
         if ($wf->status === 'REVISION') {
             $statusFinal = 'Perlu Revisi';
         } elseif ($wf->status === 'APPROVED') {
             $statusFinal = 'Selesai Diverifikasi';
         } else {
-            $pending = $wf->approvals->where('status', 'PENDING');
-            $statusFinal = $pending->count() > 1 ? 'Menunggu Verifikasi' : 'Dalam Proses';
+            $pendingCount = $wf->approvals->where('status', 'PENDING')->count();
+            $statusFinal = $pendingCount > 1 ? 'Menunggu Verifikasi' : 'Dalam Proses';
         }
 
-        $canAct = (
-            $ppkApproval
-            && $ppkApproval->status === 'PENDING'
-            && $wf->status === 'IN_PROGRESS'
-            && (int) $wf->step_saat_ini === (int) $ppkApproval->urutan_step
-        );
+        // Untuk visual timeline kasubbag
+        $kasubbagApproval = $wf->approvals->where('role_code', 'Kepala Subbagian Keuangan dan Tata Usaha')->first();
+        $ppkApproval = $wf->approvals->where('role_code', 'PPK')->first();
+        $koordinatorApproval = $wf->approvals->where('role_code', 'Koordinator Keuangan')->first();
+        
+        $myApproval = $wf->approvals->whereIn('role_code', $roleCodes)->first();
+        $canAct = count($activeRoleApprovals) > 0;
+        
+        $operatorApproval    = collect(['status' => 'APPROVED', 'acted_by_user_id' => $spp->dibuat_oleh_id, 'acted_at' => $spp->created_at]);
 
-        $latestRevisionNote = $wf->approvals->where('status', 'REVISION')->sortByDesc('acted_at')->first();
+        $roleSlug     = 'verifikator';
+        $indexRoute   = 'verifikasi-spp.kontrak.index';
+        $approveRoute = 'verifikasi-spp.kontrak.approve';
+        $revisiRoute  = 'verifikasi-spp.kontrak.revisi';
+        $roleLabel    = 'Verifikator SPP Kontrak';
 
-        $roleSlug     = 'ppk';
-        $indexRoute   = 'verifikasi-ppk.spp.index';
-        $approveRoute = 'verifikasi-ppk.spp.approve';
-        $revisiRoute  = 'verifikasi-ppk.spp.revisi';
-        $roleLabel    = 'PPK';
-
-        // View kasubbag mengharapkan variabel $kasubbagApproval (untuk timeline). Aliaskan ke approval PPK
-        // saat user adalah PPK, tapi tetap pertahankan kasubbagApproval asli untuk badge step.
         return view('verifikasi_kasubag.spp_show', compact(
-            'spp',
-            'wf',
-            'ppkApproval',
-            'kasubbagApproval',
-            'koordinatorApproval',
-            'operatorApproval',
-            'statusFinal',
-            'canAct',
-            'latestRevisionNote',
-            'roleSlug',
-            'indexRoute',
-            'approveRoute',
-            'revisiRoute',
-            'roleLabel'
+            'spp', 'wf', 'activeRoleApprovals', 'latestRevisionNote', 'statusFinal',
+            'kasubbagApproval', 'ppkApproval', 'koordinatorApproval', 'canAct', 'myApproval', 'operatorApproval',
+            'roleSlug', 'indexRoute', 'approveRoute', 'revisiRoute', 'roleLabel'
         ));
     }
 
-    /**
-     * Setujui SPP
-     */
-    public function approveSpp($spp_id)
+    public function approve(Request $request, $id)
     {
-        $spp = Spp::with('tagihan')->findOrFail($spp_id);
+        $spp = Spp::with(['tagihan', 'standingInstruction'])->findOrFail($id);
+        $this->ensureKontrakSpp($spp);
 
-        if (!in_array($spp->status, ['Menunggu Verifikasi', 'PENDING_PPK'], true)) {
-            return back()->with('warning', "SPP {$spp->nomor_spp} tidak sedang menunggu verifikasi.");
+        $approvalId = $request->input('approval_id');
+        abort_unless($approvalId, 400, 'Approval ID diperlukan.');
+
+        $approval = \App\Models\WorkflowApproval::find($approvalId);
+        if ($approval && $approval->role_code === 'PPK') {
+            if (!$spp->hasFinalSignedStandingInstruction()) {
+                return back()->with('error', 'File Standing Instruction bertanda tangan wajib diunggah sebelum PPK menyetujui SPP.');
+            }
         }
 
-        // --- Workflow Engine: approve step aktif ---
         $workflowFullyApproved = false;
         try {
-            app(WorkflowService::class)->approveCurrentStep($spp, Auth::id(), 'Dokumen SPP disetujui oleh PPK.');
-
+            app(WorkflowService::class)->approveCurrentStep($spp, Auth::id(), 'Dokumen SPP disetujui.', $approvalId);
             $workflowFullyApproved = $this->finalizeWorkflowIfComplete($spp);
-        } catch (\RuntimeException $e) {
-            // Workflow instance mungkin belum ada untuk SPP lama
+        } catch (\Exception $e) {
+            return back()->with('error', 'Gagal memproses persetujuan: ' . $e->getMessage());
         }
 
         if ($workflowFullyApproved) {
-            // Semua approver (PPK + Kasubbag) sudah approve → status final
             $spp->update(['status' => $this->isPerjaldinSpp($spp) ? 'DISETUJUI_SPP' : 'APPROVED']);
-
             $this->syncParentTagihanAfterSppFinal($spp);
         } else {
-            // Baru PPK saja yang approve, Kasubbag belum
-            $spp->update(['status' => $this->isPerjaldinSpp($spp) ? 'PENDING_KASUBBAG' : 'Disetujui PPK']);
+            // Kita bisa atur status intermediate jika perlu, tapi 'Dalam Proses' / 'PENDING_KASUBBAG' sudah cukup
+            if ($spp->status == 'Menunggu Verifikasi' || $spp->status == 'PENDING_PPK') {
+                $spp->update(['status' => 'Dalam Proses']);
+            }
         }
 
-        $statusBaru = $spp->status;
         $this->syncPerjaldinKomponenStatus($spp);
+
+        $roleSaAtItu = Auth::user()?->getRoleNames()->first() ?? 'Verifikator';
 
         LogStatusDokumen::create([
             'dokumen_type' => DokumenSpp::class,
             'dokumen_id' => $spp->id,
             'user_id' => Auth::id(),
-            'role_saat_itu' => Auth::user()?->getRoleNames()->first() ?? 'PPK',
+            'role_saat_itu' => $roleSaAtItu,
             'status_sebelumnya' => 'Menunggu Verifikasi',
-            'status_baru' => $statusBaru,
-            'aksi' => 'APPROVE_PPK',
-            'catatan' => $workflowFullyApproved
-                ? 'Dokumen SPP disetujui oleh PPK. Seluruh approver telah menyetujui — SPP final.'
-                : 'Dokumen SPP disetujui oleh PPK.',
+            'status_baru' => $spp->status,
+            'aksi' => 'APPROVE_SPP',
+            'catatan' => 'Dokumen SPP disetujui oleh ' . $roleSaAtItu,
             'ip_address' => request()->ip(),
         ]);
 
-        $operators = User::role('Operator BLU')->get();
-        Notification::send($operators, new WorkflowNotification([
-            'title' => $workflowFullyApproved ? 'SPP Disetujui Final' : 'SPP Disetujui PPK',
-            'message' => $workflowFullyApproved
-                ? "SPP {$spp->nomor_spp} telah disetujui oleh semua pihak dan siap lanjut ke SPM."
-                : "SPP {$spp->nomor_spp} telah disetujui PPK. Menunggu verifikasi Kasubbag.",
-            'url' => $this->resolveOperatorDetailRoute($spp),
-            'icon' => 'verified',
-            'color' => 'success'
-        ]));
-
-        if (!$workflowFullyApproved) {
-            $kasubbags = User::role('Kepala Subbagian Keuangan dan Tata Usaha')->get();
-            Notification::send($kasubbags, new WorkflowNotification([
-                'title' => 'SPP Menunggu Verifikasi',
-                'message' => "SPP {$spp->nomor_spp} telah disetujui PPK dan menunggu verifikasi Anda.",
-                'url' => route('verifikasi-kasubag.spp.index'),
-                'icon' => 'fact_check',
-                'color' => 'primary'
-            ]));
-        }
-
-        return back()->with('success', $workflowFullyApproved
-            ? "SPP Nomor {$spp->nomor_spp} telah disetujui oleh semua pihak."
-            : "SPP Nomor {$spp->nomor_spp} berhasil disetujui PPK.");
+        return back()->with('success', 'Dokumen berhasil disetujui.');
     }
 
-    /**
-     * Kembalikan SPP ke Operator dengan catatan revisi
-     */
-    public function revisiSpp(Request $request, $spp_id)
+    public function revisi(Request $request, $id)
     {
-        $request->validate([
-            'catatan_revisi' => 'required|string|max:1000'
-        ]);
+        $request->validate(['catatan_revisi' => 'required|string|max:1000']);
 
-        $spp = Spp::with('tagihan')->findOrFail($spp_id);
+        $spp = Spp::with('tagihan')->findOrFail($id);
+        $this->ensureKontrakSpp($spp);
 
-        if (!in_array($spp->status, ['Menunggu Verifikasi', 'PENDING_PPK'], true)) {
-            return back()->with('warning', "SPP {$spp->nomor_spp} tidak sedang menunggu verifikasi.");
-        }
+        $approvalId = $request->input('approval_id');
+        abort_unless($approvalId, 400, 'Approval ID diperlukan.');
 
-        $spp->update([
-            'status' => $this->isPerjaldinSpp($spp) ? 'REVISI_PPK' : 'Revisi',
-        ]);
-        $this->syncPerjaldinKomponenStatus($spp);
-
-        // --- Workflow Engine: request revision ---
         try {
-            app(WorkflowService::class)->requestRevision($spp, Auth::id(), $request->catatan_revisi);
-        } catch (\RuntimeException $e) {
-            // Workflow instance mungkin belum ada untuk SPP lama, lanjutkan tanpa error
+            app(WorkflowService::class)->rejectCurrentStep($spp, Auth::id(), $request->catatan_revisi, $approvalId);
+            $spp->update(['status' => 'REVISION']);
+            
+            // Sync jika perjaldin
+            if ($this->isPerjaldinSpp($spp)) {
+                $spp->tagihan()->update(['status' => 'REVISION']);
+            }
+        } catch (\Exception $e) {
+            return back()->with('error', 'Gagal memproses revisi: ' . $e->getMessage());
         }
+
+        $roleSaAtItu = Auth::user()?->getRoleNames()->first() ?? 'Verifikator';
 
         LogStatusDokumen::create([
             'dokumen_type' => DokumenSpp::class,
             'dokumen_id' => $spp->id,
             'user_id' => Auth::id(),
-            'role_saat_itu' => Auth::user()?->getRoleNames()->first() ?? 'PPK',
+            'role_saat_itu' => $roleSaAtItu,
             'status_sebelumnya' => 'Menunggu Verifikasi',
-            'status_baru' => $spp->status,
-            'aksi' => 'REVISI_PPK',
+            'status_baru' => 'REVISION',
+            'aksi' => 'REVISI_SPP',
             'catatan' => $request->catatan_revisi,
             'ip_address' => request()->ip(),
         ]);
 
-        $operators = User::role('Operator BLU')->get();
-        Notification::send($operators, new WorkflowNotification([
-            'title' => 'SPP Direvisi PPK',
-            'message' => "SPP {$spp->nomor_spp} perlu revisi. Catatan: {$request->catatan_revisi}",
-            'url' => $this->resolveOperatorDetailRoute($spp),
-            'icon' => 'error_outline',
-            'color' => 'danger'
-        ]));
-
-        return back()->with('warning', "Catatan revisi untuk SPP {$spp->nomor_spp} telah dikirim ke Operator BLU.");
+        return redirect()->route('verifikasi-spp.kontrak.index')->with('success', 'Dokumen dikembalikan untuk revisi.');
     }
 
     private function resolveOperatorDetailRoute(Spp $spp): string
@@ -325,7 +304,7 @@ class SppVerifikasiController extends Controller
             'PERJALDIN' => route('spps.perjaldin.detail', $tagihan->id),
             'HONORARIUM' => route('spps.honor.detail', $tagihan->id),
             'KONTRAK' => route('spps.kontrak.detail', $tagihan->id),
-            default => route('verifikasi-ppk.spp.index'),
+            default => route('verifikasi-spp.kontrak.index'),
         };
     }
 
@@ -345,6 +324,8 @@ class SppVerifikasiController extends Controller
                 },
                 'workflowInstances.approvals'
             ])
+            ->whereHas('tagihan', fn ($q) => $q->where('tipe_tagihan', 'KONTRAK'))
+            ->whereHas('workflowInstances.definition', fn ($q) => $q->where('kode', self::SPP_KONTRAK_WORKFLOW))
             ->whereHas('workflowInstances', function($q) use ($roleName) {
                 // Hanya SPP yang punya approval step untuk role Kasubbag
                 $q->whereHas('approvals', function($a) use ($roleName) {
@@ -447,6 +428,7 @@ class SppVerifikasiController extends Controller
             },
             'workflowInstances.approvals'
         ])->findOrFail($id);
+        $this->ensureKontrakSpp($spp);
 
         $wf = $spp->workflowInstances->first();
         if (!$wf) {
@@ -481,6 +463,18 @@ class SppVerifikasiController extends Controller
             && (int) $wf->step_saat_ini === (int) $kasubbagApproval->urutan_step
         );
 
+        $user = auth()->user();
+        $activeRoleApprovals = [];
+        
+        if ($user->hasRole('Kepala Subbagian Keuangan dan Tata Usaha') && $kasubbagApproval && $kasubbagApproval->status === 'PENDING' && $wf->status === 'IN_PROGRESS') {
+            $activeRoleApprovals[] = [
+                'role' => 'Kepala Subbagian Keuangan dan Tata Usaha',
+                'approval_id' => $kasubbagApproval->id,
+                'approveRoute' => route('verifikasi-kasubag.spp.approve', $id),
+                'revisiRoute' => route('verifikasi-kasubag.spp.revisi', $id)
+            ];
+        }
+
         $latestRevisionNote = null;
         $revisions = $wf->approvals->where('status', 'REVISION')->sortByDesc('acted_at');
         if ($revisions->isNotEmpty()) {
@@ -504,6 +498,7 @@ class SppVerifikasiController extends Controller
             'statusFinal',
             'canAct',
             'latestRevisionNote',
+            'activeRoleApprovals',
             'roleSlug',
             'indexRoute',
             'approveRoute',
@@ -512,12 +507,14 @@ class SppVerifikasiController extends Controller
         ));
     }
 
-    public function approveKasubbag($spp_id)
+    public function approveKasubbag(Request $request, $spp_id)
     {
         $spp = Spp::with('tagihan')->findOrFail($spp_id);
+        $this->ensureKontrakSpp($spp);
 
         try {
-            app(WorkflowService::class)->approveCurrentStep($spp, Auth::id(), 'Dokumen SPP disetujui oleh Kasubbag.');
+            $approvalId = $request->input('approval_id');
+            app(WorkflowService::class)->approveCurrentStep($spp, Auth::id(), 'Dokumen SPP disetujui oleh Kasubbag.', $approvalId);
             
             $workflowFullyApproved = $this->finalizeWorkflowIfComplete($spp);
 
@@ -572,6 +569,7 @@ class SppVerifikasiController extends Controller
         ]);
 
         $spp = Spp::with('tagihan')->findOrFail($spp_id);
+        $this->ensureKontrakSpp($spp);
 
         try {
             app(WorkflowService::class)->requestRevision($spp, Auth::id(), $request->catatan_revisi);
@@ -624,6 +622,8 @@ class SppVerifikasiController extends Controller
                 },
                 'workflowInstances.approvals'
             ])
+            ->whereHas('tagihan', fn ($q) => $q->where('tipe_tagihan', 'KONTRAK'))
+            ->whereHas('workflowInstances.definition', fn ($q) => $q->where('kode', self::SPP_KONTRAK_WORKFLOW))
             ->whereHas('workflowInstances', function($q) use ($roleName) {
                 $q->whereHas('approvals', function($a) use ($roleName) {
                     $a->where('role_code', $roleName);
@@ -746,6 +746,26 @@ class SppVerifikasiController extends Controller
             && (int) $wf->step_saat_ini === (int) $koordinatorApproval->urutan_step
         );
 
+        $user = auth()->user();
+        $activeRoleApprovals = [];
+        
+        if ($user->hasRole('PPK') && $ppkApproval && $ppkApproval->status === 'PENDING' && $wf->status === 'IN_PROGRESS') {
+            $activeRoleApprovals[] = [
+                'role' => 'PPK',
+                'approval_id' => $ppkApproval->id,
+                'approveRoute' => route('verifikasi-spp.kontrak.approve', $id),
+                'revisiRoute' => route('verifikasi-spp.kontrak.revisi', $id)
+            ];
+        }
+        if ($user->hasRole('Koordinator Keuangan') && $koordinatorApproval && $koordinatorApproval->status === 'PENDING' && $wf->status === 'IN_PROGRESS') {
+            $activeRoleApprovals[] = [
+                'role' => 'Koordinator Keuangan',
+                'approval_id' => $koordinatorApproval->id,
+                'approveRoute' => route('verifikasi-koordinator.spp.approve', $id),
+                'revisiRoute' => route('verifikasi-koordinator.spp.revisi', $id)
+            ];
+        }
+
         $latestRevisionNote = null;
         $revisions = $wf->approvals->where('status', 'REVISION')->sortByDesc('acted_at');
         if ($revisions->isNotEmpty()) {
@@ -768,6 +788,7 @@ class SppVerifikasiController extends Controller
             'statusFinal',
             'canAct',
             'latestRevisionNote',
+            'activeRoleApprovals',
             'roleSlug',
             'indexRoute',
             'approveRoute',
@@ -776,12 +797,14 @@ class SppVerifikasiController extends Controller
         ));
     }
 
-    public function approveKoordinator($spp_id)
+    public function approveKoordinator(Request $request, $spp_id)
     {
         $spp = Spp::with('tagihan')->findOrFail($spp_id);
+        $this->ensureKontrakSpp($spp);
 
         try {
-            app(WorkflowService::class)->approveCurrentStep($spp, Auth::id(), 'Dokumen SPP disetujui oleh Koordinator Keuangan.');
+            $approvalId = $request->input('approval_id');
+            app(WorkflowService::class)->approveCurrentStep($spp, Auth::id(), 'Dokumen SPP disetujui oleh Koordinator Keuangan.', $approvalId);
 
             $workflowFullyApproved = $this->finalizeWorkflowIfComplete($spp);
 
@@ -833,9 +856,11 @@ class SppVerifikasiController extends Controller
         ]);
 
         $spp = Spp::with('tagihan')->findOrFail($spp_id);
+        $this->ensureKontrakSpp($spp);
 
         try {
-            app(WorkflowService::class)->requestRevision($spp, Auth::id(), $request->catatan_revisi);
+            $approvalId = $request->input('approval_id');
+            app(WorkflowService::class)->requestRevision($spp, Auth::id(), $request->catatan_revisi, $approvalId);
 
             $spp->update([
                 'status' => $this->isPerjaldinSpp($spp) ? 'REVISI_KOORDINATOR' : 'Revisi',
@@ -889,6 +914,11 @@ class SppVerifikasiController extends Controller
         }
 
         return $allApproved && !$hasBlockingStatus;
+    }
+
+    private function ensureKontrakSpp(Spp $spp): void
+    {
+        abort_unless($spp->tagihan?->tipe_tagihan === 'KONTRAK', 404);
     }
 
     private function isPerjaldinSpp(Spp $spp): bool

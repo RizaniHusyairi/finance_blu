@@ -1,5 +1,12 @@
 @extends('layouts.app')
 @section('title', 'Detail Verifikasi SPP — ' . ($roleLabel ?? 'Kasubbag'))
+
+@push('css')
+    <style>
+        .auth-approval-panel { border: 2px dashed #0d6efd; border-radius: 12px; background: #f8fbff; padding: 1.5rem; position: relative;}
+    </style>
+@endpush
+
 @section('content')
     <div class="d-flex justify-content-between align-items-center mb-3">
         <div>
@@ -30,101 +37,103 @@
         </div>
     @endif
 
-    <!-- Workflow Timeline -->
+    <!-- Workflow Status -->
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-body">
-            <h6 class="card-title mb-3">Status Verifikasi Paralel</h6>
-            <div class="d-flex w-100 justify-content-between align-items-center text-center">
-                <!-- Operator -->
-                <div class="flex-fill">
-                    <div class="d-inline-flex justify-content-center align-items-center rounded-circle bg-success text-white mb-2" style="width: 40px; height: 40px;">
-                        <i class="bi bi-check-lg fs-5"></i>
-                    </div>
-                    <div class="fw-bold small">Operator BLU</div>
-                    <div class="text-success small">Diajukan</div>
-                    @if($operatorApproval)
-                        <div class="text-muted" style="font-size: 0.7rem;">{{ \Carbon\Carbon::parse($operatorApproval['acted_at'])->format('d M Y H:i') }}</div>
-                    @endif
-                </div>
+            <h6 class="card-title mb-3 fw-bold text-secondary"><i class="bi bi-people me-2"></i> Status Verifikasi Paralel</h6>
+            
+            @php
+                $ppkUser = \App\Models\User::find($spp->tagihan->ppk_user_id) ?? \App\Models\User::role('PPK')->first();
+                $koordinatorUser = \App\Models\User::find($spp->tagihan->koordinator_keuangan_user_id) ?? \App\Models\User::role('Koordinator Keuangan')->first();
+                $kasubbagUser = \App\Models\User::find($spp->tagihan->kasubbag_user_id) ?? \App\Models\User::role('Kepala Subbagian Keuangan dan Tata Usaha')->first();
 
-                <!-- Connector -->
-                <div class="flex-fill d-flex align-items-center px-2">
-                    <div class="w-100 border-top border-2 border-success"></div>
-                </div>
+                // PPK Status
+                $ppkColor = 'warning'; $ppkText = 'Menunggu';
+                if ($ppkApproval) {
+                    if ($ppkApproval->status === 'APPROVED') { $ppkColor = 'success'; $ppkText = 'Disetujui'; }
+                    if ($ppkApproval->status === 'REVISION') { $ppkColor = 'danger'; $ppkText = 'Revisi'; }
+                }
 
+                // Koordinator Status
+                $koorColor = 'warning'; $koorText = 'Menunggu';
+                if (!empty($koordinatorApproval)) {
+                    if ($koordinatorApproval->status === 'APPROVED') { $koorColor = 'success'; $koorText = 'Disetujui'; }
+                    if ($koordinatorApproval->status === 'REVISION') { $koorColor = 'danger'; $koorText = 'Revisi'; }
+                }
+
+                // Kasubbag Status
+                $kasColor = 'warning'; $kasText = 'Menunggu';
+                if ($kasubbagApproval) {
+                    if ($kasubbagApproval->status === 'APPROVED') { $kasColor = 'success'; $kasText = 'Disetujui'; }
+                    if ($kasubbagApproval->status === 'REVISION') { $kasColor = 'danger'; $kasText = 'Revisi'; }
+                }
+            @endphp
+
+            <ul class="list-group mb-0">
                 <!-- PPK -->
-                <div class="flex-fill">
-                    @php
-                        $ppkColor = 'warning';
-                        $ppkIcon = 'bi-hourglass-split';
-                        $ppkText = 'Menunggu';
-                        if ($ppkApproval) {
-                            if ($ppkApproval->status === 'APPROVED') { $ppkColor = 'success'; $ppkIcon = 'bi-check-lg'; $ppkText = 'Disetujui'; }
-                            if ($ppkApproval->status === 'REVISION') { $ppkColor = 'danger'; $ppkIcon = 'bi-x-lg'; $ppkText = 'Revisi'; }
-                        }
-                    @endphp
-                    <div class="d-inline-flex justify-content-center align-items-center rounded-circle border border-2 border-{{ $ppkColor }} text-{{ $ppkColor }} mb-2 bg-{{ $ppkColor }} bg-opacity-10" style="width: 40px; height: 40px;">
-                        <i class="bi {{ $ppkIcon }} fs-5"></i>
+                <li class="list-group-item px-3 py-2 border-start-0 border-end-0 border-top-0 border-bottom">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 35px; height: 35px;">
+                                <i class="bi bi-person-check fs-5"></i>
+                            </div>
+                            <div>
+                                <div class="fw-semibold text-dark">Pejabat Pembuat Komitmen</div>
+                                <div class="small text-muted">{{ $ppkUser?->name ?? 'Belum Ditentukan' }}</div>
+                                @if($ppkUser?->nip)<div class="text-muted font-monospace" style="font-size: .72rem;">NIP: {{ $ppkUser->nip }}</div>@endif
+                            </div>
+                        </div>
+                        <div class="text-end">
+                            <span class="badge bg-{{ $ppkColor }}">{{ $ppkText }}</span>
+                            @if($ppkApproval && $ppkApproval->acted_at)
+                                <div class="text-muted mt-1" style="font-size: 0.7rem;">{{ \Carbon\Carbon::parse($ppkApproval->acted_at)->format('d M Y H:i') }}</div>
+                            @endif
+                        </div>
                     </div>
-                    <div class="fw-bold small">PPK</div>
-                    <div class="text-{{ $ppkColor }} small">{{ $ppkText }}</div>
-                    @if($ppkApproval && $ppkApproval->acted_at)
-                        <div class="text-muted" style="font-size: 0.7rem;">{{ \Carbon\Carbon::parse($ppkApproval->acted_at)->format('d M Y H:i') }}</div>
-                    @endif
-                </div>
-
-                <!-- Connector -->
-                <div class="flex-fill d-flex align-items-center px-2">
-                    <div class="w-100 border-top border-2 border-muted" style="border-style: dashed !important;"></div>
-                </div>
-
+                </li>
                 <!-- Koordinator Keuangan -->
-                <div class="flex-fill">
-                    @php
-                        $koorColor = 'warning';
-                        $koorIcon = 'bi-hourglass-split';
-                        $koorText = 'Menunggu';
-                        if (!empty($koordinatorApproval)) {
-                            if ($koordinatorApproval->status === 'APPROVED') { $koorColor = 'success'; $koorIcon = 'bi-check-lg'; $koorText = 'Disetujui'; }
-                            if ($koordinatorApproval->status === 'REVISION') { $koorColor = 'danger'; $koorIcon = 'bi-x-lg'; $koorText = 'Revisi'; }
-                        }
-                    @endphp
-                    <div class="d-inline-flex justify-content-center align-items-center rounded-circle border border-2 border-{{ $koorColor }} text-{{ $koorColor }} mb-2 bg-{{ $koorColor }} bg-opacity-10" style="width: 40px; height: 40px;">
-                        <i class="bi {{ $koorIcon }} fs-5"></i>
+                <li class="list-group-item px-3 py-2 border-start-0 border-end-0 border-top-0 border-bottom">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="bg-info bg-opacity-10 text-info rounded-circle d-flex align-items-center justify-content-center" style="width: 35px; height: 35px;">
+                                <i class="bi bi-person-gear fs-5"></i>
+                            </div>
+                            <div>
+                                <div class="fw-semibold text-dark">Koordinator Keuangan</div>
+                                <div class="small text-muted">{{ $koordinatorUser?->name ?? 'Belum Ditentukan' }}</div>
+                                @if($koordinatorUser?->nip)<div class="text-muted font-monospace" style="font-size: .72rem;">NIP: {{ $koordinatorUser->nip }}</div>@endif
+                            </div>
+                        </div>
+                        <div class="text-end">
+                            <span class="badge bg-{{ $koorColor }}">{{ $koorText }}</span>
+                            @if(!empty($koordinatorApproval) && $koordinatorApproval->acted_at)
+                                <div class="text-muted mt-1" style="font-size: 0.7rem;">{{ \Carbon\Carbon::parse($koordinatorApproval->acted_at)->format('d M Y H:i') }}</div>
+                            @endif
+                        </div>
                     </div>
-                    <div class="fw-bold small">Koord. Keuangan</div>
-                    <div class="text-{{ $koorColor }} small">{{ $koorText }}</div>
-                    @if(!empty($koordinatorApproval) && $koordinatorApproval->acted_at)
-                        <div class="text-muted" style="font-size: 0.7rem;">{{ \Carbon\Carbon::parse($koordinatorApproval->acted_at)->format('d M Y H:i') }}</div>
-                    @endif
-                </div>
-
-                <!-- Connector -->
-                <div class="flex-fill d-flex align-items-center px-2">
-                    <div class="w-100 border-top border-2 border-muted" style="border-style: dashed !important;"></div>
-                </div>
-
+                </li>
                 <!-- Kasubbag -->
-                <div class="flex-fill">
-                    @php
-                        $kasColor = 'warning';
-                        $kasIcon = 'bi-hourglass-split';
-                        $kasText = 'Menunggu';
-                        if ($kasubbagApproval) {
-                            if ($kasubbagApproval->status === 'APPROVED') { $kasColor = 'success'; $kasIcon = 'bi-check-lg'; $kasText = 'Disetujui'; }
-                            if ($kasubbagApproval->status === 'REVISION') { $kasColor = 'danger'; $kasIcon = 'bi-x-lg'; $kasText = 'Revisi'; }
-                        }
-                    @endphp
-                    <div class="d-inline-flex justify-content-center align-items-center rounded-circle border border-2 border-{{ $kasColor }} text-{{ $kasColor }} mb-2 bg-{{ $kasColor }} bg-opacity-10" style="width: 40px; height: 40px;">
-                        <i class="bi {{ $kasIcon }} fs-5"></i>
+                <li class="list-group-item px-3 py-2 border-0">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="bg-warning bg-opacity-10 text-warning rounded-circle d-flex align-items-center justify-content-center" style="width: 35px; height: 35px;">
+                                <i class="bi bi-person-badge fs-5"></i>
+                            </div>
+                            <div>
+                                <div class="fw-semibold text-dark">Kepala Subbagian Keuangan dan Tata Usaha</div>
+                                <div class="small text-muted">{{ $kasubbagUser?->name ?? 'Belum Ditentukan' }}</div>
+                                @if($kasubbagUser?->nip)<div class="text-muted font-monospace" style="font-size: .72rem;">NIP: {{ $kasubbagUser->nip }}</div>@endif
+                            </div>
+                        </div>
+                        <div class="text-end">
+                            <span class="badge bg-{{ $kasColor }}">{{ $kasText }}</span>
+                            @if($kasubbagApproval && $kasubbagApproval->acted_at)
+                                <div class="text-muted mt-1" style="font-size: 0.7rem;">{{ \Carbon\Carbon::parse($kasubbagApproval->acted_at)->format('d M Y H:i') }}</div>
+                            @endif
+                        </div>
                     </div>
-                    <div class="fw-bold small">Kasubbag</div>
-                    <div class="text-{{ $kasColor }} small">{{ $kasText }}</div>
-                    @if($kasubbagApproval && $kasubbagApproval->acted_at)
-                        <div class="text-muted" style="font-size: 0.7rem;">{{ \Carbon\Carbon::parse($kasubbagApproval->acted_at)->format('d M Y H:i') }}</div>
-                    @endif
-                </div>
-            </div>
+                </li>
+            </ul>
             
             @if($latestRevisionNote)
                 <div class="mt-3 p-3 bg-danger bg-opacity-10 border border-danger rounded text-danger">
@@ -188,7 +197,7 @@
                     </div>
                     <div class="row mb-3">
                         <div class="col-sm-4 text-muted">Uraian / Termin Pekerjaan</div>
-                        <div class="col-sm-8">{{ $spp->tagihan?->detailKontrak?->kontrakTermin?->keterangan_termin ?? $spp->tagihan?->detailKontrak?->kontrakTermin?->kontrak?->nama_pekerjaan ?? $spp->tagihan?->deskripsi ?? '-' }}</div>
+                        <div class="col-sm-8">{{ $spp->tagihan?->detailKontrak?->kontrakTermin?->kontrak?->nama_pekerjaan ?? $spp->tagihan?->deskripsi ?? $spp->tagihan?->detailKontrak?->kontrakTermin?->keterangan_termin ?? '-' }}</div>
                     </div>
                     <div class="row mb-3">
                         <div class="col-sm-4 text-muted">Beban Anggaran (COA)</div>
@@ -247,6 +256,9 @@
 
         <!-- Kolom Kanan: Dokumen & Aksi -->
         <div class="col-xl-4">
+            <!-- Standing Instruction -->
+            @include('spps.partials.standing_instruction_card')
+
             <!-- Dokumen Pendukung -->
             <div class="card border-0 shadow-sm mb-4">
                 <div class="card-header bg-white py-3">
@@ -285,71 +297,68 @@
             </div>
 
             <!-- Panel Aksi Verifikasi -->
-            @if($canAct)
-            <div class="card border-0 shadow-sm bg-light">
-                <div class="card-body text-center py-4">
-                    <h5 class="fw-bold mb-3">Aksi Verifikasi</h5>
-                    <p class="text-muted small mb-4">Pastikan dokumen dan nilai SPP sudah sesuai sebelum memberikan persetujuan.</p>
-                    
-                    <button type="button" class="btn btn-success w-100 mb-2 py-2 fs-6 fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#modalApprove">
-                        <i class="bi bi-check-circle me-1"></i> Setujui SPP
-                    </button>
-                    <button type="button" class="btn btn-outline-danger w-100 py-2 fw-bold" data-bs-toggle="modal" data-bs-target="#modalRevisi">
-                        <i class="bi bi-x-circle me-1"></i> Minta Revisi
-                    </button>
-                </div>
-            </div>
+            <div class="sticky-top" style="top: 1.5rem; z-index: 1020;">
+            @if(isset($activeRoleApprovals) && count($activeRoleApprovals) > 1)
+                @foreach($activeRoleApprovals as $approvalData)
+                    <div class="auth-approval-panel shadow-sm mb-4">
+                        <div class="d-flex align-items-center gap-2 mb-3">
+                            <i class="bi bi-shield-lock-fill text-primary fs-3"></i>
+                            <div>
+                                <h5 class="fw-bold mb-0 text-primary">Tindakan Verifikasi</h5>
+                                <div class="small text-muted">Menunggu persetujuan Anda sebagai <strong>{{ $approvalData['role'] }}</strong></div>
+                            </div>
+                        </div>
 
-            <!-- Modal Approve -->
-            <div class="modal fade" id="modalApprove" tabindex="-1" aria-hidden="true">
-                <div class="modal-dialog modal-dialog-centered">
-                    <div class="modal-content">
-                        <div class="modal-header bg-success text-white">
-                            <h5 class="modal-title text-white">Konfirmasi Persetujuan</h5>
-                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                        </div>
-                        <div class="modal-body text-center py-4">
-                            <i class="bi bi-check-circle text-success" style="font-size: 4rem;"></i>
-                            <h4 class="mt-3 mb-2">Apakah Anda yakin?</h4>
-                            <p class="text-muted mb-0">Anda akan memberikan persetujuan sebagai <strong>{{ $roleLabel ?? 'Kasubbag' }}</strong> untuk SPP <strong>{{ $spp->nomor_spp }}</strong>.</p>
-                        </div>
-                        <div class="modal-footer justify-content-center border-0 pb-4">
-                            <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Batal</button>
-                            <form action="{{ route($approveRoute ?? 'verifikasi-kasubag.spp.approve', $spp->id) }}" method="POST">
-                                @csrf
-                                <button type="submit" class="btn btn-success px-4 fw-bold">Teruskan Proses</button>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Modal Revisi -->
-            <div class="modal fade" id="modalRevisi" tabindex="-1" aria-hidden="true">
-                <div class="modal-dialog modal-dialog-centered">
-                    <div class="modal-content">
-                        <div class="modal-header bg-danger text-white">
-                            <h5 class="modal-title text-white">Kembalikan untuk Revisi</h5>
-                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                        </div>
-                        <form action="{{ route($revisiRoute ?? 'verifikasi-kasubag.spp.revisi', $spp->id) }}" method="POST">
+                        <form action="{{ $approvalData['approveRoute'] }}" method="POST" id="formVerifyApprove_{{ Str::slug($approvalData['role']) }}" onsubmit="return confirm('Apakah Anda yakin menyetujui SPP ini sebagai {{ $approvalData['role'] }}?');">
                             @csrf
-                            <div class="modal-body">
-                                <p class="text-muted small">SPP ini akan dikembalikan ke Operator BLU. Operator harus memperbaiki dan mensubmit ulang SPP ini sehingga Verifikasi PPK dan Kasubbag akan diulang dari awal.</p>
-                                <div class="mb-3 mt-3 text-start">
-                                    <label class="form-label fw-bold">Catatan / Alasan Revisi <span class="text-danger">*</span></label>
-                                    <textarea name="catatan_revisi" class="form-control" rows="4" required placeholder="Jelaskan secara spesifik apa yang harus diperbaiki oleh Operator BLU..."></textarea>
-                                </div>
-                            </div>
-                            <div class="modal-footer bg-light">
-                                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Batal</button>
-                                <button type="submit" class="btn btn-danger fw-bold">Kembalikan ke Operator</button>
-                            </div>
+                            <input type="hidden" name="approval_id" value="{{ $approvalData['approval_id'] }}">
+                            <label class="form-label fw-semibold">Catatan Keputusan</label>
+                            <textarea name="catatan" class="form-control mb-3" rows="2" placeholder="(Opsional) Tulis catatan persetujuan Anda..."></textarea>
+                            <button type="submit" class="btn btn-success shadow-sm w-100 mb-2 py-2 fw-bold"><i class="bi bi-check-circle me-1"></i> Setujui sebagai {{ $approvalData['role'] }}</button>
+                        </form>
+
+                        <hr class="text-primary opacity-25">
+
+                        <form action="{{ $approvalData['revisiRoute'] }}" method="POST" id="formVerifyReject_{{ Str::slug($approvalData['role']) }}" onsubmit="return confirm('Apakah Anda yakin mengembalikan SPP ini untuk revisi sebagai {{ $approvalData['role'] }}?');">
+                            @csrf
+                            <input type="hidden" name="approval_id" value="{{ $approvalData['approval_id'] }}">
+                            <label class="form-label fw-semibold">Alasan Penolakan / Revisi <span class="text-danger">*</span></label>
+                            <textarea name="catatan_revisi" class="form-control mb-3" rows="2" required placeholder="(Wajib) Tulis instruksi revisi untuk Operator..."></textarea>
+                            <button type="submit" class="btn btn-outline-danger w-100 py-2"><i class="bi bi-x-circle me-1"></i> Kembalikan untuk Revisi</button>
                         </form>
                     </div>
+                @endforeach
+
+            @elseif($canAct)
+                <div class="auth-approval-panel shadow-sm mb-4">
+                    <div class="d-flex align-items-center gap-2 mb-3">
+                        <i class="bi bi-shield-lock-fill text-primary fs-3"></i>
+                        <div>
+                            <h5 class="fw-bold mb-0 text-primary">Tindakan Verifikasi</h5>
+                            <div class="small text-muted">Menunggu persetujuan Anda sebagai <strong>{{ $roleLabel ?? 'Kasubbag' }}</strong></div>
+                        </div>
+                    </div>
+
+                    <form action="{{ route($approveRoute ?? 'verifikasi-kasubag.spp.approve', $spp->id) }}" method="POST" onsubmit="return confirm('Apakah Anda yakin menyetujui SPP ini?');">
+                        @csrf
+                        <input type="hidden" name="approval_id" value="{{ count($activeRoleApprovals) === 1 ? $activeRoleApprovals[0]['approval_id'] : ($myApproval->id ?? '') }}">
+                        <label class="form-label fw-semibold">Catatan Keputusan</label>
+                        <textarea name="catatan" class="form-control mb-3" rows="2" placeholder="(Opsional) Tulis catatan persetujuan Anda..."></textarea>
+                        <button type="submit" class="btn btn-success shadow-sm w-100 mb-2 py-2 fw-bold"><i class="bi bi-check-circle me-1"></i> Setujui SPP</button>
+                    </form>
+
+                    <hr class="text-primary opacity-25">
+
+                    <form action="{{ route($revisiRoute ?? 'verifikasi-kasubag.spp.revisi', $spp->id) }}" method="POST" onsubmit="return confirm('Apakah Anda yakin mengembalikan SPP ini untuk revisi?');">
+                        @csrf
+                        <input type="hidden" name="approval_id" value="{{ count($activeRoleApprovals) === 1 ? $activeRoleApprovals[0]['approval_id'] : ($myApproval->id ?? '') }}">
+                        <label class="form-label fw-semibold">Alasan Penolakan / Revisi <span class="text-danger">*</span></label>
+                        <textarea name="catatan_revisi" class="form-control mb-3" rows="2" required placeholder="(Wajib) Tulis instruksi revisi untuk Operator..."></textarea>
+                        <button type="submit" class="btn btn-outline-danger w-100 py-2"><i class="bi bi-x-circle me-1"></i> Kembalikan untuk Revisi</button>
+                    </form>
                 </div>
-            </div>
             @endif
+            </div>
 
         </div>
     </div>

@@ -150,7 +150,7 @@
                                 <span class="badge {{ $sf === 'Selesai Diverifikasi' ? 'bg-success' : (str_contains($sf, 'Revisi') ? 'bg-danger' : 'bg-info text-dark') }}" style="font-size: 11px;">{{ $sf }}</span>
                             </td>
                             <td class="text-center">
-                                @if(($currentRole === 'PPK' ? $tagihan->_ppkApproval : $tagihan->_bendaharaApproval)?->status === 'PENDING')
+                                @if(($tagihan->_currentApproval ?? null)?->status === 'PENDING')
                                     <a href="{{ route($routePrefix . '.show', $tagihan->id) }}" class="btn btn-sm btn-primary px-3">
                                         <i class="bi bi-ui-checks"></i> Verifikasi
                                     </a>

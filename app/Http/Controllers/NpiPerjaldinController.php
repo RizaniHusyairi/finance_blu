@@ -24,7 +24,7 @@ class NpiPerjaldinController extends Controller
         $query = DokumenSpm::whereHas('spp', function($q) {
                 $q->whereNotNull('tagihan_perjaldin_komponen_id');
             })
-            ->whereIn('status', [DokumenSpm::STATUS_DISETUJUI_FINAL, DokumenSpm::STATUS_APPROVED_KASUBAG])
+            ->whereIn('status', [DokumenSpm::STATUS_SPM_TERBIT, DokumenSpm::STATUS_DISETUJUI_FINAL, DokumenSpm::STATUS_APPROVED_KASUBAG])
             ->with([
                 'npi',
                 'npi.workflowInstances.approvals',
@@ -91,6 +91,8 @@ class NpiPerjaldinController extends Controller
                 'spp.tagihan.detailPerjaldin.pegawai',
                 'spp.tagihan.detailPerjaldin.provinsi',
                 'spp.tagihan.komponenPerjaldin',
+                'spp.tagihan.bendaharaPenerimaanUser',
+                'spp.tagihan.koordinatorKeuanganUser',
                 'spp.tagihanPerjaldinKomponen.dipaRevisionItem.coa',
                 'npi.bendaharaPenerimaan',
                 'npi.workflowInstances.approvals.assignedUser',
@@ -104,16 +106,20 @@ class NpiPerjaldinController extends Controller
         
         $npiModel = $spmModel->npi;
 
-        $bendaharaPenerimaans = User::role('Bendahara Penerimaan')->orderByDisplayName()->get();
+        $bendaharaPenerimaanTagihan = $tagihan?->bendaharaPenerimaanUser;
         // Fetch PPK & Kasubbag
         $ppkSpp = $sppModel?->ppkVerifikator; // Asumsi jika SPP menyimpan info verifikator PPK
+        $koordinatorKeuanganUser = $tagihan?->koordinatorKeuanganUser ?: User::role('Koordinator Keuangan')->first();
         $kasubbagUser = User::role('Kepala Subbagian Keuangan dan Tata Usaha')->first();
 
         // Nominal
         $nominalNpi = (float) ($sppModel->nominal_spp ?? $tagihan->total_netto ?? 0);
 
         // Readiness checklist
-        $draftReady = $npiModel && filled($npiModel->nomor_npi) && filled($npiModel->tanggal_npi) && filled($npiModel->bendahara_penerimaan_id);
+        $draftReady = $npiModel
+            && filled($npiModel->nomor_npi)
+            && filled($npiModel->tanggal_npi)
+            && filled($bendaharaPenerimaanTagihan?->id);
         
         $readinessChecklist = collect([
             [
@@ -124,7 +130,9 @@ class NpiPerjaldinController extends Controller
             [
                 'label' => 'Draft NPI dilengkapi',
                 'status' => $draftReady ? 'ready' : 'missing',
-                'hint' => $draftReady ? 'Nomor, Tanggal dan Bendahara Penerimaan telah ditentukan.' : 'Bendahara Penerimaan & Nomor NPI belum diatur di Draft.'
+                'hint' => $draftReady
+                    ? 'Nomor, Tanggal dan Bendahara Penerimaan dari tagihan telah ditentukan.'
+                    : 'Nomor NPI belum lengkap atau Bendahara Penerimaan belum ditentukan pada tagihan.'
             ],
         ])->values();
 
@@ -139,6 +147,7 @@ class NpiPerjaldinController extends Controller
         $latestWorkflowInstance = collect($npiModel?->workflowInstances ?? [])->sortByDesc('created_at')->first();
         $benpenApproval = collect($latestWorkflowInstance?->approvals ?? [])->firstWhere('role_code', 'Bendahara Penerimaan');
         $ppkApproval = collect($latestWorkflowInstance?->approvals ?? [])->firstWhere('role_code', 'PPK');
+        $koordinatorApproval = collect($latestWorkflowInstance?->approvals ?? [])->firstWhere('role_code', 'Koordinator Keuangan');
         $kasubbagApproval = collect($latestWorkflowInstance?->approvals ?? [])->firstWhere('role_code', 'Kepala Subbagian Keuangan dan Tata Usaha');
 
         // Recent activities
@@ -162,7 +171,7 @@ class NpiPerjaldinController extends Controller
             'npiModel',
             'tagihan',
             'komponenSpp',
-            'bendaharaPenerimaans',
+            'bendaharaPenerimaanTagihan',
             'nominalNpi',
             'readinessChecklist',
             'readinessIssues',
@@ -172,9 +181,11 @@ class NpiPerjaldinController extends Controller
             'isReadyToSubmit',
             'benpenApproval',
             'ppkApproval',
+            'koordinatorApproval',
             'kasubbagApproval',
             'recentActivities',
             'ppkSpp',
+            'koordinatorKeuanganUser',
             'kasubbagUser',
             'autoNomorNpi'
         ));
@@ -187,26 +198,34 @@ class NpiPerjaldinController extends Controller
     {
         $spm = DokumenSpm::whereHas('spp', function($q) {
                 $q->whereNotNull('tagihan_perjaldin_komponen_id');
-            })->findOrFail($spm_id);
+            })
+            ->with(['spp.tagihan.bendaharaPenerimaanUser', 'npi'])
+            ->findOrFail($spm_id);
             
         $existingNpi = $spm->npi;
+        $bendaharaPenerimaan = $spm->spp?->tagihan?->bendaharaPenerimaanUser;
+
+        if (!$bendaharaPenerimaan || !$bendaharaPenerimaan->hasRole('Bendahara Penerimaan')) {
+            return back()
+                ->withInput()
+                ->withErrors(['bendahara_penerimaan_id' => 'Verifikator Bendahara Penerimaan belum ditentukan pada tagihan. Lengkapi data tagihan terlebih dahulu.']);
+        }
 
         $request->validate([
             'nomor_npi' => 'required|string|max:100',
             'tanggal_npi' => 'required|date',
-            'bendahara_penerimaan_id' => 'required|exists:users,id',
             'tahun_anggaran' => 'nullable|string|max:10',
             'uraian_npi' => 'nullable|string'
         ]);
 
-        DB::transaction(function () use ($request, $spm, $existingNpi) {
+        DB::transaction(function () use ($request, $spm, $existingNpi, $bendaharaPenerimaan) {
             $npi = DokumenNpi::updateOrCreate(
                 ['id' => $existingNpi?->id],
                 [
                     'spm_id' => $spm->id,
                     'nomor_npi' => $request->nomor_npi,
                     'tanggal_npi' => $request->tanggal_npi,
-                    'bendahara_penerimaan_id' => $request->bendahara_penerimaan_id,
+                    'bendahara_penerimaan_id' => $bendaharaPenerimaan->id,
                     'tahun_anggaran' => $request->tahun_anggaran ?? date('Y'),
                     'status' => $existingNpi && $existingNpi->status === DokumenNpi::STATUS_REVISI
                                     ? DokumenNpi::STATUS_REVISI 
@@ -235,7 +254,7 @@ class NpiPerjaldinController extends Controller
      */
     public function submit($spm_id)
     {
-        $spm = DokumenSpm::with(['npi', 'spp'])->findOrFail($spm_id);
+        $spm = DokumenSpm::with(['npi', 'spp.tagihan.bendaharaPenerimaanUser'])->findOrFail($spm_id);
         $npi = $spm->npi;
 
         if (!$npi) {
@@ -246,11 +265,20 @@ class NpiPerjaldinController extends Controller
             return back()->withErrors(['error' => 'NPI tidak dapat diajukan (bukan status draft atau revisi).']);
         }
 
-        DB::transaction(function () use ($npi, $spm) {
+        $bendaharaPenerimaan = $spm->spp?->tagihan?->bendaharaPenerimaanUser;
+
+        if (!$bendaharaPenerimaan || !$bendaharaPenerimaan->hasRole('Bendahara Penerimaan')) {
+            return back()->withErrors(['bendahara_penerimaan_id' => 'Verifikator Bendahara Penerimaan belum ditentukan pada tagihan. Lengkapi data tagihan terlebih dahulu.']);
+        }
+
+        DB::transaction(function () use ($npi, $spm, $bendaharaPenerimaan) {
             $statusSebelumnya = $npi->status;
 
             // Updated status
-            $npi->update(['status' => DokumenNpi::STATUS_MENUNGGU_VERIFIKASI]);
+            $npi->update([
+                'bendahara_penerimaan_id' => $bendaharaPenerimaan->id,
+                'status' => DokumenNpi::STATUS_MENUNGGU_VERIFIKASI,
+            ]);
 
             $ppkId = $spm->spp?->ppk_verifikator_id; // Using SPP's PPK as assignee if needed, workflow engine handles standard rolenames
             app(WorkflowService::class)->startWorkflow('NPI_PERJALDIN', $npi, $ppkId);
@@ -273,7 +301,7 @@ class NpiPerjaldinController extends Controller
         if ($npi->bendahara_penerimaan_id) {
             $usersToNotify->push(User::find($npi->bendahara_penerimaan_id));
         }
-        $usersToNotify = $usersToNotify->merge(User::role(['PPK', 'Kepala Subbagian Keuangan dan Tata Usaha'])->get());
+        $usersToNotify = $usersToNotify->merge(User::role(['PPK', 'Koordinator Keuangan', 'Kepala Subbagian Keuangan dan Tata Usaha'])->get());
         
         $usersToNotify = $usersToNotify->filter()->unique('id');
 
@@ -288,5 +316,69 @@ class NpiPerjaldinController extends Controller
         }
 
         return redirect()->route('npis.perjaldin.detail', $spm->id)->with('success', 'NPI berhasil diajukan untuk verifikasi paralel.');
+    }
+
+    /**
+     * Upload file NPI Bertandatangan.
+     */
+    public function uploadSignedNpi(Request $request, $npi_id)
+    {
+        $npi = DokumenNpi::findOrFail($npi_id);
+
+        if (!in_array($npi->status, [DokumenNpi::STATUS_MENUNGGU_UPLOAD, DokumenNpi::STATUS_NPI_TERBIT, DokumenNpi::STATUS_DISETUJUI_FINAL])) {
+            return back()->withErrors(['error' => 'NPI belum disetujui oleh semua verifikator.']);
+        }
+
+        $request->validate([
+            'file_npi_ttd' => 'required|file|mimes:pdf,jpg,jpeg,png|max:10240',
+        ], [
+            'file_npi_ttd.required' => 'File NPI Bertandatangan wajib diunggah.',
+            'file_npi_ttd.mimes' => 'File harus berformat PDF, JPG, atau PNG.',
+            'file_npi_ttd.max' => 'Ukuran file maksimal 10MB.',
+        ]);
+
+        DB::transaction(function () use ($request, $npi) {
+            $file = $request->file('file_npi_ttd');
+            $namaAsli = $file->getClientOriginalName();
+            $path = $file->store('arsip_npi_signed/' . date('Y'), 'public');
+
+            // Nonaktifkan arsip lama (jika ada re-upload)
+            $npi->arsipDokumen()
+                ->where('jenis_dokumen', DokumenNpi::NPI_SIGNED_ARCHIVE_TYPE)
+                ->where('is_active', true)
+                ->update(['is_active' => false]);
+
+            // Buat arsip baru
+            $npi->arsipDokumen()->create([
+                'jenis_dokumen' => DokumenNpi::NPI_SIGNED_ARCHIVE_TYPE,
+                'nama_file_asli' => $namaAsli,
+                'path_file' => $path,
+                'mime_type' => $file->getMimeType(),
+                'ukuran_file' => $file->getSize(),
+                'uploaded_by' => auth()->id(),
+                'uploaded_at' => now(),
+                'is_active' => true,
+            ]);
+
+            // Update status ke NPI_TERBIT
+            if ($npi->status !== DokumenNpi::STATUS_NPI_TERBIT) {
+                $statusSebelumnya = $npi->status;
+                $npi->update(['status' => DokumenNpi::STATUS_NPI_TERBIT]);
+
+                LogStatusDokumen::create([
+                    'dokumen_type' => DokumenNpi::class,
+                    'dokumen_id' => $npi->id,
+                    'user_id' => auth()->id(),
+                    'role_saat_itu' => auth()->user()?->getRoleNames()->first() ?? 'Bendahara Pengeluaran',
+                    'status_sebelumnya' => $statusSebelumnya,
+                    'status_baru' => DokumenNpi::STATUS_NPI_TERBIT,
+                    'aksi' => 'UPLOAD_SIGNED_NPI',
+                    'catatan' => 'File fisik NPI yang telah ditandatangani berhasil diunggah.',
+                    'ip_address' => request()->ip(),
+                ]);
+            }
+        });
+
+        return back()->with('success', 'File NPI Bertandatangan berhasil diunggah dan NPI resmi terbit.');
     }
 }

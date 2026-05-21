@@ -151,7 +151,7 @@ class ContractController extends Controller
             'satuan_waktu' => 'required|in:HARI,MINGGU,BULAN',
             'jangka_waktu' => 'required|integer|min:1',
             'tanggal_selesai' => 'required|date|after_or_equal:tanggal_mulai',
-            'masa_pemeliharaan_hari' => 'nullable|integer|min:0',
+            'masa_pemeliharaan_hari' => 'nullable|integer|min:0|required_if:gunakan_retensi,1',
             'tanggal_mulai_pemeliharaan' => 'nullable|date',
             'tanggal_selesai_pemeliharaan' => 'nullable|date|after_or_equal:tanggal_mulai_pemeliharaan',
             'ketentuan_denda' => 'nullable|string',
@@ -171,7 +171,17 @@ class ContractController extends Controller
             'gunakan_retensi' => 'nullable|boolean',
             'retensi_keterangan' => 'nullable|required_if:gunakan_retensi,1|string|max:255',
             'retensi_persentase' => 'nullable|required_if:gunakan_retensi,1|numeric|min:0.0001|max:100',
+        ], [
+            'masa_pemeliharaan_hari.required_if' => 'Masa pemeliharaan wajib diisi (minimal 1 hari) ketika kontrak menggunakan retensi.',
+            'retensi_persentase.required_if' => 'Persentase retensi wajib diisi saat opsi retensi diaktifkan.',
+            'retensi_keterangan.required_if' => 'Keterangan retensi wajib diisi saat opsi retensi diaktifkan.',
         ]);
+
+        if ($request->boolean('gunakan_retensi') && (int) ($validated['masa_pemeliharaan_hari'] ?? 0) < 1) {
+            return back()->withInput()->withErrors([
+                'masa_pemeliharaan_hari' => 'Masa pemeliharaan minimal 1 hari karena kontrak menggunakan retensi.',
+            ]);
+        }
 
         try {
             DB::beginTransaction();
@@ -183,16 +193,13 @@ class ContractController extends Controller
             $nomorSpk = $documentNumberService->generateByKey('SPK');
             $nomorSpmk = $documentNumberService->generateByKey('SPMK');
             
-            // Cek sisa pagu DIPA
-            $terpakai = \App\Models\KontrakPengadaan::where('master_dipa_id', $dipa->id)
-                ->where('status_kontrak', '!=', 'DIBATALKAN')
-                ->sum('nilai_total_kontrak');
-            $sisaPagu = $dipa->total_pagu - $terpakai;
+            // Cek sisa pagu COA
+            $sisaPagu = $selectedItem->sisa_pagu;
 
             if ($validated['nilai_total_kontrak'] > $sisaPagu) {
                 return back()->withInput()->withErrors([
                     'error' => "Gagal disimpan: Nilai Kontrak (Rp " . number_format($validated['nilai_total_kontrak'],0,',','.') . 
-                               ") melebihi sisa pagu anggaran DIPA yang tersedia (Rp " . number_format($sisaPagu,0,',','.') . ")."
+                               ") melebihi sisa pagu COA yang tersedia (Rp " . number_format($sisaPagu,0,',','.') . ")."
                 ]);
             }
 
@@ -405,7 +412,7 @@ class ContractController extends Controller
             'satuan_waktu' => 'required|in:HARI,MINGGU,BULAN',
             'jangka_waktu' => 'required|integer|min:1',
             'tanggal_selesai' => 'required|date|after_or_equal:tanggal_mulai',
-            'masa_pemeliharaan_hari' => 'nullable|integer|min:0',
+            'masa_pemeliharaan_hari' => 'nullable|integer|min:0|required_if:gunakan_retensi,1',
             'tanggal_mulai_pemeliharaan' => 'nullable|date',
             'tanggal_selesai_pemeliharaan' => 'nullable|date|after_or_equal:tanggal_mulai_pemeliharaan',
             'ketentuan_denda' => 'nullable|string',
@@ -425,7 +432,17 @@ class ContractController extends Controller
             'gunakan_retensi' => 'nullable|boolean',
             'retensi_keterangan' => 'nullable|required_if:gunakan_retensi,1|string|max:255',
             'retensi_persentase' => 'nullable|required_if:gunakan_retensi,1|numeric|min:0.0001|max:100',
+        ], [
+            'masa_pemeliharaan_hari.required_if' => 'Masa pemeliharaan wajib diisi (minimal 1 hari) ketika kontrak menggunakan retensi.',
+            'retensi_persentase.required_if' => 'Persentase retensi wajib diisi saat opsi retensi diaktifkan.',
+            'retensi_keterangan.required_if' => 'Keterangan retensi wajib diisi saat opsi retensi diaktifkan.',
         ]);
+
+        if ($request->boolean('gunakan_retensi') && (int) ($validated['masa_pemeliharaan_hari'] ?? 0) < 1) {
+            return back()->withInput()->withErrors([
+                'masa_pemeliharaan_hari' => 'Masa pemeliharaan minimal 1 hari karena kontrak menggunakan retensi.',
+            ]);
+        }
 
         try {
             DB::beginTransaction();
@@ -434,17 +451,16 @@ class ContractController extends Controller
             $dipa = $selectedItem->dipaRevision->masterDipa;
             $selectedPpk = $this->resolvePpkUser((int) $validated['ppk_user_id']);
             
-            // Cek sisa pagu DIPA (exclude this contract itself)
-            $terpakai = \App\Models\KontrakPengadaan::where('master_dipa_id', $dipa->id)
-                ->whereNotIn('status_kontrak', ['DIBATALKAN', 'DRAFT', 'DRAFT'])
-                ->where('id', '!=', $kontrak->id)
-                ->sum('nilai_total_kontrak');
-            $sisaPagu = $dipa->total_pagu - $terpakai;
+            // Cek sisa pagu COA
+            $sisaPagu = $selectedItem->sisa_pagu;
+            if ($kontrak->dipa_revision_item_id == $selectedItem->id) {
+                $sisaPagu += $kontrak->nilai_total_kontrak;
+            }
 
             if ($validated['nilai_total_kontrak'] > $sisaPagu) {
                 return back()->withInput()->withErrors([
                     'error' => "Gagal disimpan: Nilai Kontrak (Rp " . number_format($validated['nilai_total_kontrak'],0,',','.') . 
-                               ") melebihi sisa pagu anggaran DIPA yang tersedia (Rp " . number_format($sisaPagu,0,',','.') . ")."
+                               ") melebihi sisa pagu COA yang tersedia (Rp " . number_format($sisaPagu,0,',','.') . ")."
                 ]);
             }
 

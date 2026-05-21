@@ -13,10 +13,14 @@
 
     $ppspmStatusLabel = $ppspmApproval?->status ?? 'Belum diajukan';
     $kasubbagStatusLabel = $kasubbagApproval?->status ?? 'Belum diajukan';
+    $koordinatorStatusLabel = $koordinatorApproval?->status ?? 'Belum diajukan';
     $ppspmStatusClass = match($ppspmStatusLabel) {
         'APPROVED' => 'text-success', 'PENDING' => 'text-warning', 'REVISION','REJECTED' => 'text-danger', default => 'text-muted'
     };
     $kasubbagStatusClass = match($kasubbagStatusLabel) {
+        'APPROVED' => 'text-success', 'PENDING' => 'text-warning', 'REVISION','REJECTED' => 'text-danger', default => 'text-muted'
+    };
+    $koordinatorStatusClass = match($koordinatorStatusLabel) {
         'APPROVED' => 'text-success', 'PENDING' => 'text-warning', 'REVISION','REJECTED' => 'text-danger', default => 'text-muted'
     };
 
@@ -155,6 +159,13 @@
                             <div class="timeline-sub fw-semibold {{ $ppspmStatusClass }}">{{ $ppspmStatusLabel }}</div>
                             @if($ppspmApproval) <div class="timeline-sub mt-0 opacity-75" style="font-size: 0.7rem;">{{ $ppspmApproval->assignedUser?->name ?? 'All Ppspm' }}</div> @endif
                         </div>
+                        {{-- Step 2: Verifikasi Koordinator Keuangan --}}
+                        <div class="timeline-step {{ $koordinatorApproval?->status === 'APPROVED' ? 'passed' : ($koordinatorApproval?->status === 'REVISION' ? 'revision' : ($progressStep == 2 ? 'active' : '')) }}">
+                            <div class="timeline-icon"><i class="bi bi-person-gear"></i></div>
+                            <div class="timeline-label">Verifikasi Koordinator Keuangan</div>
+                            <div class="timeline-sub fw-semibold {{ $koordinatorStatusClass }}">{{ $koordinatorStatusLabel }}</div>
+                            @if($koordinatorApproval) <div class="timeline-sub mt-0 opacity-75" style="font-size: 0.7rem;">{{ $koordinatorApproval->assignedUser?->name ?? 'Koordinator' }}</div> @endif
+                        </div>
                         {{-- Step 2: Verifikasi Kasubbag --}}
                         <div class="timeline-step {{ $kasubbagApproval?->status === 'APPROVED' ? 'passed' : ($kasubbagApproval?->status === 'REVISION' ? 'revision' : ($progressStep == 2 ? 'active' : '')) }}">
                             <div class="timeline-icon"><i class="bi bi-person-badge"></i></div>
@@ -288,10 +299,11 @@
             <div class="sticky-top" style="top: 1.5rem; z-index: 1;">
 
                 {{-- PANEL AKSI VERIFIKATOR JIKA PENDING --}}
-                @if($isMyPendingApproval)
+                @if($isMyPendingApproval && !empty($activeRoleApprovals))
+                    @foreach($activeRoleApprovals as $approvalData)
                     <div class="card action-card mb-4">
                         <div class="card-header bg-primary text-white p-3 rounded-top-3 border-0">
-                            <h6 class="mb-0 fw-bold"><i class="bi bi-shield-lock me-2"></i> Papan Keputusan Anda</h6>
+                            <h6 class="mb-0 fw-bold"><i class="bi bi-shield-lock me-2"></i> Papan Keputusan ({{ $approvalData['role'] }})</h6>
                         </div>
                         <div class="card-body p-4 bg-white rounded-bottom-3">
                             <div class="alert alert-light border small text-dark mb-4">
@@ -299,14 +311,15 @@
                             </div>
                             
                             {{-- Button Setujui --}}
-                            <form action="{{ route('verifikasi-spm.honor.approve', $spmModel->id) }}" method="POST" class="mb-3">
+                            <form action="{{ $approvalData['approveRoute'] }}" method="POST" class="mb-3" id="formVerifyApprove_{{ Str::slug($approvalData['role']) }}">
                                 @csrf
+                                <input type="hidden" name="approval_id" value="{{ $approvalData['approval_id'] }}">
                                 <div class="mb-3">
                                     <label class="form-label small fw-semibold text-muted">Catatan Persetujuan (Opsional)</label>
                                     <input type="text" name="catatan" class="form-control form-control-sm" placeholder="Contoh: Dokumen lengkap dan valid. Ok.">
                                 </div>
-                                <button type="submit" class="btn btn-success w-100 py-2 fs-6 fw-bold shadow-sm" onclick="return confirm('Apakah Anda yakin menyetujui dokumen SPM Honorarium ini?')">
-                                    <i class="bi bi-check-circle-fill me-1"></i> SETUJUI SPM INI
+                                <button type="submit" class="btn btn-success w-100 py-2 fs-6 fw-bold shadow-sm" onclick="return confirm('Apakah Anda yakin menyetujui dokumen SPM Honorarium ini sebagai {{ $approvalData['role'] }}?')">
+                                    <i class="bi bi-check-circle-fill me-1"></i> SETUJUI SEBAGAI {{ strtoupper($approvalData['role']) }}
                                 </button>
                             </form>
                             
@@ -314,18 +327,20 @@
                             
                             <div class="fw-bold text-danger mb-2 small"><i class="bi bi-arrow-return-left me-1"></i> Terdapat Kesalahan Data?</div>
                             {{-- Form Tolak --}}
-                            <form action="{{ route('verifikasi-spm.honor.reject', $spmModel->id) }}" method="POST">
+                            <form action="{{ $approvalData['revisiRoute'] }}" method="POST" id="formVerifyReject_{{ Str::slug($approvalData['role']) }}">
                                 @csrf
+                                <input type="hidden" name="approval_id" value="{{ $approvalData['approval_id'] }}">
                                 <div class="mb-3">
                                     <label class="form-label small fw-semibold">Catatan Revisi <span class="text-danger">*</span></label>
                                     <textarea name="catatan" rows="2" class="form-control form-control-sm border-danger" required placeholder="Tulis instruksi revisi sejelas mungkin untuk Operator..."></textarea>
                                 </div>
-                                <button type="submit" class="btn btn-outline-danger w-100 fw-bold" onclick="return confirm('Kembalikan dokumen ini dalam mode Revisi ke Operator BLU?')">
+                                <button type="submit" class="btn btn-outline-danger w-100 fw-bold" onclick="return confirm('Kembalikan dokumen ini dalam mode Revisi ke Operator BLU sebagai {{ $approvalData['role'] }}?')">
                                     TOLAK & MINTA REVISI
                                 </button>
                             </form>
                         </div>
                     </div>
+                    @endforeach
                 @else
                     <div class="alert alert-secondary border-0 shadow-sm d-flex align-items-center gap-3 p-4 mb-4">
                         <i class="bi bi-info-circle-fill fs-2 text-secondary opacity-50"></i>

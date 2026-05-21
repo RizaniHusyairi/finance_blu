@@ -31,11 +31,13 @@ class PerjaldinWorkflowService
             'REVISI_BENDAHARA_PENERIMAAN',
             'REVISI_BENDAHARA_PENGELUARAN',
             'REVISI_KASUBBAG',
+            'REVISI_KOORDINATOR_KEUANGAN',
             'DITOLAK_PPK',
             'DITOLAK_PPSPM',
             'DITOLAK_BENDAHARA_PENERIMAAN',
             'DITOLAK_BENDAHARA_PENGELUARAN',
             'DITOLAK_KASUBBAG',
+            'DITOLAK_KOORDINATOR_KEUANGAN',
         ];
 
         if (!in_array($tagihan->status, $allowedSubmitStatuses)) {
@@ -274,13 +276,42 @@ class PerjaldinWorkflowService
                 $mappedStatus = "DITOLAK_{$rolePrefix}";
                 break;
             case 'APPROVED':
-                $mappedStatus = "DISETUJUI_PERJALDIN";
+                // Untuk Perjaldin: setelah seluruh verifikator (Kasubbag final) approve,
+                // tagihan masih HARUS menunggu Operator Perjaldin mengunggah dua file
+                // bertandatangan (Nominatif + Daftar Nominatif Pembayaran) sebelum
+                // boleh diteruskan ke Operator BLU untuk dibuatkan SPP.
+                if ($tagihan->tipe_tagihan === 'PERJALDIN') {
+                    $mappedStatus = $this->hasNominatifTtdComplete($tagihan)
+                        ? 'DISETUJUI_PERJALDIN'
+                        : 'MENUNGGU_UPLOAD_NOMINATIF_TTD';
+                } else {
+                    $mappedStatus = 'DISETUJUI_PERJALDIN';
+                }
                 break;
             default:
                 $mappedStatus = $instance->status;
         }
 
         $tagihan->update(['status' => $mappedStatus]);
+    }
+
+    /**
+     * Apakah dua arsip Nominatif bertandatangan sudah lengkap.
+     */
+    public function hasNominatifTtdComplete(Tagihan $tagihan): bool
+    {
+        $jenis = [
+            'NOMINATIF_PERJALDIN_TTD',
+            'DAFTAR_NOMINATIF_PEMBAYARAN_PERJALDIN_TTD',
+        ];
+
+        $found = $tagihan->arsipDokumen()
+            ->whereIn('jenis_dokumen', $jenis)
+            ->where('is_active', true)
+            ->pluck('jenis_dokumen')
+            ->unique();
+
+        return $found->count() === count($jenis);
     }
 
     public function pendingApprovalForRole(Tagihan $tagihan, string $roleCode): ?WorkflowApproval
@@ -371,6 +402,7 @@ class PerjaldinWorkflowService
             'BENDAHARA_PENERIMAAN' => 'BENDAHARA_PENERIMAAN',
             'BENDAHARA_PENGELUARAN' => 'BENDAHARA_PENGELUARAN',
             'KEPALA_SUBBAGIAN_KEUANGAN_DAN_TATA_USAHA' => 'KASUBBAG',
+            'KOORDINATOR_KEUANGAN' => 'KOORDINATOR_KEUANGAN',
             default => $normalized,
         };
     }
@@ -386,6 +418,8 @@ class PerjaldinWorkflowService
         'OPERATOR_PERJALDIN'      => 'Operator Perjaldin',
         'OPERATOR_BLU'            => 'Operator BLU',
         'KASUBBAG'                => 'Kepala Subbagian Keuangan dan Tata Usaha',
+        'KOORDINATOR_KEUANGAN'    => 'Koordinator Keuangan',
+        'Koordinator Keuangan'    => 'Koordinator Keuangan',
     ];
 
     protected function mapRoleCodeToName(string $roleCode): string
@@ -424,6 +458,7 @@ class PerjaldinWorkflowService
                 'BENDAHARA_PENERIMAAN' => 'bendahara_penerimaan_user_id',
                 'BENDAHARA_PENGELUARAN' => 'bendahara_pengeluaran_user_id',
                 'KASUBBAG' => 'kasubbag_user_id',
+                'KOORDINATOR_KEUANGAN' => 'koordinator_keuangan_user_id',
                 default => null,
             };
 

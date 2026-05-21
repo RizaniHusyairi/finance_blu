@@ -111,8 +111,7 @@
 
 
             @hasanyrole('Super Admin|Pejabat Pengadaan')
-            <li><a href="{{ route('suppliers.index') }}"><i class="material-icons-outlined">arrow_right</i>Supplier /
-                Mitra</a>
+            <li><a href="{{ route('suppliers.index') }}"><i class="material-icons-outlined">arrow_right</i>Vendor</a>
             </li>
             @endhasanyrole
             @hasanyrole('Super Admin|KPA|Operator BLU|Kepala Subbagian Keuangan dan Tata Usaha|Kepala Seksi Pelayanan dan Kerjasama')
@@ -290,43 +289,27 @@
             </ul>
           </li>
           @endhasanyrole
-        @hasrole('PPK')
-        {{-- 1. Verifikasi SPMK (khusus PPK) --}}
-        <li>
-          <a href="javascript:;" class="has-arrow">
-            <div class="parent-icon"><i class="material-icons-outlined">draw</i></div>
-            <div class="menu-title">Verifikasi SPMK</div>
-          </a>
-          <ul>
-            <li><a href="{{ route('contracts.verifikasi') }}"><i class="material-icons-outlined">arrow_right</i>Draft Kontrak & SPMK</a></li>
-          </ul>
-        </li>
-        @endhasrole
-
         {{-- Verifikasi Tagihan — seragam untuk SEMUA verifikator (PPK, PPSPM, Koor.Keu, Bendahara×2, Kasubbag) --}}
         @hasanyrole('PPK|PPSPM|Koordinator Keuangan|Bendahara Pengeluaran|Bendahara Penerimaan|Kepala Subbagian Keuangan dan Tata Usaha|Koordinator Jasa')
         @php
-            // Resolusi route Perjaldin & Honorarium berdasarkan role user yang login.
-            // Setiap role punya namespace route-nya sendiri; kalau tidak ada → null (link disabled).
+            // Perjaldin masih memakai route per-role. Honorarium sudah disatukan ke endpoint terpadu
+            // `verifikasi-tagihan-honorarium.*` yang dapat melayani 6 role + user dual-role dalam satu halaman.
             $u = auth()->user();
-            $perjaldinRoute = null; $honorariumRoute = null;
-            if ($u?->hasRole('PPK')) {
-                $perjaldinRoute  = Route::has('verifikasi-ppk.perjaldin.index')  ? 'verifikasi-ppk.perjaldin.index'  : null;
-                $honorariumRoute = Route::has('verifikasi-ppk.honorarium.index') ? 'verifikasi-ppk.honorarium.index' : null;
-            } elseif ($u?->hasRole('PPSPM')) {
-                $perjaldinRoute  = Route::has('verifikasi-ppspm.perjaldin.index') ? 'verifikasi-ppspm.perjaldin.index' : null;
-                $honorariumRoute = Route::has('verifikasi-ppspm.honorarium.index')? 'verifikasi-ppspm.honorarium.index': null;
-            } elseif ($u?->hasRole('Bendahara Pengeluaran')) {
-                $perjaldinRoute  = Route::has('verifikasi-bendahara.perjaldin.index') ? 'verifikasi-bendahara.perjaldin.index' : null;
-                $honorariumRoute = Route::has('verifikasi-bendahara.honorarium.index')? 'verifikasi-bendahara.honorarium.index': null;
-            } elseif ($u?->hasRole('Bendahara Penerimaan')) {
-                $perjaldinRoute  = Route::has('verifikasi-bendahara-penerimaan.perjaldin.index') ? 'verifikasi-bendahara-penerimaan.perjaldin.index' : null;
-                $honorariumRoute = Route::has('verifikasi-bendahara-penerimaan.honorarium.index')? 'verifikasi-bendahara-penerimaan.honorarium.index': null;
-            } elseif ($u?->hasRole('Kepala Subbagian Keuangan dan Tata Usaha')) {
-                $perjaldinRoute  = Route::has('verifikasi-kasubag.index') ? 'verifikasi-kasubag.index' : null;
-                $honorariumRoute = Route::has('verifikasi-kasubag.honorarium.index')? 'verifikasi-kasubag.honorarium.index': null;
+            $roleRouteMap = [
+                'PPK' => ['perjaldin' => 'verifikasi-ppk.perjaldin.index', 'badge' => 'PPK'],
+                'PPSPM' => ['perjaldin' => 'verifikasi-ppspm.perjaldin.index', 'badge' => 'PPSPM'],
+                'Koordinator Keuangan' => ['perjaldin' => 'verifikasi-koordinator.perjaldin.index', 'badge' => 'Koordinator'],
+                'Bendahara Pengeluaran' => ['perjaldin' => 'verifikasi-bendahara.perjaldin.index', 'badge' => 'Bend. Keluar'],
+                'Bendahara Penerimaan' => ['perjaldin' => 'verifikasi-bendahara-penerimaan.perjaldin.index', 'badge' => 'Bend. Terima'],
+                'Kepala Subbagian Keuangan dan Tata Usaha' => ['perjaldin' => 'verifikasi-kasubag.index', 'badge' => 'Kasubbag'],
+            ];
+            $perjaldinLinks = [];
+            foreach ($roleRouteMap as $role => $cfg) {
+                if ($u?->hasRole($role)) {
+                    if (Route::has($cfg['perjaldin']))  $perjaldinLinks[]  = ['route' => $cfg['perjaldin'],  'badge' => $cfg['badge']];
+                }
             }
-            // Koordinator Keuangan: belum ada route Perjaldin/Honor — biarkan null
+            $showBadge = count($perjaldinLinks) > 1;
         @endphp
         <li>
           <a href="javascript:;" class="has-arrow">
@@ -346,23 +329,45 @@
                 <i class="material-icons-outlined">arrow_right</i>Kontrak
               </a>
             </li>
+            @if(count($perjaldinLinks) > 0)
+            @php
+                $combinedRoute = $perjaldinLinks[0]['route'];
+                $combinedBadges = collect($perjaldinLinks)->pluck('badge')->join(' & ');
+            @endphp
             <li>
-              @if($perjaldinRoute)
-                <a href="{{ route($perjaldinRoute) }}"><i class="material-icons-outlined">arrow_right</i>Perjaldin</a>
-              @else
-                <a href="javascript:;" class="text-muted" style="cursor: not-allowed;" title="Belum tersedia untuk role Anda">
-                  <i class="material-icons-outlined">arrow_right</i>Perjaldin <small class="badge bg-secondary ms-1">soon</small>
-                </a>
-              @endif
+              <a href="{{ route($combinedRoute) }}">
+                <i class="material-icons-outlined">arrow_right</i>Perjaldin
+                @if(count($perjaldinLinks) > 1)
+                  <small class="badge bg-info ms-1" style="font-size:9px" title="{{ $combinedBadges }}">{{ count($perjaldinLinks) }} Peran</small>
+                @endif
+              </a>
             </li>
+            @else
             <li>
-              @if($honorariumRoute)
-                <a href="{{ route($honorariumRoute) }}"><i class="material-icons-outlined">arrow_right</i>Honorarium</a>
-              @else
-                <a href="javascript:;" class="text-muted" style="cursor: not-allowed;" title="Belum tersedia untuk role Anda">
-                  <i class="material-icons-outlined">arrow_right</i>Honorarium <small class="badge bg-secondary ms-1">soon</small>
-                </a>
-              @endif
+              <a href="javascript:;" class="text-muted" style="cursor: not-allowed;">
+                <i class="material-icons-outlined">arrow_right</i>Perjaldin <small class="badge bg-secondary ms-1">soon</small>
+              </a>
+            </li>
+            @endif
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+            <li>
+              <a href="{{ route('verifikasi-tagihan-honorarium.index') }}">
+                <i class="material-icons-outlined">arrow_right</i>Honorarium
+              </a>
             </li>
             <li>
               <a href="{{ route('verifikasi-tagihan-jasa.index') }}">
@@ -480,18 +485,24 @@
         @hasrole('PPK')
         {{-- placeholder agar @endhasrole di bawah tidak orphan --}}
 
-        {{-- 3. Verifikasi SPP --}}
+        @endhasrole
+
+        @hasanyrole('PPK|Kepala Subbagian Keuangan dan Tata Usaha|Koordinator Keuangan')
+        {{-- Verifikasi SPP (Terpadu 3 Role) --}}
         <li>
           <a href="javascript:;" class="has-arrow">
             <div class="parent-icon"><i class="material-icons-outlined">history_edu</i></div>
             <div class="menu-title">Verifikasi SPP</div>
           </a>
           <ul>
-            <li><a href="{{ route('verifikasi-ppk.spp.index') }}"><i class="material-icons-outlined">arrow_right</i>Kontrak</a></li>
-            <li><a href="{{ route('verifikasi-ppk.spp-perjaldin.index') }}"><i class="material-icons-outlined">arrow_right</i>Perjaldin</a></li>
+            <li><a href="{{ route('verifikasi-spp.kontrak.index') }}"><i class="material-icons-outlined">arrow_right</i>Kontrak</a></li>
+            <li><a href="{{ route('verifikasi-spp.perjaldin.index') }}"><i class="material-icons-outlined">arrow_right</i>Perjaldin</a></li>
             <li><a href="{{ route('verifikasi-spp.honor.index') }}"><i class="material-icons-outlined">arrow_right</i>Honor</a></li>
           </ul>
         </li>
+        @endhasanyrole
+
+        @hasrole('PPK')
 
         {{-- 4. Verifikasi NPI --}}
         <li>
@@ -538,46 +549,6 @@
         @endhasrole
         @hasrole('Kepala Subbagian Keuangan dan Tata Usaha')
 
-        <li>
-          <a href="javascript:;" class="has-arrow">
-            <div class="parent-icon"><i class="material-icons-outlined">history_edu</i></div>
-            <div class="menu-title">Verifikasi SPP</div>
-          </a>
-          <ul>
-            <li>
-              <a href="{{ route('verifikasi-kasubag.spp.index') }}"><i class="material-icons-outlined">arrow_right</i>Kontrak</a>
-            </li>
-            <li>
-              <a href="{{ route('verifikasi-kasubag.spp-perjaldin.index') }}"><i class="material-icons-outlined">arrow_right</i>Perjaldin</a>
-            </li>
-            <li>
-              <a href="{{ route('verifikasi-spp.honor.index') }}"><i class="material-icons-outlined">arrow_right</i>Honor</a>
-            </li>
-          </ul>
-        </li>
-        @endhasrole
-
-        @hasrole('Koordinator Keuangan')
-        <li>
-          <a href="javascript:;" class="has-arrow">
-            <div class="parent-icon"><i class="material-icons-outlined">history_edu</i></div>
-            <div class="menu-title">Verifikasi SPP</div>
-          </a>
-          <ul>
-            <li>
-              <a href="{{ route('verifikasi-koordinator.spp.index') }}"><i class="material-icons-outlined">arrow_right</i>Kontrak</a>
-            </li>
-            <li>
-              <a href="{{ route('verifikasi-koordinator.spp-perjaldin.index') }}"><i class="material-icons-outlined">arrow_right</i>Perjaldin</a>
-            </li>
-            <li>
-              <a href="{{ route('verifikasi-spp.honor.index') }}"><i class="material-icons-outlined">arrow_right</i>Honor</a>
-            </li>
-          </ul>
-        </li>
-        @endhasrole
-
-        @hasrole('Kepala Subbagian Keuangan dan Tata Usaha')
         <li>
           <a href="javascript:;" class="has-arrow">
             <div class="parent-icon"><i class="material-icons-outlined">fact_check</i></div>
@@ -677,20 +648,59 @@
           </ul>
         </li>
         @endhasanyrole
-        @hasrole('PPSPM')
+        {{-- === Blok Gabungan PPSPM + Koordinator Keuangan === --}}
+        {{-- Satu user (MUTIA RACHMI) memegang kedua role. --}}
+        {{-- Menu digabung menjadi 1 item; detail page menangani dual-role action buttons. --}}
+        @hasanyrole('PPSPM|Koordinator Keuangan')
+        @php
+            $isDualRole = auth()->user()?->hasRole('PPSPM') && auth()->user()?->hasRole('Koordinator Keuangan');
+        @endphp
 
+        {{-- Verifikasi SPM — gabungan PPSPM + Koordinator menjadi 1 menu --}}
         <li>
           <a href="javascript:;" class="has-arrow">
             <div class="parent-icon"><i class="material-icons-outlined">verified_user</i></div>
             <div class="menu-title">Verifikasi SPM</div>
           </a>
           <ul>
-            <li><a href="{{ route('verifikasi-ppspm.spm-perjaldin.index') }}"><i class="material-icons-outlined">arrow_right</i>SPM Perjaldin</a></li>
-            <li><a href="{{ route('verifikasi-spm.honor.index') }}"><i class="material-icons-outlined">arrow_right</i>SPM Honor</a></li>
-            <li><a href="{{ route('verifikasi-ppspm.spm.kontrak.index') }}"><i class="material-icons-outlined">arrow_right</i>SPM Kontrak</a></li>
+            {{-- Gunakan route PPSPM jika punya role PPSPM, fallback ke Koordinator --}}
+            <li><a href="{{ route(auth()->user()?->hasRole('PPSPM') ? 'verifikasi-ppspm.spm.kontrak.index' : 'verifikasi-koordinator.spm.kontrak.index') }}"><i class="material-icons-outlined">arrow_right</i>Kontrak</a></li>
+            <li><a href="{{ route(auth()->user()?->hasRole('PPSPM') ? 'verifikasi-ppspm.spm-perjaldin.index' : 'verifikasi-koordinator.spm-perjaldin.index') }}"><i class="material-icons-outlined">arrow_right</i>Perjaldin</a></li>
+            <li><a href="{{ route('verifikasi-spm.honor.index') }}"><i class="material-icons-outlined">arrow_right</i>Honor</a></li>
+          </ul>
+        </li>
+
+        {{-- Verifikasi NPI — hanya Koordinator Keuangan --}}
+        @hasrole('Koordinator Keuangan')
+        <li>
+          <a href="javascript:;" class="has-arrow">
+            <div class="parent-icon"><i class="material-icons-outlined">receipt_long</i></div>
+            <div class="menu-title">Verifikasi NPI</div>
+          </a>
+          <ul>
+            <li><a href="{{ route('verifikasi-koordinator.npi.kontrak.index') }}"><i class="material-icons-outlined">arrow_right</i>Kontrak</a></li>
+            <li><a href="{{ route('verifikasi-npi.perjaldin.index') }}"><i class="material-icons-outlined">arrow_right</i>Perjaldin</a></li>
+            <li><a href="{{ route('verifikasi-npi.honor.index') }}"><i class="material-icons-outlined">arrow_right</i>Honor</a></li>
           </ul>
         </li>
         @endhasrole
+
+        {{-- Verifikasi SP2D — PPSPM dan/atau Koordinator Keuangan --}}
+        @hasanyrole('PPSPM|Koordinator Keuangan')
+        <li>
+          <a href="javascript:;" class="has-arrow">
+            <div class="parent-icon"><i class="material-icons-outlined">account_balance</i></div>
+            <div class="menu-title">Verifikasi SP2D</div>
+          </a>
+          <ul>
+            <li><a href="{{ route(auth()->user()?->hasRole('PPSPM') ? 'verifikasi-ppspm.sp2d.kontrak.index' : 'verifikasi-koordinator.sp2d.kontrak.index') }}"><i class="material-icons-outlined">arrow_right</i>Kontrak</a></li>
+            <li><a href="{{ route('verifikasi-sp2d.perjaldin.index') }}"><i class="material-icons-outlined">arrow_right</i>Perjaldin</a></li>
+            <li><a href="{{ route('verifikasi-sp2d.honor.index') }}"><i class="material-icons-outlined">arrow_right</i>Honor</a></li>
+          </ul>
+        </li>
+        @endhasanyrole
+
+        @endhasanyrole
         @hasrole('Bendahara Pengeluaran')
 
         {{-- Verifikasi Tagihan Perjaldin --}}
@@ -736,7 +746,7 @@
           <ul>
             <li><a href="{{ route('pembukuan.bku.index') }}"><i class="material-icons-outlined">arrow_right</i>Buku Kas Umum</a></li>
             <li><a href="{{ route('pembukuan.bank.index') }}"><i class="material-icons-outlined">arrow_right</i>Buku Pembantu Bank</a></li>
-            <li><a href="{{ route('pembukuan.bendahara.index') }}"><i class="material-icons-outlined">arrow_right</i>Buku Pembantu Bendahara</a></li>
+            <li><a href="{{ route('pembukuan.bendahara.index') }}"><i class="material-icons-outlined">arrow_right</i>Buku Pembantu LS Bendahara</a></li>
             <li><a href="{{ route('pembukuan.bunga.index') }}"><i class="material-icons-outlined">arrow_right</i>Buku Pembantu Bunga Rekening</a></li>
             <li><a href="{{ route('pembukuan.pajak.index') }}"><i class="material-icons-outlined">arrow_right</i>Buku Pembantu Pajak</a></li>
             <li><a href="{{ route('pembukuan.pengesahan.index') }}"><i class="material-icons-outlined">arrow_right</i>Buku Pengesahan Belanja</a></li>
@@ -771,15 +781,7 @@
           </ul>
         </li>
         @endhasrole
-        @hasanyrole('Super Admin|KPA|Kepala Subbagian Keuangan dan Tata Usaha|Kepala Seksi Pelayanan dan Kerjasama|PPK')
-        <li>
-          <a href="{{ route('reports.bku') }}">
-            <div class="parent-icon"><i class="material-icons-outlined">summarize</i>
-            </div>
-            <div class="menu-title">Laporan BKU</div>
-          </a>
-        </li>
-        @endhasanyrole
+        
       @endauth
       <!--end navigation-->
   </div>

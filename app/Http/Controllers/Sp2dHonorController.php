@@ -31,14 +31,16 @@ class Sp2dHonorController extends Controller
         $query = DokumenNpi::with([
             'spm.spp.tagihan.detailHonorarium',
             'bendaharaPenerimaan',
-            'sp2d'
+            'sp2d',
+            'sp2d.workflowInstances.approvals',
         ])
         ->whereHas('spm.spp.tagihan', function($q) {
             $q->where('tipe_tagihan', 'HONORARIUM');
         })
         ->whereIn('status', [
             DokumenNpi::STATUS_DISETUJUI_FINAL,
-            DokumenNpi::STATUS_APPROVED_KASUBAG 
+            DokumenNpi::STATUS_APPROVED_KASUBAG,
+            DokumenNpi::STATUS_NPI_TERBIT
         ]);
 
         $allNpis = $query->latest()->get();
@@ -121,7 +123,7 @@ class Sp2dHonorController extends Controller
         ->whereHas('spm.spp.tagihan', function($q) {
             $q->where('tipe_tagihan', 'HONORARIUM');
         })
-        ->whereIn('status', [DokumenNpi::STATUS_DISETUJUI_FINAL, DokumenNpi::STATUS_APPROVED_KASUBAG])
+        ->whereIn('status', [DokumenNpi::STATUS_DISETUJUI_FINAL, DokumenNpi::STATUS_APPROVED_KASUBAG, DokumenNpi::STATUS_NPI_TERBIT])
         ->findOrFail($npiId);
 
         $spm = $npi->spm;
@@ -169,11 +171,15 @@ class Sp2dHonorController extends Controller
         $workflow = null;
         $ppkApproval = null;
         $kasubbagApproval = null;
+        $ppspmApproval = null;
+        $koordinatorApproval = null;
 
         if ($sp2d) {
             $workflow = $sp2d->workflowInstances->first();
             $ppkApproval = collect($workflow?->approvals ?? [])->firstWhere('role_code', 'PPK');
             $kasubbagApproval = collect($workflow?->approvals ?? [])->firstWhere('role_code', 'Kepala Subbagian Keuangan dan Tata Usaha');
+            $ppspmApproval = collect($workflow?->approvals ?? [])->firstWhere('role_code', 'PPSPM');
+            $koordinatorApproval = collect($workflow?->approvals ?? [])->firstWhere('role_code', 'Koordinator Keuangan');
         }
 
         if ($progressStep == 3) {
@@ -189,7 +195,7 @@ class Sp2dHonorController extends Controller
             'checks', 'rekeningPenerima',
             'defaultNilai', 'defaultTahun',
             'progressStep', 'isSP2DFinal',
-            'workflow', 'ppkApproval', 'kasubbagApproval', 'autoNomorSp2d'
+            'workflow', 'ppkApproval', 'kasubbagApproval', 'ppspmApproval', 'koordinatorApproval', 'autoNomorSp2d'
         ));
     }
 
@@ -299,7 +305,7 @@ class Sp2dHonorController extends Controller
                 'status_sebelumnya' => $statusSebelum,
                 'status_baru'       => DokumenSp2d::STATUS_MENUNGGU_VERIFIKASI,
                 'aksi'              => 'SUBMIT_SP2D',
-                'catatan'           => 'SP2D Honorarium didorong mutlak. Menanti verifikasi PPK dan Kasubbag.',
+                'catatan'           => 'SP2D Honorarium diajukan. Menanti verifikasi PPK, Kasubbag, PPSPM, dan Koordinator Keuangan.',
                 'ip_address'        => $request->ip(),
             ]);
 
@@ -316,6 +322,20 @@ class Sp2dHonorController extends Controller
                 'title' => 'Tugas Verifikasi SP2D Honorarium',
                 'message' => "Mohon evaluasi paralelisasi penyelesaian SP2D Honorarium #{$sp2d->nomor_sp2d}.",
                 'url' => route('verifikasi-kasubag.sp2d.kontrak.index') // Note: same
+            ]));
+
+            $ppspms = User::role('PPSPM')->get();
+            Notification::send($ppspms, new WorkflowNotification([
+                'title' => 'Tugas Verifikasi SP2D Honorarium',
+                'message' => "Mohon evaluasi paralelisasi penyelesaian SP2D Honorarium #{$sp2d->nomor_sp2d}.",
+                'url' => '#' 
+            ]));
+
+            $koordinators = User::role('Koordinator Keuangan')->get();
+            Notification::send($koordinators, new WorkflowNotification([
+                'title' => 'Tugas Verifikasi SP2D Honorarium',
+                'message' => "Mohon evaluasi paralelisasi penyelesaian SP2D Honorarium #{$sp2d->nomor_sp2d}.",
+                'url' => route('verifikasi-sp2d.honor.index')
             ]));
 
             DB::commit();

@@ -182,6 +182,13 @@
                                         @else {{ $item->kasubbag_status }}
                                         @endif
                                     </div>
+                                    <div><span class="text-muted">PPSPM:</span>
+                                        @if($item->ppspm_status == 'APPROVED') <span class="text-success"><i class="material-icons-outlined" style="font-size: 14px; vertical-align: middle;">check</i></span>
+                                        @elseif($item->ppspm_status == 'PENDING') <span class="text-warning"><i class="material-icons-outlined" style="font-size: 14px; vertical-align: middle;">hourglass_empty</i></span>
+                                        @elseif(in_array($item->ppspm_status, ['REVISION', 'REJECTED'])) <span class="text-danger"><i class="material-icons-outlined" style="font-size: 14px; vertical-align: middle;">close</i></span>
+                                        @else {{ $item->ppspm_status }}
+                                        @endif
+                                    </div>
                                 @endif
                             </td>
                             <td class="text-center">

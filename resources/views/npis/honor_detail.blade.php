@@ -18,6 +18,7 @@
 
     $benpenStatusLabel = $benpenApproval?->status ?? 'Belum diajukan';
     $ppkStatusLabel = $ppkApproval?->status ?? 'Belum diajukan';
+    $koordinatorStatusLabel = $koordinatorApproval?->status ?? 'Belum diajukan';
     $kasubbagStatusLabel = $kasubbagApproval?->status ?? 'Belum diajukan';
 
     $statusClassMap = [
@@ -26,6 +27,7 @@
     
     $benpenStatusClass = $statusClassMap[$benpenStatusLabel] ?? 'text-muted';
     $ppkStatusClass = $statusClassMap[$ppkStatusLabel] ?? 'text-muted';
+    $koordinatorStatusClass = $statusClassMap[$koordinatorStatusLabel] ?? 'text-muted';
     $kasubbagStatusClass = $statusClassMap[$kasubbagStatusLabel] ?? 'text-muted';
 
     $progressStep = 3; 
@@ -144,6 +146,13 @@
                     <div class="timeline-label">PPK</div>
                     <div class="timeline-sub fw-semibold {{ $ppkStatusClass }}">{{ $ppkStatusLabel }}</div>
                     <div class="timeline-sub mt-0 opacity-75" style="font-size: 0.7rem;">{{ $ppkApproval?->actedByUser?->name ?? $ppkApproval?->assignedUser?->name ?? $ppkSpp?->name ?? 'PPK' }}</div>
+                </div>
+                {{-- Step 2: Verifikasi Koordinator Keuangan --}}
+                <div class="timeline-step {{ $koordinatorApproval?->status === 'APPROVED' ? 'passed' : ($koordinatorApproval?->status === 'REVISION' ? 'revision' : ($progressStep == 3 ? 'active' : '')) }}">
+                    <div class="timeline-icon"><i class="bi bi-diagram-3"></i></div>
+                    <div class="timeline-label">Koord. Keuangan</div>
+                    <div class="timeline-sub fw-semibold {{ $koordinatorStatusClass }}">{{ $koordinatorStatusLabel }}</div>
+                    <div class="timeline-sub mt-0 opacity-75" style="font-size: 0.7rem;">{{ $koordinatorApproval?->actedByUser?->name ?? $koordinatorApproval?->assignedUser?->name ?? $koordinatorKeuanganUser?->name ?? 'Koordinator' }}</div>
                 </div>
                 {{-- Step 2: Verifikasi Kasubbag --}}
                 <div class="timeline-step {{ $kasubbagApproval?->status === 'APPROVED' ? 'passed' : ($kasubbagApproval?->status === 'REVISION' ? 'revision' : ($progressStep == 3 ? 'active' : '')) }}">
@@ -283,14 +292,17 @@
                                     </div>
                                     <div class="col-12">
                                         <label class="form-label small fw-semibold text-dark">Bendahara Penerimaan Tujuan <span class="text-danger">*</span></label>
-                                        <select name="bendahara_penerimaan_id" class="form-select border-primary" required>
-                                            <option value="">-- Pilih Bendahara Penerimaan --</option>
-                                            @foreach($bendaharaPenerimaans as $userObj)
-                                                <option value="{{ $userObj->id }}" {{ (old('bendahara_penerimaan_id', $npiModel?->bendahara_penerimaan_id) == $userObj->id) ? 'selected' : '' }}>
-                                                    {{ $userObj->name }}
-                                                </option>
-                                            @endforeach
-                                        </select>
+                                        <input type="hidden" name="bendahara_penerimaan_id" value="{{ $bendaharaPenerimaanTagihan?->id }}">
+                                        <input type="text" class="form-control bg-light border-primary" value="{{ $bendaharaPenerimaanTagihan?->name ?? $tagihan?->bendahara_penerimaan_nama_snapshot ?? 'Belum ditentukan pada tagihan' }}" readonly>
+                                        <small class="text-muted">Diwariskan dari verifikator Bendahara Penerimaan yang dipilih saat tagihan diajukan.</small>
+                                        @if(!$bendaharaPenerimaanTagihan)
+                                            <div class="text-danger small mt-1">Verifikator Bendahara Penerimaan belum ada pada tagihan sumber.</div>
+                                        @endif
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label small fw-semibold text-dark">Koordinator Keuangan</label>
+                                        <input type="text" class="form-control bg-light" value="{{ $koordinatorKeuanganUser?->name ?? $tagihan?->koordinator_keuangan_nama_snapshot ?? 'Belum Ditentukan' }}" readonly>
+                                        <small class="text-muted">Verifikator Koordinator Keuangan.</small>
                                     </div>
                                     <div class="col-12">
                                         <label class="form-label small fw-semibold text-dark">Uraian / Tujuan NPI</label>
@@ -307,7 +319,7 @@
                                 @if($isReadyToSubmit)
                                     <form action="{{ route('npis.honor.submit', $spmModel->id) }}" method="POST">
                                         @csrf
-                                        <button class="btn btn-success w-100 py-3 fw-bold fs-6 shadow-sm" onclick="return confirm('Mengajukan NPI Honorarium ini akan mengunci draf form NPI ini, dan segera memanggil verifikasi ganda Paralel dari Kasubbag, Bendahara Penerimaan, dan PPK secara bersamaan. Lanjutkan?')">
+                                        <button class="btn btn-success w-100 py-3 fw-bold fs-6 shadow-sm" onclick="return confirm('Mengajukan NPI Honorarium ini akan mengunci draf form NPI ini, dan segera memanggil verifikasi paralel dari Kasubbag, Bendahara Penerimaan, Koordinator Keuangan, dan PPK secara bersamaan. Lanjutkan?')">
                                             <i class="bi bi-send me-1"></i> AJUKAN UNTUK VERIFIKASI
                                         </button>
                                     </form>
@@ -328,6 +340,57 @@
                             <div class="small">Dokumen NPI telah disubmit ke Workflow Verifikasi (atau Selesai) dan *read-only*.</div>
                         </div>
                     </div>
+                @endif
+                
+                @if(in_array($statusNpi, [\App\Models\DokumenNpi::STATUS_MENUNGGU_UPLOAD, \App\Models\DokumenNpi::STATUS_NPI_TERBIT, \App\Models\DokumenNpi::STATUS_DISETUJUI_FINAL]))
+                <div class="card action-card mb-4 border-success">
+                    <div class="card-header bg-success text-white p-3 rounded-top-3 border-0">
+                        <h6 class="mb-0 fw-bold"><i class="bi bi-upload me-2"></i> Upload NPI Bertandatangan</h6>
+                    </div>
+                    <div class="card-body p-4 bg-white rounded-bottom-3">
+                        @if($npiModel->hasSignedNpiFile())
+                            <div class="alert alert-success d-flex align-items-center mb-3 border-0">
+                                <i class='bi bi-check-circle fs-3 me-3'></i>
+                                <div>
+                                    <h6 class="alert-heading fw-bold mb-1">NPI Telah Terbit</h6>
+                                    <span class="font-13">File NPI fisik bertandatangan telah diunggah dan disimpan.</span>
+                                </div>
+                            </div>
+                            
+                            <div class="d-flex align-items-center mb-3 bg-light p-3 rounded">
+                                <i class='bi bi-file-earmark-pdf text-danger fs-1 me-3'></i>
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-0 fw-bold">{{ $npiModel->signedNpiArsip->nama_file_asli ?? 'Dokumen NPI' }}</h6>
+                                    <small class="text-muted">Diunggah pada {{ $npiModel->signedNpiArsip->created_at->format('d M Y H:i') }}</small>
+                                </div>
+                                <a href="{{ Storage::url($npiModel->signedNpiArsip->path_file) }}" target="_blank" class="btn btn-primary btn-sm px-3"><i class='bi bi-download me-1'></i> Unduh File</a>
+                            </div>
+                            
+                            <hr class="border-dashed">
+                            <p class="mb-2 fw-bold font-13 text-muted">Upload Ulang File NPI Fisik (Opsional)</p>
+                        @else
+                            <div class="alert alert-warning d-flex align-items-center mb-4 border-0">
+                                <i class='bi bi-exclamation-triangle fs-3 me-3'></i>
+                                <div>
+                                    <h6 class="alert-heading fw-bold mb-1">Menunggu Upload Fisik</h6>
+                                    <span class="font-13">NPI telah diverifikasi penuh. Silakan cetak, tandatangani, dan unggah scan/foto dokumen NPI untuk menerbitkan NPI dan bisa digunakan sebagai dasar SP2D.</span>
+                                </div>
+                            </div>
+                        @endif
+                        
+                        <form action="{{ route('npis.honor.upload-signed-npi', $npiModel->id) }}" method="POST" enctype="multipart/form-data">
+                            @csrf
+                            <div class="input-group">
+                                <input type="file" class="form-control" name="file_npi_ttd" accept=".pdf,.jpg,.jpeg,.png" required>
+                                <button class="btn btn-success px-4 fw-bold" type="submit"><i class='bi bi-upload me-1'></i> Unggah & Terbitkan NPI</button>
+                            </div>
+                            <small class="text-muted mt-2 d-block">Format: PDF/JPG/PNG. Maks: 10MB.</small>
+                            @error('file_npi_ttd')
+                                <span class="text-danger small mt-1 d-block"><i class='bi bi-x-circle'></i> {{ $message }}</span>
+                            @enderror
+                        </form>
+                    </div>
+                </div>
                 @endif
                 
                 {{-- Aktivitas Workflow --}}

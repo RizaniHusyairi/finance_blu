@@ -5,6 +5,7 @@
     $benpenStatus = $benpenApproval?->status ?? 'N/A';
     $ppkStatus = $ppkApproval?->status ?? 'N/A';
     $kasubbagStatus = $kasubbagApproval?->status ?? 'N/A';
+    $koordinatorStatus = $koordinatorApproval?->status ?? 'N/A';
 
     $badgeClass = fn($s) => match($s) {
         'APPROVED' => 'bg-success',
@@ -65,6 +66,7 @@
                     <span class="badge {{ $badgeClass($benpenStatus) }}" title="Bendahara Penerimaan">BenPen: {{ $benpenStatus }}</span>
                     <span class="badge {{ $badgeClass($ppkStatus) }}" title="PPK">PPK: {{ $ppkStatus }}</span>
                     <span class="badge {{ $badgeClass($kasubbagStatus) }}" title="Kasubbag">KSB: {{ $kasubbagStatus }}</span>
+                    <span class="badge {{ $badgeClass($koordinatorStatus) }}" title="Koordinator Keuangan">Koor: {{ $koordinatorStatus }}</span>
                     <span class="badge {{ $finalBadge }}">{{ $statusFinal }}</span>
                 </div>
 
@@ -72,14 +74,7 @@
                     <i class="material-icons-outlined" style="font-size:14px; vertical-align: middle;">arrow_back</i> Kembali ke Antrean
                 </a>
 
-                @if($canApprove)
-                    <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#modalApprove">
-                        <i class="material-icons-outlined" style="font-size:14px; vertical-align: middle;">check_circle</i> Setujui
-                    </button>
-                    <button type="button" class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#modalRevisi">
-                        <i class="material-icons-outlined" style="font-size:14px; vertical-align: middle;">replay</i> Minta Revisi
-                    </button>
-                @endif
+               
             </div>
         </div>
     </div>
@@ -124,10 +119,21 @@
             <div class="col-6 col-lg-3">
                 <div class="border rounded p-3 text-center h-100 {{ $kasubbagStatus === 'APPROVED' ? 'border-success bg-success bg-opacity-10' : ($kasubbagStatus === 'PENDING' ? 'border-warning bg-warning bg-opacity-10' : (in_array($kasubbagStatus, ['REVISION','REJECTED']) ? 'border-danger bg-danger bg-opacity-10' : '')) }}">
                     <div class="fw-bold mb-1" style="font-size: 13px;">Kasubbag</div>
-                    <div class="text-muted mb-2" style="font-size: 11px;">{{ $kasubbagApproval?->assignedUser?->name ?? '-' }}</div>
+                    <div class="text-muted mb-2" style="font-size: 11px;">{{ $kasubbagApproval?->assignedUser?->name ?? \App\Models\User::role('Kepala Subbagian Keuangan dan Tata Usaha')->first()?->name ?? '-' }}</div>
                     <span class="badge {{ $badgeClass($kasubbagStatus) }}">{{ $kasubbagStatus }}</span>
                     @if($kasubbagApproval?->acted_at)
                         <div class="mt-1" style="font-size: 10px; color: #6c757d;">{{ \Carbon\Carbon::parse($kasubbagApproval->acted_at)->format('d M Y H:i') }}</div>
+                    @endif
+                </div>
+            </div>
+            {{-- Koordinator Keuangan --}}
+            <div class="col-6 col-lg-3 mt-3 mt-lg-0">
+                <div class="border rounded p-3 text-center h-100 {{ $koordinatorStatus === 'APPROVED' ? 'border-success bg-success bg-opacity-10' : ($koordinatorStatus === 'PENDING' ? 'border-warning bg-warning bg-opacity-10' : (in_array($koordinatorStatus, ['REVISION','REJECTED']) ? 'border-danger bg-danger bg-opacity-10' : '')) }}">
+                    <div class="fw-bold mb-1" style="font-size: 13px;">Koordinator</div>
+                    <div class="text-muted mb-2" style="font-size: 11px;">{{ $koordinatorApproval?->assignedUser?->name ?? \App\Models\User::role('Koordinator Keuangan')->first()?->name ?? '-' }}</div>
+                    <span class="badge {{ $badgeClass($koordinatorStatus) }}">{{ $koordinatorStatus }}</span>
+                    @if($koordinatorApproval?->acted_at)
+                        <div class="mt-1" style="font-size: 10px; color: #6c757d;">{{ \Carbon\Carbon::parse($koordinatorApproval->acted_at)->format('d M Y H:i') }}</div>
                     @endif
                 </div>
             </div>
@@ -285,22 +291,9 @@
     </div>
 </div>
 
-{{-- PANEL KEPUTUSAN --}}
+{{-- STATUS KEPUTUSAN --}}
 @if($canApprove)
-    <div class="card border-0 shadow-sm mb-4 border-top border-4 border-warning">
-        <div class="card-body p-4 text-center">
-            <h5 class="fw-bold mb-2"><i class="material-icons-outlined align-middle text-warning me-1">gavel</i> Keputusan Anda</h5>
-            <p class="text-muted mb-3">NPI ini menunggu tindakan verifikasi dari Anda sebagai Bendahara Penerimaan.</p>
-            <div class="d-flex gap-3 justify-content-center">
-                <button type="button" class="btn btn-success px-4" data-bs-toggle="modal" data-bs-target="#modalApprove">
-                    <i class="material-icons-outlined" style="font-size:16px; vertical-align: middle;">check_circle</i> Setujui NPI
-                </button>
-                <button type="button" class="btn btn-outline-danger px-4" data-bs-toggle="modal" data-bs-target="#modalRevisi">
-                    <i class="material-icons-outlined" style="font-size:16px; vertical-align: middle;">replay</i> Minta Revisi
-                </button>
-            </div>
-        </div>
-    </div>
+    {{-- Fixed bar akan muncul di bawah --}}
 @elseif($benpenStatus === 'APPROVED')
     <div class="card border-0 shadow-sm mb-4 border-top border-4 border-success">
         <div class="card-body p-4 text-center">
@@ -323,6 +316,31 @@
             @endif
         </div>
     </div>
+@endif
+
+{{-- FIXED BOTTOM ACTION BAR --}}
+@if($canApprove)
+<div class="npi-fixed-action-bar">
+    <div class="container-fluid">
+        <div class="d-flex align-items-center justify-content-between gap-3 flex-wrap">
+            <div class="d-flex align-items-center gap-2 text-white">
+                <i class="material-icons-outlined" style="font-size: 22px;">verified</i>
+                <div>
+                    <div class="fw-bold" style="font-size: 0.9rem;">NPI Kontrak: {{ $npi->nomor_npi ?? '-' }}</div>
+                    <div style="font-size: 0.75rem; opacity: 0.8;">Rp {{ number_format($nominalNpi, 0, ',', '.') }} &bull; Bend. Penerimaan</div>
+                </div>
+            </div>
+            <div class="d-flex gap-2 flex-wrap">
+                <button type="button" class="btn btn-light fw-bold px-4 py-2 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalRevisi">
+                    <i class="material-icons-outlined me-1" style="font-size: 16px; vertical-align: middle;">replay</i> Revisi
+                </button>
+                <button type="button" class="btn btn-success fw-bold px-4 py-2 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalApprove">
+                    <i class="material-icons-outlined me-1" style="font-size: 16px; vertical-align: middle;">check_circle</i> Setujui NPI
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 @endif
 
 {{-- Riwayat Log --}}
@@ -404,3 +422,39 @@
     </div>
 </div>
 @endsection
+
+@push('css')
+<style>
+    .npi-fixed-action-bar {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 1050;
+        background: linear-gradient(135deg, #1e293b, #334155);
+        border-top: 3px solid #10b981;
+        padding: 0.85rem 1.5rem;
+        box-shadow: 0 -4px 20px rgba(0,0,0,0.2);
+        animation: slideUpBar 0.4s ease-out;
+    }
+    @keyframes slideUpBar {
+        from { transform: translateY(100%); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
+    .npi-fixed-action-bar .btn-success {
+        background: linear-gradient(135deg, #10b981, #059669);
+        border: none;
+    }
+    .npi-fixed-action-bar .btn-success:hover {
+        background: linear-gradient(135deg, #059669, #047857);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(16,185,129,0.4);
+    }
+    .npi-fixed-action-bar .btn-light:hover {
+        background: #fee2e2;
+        color: #dc2626;
+        border-color: #fca5a5;
+    }
+    body { padding-bottom: 90px; }
+</style>
+@endpush

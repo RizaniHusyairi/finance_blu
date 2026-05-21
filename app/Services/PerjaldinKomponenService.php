@@ -12,30 +12,29 @@ use Illuminate\Support\Facades\DB;
 class PerjaldinKomponenService
 {
     /**
-     * Mapping kode komponen ke field di detail_perjaldin dan label UI.
+     * Mapping kode komponen ke daftar field di detail_perjaldin dan label UI.
+     *
+     * Catatan: Komponen UANG_HARIAN menggabungkan uang_harian + uang_representasi + uang_rapat
+     * sehingga ketiganya dicairkan lewat satu COA/SPP yang sama.
      */
     public static function getKomponenMap(): array
     {
         return [
             'TIKET' => [
-                'field' => 'biaya_tiket',
+                'fields' => ['biaya_tiket'],
                 'label' => 'Biaya Tiket',
             ],
             'TRANSPORT' => [
-                'field' => 'biaya_transport',
+                'fields' => ['biaya_transport'],
                 'label' => 'Biaya Transport',
             ],
             'PENGINAPAN' => [
-                'field' => 'biaya_penginapan',
+                'fields' => ['biaya_penginapan'],
                 'label' => 'Biaya Penginapan',
             ],
             'UANG_HARIAN' => [
-                'field' => 'uang_harian',
+                'fields' => ['uang_harian', 'uang_representasi', 'uang_rapat'],
                 'label' => 'Uang Harian',
-            ],
-            'UANG_REPRESENTASI' => [
-                'field' => 'uang_representasi',
-                'label' => 'Uang Representasi',
             ],
         ];
     }
@@ -76,17 +75,25 @@ class PerjaldinKomponenService
         $map = self::getKomponenMap();
 
         foreach ($map as $kode => $meta) {
-            $field = $meta['field'];
+            $fields = $meta['fields'];
             $label = $meta['label'];
 
-            // Hitung total nominal komponen ini
-            $totalNominal = $details->sum(function ($detail) use ($field) {
-                return (float) ($detail->{$field} ?? 0);
+            // Hitung total nominal komponen ini (jumlah dari semua field terkait)
+            $totalNominal = $details->sum(function ($detail) use ($fields) {
+                $sum = 0;
+                foreach ($fields as $f) {
+                    $sum += (float) ($detail->{$f} ?? 0);
+                }
+                return $sum;
             });
 
-            // Hitung jumlah peserta yang nilai komponen ini > 0
-            $jumlahPeserta = $details->filter(function ($detail) use ($field) {
-                return (float) ($detail->{$field} ?? 0) > 0;
+            // Hitung jumlah peserta yang total field-fieldnya > 0
+            $jumlahPeserta = $details->filter(function ($detail) use ($fields) {
+                $sum = 0;
+                foreach ($fields as $f) {
+                    $sum += (float) ($detail->{$f} ?? 0);
+                }
+                return $sum > 0;
             })->count();
 
             if ($totalNominal > 0) {
@@ -122,6 +129,18 @@ class PerjaldinKomponenService
                 }
             }
         }
+
+        // Bersihkan komponen lama yang tidak lagi ada di map (mis. UANG_REPRESENTASI sebelumnya berdiri sendiri).
+        // Hanya hapus yang belum memiliki dokumen turunan; yang sudah punya SPP biarkan agar data lama tidak rusak.
+        $aktifKodes = array_keys($map);
+        TagihanPerjaldinKomponen::where('tagihan_id', $tagihan->id)
+            ->whereNotIn('kode_komponen', $aktifKodes)
+            ->get()
+            ->each(function ($leftover) {
+                if (! $leftover->hasDokumenTurunan()) {
+                    $leftover->delete();
+                }
+            });
     }
 
     /**
@@ -192,7 +211,7 @@ class PerjaldinKomponenService
             'tagihan_perjaldin_komponen_id' => $komponen->id,
             'komponen_biaya' => $komponen->kode_komponen,
             'dipa_revision_item_id' => $komponen->dipa_revision_item_id,
-            'kategori_pembayaran' => 'SP2D BLU - TRF',
+            'kategori_pembayaran' => optional($tagihan?->mekanisme_pembayaran)->sppKategoriPembayaran() ?? 'SP2D BLU - TRF',
             'jenis_tagihan' => 'NON REMUNERASI',
             'nominal_spp' => $komponen->total_nominal,
             'nomor_spp' => $nomorSpp,

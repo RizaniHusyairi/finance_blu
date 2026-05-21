@@ -9,6 +9,9 @@ class DokumenSpp extends Model
 {
     use SoftDeletes;
 
+    public const STANDING_INSTRUCTION_SIGNED_ARCHIVE_TYPE = 'STANDING_INSTRUCTION_FINAL_TTD';
+    public const SPP_SIGNED_ARCHIVE_TYPE = 'SPP_BERTANDATANGAN';
+
     protected $table = 'dokumen_spp';
     protected $guarded = ['id'];
 
@@ -68,5 +71,60 @@ class DokumenSpp extends Model
     public function logs()
     {
         return $this->morphMany(LogStatusDokumen::class, 'dokumen');
+    }
+
+    public function standingInstruction()
+    {
+        return $this->hasOne(StandingInstruction::class, 'dokumen_spp_id');
+    }
+
+    public function signedStandingInstructionArsip()
+    {
+        return $this->morphOne(ArsipDokumen::class, 'documentable')
+            ->where('jenis_dokumen', self::STANDING_INSTRUCTION_SIGNED_ARCHIVE_TYPE)
+            ->where('is_active', true)
+            ->latestOfMany('uploaded_at');
+    }
+
+    /**
+     * Relasi ke arsip dokumen SPP Bertandatangan.
+     */
+    public function signedSppArsip()
+    {
+        return $this->morphOne(ArsipDokumen::class, 'documentable')
+            ->where('jenis_dokumen', self::SPP_SIGNED_ARCHIVE_TYPE)
+            ->where('is_active', true)
+            ->latestOfMany('uploaded_at');
+    }
+
+    /**
+     * Cek apakah file SPP Bertandatangan sudah diupload.
+     */
+    public function hasSignedSppFile(): bool
+    {
+        if ($this->relationLoaded('signedSppArsip')) {
+            return $this->signedSppArsip !== null;
+        }
+
+        return $this->arsipDokumen()
+            ->where('jenis_dokumen', self::SPP_SIGNED_ARCHIVE_TYPE)
+            ->where('is_active', true)
+            ->exists();
+    }
+
+    public function hasFinalSignedStandingInstruction(): bool
+    {
+        $standingInstruction = $this->relationLoaded('standingInstruction')
+            ? $this->standingInstruction
+            : $this->standingInstruction()->first();
+
+        if (!$standingInstruction || $standingInstruction->status !== 'FINAL') {
+            return false;
+        }
+
+        return $this->arsipDokumen()
+            ->where('jenis_dokumen', self::STANDING_INSTRUCTION_SIGNED_ARCHIVE_TYPE)
+            ->where('is_active', true)
+            ->exists();
     }
 }

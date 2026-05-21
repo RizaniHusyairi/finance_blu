@@ -56,6 +56,22 @@
                         <label class="form-label">Tanggal TTD <span class="text-danger">*</span></label>
                         <input type="date" name="tanggal_ttd" class="form-control" required value="{{ old('tanggal_ttd', $tagihan->tanggal_ttd) }}">
                     </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Mekanisme Pembayaran <span class="text-danger">*</span></label>
+                        @php
+                            $mekValue = old(
+                                'mekanisme_pembayaran',
+                                optional($tagihan->mekanisme_pembayaran)->value
+                                    ?? \App\Enums\MekanismePembayaran::defaultFor('PERJALDIN')->value
+                            );
+                        @endphp
+                        <select name="mekanisme_pembayaran" class="form-select" required>
+                            @foreach(\App\Enums\MekanismePembayaran::optionsFor('PERJALDIN') as $val => $lbl)
+                                <option value="{{ $val }}" {{ $mekValue === $val ? 'selected' : '' }}>{{ $lbl }}</option>
+                            @endforeach
+                        </select>
+                        <div class="form-text">LS - Pihak Ketiga: ditransfer langsung ke rekening masing-masing peserta. LS - Via Bendahara: diteruskan melalui Bendahara Pengeluaran.</div>
+                    </div>
                 </div>
 
                 <!-- SECTION B: VERIFIKATOR -->
@@ -182,6 +198,31 @@
                             <input type="hidden" name="kasubbag_nip_snapshot" value="{{ $kasubbagNip }}">
                         </div>
                     </div>
+
+                    <!-- Koordinator Keuangan -->
+                    <div class="col-md-6 col-xl mb-3">
+                        <h6 class="text-muted mb-3">Koordinator Keuangan</h6>
+                        <div class="mb-2">
+                            <label class="form-label">Pilih User Koordinator Keuangan <span class="text-danger">*</span></label>
+                            <select name="koordinator_keuangan_user_id" class="form-select select2" id="koorKeuanganUserId" required>
+                                <option value="">-- Pilih User Koordinator --</option>
+                                @foreach($koorKeuanganUsers as $user)
+                                    <option value="{{ $user->id }}" data-nip="{{ optional($user->pegawai)->nip }}" data-nama="{{ $user->name }}" {{ old('koordinator_keuangan_user_id', $tagihan->koordinator_keuangan_user_id) == $user->id ? 'selected' : '' }}>
+                                        {{ $user->name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            <small class="text-muted d-block mt-1">Pilih untuk auto-fill Nama & NIP di bawah ini</small>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label">Nama Koordinator Keuangan <span class="text-danger">*</span></label>
+                            <input type="text" name="koordinator_keuangan_nama_snapshot" id="koorKeuanganNamaSnapshot" class="form-control" required value="{{ old('koordinator_keuangan_nama_snapshot', $tagihan->koordinator_keuangan_nama_snapshot) }}">
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label">NIP Koordinator Keuangan</label>
+                            <input type="text" name="koordinator_keuangan_nip_snapshot" id="koorKeuanganNipSnapshot" class="form-control" value="{{ old('koordinator_keuangan_nip_snapshot', $tagihan->koordinator_keuangan_nip_snapshot) }}">
+                        </div>
+                    </div>
                 </div>
 
                                 <!-- SECTION C: DAFTAR NOMINATIF PEGAWAI -->
@@ -209,12 +250,82 @@
                     @endphp
 
                     @foreach($oldPeserta as $index => $row)
-                        @include('perjaldins.partials.peserta-card', ['index' => $index, 'row' => $row, 'masterProvinsi' => $masterProvinsi, 'isCreate' => false])
+                        @include('perjaldins.partials.peserta-card', ['index' => $index, 'row' => $row, 'masterProvinsi' => $masterProvinsi, 'masterPegawai' => $masterPegawai, 'isCreate' => false])
                     @endforeach
                 </div>
 
                 <div class="mt-3">
                     <button type="button" class="btn btn-dark btn-sm btn-add-row-trigger"><i class="bi bi-plus-circle"></i> Tambah Baris Peserta</button>
+                </div>
+
+                <!-- SECTION D: PEMILIHAN COA PER KOMPONEN BIAYA -->
+                @php
+                    $komponenList = [
+                        ['kode' => 'TIKET', 'label' => 'Biaya Tiket', 'icon' => 'bi-ticket-detailed'],
+                        ['kode' => 'TRANSPORT', 'label' => 'Biaya Transport', 'icon' => 'bi-car-front'],
+                        ['kode' => 'PENGINAPAN', 'label' => 'Biaya Penginapan', 'icon' => 'bi-building'],
+                        ['kode' => 'UANG_HARIAN', 'label' => 'Uang Harian', 'icon' => 'bi-wallet2'],
+                    ];
+                    $existingKomponen = $tagihan->komponenPerjaldin->keyBy('kode_komponen');
+                @endphp
+                <h5 class="mb-3 border-bottom pb-2 text-primary mt-5"><i class="bi bi-bank"></i> Bagian D: Pemilihan COA per Komponen Biaya</h5>
+                <div id="komponenCoaSection">
+                    <div class="alert alert-warning border-0 shadow-sm py-2 px-3 mb-3 small komponen-coa-empty">
+                        <i class="bi bi-info-circle me-1"></i> Belum ada komponen biaya bernilai. Isi rincian biaya peserta dulu, baris pemilihan COA akan muncul otomatis.
+                    </div>
+                    @foreach($komponenList as $k)
+                        @php
+                            $existing = $existingKomponen->get($k['kode']);
+                            $lockedBySpp = $existing && $existing->hasDokumenTurunan();
+                            $selectedCoa = old('komponen_coa.' . $k['kode'], $existing?->dipa_revision_item_id);
+                        @endphp
+                        <div class="card border shadow-sm mb-2 komponen-coa-row d-none" data-kode="{{ $k['kode'] }}">
+                            <div class="card-body py-2 px-3">
+                                <div class="row g-2 align-items-center">
+                                    <div class="col-md-3">
+                                        <div class="d-flex align-items-center">
+                                            <div class="bg-primary bg-opacity-10 text-primary p-2 rounded-circle me-2">
+                                                <i class="bi {{ $k['icon'] }}"></i>
+                                            </div>
+                                            <div>
+                                                <div class="fw-bold small">{{ $k['label'] }}</div>
+                                                <small class="text-muted" style="font-size: 0.7rem;">Kode: {{ $k['kode'] }}</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <small class="text-muted d-block" style="font-size: 0.7rem;">Total Komponen</small>
+                                        <span class="fw-bold text-dark">Rp <span class="komponen-coa-total">0</span></span>
+                                        @if($lockedBySpp)
+                                            <span class="badge bg-warning text-dark mt-1" style="font-size: 0.6rem;"><i class="bi bi-lock-fill"></i> Terkunci SPP</span>
+                                        @endif
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label mb-1 small fw-semibold">Pilih COA <span class="text-danger">*</span></label>
+                                        <select name="komponen_coa[{{ $k['kode'] }}]" class="form-select form-select-sm komponen-coa-select @error('komponen_coa.' . $k['kode']) is-invalid @enderror" {{ $lockedBySpp ? 'disabled' : '' }}>
+                                            <option value="">-- Pilih COA --</option>
+                                            @foreach($budgetGroups as $group)
+                                                <optgroup label="{{ $group['label'] }}">
+                                                    @foreach($group['items'] as $item)
+                                                        <option value="{{ $item['id'] }}" data-sisa-pagu="{{ $item['sisa_pagu'] }}" {{ (string) $selectedCoa === (string) $item['id'] ? 'selected' : '' }}>
+                                                            {{ $item['option_label'] }}
+                                                        </option>
+                                                    @endforeach
+                                                </optgroup>
+                                            @endforeach
+                                        </select>
+                                        @if($lockedBySpp)
+                                            <input type="hidden" name="komponen_coa[{{ $k['kode'] }}]" value="{{ $selectedCoa }}">
+                                            <small class="text-muted" style="font-size: 0.7rem;"><i class="bi bi-info-circle me-1"></i>COA tidak dapat diubah karena komponen sudah memiliki SPP.</small>
+                                        @endif
+                                        <small class="d-none text-danger mt-1 komponen-coa-warning" style="font-size: 0.7rem;">
+                                            <i class="bi bi-exclamation-triangle-fill me-1"></i><span class="komponen-coa-warning-text"></span>
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    @endforeach
                 </div>
 
                 <div class="mt-5 border-top pt-3 text-end">
@@ -235,6 +346,92 @@
             return n.toString().replace(/\D/g, "").replace(/\B(?=(\d{3})+(?!\d))/g, ",");
         }
 
+        // Toggle visibility of input file tiket berdasarkan nilai biaya_tiket.
+        window.toggleTiketFile = function (element) {
+            let card = $(element).closest('.item-row');
+            let val = parseFloat(String($(element).val()).replace(/,/g, '')) || 0;
+            let wrapper = card.find('.tiket-file-wrapper');
+            if (val > 0) {
+                wrapper.removeClass('d-none');
+            } else {
+                wrapper.addClass('d-none');
+                wrapper.find('.tiket-file-input').val('');
+                wrapper.find('.tiket-existing-notice').remove();
+            }
+        };
+
+        // Hitung total tampilan grup Uang Harian (Harian + Representasi + Rapat)
+        function calculateUangHarianGroup(card) {
+            let total = 0;
+            card.find('.uang-harian-component').each(function () {
+                let num = parseFloat(String($(this).val()).replace(/,/g, ''));
+                if (!isNaN(num)) total += num;
+            });
+            card.find('.uang-harian-total').text(formatNumber(total));
+        }
+
+        // Cek sisa pagu COA terpilih vs total komponen, tampilkan warning bila kurang.
+        function evaluateCoaPagu(row, total) {
+            let select = row.find('.komponen-coa-select');
+            let warning = row.find('.komponen-coa-warning');
+            let warningText = row.find('.komponen-coa-warning-text');
+            let selectedOpt = select.find('option:selected');
+            let sisa = parseFloat(selectedOpt.data('sisa-pagu'));
+            if (!selectedOpt.val() || isNaN(sisa)) {
+                warning.addClass('d-none');
+                select.removeClass('is-invalid');
+                return;
+            }
+            if (sisa < total) {
+                warningText.text('Sisa pagu COA (Rp ' + formatNumber(Math.round(sisa)) + ') tidak mencukupi total komponen (Rp ' + formatNumber(total) + ').');
+                warning.removeClass('d-none');
+                select.addClass('is-invalid');
+            } else {
+                warning.addClass('d-none');
+                select.removeClass('is-invalid');
+            }
+        }
+
+        // Hitung total per kode komponen biaya (lintas semua peserta) dan show/hide baris COA
+        function recalcKomponenCoaSection() {
+            let totals = { TIKET: 0, TRANSPORT: 0, PENGINAPAN: 0, UANG_HARIAN: 0 };
+            $('.komponen-input').each(function () {
+                let kode = $(this).data('kode');
+                if (!(kode in totals)) return;
+                let num = parseFloat(String($(this).val()).replace(/,/g, ''));
+                if (!isNaN(num)) totals[kode] += num;
+            });
+            let anyVisible = false;
+            $('.komponen-coa-row').each(function () {
+                let row = $(this);
+                let kode = row.data('kode');
+                let total = totals[kode] || 0;
+                row.find('.komponen-coa-total').text(formatNumber(total));
+                let select = row.find('.komponen-coa-select');
+                if (total > 0) {
+                    row.removeClass('d-none');
+                    if (!select.prop('disabled')) {
+                        select.prop('required', true);
+                    }
+                    anyVisible = true;
+                } else {
+                    row.addClass('d-none');
+                    if (!select.prop('disabled')) {
+                        select.prop('required', false).val('');
+                    }
+                }
+                evaluateCoaPagu(row, total);
+            });
+            $('.komponen-coa-empty').toggleClass('d-none', anyVisible);
+        }
+
+        // Live re-cek pagu saat user ganti COA
+        $(document).on('change', '.komponen-coa-select', function () {
+            let row = $(this).closest('.komponen-coa-row');
+            let total = parseFloat(String(row.find('.komponen-coa-total').text()).replace(/,/g, '')) || 0;
+            evaluateCoaPagu(row, total);
+        });
+
         // Auto calculate per row and grand total
         window.calculateJumlah = function (element) {
             let val = $(element).val();
@@ -250,7 +447,9 @@
             });
             card.find('.row-jumlah').val(formatNumber(total));
             card.find('.summary-total').text(formatNumber(total)); // update header card summary
+            calculateUangHarianGroup(card);
             calculateGrandTotal();
+            recalcKomponenCoaSection();
         }
 
         function calculateGrandTotal() {
@@ -290,7 +489,12 @@
 
             // Initialize formatting for old inputs
             $('.biaya-input').each(function() {
-               calculateJumlah(this); 
+               calculateJumlah(this);
+            });
+
+            // Initialize toggle file tiket based on initial biaya_tiket value
+            $('.tiket-amount-input').each(function() {
+                toggleTiketFile(this);
             });
 
             // Auto-fill PPK
@@ -329,10 +533,32 @@
                 }
             });
 
+            // Auto-fill Koordinator Keuangan
+            $('#koorKeuanganUserId').change(function() {
+                let selected = $(this).find(':selected');
+                if(selected.val() !== '') {
+                    $('#koorKeuanganNamaSnapshot').val(selected.data('nama'));
+                    $('#koorKeuanganNipSnapshot').val(selected.data('nip'));
+                }
+            });
+
             // Add Row Check
             $(document).on('click', '.btn-add-row-trigger', function (e) {
                 e.preventDefault();
-                let newRow = $('.item-row:first').clone();
+                
+                // Destroy Select2 on the first row before cloning
+                let firstRow = $('.item-row:first');
+                if (firstRow.find('.select2').hasClass('select2-hidden-accessible')) {
+                    firstRow.find('.select2').select2('destroy');
+                }
+
+                let newRow = firstRow.clone();
+
+                // Reinitialize Select2 on the first row
+                firstRow.find('.select2').select2({
+                    theme: 'bootstrap-5',
+                    width: '100%'
+                });
 
                 // Clear values and validation classes
                 newRow.find('input[type="text"], input[type="number"], input[type="date"], input[type="hidden"], input[type="file"], textarea').val('').removeClass('is-invalid');
@@ -340,8 +566,18 @@
                 newRow.find('.row-jumlah').val('0');
                 newRow.find('.summary-nama, .summary-tujuan').text('-');
                 newRow.find('.summary-total').text('0');
+                newRow.find('.uang-harian-total').text('0');
                 newRow.find('.file-existing-notice').remove();
+                newRow.find('.tiket-existing-notice').remove();
+                newRow.find('.tiket-file-wrapper').addClass('d-none');
                 newRow.find('.file-status-badge').removeClass('bg-success').addClass('bg-secondary').html('<i class="bi bi-paperclip"></i> SPT Kosong');
+                newRow.find('.nip-input').val('').prop('readonly', true);
+                newRow.find('.rekening-input').val('').prop('readonly', false);
+                newRow.find('.rek-hint').addClass('d-none');
+                
+                // Remove any leftover select2 elements if they were cloned
+                newRow.find('.select2-container').remove();
+                newRow.find('.select2-hidden-accessible').removeClass('select2-hidden-accessible').removeAttr('data-select2-id aria-hidden tabindex');
 
                 // Adjust Collapse id
                 let collapseId = 'collapsePeserta' + rowIdx;
@@ -354,10 +590,18 @@
                         name = name.replace(/\[\d+\]/g, '[' + rowIdx + ']');
                         $(this).attr('name', name);
                     }
+                    $(this).removeAttr('id'); // Remove id to avoid duplicates
                 });
 
                 newRow.find('.btn-delete-row').prop('disabled', false);
                 $('#pesertaRepeater').append(newRow);
+                
+                // Initialize Select2 on the new row
+                newRow.find('.select2').select2({
+                    theme: 'bootstrap-5',
+                    width: '100%'
+                });
+
                 updateRowNumbers();
                 $('.btn-delete-row').prop('disabled', false);
                 rowIdx++;
@@ -371,6 +615,7 @@
                     $(this).closest('.item-row').remove();
                     updateRowNumbers();
                     calculateGrandTotal();
+                    recalcKomponenCoaSection();
                     if ($('.item-row').length === 1) {
                         $('.btn-delete-row').prop('disabled', true);
                     }
@@ -386,10 +631,33 @@
                 calculateUangHarian($(this).closest('.item-row'));
             });
 
-            // Update Summary Name & Tujuan Live
-            $(document).on('input', '.input-nama', function() {
-                $(this).closest('.item-row').find('.summary-nama').text($(this).val() || '-');
+            // Auto-fill pegawai (NIP, Rekening, Summary)
+            $(document).on('change', '.pegawai-select', function() {
+                let card = $(this).closest('.item-row');
+                let selected = $(this).find(':selected');
+                let nama = selected.data('nama') || '';
+                let nip = selected.data('nip') || '';
+                let rek = selected.data('rek') || '';
+
+                card.find('.input-nama-hidden').val(nama);
+                card.find('.nip-input').val(nip);
+
+                if (rek) {
+                    card.find('.rekening-input').val(rek).prop('readonly', false);
+                    card.find('.rek-hint').addClass('d-none');
+                } else {
+                    card.find('.rekening-input').val('').prop('readonly', false);
+                    if (selected.val() !== '') {
+                        card.find('.rek-hint').removeClass('d-none');
+                    } else {
+                        card.find('.rek-hint').addClass('d-none');
+                    }
+                }
+
+                card.find('.summary-nama').text(nama || '-');
             });
+
+            // Update Summary Tujuan Live
             $(document).on('input', '.input-tujuan', function() {
                 $(this).closest('.item-row').find('.summary-tujuan').text($(this).val() || '-');
             });

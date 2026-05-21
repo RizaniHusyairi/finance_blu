@@ -107,12 +107,15 @@
                     </div>
                     <div class="col-md-3">
                         <label class="form-label fw-semibold d-block">Status Aktif</label>
-                        <div class="form-check form-switch border rounded-4 px-3 py-3 mt-1">
-                            <input class="form-check-input" type="checkbox" role="switch" id="status_aktif" name="status_aktif" value="1" {{ (string) $oldStatusAktif === '1' ? 'checked' : '' }}>
-                            <label class="form-check-label ms-2" for="status_aktif">
-                                COA aktif dan siap dipakai
-                            </label>
-                            <div class="small text-muted mt-1">Nonaktifkan bila COA hanya ingin disimpan sebagai referensi.</div>
+                        <div class="border rounded-4 p-3 mt-1">
+                            <input type="hidden" name="status_aktif" value="0">
+                            <div class="form-check form-switch d-flex align-items-center gap-2 ps-0 mb-1">
+                                <input class="form-check-input m-0 flex-shrink-0" type="checkbox" role="switch" id="status_aktif" name="status_aktif" value="1" aria-describedby="status_aktif_help" {{ (string) $oldStatusAktif === '1' ? 'checked' : '' }}>
+                                <label class="form-check-label fw-semibold mb-0" for="status_aktif">
+                                    COA aktif
+                                </label>
+                            </div>
+                            <div class="small text-muted" id="status_aktif_help">Aktifkan agar COA siap dipakai. Matikan bila COA hanya ingin disimpan sebagai referensi.</div>
                         </div>
                     </div>
                 </div>

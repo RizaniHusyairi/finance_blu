@@ -13,11 +13,15 @@
 
     $ppspmStatusLabel = $ppspmApproval?->status ?? 'Belum diajukan';
     $kasubbagStatusLabel = $kasubbagApproval?->status ?? 'Belum diajukan';
+    $koordinatorStatusLabel = $koordinatorApproval?->status ?? 'Belum diajukan';
     $ppspmStatusClass = match($ppspmStatusLabel) {
-        'APPROVED' => 'text-success', 'PENDING' => 'text-warning', 'REVISION','REJECTED' => 'text-danger', default => 'text-muted'
+        'APPROVED' => 'bg-success', 'PENDING' => 'bg-warning text-dark', 'REVISION','REJECTED' => 'bg-danger', default => 'bg-secondary'
     };
     $kasubbagStatusClass = match($kasubbagStatusLabel) {
-        'APPROVED' => 'text-success', 'PENDING' => 'text-warning', 'REVISION','REJECTED' => 'text-danger', default => 'text-muted'
+        'APPROVED' => 'bg-success', 'PENDING' => 'bg-warning text-dark', 'REVISION','REJECTED' => 'bg-danger', default => 'bg-secondary'
+    };
+    $koordinatorStatusClass = match($koordinatorStatusLabel) {
+        'APPROVED' => 'bg-success', 'PENDING' => 'bg-warning text-dark', 'REVISION','REJECTED' => 'bg-danger', default => 'bg-secondary'
     };
 
     $workflowLockLabel = ($canEditSpm) ? 'Dapat diedit' : 'Terkunci / readonly';
@@ -116,18 +120,37 @@
                     <a href="{{ route('spms.cetak-pdf', $spmModel->id) }}" target="_blank" class="btn btn-outline-danger shadow-sm"><i class="bi bi-file-earmark-pdf me-1"></i> Cetak PDF SPM</a>
                 @endif
 
-                <button type="button" class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#modalSpmHonor" {{ $canEditSpm ? '' : 'disabled' }}>
-                    <i class="bi bi-pencil-square me-1"></i> {{ $spmModel ? 'Edit Draft SPM' : 'Buat Draft Baru' }}
-                </button>
+                {{-- Upload SPM Bertandatangan --}}
+                @if($spmModel && in_array($spmModel->status, [\App\Models\DokumenSpm::STATUS_MENUNGGU_UPLOAD, \App\Models\DokumenSpm::STATUS_SPM_TERBIT]))
+                    <button type="button" class="btn btn-warning shadow-sm" data-bs-toggle="modal" data-bs-target="#modalUploadSpmSigned">
+                        <i class="bi bi-upload me-1"></i> {{ $hasSignedSpmFile ? 'Re-upload SPM Bertandatangan' : 'Upload Scan SPM Bertandatangan' }}
+                    </button>
+                    @if($hasSignedSpmFile)
+                        <div class="alert alert-success p-2 mb-0 small border-0"><i class="bi bi-check-circle-fill me-1"></i> File SPM bertandatangan sudah diunggah.</div>
+                    @else
+                        <div class="alert alert-warning p-2 mb-0 small border-0"><i class="bi bi-exclamation-triangle me-1"></i> Upload scan SPM bertandatangan untuk menyelesaikan proses.</div>
+                    @endif
+                @endif
+
+                {{-- Lanjut ke NPI --}}
+            
+
+                @if($canEditSpm)
+                    <button type="button" class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#modalSpmHonor">
+                        <i class="bi bi-pencil-square me-1"></i> {{ $spmModel ? 'Edit Draft SPM' : 'Buat Draft Baru' }}
+                    </button>
+                @endif
 
                 @if($spmModel)
-                    @if($canSubmit && $isReadyToSubmit)
-                        <form action="{{ route('spms.honor.submit', $sppModel->id) }}" method="POST" onsubmit="return confirm('Ajukan SPM honorarium ini untuk verifikasi PPSPM dan Kasubbag secara paralel?')">
-                            @csrf
-                            <button type="submit" class="btn btn-success shadow-sm w-100"><i class="bi bi-send me-1"></i> Ajukan Verifikasi</button>
-                        </form>
-                    @else
-                        <button type="button" class="btn btn-success shadow-sm w-100" disabled><i class="bi bi-send me-1"></i> Ajukan Verifikasi</button>
+                    @if($canSubmit)
+                        @if($isReadyToSubmit)
+                            <form action="{{ route('spms.honor.submit', $sppModel->id) }}" method="POST" onsubmit="return confirm('Ajukan SPM honorarium ini untuk verifikasi PPSPM dan Kasubbag secara paralel?')">
+                                @csrf
+                                <button type="submit" class="btn btn-success shadow-sm w-100"><i class="bi bi-send me-1"></i> Ajukan Verifikasi</button>
+                            </form>
+                        @else
+                            <button type="button" class="btn btn-success shadow-sm w-100" disabled><i class="bi bi-send me-1"></i> Ajukan Verifikasi</button>
+                        @endif
                     @endif
                 @endif
             </div>
@@ -143,7 +166,7 @@
                     <div class="bg-white p-3 rounded-3 border shadow-sm h-100">
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <h6 class="fw-bold mb-0">Checklist Operator</h6>
-                            <span class="badge {{ $isReadyToSubmit ? 'bg-success' : 'bg-warning text-dark' }}">{{ $isReadyToSubmit ? 'Siap Diajukan' : 'Belum Lengkap' }}</span>
+                            <span class="badge {{ $isChecklistComplete ? 'bg-success' : 'bg-warning text-dark' }}">{{ $isChecklistComplete ? 'Lengkap' : 'Belum Lengkap' }}</span>
                         </div>
                         <div style="font-size: 0.9rem;">
                             @foreach($readinessChecklist as $item)
@@ -153,7 +176,7 @@
                                 </div>
                             @endforeach
                         </div>
-                        @if(!$isReadyToSubmit && $readinessIssues->isNotEmpty())
+                        @if(!$isChecklistComplete && $readinessIssues->isNotEmpty())
                             <div class="alert alert-warning mt-3 mb-0 p-2 py-1 small border-0">
                                 <ul class="mb-0 ps-3">@foreach($readinessIssues as $issue)<li>{{ $issue }}</li>@endforeach</ul>
                             </div>
@@ -161,34 +184,58 @@
                     </div>
                 </div>
                 <div class="col-xl-7">
-                    <div class="timeline-wrapper pt-0">
-                        <div class="timeline-line"></div>
-                        {{-- Step 1: Draft --}}
-                        <div class="timeline-step {{ $progressStep >= 1 ? 'passed' : '' }}">
-                            <div class="timeline-icon"><i class="bi bi-file-earmark-text"></i></div>
-                            <div class="timeline-label">Draft Dibuat</div>
-                            <div class="timeline-sub">{{ $spmModel ? 'Telah disimpan' : 'Belum dimulai' }}</div>
-                        </div>
-                        {{-- Step 2: Verifikasi PPSPM --}}
-                        <div class="timeline-step {{ $ppspmApproval?->status === 'APPROVED' ? 'passed' : ($ppspmApproval?->status === 'REVISION' ? 'revision' : ($progressStep == 2 ? 'active' : '')) }}">
-                            <div class="timeline-icon"><i class="bi bi-person-check"></i></div>
-                            <div class="timeline-label">Verifikasi PPSPM</div>
-                            <div class="timeline-sub fw-semibold {{ $ppspmStatusClass }}">{{ $ppspmStatusLabel }}</div>
-                            @if($ppspmApproval) <div class="timeline-sub mt-0 opacity-75" style="font-size: 0.7rem;">{{ $spmModel?->ppspm?->name }}</div> @endif
-                        </div>
-                        {{-- Step 2: Verifikasi Kasubbag --}}
-                        <div class="timeline-step {{ $kasubbagApproval?->status === 'APPROVED' ? 'passed' : ($kasubbagApproval?->status === 'REVISION' ? 'revision' : ($progressStep == 2 ? 'active' : '')) }}">
-                            <div class="timeline-icon"><i class="bi bi-person-badge"></i></div>
-                            <div class="timeline-label">Verifikasi Kasubbag</div>
-                            <div class="timeline-sub fw-semibold {{ $kasubbagStatusClass }}">{{ $kasubbagStatusLabel }}</div>
-                            <div class="timeline-sub mt-0 opacity-75" style="font-size: 0.7rem;">{{ $kasubbagUser?->name ?? 'Kasubbag Keuangan' }}</div>
-                        </div>
-                        {{-- Step 3: Final --}}
-                        <div class="timeline-step {{ $progressStep >= 4 ? 'passed' : '' }}">
-                            <div class="timeline-icon"><i class="bi bi-check-all"></i></div>
-                            <div class="timeline-label">Selesai</div>
-                            <div class="timeline-sub">SPM Disetujui Final</div>
-                        </div>
+                    <div class="bg-white p-3 rounded-3 border shadow-sm h-100">
+                        <h6 class="fw-bold text-secondary mb-3"><i class="bi bi-people me-2"></i> Status Verifikator SPM</h6>
+                        <ul class="list-group mb-0">
+                            <!-- PPSPM -->
+                            <li class="list-group-item px-3 py-2 border-start-0 border-end-0 border-top-0 border-bottom">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 35px; height: 35px;">
+                                            <i class="bi bi-person-check fs-5"></i>
+                                        </div>
+                                        <div>
+                                            <div class="fw-semibold text-dark">PPSPM</div>
+                                            <div class="small text-muted">{{ $spmModel?->ppspm?->name ?? 'Belum Ditentukan' }}</div>
+                                            @if($spmModel?->ppspm?->nip)<div class="text-muted font-monospace" style="font-size: .72rem;">NIP: {{ $spmModel->ppspm->nip }}</div>@endif
+                                        </div>
+                                    </div>
+                                    <span class="badge {{ $ppspmStatusClass }}">{{ $ppspmStatusLabel }}</span>
+                                </div>
+                            </li>
+                            <!-- Koordinator Keuangan -->
+                            <li class="list-group-item px-3 py-2 border-start-0 border-end-0 border-top-0 border-bottom">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="bg-info bg-opacity-10 text-info rounded-circle d-flex align-items-center justify-content-center" style="width: 35px; height: 35px;">
+                                            <i class="bi bi-person-gear fs-5"></i>
+                                        </div>
+                                        <div>
+                                            <div class="fw-semibold text-dark">Koordinator Keuangan</div>
+                                            <div class="small text-muted">{{ $koordinatorUser?->name ?? 'Belum Ditentukan' }}</div>
+                                            @if($koordinatorUser?->nip)<div class="text-muted font-monospace" style="font-size: .72rem;">NIP: {{ $koordinatorUser->nip }}</div>@endif
+                                        </div>
+                                    </div>
+                                    <span class="badge {{ $koordinatorStatusClass }}">{{ $koordinatorStatusLabel }}</span>
+                                </div>
+                            </li>
+                            <!-- Kasubbag -->
+                            <li class="list-group-item px-3 py-2 border-0">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="bg-warning bg-opacity-10 text-warning rounded-circle d-flex align-items-center justify-content-center" style="width: 35px; height: 35px;">
+                                            <i class="bi bi-person-badge fs-5"></i>
+                                        </div>
+                                        <div>
+                                            <div class="fw-semibold text-dark">Kepala Subbagian Keuangan dan Tata Usaha</div>
+                                            <div class="small text-muted">{{ $kasubbagUser?->name ?? 'Belum Ditentukan' }}</div>
+                                            @if($kasubbagUser?->nip)<div class="text-muted font-monospace" style="font-size: .72rem;">NIP: {{ $kasubbagUser->nip }}</div>@endif
+                                        </div>
+                                    </div>
+                                    <span class="badge {{ $kasubbagStatusClass }}">{{ $kasubbagStatusLabel }}</span>
+                                </div>
+                            </li>
+                        </ul>
                     </div>
                 </div>
             </div>
@@ -302,6 +349,8 @@
         <div class="col-xl-5">
             <div class="sticky-top" style="top: 1.5rem; z-index: 1;">
 
+
+
                 {{-- Ringkasan Draft SPM --}}
                 <div class="card spm-section-card mb-4 border-primary shadow-sm">
                     <div class="card-header bg-primary text-white p-3">
@@ -314,9 +363,6 @@
                         </div>
                         <div class="spm-info-block mb-2"><div class="label">Nomor SPM</div><div class="value">{{ $spmModel?->nomor_spm ?? '-' }}</div></div>
                         <div class="spm-info-block mb-2"><div class="label">Tanggal SPM</div><div class="value">{{ optional($spmModel?->tanggal_spm)->format('d F Y') ?? '-' }}</div></div>
-                        <div class="spm-info-block mb-2"><div class="label">Tahun Anggaran</div><div class="value">{{ $spmModel?->tahun_anggaran ?? date('Y') }}</div></div>
-                        <div class="spm-info-block mb-2"><div class="label">Jenis Tagihan</div><div class="value">{{ $spmModel?->jenis_tagihan ?? 'NON REMUNERASI' }}</div></div>
-                        <div class="spm-info-block mb-2"><div class="label">Cara Bayar</div><div class="value">{{ $spmModel?->cara_bayar ?? 'SP2D BLU - TRF' }}</div></div>
                         <div class="spm-info-block mb-3"><div class="label">Nilai SPM (Otomatis dari Netto SPP)</div><div class="value text-primary fs-5">Rp {{ number_format($nominalSpm, 0, ',', '.') }}</div></div>
                         <div class="p-2 bg-light rounded text-center small text-muted">Mode Dokumen: {{ $workflowLockLabel }}</div>
                     </div>
@@ -393,25 +439,6 @@
                                     <label class="form-label fw-semibold">Tanggal SPM <span class="text-danger">*</span></label>
                                     <input type="date" name="tanggal_spm" class="form-control" required value="{{ old('tanggal_spm', optional($spmModel?->tanggal_spm)->format('Y-m-d') ?? now()->format('Y-m-d')) }}">
                                 </div>
-                                <div class="col-md-4">
-                                    <label class="form-label fw-semibold">Tahun Anggaran</label>
-                                    <input type="text" name="tahun_anggaran" class="form-control" value="{{ old('tahun_anggaran', $spmModel?->tahun_anggaran ?? date('Y')) }}">
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label fw-semibold">Jenis Tagihan</label>
-                                    <select name="jenis_tagihan" class="form-select">
-                                        <option value="NON REMUNERASI" {{ old('jenis_tagihan', $spmModel?->jenis_tagihan) === 'NON REMUNERASI' ? 'selected' : '' }}>NON REMUNERASI</option>
-                                        <option value="REMUNERASI" {{ old('jenis_tagihan', $spmModel?->jenis_tagihan) === 'REMUNERASI' ? 'selected' : '' }}>REMUNERASI</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label fw-semibold">Jatuh Tempo</label>
-                                    <input type="text" name="jatuh_tempo" class="form-control" value="{{ old('jatuh_tempo', $spmModel?->jatuh_tempo ?? 'Segera') }}">
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label fw-semibold">Cara Bayar</label>
-                                    <input type="text" name="cara_bayar" class="form-control" value="{{ old('cara_bayar', $spmModel?->cara_bayar ?? 'SP2D BLU - Ls') }}">
-                                </div>
                                 <div class="col-md-6">
                                     <label class="form-label fw-semibold">Nilai SPM (Otomatis dari SPP)</label>
                                     <input type="text" class="form-control fw-bold text-success bg-white" value="Rp {{ number_format($nominalSpm, 0, ',', '.') }}" readonly>
@@ -468,6 +495,46 @@
         </div>
     </div>
 @endsection
+
+{{-- Modal Upload SPM Bertandatangan --}}
+@if($spmModel && in_array($spmModel->status, [\App\Models\DokumenSpm::STATUS_MENUNGGU_UPLOAD, \App\Models\DokumenSpm::STATUS_SPM_TERBIT]))
+<div class="modal fade" id="modalUploadSpmSigned" tabindex="-1" aria-labelledby="modalUploadSpmSignedLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-warning bg-opacity-10 border-0">
+                <h5 class="modal-title fw-bold" id="modalUploadSpmSignedLabel">
+                    <i class="bi bi-upload me-2 text-warning"></i> Upload Scan SPM Bertandatangan
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ route('spms.honor.upload-signed-spm', $spmModel->id) }}" method="POST" enctype="multipart/form-data">
+                @csrf
+                <div class="modal-body">
+                    <div class="alert alert-info border-0 small mb-3">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Unggah file scan SPM yang sudah <strong>dicetak dan ditandatangani</strong> oleh pihak berwenang.
+                        Setelah file diunggah, status SPM akan otomatis berubah menjadi <strong>SPM Terbit</strong>.
+                    </div>
+                    <div class="mb-3">
+                        <label for="file_spm_ttd_honor" class="form-label fw-semibold">File SPM Bertandatangan <span class="text-danger">*</span></label>
+                        <input type="file" class="form-control" id="file_spm_ttd_honor" name="file_spm_ttd" accept=".pdf,.jpg,.jpeg,.png" required>
+                        <div class="form-text">Format: PDF, JPG, PNG. Maks: 10MB</div>
+                    </div>
+                    @if($hasSignedSpmFile)
+                        <div class="alert alert-success border-0 small mb-0">
+                            <i class="bi bi-check-circle me-1"></i> File sebelumnya sudah ada. Upload ulang akan menggantikan file lama.
+                        </div>
+                    @endif
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-warning"><i class="bi bi-upload me-1"></i> Upload SPM</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+@endif
 
 @push('script')
 <script>

@@ -26,6 +26,7 @@ class VerifikasiNpiHonorController extends Controller
         if ($user->hasRole('Bendahara Penerimaan')) return 'Bendahara Penerimaan';
         if ($user->hasRole('PPK')) return 'PPK';
         if ($user->hasRole('Kepala Subbagian Keuangan dan Tata Usaha')) return 'Kepala Subbagian Keuangan dan Tata Usaha';
+        if ($user->hasRole('Koordinator Keuangan')) return 'Koordinator Keuangan';
         
         return '';
     }
@@ -66,7 +67,7 @@ class VerifikasiNpiHonorController extends Controller
                     $sq->whereNull('assigned_user_id')->orWhere('assigned_user_id', $user->id);
                 });
             });
-        } elseif ($roleCode === 'Kepala Subbagian Keuangan dan Tata Usaha') {
+        } elseif (in_array($roleCode, ['Kepala Subbagian Keuangan dan Tata Usaha', 'Koordinator Keuangan'], true)) {
             $query->whereHas('workflowInstances.approvals', function($q) use ($roleCode) {
                 $q->where('role_code', $roleCode);
             });
@@ -178,6 +179,9 @@ class VerifikasiNpiHonorController extends Controller
         if ($myApproval?->assigned_user_id && $myApproval->assigned_user_id !== $user->id) {
             abort(403, 'Anda tidak ditugaskan untuk memverifikasi dokumen ini.');
         }
+        if ($roleCode === 'Bendahara Penerimaan' && (int) $npi->bendahara_penerimaan_id !== (int) $user->id) {
+            abort(403, 'NPI ini bukan tugas Bendahara Penerimaan Anda.');
+        }
 
         $canVerify = (
             $myApproval
@@ -223,6 +227,9 @@ class VerifikasiNpiHonorController extends Controller
 
         $npi = DokumenNpi::with('workflowInstances')->findOrFail($id);
         $wf = $npi->workflowInstances->first();
+        if ($roleCode === 'Bendahara Penerimaan' && (int) $npi->bendahara_penerimaan_id !== (int) $user->id) {
+            abort(403, 'NPI ini bukan tugas Bendahara Penerimaan Anda.');
+        }
 
         try {
             DB::beginTransaction();
@@ -232,15 +239,15 @@ class VerifikasiNpiHonorController extends Controller
             $isFinished = $wf->status === 'APPROVED';
 
             if ($isFinished) {
-                $npi->update(['status' => DokumenNpi::STATUS_DISETUJUI_FINAL]);
+                $npi->update(['status' => DokumenNpi::STATUS_MENUNGGU_UPLOAD]);
                 LogStatusDokumen::create([
                     'dokumen_type' => DokumenNpi::class,
                     'dokumen_id' => $npi->id,
                     'user_id' => $user->id,
                     'role_saat_itu' => 'Sistem Verifikasi',
-                    'status_baru' => DokumenNpi::STATUS_DISETUJUI_FINAL,
+                    'status_baru' => DokumenNpi::STATUS_MENUNGGU_UPLOAD,
                     'aksi' => 'NPI_FINAL_APPROVED',
-                    'catatan' => 'Form NPI Honorarium disetujui secara mufakat dan berstatus Rilis (Terbit).',
+                    'catatan' => 'Form NPI Honorarium disetujui secara mufakat dan berstatus Menunggu Upload Fisik NPI.',
                     'ip_address' => request()->ip()
                 ]);
             }
@@ -278,6 +285,9 @@ class VerifikasiNpiHonorController extends Controller
 
         $npi = DokumenNpi::with('workflowInstances')->findOrFail($id);
         $wf = $npi->workflowInstances->first();
+        if ($roleCode === 'Bendahara Penerimaan' && (int) $npi->bendahara_penerimaan_id !== (int) $user->id) {
+            abort(403, 'NPI ini bukan tugas Bendahara Penerimaan Anda.');
+        }
 
         try {
             DB::beginTransaction();

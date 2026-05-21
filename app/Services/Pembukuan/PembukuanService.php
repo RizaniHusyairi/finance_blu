@@ -329,13 +329,51 @@ class PembukuanService
         $this->applyMutasiFilters($query, $filters);
         $this->applyBungaFilter($query);
 
+        // Urut naik supaya saldo berjalan bisa dihitung secara kumulatif.
         $entries = $query
-            ->orderByDesc('tanggal_transaksi')
-            ->orderByDesc('id')
+            ->orderBy('tanggal_transaksi')
+            ->orderBy('id')
             ->get();
+
+        // Saldo awal = akumulasi (penerimaan - pengeluaran) seluruh transaksi bunga
+        // sebelum start_date (tanpa filter start_date).
+        $openingQuery = DetailMutasiBank::query();
+        $openingFilters = $filters;
+        $openingFilters['start_date'] = null;
+        $openingFilters['end_date'] = null;
+        $this->applyMutasiFilters($openingQuery, $openingFilters);
+        $this->applyBungaFilter($openingQuery);
+
+        if ($filters['start_date']) {
+            $openingQuery->whereDate('tanggal_transaksi', '<', $filters['start_date']);
+        }
+
+        $saldoAwal = (float) ($openingQuery->sum(DB::raw('COALESCE(debit,0) - COALESCE(kredit,0)')));
+
+        // Anotasi saldo berjalan per baris (cumulative). Simpan pada atribut transient.
+        $saldoBerjalan = $saldoAwal;
+        $totalPenerimaan = 0.0;
+        $totalPengeluaran = 0.0;
+
+        foreach ($entries as $entry) {
+            $penerimaan = (float) $entry->debit;
+            $pengeluaran = (float) $entry->kredit;
+
+            $saldoBerjalan += $penerimaan - $pengeluaran;
+            $totalPenerimaan += $penerimaan;
+            $totalPengeluaran += $pengeluaran;
+
+            // Atribut transient non-persisten — dipakai view saja.
+            $entry->nominal_penerimaan = $penerimaan;
+            $entry->nominal_pengeluaran = $pengeluaran;
+            $entry->saldo_berjalan = $saldoBerjalan;
+        }
+
+        $saldoAkhir = $saldoBerjalan;
 
         $matchedBkuMap = $this->mapBungaToBku($entries);
 
+        // Summary bulan berjalan & tahun berjalan tetap berbasis net penerimaan bunga.
         $baseSummaryQuery = DetailMutasiBank::query()
             ->join('import_mutasi_bank', 'import_mutasi_bank.id', '=', 'detail_mutasi_bank.import_mutasi_bank_id');
 
@@ -354,6 +392,10 @@ class PembukuanService
             'entries' => $entries,
             'matchedBkuMap' => $matchedBkuMap,
             'summary' => [
+                'saldo_awal' => $saldoAwal,
+                'saldo_akhir' => $saldoAkhir,
+                'total_penerimaan' => $totalPenerimaan,
+                'total_pengeluaran' => $totalPengeluaran,
                 'bulan_ini' => (clone $baseSummaryQuery)
                     ->whereDate('detail_mutasi_bank.tanggal_transaksi', '>=', $monthStart)
                     ->sum(DB::raw('detail_mutasi_bank.debit')),
@@ -571,6 +613,7 @@ class PembukuanService
             'status' => $filters['status'] ?? null,
             'jenis_transaksi' => $filters['jenis_transaksi'] ?? null,
             'tagihan_id' => $filters['tagihan_id'] ?? null,
+            'mekanisme_pembayaran' => $filters['mekanisme_pembayaran'] ?? null,
             'jenis_tagihan' => $filters['jenis_tagihan'] ?? null,
             'jenis_pajak' => $filters['jenis_pajak'] ?? null,
             'status_billing_setor' => $filters['status_billing_setor'] ?? null,
@@ -625,6 +668,23 @@ class PembukuanService
             ->when($filters['jenis_transaksi'] === 'pengeluaran', fn (Builder $q) => $q->whereNotNull('referensi_pengeluaran_id'))
             ->when($filters['jenis_transaksi'] === 'penerimaan', fn (Builder $q) => $q->whereNotNull('referensi_penerimaan_id'))
             ->when($filters['tagihan_id'], fn (Builder $q) => $q->where('referensi_pengeluaran_id', $filters['tagihan_id']));
+
+        // Filter mekanisme pembayaran: default hanya LS_BENDAHARA agar menu ini
+        // konsisten dengan penamaannya ("Buku Pembantu LS Bendahara"). Pengguna
+        // dapat mengubah ke 'all' atau memilih mekanisme lain lewat filter.
+        $mekanisme = $filters['mekanisme_pembayaran']
+            ?? \App\Enums\MekanismePembayaran::LS_BENDAHARA->value;
+
+        if ($mekanisme !== 'all') {
+            $query->where(function (Builder $q) use ($mekanisme) {
+                // Baris yang punya referensi tagihan pengeluaran → match mekanisme tagihan
+                $q->whereHas('referensiPengeluaran', function (Builder $t) use ($mekanisme) {
+                    $t->where('mekanisme_pembayaran', $mekanisme);
+                });
+                // Baris penerimaan tetap ditampilkan (bukan outflow LS)
+                $q->orWhereNotNull('referensi_penerimaan_id');
+            });
+        }
     }
 
     private function applyMutasiFilters($query, array $filters, string $dateColumn = 'tanggal_transaksi'): void
@@ -694,11 +754,25 @@ class PembukuanService
     private function applyBungaFilter($query): void
     {
         $keywords = ['bunga', 'jasa giro', 'interest'];
+        $kategoriBungaValues = [
+            \App\Enums\KategoriMutasiBank::BUNGA_MASUK->value,
+            \App\Enums\KategoriMutasiBank::TRANSFER_BUNGA_KELUAR->value,
+            \App\Enums\KategoriMutasiBank::PAJAK_BUNGA->value,
+        ];
 
-        $query->where(function ($subQuery) use ($keywords) {
-            foreach ($keywords as $keyword) {
-                $subQuery->orWhereRaw('LOWER(deskripsi) LIKE ?', ['%' . $keyword . '%']);
-            }
+        $query->where(function ($subQuery) use ($keywords, $kategoriBungaValues) {
+            // Prioritas 1: baris yang sudah terklasifikasi sebagai kategori bunga
+            $subQuery->whereIn('kategori_mutasi', $kategoriBungaValues);
+
+            // Prioritas 2: fallback keyword pada deskripsi (untuk data yang belum ter-classify)
+            $subQuery->orWhere(function ($inner) use ($keywords) {
+                $inner->whereNull('kategori_mutasi');
+                $inner->where(function ($kw) use ($keywords) {
+                    foreach ($keywords as $keyword) {
+                        $kw->orWhereRaw('LOWER(deskripsi) LIKE ?', ['%' . $keyword . '%']);
+                    }
+                });
+            });
         });
     }
 

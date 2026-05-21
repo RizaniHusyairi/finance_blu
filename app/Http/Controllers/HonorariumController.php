@@ -37,10 +37,63 @@ class HonorariumController extends Controller
         $tarifPajaks = \App\Models\MasterTarifPajak::where('status_aktif', true)
             ->where('kode_pajak', 'like', 'PPH%')
             ->orderBy('kode_pajak')->get();
-        $ppkUsers = User::role('PPK')->get();
-        $bendaharaUsers = User::role('Bendahara Pengeluaran')->get();
 
-        return view('honorarium.create', compact('budgetGroups', 'nextNumber', 'tarifPajaks', 'ppkUsers', 'bendaharaUsers'));
+        $verifikatorOptions = $this->buildVerifikatorOptions();
+
+        return view('honorarium.create', compact(
+            'budgetGroups', 'nextNumber', 'tarifPajaks', 'verifikatorOptions'
+        ));
+    }
+
+    /**
+     * Kumpulkan user per role untuk dropdown verifikator Honorarium.
+     */
+    private function buildVerifikatorOptions(): array
+    {
+        $roles = [
+            'ppk'                   => 'PPK',
+            'ppspm'                 => 'PPSPM',
+            'koordinator_keuangan'  => 'Koordinator Keuangan',
+            'bendahara_pengeluaran' => 'Bendahara Pengeluaran',
+            'bendahara_penerimaan'  => 'Bendahara Penerimaan',
+            'kasubbag'              => 'Kepala Subbagian Keuangan dan Tata Usaha',
+        ];
+
+        $options = [];
+        foreach ($roles as $key => $roleName) {
+            try {
+                $users = User::role($roleName)->with('profilable')->orderByDisplayName()->get();
+            } catch (\Exception $e) {
+                $users = collect();
+            }
+
+            $options[$key] = $users->map(fn ($u) => [
+                'id'      => $u->id,
+                'name'    => $u->name,
+                'nip'     => optional($u->profilable)->nip ?? '-',
+                'jabatan' => optional($u->profilable)->jabatan ?? $roleName,
+            ])->values();
+        }
+
+        return $options;
+    }
+
+    /**
+     * Bangun array snapshot verifikator (user_id + nama + nip) dari input role → user_id.
+     */
+    private function buildVerifikatorSnapshots(array $userIdsByRole): array
+    {
+        $out = [];
+        foreach ($userIdsByRole as $key => $userId) {
+            if (empty($userId)) continue;
+            $user = User::with('profilable')->find($userId);
+            if (! $user) continue;
+
+            $out["{$key}_user_id"]       = $user->id;
+            $out["{$key}_nama_snapshot"] = $user->name;
+            $out["{$key}_nip_snapshot"]  = optional($user->profilable)->nip ?? null;
+        }
+        return $out;
     }
 
     public function store(Request $request)
@@ -58,6 +111,7 @@ class HonorariumController extends Controller
 
         $request->validate([
             'deskripsi' => 'required|string|max:255',
+            'nama_supplier' => 'required|string|max:150',
             'dipa_revision_item_id' => 'required|exists:dipa_revision_items,id',
             'items' => 'required|array|min:1',
             'items.*.nama_personel' => 'required|string|max:255',
@@ -72,7 +126,19 @@ class HonorariumController extends Controller
             'items.*.no_hp' => 'nullable|string|max:50',
             'file_sk' => 'nullable|file|mimes:pdf,doc,docx|max:10240',
             'ppk_id' => 'required|exists:users,id',
+            'ppspm_id' => 'required|exists:users,id',
+            'koordinator_keuangan_id' => 'required|exists:users,id',
             'bendahara_pengeluaran_id' => 'required|exists:users,id',
+            'bendahara_penerimaan_id' => 'required|exists:users,id',
+            'kasubbag_id' => 'required|exists:users,id',
+            'mekanisme_pembayaran' => [
+                'nullable',
+                'string',
+                \Illuminate\Validation\Rule::in([
+                    \App\Enums\MekanismePembayaran::LS_PIHAK_3->value,
+                    \App\Enums\MekanismePembayaran::LS_BENDAHARA->value,
+                ]),
+            ],
         ]);
 
         try {
@@ -89,27 +155,33 @@ class HonorariumController extends Controller
 
             $status = 'DRAFT';
 
-            $ppk = User::find($request->ppk_id);
-            $bendahara = User::find($request->bendahara_pengeluaran_id);
+            // Snapshot 6 verifikator (PPK, PPSPM, Koor.Keu, Bend.Kel, Bend.Trm, Kasubbag)
+            $verifikatorSnapshots = $this->buildVerifikatorSnapshots([
+                'ppk'                   => (int) $request->ppk_id,
+                'ppspm'                 => (int) $request->ppspm_id,
+                'koordinator_keuangan'  => (int) $request->koordinator_keuangan_id,
+                'bendahara_pengeluaran' => (int) $request->bendahara_pengeluaran_id,
+                'bendahara_penerimaan'  => (int) $request->bendahara_penerimaan_id,
+                'kasubbag'              => (int) $request->kasubbag_id,
+            ]);
 
-            $tagihan = Tagihan::create([
+            $tagihan = Tagihan::create(array_merge([
                 'nomor_tagihan' => $nomorTagihan,
                 'tipe_tagihan' => 'HONORARIUM',
                 'master_dipa_id' => $selectedItem->dipaRevision->master_dipa_id,
                 'dipa_revision_item_id' => $selectedItem->id,
                 'deskripsi' => $request->deskripsi,
+                'nama_supplier' => $request->nama_supplier,
                 'total_bruto' => $totalBruto,
                 'total_potongan' => $totalPph,
                 'total_netto' => $totalNetto,
+                'mekanisme_pembayaran' => $request->input(
+                    'mekanisme_pembayaran',
+                    \App\Enums\MekanismePembayaran::defaultFor('HONORARIUM')->value
+                ),
                 'status' => $status,
                 'created_by' => auth()->id(),
-                'ppk_user_id' => $ppk?->id,
-                'ppk_nama_snapshot' => $ppk?->name,
-                'ppk_nip_snapshot' => $ppk?->nip,
-                'bendahara_pengeluaran_user_id' => $bendahara?->id,
-                'bendahara_pengeluaran_nama_snapshot' => $bendahara?->name,
-                'bendahara_pengeluaran_nip_snapshot' => $bendahara?->nip,
-            ]);
+            ], $verifikatorSnapshots));
 
             foreach ($request->items as $itemData) {
                 DetailHonorarium::create([
@@ -170,7 +242,11 @@ class HonorariumController extends Controller
                 'workflowInstances.definition',
                 'workflowInstances.approvals.assignedUser',
                 'workflowInstances.approvals.actedByUser',
-                'creator'
+                'creator',
+                'dipa',
+                'dipaRevisionItem.coa',
+                'dipaRevisionItem.dipaRevision.masterDipa',
+                'arsipDokumen',
             ])
             ->findOrFail($id);
 
@@ -179,7 +255,7 @@ class HonorariumController extends Controller
         $ppkApproval = $approvals->firstWhere('role_code', 'PPK');
         $bendaharaApproval = $approvals->firstWhere('role_code', 'Bendahara Pengeluaran');
 
-        return view('honorarium.show', compact('tagihan', 'ppkApproval', 'bendaharaApproval'));
+        return view('honorarium.show', compact('tagihan', 'ppkApproval', 'bendaharaApproval', 'activeWorkflowInstance'));
     }
 
     public function edit($id)
@@ -188,7 +264,11 @@ class HonorariumController extends Controller
             ->with('detailHonorarium')
             ->findOrFail($id);
 
-        if (!in_array($tagihan->status, ['DRAFT', 'DITOLAK_PPK'])) {
+        $allowedEditStatuses = ['DRAFT', 'DITOLAK_PPK', 'DITOLAK_PPSPM', 'DITOLAK_KOORDINATOR_KEUANGAN',
+            'DITOLAK_BENDAHARA_PENGELUARAN', 'DITOLAK_BENDAHARA_PENERIMAAN', 'DITOLAK_KASUBBAG'];
+        $isRevisi = str_starts_with((string) $tagihan->status, 'REVISI_');
+
+        if (! in_array($tagihan->status, $allowedEditStatuses, true) && ! $isRevisi) {
             return redirect()->route('honorarium.index')
                 ->with('error', 'Data dengan status ' . $tagihan->status . ' tidak bisa diedit.');
         }
@@ -198,17 +278,22 @@ class HonorariumController extends Controller
             ->where('kode_pajak', 'like', 'PPH%')
             ->orderBy('kode_pajak')->get();
 
-        $ppkUsers = User::role('PPK')->get();
-        $bendaharaUsers = User::role('Bendahara Pengeluaran')->get();
+        $verifikatorOptions = $this->buildVerifikatorOptions();
 
-        return view('honorarium.edit', compact('tagihan', 'budgetGroups', 'tarifPajaks', 'ppkUsers', 'bendaharaUsers'));
+        return view('honorarium.edit', compact(
+            'tagihan', 'budgetGroups', 'tarifPajaks', 'verifikatorOptions'
+        ));
     }
 
     public function update(Request $request, $id)
     {
         $tagihan = Tagihan::where('tipe_tagihan', 'HONORARIUM')->findOrFail($id);
 
-        if (!in_array($tagihan->status, ['DRAFT', 'DITOLAK_PPK'])) {
+        $allowedEditStatuses = ['DRAFT', 'DITOLAK_PPK', 'DITOLAK_PPSPM', 'DITOLAK_KOORDINATOR_KEUANGAN',
+            'DITOLAK_BENDAHARA_PENGELUARAN', 'DITOLAK_BENDAHARA_PENERIMAAN', 'DITOLAK_KASUBBAG'];
+        $isRevisi = str_starts_with((string) $tagihan->status, 'REVISI_');
+
+        if (! in_array($tagihan->status, $allowedEditStatuses, true) && ! $isRevisi) {
             return redirect()->route('honorarium.index')
                 ->with('error', 'Data dengan status ' . $tagihan->status . ' tidak bisa diedit.');
         }
@@ -225,6 +310,7 @@ class HonorariumController extends Controller
 
         $request->validate([
             'deskripsi' => 'required|string|max:255',
+            'nama_supplier' => 'required|string|max:150',
             'dipa_revision_item_id' => 'required|exists:dipa_revision_items,id',
             'items' => 'required|array|min:1',
             'items.*.nama_personel' => 'required|string|max:255',
@@ -239,7 +325,19 @@ class HonorariumController extends Controller
             'items.*.no_hp' => 'nullable|string|max:50',
             'file_sk' => 'nullable|file|mimes:pdf,doc,docx|max:10240',
             'ppk_id' => 'required|exists:users,id',
+            'ppspm_id' => 'required|exists:users,id',
+            'koordinator_keuangan_id' => 'required|exists:users,id',
             'bendahara_pengeluaran_id' => 'required|exists:users,id',
+            'bendahara_penerimaan_id' => 'required|exists:users,id',
+            'kasubbag_id' => 'required|exists:users,id',
+            'mekanisme_pembayaran' => [
+                'nullable',
+                'string',
+                \Illuminate\Validation\Rule::in([
+                    \App\Enums\MekanismePembayaran::LS_PIHAK_3->value,
+                    \App\Enums\MekanismePembayaran::LS_BENDAHARA->value,
+                ]),
+            ],
         ]);
 
         try {
@@ -253,24 +351,30 @@ class HonorariumController extends Controller
             $statusLama = $tagihan->status;
             $statusBaru = 'DRAFT';
 
-            $ppk = User::find($request->ppk_id);
-            $bendahara = User::find($request->bendahara_pengeluaran_id);
+            $verifikatorSnapshots = $this->buildVerifikatorSnapshots([
+                'ppk'                   => (int) $request->ppk_id,
+                'ppspm'                 => (int) $request->ppspm_id,
+                'koordinator_keuangan'  => (int) $request->koordinator_keuangan_id,
+                'bendahara_pengeluaran' => (int) $request->bendahara_pengeluaran_id,
+                'bendahara_penerimaan'  => (int) $request->bendahara_penerimaan_id,
+                'kasubbag'              => (int) $request->kasubbag_id,
+            ]);
 
-            $tagihan->update([
+            $tagihan->update(array_merge([
                 'master_dipa_id' => $selectedItem->dipaRevision->master_dipa_id,
                 'dipa_revision_item_id' => $selectedItem->id,
                 'deskripsi' => $request->deskripsi,
+                'nama_supplier' => $request->nama_supplier,
                 'total_bruto' => $totalBruto,
                 'total_potongan' => $totalPph,
                 'total_netto' => $totalNetto,
+                'mekanisme_pembayaran' => $request->input(
+                    'mekanisme_pembayaran',
+                    optional($tagihan->mekanisme_pembayaran)->value
+                        ?? \App\Enums\MekanismePembayaran::defaultFor('HONORARIUM')->value
+                ),
                 'status' => $statusBaru,
-                'ppk_user_id' => $ppk?->id,
-                'ppk_nama_snapshot' => $ppk?->name,
-                'ppk_nip_snapshot' => $ppk?->nip,
-                'bendahara_pengeluaran_user_id' => $bendahara?->id,
-                'bendahara_pengeluaran_nama_snapshot' => $bendahara?->name,
-                'bendahara_pengeluaran_nip_snapshot' => $bendahara?->nip,
-            ]);
+            ], $verifikatorSnapshots));
 
             // Delete old, re-insert
             DetailHonorarium::where('tagihan_id', $tagihan->id)->delete();
@@ -389,6 +493,56 @@ class HonorariumController extends Controller
         }
     }
 
+    /**
+     * Upload dua dokumen wajib (Daftar Nominatif & Dokumen Honorarium) sekaligus
+     * untuk PPABP saat melengkapi syarat pengajuan verifikasi.
+     */
+    public function uploadDokumenWajib(Request $request, $id)
+    {
+        $tagihan = Tagihan::where('tipe_tagihan', 'HONORARIUM')->findOrFail($id);
+
+        if ($tagihan->status !== 'DRAFT') {
+            return redirect()->back()->withErrors(['error' => 'Dokumen hanya bisa diunggah pada saat status DRAFT.']);
+        }
+
+        $uploadedTypes = $tagihan->arsipDokumen->pluck('jenis_dokumen')->toArray();
+        $needsNominatif = ! in_array('Daftar Nominatif Bertandatangan', $uploadedTypes, true);
+        $needsHonorarium = ! in_array('Dokumen Honorarium Bertandatangan', $uploadedTypes, true);
+
+        $rules = [];
+        if ($needsNominatif)  $rules['file_nominatif']  = 'required|file|mimes:pdf|max:10240';
+        if ($needsHonorarium) $rules['file_honorarium'] = 'required|file|mimes:pdf|max:10240';
+        $request->validate($rules);
+
+        $docService = app(DocumentArchiveService::class);
+        $directory = 'arsip-dokumen/Tagihan/' . $tagihan->nomor_tagihan;
+        $uploaded = [];
+
+        try {
+            if ($needsNominatif && $request->hasFile('file_nominatif')) {
+                $docService->upload($tagihan, 'Daftar Nominatif Bertandatangan', $request->file('file_nominatif'), [
+                    'directory'   => $directory,
+                    'uploaded_by' => Auth::id(),
+                    'keterangan'  => 'Diunggah oleh PPABP',
+                ]);
+                $uploaded[] = 'Daftar Nominatif';
+            }
+
+            if ($needsHonorarium && $request->hasFile('file_honorarium')) {
+                $docService->upload($tagihan, 'Dokumen Honorarium Bertandatangan', $request->file('file_honorarium'), [
+                    'directory'   => $directory,
+                    'uploaded_by' => Auth::id(),
+                    'keterangan'  => 'Diunggah oleh PPABP',
+                ]);
+                $uploaded[] = 'Dokumen Honorarium';
+            }
+
+            return redirect()->back()->with('success', 'Dokumen berhasil diunggah: ' . implode(', ', $uploaded) . '.');
+        } catch (\Exception $e) {
+            return redirect()->back()->withErrors(['error' => 'Gagal mengunggah dokumen: ' . $e->getMessage()]);
+        }
+    }
+
     public function deleteDokumen($id, $arsip_id)
     {
         $tagihan = Tagihan::where('tipe_tagihan', 'HONORARIUM')->findOrFail($id);
@@ -412,8 +566,12 @@ class HonorariumController extends Controller
     {
         $tagihan = Tagihan::where('tipe_tagihan', 'HONORARIUM')->findOrFail($id);
 
-        if ($tagihan->status !== 'DRAFT') {
-            return redirect()->back()->withErrors(['error' => 'Honorarium tidak dalam status DRAFT.']);
+        $allowedSubmitStatuses = ['DRAFT', 'DITOLAK_PPK', 'DITOLAK_PPSPM', 'DITOLAK_KOORDINATOR_KEUANGAN',
+            'DITOLAK_BENDAHARA_PENGELUARAN', 'DITOLAK_BENDAHARA_PENERIMAAN', 'DITOLAK_KASUBBAG'];
+        $isRevisi = str_starts_with((string) $tagihan->status, 'REVISI_');
+
+        if (! in_array($tagihan->status, $allowedSubmitStatuses, true) && ! $isRevisi) {
+            return redirect()->back()->withErrors(['error' => 'Honorarium tidak dalam status DRAFT / REVISI.']);
         }
 
         // Cek dokumen wajib
@@ -426,29 +584,68 @@ class HonorariumController extends Controller
             }
         }
 
+        // Pastikan semua verifikator sudah terisi
+        $missingVerif = collect([
+            'PPK' => $tagihan->ppk_user_id,
+            'PPSPM' => $tagihan->ppspm_user_id,
+            'Koordinator Keuangan' => $tagihan->koordinator_keuangan_user_id,
+            'Bendahara Pengeluaran' => $tagihan->bendahara_pengeluaran_user_id,
+            'Bendahara Penerimaan' => $tagihan->bendahara_penerimaan_user_id,
+            'Kasubbag' => $tagihan->kasubbag_user_id,
+        ])->filter(fn ($v) => empty($v))->keys();
+
+        if ($missingVerif->isNotEmpty()) {
+            return redirect()->back()->withErrors([
+                'error' => 'Verifikator belum lengkap: ' . $missingVerif->implode(', '),
+            ]);
+        }
+
         DB::beginTransaction();
         try {
-            // Update tagihan status
-            $tagihan->update(['status' => 'PENDING_VERIFIKASI']);
+            $statusSebelumnya = $tagihan->status;
 
-            // Start Parallel Workflow
-            $workflowService = app(WorkflowService::class);
-            $workflowService->startWorkflow('TAGIHAN_HONORARIUM', $tagihan);
+            // Start Parallel Workflow via service khusus honorarium.
+            // Service ini akan membuat instance + 6 approvals (5 paralel + Kasubbag),
+            // lalu sinkronkan tagihan.status ke PENDING_VERIFIKASI_HONORARIUM.
+            $workflow = app(\App\Services\TagihanHonorariumWorkflowService::class);
+            $workflow->submit($tagihan, Auth::user(), $request->ip());
+            $tagihan->refresh();
 
             LogStatusDokumen::create([
                 'dokumen_type' => Tagihan::class,
                 'dokumen_id' => $tagihan->id,
                 'user_id' => Auth::id(),
-                'role_saat_itu' => Auth::user()->getRoleNames()->first() ?? '-',
-                'status_sebelumnya' => 'DRAFT',
-                'status_baru' => 'PENDING_VERIFIKASI',
-                'aksi' => 'SUBMIT_WORKFLOW',
-                'catatan' => 'PPABP mengajukan dokumen untuk verifikasi paralel PPK dan Bendahara.',
+                'role_saat_itu' => Auth::user()->getRoleNames()->first() ?? 'PPABP',
+                'status_sebelumnya' => $statusSebelumnya,
+                'status_baru' => $tagihan->status,
+                'aksi' => 'DIAJUKAN',
+                'catatan' => 'Tagihan diajukan ke 5 verifikator paralel (PPK, PPSPM, Koor.Keu, Bend.Keluar, Bend.Terima) lalu Kasubbag.',
                 'ip_address' => $request->ip(),
             ]);
 
+            // Notifikasi paralel ke semua 5 verifikator step 1
+            foreach ([
+                $tagihan->ppk_user_id,
+                $tagihan->ppspm_user_id,
+                $tagihan->koordinator_keuangan_user_id,
+                $tagihan->bendahara_pengeluaran_user_id,
+                $tagihan->bendahara_penerimaan_user_id,
+            ] as $uid) {
+                if (! $uid) continue;
+                $u = User::find($uid);
+                if (! $u) continue;
+                Notification::send($u, new WorkflowNotification([
+                    'title' => 'Tagihan Honorarium Menunggu Verifikasi',
+                    'message' => "Tagihan {$tagihan->nomor_tagihan} menunggu verifikasi Anda.",
+                    'url' => route('verifikasi-tagihan-honorarium.show', $tagihan->id),
+                    'icon' => 'receipt_long',
+                    'color' => 'primary',
+                ]));
+            }
+
             DB::commit();
-            return redirect()->route('honorarium.show', $tagihan->id)->with('success', 'Dokumen honorarium berhasil diajukan untuk verifikasi.');
+            return redirect()->route('honorarium.show', $tagihan->id)
+                ->with('success', 'Tagihan honorarium berhasil diajukan. Menunggu verifikasi 5 pejabat paralel, lalu finalisasi Kasubbag.');
         } catch (\Exception $e) {
             DB::rollBack();
             return redirect()->back()->withErrors(['error' => 'Gagal submit workflow: ' . $e->getMessage()]);
@@ -505,4 +702,3 @@ class HonorariumController extends Controller
         ]));
     }
 }
-

@@ -141,15 +141,13 @@
 
                                                     <div class="mb-3">
                                                         <label class="form-label fw-bold">Bendahara Penerimaan <span class="text-danger">*</span></label>
-                                                        <select name="bendahara_penerimaan_id" class="form-select" required>
-                                                            <option value="">-- Pilih Bendahara Penerimaan --</option>
-                                                            @foreach($bendaharaPenerimaans as $pejabat)
-                                                                <option value="{{ $pejabat->id }}" {{ optional(optional($spp->spm)->npi)->bendahara_penerimaan_id == $pejabat->id ? 'selected' : '' }}>
-                                                                    {{ $pejabat->name }}
-                                                                </option>
-                                                            @endforeach
-                                                        </select>
-                                                        </div>
+                                                        @php($bendaharaPenerimaanTagihan = $spp->tagihan?->bendaharaPenerimaanUser)
+                                                        <input type="hidden" name="bendahara_penerimaan_id" value="{{ $bendaharaPenerimaanTagihan?->id }}">
+                                                        <input type="text" class="form-control bg-light" value="{{ $bendaharaPenerimaanTagihan?->name ?? $spp->tagihan?->bendahara_penerimaan_nama_snapshot ?? 'Belum ditentukan pada tagihan' }}" readonly>
+                                                        <div class="form-text">Diwariskan dari verifikator Bendahara Penerimaan yang dipilih saat tagihan diajukan.</div>
+                                                        @if(!$bendaharaPenerimaanTagihan)
+                                                            <div class="text-danger small mt-1">Verifikator Bendahara Penerimaan belum ada pada tagihan sumber.</div>
+                                                        @endif
                                                     </div>
                                                 </div>
                                                 <div class="modal-footer">

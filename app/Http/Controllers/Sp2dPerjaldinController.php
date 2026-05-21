@@ -42,7 +42,8 @@ class Sp2dPerjaldinController extends Controller
         })
         ->whereIn('status', [
             DokumenNpi::STATUS_DISETUJUI_FINAL,
-            DokumenNpi::STATUS_APPROVED_KASUBAG // fallback legacy
+            DokumenNpi::STATUS_APPROVED_KASUBAG, // fallback legacy
+            DokumenNpi::STATUS_NPI_TERBIT
         ]);
 
         $allNpis = $query->latest()->get();
@@ -126,7 +127,7 @@ class Sp2dPerjaldinController extends Controller
         ->whereHas('spm.spp', function($q) {
             $q->whereNotNull('tagihan_perjaldin_komponen_id');
         })
-        ->whereIn('status', [DokumenNpi::STATUS_DISETUJUI_FINAL, DokumenNpi::STATUS_APPROVED_KASUBAG])
+        ->whereIn('status', [DokumenNpi::STATUS_DISETUJUI_FINAL, DokumenNpi::STATUS_APPROVED_KASUBAG, DokumenNpi::STATUS_NPI_TERBIT])
         ->findOrFail($npiId);
 
         $spm = $npi->spm;
@@ -152,13 +153,19 @@ class Sp2dPerjaldinController extends Controller
         
         $isLengkap = !in_array(false, array_values($checks), true);
         
-        $wf = $sp2d ? $sp2d->workflowInstances->first() : null;
+        $wf = $sp2d ? $sp2d->workflowInstances->sortByDesc('created_at')->first() : null;
+        $approvals = collect($wf ? $wf->approvals : []);
+
+        $ppkApproval = $approvals->firstWhere('role_code', 'PPK');
+        $kasubbagApproval = $approvals->firstWhere('role_code', 'Kepala Subbagian Keuangan dan Tata Usaha');
+        $koordinatorApproval = $approvals->firstWhere('role_code', 'Koordinator Keuangan');
+        $ppspmApproval = $approvals->firstWhere('role_code', 'PPSPM');
 
         $autoNomorSp2d = \App\Services\DocumentNumberingService::generateDerivedNumber($spp->nomor_spp ?? '', 'SP2D');
 
         return view('sp2ds.perjaldin.detail', compact(
             'npi', 'spm', 'spp', 'tagihan', 'komponen', 'sp2d',
-            'defaultNilai', 'defaultTahun', 'checks', 'isLengkap', 'wf', 'autoNomorSp2d'
+            'defaultNilai', 'defaultTahun', 'checks', 'isLengkap', 'wf', 'autoNomorSp2d', 'ppkApproval', 'kasubbagApproval', 'koordinatorApproval', 'ppspmApproval'
         ));
     }
 
@@ -176,7 +183,7 @@ class Sp2dPerjaldinController extends Controller
         $npi = DokumenNpi::whereHas('spm.spp', function($q) {
             $q->whereNotNull('tagihan_perjaldin_komponen_id');
         })
-        ->whereIn('status', [DokumenNpi::STATUS_DISETUJUI_FINAL, DokumenNpi::STATUS_APPROVED_KASUBAG])
+        ->whereIn('status', [DokumenNpi::STATUS_DISETUJUI_FINAL, DokumenNpi::STATUS_APPROVED_KASUBAG, DokumenNpi::STATUS_NPI_TERBIT])
         ->findOrFail($npiId);
 
         $sp2d = $npi->sp2d;
@@ -283,6 +290,36 @@ class Sp2dPerjaldinController extends Controller
                 'title'   => 'Antrean Verifikasi SP2D Perjaldin Baru',
                 'message' => "SP2D Perjaldin dengan Nomor {$sp2d->nomor_sp2d} telah diajukan dan membutuhkan persetujuan Anda.",
                 'url'     => '#', // Nanti dialihkan ke route verifikasi PPK SP2D
+                'icon'    => 'inventory',
+                'color'   => 'primary',
+            ]));
+
+            // Notify Kasubbag
+            $kasubbags = User::role('Kepala Subbagian Keuangan dan Tata Usaha')->get();
+            Notification::send($kasubbags, new WorkflowNotification([
+                'title'   => 'Antrean Verifikasi SP2D Perjaldin Baru',
+                'message' => "SP2D Perjaldin dengan Nomor {$sp2d->nomor_sp2d} telah diajukan dan membutuhkan persetujuan Anda.",
+                'url'     => '#',
+                'icon'    => 'inventory',
+                'color'   => 'primary',
+            ]));
+
+            // Notify PPSPM
+            $ppspms = User::role('PPSPM')->get();
+            Notification::send($ppspms, new WorkflowNotification([
+                'title'   => 'Antrean Verifikasi SP2D Perjaldin Baru',
+                'message' => "SP2D Perjaldin dengan Nomor {$sp2d->nomor_sp2d} telah diajukan dan membutuhkan persetujuan Anda.",
+                'url'     => '#',
+                'icon'    => 'inventory',
+                'color'   => 'primary',
+            ]));
+
+            // Notify Koordinator Keuangan
+            $koordinators = User::role('Koordinator Keuangan')->get();
+            Notification::send($koordinators, new WorkflowNotification([
+                'title'   => 'Antrean Verifikasi SP2D Perjaldin Baru',
+                'message' => "SP2D Perjaldin dengan Nomor {$sp2d->nomor_sp2d} telah diajukan dan membutuhkan persetujuan Anda.",
+                'url'     => route('verifikasi-sp2d.perjaldin.index'),
                 'icon'    => 'inventory',
                 'color'   => 'primary',
             ]));

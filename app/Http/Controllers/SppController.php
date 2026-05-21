@@ -14,6 +14,7 @@ use App\Models\MasterTarifPajak;
 use App\Models\PotonganTagihan;
 use App\Models\User;
 use App\Notifications\WorkflowNotification;
+use App\Support\PaymentPdfReference;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -58,14 +59,15 @@ class SppController extends Controller
             ->findOrFail($perjaldin_id);
             
         $budgets = \App\Support\DipaBudgetOptionService::groupedOptions();
-        $ppkUsers = clone \App\Models\User::role('PPK')->orderByDisplayName()->get();
-        $kasubbagUser = \App\Models\User::role('Kepala Subbagian Keuangan dan Tata Usaha')->first();
+        $ppkUser = \App\Models\User::find($tagihan->ppk_user_id) ?? \App\Models\User::role('PPK')->orderByDisplayName()->first();
+        $kasubbagUser = \App\Models\User::find($tagihan->kasubbag_user_id) ?? \App\Models\User::role('Kepala Subbagian Keuangan dan Tata Usaha')->first();
+        $koordinatorUser = \App\Models\User::find($tagihan->koordinator_keuangan_user_id) ?? \App\Models\User::role('Koordinator Keuangan')->first();
 
         // Hitung counter berikutnya untuk preview nomor SPP
         $tahun = date('Y');
         $nextSppCounter = \App\Services\DocumentNumberingService::getNextSppSequence($tahun);
 
-        return view('spps.detail_perjaldin', compact('tagihan', 'budgets', 'ppkUsers', 'kasubbagUser', 'nextSppCounter'));
+        return view('spps.detail_perjaldin', compact('tagihan', 'budgets', 'ppkUser', 'kasubbagUser', 'koordinatorUser', 'nextSppCounter'));
     }
 
     /**
@@ -105,8 +107,8 @@ class SppController extends Controller
                         'tagihan_id' => $tagihan->id,
                         'komponen_biaya' => $komponen->kode_komponen,
                         'dipa_revision_item_id' => $komponen->dipa_revision_item_id,
-                        'kategori_pembayaran' => 'SP2D BLU - TRF',
-                        'jenis_tagihan' => 'NON REMUNERASI',
+                        'kategori_pembayaran' => optional($tagihan->mekanisme_pembayaran)->sppKategoriPembayaran() ?? 'SP2D BLU - TRF',
+                        'jenis_tagihan' => $request->jenis_tagihan ?? 'NON REMUNERASI',
                         'nominal_spp' => $komponen->total_nominal,
                         'nomor_spp' => $nomorSpp,
                         'tanggal_spp' => $request->tanggal_spp,
@@ -207,7 +209,7 @@ class SppController extends Controller
         \Illuminate\Support\Facades\Notification::send($ppks, new \App\Notifications\WorkflowNotification([
             'title' => 'Pengajuan SPP',
             'message' => "Surat Permintaan Pembayaran ({$request->kategori_biaya}) menunggu verifikasi Anda.",
-            'url' => route('verifikasi-ppk.spp.index'),
+            'url' => route('verifikasi-spp.perjaldin.index'),
             'icon' => 'receipt_long',
             'color' => 'primary'
         ]));
@@ -253,8 +255,9 @@ class SppController extends Controller
         // Budget item options: Honorarium has dipa_revision_item_id on tagihan
         $selectedBudgetItem = $sppModel?->dipaRevisionItem ?? \App\Models\DetailDipa::with('coa')->find($tagihan->dipa_revision_item_id);
         
-        $ppkUsers = User::role('PPK')->orderByDisplayName()->get();
-        $kasubbagUser = User::role('Kepala Subbagian Keuangan dan Tata Usaha')->orderByDisplayName()->first();
+        $ppkUser = \App\Models\User::find($tagihan->ppk_user_id) ?? \App\Models\User::role('PPK')->orderByDisplayName()->first();
+        $kasubbagUser = \App\Models\User::find($tagihan->kasubbag_user_id) ?? \App\Models\User::role('Kepala Subbagian Keuangan dan Tata Usaha')->orderByDisplayName()->first();
+        $koordinatorUser = \App\Models\User::find($tagihan->koordinator_keuangan_user_id) ?? \App\Models\User::role('Koordinator Keuangan')->orderByDisplayName()->first();
         
         $skHonorarium = $tagihan->arsipDokumen->firstWhere('jenis_dokumen', 'SK Honorarium');
         $daftarNominatif = $tagihan->arsipDokumen->firstWhere('jenis_dokumen', 'Daftar Nominatif Bertandatangan');
@@ -398,6 +401,7 @@ class SppController extends Controller
 
         $latestWorkflowInstance = collect($sppModel?->workflowInstances ?? [])->sortByDesc('created_at')->first();
         $ppkApproval = collect($latestWorkflowInstance?->approvals ?? [])->firstWhere('role_code', 'PPK');
+        $koordinatorApproval = collect($latestWorkflowInstance?->approvals ?? [])->firstWhere('role_code', 'Koordinator Keuangan');
         $kasubbagApproval = collect($latestWorkflowInstance?->approvals ?? [])->firstWhere('role_code', 'Kepala Subbagian Keuangan dan Tata Usaha');
         $submittedLog = collect($sppModel?->logs ?? [])->sortByDesc('created_at')->firstWhere('aksi', 'SUBMIT_PPK');
 
@@ -417,9 +421,9 @@ class SppController extends Controller
         $autoNomorSpp = \App\Services\DocumentNumberingService::generateSppNumber(date('Y'));
 
         return view('spps.detail_honor', compact(
-            'tagihan', 'sppModel', 'selectedBudgetItem', 'ppkUsers', 'kasubbagUser', 'documentStatuses', 'readinessChecklist',
+            'tagihan', 'sppModel', 'selectedBudgetItem', 'ppkUser', 'kasubbagUser', 'koordinatorUser', 'documentStatuses', 'readinessChecklist',
             'readinessIssues', 'workflowSummary', 'activitySummary', 'recentActivities', 'isReadyToSubmit', 'readinessStatus',
-            'ppkApproval', 'kasubbagApproval', 'autoNomorSpp'
+            'ppkApproval', 'koordinatorApproval', 'kasubbagApproval', 'autoNomorSpp'
         ));
     }
 
@@ -447,8 +451,8 @@ class SppController extends Controller
                 [
                     'tagihan_id' => $tagihan->id,
                     'dipa_revision_item_id' => $defaultBudgetItemId,
-                    'kategori_pembayaran' => 'SP2D BLU - TRF',
-                    'jenis_tagihan' => 'NON REMUNERASI',
+                    'kategori_pembayaran' => optional($tagihan->mekanisme_pembayaran)->sppKategoriPembayaran() ?? 'SP2D BLU - TRF',
+                    'jenis_tagihan' => $request->jenis_tagihan ?? 'NON REMUNERASI',
                     'nominal_spp' => $tagihan->total_netto,
                     'nomor_spp' => $request->nomor_spp,
                     'tanggal_spp' => $request->tanggal_spp,
@@ -488,8 +492,7 @@ class SppController extends Controller
             $statusSebelumnya = $spp->status;
             $spp->update(['status' => 'Menunggu Verifikasi']);
 
-            // Generate workflow definition secara seragam menggunakan definisi paralel PPK-Kasubbag existing.
-            app(WorkflowService::class)->startWorkflow('SPP_KONTRAK_PPK', $spp, $spp->ppk_verifikator_id);
+            app(WorkflowService::class)->startWorkflow('SPP_HONORARIUM_PPK', $spp, $spp->ppk_verifikator_id);
             
             if (!in_array($tagihan->status, ['PROSES_SPP', 'SPP_TERBIT'])) {
                 $tagihan->update(['status' => 'PROSES_SPP']);
@@ -514,7 +517,7 @@ class SppController extends Controller
             Notification::send($selectedPpk, new WorkflowNotification([
                 'title' => 'SPP Honorarium Diajukan',
                 'message' => "SPP Honorarium ({$spp->nomor_spp}) menunggu verifikasi Anda.",
-                'url' => route('verifikasi-ppk.spp.index'),
+                'url' => route('verifikasi-spp.honor.index'),
                 'icon' => 'receipt_long',
                 'color' => 'primary',
             ]));
@@ -567,8 +570,9 @@ class SppController extends Controller
             ->values();
         $sppModel = $tagihan->spps->sortByDesc('created_at')->first();
         $selectedBudgetItem = $sppModel?->dipaRevisionItem ?? $budgetItems->first();
-        $ppkUsers = User::role('PPK')->orderByDisplayName()->get();
-        $kasubbagUser = User::role('Kepala Subbagian Keuangan dan Tata Usaha')->orderByDisplayName()->first();
+        $ppkUser = \App\Models\User::find($tagihan->ppk_user_id) ?? \App\Models\User::role('PPK')->orderByDisplayName()->first();
+        $kasubbagUser = \App\Models\User::find($tagihan->kasubbag_user_id) ?? \App\Models\User::role('Kepala Subbagian Keuangan dan Tata Usaha')->orderByDisplayName()->first();
+        $koordinatorUser = \App\Models\User::find($tagihan->koordinator_keuangan_user_id) ?? \App\Models\User::role('Koordinator Keuangan')->orderByDisplayName()->first();
         $pajaks = MasterTarifPajak::orderBy('jenis_pajak')->get();
         $potonganTagihans = collect($tagihan->potonganTagihan);
         $potonganPajak = $potonganTagihans->filter(fn ($item) => $item->jenis_potongan !== 'ANGSURAN_UANG_MUKA');
@@ -760,6 +764,8 @@ class SppController extends Controller
         
         $ppkApproval = collect($latestWorkflowInstance?->approvals ?? [])
             ->firstWhere('role_code', 'PPK');
+        $koordinatorApproval = collect($latestWorkflowInstance?->approvals ?? [])
+            ->firstWhere('role_code', 'Koordinator Keuangan');
         $kasubbagApproval = collect($latestWorkflowInstance?->approvals ?? [])
             ->firstWhere('role_code', 'Kepala Subbagian Keuangan dan Tata Usaha');
 
@@ -788,6 +794,11 @@ class SppController extends Controller
                 'label' => 'Verifikator PPK',
                 'value' => $sppModel?->ppkVerifikator?->name ?? '-',
                 'meta' => $ppkApproval?->status ? 'Status: ' . $ppkApproval->status : null,
+            ],
+            [
+                'label' => 'Verifikator Koordinator Keuangan',
+                'value' => $koordinatorUser?->name ?? '-',
+                'meta' => $koordinatorApproval?->status ? 'Status: ' . $koordinatorApproval->status : null,
             ],
             [
                 'label' => 'Verifikator Kasubbag',
@@ -831,8 +842,9 @@ class SppController extends Controller
             'autoNomorSpp',
             'selectedBudgetItem',
             'sppModel',
-            'ppkUsers',
+            'ppkUser',
             'kasubbagUser',
+            'koordinatorUser',
             'pajaks',
             'documentStatuses',
             'readinessChecklist',
@@ -843,6 +855,7 @@ class SppController extends Controller
             'isReadyToSubmit',
             'readinessStatus',
             'ppkApproval',
+            'koordinatorApproval',
             'kasubbagApproval',
         ));
     }
@@ -926,8 +939,8 @@ class SppController extends Controller
                 [
                     'tagihan_id' => $tagihan->id,
                     'dipa_revision_item_id' => $defaultBudgetItemId,
-                    'kategori_pembayaran' => 'SP2D BLU - TRF',
-                    'jenis_tagihan' => 'NON REMUNERASI',
+                    'kategori_pembayaran' => optional($tagihan->mekanisme_pembayaran)->sppKategoriPembayaran() ?? 'SP2D BLU - TRF',
+                    'jenis_tagihan' => $request->jenis_tagihan ?? 'NON REMUNERASI',
                     'nominal_spp' => $totalNetto,
                     'nomor_spp' => $request->nomor_spp,
                     'tanggal_spp' => $request->tanggal_spp,
@@ -1033,7 +1046,7 @@ class SppController extends Controller
             Notification::send($selectedPpk, new WorkflowNotification([
                 'title' => 'SPP Kontrak Diajukan',
                 'message' => "SPP Kontrak ({$spp->nomor_spp}) menunggu verifikasi Anda.",
-                'url' => route('verifikasi-ppk.spp.index'),
+                'url' => route('verifikasi-spp.kontrak.index'),
                 'icon' => 'receipt_long',
                 'color' => 'primary',
             ]));
@@ -1051,32 +1064,105 @@ class SppController extends Controller
         require_once app_path('Helpers/TerbilangHelper.php');
 
         // Pertama, cek menggunakan model alur baru (DokumenSpp)
-        $dokumenSpp = \App\Models\DokumenSpp::with('tagihan')->find($spp_id);
+        $dokumenSpp = \App\Models\DokumenSpp::with([
+            'dipaRevisionItem.coa',
+            'dipaRevisionItem.dipaRevision.masterDipa',
+            'tagihan.pihak.rekening',
+            'tagihan.detailKontrak.kontrakTermin.kontrak.vendor.rekening',
+            'tagihan.detailPerjaldin',
+            'tagihan.detailHonorarium',
+            'tagihan.dipa',
+            'tagihan.dipaRevisionItem.coa',
+            'tagihan.dipaRevisionItem.dipaRevision.masterDipa',
+            'tagihan.potonganTagihan.pajak',
+            'tagihan.potonganTagihan.akunPotongan',
+        ])->find($spp_id);
 
         if ($dokumenSpp) {
             $spp = $dokumenSpp;
             $sppable = $dokumenSpp->tagihan;
             $jumlahUang = $spp->nominal_spp;
-            $uraianSupplier = $spp->uraian;
+            $uraianSupplier = PaymentPdfReference::uraianForTagihan($sppable, $spp->uraian ?? null);
+            $kodeCoa = $spp->dipaRevisionItem?->coa?->kode_mak_lengkap
+                ?? $sppable?->dipaRevisionItem?->coa?->kode_mak_lengkap
+                ?? $spp->akun_mak
+                ?? '-';
+            $potonganPajak = collect($sppable?->potonganTagihan ?? [])
+                ->filter(fn ($potongan) => $potongan->jenis_potongan !== 'ANGSURAN_UANG_MUKA')
+                ->values();
+            $jumlahPotonganPajak = $potonganPajak->sum('nominal_potongan');
+            $pdfReference = PaymentPdfReference::forTagihan($sppable);
+            $dipaInfo = PaymentPdfReference::dipaForSpp($spp);
+            $supplierInfo = PaymentPdfReference::supplierForTagihan($sppable, $uraianSupplier);
             
             $terbilang = terbilang_rupiah($jumlahUang);
 
-            $pdf = Pdf::loadView('spps.pdf', compact('spp', 'sppable', 'jumlahUang', 'terbilang', 'uraianSupplier'));
+            $pdf = Pdf::loadView('spps.pdf', compact(
+                'spp',
+                'sppable',
+                'jumlahUang',
+                'terbilang',
+                'uraianSupplier',
+                'kodeCoa',
+                'potonganPajak',
+                'jumlahPotonganPajak',
+                'pdfReference',
+                'dipaInfo',
+                'supplierInfo'
+            ));
             $pdf->setPaper('a4', 'portrait');
 
             return $pdf->stream('SPP-BLU-' . str_replace('/', '-', $spp->nomor_spp) . '.pdf');
         }
 
         // Jika tidak ditemukan, fallback ke alur legacy (Spp)
-        $spp = Spp::with('sppable')->findOrFail($spp_id);
+        $spp = Spp::with([
+            'sppable.pihak.rekening',
+            'sppable.detailKontrak.kontrakTermin.kontrak.vendor.rekening',
+            'sppable.detailPerjaldin',
+            'sppable.detailHonorarium',
+            'sppable.dipa',
+            'sppable.dipaRevisionItem.dipaRevision.masterDipa',
+            'sppable.potonganTagihan.pajak',
+            'sppable.potonganTagihan.akunPotongan',
+            'dipaRevisionItem.coa',
+            'dipaRevisionItem.dipaRevision.masterDipa',
+            'tagihan.dipaRevisionItem.coa',
+            'tagihan.dipaRevisionItem.dipaRevision.masterDipa',
+            'tagihan.pihak.rekening',
+            'tagihan.detailKontrak.kontrakTermin.kontrak.vendor.rekening',
+        ])->findOrFail($spp_id);
         $sppable = $spp->sppable;
         
         $jumlahUang = $spp->jumlah_uang;
-        $uraianSupplier = $spp->uraian;
+        $uraianSupplier = PaymentPdfReference::uraianForTagihan($sppable, $spp->uraian ?? null);
+        $kodeCoa = $spp->dipaRevisionItem?->coa?->kode_mak_lengkap
+            ?? $spp->tagihan?->dipaRevisionItem?->coa?->kode_mak_lengkap
+            ?? $spp->akun_mak
+            ?? '-';
+        $potonganPajak = collect($sppable?->potonganTagihan ?? [])
+            ->filter(fn ($potongan) => $potongan->jenis_potongan !== 'ANGSURAN_UANG_MUKA')
+            ->values();
+        $jumlahPotonganPajak = $potonganPajak->sum('nominal_potongan');
+        $pdfReference = PaymentPdfReference::forTagihan($sppable);
+        $dipaInfo = PaymentPdfReference::dipaForSpp($spp);
+        $supplierInfo = PaymentPdfReference::supplierForTagihan($sppable, $uraianSupplier);
         
         $terbilang = terbilang_rupiah($jumlahUang);
 
-        $pdf = Pdf::loadView('spps.pdf', compact('spp', 'sppable', 'jumlahUang', 'terbilang', 'uraianSupplier'));
+        $pdf = Pdf::loadView('spps.pdf', compact(
+            'spp',
+            'sppable',
+            'jumlahUang',
+            'terbilang',
+            'uraianSupplier',
+            'kodeCoa',
+            'potonganPajak',
+            'jumlahPotonganPajak',
+            'pdfReference',
+            'dipaInfo',
+            'supplierInfo'
+        ));
         $pdf->setPaper('a4', 'portrait');
 
         return $pdf->stream('SPP-BLU-' . str_replace('/', '-', $spp->nomor_spp) . '.pdf');
@@ -1094,5 +1180,71 @@ class SppController extends Controller
                 ];
             })
             ->values();
+    }
+
+    // ===================================================================
+    // UPLOAD FILE SPP BERTANDATANGAN
+    // ===================================================================
+
+    /**
+     * Upload file SPP Bertandatangan (PDF scan bertanda tangan basah).
+     * Dipanggil dari halaman SPM (sebelum SPM bisa dibuat).
+     */
+    public function uploadSignedSpp(Request $request, $spp_id)
+    {
+        $spp = DokumenSpp::findOrFail($spp_id);
+
+        // Hanya boleh upload jika SPP sudah disetujui
+        $approvedStatuses = ['APPROVED', 'DISETUJUI_SPP', 'Disetujui PPK', 'SPP_TERBIT'];
+        if (!in_array($spp->status, $approvedStatuses)) {
+            return back()->withErrors(['error' => 'SPP belum disetujui oleh semua verifikator.']);
+        }
+
+        $request->validate([
+            'file_spp_ttd' => 'required|file|mimes:pdf,jpg,jpeg,png|max:10240',
+        ], [
+            'file_spp_ttd.required' => 'File SPP Bertandatangan wajib diunggah.',
+            'file_spp_ttd.mimes' => 'File harus berformat PDF, JPG, atau PNG.',
+            'file_spp_ttd.max' => 'Ukuran file maksimal 10MB.',
+        ]);
+
+        DB::transaction(function () use ($request, $spp) {
+            $file = $request->file('file_spp_ttd');
+            $namaAsli = $file->getClientOriginalName();
+            $path = $file->store('arsip_spp_signed/' . date('Y'), 'public');
+
+            // Nonaktifkan arsip lama (jika ada re-upload)
+            $spp->arsipDokumen()
+                ->where('jenis_dokumen', DokumenSpp::SPP_SIGNED_ARCHIVE_TYPE)
+                ->where('is_active', true)
+                ->update(['is_active' => false]);
+
+            // Buat arsip baru
+            $spp->arsipDokumen()->create([
+                'jenis_dokumen' => DokumenSpp::SPP_SIGNED_ARCHIVE_TYPE,
+                'nama_file_asli' => $namaAsli,
+                'path_file' => $path,
+                'mime_type' => $file->getMimeType(),
+                'ukuran_file' => $file->getSize(),
+                'uploaded_by' => auth()->id(),
+                'uploaded_at' => now(),
+                'is_active' => true,
+            ]);
+
+            // Log
+            LogStatusDokumen::create([
+                'dokumen_type' => DokumenSpp::class,
+                'dokumen_id' => $spp->id,
+                'user_id' => auth()->id(),
+                'role_saat_itu' => auth()->user()?->getRoleNames()->first() ?? 'Operator BLU',
+                'status_sebelumnya' => $spp->status,
+                'status_baru' => $spp->status,
+                'aksi' => 'UPLOAD_SPP_BERTANDATANGAN',
+                'catatan' => "File SPP Bertandatangan diunggah: {$namaAsli}",
+                'ip_address' => request()->ip(),
+            ]);
+        });
+
+        return back()->with('success', 'File SPP Bertandatangan berhasil diunggah. Anda sekarang dapat membuat draft SPM.');
     }
 }

@@ -17,10 +17,66 @@
         'Disetujui Final' => 'SPM Terbit',
         default => 'Belum Dibuat',
     };
+    $verificationStatusClass = fn($status) => match ($status ?? '-') {
+        'APPROVED' => 'bg-success-subtle text-success',
+        'PENDING' => 'bg-warning-subtle text-warning',
+        'REVISION', 'REJECTED' => 'bg-danger-subtle text-danger',
+        'WAITING' => 'bg-light text-muted',
+        default => 'bg-light text-muted',
+    };
 @endphp
 
 @push('css')
     <link href="{{ URL::asset('build/plugins/datatable/css/dataTables.bootstrap5.min.css') }}" rel="stylesheet" />
+    <style>
+        .spm-verif-badge { display: inline-flex; align-items: center; gap: .25rem; font-size: .72rem; font-weight: 600; padding: .15rem .5rem; border-radius: .35rem; }
+        .stat-card {
+            transition: transform .2s ease, box-shadow .2s ease;
+            min-height: 175px;
+        }
+        .stat-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 .75rem 1.25rem rgba(0,0,0,.08) !important;
+        }
+        .stat-icon {
+            width: 44px; height: 44px;
+            border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+            font-size: 1.25rem;
+        }
+        .stat-value {
+            font-size: 1.65rem;
+            line-height: 1.2;
+            letter-spacing: -.5px;
+        }
+        .stat-deco {
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            height: 60px;
+            overflow: hidden;
+            pointer-events: none;
+        }
+        .stat-wave {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 200%;
+            height: 100%;
+        }
+        .stat-wave-1 { opacity: .18; animation: stat-wave-scroll 9s linear infinite; }
+        .stat-wave-2 { opacity: .28; animation: stat-wave-scroll 13s linear infinite reverse; }
+        .stat-wave-3 { opacity: .40; animation: stat-wave-scroll 17s linear infinite; }
+        @keyframes stat-wave-scroll {
+            from { transform: translate3d(0, 0, 0); }
+            to   { transform: translate3d(-50%, 0, 0); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .stat-wave-1, .stat-wave-2, .stat-wave-3 { animation: none; }
+        }
+    </style>
 @endpush
 
 @section('content')
@@ -42,36 +98,48 @@
     {{-- Summary Cards --}}
     <div class="row row-cols-1 row-cols-md-2 row-cols-xl-4 g-3 mb-4 mt-2">
         <div class="col">
-            <div class="card h-100 border-0 shadow-sm bg-warning text-dark">
-                <div class="card-body p-3">
-                    <h6 class="card-title fw-normal mb-1">SPP Siap Dibuatkan SPM</h6>
-                    <h3 class="fw-bold mb-0">{{ $summary['belum_dibuat'] ?? 0 }}</h3>
-                </div>
-            </div>
+            @include('spps.partials.stat-card', [
+                'icon' => 'bi-hourglass-split',
+                'color' => 'warning',
+                'category' => 'Antrean SPM',
+                'value' => $summary['belum_dibuat'] ?? 0,
+                'description' => 'SPP siap dibuatkan SPM',
+                'badge' => 'Pending',
+                'badgeColor' => 'warning',
+            ])
         </div>
         <div class="col">
-            <div class="card h-100 border-0 shadow-sm text-white" style="background-color: #6366f1;">
-                <div class="card-body p-3">
-                    <h6 class="card-title fw-normal mb-1">Draft / Revisi SPM</h6>
-                    <h3 class="fw-bold mb-0 text-white">{{ $summary['draft_revisi'] ?? 0 }}</h3>
-                </div>
-            </div>
+            @include('spps.partials.stat-card', [
+                'icon' => 'bi-pencil-square',
+                'color' => 'primary',
+                'category' => 'Draft / Revisi',
+                'value' => $summary['draft_revisi'] ?? 0,
+                'description' => 'Sedang disusun / revisi',
+                'badge' => 'Draft',
+                'badgeColor' => 'primary',
+            ])
         </div>
         <div class="col">
-            <div class="card h-100 border-0 shadow-sm text-white" style="background-color: #0dcaf0;">
-                <div class="card-body p-3">
-                    <h6 class="card-title fw-normal mb-1">Menunggu Verifikasi</h6>
-                    <h3 class="fw-bold mb-0 text-white">{{ $summary['menunggu'] ?? 0 }}</h3>
-                </div>
-            </div>
+            @include('spps.partials.stat-card', [
+                'icon' => 'bi-arrow-repeat',
+                'color' => 'info',
+                'category' => 'Verifikasi',
+                'value' => $summary['menunggu'] ?? 0,
+                'description' => 'Menunggu verifikasi',
+                'badge' => 'On Going',
+                'badgeColor' => 'info',
+            ])
         </div>
         <div class="col">
-            <div class="card h-100 border-0 shadow-sm text-white" style="background-color: #20c997;">
-                <div class="card-body p-3">
-                    <h6 class="card-title fw-normal mb-1">SPM Terbit (Final)</h6>
-                    <h3 class="fw-bold mb-0 text-white">{{ $summary['selesai'] ?? 0 }}</h3>
-                </div>
-            </div>
+            @include('spps.partials.stat-card', [
+                'icon' => 'bi-check2-all',
+                'color' => 'success',
+                'category' => 'Terbit',
+                'value' => $summary['selesai'] ?? 0,
+                'description' => 'SPM terbit final',
+                'badge' => 'Done',
+                'badgeColor' => 'success',
+            ])
         </div>
     </div>
 
@@ -111,6 +179,7 @@
                             <th>COA</th>
                             <th class="text-end">Nilai SPP (Rp)</th>
                             <th class="text-center">Status SPM</th>
+                            <th class="text-center">Verifikasi Koor Keu</th>
                             <th class="text-center">Aksi</th>
                         </tr>
                     </thead>
@@ -119,6 +188,10 @@
                         @php
                             $hasSpm = (bool) $spp->spm;
                             $spmStatus = $spp->spm?->status ?? 'Belum Dibuat';
+                            $wfInstance = collect($spp->spm?->workflowInstances ?? [])->sortByDesc('created_at')->first();
+                            $koordinatorApproval = collect($wfInstance?->approvals ?? [])->first(
+                                fn ($approval) => in_array($approval->role_code, ['Koordinator Keuangan', 'KOORDINATOR_KEUANGAN'], true)
+                            );
                         @endphp
                         <tr>
                             <td>{{ $idx + 1 }}</td>
@@ -152,6 +225,15 @@
                                 @endif
                                 @if($hasSpm && $spmStatus === 'Revisi' && $spp->spm->catatan_revisi)
                                     <div class="text-danger small mt-1 fw-bold text-truncate" style="max-width: 150px;" title="{{ $spp->spm->catatan_revisi }}">"{{ $spp->spm->catatan_revisi }}"</div>
+                                @endif
+                            </td>
+                            <td class="text-center">
+                                @if($hasSpm && $wfInstance)
+                                    <span class="spm-verif-badge {{ $verificationStatusClass($koordinatorApproval?->status) }}">
+                                        <i class="bi bi-person-check"></i> {{ $koordinatorApproval?->status ?? '-' }}
+                                    </span>
+                                @else
+                                    <span class="text-muted small">-</span>
                                 @endif
                             </td>
                             <td class="text-center">

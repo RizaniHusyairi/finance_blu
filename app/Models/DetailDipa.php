@@ -34,4 +34,22 @@ class DetailDipa extends Model
     {
         return $this->belongsTo(MasterCoa::class, 'coa_id');
     }
+
+    public function realisasiAnggarans()
+    {
+        return $this->hasMany(RealisasiAnggaran::class, 'dipa_revision_item_id')->where('status', 'TERCATAT');
+    }
+
+    public function getTotalRealisasiAttribute()
+    {
+        // Calculate from relation, ensuring to use sum if loaded, else query DB
+        return $this->relationLoaded('realisasiAnggarans') 
+            ? $this->realisasiAnggarans->sum('nominal_cair')
+            : $this->realisasiAnggarans()->sum('nominal_cair');
+    }
+
+    public function getSisaPaguAttribute()
+    {
+        return $this->nilai_pagu - $this->total_realisasi;
+    }
 }

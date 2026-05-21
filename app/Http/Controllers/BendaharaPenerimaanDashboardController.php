@@ -21,6 +21,7 @@ class BendaharaPenerimaanDashboardController extends Controller
     {
         $now = Carbon::now();
         $user = Auth::user();
+        $userId = $user?->id;
 
         // 1. Tagihan Perjaldin Menunggu Verifikasi
         $tagihanPerjaldin = Tagihan::where('tipe_tagihan', 'PERJALDIN')
@@ -37,9 +38,14 @@ class BendaharaPenerimaanDashboardController extends Controller
             
         // 2. NPI Kontrak Menunggu Verifikasi
         $npiKontrak = DokumenNpi::whereHas('spm.spp.tagihan', fn($q) => $q->where('tipe_tagihan', 'KONTRAK'))
-            ->whereHas('workflowInstances.approvals', function ($q) {
+            ->where('bendahara_penerimaan_id', $userId)
+            ->whereHas('workflowInstances.approvals', function ($q) use ($userId) {
                 $q->where('role_code', 'Bendahara Penerimaan')
-                  ->where('status', 'PENDING');
+                    ->where('status', 'PENDING')
+                    ->where(function ($assignedQuery) use ($userId) {
+                        $assignedQuery->whereNull('assigned_user_id')
+                            ->orWhere('assigned_user_id', $userId);
+                    });
             })
             ->with([
                 'spm.spp.tagihan.detailKontrak.kontrakTermin.kontrak.vendor',
@@ -50,9 +56,14 @@ class BendaharaPenerimaanDashboardController extends Controller
 
         // 3. NPI Perjaldin Menunggu Verifikasi
         $npiPerjaldin = DokumenNpi::whereHas('spm.spp', fn($q) => $q->whereNotNull('tagihan_perjaldin_komponen_id'))
-            ->whereHas('workflowInstances.approvals', function ($q) {
+            ->where('bendahara_penerimaan_id', $userId)
+            ->whereHas('workflowInstances.approvals', function ($q) use ($userId) {
                 $q->where('role_code', 'Bendahara Penerimaan')
-                  ->where('status', 'PENDING');
+                    ->where('status', 'PENDING')
+                    ->where(function ($assignedQuery) use ($userId) {
+                        $assignedQuery->whereNull('assigned_user_id')
+                            ->orWhere('assigned_user_id', $userId);
+                    });
             })
             ->with([
                 'spm.spp.tagihan.detailPerjaldin.pegawai',
@@ -65,11 +76,16 @@ class BendaharaPenerimaanDashboardController extends Controller
         // Usually NPI Honor uses status STATUS_SUBMITTED_BENPEN or workflow.
         // Assuming workflow for Bendahara Penerimaan
         $npiHonor = DokumenNpi::whereHas('spm.spp.tagihan', fn($q) => $q->where('tipe_tagihan', 'HONORARIUM'))
-            ->where(function($q) {
+            ->where('bendahara_penerimaan_id', $userId)
+            ->where(function($q) use ($userId) {
                 $q->where('status', DokumenNpi::STATUS_SUBMITTED_BENPEN)
-                  ->orWhereHas('workflowInstances.approvals', function ($sq) {
+                  ->orWhereHas('workflowInstances.approvals', function ($sq) use ($userId) {
                       $sq->where('role_code', 'Bendahara Penerimaan')
-                        ->where('status', 'PENDING');
+                        ->where('status', 'PENDING')
+                        ->where(function ($assignedQuery) use ($userId) {
+                            $assignedQuery->whereNull('assigned_user_id')
+                                ->orWhere('assigned_user_id', $userId);
+                        });
                   });
             })
             ->with([
