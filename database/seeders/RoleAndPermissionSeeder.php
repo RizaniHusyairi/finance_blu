@@ -23,6 +23,7 @@ class RoleAndPermissionSeeder extends Seeder
             'Super Admin',
             'Super Admin Jasa',
             'KPA',
+            'PLT/PLH',
             'Kepala Subbagian Keuangan dan Tata Usaha',
             'Kepala Seksi Pelayanan dan Kerjasama',
             'PPK',
