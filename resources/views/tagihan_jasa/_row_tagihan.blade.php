@@ -16,7 +16,7 @@
     </td>
     <td>
         <span class="badge {{ match($tagihan->status) {
-            'PUBLISHED', 'LUNAS' => 'bg-success',
+            'PUBLISHED', 'LUNAS', 'DISETUJUI' => 'bg-success',
             'DRAFT' => 'bg-secondary',
             'DITOLAK' => 'bg-danger',
             default => 'bg-warning text-dark',
@@ -27,7 +27,7 @@
             <a href="{{ route('tagihan-jasa.show', $tagihan->id) }}" class="btn btn-sm btn-light text-info border shadow-sm" title="Detail">
                 <i class="bi bi-search"></i> Detail
             </a>
-            @if(in_array($tagihan->status, ['PUBLISHED', 'LUNAS', 'VERIFIKASI_KABANDARA']))
+            @if(in_array($tagihan->status, ['PUBLISHED', 'LUNAS', 'DISETUJUI', 'VERIFIKASI_KABANDARA']))
             <a href="{{ route('tagihan-jasa.pdf', $tagihan->id) }}" target="_blank" class="btn btn-sm btn-light text-danger border shadow-sm" title="Cetak PDF">
                 <i class="bi bi-file-pdf"></i> PDF
             </a>

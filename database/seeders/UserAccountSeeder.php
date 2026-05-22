@@ -25,6 +25,15 @@ class UserAccountSeeder extends Seeder
             label: 'SUPER ADMIN SISTEM',
         );
 
+        // 1b) Akun PLT/PLH — Pelaksana Tugas / Pelaksana Harian.
+        //     Tidak terikat ke MasterPegawai (akun jabatan sementara) sehingga dibuat
+        //     sebagai system account. Memiliki menu yang sama persis dengan KPA.
+        $this->seedSystemAccount(
+            email: 'plt.plh@sikeren.id',
+            roles: ['PLT/PLH'],
+            label: 'PLT / PLH',
+        );
+
         // 2) Akun yang terhubung ke MasterPegawai.
         $accounts = [
             [

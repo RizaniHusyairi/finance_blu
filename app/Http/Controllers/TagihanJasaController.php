@@ -230,6 +230,7 @@ class TagihanJasaController extends Controller
             'tipe_pnbp' => ['required', 'in:FUNGSI,NON_FUNGSI,KONSESI'],
             'mitra_jasa_id' => ['required', 'exists:mitra_jasa,id'],
             'tanggal_tagihan' => ['required', 'date'],
+            'final_verifier_role' => ['required', 'in:KPA,PLT/PLH'],
             'kontrak_mitra_jasa_id' => ['nullable', 'exists:kontrak_mitra_jasa,id'],
             'penjualan_id' => ['nullable', 'exists:mitra_jasa_penjualan,id'],
             'utilitas_id' => ['nullable', 'exists:laporan_utilitas,id'],
@@ -344,6 +345,7 @@ class TagihanJasaController extends Controller
                     'tanggal_tagihan' => $validated['tanggal_tagihan'],
                     'total_tagihan' => $totalTagihan,
                     'status' => 'VERIFIKASI_KOORDINATOR',
+                    'final_verifier_role' => $validated['final_verifier_role'],
                     'created_by' => Auth::id(),
                 ]);
 
@@ -914,7 +916,7 @@ class TagihanJasaController extends Controller
         if ($tagihan->tanggal_jatuh_tempo) {
             $message .= "Jatuh Tempo: *" . $tagihan->tanggal_jatuh_tempo->format('d/m/Y') . "*\n";
         }
-        $message .= "Link Invoice: " . route('mitra.tagihan-jasa.show', $tagihan) . "\n\n";
+        $message .= "Link Invoice: " . \Illuminate\Support\Facades\URL::signedRoute('public.tagihan-jasa.show', ['id' => $tagihan->id]) . "\n\n";
         $message .= "----------------------------------------\n";
         $message .= "*AKUN PORTAL MITRA*\n";
         $message .= "Email Login: " . ($accountInfo['email'] ?? '-') . "\n";

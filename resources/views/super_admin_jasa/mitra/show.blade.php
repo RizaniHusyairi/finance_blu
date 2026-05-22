@@ -432,6 +432,473 @@
             display: block;
         }
     }
+
+    /* ============ Workflow Pipeline (Mitra → Kontrak → Layanan) ============ */
+    .workflow-pipeline {
+        background: linear-gradient(135deg, #fafbff 0%, #ffffff 100%);
+        border: 1px solid #eef0f4;
+        border-radius: 16px;
+        padding: 1rem 1.25rem;
+        margin-bottom: 1.15rem;
+        display: flex;
+        align-items: center;
+        gap: .85rem;
+        flex-wrap: wrap;
+        box-shadow: 0 4px 12px rgba(15,23,42,.04);
+    }
+    .wp-step {
+        display: flex;
+        align-items: center;
+        gap: .65rem;
+        padding: .35rem .25rem;
+        flex-shrink: 0;
+    }
+    .wp-step .wp-num {
+        width: 32px; height: 32px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 800;
+        font-size: .85rem;
+        background: #e2e8f0;
+        color: #64748b;
+        flex-shrink: 0;
+        border: 2px solid #e2e8f0;
+        transition: all .25s ease;
+    }
+    .wp-step.is-done .wp-num {
+        background: linear-gradient(135deg, #34d399, #10b981);
+        color: #fff;
+        border-color: #10b981;
+        box-shadow: 0 4px 10px rgba(16,185,129,.30);
+    }
+    .wp-step.is-active .wp-num {
+        background: linear-gradient(135deg, #fbbf24, #f59e0b);
+        color: #fff;
+        border-color: #f59e0b;
+        box-shadow: 0 4px 12px rgba(245,158,11,.40);
+        animation: wpPulse 1.6s ease-in-out infinite;
+    }
+    @keyframes wpPulse {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(245,158,11,.45); }
+        50%      { box-shadow: 0 0 0 8px rgba(245,158,11,0); }
+    }
+    .wp-step .wp-info { line-height: 1.2; }
+    .wp-step .wp-label {
+        font-size: .65rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: .06em;
+        color: #94a3b8;
+    }
+    .wp-step.is-done .wp-label { color: #047857; }
+    .wp-step.is-active .wp-label { color: #b45309; }
+    .wp-step .wp-text {
+        font-size: .85rem;
+        font-weight: 700;
+        color: #0f172a;
+    }
+    .wp-arrow {
+        flex: 1 1 30px;
+        min-width: 24px;
+        height: 2px;
+        background: repeating-linear-gradient(90deg, #cbd5e1 0 6px, transparent 6px 12px);
+        position: relative;
+    }
+    .wp-arrow.is-done {
+        background: linear-gradient(90deg, #10b981, #34d399);
+    }
+    .wp-arrow.is-active {
+        background: linear-gradient(90deg, #f59e0b, #fbbf24, #f59e0b);
+        background-size: 200% 100%;
+        animation: wpShimmer 1.8s linear infinite;
+    }
+    @keyframes wpShimmer {
+        0%   { background-position: 0% 0; }
+        100% { background-position: 200% 0; }
+    }
+
+    /* ============ Priority Kontrak Card (when empty) ============ */
+    .kontrak-priority-card {
+        position: relative;
+        overflow: hidden;
+        border: 0;
+        border-radius: 18px;
+        padding: 1.5rem 1.75rem;
+        margin-bottom: 1.15rem;
+        background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #db2777 100%);
+        color: #fff;
+        box-shadow: 0 18px 40px rgba(79,70,229,.30);
+        animation: secInUp .55s cubic-bezier(.22,1,.36,1) both;
+    }
+    .kontrak-priority-card::before,
+    .kontrak-priority-card::after {
+        content: '';
+        position: absolute;
+        border-radius: 50%;
+        pointer-events: none;
+    }
+    .kontrak-priority-card::before {
+        right: -110px; top: -110px;
+        width: 280px; height: 280px;
+        background: rgba(255,255,255,.10);
+    }
+    .kontrak-priority-card::after {
+        left: -60px; bottom: -80px;
+        width: 200px; height: 200px;
+        background: rgba(255,255,255,.06);
+    }
+    .kontrak-priority-card > * { position: relative; z-index: 1; }
+    .kontrak-priority-card .kpc-illust {
+        position: absolute;
+        right: 1.5rem; top: 50%;
+        transform: translateY(-50%) rotate(-10deg);
+        font-size: 7.5rem;
+        opacity: .14;
+        z-index: 0;
+        line-height: 1;
+    }
+    .kontrak-priority-card .kpc-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: .4rem;
+        background: rgba(255,255,255,.18);
+        backdrop-filter: blur(8px);
+        border: 1px solid rgba(255,255,255,.30);
+        padding: .35rem .85rem;
+        border-radius: 999px;
+        font-size: .72rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .06em;
+        color: #fff;
+        margin-bottom: .65rem;
+        animation: kpcTagBounce 1.8s ease-in-out infinite;
+    }
+    @keyframes kpcTagBounce {
+        0%, 100% { transform: translateY(0); }
+        50%      { transform: translateY(-3px); }
+    }
+    .kontrak-priority-card .kpc-tag i { color: #fde68a; }
+    .kontrak-priority-card .kpc-title {
+        font-size: 1.45rem;
+        font-weight: 800;
+        margin: 0 0 .35rem;
+        color: #fff !important;
+        text-shadow: 0 1px 2px rgba(0,0,0,.15);
+        letter-spacing: -.01em;
+    }
+    .kontrak-priority-card .kpc-sub {
+        font-size: .9rem;
+        color: rgba(255,255,255,.92);
+        margin: 0 0 1rem;
+        max-width: 640px;
+    }
+    .kontrak-priority-card .kpc-checklist {
+        display: flex;
+        flex-wrap: wrap;
+        gap: .5rem;
+        margin-bottom: 1rem;
+    }
+    .kontrak-priority-card .kpc-check {
+        display: inline-flex;
+        align-items: center;
+        gap: .35rem;
+        background: rgba(255,255,255,.14);
+        border: 1px solid rgba(255,255,255,.25);
+        padding: .35rem .75rem;
+        border-radius: 999px;
+        font-size: .76rem;
+        font-weight: 600;
+    }
+    .kontrak-priority-card .kpc-check i { color: #fde68a; }
+
+    .btn-kpc-cta {
+        display: inline-flex;
+        align-items: center;
+        gap: .5rem;
+        background: #fff;
+        color: #4338ca;
+        font-weight: 800;
+        padding: .75rem 1.4rem;
+        border-radius: .75rem;
+        font-size: .9rem;
+        text-decoration: none;
+        box-shadow: 0 12px 28px rgba(0,0,0,.18);
+        transition: all .25s ease;
+        border: 0;
+    }
+    .btn-kpc-cta:hover {
+        color: #312e81;
+        transform: translateY(-2px);
+        box-shadow: 0 18px 36px rgba(0,0,0,.25);
+    }
+    .btn-kpc-cta i { font-size: 1.05rem; }
+
+    /* ============ Kontrak Active card ============ */
+    .kontrak-active-card {
+        position: relative;
+        background: #fff;
+        border: 1px solid #eef0f4;
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 4px 12px rgba(15,23,42,.04);
+        margin-bottom: 1.15rem;
+        transition: box-shadow .25s ease;
+        animation: secInUp .55s cubic-bezier(.22,1,.36,1) both;
+    }
+    .kontrak-active-card:hover { box-shadow: 0 14px 32px rgba(15,23,42,.07); }
+    .kontrak-active-card .kac-head {
+        padding: 1rem 1.5rem;
+        background: linear-gradient(135deg, rgba(16,185,129,.08), rgba(16,185,129,.02));
+        border-bottom: 1px solid #eef0f4;
+        display: flex;
+        align-items: center;
+        gap: .85rem;
+        flex-wrap: wrap;
+    }
+    .kontrak-active-card .kac-icon {
+        width: 44px; height: 44px;
+        border-radius: 12px;
+        background: linear-gradient(135deg, #34d399, #10b981);
+        color: #fff;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+        flex-shrink: 0;
+        box-shadow: 0 6px 14px rgba(16,185,129,.30);
+    }
+    .kontrak-active-card .kac-title {
+        font-weight: 800;
+        font-size: 1rem;
+        color: #0f172a;
+        margin: 0;
+        letter-spacing: -.01em;
+    }
+    .kontrak-active-card .kac-sub {
+        font-size: .76rem;
+        color: #047857;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .06em;
+        margin-top: .15rem;
+    }
+    .kontrak-active-card .kac-actions {
+        margin-left: auto;
+    }
+    .btn-kac-add {
+        background: linear-gradient(135deg, #6366f1, #4f46e5);
+        color: #fff;
+        font-weight: 700;
+        font-size: .8rem;
+        padding: .5rem 1rem;
+        border-radius: .55rem;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: .35rem;
+        box-shadow: 0 4px 10px rgba(99,102,241,.30);
+        transition: all .2s ease;
+    }
+    .btn-kac-add:hover {
+        color: #fff;
+        transform: translateY(-1px);
+        box-shadow: 0 8px 18px rgba(99,102,241,.45);
+    }
+    .kontrak-active-card .kac-body {
+        padding: 1rem 1.5rem 1.25rem;
+    }
+    .kontrak-row-modern {
+        display: flex;
+        align-items: flex-start;
+        gap: 1rem;
+        padding: .9rem 0;
+        border-bottom: 1px dashed #eef2f7;
+    }
+    .kontrak-row-modern:last-child { border-bottom: 0; padding-bottom: 0; }
+    .kontrak-row-modern:first-child { padding-top: 0; }
+    .kontrak-row-modern .krm-num {
+        width: 32px; height: 32px;
+        border-radius: 9px;
+        background: linear-gradient(135deg, rgba(99,102,241,.12), rgba(139,92,246,.06));
+        color: #4338ca;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 800;
+        font-size: .82rem;
+        flex-shrink: 0;
+    }
+    .kontrak-row-modern .krm-info { flex: 1 1 auto; min-width: 0; }
+    .kontrak-row-modern .krm-title {
+        font-weight: 700;
+        color: #0f172a;
+        font-size: .9rem;
+        margin: 0 0 .25rem;
+    }
+    .kontrak-row-modern .krm-meta {
+        font-size: .76rem;
+        color: #64748b;
+        display: flex;
+        gap: .85rem;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+    .kontrak-row-modern .krm-meta i { color: #94a3b8; }
+    .kontrak-row-modern .krm-scope {
+        margin-top: .35rem;
+        font-size: .76rem;
+        color: #4338ca;
+        background: rgba(99,102,241,.08);
+        padding: .25rem .6rem;
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        gap: .35rem;
+    }
+    .kontrak-row-modern .krm-actions {
+        display: flex;
+        gap: .35rem;
+        flex-shrink: 0;
+    }
+    .kontrak-status-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: .3rem;
+        font-size: .65rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: .05em;
+        padding: .2rem .55rem;
+        border-radius: 999px;
+    }
+    .kontrak-status-pill.is-aktif   { background: rgba(16,185,129,.12); color: #047857; }
+    .kontrak-status-pill.is-draft   { background: rgba(100,116,139,.12); color: #475569; }
+    .kontrak-status-pill.is-revisi  { background: rgba(245,158,11,.14); color: #b45309; }
+    .kontrak-status-pill.is-selesai { background: rgba(99,102,241,.12); color: #4338ca; }
+
+    /* ============ Locked Section ============ */
+    .section-locked { position: relative; opacity: .82; }
+    .section-locked .card-header { filter: grayscale(.45); }
+    .section-locked .mitra-section-title { color: #475569; }
+    .section-locked .mitra-section-icon {
+        background: linear-gradient(135deg, #94a3b8, #64748b) !important;
+        box-shadow: 0 6px 14px rgba(100,116,139,.25) !important;
+    }
+    .btn-add-disabled {
+        background: #e2e8f0 !important;
+        color: #94a3b8 !important;
+        cursor: not-allowed !important;
+        pointer-events: none;
+        border: 1px dashed #cbd5e1 !important;
+        box-shadow: none !important;
+    }
+    .locked-banner {
+        display: flex;
+        align-items: flex-start;
+        gap: .75rem;
+        background: linear-gradient(135deg, rgba(245,158,11,.08), rgba(245,158,11,.02));
+        border: 1px solid rgba(245,158,11,.25);
+        border-left: 4px solid #f59e0b;
+        border-radius: 12px;
+        padding: .85rem 1rem;
+        margin-bottom: 1rem;
+    }
+    .locked-banner .lb-icon {
+        width: 38px; height: 38px;
+        border-radius: 10px;
+        background: linear-gradient(135deg, #fbbf24, #f59e0b);
+        color: #fff;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.05rem;
+        flex-shrink: 0;
+        box-shadow: 0 4px 10px rgba(245,158,11,.30);
+    }
+    .locked-banner .lb-text {
+        font-size: .82rem;
+        color: #92400e;
+        line-height: 1.5;
+    }
+    .locked-banner .lb-text strong { color: #78350f; }
+    .locked-banner .lb-cta { margin-top: .55rem; }
+    .locked-banner .lb-cta a {
+        background: linear-gradient(135deg, #f59e0b, #d97706);
+        color: #fff;
+        font-weight: 700;
+        font-size: .78rem;
+        padding: .45rem .9rem;
+        border-radius: .55rem;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: .35rem;
+        box-shadow: 0 4px 10px rgba(245,158,11,.35);
+        transition: all .2s ease;
+    }
+    .locked-banner .lb-cta a:hover {
+        color: #fff;
+        transform: translateY(-1px);
+        box-shadow: 0 8px 18px rgba(245,158,11,.45);
+    }
+    .locked-empty {
+        position: relative;
+        padding: 2.5rem 1rem 2.25rem;
+        text-align: center;
+        background: repeating-linear-gradient(135deg, #f8fafc 0 12px, #fafbff 12px 24px);
+        border: 1px dashed #cbd5e1;
+        border-radius: 14px;
+        color: #64748b;
+    }
+    .locked-empty .le-icon {
+        width: 64px; height: 64px;
+        border-radius: 18px;
+        background: linear-gradient(135deg, #94a3b8, #64748b);
+        color: #fff;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.65rem;
+        margin: 0 auto .65rem;
+        box-shadow: 0 8px 18px rgba(100,116,139,.25);
+        position: relative;
+    }
+    .locked-empty .le-icon::after {
+        content: '\F47A';
+        font-family: 'bootstrap-icons';
+        position: absolute;
+        right: -6px; bottom: -6px;
+        width: 26px; height: 26px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #fbbf24, #f59e0b);
+        color: #fff;
+        font-size: .85rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 3px solid #fff;
+        box-shadow: 0 4px 10px rgba(245,158,11,.35);
+    }
+    .locked-empty .le-title {
+        font-weight: 800;
+        color: #1e293b;
+        font-size: .95rem;
+        margin: 0 0 .25rem;
+    }
+    .locked-empty .le-sub {
+        font-size: .82rem;
+        color: #64748b;
+        max-width: 380px;
+        margin: 0 auto;
+    }
+
+    @keyframes secInUp {
+        from { opacity: 0; transform: translateY(10px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
 </style>
 
 <div class="mitra-detail-page">
@@ -494,6 +961,14 @@
 @if(session('error'))
     <div class="alert alert-danger">{{ session('error') }}</div>
 @endif
+@php
+    $hasKontrak = $mitra->kontrak->isNotEmpty();
+    $kontrakCount = $mitra->kontrak->count();
+    $kontrakActiveCount = $mitra->kontrak->where('status_kontrak', 'AKTIF')->count();
+    $stepMitraDone = (bool) $mitra->id;
+    $stepKontrakDone = $hasKontrak;
+    $stepLayananDone = $hasKontrak && $layananAktifCount > 0;
+@endphp
 <div class="row g-4">
     <div class="col-lg-5">
         <div class="card mitra-section-card overflow-hidden">
@@ -575,15 +1050,156 @@
             </div>
         </div>
 
-        <div class="card mitra-section-card">
-            <div class="card-header d-flex justify-content-between align-items-center gap-3 flex-wrap">
-                <h5 class="mitra-section-title"><span class="mitra-section-icon"><i class="bi bi-diagram-3"></i></span>Layanan Aktif</h5>
+        {{-- Workflow Pipeline --}}
+        <div class="workflow-pipeline">
+            <div class="wp-step is-done">
+                <span class="wp-num"><i class="bi bi-check-lg"></i></span>
+                <div class="wp-info">
+                    <div class="wp-label">Langkah 1</div>
+                    <div class="wp-text">Mitra Ditambahkan</div>
+                </div>
+            </div>
+            <div class="wp-arrow {{ $stepKontrakDone ? 'is-done' : 'is-active' }}"></div>
+            <div class="wp-step {{ $stepKontrakDone ? 'is-done' : 'is-active' }}">
+                <span class="wp-num">{{ $stepKontrakDone ? '✓' : '2' }}</span>
+                <div class="wp-info">
+                    <div class="wp-label">{{ $stepKontrakDone ? 'Langkah 2 — Selesai' : 'Langkah 2 — Wajib' }}</div>
+                    <div class="wp-text">Input Kontrak Dasar</div>
+                </div>
+            </div>
+            <div class="wp-arrow {{ $stepLayananDone ? 'is-done' : '' }}"></div>
+            <div class="wp-step {{ $stepLayananDone ? 'is-done' : '' }}">
+                <span class="wp-num">{{ $stepLayananDone ? '✓' : '3' }}</span>
+                <div class="wp-info">
+                    <div class="wp-label">Langkah 3</div>
+                    <div class="wp-text">Layanan, Konsesi &amp; PJP2U</div>
+                </div>
+            </div>
+        </div>
+
+        {{-- Kontrak: Priority Card (empty) atau Active Card --}}
+        @if(! $hasKontrak)
+            <div class="kontrak-priority-card">
+                <i class="bi bi-file-earmark-text-fill kpc-illust d-none d-md-block"></i>
+                <span class="kpc-tag"><i class="bi bi-exclamation-diamond-fill"></i> Tindakan Diperlukan</span>
+                <h5 class="kpc-title"><i class="bi bi-file-earmark-text me-2"></i>Input Kontrak / Dokumen Dasar Terlebih Dahulu</h5>
+                <p class="kpc-sub">
+                    Kontrak adalah <strong>dasar utama</strong> sebelum Anda dapat menambahkan
+                    Layanan Aktif, Hak Kelola Konsesi, maupun Hak PJP2U untuk mitra ini.
+                    Tanpa kontrak, ketiga modul tersebut akan tetap terkunci.
+                </p>
+                <div class="kpc-checklist">
+                    <span class="kpc-check"><i class="bi bi-check2-circle"></i> Mengikat scope layanan</span>
+                    <span class="kpc-check"><i class="bi bi-check2-circle"></i> Menentukan masa berlaku</span>
+                    <span class="kpc-check"><i class="bi bi-check2-circle"></i> Wajib untuk konsesi &amp; PJP2U</span>
+                </div>
                 @if($canManageMitraMaster)
-                    <a href="{{ route('jasa.mitra.layanan.edit', $mitra) }}" class="btn btn-sm btn-primary fw-bold jasa-icon-btn" title="Atur layanan" aria-label="Atur layanan"><i class="bi bi-sliders"></i></a>
+                    <a href="{{ route('jasa.mitra.kontrak.create', $mitra) }}" class="btn-kpc-cta">
+                        <i class="bi bi-plus-lg"></i> Tambah Kontrak Sekarang
+                    </a>
+                @else
+                    <span class="kpc-check"><i class="bi bi-info-circle"></i> Hubungi Admin Jasa untuk menambahkan kontrak.</span>
+                @endif
+            </div>
+        @else
+            <div class="kontrak-active-card">
+                <div class="kac-head">
+                    <span class="kac-icon"><i class="bi bi-file-earmark-check-fill"></i></span>
+                    <div>
+                        <div class="kac-sub">Kontrak / Dokumen Dasar</div>
+                        <h6 class="kac-title">{{ $kontrakCount }} dokumen tercatat &middot; {{ $kontrakActiveCount }} aktif</h6>
+                    </div>
+                    @if($canManageMitraMaster)
+                        <div class="kac-actions">
+                            <a href="{{ route('jasa.mitra.kontrak.create', $mitra) }}" class="btn-kac-add" title="Tambah kontrak">
+                                <i class="bi bi-plus-lg"></i> Tambah Kontrak
+                            </a>
+                        </div>
+                    @endif
+                </div>
+                <div class="kac-body">
+                    @foreach($mitra->kontrak as $kontrak)
+                        @php
+                            $statusKey = strtolower((string) $kontrak->status_kontrak);
+                            $statusCls = match($statusKey) {
+                                'aktif'   => 'is-aktif',
+                                'draft'   => 'is-draft',
+                                'revisi'  => 'is-revisi',
+                                'selesai' => 'is-selesai',
+                                default   => 'is-draft',
+                            };
+                        @endphp
+                        <div class="kontrak-row-modern">
+                            <span class="krm-num">{{ $loop->iteration }}</span>
+                            <div class="krm-info">
+                                <div class="krm-title">{{ $kontrak->nomor_kontrak ?: '-' }} &middot; {{ $kontrak->nama_kontrak ?: 'Dokumen Mitra Jasa' }}</div>
+                                <div class="krm-meta">
+                                    <span><i class="bi bi-tag-fill me-1"></i>{{ str_replace('_', ' ', $kontrak->jenis_dokumen ?: '-') }}</span>
+                                    <span><i class="bi bi-calendar3 me-1"></i>{{ optional($kontrak->tanggal_mulai)->format('d/m/Y') ?: '-' }} &mdash; {{ optional($kontrak->tanggal_selesai)->format('d/m/Y') ?: '-' }}</span>
+                                    <span class="kontrak-status-pill {{ $statusCls }}">{{ $kontrak->status_kontrak }}</span>
+                                </div>
+                                <span class="krm-scope">
+                                    <i class="bi bi-diagram-3"></i>
+                                    {{ $kontrak->layananJasa->isEmpty() ? 'Berlaku untuk semua layanan aktif mitra' : $kontrak->layananJasa->pluck('kode_layanan')->filter()->join(', ') }}
+                                </span>
+                            </div>
+                            <div class="krm-actions">
+                                <a href="{{ route('jasa.mitra.kontrak.show', [$mitra, $kontrak]) }}" class="btn btn-sm btn-light border jasa-icon-btn" title="Detail" aria-label="Detail"><i class="bi bi-eye"></i></a>
+                                @if($canManageMitraMaster)
+                                    <form method="POST" action="{{ route('jasa.mitra.kontrak.destroy', [$mitra, $kontrak]) }}" onsubmit="return confirm('Hapus kontrak/dokumen ini? Data yang sudah dipakai tagihan tidak bisa dihapus.');">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn btn-sm btn-light border text-danger jasa-icon-btn" title="Hapus" aria-label="Hapus"><i class="bi bi-trash"></i></button>
+                                    </form>
+                                @endif
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+        @endif
+
+        @unless($hasKontrak)
+            <div class="locked-banner">
+                <span class="lb-icon"><i class="bi bi-lock-fill"></i></span>
+                <div>
+                    <div class="lb-text">
+                        <strong>Modul terkunci.</strong>
+                        Layanan Aktif, Hak Kelola Konsesi, dan Hak PJP2U baru bisa diatur setelah minimal satu kontrak dimasukkan.
+                    </div>
+                    @if($canManageMitraMaster)
+                        <div class="lb-cta">
+                            <a href="{{ route('jasa.mitra.kontrak.create', $mitra) }}">
+                                <i class="bi bi-plus-lg"></i> Tambah Kontrak untuk Membuka Modul
+                            </a>
+                        </div>
+                    @endif
+                </div>
+            </div>
+        @endunless
+
+        <div class="card mitra-section-card {{ ! $hasKontrak ? 'section-locked' : '' }}">
+            <div class="card-header d-flex justify-content-between align-items-center gap-3 flex-wrap">
+                <h5 class="mitra-section-title">
+                    <span class="mitra-section-icon"><i class="bi {{ $hasKontrak ? 'bi-diagram-3' : 'bi-lock-fill' }}"></i></span>
+                    Layanan Aktif
+                </h5>
+                @if($canManageMitraMaster)
+                    @if($hasKontrak)
+                        <a href="{{ route('jasa.mitra.layanan.edit', $mitra) }}" class="btn btn-sm btn-primary fw-bold jasa-icon-btn" title="Atur layanan" aria-label="Atur layanan"><i class="bi bi-sliders"></i></a>
+                    @else
+                        <button type="button" class="btn btn-sm fw-bold jasa-icon-btn btn-add-disabled" title="Tambah kontrak terlebih dahulu" aria-label="Terkunci"><i class="bi bi-lock-fill"></i></button>
+                    @endif
                 @endif
             </div>
             <div class="card-body">
-                @if($mitra->layananJasa->isEmpty())
+                @if(! $hasKontrak)
+                    <div class="locked-empty">
+                        <div class="le-icon"><i class="bi bi-diagram-3"></i></div>
+                        <div class="le-title">Modul Layanan Aktif Terkunci</div>
+                        <div class="le-sub">Setelah kontrak dasar dimasukkan, Anda dapat mengatur layanan apa saja yang aktif untuk mitra ini.</div>
+                    </div>
+                @elseif($mitra->layananJasa->isEmpty())
                     <div class="mitra-empty"><i class="bi bi-diagram-3"></i>Belum ada layanan aktif untuk mitra ini.</div>
                 @else
                     <div class="mb-3">
@@ -606,15 +1222,28 @@
             </div>
         </div>
 
-        <div class="card mitra-section-card mt-4">
+        <div class="card mitra-section-card mt-4 {{ ! $hasKontrak ? 'section-locked' : '' }}">
             <div class="card-header d-flex justify-content-between align-items-center gap-3 flex-wrap">
-                <h5 class="mitra-section-title"><span class="mitra-section-icon"><i class="bi bi-percent"></i></span>Hak Kelola Konsesi</h5>
+                <h5 class="mitra-section-title">
+                    <span class="mitra-section-icon"><i class="bi {{ $hasKontrak ? 'bi-percent' : 'bi-lock-fill' }}"></i></span>
+                    Hak Kelola Konsesi
+                </h5>
                 @if($canManageMitraMaster)
-                    <a href="{{ route('jasa.mitra.konsesi.create', $mitra) }}" class="btn btn-sm btn-primary fw-bold jasa-icon-btn" title="Tambah hak konsesi" aria-label="Tambah hak konsesi"><i class="bi bi-plus-lg"></i></a>
+                    @if($hasKontrak)
+                        <a href="{{ route('jasa.mitra.konsesi.create', $mitra) }}" class="btn btn-sm btn-primary fw-bold jasa-icon-btn" title="Tambah hak konsesi" aria-label="Tambah hak konsesi"><i class="bi bi-plus-lg"></i></a>
+                    @else
+                        <button type="button" class="btn btn-sm fw-bold jasa-icon-btn btn-add-disabled" title="Tambah kontrak terlebih dahulu" aria-label="Terkunci"><i class="bi bi-lock-fill"></i></button>
+                    @endif
                 @endif
             </div>
             <div class="card-body">
-                @if($mitra->konsesi->isEmpty())
+                @if(! $hasKontrak)
+                    <div class="locked-empty">
+                        <div class="le-icon"><i class="bi bi-percent"></i></div>
+                        <div class="le-title">Modul Hak Kelola Konsesi Terkunci</div>
+                        <div class="le-sub">Konsesi mengikat persentase pendapatan dengan kontrak. Tambahkan kontrak dasar lebih dulu.</div>
+                    </div>
+                @elseif($mitra->konsesi->isEmpty())
                     <div class="mitra-empty"><i class="bi bi-percent"></i>Belum ada hak kelola konsesi untuk mitra ini.</div>
                 @else
                     <div class="table-responsive">
@@ -667,15 +1296,28 @@
             </div>
         </div>
 
-        <div class="card mitra-section-card mt-4">
+        <div class="card mitra-section-card mt-4 {{ ! $hasKontrak ? 'section-locked' : '' }}">
             <div class="card-header d-flex justify-content-between align-items-center gap-3 flex-wrap">
-                <h5 class="mitra-section-title"><span class="mitra-section-icon"><i class="bi bi-airplane"></i></span>Hak PJP2U</h5>
+                <h5 class="mitra-section-title">
+                    <span class="mitra-section-icon"><i class="bi {{ $hasKontrak ? 'bi-airplane' : 'bi-lock-fill' }}"></i></span>
+                    Hak PJP2U
+                </h5>
                 @if($canManageMitraMaster)
-                    <a href="{{ route('jasa.mitra.pjp2u.create', $mitra) }}" class="btn btn-sm btn-primary fw-bold jasa-icon-btn" title="Tambah hak PJP2U" aria-label="Tambah hak PJP2U"><i class="bi bi-plus-lg"></i></a>
+                    @if($hasKontrak)
+                        <a href="{{ route('jasa.mitra.pjp2u.create', $mitra) }}" class="btn btn-sm btn-primary fw-bold jasa-icon-btn" title="Tambah hak PJP2U" aria-label="Tambah hak PJP2U"><i class="bi bi-plus-lg"></i></a>
+                    @else
+                        <button type="button" class="btn btn-sm fw-bold jasa-icon-btn btn-add-disabled" title="Tambah kontrak terlebih dahulu" aria-label="Terkunci"><i class="bi bi-lock-fill"></i></button>
+                    @endif
                 @endif
             </div>
             <div class="card-body">
-                @if($mitra->pjp2u->isEmpty())
+                @if(! $hasKontrak)
+                    <div class="locked-empty">
+                        <div class="le-icon"><i class="bi bi-airplane"></i></div>
+                        <div class="le-title">Modul Hak PJP2U Terkunci</div>
+                        <div class="le-sub">Hak input laporan PAX terikat pada kontrak. Tambahkan kontrak dasar lebih dulu.</div>
+                    </div>
+                @elseif($mitra->pjp2u->isEmpty())
                     <div class="mitra-empty"><i class="bi bi-airplane"></i>Belum ada hak PJP2U untuk mitra ini.</div>
                 @else
                     <div class="table-responsive">
@@ -725,45 +1367,6 @@
                         </table>
                     </div>
                 @endif
-            </div>
-        </div>
-
-        <div class="card mitra-section-card mt-4">
-            <div class="card-header d-flex justify-content-between align-items-center gap-3 flex-wrap">
-                <h5 class="mitra-section-title"><span class="mitra-section-icon"><i class="bi bi-file-earmark-text"></i></span>Kontrak/Dokumen Dasar</h5>
-                @if($canManageMitraMaster)
-                    <a href="{{ route('jasa.mitra.kontrak.create', $mitra) }}" class="btn btn-sm btn-primary fw-bold jasa-icon-btn" title="Tambah kontrak" aria-label="Tambah kontrak"><i class="bi bi-plus-lg"></i></a>
-                @endif
-            </div>
-            <div class="card-body">
-                @forelse($mitra->kontrak as $kontrak)
-                    <div class="mitra-list-row">
-                        <div>
-                            <div class="fw-semibold">{{ $kontrak->nomor_kontrak ?: '-' }} - {{ $kontrak->nama_kontrak ?: 'Dokumen Mitra Jasa' }}</div>
-                            <small class="text-muted">
-                                {{ str_replace('_', ' ', $kontrak->jenis_dokumen ?: '-') }}
-                                | {{ optional($kontrak->tanggal_mulai)->format('d/m/Y') ?: '-' }} s.d. {{ optional($kontrak->tanggal_selesai)->format('d/m/Y') ?: '-' }}
-                                | {{ $kontrak->status_kontrak }}
-                            </small>
-                            <div class="small text-primary mt-1">
-                                <i class="bi bi-diagram-3 me-1"></i>
-                                {{ $kontrak->layananJasa->isEmpty() ? 'Berlaku untuk semua layanan aktif mitra' : $kontrak->layananJasa->pluck('kode_layanan')->filter()->join(', ') }}
-                            </div>
-                        </div>
-                        <div class="d-flex gap-1 align-items-start">
-                            <a href="{{ route('jasa.mitra.kontrak.show', [$mitra, $kontrak]) }}" class="btn btn-sm btn-light border jasa-icon-btn" title="Detail" aria-label="Detail"><i class="bi bi-eye"></i></a>
-                            @if($canManageMitraMaster)
-                                <form method="POST" action="{{ route('jasa.mitra.kontrak.destroy', [$mitra, $kontrak]) }}" onsubmit="return confirm('Hapus kontrak/dokumen ini? Data yang sudah dipakai tagihan tidak bisa dihapus.');">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-light border text-danger jasa-icon-btn" title="Hapus" aria-label="Hapus"><i class="bi bi-trash"></i></button>
-                                </form>
-                            @endif
-                        </div>
-                    </div>
-                @empty
-                    <div class="mitra-empty"><i class="bi bi-file-earmark-text"></i>Belum ada kontrak/dokumen dasar untuk mitra ini.</div>
-                @endforelse
             </div>
         </div>
 

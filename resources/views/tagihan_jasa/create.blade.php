@@ -519,6 +519,47 @@
                         </div>
                     </div>
 
+                    <div class="invoice-date-card mb-4" style="background: linear-gradient(135deg, #eef2ff 0%, #faf5ff 100%); border: 1px solid #c7d2fe;">
+                        <div class="row align-items-start g-3">
+                            <div class="col-lg-4">
+                                <span class="invoice-section-kicker" style="color:#4338ca;"><i class="bi bi-patch-check-fill"></i> Verifikator Final</span>
+                                <div class="mt-1 text-xs font-semibold text-slate-600">
+                                    Pilih pejabat yang akan melakukan persetujuan dan tanda tangan akhir (Kabandara) pada tagihan ini.
+                                </div>
+                            </div>
+                            <div class="col-lg-8">
+                                <label class="form-label fw-bold">Verifikasi Final Dilakukan Oleh <span class="text-danger">*</span></label>
+                                @php
+                                    $finalVerifierRole = old('final_verifier_role', 'KPA');
+                                @endphp
+                                <div class="row g-2">
+                                    <div class="col-md-6">
+                                        <label class="d-block p-3 rounded-3 border bg-white" style="cursor:pointer; {{ $finalVerifierRole === 'KPA' ? 'border-color:#6366f1; box-shadow:0 0 0 4px rgba(99,102,241,.12);' : 'border-color:#e2e8f0;' }}">
+                                            <div class="d-flex align-items-start gap-2">
+                                                <input type="radio" name="final_verifier_role" value="KPA" class="form-check-input mt-1" @checked($finalVerifierRole === 'KPA') required>
+                                                <div>
+                                                    <div class="fw-bold text-dark">KPA <span class="badge bg-primary-subtle text-primary ms-1" style="font-size:.65rem;">Default</span></div>
+                                                    <div class="small text-muted" style="font-size:.78rem;">Kuasa Pengguna Anggaran (Kabandara)</div>
+                                                </div>
+                                            </div>
+                                        </label>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="d-block p-3 rounded-3 border bg-white" style="cursor:pointer; {{ $finalVerifierRole === 'PLT/PLH' ? 'border-color:#6366f1; box-shadow:0 0 0 4px rgba(99,102,241,.12);' : 'border-color:#e2e8f0;' }}">
+                                            <div class="d-flex align-items-start gap-2">
+                                                <input type="radio" name="final_verifier_role" value="PLT/PLH" class="form-check-input mt-1" @checked($finalVerifierRole === 'PLT/PLH') required>
+                                                <div>
+                                                    <div class="fw-bold text-dark">PLT / PLH</div>
+                                                    <div class="small text-muted" style="font-size:.78rem;">Pelaksana Tugas / Pelaksana Harian Kabandara</div>
+                                                </div>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="invoice-document-card">
                         <div class="mb-3 flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
                             <div>

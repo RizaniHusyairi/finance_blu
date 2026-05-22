@@ -205,7 +205,7 @@ class BtnVirtualAccountService
         $message .= "Waktu Bayar: *" . optional($transaction->paid_at)->format('d/m/Y H:i') . "*\n";
         $message .= "Referensi: " . ($transaction->external_reference ?: '-') . "\n\n";
         $message .= "Status tagihan sekarang: *LUNAS*.\n";
-        $message .= "Detail: " . route('mitra.tagihan-jasa.show', $tagihan) . "\n\n";
+        $message .= "Detail: " . \Illuminate\Support\Facades\URL::signedRoute('public.tagihan-jasa.show', ['id' => $tagihan->id]) . "\n\n";
         $message .= "_Sistem Informasi Keuangan (SIKEREN)_";
 
         app(WhatsappService::class)->sendMessage($target, $message, $tagihan);

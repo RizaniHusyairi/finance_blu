@@ -67,23 +67,30 @@ class TagihanJasaVerifikasiController extends Controller
             $workflowService = app(WorkflowService::class);
             $workflowService->approveCurrentStep($tagihan, Auth::id(), $request->catatan);
 
-            // Perbarui status tagihan berdasarkan step workflow yang baru disetujui
+            // Perbarui status tagihan berdasarkan step workflow yang baru disetujui.
+            // Konvensi status menggambarkan ROLE YANG SEDANG MENUNGGU APPROVAL (next pending),
+            // bukan role yang baru saja approve.
             $wfInstance = $tagihan->workflowInstance()->latest()->first();
-            $currentApproval = $wfInstance ? $wfInstance->approvals()->where('urutan_step', $wfInstance->step_saat_ini)->first() : null;
-            
-            if ($wfInstance->status === 'APPROVED') {
-                $tagihan->status = 'VERIFIKASI_KABANDARA'; // Or 'PUBLISHED' if you auto publish
+            $currentApproval = $wfInstance
+                ? $wfInstance->approvals()->where('urutan_step', $wfInstance->step_saat_ini)->first()
+                : null;
+
+            if ($wfInstance && $wfInstance->status === 'APPROVED') {
+                // Seluruh tahap verifikasi (termasuk KPA / Kabandara) sudah selesai.
+                $tagihan->status = 'DISETUJUI';
                 $tagihan->save();
-            } else if ($currentApproval) {
-                // Update status based on next pending role
-                if ($currentApproval->role_code === 'Kepala Seksi Pelayanan dan Kerjasama') {
-                    $tagihan->status = 'VERIFIKASI_KOORDINATOR'; // Actually it means waiting for Kasi Jasa, so previous was Koordinator
-                } else if ($currentApproval->role_code === 'Kepala Subbagian Keuangan dan Tata Usaha') {
-                    $tagihan->status = 'VERIFIKASI_KASI_JASA';
-                } else if ($currentApproval->role_code === 'KPA') {
-                    $tagihan->status = 'VERIFIKASI_KASUBAG_TU';
+            } elseif ($currentApproval) {
+                $statusMap = [
+                    'Koordinator Jasa'                          => 'VERIFIKASI_KOORDINATOR',
+                    'Kepala Seksi Pelayanan dan Kerjasama'      => 'VERIFIKASI_KASI_JASA',
+                    'Kepala Subbagian Keuangan dan Tata Usaha'  => 'VERIFIKASI_KASUBAG_TU',
+                    'KPA'                                       => 'VERIFIKASI_KABANDARA',
+                    'PLT/PLH'                                   => 'VERIFIKASI_KABANDARA',
+                ];
+                if (isset($statusMap[$currentApproval->role_code])) {
+                    $tagihan->status = $statusMap[$currentApproval->role_code];
+                    $tagihan->save();
                 }
-                $tagihan->save();
             }
 
             DB::commit();

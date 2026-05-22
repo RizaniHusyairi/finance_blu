@@ -21,7 +21,7 @@
     </div>
 </div>
 
-<form method="POST" action="{{ $konsesi->exists ? route('jasa.mitra.konsesi.update', [$mitra, $konsesi]) : route('jasa.mitra.konsesi.store', $mitra) }}">
+<form method="POST" id="konsesiForm" action="{{ $konsesi->exists ? route('jasa.mitra.konsesi.update', [$mitra, $konsesi]) : route('jasa.mitra.konsesi.store', $mitra) }}">
     @csrf
     @if($konsesi->exists)
         @method('PUT')
@@ -233,6 +233,17 @@
 
                 if(!inputPersen.value && radio.dataset.persen) {
                     inputPersen.value = parseFloat(radio.dataset.persen);
+                }
+            });
+
+            // Submit-time validation: pastikan satu Item Tarif terpilih
+            root.addEventListener('submit', function (event) {
+                const checked = root.querySelector('.layanan-radio:checked');
+                if (!checked) {
+                    event.preventDefault();
+                    alert('Pilih salah satu Item Tarif (layanan paling bawah) terlebih dahulu.');
+                    root.querySelector('.layanan-radio')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    return false;
                 }
             });
         }

@@ -26,6 +26,14 @@ Route::get('/aktivitas-tagihan/{id}', [\App\Http\Controllers\PublicTagihanActivi
     ->middleware('signed')
     ->name('public.tagihan.aktivitas');
 
+// Route publik (signed URL) untuk Tagihan Jasa yang dikirim ke mitra via WhatsApp.
+Route::get('/p/tagihan-jasa/{id}', [\App\Http\Controllers\PublicTagihanJasaController::class, 'show'])
+    ->middleware('signed')
+    ->name('public.tagihan-jasa.show');
+Route::get('/p/tagihan-jasa/{id}/pdf', [\App\Http\Controllers\PublicTagihanJasaController::class, 'pdf'])
+    ->middleware('signed')
+    ->name('public.tagihan-jasa.pdf');
+
 Route::get('/', function () {
     if (!Auth::check()) {
         return redirect()->route('login');
@@ -36,7 +44,7 @@ Route::get('/', function () {
         : redirect()->route('dashboard');
 });
 
-$internalRoles = 'Super Admin|Super Admin Jasa|KPA|Kepala Subbagian Keuangan dan Tata Usaha|Kepala Seksi Pelayanan dan Kerjasama|PPK|PPSPM|Bendahara Pengeluaran|Bendahara Penerimaan|Pejabat Pengadaan|Operator BLU|PPABP|Operator Perjaldin|Koordinator Keuangan|Admin Jasa|Admin Konsesi|Koordinator Jasa';
+$internalRoles = 'Super Admin|Super Admin Jasa|KPA|PLT/PLH|Kepala Subbagian Keuangan dan Tata Usaha|Kepala Seksi Pelayanan dan Kerjasama|PPK|PPSPM|Bendahara Pengeluaran|Bendahara Penerimaan|Pejabat Pengadaan|Operator BLU|PPABP|Operator Perjaldin|Koordinator Keuangan|Admin Jasa|Admin Konsesi|Koordinator Jasa';
 
 Route::middleware('auth')->group(function () use ($internalRoles) {
 
@@ -59,12 +67,26 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
         ->group(function () {
             Route::get('/dashboard', [\App\Http\Controllers\AdminJasaDashboardController::class, 'index'])
                 ->name('dashboard');
-            Route::get('/tagihan/log-bulanan', [\App\Http\Controllers\AdminJasaTagihanController::class, 'logBulanan'])
-                ->name('tagihan.log-bulanan');
-            Route::get('/tagihan/jatuh-tempo', [\App\Http\Controllers\AdminJasaTagihanController::class, 'jatuhTempo'])
-                ->name('tagihan.jatuh-tempo');
             Route::get('/mitra', [\App\Http\Controllers\AdminJasaTagihanController::class, 'mitra'])
                 ->name('mitra');
+        });
+
+    // Jatuh Tempo — diperluas ke KPA/PLT/PLH (read-only akses untuk monitoring)
+    Route::middleware('role:Super Admin|Super Admin Jasa|Koordinator Jasa|Admin Jasa|KPA|PLT/PLH')
+        ->prefix('admin-jasa')
+        ->name('admin-jasa.')
+        ->group(function () {
+            Route::get('/tagihan/jatuh-tempo', [\App\Http\Controllers\AdminJasaTagihanController::class, 'jatuhTempo'])
+                ->name('tagihan.jatuh-tempo');
+        });
+
+    // Log Tagihan Bulanan — diperluas ke verifikator jasa (Koord. Jasa, Kasi PK, Kasubbag TU, KPA, PLT/PLH)
+    Route::middleware('role:Super Admin|Super Admin Jasa|Koordinator Jasa|Admin Jasa|Kepala Seksi Pelayanan dan Kerjasama|Kepala Subbagian Keuangan dan Tata Usaha|KPA|PLT/PLH')
+        ->prefix('admin-jasa')
+        ->name('admin-jasa.')
+        ->group(function () {
+            Route::get('/tagihan/log-bulanan', [\App\Http\Controllers\AdminJasaTagihanController::class, 'logBulanan'])
+                ->name('tagihan.log-bulanan');
         });
 
     // Workflow Engine General Routes
@@ -103,7 +125,7 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
     });
 
     // Master Data — DIPA
-    Route::middleware('role:Super Admin|KPA|Operator BLU|Kepala Subbagian Keuangan dan Tata Usaha|Kepala Seksi Pelayanan dan Kerjasama')->group(function () {
+    Route::middleware('role:Super Admin|KPA|PLT/PLH|Operator BLU|Kepala Subbagian Keuangan dan Tata Usaha|Kepala Seksi Pelayanan dan Kerjasama')->group(function () {
         Route::get('/dipas', [DipaController::class, 'index'])->name('dipas.index');
         Route::get('/dipas/create', [DipaController::class, 'create'])->name('dipas.create');
         Route::post('/dipas', [DipaController::class, 'store'])->name('dipas.store');
@@ -172,17 +194,25 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
         Route::delete('/jasa/admin/{admin}', [\App\Http\Controllers\AdminJasaController::class, 'destroy'])->name('jasa.admin.destroy');
         Route::get('/jasa/admin/{user}/layanan', [\App\Http\Controllers\AdminJasaLayananController::class, 'edit'])->name('jasa.admin.layanan.edit');
         Route::put('/jasa/admin/{user}/layanan', [\App\Http\Controllers\AdminJasaLayananController::class, 'update'])->name('jasa.admin.layanan.update');
+    });
+
+    // Integrasi API — hanya Super Admin
+    Route::middleware('role:Super Admin')->group(function () {
         Route::get('/jasa/integrasi', [\App\Http\Controllers\JasaIntegrationSettingController::class, 'index'])->name('jasa.integrasi.index');
         Route::put('/jasa/integrasi', [\App\Http\Controllers\JasaIntegrationSettingController::class, 'update'])->name('jasa.integrasi.update');
         Route::post('/jasa/integrasi/whatsapp/test', [\App\Http\Controllers\JasaIntegrationSettingController::class, 'testWhatsapp'])->name('jasa.integrasi.whatsapp.test');
     });
 
-    Route::middleware('role:Super Admin|Super Admin Jasa|Operator BLU|Koordinator Keuangan|Admin Jasa|Admin Konsesi|Koordinator Jasa')->group(function () {
+    // Index Laporan Mitra (Konsesi & PJP2U) — read-only, dibuka untuk verifikator (KPA, PLT/PLH, Kasi PK, Kasubag TU)
+    Route::middleware('role:Super Admin|Super Admin Jasa|Operator BLU|Koordinator Keuangan|Admin Jasa|Admin Konsesi|Koordinator Jasa|KPA|PLT/PLH|Kepala Seksi Pelayanan dan Kerjasama|Kepala Subbagian Keuangan dan Tata Usaha')->group(function () {
         Route::get('/jasa/laporan-penjualan', [\App\Http\Controllers\MitraJasaPenjualanController::class, 'index'])->name('jasa.mitra.penjualan.index');
         Route::get('/jasa/laporan-pjp2u', [\App\Http\Controllers\MitraJasaPenjualanController::class, 'indexPjp2u'])->name('jasa.mitra.pjp2u.index');
+        Route::get('/jasa/mitra/{mitra}/penjualan/{penjualan}', [\App\Http\Controllers\MitraJasaPenjualanController::class, 'show'])->name('jasa.mitra.penjualan.show');
+    });
+
+    Route::middleware('role:Super Admin|Super Admin Jasa|Operator BLU|Koordinator Keuangan|Admin Jasa|Admin Konsesi|Koordinator Jasa')->group(function () {
         Route::get('/jasa/mitra/{mitra}/penjualan/create', [\App\Http\Controllers\MitraJasaPenjualanController::class, 'create'])->name('jasa.mitra.penjualan.create');
         Route::post('/jasa/mitra/{mitra}/penjualan', [\App\Http\Controllers\MitraJasaPenjualanController::class, 'store'])->name('jasa.mitra.penjualan.store');
-        Route::get('/jasa/mitra/{mitra}/penjualan/{penjualan}', [\App\Http\Controllers\MitraJasaPenjualanController::class, 'show'])->name('jasa.mitra.penjualan.show');
         Route::get('/jasa/mitra/{mitra}/penjualan/{penjualan}/edit', [\App\Http\Controllers\MitraJasaPenjualanController::class, 'edit'])->name('jasa.mitra.penjualan.edit');
         Route::put('/jasa/mitra/{mitra}/penjualan/{penjualan}', [\App\Http\Controllers\MitraJasaPenjualanController::class, 'update'])->name('jasa.mitra.penjualan.update');
         Route::post('/jasa/mitra/{mitra}/penjualan/{penjualan}/submit', [\App\Http\Controllers\MitraJasaPenjualanController::class, 'submit'])->name('jasa.mitra.penjualan.submit');
@@ -201,11 +231,15 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
         Route::get('/tagihan/kontrak/{id}/export/{type}', [\App\Http\Controllers\TagihanController::class, 'exportPdfKontrak'])->name('tagihan.kontrak.export-pdf');
     });
 
-    // Tagihan Jasa (PNBP)
-    Route::middleware('role:Super Admin|Super Admin Jasa|Admin Jasa|Admin Konsesi|Koordinator Jasa|Kepala Seksi Pelayanan dan Kerjasama|Kepala Subbagian Keuangan dan Tata Usaha|KPA')->group(function () {
-        Route::get('/tagihan-jasa', [\App\Http\Controllers\TagihanJasaController::class, 'index'])->name('tagihan-jasa.index');
+    // Tagihan Jasa (PNBP) — pembuatan tagihan dibatasi ke role pembuat (admin),
+    // verifikator jasa hanya boleh melihat/approve.
+    Route::middleware('role:Super Admin|Super Admin Jasa|Admin Jasa|Admin Konsesi')->group(function () {
         Route::get('/tagihan-jasa/create', [\App\Http\Controllers\TagihanJasaController::class, 'create'])->name('tagihan-jasa.create');
         Route::post('/tagihan-jasa', [\App\Http\Controllers\TagihanJasaController::class, 'store'])->name('tagihan-jasa.store');
+    });
+
+    Route::middleware('role:Super Admin|Super Admin Jasa|Admin Jasa|Admin Konsesi|Koordinator Jasa|Kepala Seksi Pelayanan dan Kerjasama|Kepala Subbagian Keuangan dan Tata Usaha|KPA|PLT/PLH')->group(function () {
+        Route::get('/tagihan-jasa', [\App\Http\Controllers\TagihanJasaController::class, 'index'])->name('tagihan-jasa.index');
         Route::get('/tagihan-jasa/{id}/surat-pengantar', [\App\Http\Controllers\TagihanJasaController::class, 'generateSuratPengantarPdf'])->name('tagihan-jasa.surat-pengantar');
         Route::put('/tagihan-jasa/{id}/surat-pengantar', [\App\Http\Controllers\TagihanJasaController::class, 'updateSuratPengantarDraft'])->name('tagihan-jasa.surat-pengantar.update');
         Route::post('/tagihan-jasa/{id}/surat-pengantar-final', [\App\Http\Controllers\TagihanJasaController::class, 'uploadSuratPengantarFinal'])->name('tagihan-jasa.surat-pengantar-final.upload');
@@ -240,7 +274,7 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
     });
 
     // Verifikasi Tagihan Jasa - multi-role
-    Route::middleware('role:Super Admin|Super Admin Jasa|Koordinator Jasa|Kepala Seksi Pelayanan dan Kerjasama|Kepala Subbagian Keuangan dan Tata Usaha|KPA')->group(function () {
+    Route::middleware('role:Super Admin|Super Admin Jasa|Koordinator Jasa|Kepala Seksi Pelayanan dan Kerjasama|Kepala Subbagian Keuangan dan Tata Usaha|KPA|PLT/PLH')->group(function () {
         Route::get('/verifikasi-tagihan-jasa', [\App\Http\Controllers\TagihanJasaVerifikasiController::class, 'index'])->name('verifikasi-tagihan-jasa.index');
         Route::get('/verifikasi-tagihan-jasa/{id}', [\App\Http\Controllers\TagihanJasaVerifikasiController::class, 'show'])->name('verifikasi-tagihan-jasa.show');
     });
@@ -780,7 +814,7 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
 
 
     // Laporan BKU
-    Route::middleware('role:Super Admin|KPA|Kepala Subbagian Keuangan dan Tata Usaha|Kepala Seksi Pelayanan dan Kerjasama|PPK|Bendahara Pengeluaran|Bendahara Penerimaan')->group(function () {
+    Route::middleware('role:Super Admin|KPA|PLT/PLH|Kepala Subbagian Keuangan dan Tata Usaha|Kepala Seksi Pelayanan dan Kerjasama|PPK|Bendahara Pengeluaran|Bendahara Penerimaan')->group(function () {
         Route::get('/reports/bku', [\App\Http\Controllers\ReportController::class, 'bku'])->name('reports.bku');
         Route::get('/reports/bku/pdf', [\App\Http\Controllers\ReportController::class, 'bkuPdf'])->name('reports.bku.pdf');
     });

@@ -11,7 +11,7 @@
     <div class="mb-2 layanan-node" data-layanan-id="{{ $layanan->id }}" style="margin-left: {{ (($depth ?? 0) * 18) }}px;">
         <div class="d-flex align-items-start gap-2 p-2 rounded border bg-white {{ $checked ? 'border-primary bg-primary bg-opacity-10' : '' }}">
             @if($isLeaf)
-                <input type="radio" class="form-check-input mt-1 layanan-radio" name="layanan_jasa_id" value="{{ $layanan->id }}" data-persen="{{ floatval($layanan->persentase_konsesi) }}" @checked($checked) required>
+                <input type="radio" class="form-check-input mt-1 layanan-radio" name="layanan_jasa_id" value="{{ $layanan->id }}" data-persen="{{ floatval($layanan->persentase_konsesi) }}" @checked($checked)>
             @else
                 <div style="width: 16px; display: inline-block;"></div>
             @endif

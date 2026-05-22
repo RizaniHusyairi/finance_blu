@@ -73,6 +73,17 @@ class WorkflowService
             ]);
         }
 
+        // Override role verifikator final untuk Tagihan Jasa (KPA atau PLT/PLH).
+        // Workflow definition default-nya KPA — bisa diganti sesuai pilihan saat input.
+        if ($workflowCode === 'TAGIHAN_JASA' && $document instanceof \App\Models\TagihanJasa) {
+            $finalRole = $document->final_verifier_role ?? 'KPA';
+            if ($finalRole && $finalRole !== 'KPA') {
+                WorkflowApproval::where('workflow_instance_id', $instance->id)
+                    ->where('role_code', 'KPA')
+                    ->update(['role_code' => $finalRole]);
+            }
+        }
+
         return $instance;
     }
 

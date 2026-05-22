@@ -100,7 +100,7 @@
             @endhasanyrole
           </ul>
         </li>
-        @hasanyrole('Super Admin||KPA|Kepala Subbagian Keuangan dan Tata Usaha|Kepala Seksi Pelayanan dan Kerjasama|Pejabat Pengadaan|Operator BLU|Koordinator Keuangan')
+        @hasanyrole('Super Admin||KPA|Kepala Subbagian Keuangan dan Tata Usaha|Pejabat Pengadaan|Operator BLU|Koordinator Keuangan')
         <li>
           <a href="javascript:;" class="has-arrow">
             <div class="parent-icon"><i class="material-icons-outlined">folder</i>
@@ -114,7 +114,7 @@
             <li><a href="{{ route('suppliers.index') }}"><i class="material-icons-outlined">arrow_right</i>Vendor</a>
             </li>
             @endhasanyrole
-            @hasanyrole('Super Admin|KPA|Operator BLU|Kepala Subbagian Keuangan dan Tata Usaha|Kepala Seksi Pelayanan dan Kerjasama')
+            @hasanyrole('Super Admin|KPA|Operator BLU|Kepala Subbagian Keuangan dan Tata Usaha')
             <li><a href="{{ route('dipas.index') }}"><i class="material-icons-outlined">arrow_right</i>DIPA</a>
             </li>
             <li><a href="{{ route('coas.index') }}"><i class="material-icons-outlined">arrow_right</i>COA</a>
@@ -200,11 +200,13 @@
                 <i class="material-icons-outlined">arrow_right</i>Mitra Jasa
               </a>
             </li>
+            @hasrole('Super Admin')
             <li>
               <a href="{{ route('jasa.integrasi.index') }}">
                 <i class="material-icons-outlined">arrow_right</i>Integrasi API
               </a>
             </li>
+            @endhasrole
           </ul>
         </li>
         @endhasrole
@@ -289,8 +291,8 @@
             </ul>
           </li>
           @endhasanyrole
-        {{-- Verifikasi Tagihan — seragam untuk SEMUA verifikator (PPK, PPSPM, Koor.Keu, Bendahara×2, Kasubbag) --}}
-        @hasanyrole('PPK|PPSPM|Koordinator Keuangan|Bendahara Pengeluaran|Bendahara Penerimaan|Kepala Subbagian Keuangan dan Tata Usaha|Koordinator Jasa')
+        {{-- Verifikasi Tagihan — seragam untuk SEMUA verifikator (PPK, PPSPM, Koor.Keu, Bendahara×2, Kasubbag, Koord. Jasa, Kasi Pelayanan & Kerjasama, KPA) --}}
+        @hasanyrole('PPK|PPSPM|Koordinator Keuangan|Bendahara Pengeluaran|Bendahara Penerimaan|Kepala Subbagian Keuangan dan Tata Usaha|Koordinator Jasa|Kepala Seksi Pelayanan dan Kerjasama|KPA')
         @php
             // Perjaldin masih memakai route per-role. Honorarium sudah disatukan ke endpoint terpadu
             // `verifikasi-tagihan-honorarium.*` yang dapat melayani 6 role + user dual-role dalam satu halaman.
@@ -310,14 +312,16 @@
                 }
             }
             $showBadge = count($perjaldinLinks) > 1;
+            $isJasaOnlyVerifier = $u?->hasAnyRole(['Koordinator Jasa', 'Kepala Seksi Pelayanan dan Kerjasama', 'KPA'])
+                && ! $u?->hasAnyRole(['PPK', 'PPSPM', 'Koordinator Keuangan', 'Bendahara Pengeluaran', 'Bendahara Penerimaan', 'Kepala Subbagian Keuangan dan Tata Usaha']);
         @endphp
         <li>
           <a href="javascript:;" class="has-arrow">
             <div class="parent-icon"><i class="material-icons-outlined">fact_check</i></div>
-            <div class="menu-title">{{ auth()->user()?->hasRole('Koordinator Jasa') ? 'Verifikasi Tagihan Jasa' : 'Verifikasi Tagihan' }}</div>
+            <div class="menu-title">{{ $isJasaOnlyVerifier ? 'Verifikasi Tagihan Jasa' : 'Verifikasi Tagihan' }}</div>
           </a>
           <ul>
-            @if($u?->hasRole('Koordinator Jasa'))
+            @if($isJasaOnlyVerifier)
             <li>
               <a href="{{ route('verifikasi-tagihan-jasa.index') }}">
                 <i class="material-icons-outlined">arrow_right</i>Tagihan Jasa
@@ -389,6 +393,33 @@
         </li>
         @endhasrole
 
+        {{-- Log Tagihan Bulanan untuk Kasi PK, Kasubag TU, KPA (read-only).
+             KPA juga memperoleh akses ke Jatuh Tempo. --}}
+        @hasanyrole('Kepala Seksi Pelayanan dan Kerjasama|Kepala Subbagian Keuangan dan Tata Usaha|KPA')
+        @unlessrole('Super Admin|Super Admin Jasa|Koordinator Jasa|Admin Jasa')
+        <li>
+          <a href="javascript:;" class="has-arrow">
+            <div class="parent-icon"><i class="material-icons-outlined">receipt_long</i></div>
+            <div class="menu-title">Riwayat</div>
+          </a>
+          <ul>
+            <li>
+              <a href="{{ route('admin-jasa.tagihan.log-bulanan') }}">
+                <i class="material-icons-outlined">arrow_right</i>Log Tagihan Bulanan
+              </a>
+            </li>
+            @hasrole('KPA')
+            <li>
+              <a href="{{ route('admin-jasa.tagihan.jatuh-tempo') }}">
+                <i class="material-icons-outlined">arrow_right</i>Jatuh Tempo
+              </a>
+            </li>
+            @endhasrole
+          </ul>
+        </li>
+        @endunlessrole
+        @endhasanyrole
+
         @hasanyrole('Super Admin|Super Admin Jasa|Koordinator Keuangan|Kepala Seksi Pelayanan dan Kerjasama|Kepala Subbagian Keuangan dan Tata Usaha|KPA')
         <li>
           <a href="javascript:;" class="has-arrow">
@@ -408,6 +439,7 @@
             </li>
           </ul>
         </li>
+        @hasanyrole('Super Admin|Super Admin Jasa|Koordinator Keuangan|Kepala Subbagian Keuangan dan Tata Usaha')
         <li>
           <a href="javascript:;" class="has-arrow">
             <div class="parent-icon"><i class="material-icons-outlined">receipt_long</i></div>
@@ -462,13 +494,16 @@
                 <i class="material-icons-outlined">arrow_right</i>Tarif Jasa
               </a>
             </li>
+            @hasrole('Super Admin')
             <li>
               <a href="{{ route('jasa.integrasi.index') }}">
                 <i class="material-icons-outlined">arrow_right</i>Integrasi API
               </a>
             </li>
+            @endhasrole
           </ul>
         </li>
+        @endhasanyrole
         @endhasanyrole
 
         @hasrole('PPK')

@@ -415,7 +415,7 @@
             <div class="card-header bg-white p-4 border-bottom rounded-top-4 d-flex justify-content-between align-items-center">
                 <h5 class="mb-0 fw-bold"><i class="bi bi-file-earmark-text text-primary me-2"></i>Informasi Tagihan</h5>
                 <span class="badge tj-status-badge {{ match($tagihan->status) {
-                    'PUBLISHED', 'LUNAS' => 'bg-success',
+                    'PUBLISHED', 'LUNAS', 'DISETUJUI' => 'bg-success',
                     'DRAFT' => 'bg-secondary',
                     'DITOLAK' => 'bg-danger',
                     default => 'bg-warning text-dark',
@@ -873,16 +873,20 @@
                 <h6 class="fw-bold mb-3"><i class="bi bi-whatsapp text-success me-2"></i>Pesan Tagihan WA Mitra</h6>
                 @php
                     $persistentPesan = "*PEMBERITAHUAN TAGIHAN PNBP*\n\n";
-                    $persistentPesan .= "Yth. " . ($mitraTagihan->nama_pihak ?? '') . ",\n\n";
+                    $persistentPesan .= "Yth. " . ($mitraTagihan->nama_pihak ?? '-') . ",\n\n";
                     $persistentPesan .= "Berikut adalah informasi tagihan layanan Anda:\n";
-                    $persistentPesan .= "No Tagihan: *" . $tagihan->nomor_tagihan . "*\n";
-                    $persistentPesan .= "Total Tagihan: *Rp " . number_format($tagihan->total_tagihan, 0, ',', '.') . "*\n\n";
+                    $persistentPesan .= "No Tagihan : *" . $tagihan->nomor_tagihan . "*\n";
+                    $persistentPesan .= "Total Tagihan : *Rp " . number_format((float) $tagihan->total_tagihan, 0, ',', '.') . "*\n\n";
                     $persistentPesan .= "Silakan lakukan pembayaran melalui Virtual Account Bank BTN berikut:\n";
-                    $persistentPesan .= "ðŸ’³ No VA: *" . ($tagihan->nomor_va ?? '-') . "*\n\n";
+                    $persistentPesan .= "No VA : *" . ($tagihan->nomor_va ?? '-') . "*\n";
+                    if ($tagihan->tanggal_jatuh_tempo) {
+                        $persistentPesan .= "Jatuh Tempo : *" . \Carbon\Carbon::parse($tagihan->tanggal_jatuh_tempo)->translatedFormat('d F Y') . "*\n";
+                    }
+                    $persistentPesan .= "Link Invoice : " . URL::signedRoute('public.tagihan-jasa.show', ['id' => $tagihan->id]) . "\n\n";
                     $persistentPesan .= "----------------------------------------\n";
-                    $persistentPesan .= "â„¹ï¸ *AKUN PORTAL MITRA*\n";
+                    $persistentPesan .= "*AKUN PORTAL MITRA*\n";
                     $persistentPesan .= "Silakan login menggunakan akun Mitra Anda yang sudah terdaftar.\n";
-                    $persistentPesan .= "Login Portal: " . route('login') . "\n";
+                    $persistentPesan .= "Login Portal : " . route('login') . "\n";
                     $persistentPesan .= "----------------------------------------\n\n";
                     $persistentPesan .= "Terima kasih atas kerja sama Anda.\n";
                     $persistentPesan .= "_Sistem Informasi Keuangan (SIKEREN)_";
