@@ -9,7 +9,6 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\CoaController;
 use App\Http\Controllers\DipaController;
 use App\Http\Controllers\DocumentNumberController;
-use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\SupplierController;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\HonorariumController;
@@ -107,9 +106,30 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
         Route::post('/perjaldin-blu/{id}/reject', [\App\Http\Controllers\PerjaldinBluController::class, 'reject'])->name('perjaldin-blu.reject');
     });
 
-    // Master Data — Pegawai & Pejabat
+    // Master Data — Pegawai & Pejabat (legacy alias → diarahkan ke modul Administrasi baru)
     Route::middleware('role:Super Admin|Operator BLU|PPABP')->group(function () {
-        Route::resource('employees', EmployeeController::class);
+        Route::get('/employees', fn () => redirect()->route('admin.pegawai.index'))->name('employees.index');
+    });
+
+    // === Modul Administrasi (khusus Super Admin) ===
+    Route::middleware('role:Super Admin')->prefix('admin')->name('admin.')->group(function () {
+        // Master Pegawai
+        Route::resource('pegawai', \App\Http\Controllers\Admin\MasterPegawaiController::class)
+            ->parameters(['pegawai' => 'pegawai']);
+        Route::patch('pegawai/{pegawai}/toggle', [\App\Http\Controllers\Admin\MasterPegawaiController::class, 'toggle'])
+            ->name('pegawai.toggle');
+
+        // User Management
+        Route::resource('users', \App\Http\Controllers\Admin\UserManagementController::class)
+            ->parameters(['users' => 'user']);
+        Route::post('users/{user}/reset-password', [\App\Http\Controllers\Admin\UserManagementController::class, 'resetPassword'])
+            ->name('users.reset-password');
+        Route::patch('users/{user}/roles', [\App\Http\Controllers\Admin\UserManagementController::class, 'syncRoles'])
+            ->name('users.roles.sync');
+
+        // Roles (read-only)
+        Route::get('roles', [\App\Http\Controllers\Admin\RoleManagementController::class, 'index'])->name('roles.index');
+        Route::get('roles/{role}', [\App\Http\Controllers\Admin\RoleManagementController::class, 'show'])->name('roles.show');
     });
 
     // Master Data — Supplier / Mitra

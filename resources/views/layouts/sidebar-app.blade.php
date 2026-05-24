@@ -100,6 +100,22 @@
             @endhasanyrole
           </ul>
         </li>
+
+        {{-- ===== Modul Administrasi (Super Admin) ===== --}}
+        @hasrole('Super Admin')
+        <li>
+          <a href="javascript:;" class="has-arrow">
+            <div class="parent-icon"><i class="material-icons-outlined">admin_panel_settings</i></div>
+            <div class="menu-title">Administrasi</div>
+          </a>
+          <ul>
+            <li><a href="{{ route('admin.users.index') }}"><i class="material-icons-outlined">arrow_right</i>Manajemen User</a></li>
+            <li><a href="{{ route('admin.roles.index') }}"><i class="material-icons-outlined">arrow_right</i>Manajemen Role</a></li>
+            <li><a href="{{ route('admin.pegawai.index') }}"><i class="material-icons-outlined">arrow_right</i>Data Pegawai</a></li>
+          </ul>
+        </li>
+        @endhasrole
+
         @hasanyrole('Super Admin||KPA|Kepala Subbagian Keuangan dan Tata Usaha|Pejabat Pengadaan|Operator BLU|Koordinator Keuangan')
         <li>
           <a href="javascript:;" class="has-arrow">
@@ -658,17 +674,6 @@
             <li><a href="#"><i class="material-icons-outlined">arrow_right</i>Kontrak</a></li>
             <li><a href="#"><i class="material-icons-outlined">arrow_right</i>Perjaldin</a></li>
             <li><a href="#"><i class="material-icons-outlined">arrow_right</i>Honor</a></li>
-          </ul>
-        </li>
-        <li>
-          <a href="javascript:;" class="has-arrow">
-            <div class="parent-icon"><i class="material-icons-outlined">history</i></div>
-            <div class="menu-title">Riwayat Dokumen</div>
-          </a>
-          <ul>
-            {{-- TODO: Buat route riwayat dokumen jika controller sudah siap --}}
-            <li><a href="#"><i class="material-icons-outlined">arrow_right</i>SPP</a></li>
-            <li><a href="#"><i class="material-icons-outlined">arrow_right</i>SPM</a></li>
           </ul>
         </li>
         @endhasanyrole

@@ -2,199 +2,98 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
-use App\Models\User;
 use App\Models\MasterPegawai;
+use App\Models\User;
+use App\Services\Admin\UserProvisioningService;
+use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
 class UserAccountSeeder extends Seeder
 {
     /**
-     * Buat akun user untuk pegawai yang menjalankan fungsi operasional di SIKEREN-BLU.
-     * Setiap user di-link ke MasterPegawai via polymorphic profilable, kecuali Super Admin
-     * yang merupakan akun sistem dan tidak terikat ke data pegawai/mitra.
+     * Seed akun user untuk setiap role operasional.
+     *
+     * Mengandalkan UserProvisioningService agar logika create/sync identik dengan UI Super Admin.
+     * Idempotent: kalau user sudah ada, hanya disinkronkan emailnya, password, dan role.
      */
-    public function run(): void
+    public function run(UserProvisioningService $provisioner): void
     {
-        // 1) Akun sistem tanpa profilable — khusus Super Admin.
-        //    Dibuat lewat withoutEvents() supaya guard "wajib profilable" di model User
-        //    tidak men-throw exception (Super Admin memang akun sistem, bukan pegawai).
-        $this->seedSystemAccount(
+        // 1) Akun sistem (Super Admin) — tanpa profilable
+        $this->upsertSystemAccount(
+            $provisioner,
             email: 'super.admin@sikeren.id',
             roles: ['Super Admin'],
             label: 'SUPER ADMIN SISTEM',
         );
 
-        // 1b) Akun PLT/PLH — Pelaksana Tugas / Pelaksana Harian.
-        //     Tidak terikat ke MasterPegawai (akun jabatan sementara) sehingga dibuat
-        //     sebagai system account. Memiliki menu yang sama persis dengan KPA.
-        $this->seedSystemAccount(
-            email: 'plt.plh@sikeren.id',
-            roles: ['PLT/PLH'],
-            label: 'PLT / PLH',
-        );
-
-        // 2) Akun yang terhubung ke MasterPegawai.
+        // 2) Akun yang menempel ke MasterPegawai
         $accounts = [
-            [
-                'nama' => 'I KADEK YULI SASTRAWAN',
-                'email' => 'kpa@sikeren.id',
-                'roles' => ['KPA'],
-            ],
-            [
-                'nama' => 'ZALDI ARDIAN',
-                'email' => 'kasubbag@sikeren.id',
-                'roles' => ['Kepala Subbagian Keuangan dan Tata Usaha'],
-            ],
-            [
-                'nama' => 'ROSLAN',
-                'email' => 'kasipk@sikeren.id',
-                'roles' => ['Kepala Seksi Pelayanan dan Kerjasama'],
-            ],
-            [
-                'nama' => 'GUNAWAN',
-                'email' => 'ppk@sikeren.id',
-                'roles' => ['PPK'],
-            ],
-            [
-                'nama' => 'MUTIA RACHMI',
-                'email' => 'ppspm@sikeren.id',
-                'roles' => ['PPSPM', 'Koordinator Keuangan'], // dual-role
-            ],
-            [
-                'nama' => 'YENY PUJI ASTUTI',
-                'email' => 'bendahara.pengeluaran@sikeren.id',
-                'roles' => ['Bendahara Pengeluaran'],
-            ],
-            [
-                'nama' => 'SITI KHOLIFAH',
-                'email' => 'bendahara.penerimaan@sikeren.id',
-                'roles' => ['Bendahara Penerimaan'],
-            ],
-            [
-                'nama' => 'GUSTI AYU KHARISMA MAHARANI',
-                'email' => 'perjaldin@sikeren.id',
-                'roles' => ['Operator Perjaldin'],
-            ],
-            [
-                'nama' => 'RIZKI AULIA',
-                'email' => 'ppabp@sikeren.id',
-                'roles' => ['PPABP'],
-            ],
-            [
-                'nama' => 'VERNALDY REVIMAPUTRA SAMPE LALAN',
-                'email' => 'pengadaan@sikeren.id',
-                'roles' => ['Pejabat Pengadaan'],
-            ],
-            [
-                'nama' => 'KARTIKA FALITA',
-                'email' => 'operator@sikeren.id',
-                'roles' => ['Operator BLU'],
-            ],
+            ['I KADEK YULI SASTRAWAN',           'kpa@sikeren.id',                  ['KPA']],
+            ['ZALDI ARDIAN',                     'kasubbag@sikeren.id',             ['Kepala Subbagian Keuangan dan Tata Usaha']],
+            ['ROSLAN',                           'kasipk@sikeren.id',               ['Kepala Seksi Pelayanan dan Kerjasama']],
+            ['GUNAWAN',                          'ppk@sikeren.id',                  ['PPK']],
+            ['MUTIA RACHMI',                     'ppspm@sikeren.id',                ['PPSPM', 'Koordinator Keuangan']],
+            ['YENY PUJI ASTUTI',                 'bendahara.pengeluaran@sikeren.id',['Bendahara Pengeluaran']],
+            ['SITI KHOLIFAH',                    'bendahara.penerimaan@sikeren.id', ['Bendahara Penerimaan']],
+            ['GUSTI AYU KHARISMA MAHARANI',      'perjaldin@sikeren.id',            ['Operator Perjaldin']],
+            ['RIZKI AULIA',                      'ppabp@sikeren.id',                ['PPABP']],
+            ['VERNALDY REVIMAPUTRA SAMPE LALAN', 'pengadaan@sikeren.id',            ['Pejabat Pengadaan']],
+            ['KARTIKA FALITA',                   'operator@sikeren.id',             ['Operator BLU']],
 
-            // === Modul Jasa & Utilitas ===
-            [
-                'nama' => 'MELLYARTI RAHMAN',
-                'email' => 'super.admin.jasa@sikeren.id',
-                'roles' => ['Super Admin Jasa'],
-            ],
-            [
-                'nama' => 'DIAH DESTIANA',
-                'email' => 'admin.jasa@sikeren.id',
-                'roles' => ['Admin Jasa'],
-            ],
-            [
-                'nama' => 'ANDI AMIRAH AFIFAH',
-                'email' => 'admin.konsesi@sikeren.id',
-                'roles' => ['Admin Konsesi'],
-            ],
-            [
-                'nama' => 'MUHAMMAD KEMAL HIKMA',
-                'email' => 'koordinator.jasa@sikeren.id',
-                'roles' => ['Koordinator Jasa'],
-            ],
-            [
-                'nama' => 'FAJRUL SYAMSI',
-                'email' => 'admin.listrik@sikeren.id',
-                'roles' => ['Admin Listrik'],
-            ],
-            [
-                'nama' => 'PALUNG PURNAMA HENDRAYANA',
-                'email' => 'admin.air@sikeren.id',
-                'roles' => ['Admin Air'],
-            ],
+            // Modul Jasa & Utilitas
+            ['MELLYARTI RAHMAN',                 'super.admin.jasa@sikeren.id',     ['Super Admin Jasa']],
+            ['DIAH DESTIANA',                    'admin.jasa@sikeren.id',           ['Admin Jasa']],
+            ['ANDI AMIRAH AFIFAH',               'admin.konsesi@sikeren.id',        ['Admin Konsesi']],
+            ['MUHAMMAD KEMAL HIKMA',             'koordinator.jasa@sikeren.id',     ['Koordinator Jasa']],
+            ['FAJRUL SYAMSI',                    'admin.listrik@sikeren.id',        ['Admin Listrik']],
+            ['PALUNG PURNAMA HENDRAYANA',        'admin.air@sikeren.id',            ['Admin Air']],
         ];
 
-        foreach ($accounts as $account) {
-            $this->seedPegawaiAccount($account);
+        foreach ($accounts as [$nama, $email, $roles]) {
+            $this->upsertPegawaiAccount($provisioner, $nama, $email, $roles);
         }
     }
 
-    /**
-     * Buat / sinkronkan akun untuk user yang TERHUBUNG ke MasterPegawai.
-     */
-    private function seedPegawaiAccount(array $account): void
+    private function upsertPegawaiAccount(UserProvisioningService $provisioner, string $nama, string $email, array $roles): void
     {
-        // Cari pegawai di master_pegawai berdasarkan nama
-        $pegawai = MasterPegawai::where('nama_lengkap', $account['nama'])->first();
-
-        if (!$pegawai) {
-            $this->command->warn("Pegawai '{$account['nama']}' tidak ditemukan di master_pegawai. Skipped.");
+        $pegawai = MasterPegawai::where('nama_lengkap', $nama)->first();
+        if (! $pegawai) {
+            $this->command->warn("Pegawai '{$nama}' tidak ditemukan di master_pegawai. Skipped.");
             return;
         }
 
-        // Cari user berdasarkan profilable (pegawai), fallback ke email
-        $user = User::where('profilable_type', MasterPegawai::class)
+        $existing = User::where('profilable_type', MasterPegawai::class)
             ->where('profilable_id', $pegawai->id)
             ->first();
 
-        if ($user) {
-            $user->update([
-                'email' => $account['email'],
+        if ($existing) {
+            // Sinkronkan email + password + role tanpa membuat user baru
+            $existing->forceFill([
+                'email' => $email,
                 'password' => Hash::make('password'),
-                'email_verified_at' => now(),
-            ]);
+                'email_verified_at' => $existing->email_verified_at ?: now(),
+            ])->save();
+            $provisioner->syncRoles($existing, $roles);
         } else {
-            $user = User::updateOrCreate(
-                ['email' => $account['email']],
-                [
-                    'password' => Hash::make('password'),
-                    'profilable_type' => MasterPegawai::class,
-                    'profilable_id' => $pegawai->id,
-                    'email_verified_at' => now(),
-                ]
-            );
+            $provisioner->createForPegawai($pegawai, $email, $roles, password: 'password');
         }
 
-        // Sinkronisasi role (syncRoles menghapus role lama, assign yang baru)
-        $user->syncRoles($account['roles']);
-
-        $roleStr = implode(', ', $account['roles']);
-        $this->command->info("✓ {$account['nama']} → {$account['email']} [{$roleStr}]");
+        $this->command->info("✓ {$nama} → {$email} [" . implode(', ', $roles) . ']');
     }
 
-    /**
-     * Buat / sinkronkan akun SISTEM yang TIDAK terhubung ke pegawai/mitra.
-     * Menggunakan User::withoutEvents() agar guard model (yang mewajibkan profilable)
-     * tidak ikut berjalan saat pembuatan akun ini.
-     */
-    private function seedSystemAccount(string $email, array $roles, string $label): void
+    private function upsertSystemAccount(UserProvisioningService $provisioner, string $email, array $roles, string $label): void
     {
-        $user = User::withoutEvents(function () use ($email) {
-            return User::updateOrCreate(
-                ['email' => $email],
-                [
-                    'password' => Hash::make('password'),
-                    'profilable_type' => null,
-                    'profilable_id' => null,
-                    'email_verified_at' => now(),
-                ]
-            );
-        });
+        $existing = User::where('email', $email)->first();
+        if ($existing) {
+            $existing->forceFill([
+                'password' => Hash::make('password'),
+                'email_verified_at' => $existing->email_verified_at ?: now(),
+            ])->save();
+            $provisioner->syncRoles($existing, $roles);
+        } else {
+            $provisioner->createSystemAccount($email, $roles, password: 'password');
+        }
 
-        $user->syncRoles($roles);
-
-        $roleStr = implode(', ', $roles);
-        $this->command->info("✓ {$label} → {$email} [{$roleStr}]");
+        $this->command->info("✓ {$label} → {$email} [" . implode(', ', $roles) . ']');
     }
 }
