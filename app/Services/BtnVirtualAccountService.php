@@ -131,7 +131,23 @@ class BtnVirtualAccountService
         ]);
 
         if ($tagihan && $transaction->status === 'paid' && $transaction->wasRecentlyCreated) {
-            $this->sendPaymentReceipt($tagihan->fresh('mitra'), $transaction);
+            $freshTagihan = $tagihan->fresh(['mitra', 'mitraLegacy', 'details']);
+
+            // Sync ke piutang LUNAS + catat BKU
+            try {
+                app(\App\Services\Pembukuan\PiutangSyncService::class)->syncFromLunas(
+                    $freshTagihan,
+                    [
+                        'amount' => (float) $transaction->amount,
+                        'paid_at' => $transaction->paid_at,
+                        'reference' => $transaction->external_reference ?: ('CB/' . $transaction->id),
+                    ]
+                );
+            } catch (\Throwable $e) {
+                \Log::error('PiutangSync gagal di callback BTN: ' . $e->getMessage());
+            }
+
+            $this->sendPaymentReceipt($freshTagihan, $transaction);
         }
 
         return [
@@ -190,23 +206,68 @@ class BtnVirtualAccountService
 
     private function sendPaymentReceipt(TagihanJasa $tagihan, PaymentTransaction $transaction): void
     {
+        $this->sendLunasNotification($tagihan, [
+            'amount'    => (float) $transaction->amount,
+            'paid_at'   => $transaction->paid_at,
+            'reference' => $transaction->external_reference ?: '-',
+        ]);
+    }
+
+    /**
+     * Kirim notifikasi WA lunas berdasarkan template di IntegrationSetting.
+     * Bisa dipanggil dari mana saja (callback BTN, manual mark-lunas, dll)
+     * dengan payload pembayaran ringkas.
+     *
+     * @param array{amount: float, paid_at?: \Carbon\Carbon|null, reference?: string|null} $payment
+     */
+    public function sendLunasNotification(TagihanJasa $tagihan, array $payment): void
+    {
         $target = $tagihan->mitra?->no_telepon;
 
         if (! filled($target)) {
             return;
         }
 
-        $message = "*STRUK PEMBAYARAN PNBP JASA*\n\n";
-        $message .= "Yth. " . ($tagihan->mitra->nama_mitra ?? '-') . ",\n\n";
-        $message .= "Pembayaran tagihan Anda telah diterima.\n";
-        $message .= "No Tagihan: *{$tagihan->nomor_tagihan}*\n";
-        $message .= "No VA: *" . ($tagihan->nomor_va ?? '-') . "*\n";
-        $message .= "Nominal Bayar: *Rp " . number_format((float) $transaction->amount, 0, ',', '.') . "*\n";
-        $message .= "Waktu Bayar: *" . optional($transaction->paid_at)->format('d/m/Y H:i') . "*\n";
-        $message .= "Referensi: " . ($transaction->external_reference ?: '-') . "\n\n";
-        $message .= "Status tagihan sekarang: *LUNAS*.\n";
-        $message .= "Detail: " . \Illuminate\Support\Facades\URL::signedRoute('public.tagihan-jasa.show', ['id' => $tagihan->id]) . "\n\n";
-        $message .= "_Sistem Informasi Keuangan (SIKEREN)_";
+        // Cek toggle aktif notifikasi lunas (manajemen Super Admin).
+        $enabled = (bool) \App\Models\IntegrationSetting::getValue('whatsapp.lunas.enabled', true);
+        if (! $enabled) {
+            return;
+        }
+
+        $template = (string) \App\Models\IntegrationSetting::getValue('whatsapp.lunas.template', '');
+        $linkInvoice = \App\Models\ShortLink::forTarget('tagihan_jasa', $tagihan->id)->publicUrl();
+
+        $amount = (float) ($payment['amount'] ?? $tagihan->total_tagihan);
+        $paidAt = $payment['paid_at'] ?? now();
+        if (! $paidAt instanceof \Carbon\Carbon && $paidAt) {
+            $paidAt = \Carbon\Carbon::parse($paidAt);
+        }
+        $reference = (string) ($payment['reference'] ?? ('MANUAL/' . $tagihan->nomor_tagihan));
+
+        if (filled($template)) {
+            $message = strtr($template, [
+                '{mitra_nama}'    => $tagihan->mitra->nama_mitra ?? '-',
+                '{nomor_tagihan}' => $tagihan->nomor_tagihan,
+                '{nomor_va}'      => $tagihan->nomor_va ?? '-',
+                '{total}'         => 'Rp ' . number_format($amount, 0, ',', '.'),
+                '{waktu_bayar}'   => $paidAt ? $paidAt->format('d/m/Y H:i') : '-',
+                '{referensi}'     => $reference,
+                '{link_invoice}'  => $linkInvoice,
+            ]);
+        } else {
+            // Fallback default kalau template kosong.
+            $message = "*STRUK PEMBAYARAN PNBP JASA*\n\n";
+            $message .= "Yth. " . ($tagihan->mitra->nama_mitra ?? '-') . ",\n\n";
+            $message .= "Pembayaran tagihan Anda telah diterima.\n";
+            $message .= "No Tagihan: *{$tagihan->nomor_tagihan}*\n";
+            $message .= "No VA: *" . ($tagihan->nomor_va ?? '-') . "*\n";
+            $message .= "Nominal Bayar: *Rp " . number_format($amount, 0, ',', '.') . "*\n";
+            $message .= "Waktu Bayar: *" . ($paidAt ? $paidAt->format('d/m/Y H:i') : '-') . "*\n";
+            $message .= "Referensi: " . $reference . "\n\n";
+            $message .= "Status tagihan sekarang: *LUNAS*.\n";
+            $message .= "Detail: " . $linkInvoice . "\n\n";
+            $message .= "_Sistem Informasi Keuangan (SIKEREN)_";
+        }
 
         app(WhatsappService::class)->sendMessage($target, $message, $tagihan);
     }

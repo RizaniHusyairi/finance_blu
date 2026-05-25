@@ -592,7 +592,15 @@ class TagihanJasaController extends Controller
             'sisa_tagihan' => $tagihan->total_tagihan,
         ]);
 
-        $publishedTagihan = $tagihan->fresh('mitra');
+        $publishedTagihan = $tagihan->fresh(['mitra', 'mitraLegacy', 'details']);
+
+        // Sync ke piutang (TransaksiPenerimaan) — muncul di menu Piutang Bendahara Penerimaan.
+        try {
+            app(\App\Services\Pembukuan\PiutangSyncService::class)->syncFromPublished($publishedTagihan);
+        } catch (\Throwable $e) {
+            \Log::error('Gagal sync piutang saat publish: ' . $e->getMessage());
+        }
+
         $message = $this->buildWhatsappMessage($publishedTagihan, $accountInfo);
         $whatsappService->sendMessage($validated['wa_tujuan'], $message, $publishedTagihan);
 
@@ -623,7 +631,39 @@ class TagihanJasaController extends Controller
             'tanggal_lunas' => now()->toDateString(),
         ]);
 
-        return back()->with('success', 'Tagihan berhasil ditandai LUNAS.');
+        $freshTagihan = $tagihan->fresh(['mitra', 'mitraLegacy', 'details']);
+
+        // Sync ke piutang (PAID) + catat BKU DEBIT_MASUK.
+        try {
+            app(\App\Services\Pembukuan\PiutangSyncService::class)->syncFromLunas(
+                $freshTagihan,
+                [
+                    'amount' => (float) $freshTagihan->total_tagihan,
+                    'paid_at' => now(),
+                    'reference' => 'MANUAL/' . $freshTagihan->nomor_tagihan,
+                ]
+            );
+        } catch (\Throwable $e) {
+            \Log::error('Gagal sync piutang/BKU saat mark-lunas: ' . $e->getMessage());
+        }
+
+        // Kirim notifikasi WA "lunas" — sama dengan callback BTN VA, hanya saja
+        // ini path manual (simulasi). Pakai service yang sudah membaca template
+        // di IntegrationSetting Super Admin.
+        try {
+            app(\App\Services\BtnVirtualAccountService::class)->sendLunasNotification(
+                $freshTagihan,
+                [
+                    'amount' => (float) $freshTagihan->total_tagihan,
+                    'paid_at' => now(),
+                    'reference' => 'MANUAL/' . $freshTagihan->nomor_tagihan,
+                ]
+            );
+        } catch (\Throwable $e) {
+            \Log::error('Gagal kirim notifikasi WA lunas: ' . $e->getMessage());
+        }
+
+        return back()->with('success', 'Tagihan berhasil ditandai LUNAS, piutang & BKU diperbarui, notifikasi WA dikirim.');
     }
 
     public function autoApproveAll($id)
@@ -916,7 +956,8 @@ class TagihanJasaController extends Controller
         if ($tagihan->tanggal_jatuh_tempo) {
             $message .= "Jatuh Tempo: *" . $tagihan->tanggal_jatuh_tempo->format('d/m/Y') . "*\n";
         }
-        $message .= "Link Invoice: " . \Illuminate\Support\Facades\URL::signedRoute('public.tagihan-jasa.show', ['id' => $tagihan->id]) . "\n\n";
+        $shortLink = \App\Models\ShortLink::forTarget('tagihan_jasa', $tagihan->id, auth()->id());
+        $message .= "Link Invoice: " . $shortLink->publicUrl() . "\n\n";
         $message .= "----------------------------------------\n";
         $message .= "*AKUN PORTAL MITRA*\n";
         $message .= "Email Login: " . ($accountInfo['email'] ?? '-') . "\n";

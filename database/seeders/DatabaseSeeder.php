@@ -18,12 +18,13 @@ class DatabaseSeeder extends Seeder
             MasterDipaSeeder::class,
             MasterPegawaiSeeder::class,
             UserAccountSeeder::class,
+            MasterLayananJasaSeeder::class,
             WorkflowDefinitionSeeder::class,
+            WorkflowTagihanJasaSeeder::class,
             SppPerjaldinWorkflowSeeder::class,
             MasterUangHarianPerjaldinSeeder::class,
             MasterTarifPajakSeeder::class,
             BukuPembantuBungaRekeningSeeder::class,
-            
         ]);
     }
 }

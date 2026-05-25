@@ -191,11 +191,12 @@
         <div class="row g-3">
             <div class="col-md-3">
                 <label class="form-label">Provider</label>
-                <select name="whatsapp_provider" class="form-select">
+                <select name="whatsapp_provider" class="form-select" id="waProvider">
                     <option value="fonnte" @selected($settings['whatsapp_provider'] === 'fonnte')>Fonnte</option>
+                    <option value="wa_gateway" @selected($settings['whatsapp_provider'] === 'wa_gateway')>WA Gateway (Bearer)</option>
                 </select>
             </div>
-            <div class="col-md-5">
+            <div class="col-md-5 wa-fonnte-only">
                 <label class="form-label">Endpoint Fonnte</label>
                 <input type="url" name="whatsapp_fonnte_endpoint" class="form-control" value="{{ old('whatsapp_fonnte_endpoint', $settings['whatsapp_fonnte_endpoint']) }}">
             </div>
@@ -203,10 +204,26 @@
                 <label class="form-label">Kode Negara</label>
                 <input type="text" name="whatsapp_default_country_code" class="form-control" value="{{ old('whatsapp_default_country_code', $settings['whatsapp_default_country_code']) }}">
             </div>
-            <div class="col-md-2">
-                <label class="form-label">Token</label>
+            <div class="col-md-2 wa-fonnte-only">
+                <label class="form-label">Token Fonnte</label>
                 <input type="password" name="whatsapp_fonnte_token" class="form-control" placeholder="{{ $settings['whatsapp_fonnte_token_masked'] ?: 'Token API' }}">
             </div>
+
+            <div class="col-md-5 wa-gateway-only d-none">
+                <label class="form-label">Gateway URL</label>
+                <input type="url" name="whatsapp_gateway_url" class="form-control" value="{{ old('whatsapp_gateway_url', $settings['whatsapp_gateway_url']) }}" placeholder="https://wa.example.com">
+                <small class="text-muted">Endpoint dasar gateway. Sistem akan POST ke <code>/send/text</code>.</small>
+            </div>
+            <div class="col-md-3 wa-gateway-only d-none">
+                <label class="form-label">API Key (Bearer)</label>
+                <input type="password" name="whatsapp_gateway_api_key" class="form-control" placeholder="{{ $settings['whatsapp_gateway_api_key_masked'] ?: 'Bearer API Key' }}">
+            </div>
+            <div class="col-md-2 wa-gateway-only d-none">
+                <label class="form-label">Session</label>
+                <input type="text" name="whatsapp_gateway_session" class="form-control" value="{{ old('whatsapp_gateway_session', $settings['whatsapp_gateway_session']) }}" placeholder="opsional">
+                <small class="text-muted">Multi-akun. Kosongkan untuk default.</small>
+            </div>
+
             <div class="col-md-6">
                 <label class="form-label">Template Invoice</label>
                 <textarea name="whatsapp_invoice_template" rows="5" class="form-control" placeholder="Opsional, template custom invoice">{{ old('whatsapp_invoice_template', $settings['whatsapp_invoice_template']) }}</textarea>
@@ -285,3 +302,24 @@
     </div>
 </div>
 @endsection
+
+@push('script')
+<script>
+    (function () {
+        const sel = document.getElementById('waProvider');
+        if (! sel) return;
+
+        const fonnteFields = document.querySelectorAll('.wa-fonnte-only');
+        const gatewayFields = document.querySelectorAll('.wa-gateway-only');
+
+        const toggle = () => {
+            const v = sel.value;
+            fonnteFields.forEach(el => el.classList.toggle('d-none', v !== 'fonnte'));
+            gatewayFields.forEach(el => el.classList.toggle('d-none', v !== 'wa_gateway'));
+        };
+
+        sel.addEventListener('change', toggle);
+        toggle();
+    })();
+</script>
+@endpush

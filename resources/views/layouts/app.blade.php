@@ -97,6 +97,8 @@
     <div class="overlay btn-toggle"></div>
     <!--end overlay-->
 
+    @include('layouts._partials.sky-alerts')
+
     @include('layouts.extra')
 
     @include('layouts.app-scripts')

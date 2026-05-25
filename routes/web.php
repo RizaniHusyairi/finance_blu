@@ -33,6 +33,11 @@ Route::get('/p/tagihan-jasa/{id}/pdf', [\App\Http\Controllers\PublicTagihanJasaC
     ->middleware('signed')
     ->name('public.tagihan-jasa.pdf');
 
+// Short link redirector — link pendek di WhatsApp di-resolve ke URL publik signed.
+Route::get('/i/{slug}', [\App\Http\Controllers\ShortLinkController::class, 'show'])
+    ->where('slug', '[a-zA-Z0-9]+')
+    ->name('short-link.resolve');
+
 Route::get('/', function () {
     if (!Auth::check()) {
         return redirect()->route('login');
@@ -130,6 +135,12 @@ Route::middleware('auth')->group(function () use ($internalRoles) {
         // Roles (read-only)
         Route::get('roles', [\App\Http\Controllers\Admin\RoleManagementController::class, 'index'])->name('roles.index');
         Route::get('roles/{role}', [\App\Http\Controllers\Admin\RoleManagementController::class, 'show'])->name('roles.show');
+
+        // Manajemen Notifikasi WhatsApp
+        Route::get('notifikasi-wa', [\App\Http\Controllers\Admin\NotifikasiWaController::class, 'index'])->name('notifikasi-wa.index');
+        Route::put('notifikasi-wa', [\App\Http\Controllers\Admin\NotifikasiWaController::class, 'update'])->name('notifikasi-wa.update');
+        Route::post('notifikasi-wa/test', [\App\Http\Controllers\Admin\NotifikasiWaController::class, 'test'])->name('notifikasi-wa.test');
+        Route::post('notifikasi-wa/run-now', [\App\Http\Controllers\Admin\NotifikasiWaController::class, 'runReminderNow'])->name('notifikasi-wa.run-now');
     });
 
     // Master Data — Supplier / Mitra

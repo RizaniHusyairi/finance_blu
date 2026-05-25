@@ -24,6 +24,8 @@
 
     @yield('content')
 
+    @include('layouts._partials.sky-alerts')
+
     @include('layouts.common-scripts')
 </body>
 

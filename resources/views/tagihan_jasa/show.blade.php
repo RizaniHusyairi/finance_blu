@@ -882,7 +882,7 @@
                     if ($tagihan->tanggal_jatuh_tempo) {
                         $persistentPesan .= "Jatuh Tempo : *" . \Carbon\Carbon::parse($tagihan->tanggal_jatuh_tempo)->translatedFormat('d F Y') . "*\n";
                     }
-                    $persistentPesan .= "Link Invoice : " . URL::signedRoute('public.tagihan-jasa.show', ['id' => $tagihan->id]) . "\n\n";
+                    $persistentPesan .= "Link Invoice : " . App\Models\ShortLink::forTarget('tagihan_jasa', $tagihan->id)->publicUrl() . "\n\n";
                     $persistentPesan .= "----------------------------------------\n";
                     $persistentPesan .= "*AKUN PORTAL MITRA*\n";
                     $persistentPesan .= "Silakan login menggunakan akun Mitra Anda yang sudah terdaftar.\n";
@@ -932,23 +932,76 @@
             <form action="{{ route('tagihan-jasa.publish', $tagihan->id) }}" method="POST">
                 @csrf
                 <div class="modal-header bg-success text-white border-0">
-                    <h5 class="modal-title fw-bold">Publish Tagihan</h5>
+                    <h5 class="modal-title fw-bold"><i class="bi bi-send me-1"></i> Publish Tagihan & Kirim WA</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-4">
+                    @php
+                        $mitraTagihanModal = $tagihan->mitra ?? $tagihan->mitraLegacy;
+                        $defaultWa = $mitraTagihanModal->no_telepon ?? '';
+                        $namaMitraModal = $mitraTagihanModal->nama_pihak ?? $mitraTagihanModal->nama_mitra ?? '';
+                    @endphp
+
                     <div class="alert alert-light border mb-4 small">
-                        Tagihan akan diterbitkan (VA di-generate) dan notifikasi pesan instan otomatis dikirimkan via WhatsApp.
+                        Tagihan akan diterbitkan (VA di-generate) dan notifikasi pesan instan otomatis dikirimkan via WhatsApp ke nomor mitra di bawah.
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">No WhatsApp Tujuan <span class="text-danger">*</span></label>
-                        <!-- Defaulting to user's testing number as requested -->
-                        <input type="text" name="wa_tujuan" class="form-control" value="0895810274829" required>
-                        <small class="text-muted">Ganti nomor ini jika ingin mengirim ke WhatsApp lain.</small>
+
+                    <div class="mb-2 d-flex justify-content-between align-items-end flex-wrap gap-2">
+                        <label class="form-label fw-bold m-0" for="waTujuanInput">
+                            <i class="bi bi-whatsapp text-success me-1"></i>
+                            No WhatsApp Tujuan <span class="text-danger">*</span>
+                        </label>
+                        @if($defaultWa)
+                            <button type="button" class="btn btn-sm btn-link text-success p-0 fw-bold text-decoration-none" id="resetWaToMitra">
+                                <i class="bi bi-arrow-counterclockwise me-1"></i> Pakai nomor mitra
+                            </button>
+                        @endif
+                    </div>
+
+                    <div class="input-group">
+                        <span class="input-group-text bg-success-subtle border-success-subtle text-success fw-bold">+62</span>
+                        <input type="text"
+                            id="waTujuanInput"
+                            name="wa_tujuan"
+                            class="form-control fw-semibold"
+                            value="{{ $defaultWa }}"
+                            placeholder="08xxxxxxxxxx atau 628xxxxxxxxxx"
+                            data-default="{{ $defaultWa }}"
+                            inputmode="numeric"
+                            readonly
+                            required>
+                        <button type="button"
+                            id="waTujuanLockBtn"
+                            class="btn btn-success d-inline-flex align-items-center gap-1"
+                            title="Klik untuk membuka kunci dan mengedit nomor"
+                            aria-pressed="true">
+                            <i class="bi bi-lock-fill" id="waTujuanLockIcon"></i>
+                            <span id="waTujuanLockText">Terkunci</span>
+                        </button>
+                    </div>
+
+                    <div class="mt-2">
+                        @if($defaultWa)
+                            <div class="small text-muted">
+                                <i class="bi bi-bookmark-check-fill text-success me-1"></i>
+                                Nomor default diambil dari data mitra
+                                <strong class="text-dark">{{ $namaMitraModal }}</strong>.
+                                Klik tombol <strong>Terkunci</strong> di samping input untuk mengganti nomor.
+                            </div>
+                        @else
+                            <div class="alert alert-warning small d-flex align-items-start gap-2 mb-0">
+                                <i class="bi bi-exclamation-triangle-fill"></i>
+                                <span>Mitra <strong>{{ $namaMitraModal ?: '-' }}</strong> belum memiliki nomor telepon. Klik tombol kunci di samping input untuk mengisi manual.</span>
+                            </div>
+                        @endif
                     </div>
                 </div>
                 <div class="modal-footer border-0 bg-light">
                     <button type="button" class="btn btn-secondary fw-bold" data-bs-dismiss="modal">Batal</button>
-                    <button type="submit" class="btn btn-success fw-bold" onclick="return confirm('Apakah Anda yakin ingin mem-publish dan mengirim WA?')">
+                    <button type="submit" class="btn btn-success fw-bold"
+                        data-sky-confirm="Apakah Anda yakin ingin mem-publish dan mengirim WA?"
+                        data-sky-confirm-title="Publish Tagihan"
+                        data-sky-confirm-text="Ya, Publish & Kirim">
                         <i class="bi bi-send me-1"></i> Publish & Kirim WA
                     </button>
                 </div>
@@ -956,4 +1009,66 @@
         </div>
     </div>
 </div>
+
+@push('script')
+<script>
+    (function () {
+        const input = document.getElementById('waTujuanInput');
+        const reset = document.getElementById('resetWaToMitra');
+        const lockBtn = document.getElementById('waTujuanLockBtn');
+        const lockIcon = document.getElementById('waTujuanLockIcon');
+        const lockText = document.getElementById('waTujuanLockText');
+        if (! input || ! lockBtn) return;
+
+        // Reset to default mitra phone
+        if (reset) {
+            reset.addEventListener('click', () => {
+                input.value = input.dataset.default || '';
+                input.focus();
+            });
+        }
+
+        // Lock toggle
+        const setLocked = (locked) => {
+            input.readOnly = locked;
+            lockBtn.setAttribute('aria-pressed', locked ? 'true' : 'false');
+
+            if (locked) {
+                input.classList.remove('is-unlocked');
+                lockIcon.className = 'bi bi-lock-fill';
+                lockText.textContent = 'Terkunci';
+                lockBtn.classList.remove('btn-warning');
+                lockBtn.classList.add('btn-success');
+                lockBtn.title = 'Klik untuk membuka kunci dan mengedit nomor';
+            } else {
+                input.classList.add('is-unlocked');
+                lockIcon.className = 'bi bi-unlock-fill';
+                lockText.textContent = 'Bisa diedit';
+                lockBtn.classList.remove('btn-success');
+                lockBtn.classList.add('btn-warning');
+                lockBtn.title = 'Klik untuk mengunci kembali';
+                // Beri fokus saat dibuka supaya user langsung bisa mengetik.
+                setTimeout(() => input.focus(), 80);
+            }
+        };
+
+        lockBtn.addEventListener('click', () => setLocked(! input.readOnly));
+        // Init: default terkunci.
+        setLocked(true);
+    })();
+</script>
+<style>
+    /* Visual feedback saat input terbuka */
+    #waTujuanInput.is-unlocked {
+        background: #fff;
+        border-color: #f59e0b;
+        box-shadow: 0 0 0 3px rgba(245,158,11,.18);
+    }
+    #waTujuanInput[readonly] {
+        background: #f8fafc;
+        cursor: not-allowed;
+        color: #475569;
+    }
+</style>
+@endpush
 @endsection
