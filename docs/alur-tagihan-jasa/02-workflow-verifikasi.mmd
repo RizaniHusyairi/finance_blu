@@ -1,0 +1,70 @@
+flowchart TB
+    subgraph ADMIN_JASA["🏢 Ranah Admin Jasa"]
+        direction TB
+        A([Admin Jasa<br/>Create Tagihan]) --> B[VERIFIKASI_KOORDINATOR<br/>workflow IN_PROGRESS]
+    end
+
+    subgraph VERIFIKASI["✔ Ranah Verifikator Berjenjang"]
+        direction TB
+        S1{Step 1<br/>Koordinator Jasa}
+        S2{Step 2<br/>Kepala Seksi Pelayanan<br/>dan Kerjasama}
+        S3{Step 3<br/>Kepala Subbagian<br/>Keuangan dan TU}
+        S4{Step 4<br/>KPA / Kabandara}
+        S1 -->|approve| S2
+        S2 -->|approve| S3
+        S3 -->|approve| S4
+    end
+
+    B --> S1
+
+    S4 -->|approve| D
+
+    subgraph FINALISASI["📄 Finalisasi Dokumen Admin Jasa"]
+        direction TB
+        D[DISETUJUI<br/>workflow APPROVED]
+        U[Upload Surat Pengantar<br/>Final TTD<br/>status_dokumen=SUDAH_DITANDATANGANI]
+        P[PUBLISHED<br/>VA dibuat + WA dikirim ke Mitra]
+        D --> U --> P
+    end
+
+    subgraph BENPEN["💰 Ranah Bendahara Penerimaan"]
+        direction TB
+        PIUTANG[(transaksi_penerimaan<br/>status: UNPAID)]
+        PAY{Pembayaran diterima?<br/>Callback BTN VA atau<br/>markAsPaid manual}
+        LUNAS[LUNAS<br/>tanggal_lunas terisi]
+        PIUTANG_PAID[(transaksi_penerimaan<br/>status: PAID<br/>total_dibayar terisi)]
+        BKU[(buku_kas_umum<br/>arus_kas: DEBIT_MASUK<br/>saldo bertambah)]
+        PIUTANG --> PAY
+        PAY -->|ya| LUNAS
+        LUNAS --> PIUTANG_PAID
+        LUNAS --> BKU
+    end
+
+    P -.->|syncFromPublished| PIUTANG
+
+    R[DITOLAK]
+    S1 -.->|reject| R
+    S2 -.->|reject| R
+    S3 -.->|reject| R
+    S4 -.->|reject| R
+
+    X([Selesai - ditolak])
+    R --> X
+
+    style A fill:#dbeafe,stroke:#1e40af,color:#1e3a8a
+    style B fill:#fef3c7,stroke:#b45309,color:#92400e
+    style D fill:#d1fae5,stroke:#047857,color:#065f46
+    style U fill:#d1fae5,stroke:#047857,color:#065f46
+    style P fill:#dbeafe,stroke:#1e40af,color:#1e3a8a
+    style PIUTANG fill:#ede9fe,stroke:#6d28d9,color:#4c1d95
+    style PIUTANG_PAID fill:#c7d2fe,stroke:#3730a3,color:#312e81
+    style BKU fill:#c7d2fe,stroke:#3730a3,color:#312e81
+    style LUNAS fill:#c7d2fe,stroke:#3730a3,color:#312e81
+    style PAY fill:#fef3c7,stroke:#b45309,color:#92400e
+    style R fill:#fee2e2,stroke:#b91c1c,color:#991b1b
+    style X fill:#fee2e2,stroke:#b91c1c,color:#991b1b
+
+    style ADMIN_JASA fill:#eff6ff,stroke:#1e40af,stroke-width:2px,color:#1e3a8a
+    style VERIFIKASI fill:#fefce8,stroke:#b45309,stroke-width:2px,color:#92400e
+    style FINALISASI fill:#ecfdf5,stroke:#047857,stroke-width:2px,color:#065f46
+    style BENPEN fill:#f5f3ff,stroke:#6d28d9,stroke-width:3px,color:#4c1d95

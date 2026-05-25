@@ -1,0 +1,66 @@
+sequenceDiagram
+    autonumber
+    actor AJ as 🏢 Admin Jasa
+    actor V as ✔ Verifikator<br/>(4 step)
+    participant SYS as Sistem<br/>TagihanJasaController
+    participant DB as DB tagihan_jasas
+    participant WF as WorkflowService
+    participant BTN as BtnVirtualAccountService
+    participant WA as WhatsappService
+    actor M as 👤 Mitra
+    participant CB as BTN VA Callback
+    participant PSS as PiutangSyncService
+    participant BKU as 💰 transaksi_penerimaan<br/>+ buku_kas_umum
+    actor BP as 💰 Bendahara<br/>Penerimaan
+
+    rect rgb(239, 246, 255)
+    Note over AJ,SYS: Tahap 1 — Pembuatan (Admin Jasa)
+    AJ->>SYS: POST /tagihan-jasa (store)
+    SYS->>DB: insert TagihanJasa<br/>status=VERIFIKASI_KOORDINATOR
+    SYS->>WF: startWorkflow('TAGIHAN_JASA')
+    WF-->>DB: workflow_instance IN_PROGRESS<br/>+ 4 approvals
+    end
+
+    rect rgb(254, 252, 232)
+    Note over V,DB: Tahap 2 — Verifikasi berjenjang
+    loop 4 step (Koord → Kasi → Kasubag → KPA)
+        V->>SYS: approve / reject
+        SYS->>WF: approveCurrentStep / rejectCurrentStep
+        SYS->>DB: update status VERIFIKASI_* /<br/>DISETUJUI / DITOLAK
+    end
+    end
+
+    rect rgb(236, 253, 245)
+    Note over AJ,M: Tahap 3 — Finalisasi & Publish (Admin Jasa)
+    AJ->>SYS: upload Surat Pengantar Final TTD
+    SYS->>DB: status_dokumen_pengantar=SUDAH_DITANDATANGANI
+    AJ->>SYS: POST publish + wa_tujuan
+    SYS->>BTN: createVirtualAccount(tagihan)
+    BTN-->>SYS: nomor VA + expired_at
+    SYS->>DB: status=PUBLISHED, nomor_va, jatuh_tempo
+    SYS->>PSS: syncFromPublished()
+    PSS->>BKU: insert transaksi_penerimaan UNPAID
+    SYS->>WA: sendMessage(link + VA)
+    WA->>M: WhatsApp link tagihan + VA
+    end
+
+    rect rgb(245, 243, 255)
+    Note over M,BP: Tahap 4 — Pembayaran & Pencatatan (Bendahara Penerimaan)
+    BP->>BKU: monitor piutang UNPAID<br/>(menu Piutang)
+    alt Pembayaran via VA BTN (otomatis)
+        M->>M: Bayar via VA BTN
+        CB->>BTN: handlePaymentCallback(payload)
+        BTN->>DB: status=LUNAS, tanggal_lunas
+        BTN->>PSS: syncFromLunas()
+        PSS->>BKU: update piutang PAID
+        PSS->>BKU: insert BKU DEBIT_MASUK<br/>saldo + nominal
+        BTN->>WA: sendLunasNotification
+        WA->>M: WhatsApp konfirmasi lunas
+    else Pembayaran offline / manual (Admin Jasa)
+        AJ->>SYS: POST markAsPaid
+        SYS->>DB: status=LUNAS
+        SYS->>PSS: syncFromLunas() (idempoten)
+        SYS->>WA: sendLunasNotification
+    end
+    BP->>BKU: verifikasi pencatatan piutang & BKU<br/>(menu BKU + Buku Pembantu Bank)
+    end

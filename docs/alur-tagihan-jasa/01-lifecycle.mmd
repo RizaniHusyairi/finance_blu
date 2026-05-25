@@ -1,0 +1,35 @@
+stateDiagram-v2
+    direction TB
+    classDef adminJasa fill:#dbeafe,stroke:#1e40af,color:#1e3a8a,stroke-width:2px
+    classDef verif fill:#fef3c7,stroke:#b45309,color:#92400e,stroke-width:2px
+    classDef done fill:#d1fae5,stroke:#047857,color:#065f46,stroke-width:2px
+    classDef benpen fill:#ede9fe,stroke:#6d28d9,color:#4c1d95,stroke-width:2px
+    classDef lunas fill:#c7d2fe,stroke:#3730a3,color:#312e81,stroke-width:2px
+    classDef tolak fill:#fee2e2,stroke:#b91c1c,color:#991b1b,stroke-width:2px
+
+    [*] --> VERIFIKASI_KOORDINATOR : Admin Jasa create
+
+    VERIFIKASI_KOORDINATOR --> VERIFIKASI_KASI_JASA : Koordinator approve
+    VERIFIKASI_KASI_JASA --> VERIFIKASI_KASUBAG_TU : Kasi approve
+    VERIFIKASI_KASUBAG_TU --> VERIFIKASI_KABANDARA : Kasubag TU approve
+    VERIFIKASI_KABANDARA --> DISETUJUI : KPA / Kabandara approve
+
+    VERIFIKASI_KOORDINATOR --> DITOLAK : reject
+    VERIFIKASI_KASI_JASA --> DITOLAK : reject
+    VERIFIKASI_KASUBAG_TU --> DITOLAK : reject
+    VERIFIKASI_KABANDARA --> DITOLAK : reject
+
+    DISETUJUI --> PUBLISHED : Admin Jasa publish<br/>VA + WA + Piutang UNPAID
+
+    state "Ranah Bendahara Penerimaan" as BENPEN_ZONE {
+        PUBLISHED --> LUNAS : pembayaran VA (callback)<br/>atau markAsPaid manual<br/>Piutang PAID + BKU DEBIT_MASUK
+    }
+
+    DITOLAK --> [*]
+    LUNAS --> [*]
+
+    class VERIFIKASI_KOORDINATOR,VERIFIKASI_KASI_JASA,VERIFIKASI_KASUBAG_TU,VERIFIKASI_KABANDARA verif
+    class DISETUJUI done
+    class PUBLISHED benpen
+    class LUNAS lunas
+    class DITOLAK tolak
