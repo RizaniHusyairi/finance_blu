@@ -186,7 +186,13 @@ class PerjaldinController extends Controller
         $koorKeuanganUsers = User::role('Koordinator Keuangan')->with('profilable')->orderByDisplayName()->get();
         $masterPegawai = MasterPegawai::where('status_aktif', true)->orderBy('nama_lengkap')->get();
 
-        return view('perjaldins.create', compact('budgetGroups', 'masterProvinsi', 'ppkUsers', 'ppspmUsers', 'bendaharaPenerimaanUsers', 'bendaharaUsers', 'kasubbagUser', 'koorKeuanganUsers', 'masterPegawai'));
+        $year = now()->format('Y');
+        $count = Tagihan::withTrashed()->whereYear('created_at', $year)
+            ->where('tipe_tagihan', 'PERJALDIN')
+            ->count();
+        $nextNumber = str_pad($count + 1, 4, '0', STR_PAD_LEFT);
+
+        return view('perjaldins.create', compact('budgetGroups', 'masterProvinsi', 'ppkUsers', 'ppspmUsers', 'bendaharaPenerimaanUsers', 'bendaharaUsers', 'kasubbagUser', 'koorKeuanganUsers', 'masterPegawai', 'nextNumber'));
     }
 
     /**
@@ -205,7 +211,7 @@ class PerjaldinController extends Controller
 
         $request->validate([
             'deskripsi' => 'required|string|max:255',
-            'nomor_perjaldin' => 'required|string|max:100',
+            'nomor_urut' => 'required|numeric|min:1',
             'periode_bulan' => 'required|integer|min:1|max:12',
             'periode_tahun' => 'required|integer|min:2000|max:2100',
             'kota_ttd' => 'required|string|max:100',
@@ -276,8 +282,12 @@ class PerjaldinController extends Controller
             // Hitung total bruto dari semua peserta
             $totalBruto = $this->calculatePerjaldinGrandTotal($request->peserta);
 
+            $tahun = date('Y');
+            $nomorUrut = str_pad($request->nomor_urut, 4, '0', STR_PAD_LEFT);
+            $nomorTagihan = 'KU.201/' . $nomorUrut . '/APTP/' . $tahun;
+
             $tagihan = Tagihan::create([
-                'nomor_tagihan' => $request->nomor_perjaldin,
+                'nomor_tagihan' => $nomorTagihan,
                 'tipe_tagihan' => 'PERJALDIN',
                 'deskripsi' => $request->deskripsi,
                 'periode_bulan' => $request->periode_bulan,

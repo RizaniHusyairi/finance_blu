@@ -401,16 +401,17 @@
 
         /* Action Buttons with 3D scale transforms */
         .btn-action-view {
-            border-radius: 999px;
-            font-weight: 700;
-            font-size: 0.78rem;
-            padding: .45rem 1.1rem;
+            border-radius: 50%;
+            width: 34px;
+            height: 34px;
+            padding: 0;
+            justify-content: center;
+            font-size: 0.95rem;
             border: 1.5px solid rgba(13, 148, 136, 0.4);
             color: #0d9488 !important;
             background: transparent;
             display: inline-flex;
             align-items: center;
-            gap: 0.35rem;
             text-decoration: none;
             transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
         }
@@ -424,16 +425,17 @@
         }
 
         .btn-action-edit-warning {
-            border-radius: 999px;
-            font-weight: 700;
-            font-size: 0.78rem;
-            padding: .45rem 1.1rem;
+            border-radius: 50%;
+            width: 34px;
+            height: 34px;
+            padding: 0;
+            justify-content: center;
+            font-size: 0.95rem;
             border: 1.5px solid rgba(245, 158, 11, 0.4);
             color: #d97706 !important;
             background: transparent;
             display: inline-flex;
             align-items: center;
-            gap: 0.35rem;
             text-decoration: none;
             transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
         }
@@ -447,16 +449,17 @@
         }
 
         .btn-action-delete-danger {
-            border-radius: 999px;
-            font-weight: 700;
-            font-size: 0.78rem;
-            padding: .45rem 1.1rem;
+            border-radius: 50%;
+            width: 34px;
+            height: 34px;
+            padding: 0;
+            justify-content: center;
+            font-size: 0.95rem;
             border: 1.5px solid rgba(239, 68, 68, 0.4);
             color: #dc2626 !important;
             background: transparent;
             display: inline-flex;
             align-items: center;
-            gap: 0.35rem;
             transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
@@ -799,14 +802,14 @@
                             <td>
                                 <div class="d-flex align-items-center justify-content-center gap-2">
                                     <a href="{{ route('perjaldins.show', $tagihan->id) }}" class="btn-action-view" title="Detail Tagihan">
-                                        <i class="bi bi-eye-fill"></i> Detail
+                                        <i class="bi bi-eye-fill"></i>
                                     </a>
                                     @if(in_array($tagihan->status, $revisiDraftStatuses))
                                         <a href="{{ route('perjaldins.edit-perjaldin', $tagihan->id) }}" class="btn-action-edit-warning" title="Edit Tagihan">
-                                            <i class="bi bi-pencil-fill"></i> Edit
+                                            <i class="bi bi-pencil-fill"></i>
                                         </a>
                                         <button type="button" class="btn-action-delete-danger" onclick="deletePerjaldin('{{ route('perjaldins.destroy-perjaldin', $tagihan->id) }}')" title="Hapus Tagihan">
-                                            <i class="bi bi-trash-fill"></i> Hapus
+                                            <i class="bi bi-trash-fill"></i>
                                         </button>
                                     @endif
                                 </div>
