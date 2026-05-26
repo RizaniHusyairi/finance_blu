@@ -23,6 +23,14 @@ class StoreUserRequest extends FormRequest
             'password'       => ['nullable', 'confirmed', Password::min(8)->numbers()],
             'roles'          => ['required', 'array', 'min:1'],
             'roles.*'        => ['string', 'exists:roles,name'],
+            'active_from'    => [Rule::requiredIf(fn () => $this->hasTemporaryRole()), 'nullable', 'date'],
+            'active_until'   => [
+                Rule::requiredIf(fn () => $this->hasTemporaryRole()),
+                'nullable',
+                'date',
+                'after_or_equal:active_from',
+                'after_or_equal:today',
+            ],
 
             // Pegawai
             'pegawai_id'     => [
@@ -49,6 +57,8 @@ class StoreUserRequest extends FormRequest
             'email'      => 'email',
             'password'   => 'password',
             'roles'      => 'role',
+            'active_from' => 'tanggal mulai aktif',
+            'active_until' => 'tanggal selesai aktif',
             'pegawai_id' => 'pegawai',
             'mitra_id'   => 'mitra',
         ];
@@ -60,7 +70,7 @@ class StoreUserRequest extends FormRequest
             $tipe = $this->input('tipe_akun');
             $roles = (array) $this->input('roles', []);
 
-            if ($tipe === 'sistem' && ! in_array('Super Admin', $roles, true)) {
+            if ($tipe === 'sistem' && (count(array_unique($roles)) !== 1 || ! in_array('Super Admin', $roles, true))) {
                 $validator->errors()->add('roles', 'Akun sistem hanya boleh diberi role Super Admin.');
             }
 
@@ -68,5 +78,10 @@ class StoreUserRequest extends FormRequest
                 $validator->errors()->add('roles', 'Akun mitra minimal harus memiliki role Mitra Jasa.');
             }
         });
+    }
+
+    private function hasTemporaryRole(): bool
+    {
+        return in_array('PLT/PLH', (array) $this->input('roles', []), true);
     }
 }

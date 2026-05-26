@@ -702,7 +702,7 @@
                                 <tr>
                                     <th width="3%" class="text-center"><input type="checkbox" class="form-check-input" disabled></th>
                                     <th width="18%">Jenis Penerimaan</th>
-                                    <th width="10%">Akun</th>
+                                    <th width="10%">Kode MAK</th>
                                     <th width="11%">Tarif</th>
                                     <th width="20%">Volume</th>
                                     <th width="11%">Satuan</th>
@@ -763,7 +763,7 @@
         </td>
         <td>
             <div class="invoice-field">
-                <div class="invoice-field-label"><i class="bi bi-bank"></i>Akun</div>
+                <div class="invoice-field-label"><i class="bi bi-bank"></i>Kode MAK</div>
                 <input type="text" name="layanan[__INDEX__][kode_akun]" class="form-control invoice-muted-input kode-akun-input" readonly placeholder="Otomatis">
             </div>
         </td>
@@ -926,7 +926,7 @@
             {
                 rule: 'WEIGHT_PER_1000_PER_12_HOURS_ROUND_UP',
                 label: 'Tiap 1000 kg per 12 jam',
-                match: unit => unit.includes('tiap 1000 kg per 12 jam'),
+                match: unit => unit.includes('tiap 1000 kg') && unit.includes('12 jam'),
                 fields: [
                     { key: 'berat_kg', label: 'Bobot pesawat (kg)', defaultValue: 1000, step: 0.01 },
                     { key: 'durasi_jam', label: 'Durasi (jam)', defaultValue: 12, step: 0.01 },
@@ -937,7 +937,7 @@
             {
                 rule: 'WEIGHT_PER_1000_ROUND_UP',
                 label: 'Tiap 1000 kg',
-                match: unit => unit.includes('tiap 1000 kg'),
+                match: unit => unit.includes('tiap 1000 kg') && !unit.includes('12 jam'),
                 fields: [
                     { key: 'berat_kg', label: 'Bobot pesawat (kg)', defaultValue: 1000, step: 0.01 },
                 ],
@@ -1056,6 +1056,10 @@
             return String(value || '')
                 .toLowerCase()
                 .replace(/m(?:\u00c2)?\u00b2/g, 'm2')
+                .replace(/1\.000/g, '1000')
+                .replace(/1000kg/g, '1000 kg')
+                .replace(/rekalme/g, 'reklame')
+                .replace(/,/g, '')
                 .replace(/\s+/g, ' ')
                 .trim();
         }
@@ -1347,7 +1351,7 @@
 
             row.find('.layanan-id-input').val(service.id);
             row.find('.jenis-penerimaan-input').val(service.kode_layanan || padCode(service.id));
-            row.find('.kode-akun-input').val(service.kode_akun || '');
+            row.find('.kode-akun-input').val(service.kode_mak || service.kode_akun || '');
             row.find('.price-input').val(serviceRateValue(service));
             row.find('.kurs-input').val(1);
             row.find('.qty-input').val(isPercentageService(service) ? 0 : 1);

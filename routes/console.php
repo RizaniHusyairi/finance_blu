@@ -15,3 +15,9 @@ Schedule::command('wa:reminder-due-date')
     ->hourly()
     ->withoutOverlapping(10)
     ->onOneServer();
+
+// Nonaktifkan akun PLT/PLH setelah masa aktif berakhir.
+Schedule::command('users:disable-expired-temporary')
+    ->dailyAt('00:05')
+    ->withoutOverlapping()
+    ->onOneServer();

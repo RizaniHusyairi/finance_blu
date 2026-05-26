@@ -29,28 +29,37 @@ class AdminJasaController extends Controller
         return view('super_admin_jasa.admin.form', [
             'admin' => new User(),
             'pegawai' => new MasterPegawai(),
+            'pegawaiOptions' => $this->pegawaiTanpaUser(),
         ]);
     }
 
     public function store(Request $request)
     {
-        $validated = $this->validateAdmin($request);
-
-        $pegawai = MasterPegawai::create([
-            'nip' => $validated['nip'] ?: null,
-            'nama_lengkap' => $validated['nama_lengkap'],
-            'jabatan' => $validated['jabatan'] ?: 'Admin Jasa',
-            'npwp' => $validated['npwp'] ?: null,
-            'status_aktif' => $request->boolean('status_aktif', true),
+        $validated = $request->validate([
+            'pegawai_id' => ['required', 'integer', 'exists:master_pegawai,id'],
+            'email'      => ['required', 'email', 'max:255', 'unique:users,email'],
+            'password'   => ['required', 'string', 'min:6', 'max:100'],
         ]);
+
+        $pegawai = MasterPegawai::findOrFail($validated['pegawai_id']);
+
+        $sudahPunyaUser = User::where('profilable_type', MasterPegawai::class)
+            ->where('profilable_id', $pegawai->id)
+            ->exists();
+
+        if ($sudahPunyaUser) {
+            return back()
+                ->withInput()
+                ->with('error', 'Pegawai ini sudah memiliki akun pengguna.');
+        }
 
         Role::findOrCreate('Admin Jasa', 'web');
 
         $user = User::create([
-            'email' => $validated['email'],
-            'password' => Hash::make($validated['password']),
+            'email'           => $validated['email'],
+            'password'        => Hash::make($validated['password']),
             'profilable_type' => MasterPegawai::class,
-            'profilable_id' => $pegawai->id,
+            'profilable_id'   => $pegawai->id,
         ]);
         $user->assignRole('Admin Jasa');
 
@@ -165,6 +174,16 @@ class AdminJasaController extends Controller
             'password' => [$isUpdate ? 'nullable' : 'required', 'string', 'min:6', 'max:100'],
             'status_aktif' => ['nullable', 'boolean'],
         ]);
+    }
+
+    private function pegawaiTanpaUser()
+    {
+        $usedIds = User::where('profilable_type', MasterPegawai::class)->pluck('profilable_id');
+
+        return MasterPegawai::whereNotIn('id', $usedIds)
+            ->where('status_aktif', true)
+            ->orderBy('nama_lengkap')
+            ->get(['id', 'nama_lengkap', 'nip', 'jabatan', 'npwp']);
     }
 
     private function buildVisibleLayananIds(array $selectedIds): array

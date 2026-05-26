@@ -810,13 +810,13 @@ class TagihanJasaController extends Controller
 
     private function getKpaPenandatanganData(): array
     {
-        $kpaUser = User::role('KPA')->with('profilable')->orderByDisplayName()->first();
+        $kpaUser = User::role(['KPA', 'PLT/PLH'])->active()->with('profilable')->orderByDisplayName()->first();
         $pegawai = $kpaUser?->pegawai;
 
         return [
             'nama' => $pegawai?->nama_lengkap ?: $kpaUser?->name,
             'nip' => $pegawai?->nip,
-            'jabatan' => $pegawai?->jabatan ?: 'Kepala Bandara',
+            'jabatan' => $pegawai?->jabatan ?: ($kpaUser?->hasRole('PLT/PLH') ? 'PLT/PLH' : 'Kepala Bandara'),
         ];
     }
 

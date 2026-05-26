@@ -1030,7 +1030,7 @@
                     <span class="badge bg-success mb-2">Akun Aktif</span>
                     <div>Email login: <strong>{{ $mitra->user->email }}</strong></div>
                     @if(session('mitra_password'))
-                        <div class="alert alert-warning mt-3 mb-0">
+                        <div class="alert alert-warning mt-3 mb-0" data-sky-handled="1">
                             <div class="fw-bold mb-1">Password awal akun mitra</div>
                             <div>Email: <strong>{{ session('mitra_email', $mitra->user->email) }}</strong></div>
                             <div>Password: <strong>{{ session('mitra_password') }}</strong></div>

@@ -18,6 +18,15 @@
     if ($wfInstance && $wfInstance->status === 'IN_PROGRESS' && $currentApproval && Auth::user()->hasRole($currentApproval->role_code)) {
         $canApprove = true;
     }
+
+    $formatWorkflowLabel = function (?string $label): string {
+        return strtr($label ?: '-', [
+            'Kasi Jasa PNBP' => 'Kepala Seksi Pelayanan dan Kerjasama',
+            'KASUBAG' => 'KASUBBAG',
+            'Kasubag' => 'KASUBBAG',
+            'kasubag' => 'KASUBBAG',
+        ]);
+    };
 @endphp
 <style>
     /* ===================== Tagihan Jasa Detail â€“ Themed UI ===================== */
@@ -467,12 +476,11 @@
                         <thead class="table-light">
                             <tr>
                                 <th width="5%" class="text-center">No</th>
-                                <th width="32%">Deskripsi Layanan</th>
-                                <th width="13%">Kode Akun</th>
+                                <th width="40%">Deskripsi Layanan</th>
+                                <th width="15%">Kode Akun</th>
                                 <th width="10%" class="text-center">Qty</th>
-                                <th width="10%" class="text-end">Kurs</th>
-                                <th width="17%" class="text-end">Harga Satuan</th>
-                                <th width="18%" class="text-end">Jumlah</th>
+                                <th width="15%" class="text-end">Harga Satuan</th>
+                                <th width="15%" class="text-end">Jumlah</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -541,7 +549,6 @@
                                     </td>
                                     <td>{{ $detail->kode_akun ?: ($layanan->kode_akun ?? '-') }}</td>
                                     <td class="text-center">{{ rtrim(rtrim(number_format($detail->qty, 2, ',', '.'), '0'), ',') }}</td>
-                                    <td class="text-end">{{ number_format((float) ($detail->kurs ?? 1), 4, ',', '.') }}</td>
                                     <td class="text-end">
                                         @if($isPercentageDetail)
                                             {{ rtrim(rtrim(number_format((float) $detail->harga_satuan, 4, ',', '.'), '0'), ',') }}%
@@ -555,7 +562,7 @@
                         </tbody>
                         <tfoot>
                             <tr>
-                                <td colspan="6" class="text-end fw-bold">TOTAL TAGIHAN :</td>
+                                <td colspan="5" class="text-end fw-bold">TOTAL TAGIHAN :</td>
                                 <td class="text-end fw-bold text-success fs-5">Rp {{ number_format($tagihan->total_tagihan, 0, ',', '.') }}</td>
                             </tr>
                         </tfoot>
@@ -832,8 +839,8 @@
                             <div class="tj-timeline-item">
                                 <div class="tj-timeline-dot {{ $color }}"><i class="bi {{ $icon }}"></i></div>
                                 <div class="tj-timeline-content">
-                                    <div class="tj-timeline-title">{{ $approval->nama_step }}</div>
-                                    <div class="small fw-semibold text-slate" style="color:#334155;">{{ $approval->actedByUser->name ?? $approval->role_code }}</div>
+                                    <div class="tj-timeline-title">{{ $formatWorkflowLabel($approval->nama_step) }}</div>
+                                    <div class="small fw-semibold text-slate" style="color:#334155;">{{ $approval->actedByUser->name ?? $formatWorkflowLabel($approval->role_code) }}</div>
                                     @if($approval->catatan)
                                         <div class="tj-timeline-note">"{{ $approval->catatan }}"</div>
                                     @endif

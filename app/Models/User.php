@@ -6,6 +6,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Schema;
 use Spatie\Permission\Traits\HasRoles; // Added this line
 
 class User extends Authenticatable
@@ -21,6 +22,10 @@ class User extends Authenticatable
         'email',
         'email_verified_at',
         'password',
+        'is_active',
+        'active_from',
+        'active_until',
+        'disabled_at',
         'profilable_type',
         'profilable_id',
     ];
@@ -50,7 +55,98 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'is_active' => 'boolean',
+            'active_from' => 'date',
+            'active_until' => 'date',
+            'disabled_at' => 'datetime',
         ];
+    }
+
+    public function scopeActive($query)
+    {
+        if (! self::hasActiveAccountColumns()) {
+            return $query;
+        }
+
+        $today = now()->toDateString();
+
+        return $query
+            ->where('is_active', true)
+            ->where(function ($q) use ($today) {
+                $q->whereNull('active_from')
+                    ->orWhereDate('active_from', '<=', $today);
+            })
+            ->where(function ($q) use ($today) {
+                $q->whereNull('active_until')
+                    ->orWhereDate('active_until', '>=', $today);
+            });
+    }
+
+    public function isAccountActive(): bool
+    {
+        if (! array_key_exists('is_active', $this->attributes)) {
+            return true;
+        }
+
+        if (! $this->is_active) {
+            return false;
+        }
+
+        if ($this->active_from && $this->active_from->isFuture()) {
+            return false;
+        }
+
+        return ! $this->hasExpiredActivePeriod();
+    }
+
+    public function hasExpiredActivePeriod(): bool
+    {
+        return $this->active_until !== null
+            && $this->active_until->lt(now()->startOfDay());
+    }
+
+    public function disableIfExpired(): bool
+    {
+        if (! self::hasActiveAccountColumns()) {
+            return false;
+        }
+
+        if (! $this->is_active || ! $this->hasExpiredActivePeriod()) {
+            return false;
+        }
+
+        $this->forceFill([
+            'is_active' => false,
+            'disabled_at' => now(),
+        ])->save();
+
+        return true;
+    }
+
+    public function accountInactiveMessage(): string
+    {
+        if ($this->hasExpiredActivePeriod()) {
+            return 'Masa aktif akun ini sudah berakhir pada ' . $this->active_until->translatedFormat('d F Y') . '.';
+        }
+
+        if (! $this->is_active) {
+            return 'Akun ini sedang nonaktif. Hubungi Super Admin untuk mengaktifkan kembali.';
+        }
+
+        if ($this->active_from && $this->active_from->isFuture()) {
+            return 'Akun ini baru aktif mulai ' . $this->active_from->translatedFormat('d F Y') . '.';
+        }
+
+        return 'Akun ini tidak aktif.';
+    }
+
+    public static function hasActiveAccountColumns(): bool
+    {
+        return Schema::hasTable('users')
+            && Schema::hasColumn('users', 'is_active')
+            && Schema::hasColumn('users', 'active_from')
+            && Schema::hasColumn('users', 'active_until')
+            && Schema::hasColumn('users', 'disabled_at');
     }
 
     /**

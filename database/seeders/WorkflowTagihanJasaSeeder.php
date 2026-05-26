@@ -33,7 +33,7 @@ class WorkflowTagihanJasaSeeder extends Seeder
             [
                 'urutan_step' => 2,
                 'role_code' => 'Kepala Seksi Pelayanan dan Kerjasama',
-                'nama_step' => 'Verifikasi Kasi Jasa PNBP',
+                'nama_step' => 'Verifikasi Kepala Seksi Pelayanan dan Kerjasama',
                 'is_required' => true,
                 'can_reject' => true,
                 'can_request_revision' => true,
@@ -41,7 +41,7 @@ class WorkflowTagihanJasaSeeder extends Seeder
             [
                 'urutan_step' => 3,
                 'role_code' => 'Kepala Subbagian Keuangan dan Tata Usaha',
-                'nama_step' => 'Verifikasi KASUBAG TU',
+                'nama_step' => 'Verifikasi KASUBBAG TU',
                 'is_required' => true,
                 'can_reject' => true,
                 'can_request_revision' => true,

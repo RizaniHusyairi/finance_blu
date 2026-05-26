@@ -59,6 +59,31 @@
                     </label>
                 @endforeach
             </div>
+
+            @php $temporaryRoleSelected = in_array('PLT/PLH', (array) $current); @endphp
+            <div id="temporary-role-period" class="mt-4 pt-3 border-top {{ $temporaryRoleSelected ? '' : 'd-none' }}">
+                <div class="d-flex align-items-center gap-2 mb-3">
+                    <i class="bi bi-calendar-range text-primary"></i>
+                    <div>
+                        <div class="fw-semibold">Masa Aktif PLT/PLH</div>
+                        <small class="text-muted">Akun otomatis nonaktif setelah tanggal selesai.</small>
+                    </div>
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Tanggal Mulai</label>
+                        <input type="date" name="active_from"
+                               value="{{ old('active_from', $user->active_from?->toDateString() ?? now()->toDateString()) }}"
+                               class="form-control">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Tanggal Selesai</label>
+                        <input type="date" name="active_until"
+                               value="{{ old('active_until', $user->active_until?->toDateString()) }}"
+                               class="form-control">
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="d-flex justify-content-between align-items-center">
@@ -74,11 +99,28 @@
 
 @push('script')
 <script>
+    const roleCheckboxes = document.querySelectorAll('#role-pick input[name="roles[]"]');
+    const temporaryRolePeriod = document.getElementById('temporary-role-period');
+    const toggleTemporaryRolePeriod = () => {
+        if (! temporaryRolePeriod) return;
+
+        const visible = Array.from(roleCheckboxes).some(cb => cb.value === 'PLT/PLH' && cb.checked);
+        temporaryRolePeriod.classList.toggle('d-none', ! visible);
+        temporaryRolePeriod.querySelectorAll('input').forEach(input => {
+            input.required = visible;
+        });
+    };
+
     document.querySelectorAll('#role-pick label').forEach(label => {
         const cb = label.querySelector('input[type=checkbox]');
         label.addEventListener('click', () => {
-            setTimeout(() => label.classList.toggle('is-active', cb.checked), 0);
+            setTimeout(() => {
+                label.classList.toggle('is-active', cb.checked);
+                toggleTemporaryRolePeriod();
+            }, 0);
         });
     });
+    roleCheckboxes.forEach(cb => cb.addEventListener('change', toggleTemporaryRolePeriod));
+    toggleTemporaryRolePeriod();
 </script>
 @endpush

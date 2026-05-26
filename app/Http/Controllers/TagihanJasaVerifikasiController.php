@@ -17,12 +17,20 @@ class TagihanJasaVerifikasiController extends Controller
         $user = Auth::user();
         $workflowService = app(WorkflowService::class);
         
+        $userRoles = $user->getRoleNames()->toArray();
+        if (in_array('PLT/PLH', $userRoles, true) && !in_array('KPA', $userRoles, true)) {
+            $userRoles[] = 'KPA';
+        }
+        if (in_array('KPA', $userRoles, true) && !in_array('PLT/PLH', $userRoles, true)) {
+            $userRoles[] = 'PLT/PLH';
+        }
+
         $tagihans = TagihanJasa::with(['mitra', 'mitraLegacy', 'creator', 'workflowInstance.approvals'])
-            ->whereHas('workflowInstance', function ($q) use ($user, $workflowService) {
+            ->whereHas('workflowInstance', function ($q) use ($user, $userRoles) {
                 $q->where('status', 'IN_PROGRESS')
-                  ->whereHas('approvals', function ($q2) use ($user) {
+                  ->whereHas('approvals', function ($q2) use ($userRoles) {
                       $q2->where('status', 'PENDING')
-                         ->whereIn('role_code', $user->getRoleNames());
+                         ->whereIn('role_code', $userRoles);
                   });
             })
             ->latest()

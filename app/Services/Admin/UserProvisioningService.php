@@ -7,6 +7,7 @@ use App\Models\MitraJasa;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Spatie\Permission\Models\Role;
 
@@ -21,6 +22,8 @@ use Spatie\Permission\Models\Role;
  */
 class UserProvisioningService
 {
+    private const TEMPORARY_ROLE = 'PLT/PLH';
+
     /**
      * Buat user baru yang menempel ke MasterPegawai.
      */
@@ -29,11 +32,15 @@ class UserProvisioningService
         string $email,
         array $roles,
         ?string $password = null,
+        ?string $activeFrom = null,
+        ?string $activeUntil = null,
     ): User {
         $this->guardEmailUnique($email);
         $this->guardPegawaiBelumPunyaUser($pegawai);
 
-        return DB::transaction(function () use ($pegawai, $email, $roles, $password) {
+        return DB::transaction(function () use ($pegawai, $email, $roles, $password, $activeFrom, $activeUntil) {
+            $sanitized = $this->sanitizeRoles($roles);
+
             $user = User::create([
                 'email' => $email,
                 'password' => Hash::make($password ?? $this->randomPassword()),
@@ -42,7 +49,8 @@ class UserProvisioningService
                 'email_verified_at' => now(),
             ]);
 
-            $user->syncRoles($this->sanitizeRoles($roles));
+            $user->syncRoles($sanitized);
+            $this->syncTemporaryRolePeriod($user, $sanitized, $activeFrom, $activeUntil);
 
             return $user->fresh(['roles', 'profilable']);
         });
@@ -56,11 +64,13 @@ class UserProvisioningService
         string $email,
         array $roles,
         ?string $password = null,
+        ?string $activeFrom = null,
+        ?string $activeUntil = null,
     ): User {
         $this->guardEmailUnique($email);
         $this->guardMitraBelumPunyaUser($mitra);
 
-        return DB::transaction(function () use ($mitra, $email, $roles, $password) {
+        return DB::transaction(function () use ($mitra, $email, $roles, $password, $activeFrom, $activeUntil) {
             $user = User::create([
                 'email' => $email,
                 'password' => Hash::make($password ?? $this->randomPassword()),
@@ -72,6 +82,7 @@ class UserProvisioningService
             // Mitra harus punya role Mitra Jasa minimal; tambahkan jika tidak disertakan.
             $roles = array_unique(array_merge($this->sanitizeRoles($roles), ['Mitra Jasa']));
             $user->syncRoles($roles);
+            $this->syncTemporaryRolePeriod($user, $roles, $activeFrom, $activeUntil);
 
             return $user->fresh(['roles', 'profilable']);
         });
@@ -149,6 +160,60 @@ class UserProvisioningService
         $user->syncRoles($sanitized);
 
         return $user->fresh('roles');
+    }
+
+    /**
+     * Atur masa aktif untuk role sementara seperti PLT/PLH.
+     */
+    public function syncTemporaryRolePeriod(
+        User $user,
+        array $roles,
+        ?string $activeFrom,
+        ?string $activeUntil,
+    ): User {
+        if (! $this->hasActivePeriodColumns()) {
+            return $user->fresh();
+        }
+
+        $hasTemporaryRole = in_array(self::TEMPORARY_ROLE, $roles, true);
+
+        if (! $hasTemporaryRole) {
+            $payload = [
+                'active_from' => null,
+                'active_until' => null,
+            ];
+
+            if (! $user->is_active && $user->disabled_at !== null && $user->active_until !== null) {
+                $payload['is_active'] = true;
+                $payload['disabled_at'] = null;
+            }
+
+            $user->forceFill($payload)->save();
+
+            return $user->fresh();
+        }
+
+        if (! $activeFrom || ! $activeUntil) {
+            throw new \DomainException('Masa aktif wajib diisi untuk role PLT/PLH.');
+        }
+
+        $user->forceFill([
+            'is_active' => true,
+            'active_from' => $activeFrom,
+            'active_until' => $activeUntil,
+            'disabled_at' => null,
+        ])->save();
+
+        return $user->fresh();
+    }
+
+    private function hasActivePeriodColumns(): bool
+    {
+        return Schema::hasTable('users')
+            && Schema::hasColumn('users', 'is_active')
+            && Schema::hasColumn('users', 'active_from')
+            && Schema::hasColumn('users', 'active_until')
+            && Schema::hasColumn('users', 'disabled_at');
     }
 
     /**

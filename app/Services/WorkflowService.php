@@ -258,6 +258,12 @@ class WorkflowService
     {
         $user = \App\Models\User::find($userId);
         $roles = $user ? $user->getRoleNames()->toArray() : [];
+        if (in_array('PLT/PLH', $roles, true) && !in_array('KPA', $roles, true)) {
+            $roles[] = 'KPA';
+        }
+        if (in_array('KPA', $roles, true) && !in_array('PLT/PLH', $roles, true)) {
+            $roles[] = 'PLT/PLH';
+        }
 
         return $instance->approvals()
             ->where('urutan_step', $step)

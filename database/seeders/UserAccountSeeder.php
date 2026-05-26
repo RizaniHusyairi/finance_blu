@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Services\Admin\UserProvisioningService;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 
 class UserAccountSeeder extends Seeder
 {
@@ -71,14 +72,15 @@ class UserAccountSeeder extends Seeder
 
         if ($existing) {
             // Sinkronkan email + password + role tanpa membuat user baru
-            $existing->forceFill([
+            $existing->forceFill(array_merge([
                 'email' => $email,
                 'password' => Hash::make('password'),
                 'email_verified_at' => $existing->email_verified_at ?: now(),
-            ])->save();
+            ], $this->activeAccountAttributes()))->save();
             $provisioner->syncRoles($existing, $roles);
         } else {
-            $provisioner->createForPegawai($pegawai, $email, $roles, password: 'password');
+            $user = $provisioner->createForPegawai($pegawai, $email, $roles, password: 'password');
+            $this->markAccountActive($user);
         }
 
         $this->command->info("✓ {$nama} → {$email} [" . implode(', ', $roles) . ']');
@@ -88,15 +90,50 @@ class UserAccountSeeder extends Seeder
     {
         $existing = User::where('email', $email)->first();
         if ($existing) {
-            $existing->forceFill([
+            $existing->forceFill(array_merge([
                 'password' => Hash::make('password'),
                 'email_verified_at' => $existing->email_verified_at ?: now(),
-            ])->save();
+            ], $this->activeAccountAttributes()))->save();
             $provisioner->syncRoles($existing, $roles);
         } else {
-            $provisioner->createSystemAccount($email, $roles, password: 'password');
+            $user = $provisioner->createSystemAccount($email, $roles, password: 'password');
+            $this->markAccountActive($user);
         }
 
         $this->command->info("✓ {$label} → {$email} [" . implode(', ', $roles) . ']');
+    }
+
+    private function markAccountActive(User $user): void
+    {
+        $attributes = $this->activeAccountAttributes();
+
+        if ($attributes === []) {
+            return;
+        }
+
+        $user->forceFill($attributes)->save();
+    }
+
+    private function activeAccountAttributes(): array
+    {
+        if (! Schema::hasTable('users') || ! Schema::hasColumn('users', 'is_active')) {
+            return [];
+        }
+
+        $attributes = ['is_active' => true];
+
+        if (Schema::hasColumn('users', 'active_from')) {
+            $attributes['active_from'] = null;
+        }
+
+        if (Schema::hasColumn('users', 'active_until')) {
+            $attributes['active_until'] = null;
+        }
+
+        if (Schema::hasColumn('users', 'disabled_at')) {
+            $attributes['disabled_at'] = null;
+        }
+
+        return $attributes;
     }
 }

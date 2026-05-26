@@ -140,34 +140,42 @@
         </li>
         
         <li class="nav-item dropdown">
-          <a href="javascript:void(0);" class="dropdown-toggle dropdown-toggle-nocaret" data-bs-toggle="dropdown">
-             <img src="https://placehold.co/110x110/png" class="rounded-circle p-1 border" width="45" height="45" alt="">
+          <a href="javascript:void(0);" class="dropdown-toggle dropdown-toggle-nocaret p-1 d-flex align-items-center rounded-pill border" data-bs-toggle="dropdown" style="transition: all 0.2s;">
+             <img src="https://ui-avatars.com/api/?name={{ urlencode(Auth::user()->name) }}&background=random&color=fff" class="rounded-circle" width="38" height="38" alt="">
           </a>
-          <div class="dropdown-menu dropdown-user dropdown-menu-end shadow z-1000">
-            <a class="dropdown-item  gap-2 py-2" href="javascript:;">
-              <div class="text-center">
-                <img src="https://placehold.co/110x110/png" class="rounded-circle p-1 shadow mb-3" width="90" height="90"
-                  alt="">
-                <h5 class="user-name mb-0 fw-bold">Hello, {{ Auth::user()->name }}</h5>
-              </div>
-            </a>
-            <hr class="dropdown-divider">
-            <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="javascript:;"><i
-              class="material-icons-outlined">person_outline</i>Profile</a>
-            <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="javascript:;"><i
-              class="material-icons-outlined">local_bar</i>Setting</a>
-            <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="javascript:;"><i
-              class="material-icons-outlined">dashboard</i>Dashboard</a>
-            <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="javascript:;"><i
-              class="material-icons-outlined">account_balance</i>Earning</a>
-              <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="javascript:;"><i
-                class="material-icons-outlined">cloud_download</i>Downloads</a>
-            <hr class="dropdown-divider">
-            <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="javascript:void(0);" onclick="document.getElementById('logout-form').submit()"><i
-            class="material-icons-outlined">power_settings_new</i>Logout</a>
-            <form action="{{ route('logout') }}" method="POST" id="logout-form">
-                @csrf
-            </form>
+          <div class="dropdown-menu dropdown-user dropdown-menu-end shadow border-0 rounded-4 z-1000 p-0 mt-2" style="min-width: 260px; overflow: hidden; animation: fadeIn 0.3s;">
+            <div class="px-4 py-4 text-center position-relative" style="background: linear-gradient(135deg, #0d6efd, #6610f2); color: white;">
+                <img src="https://ui-avatars.com/api/?name={{ urlencode(Auth::user()->name) }}&background=fff&color=0d6efd" class="rounded-circle shadow-sm border border-3 border-white mb-2" width="75" height="75" alt="">
+                <h6 class="mb-0 fw-bold text-truncate text-white">{{ Auth::user()->name }}</h6>
+                <small class="text-white-50 text-truncate d-block" style="font-size: 0.8rem;">{{ Auth::user()->email ?? 'Administrator' }}</small>
+            </div>
+            
+            <div class="p-2">
+                <a class="dropdown-item d-flex align-items-center gap-3 py-2 rounded-2" href="{{ route('profile.index') }}" style="transition: 0.2s;">
+                    <div class="bg-primary bg-opacity-10 text-primary p-2 rounded-circle d-flex align-items-center justify-content-center">
+                        <i class="material-icons-outlined" style="font-size: 1.2rem;">person_outline</i>
+                    </div>
+                    <span>My Profile</span>
+                </a>
+                <a class="dropdown-item d-flex align-items-center gap-3 py-2 rounded-2" href="javascript:;" style="transition: 0.2s;">
+                    <div class="bg-secondary bg-opacity-10 text-secondary p-2 rounded-circle d-flex align-items-center justify-content-center">
+                        <i class="material-icons-outlined" style="font-size: 1.2rem;">settings</i>
+                    </div>
+                    <span>Settings</span>
+                </a>
+                
+                <hr class="dropdown-divider my-2">
+                
+                <a class="dropdown-item d-flex align-items-center gap-3 py-2 rounded-2 text-danger" href="javascript:void(0);" onclick="document.getElementById('logout-form').submit()" style="transition: 0.2s;">
+                    <div class="bg-danger bg-opacity-10 text-danger p-2 rounded-circle d-flex align-items-center justify-content-center">
+                        <i class="material-icons-outlined" style="font-size: 1.2rem;">logout</i>
+                    </div>
+                    <span class="fw-semibold">Sign Out</span>
+                </a>
+                <form action="{{ route('logout') }}" method="POST" id="logout-form" class="d-none">
+                    @csrf
+                </form>
+            </div>
           </div>
         </li>
       </ul>

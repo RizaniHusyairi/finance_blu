@@ -10,6 +10,7 @@ use App\Models\MitraJasa;
 use App\Models\User;
 use App\Services\Admin\UserProvisioningService;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Spatie\Permission\Models\Role;
 
 class UserManagementController extends Controller
@@ -71,6 +72,8 @@ class UserManagementController extends Controller
             $email = $request->input('email');
             $roles = $request->input('roles', []);
             $password = $request->input('password') ?: null;
+            $activeFrom = $request->input('active_from');
+            $activeUntil = $request->input('active_until');
 
             $user = match ($tipe) {
                 'pegawai' => $this->provisioner->createForPegawai(
@@ -78,12 +81,16 @@ class UserManagementController extends Controller
                     $email,
                     $roles,
                     $password,
+                    $activeFrom,
+                    $activeUntil,
                 ),
                 'mitra' => $this->provisioner->createForMitraJasa(
                     MitraJasa::findOrFail($request->input('mitra_id')),
                     $email,
                     $roles,
                     $password,
+                    $activeFrom,
+                    $activeUntil,
                 ),
                 'sistem' => $this->provisioner->createSystemAccount($email, $roles, $password),
             };
@@ -122,8 +129,16 @@ class UserManagementController extends Controller
     public function update(UpdateUserRequest $request, User $user)
     {
         try {
+            $roles = $request->input('roles', []);
+
             $this->provisioner->updateEmail($user, $request->input('email'));
-            $this->provisioner->syncRoles($user, $request->input('roles', []));
+            $this->provisioner->syncRoles($user, $roles);
+            $this->provisioner->syncTemporaryRolePeriod(
+                $user,
+                $roles,
+                $request->input('active_from'),
+                $request->input('active_until'),
+            );
 
             return redirect()
                 ->route('admin.users.show', $user)
@@ -156,12 +171,28 @@ class UserManagementController extends Controller
     public function syncRoles(Request $request, User $user)
     {
         $request->validate([
-            'roles'   => ['required', 'array', 'min:1'],
-            'roles.*' => ['string', 'exists:roles,name'],
+            'roles'        => ['required', 'array', 'min:1'],
+            'roles.*'      => ['string', 'exists:roles,name'],
+            'active_from'  => [Rule::requiredIf(fn () => in_array('PLT/PLH', (array) $request->input('roles', []), true)), 'nullable', 'date'],
+            'active_until' => [
+                Rule::requiredIf(fn () => in_array('PLT/PLH', (array) $request->input('roles', []), true)),
+                'nullable',
+                'date',
+                'after_or_equal:active_from',
+                'after_or_equal:today',
+            ],
         ]);
 
         try {
-            $this->provisioner->syncRoles($user, $request->input('roles', []));
+            $roles = $request->input('roles', []);
+
+            $this->provisioner->syncRoles($user, $roles);
+            $this->provisioner->syncTemporaryRolePeriod(
+                $user,
+                $roles,
+                $request->input('active_from'),
+                $request->input('active_until'),
+            );
 
             return back()->with('success', "Role untuk {$user->email} berhasil diperbarui.");
         } catch (\DomainException $e) {

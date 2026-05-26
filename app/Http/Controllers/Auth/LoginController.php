@@ -26,6 +26,7 @@ class LoginController extends Controller
         'Super Admin',
         'Super Admin Jasa',
         'KPA',
+        'PLT/PLH',
         'Kepala Subbagian Keuangan dan Tata Usaha',
         'Kepala Seksi Pelayanan dan Kerjasama',
         'PPK',
@@ -57,6 +58,20 @@ class LoginController extends Controller
 
     protected function authenticated(Request $request, $user)
     {
+        if (! $user->isAccountActive()) {
+            $message = $user->accountInactiveMessage();
+            $user->disableIfExpired();
+
+            $this->guard()->logout();
+
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return redirect()->route('login')->withErrors([
+                'email' => $message,
+            ]);
+        }
+
         if ($user->hasAnyRole(['Mitra', 'Mitra Jasa'])) {
             return redirect()->route('mitra.dashboard');
         }

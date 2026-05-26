@@ -21,7 +21,7 @@ class StandingInstructionController extends Controller
         }
 
         $spp->load('standingInstruction', 'tagihan');
-        $kpaUser = User::role('KPA')->first();
+        $kpaUser = User::role(['KPA', 'PLT/PLH'])->active()->first();
         $returnUrl = $this->resolveReturnUrl($request, $spp);
 
         // Warning jika nominal beda
@@ -45,10 +45,10 @@ class StandingInstructionController extends Controller
         }
 
         // Ambil KPA otomatis
-        $kpaUser = User::role('KPA')->first();
+        $kpaUser = User::role(['KPA', 'PLT/PLH'])->active()->first();
 
         if (!$kpaUser) {
-            return back()->with('error', 'Gagal membuat Standing Instruction: User dengan role KPA tidak ditemukan.');
+            return back()->with('error', 'Gagal membuat Standing Instruction: User dengan role KPA atau PLT/PLH tidak ditemukan.');
         }
 
         $request->validate([
@@ -76,7 +76,7 @@ class StandingInstructionController extends Controller
                 'nama_ppk_snapshot' => $user->name,
                 'jabatan_ppk_snapshot' => $user->pegawai?->jabatan ?? 'PPK',
                 'nama_kpa_snapshot' => $kpaUser->name,
-                'jabatan_kpa_snapshot' => $kpaUser->pegawai?->jabatan ?? 'KPA',
+                'jabatan_kpa_snapshot' => $kpaUser->pegawai?->jabatan ?? ($kpaUser->hasRole('PLT/PLH') ? 'PLT/PLH' : 'KPA'),
                 'rekening_sumber_nomor' => $request->rekening_sumber_nomor,
                 'rekening_sumber_nama' => $request->rekening_sumber_nama,
                 'rekening_sumber_bank' => $request->rekening_sumber_bank,
@@ -149,7 +149,7 @@ class StandingInstructionController extends Controller
         }
 
         if (!$si->kpa_user_id) {
-            return back()->with('error', 'User KPA tidak ditemukan dalam Standing Instruction.');
+            return back()->with('error', 'User KPA atau PLT/PLH tidak ditemukan dalam Standing Instruction.');
         }
 
         DB::transaction(function () use ($request, $spp, $si, $user) {

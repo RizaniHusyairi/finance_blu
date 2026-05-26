@@ -53,10 +53,10 @@
                             <input type="date" name="tanggal_surat" class="form-control" value="{{ old('tanggal_surat', $tanggalSuratValue) }}">
                         </div>
                         <div class="mb-3">
-                            <label class="form-label fw-bold">Kuasa Pengguna Anggaran (KPA)</label>
-                            <input type="text" class="form-control bg-light" value="{{ $kpaUser ? $kpaUser->name : 'USER KPA BELUM DITENTUKAN' }}" readonly>
+                            <label class="form-label fw-bold">Kuasa Pengguna Anggaran (KPA) / PLT/PLH</label>
+                            <input type="text" class="form-control bg-light" value="{{ $kpaUser ? $kpaUser->name : 'USER KPA / PLT/PLH BELUM DITENTUKAN' }}" readonly>
                             @if(!$kpaUser)
-                                <div class="text-danger small mt-1"><i class="bi bi-x-circle"></i> Sistem tidak dapat menemukan user dengan Role KPA. Mohon hubungi Super Admin.</div>
+                                <div class="text-danger small mt-1"><i class="bi bi-x-circle"></i> Sistem tidak dapat menemukan user dengan Role KPA atau PLT/PLH. Mohon hubungi Super Admin.</div>
                             @endif
                         </div>
 

@@ -9,13 +9,12 @@ use Illuminate\Support\Facades\DB;
 /**
  * Seeder Master Layanan Jasa.
  *
- * Sumber data: `database/data/layanan-jasa-seed.json` — snapshot dari struktur
- * tree layanan jasa (172 entry) yang sebelumnya di-seed melalui migration
- * `2026_05_15_*_seed_*_tree.php`.
+ * Sumber data: `database/data/layanan-jasa-seed.json` — snapshot dari
+ * `jasa_apt.xlsx`; nilai `level` mengikuti kolom `kdlevel`.
  *
  * Karakteristik:
- *  - Idempotent: pakai `kode_layanan` sebagai natural key. Re-run aman, hanya
- *    update kalau ada perubahan field.
+ *  - Replace-only: data lama di `layanan_jasas` dihapus dulu, lalu diisi ulang
+ *    hanya dari file seed ini.
  *  - Auto-resolve parent: parent_id diisi via lookup `parent_kode` → id yang
  *    baru saja diinsert.
  *  - Urutan alfabet: data di-sort berdasarkan prefix root (`A.`, `B.`, …, `L.`)
@@ -58,13 +57,13 @@ class MasterLayananJasaSeeder extends Seeder
             return strnatcmp((string) ($a['kode'] ?? ''), (string) ($b['kode'] ?? ''));
         });
 
+        $deleted = DB::table('layanan_jasas')->delete();
+
         $now = Carbon::now();
         $kodeToId = [];
         $created = 0;
-        $updated = 0;
 
-        // Pertama: pastikan semua row tertulis (dua-pass agar parent_id ter-resolve).
-        // Pass 1: insert/update tanpa parent_id (set dulu ke null untuk yang non-root).
+        // Pass 1: insert semua row tanpa parent_id (dua-pass agar parent ter-resolve).
         foreach ($rows as $row) {
             $kode = (string) ($row['kode'] ?? '');
             if ($kode === '') {
@@ -84,21 +83,15 @@ class MasterLayananJasaSeeder extends Seeder
                 'kode_mak' => $row['kode_mak'] ?? null,
                 'kode_akun' => $row['kode_akun'] ?? null,
                 'mendukung_konsesi' => (bool) ($row['mendukung_konsesi'] ?? false),
+                'persentase_konsesi' => $row['persentase_konsesi'] ?? null,
                 'jumlah_hari_jatuh_tempo' => (int) ($row['jth_tempo'] ?? 30),
                 'wajib_tagihan_terpisah' => (bool) ($row['wajib_terpisah'] ?? false),
                 'updated_at' => $now,
             ];
 
-            $existing = DB::table('layanan_jasas')->where('kode_layanan', $kode)->first();
-            if ($existing) {
-                DB::table('layanan_jasas')->where('id', $existing->id)->update($payload);
-                $kodeToId[$kode] = (int) $existing->id;
-                $updated++;
-            } else {
-                $payload['created_at'] = $now;
-                $kodeToId[$kode] = (int) DB::table('layanan_jasas')->insertGetId($payload);
-                $created++;
-            }
+            $payload['created_at'] = $now;
+            $kodeToId[$kode] = (int) DB::table('layanan_jasas')->insertGetId($payload);
+            $created++;
         }
 
         // Pass 2: set parent_id setelah semua kode tersedia.
@@ -120,7 +113,7 @@ class MasterLayananJasaSeeder extends Seeder
             }
         }
 
-        $this->command->info("✓ Master Layanan Jasa: {$created} dibuat, {$updated} diupdate, {$parentLinked} parent-link diatur.");
+        $this->command->info("✓ Master Layanan Jasa: {$deleted} data lama dihapus, {$created} dibuat dari seed Excel, {$parentLinked} parent-link diatur.");
     }
 
     /**

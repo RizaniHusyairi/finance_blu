@@ -50,7 +50,10 @@ Route::get('/', function () {
 
 $internalRoles = 'Super Admin|Super Admin Jasa|KPA|PLT/PLH|Kepala Subbagian Keuangan dan Tata Usaha|Kepala Seksi Pelayanan dan Kerjasama|PPK|PPSPM|Bendahara Pengeluaran|Bendahara Penerimaan|Pejabat Pengadaan|Operator BLU|PPABP|Operator Perjaldin|Koordinator Keuangan|Admin Jasa|Admin Konsesi|Koordinator Jasa';
 
-Route::middleware('auth')->group(function () use ($internalRoles) {
+Route::middleware(['auth', 'account.active'])->group(function () use ($internalRoles) {
+
+    // Universal Profile
+    Route::get('/profile', [\App\Http\Controllers\ProfileController::class, 'index'])->name('profile.index');
 
     // Internal Dashboard — all internal roles
     Route::middleware("role:$internalRoles")->group(function () {

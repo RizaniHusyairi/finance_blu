@@ -88,6 +88,7 @@
                         <th>Tipe</th>
                         <th>Tautan Profil</th>
                         <th>Roles</th>
+                        <th>Status</th>
                         <th class="text-end pe-4">Aksi</th>
                     </tr>
                 </thead>
@@ -139,6 +140,17 @@
                                     <small class="text-muted">tanpa role</small>
                                 @endforelse
                             </td>
+                            <td>
+                                @php $accountActive = $u->isAccountActive(); @endphp
+                                <span class="badge {{ $accountActive ? 'bg-success' : 'bg-secondary' }}">
+                                    {{ $accountActive ? 'Aktif' : 'Nonaktif' }}
+                                </span>
+                                @if ($u->active_until)
+                                    <small class="text-muted d-block mt-1">
+                                        s.d. {{ $u->active_until->format('d M Y') }}
+                                    </small>
+                                @endif
+                            </td>
                             <td class="text-end pe-4">
                                 <div class="btn-group">
                                     <a href="{{ route('admin.users.show', $u) }}" class="btn btn-sm btn-light text-primary" title="Detail">
@@ -160,7 +172,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="text-center text-muted py-5">
+                            <td colspan="6" class="text-center text-muted py-5">
                                 <i class="bi bi-inbox fs-3 d-block mb-2"></i>
                                 Belum ada user yang cocok dengan filter.
                             </td>

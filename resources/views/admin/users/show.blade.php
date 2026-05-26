@@ -50,6 +50,30 @@
                         <span class="tipe-pill {{ $tipe }}">{{ ucfirst($tipe) }}</span>
                     </dd>
 
+                    <dt class="col-sm-4 text-muted">Status Akun</dt>
+                    <dd class="col-sm-8">
+                        @if ($user->isAccountActive())
+                            <span class="badge bg-success">Aktif</span>
+                        @else
+                            <span class="badge bg-secondary">Nonaktif</span>
+                            <small class="text-muted ms-1">{{ $user->accountInactiveMessage() }}</small>
+                        @endif
+                    </dd>
+
+                    <dt class="col-sm-4 text-muted">Masa Aktif</dt>
+                    <dd class="col-sm-8">
+                        @if ($user->active_from || $user->active_until)
+                            {{ $user->active_from?->format('d M Y') ?? '-' }}
+                            sampai
+                            {{ $user->active_until?->format('d M Y') ?? '-' }}
+                            @if ($user->disabled_at)
+                                <small class="text-muted ms-1">Dinonaktifkan {{ $user->disabled_at->format('d M Y H:i') }}</small>
+                            @endif
+                        @else
+                            <span class="text-muted">Tidak dibatasi</span>
+                        @endif
+                    </dd>
+
                     <dt class="col-sm-4 text-muted">Verifikasi</dt>
                     <dd class="col-sm-8">
                         @if ($user->email_verified_at)

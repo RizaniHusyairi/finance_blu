@@ -89,9 +89,7 @@
             <a href="{{ route('tagihan-jasa.create') }}" class="inline-flex items-center rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white shadow-lg shadow-blue-600/20 transition hover:-translate-y-0.5 hover:bg-blue-700">
                 <i class="bi bi-plus-lg me-2"></i>Buat Tagihan
             </a>
-            <a href="{{ route('tagihan-jasa.create', ['mode' => 'konsesi']) }}" class="inline-flex items-center rounded-xl border border-blue-200 bg-white px-4 py-2 text-sm font-bold text-blue-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-blue-50">
-                <i class="bi bi-sliders me-2"></i>Atur Layanan Konsesi
-            </a>
+
         </div>
     </div>
 </div>

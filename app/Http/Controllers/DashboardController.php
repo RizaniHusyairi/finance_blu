@@ -22,6 +22,59 @@ use Illuminate\Support\Facades\Auth;
 class DashboardController extends Controller
 {
     /**
+     * Dashboard Khusus PLT/PLH
+     */
+    public function pltPlh()
+    {
+        $user = Auth::user();
+        $workflowService = app(\App\Services\WorkflowService::class);
+        
+        $userRoles = $user->getRoleNames()->toArray();
+        if (in_array('PLT/PLH', $userRoles, true) && !in_array('KPA', $userRoles, true)) {
+            $userRoles[] = 'KPA';
+        }
+        if (in_array('KPA', $userRoles, true) && !in_array('PLT/PLH', $userRoles, true)) {
+            $userRoles[] = 'PLT/PLH';
+        }
+
+        // Tagihan Jasa Pending Verification
+        $tagihans = TagihanJasa::with(['mitra', 'creator', 'workflowInstance.approvals'])
+            ->whereHas('workflowInstance', function ($q) use ($userRoles) {
+                $q->where('status', 'IN_PROGRESS')
+                  ->whereHas('approvals', function ($q2) use ($userRoles) {
+                      $q2->where('status', 'PENDING')
+                         ->whereIn('role_code', $userRoles);
+                  });
+            })
+            ->latest()
+            ->get();
+            
+        $pendingTagihan = $tagihans->filter(function($tagihan) use ($workflowService, $user) {
+            return $workflowService->hasPendingApprovalForUser($tagihan, $user->id);
+        });
+
+        // Tagihan Jasa Approved by PLT/PLH
+        $approvedTagihan = TagihanJasa::with(['mitra', 'creator'])
+            ->whereHas('workflowInstance.approvals', function ($q) use ($userRoles, $user) {
+                $q->where('status', 'APPROVED')
+                  ->where('acted_by_user_id', $user->id)
+                  ->whereIn('role_code', $userRoles);
+            })
+            ->latest()
+            ->take(5)
+            ->get();
+            
+        $totalPending = $pendingTagihan->count();
+        $totalApproved = TagihanJasa::whereHas('workflowInstance.approvals', function ($q) use ($userRoles, $user) {
+                $q->where('status', 'APPROVED')
+                  ->where('acted_by_user_id', $user->id)
+                  ->whereIn('role_code', $userRoles);
+            })->count();
+
+        return view('dashboard.plt_plh', compact('pendingTagihan', 'approvedTagihan', 'totalPending', 'totalApproved'));
+    }
+
+    /**
      * Internal Dashboard (KPA, Operator BLU, Bendahara, Kasubag, PPSPM, dll)
      */
     public function internal()
@@ -55,6 +108,9 @@ class DashboardController extends Controller
         }
         if (Auth::user()->hasRole('Admin Konsesi')) {
             return redirect()->route('jasa.mitra.penjualan.index');
+        }
+        if (Auth::user()->hasRole('PLT/PLH')) {
+            return $this->pltPlh();
         }
 
         $now = now();
