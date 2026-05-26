@@ -720,15 +720,21 @@
         </div>
         <div class="sec-body">
             <div class="row g-3">
-                <div class="col-md-6 col-lg-3">
+                <div class="col-md-5 col-lg-4">
+                    <label class="form-label-modern">Nomor Perjalanan Dinas <span class="text-danger">*</span></label>
+                    <div class="input-group">
+                        <span class="input-group-text text-secondary fw-bold" style="background:#f8fafc; border: 1px solid #e2e8f0; border-right: none; font-size: 0.9rem;">KU.201/</span>
+                        <input type="number" name="nomor_urut" class="form-control modern text-center text-primary fw-bold font-monospace px-0" 
+                               style="border-left: none; border-right: none; box-shadow: none;" 
+                               value="{{ old('nomor_urut', $nextNumber) }}" required placeholder="0001">
+                        <span class="input-group-text text-secondary fw-bold" style="background:#f8fafc; border: 1px solid #e2e8f0; border-left: none; font-size: 0.9rem;">/APTP/{{ date('Y') }}</span>
+                    </div>
+                </div>
+                <div class="col-md-7 col-lg-4">
                     <label class="form-label-modern">Uraian / Judul Perjalanan <span class="text-danger">*</span></label>
                     <input type="text" name="deskripsi" id="inp_deskripsi" class="form-control modern" placeholder="Contoh: Rapat Koordinasi Anggaran..." required value="{{ old('deskripsi') }}">
                 </div>
-                <div class="col-md-6 col-lg-3">
-                    <label class="form-label-modern">Nomor Perjalanan Dinas <span class="text-danger">*</span></label>
-                    <input type="text" name="nomor_perjaldin" id="inp_nomor" class="form-control modern" placeholder="KU.201/1245/APTP/2026" required value="{{ old('nomor_perjaldin') }}">
-                </div>
-                <div class="col-md-6 col-lg-3">
+                <div class="col-md-6 col-lg-2">
                     <label class="form-label-modern">Periode Bulan <span class="text-danger">*</span></label>
                     <select name="periode_bulan" id="inp_bulan" class="form-select modern" required>
                         <option value="">-- Pilih Bulan --</option>
@@ -737,7 +743,7 @@
                         @endfor
                     </select>
                 </div>
-                <div class="col-md-6 col-lg-3">
+                <div class="col-md-6 col-lg-2">
                     <label class="form-label-modern">Periode Tahun <span class="text-danger">*</span></label>
                     <input type="number" name="periode_tahun" id="inp_tahun" class="form-control modern" required value="{{ old('periode_tahun', date('Y')) }}" min="2000" max="2100">
                 </div>

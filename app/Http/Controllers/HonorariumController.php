@@ -110,6 +110,7 @@ class HonorariumController extends Controller
         }
 
         $request->validate([
+            'nomor_urut' => 'required|numeric|min:1',
             'deskripsi' => 'required|string|max:255',
             'nama_supplier' => 'required|string|max:150',
             'dipa_revision_item_id' => 'required|exists:dipa_revision_items,id',
@@ -150,8 +151,8 @@ class HonorariumController extends Controller
             $totalNetto = $totalBruto - $totalPph;
 
             $tahun = date('Y');
-            $urut = Tagihan::withTrashed()->whereYear('created_at', $tahun)->where('tipe_tagihan', 'HONORARIUM')->count() + 1;
-            $nomorTagihan = 'HON-' . $tahun . '-' . str_pad($urut, 4, '0', STR_PAD_LEFT);
+            $nomorUrut = str_pad($request->nomor_urut, 4, '0', STR_PAD_LEFT);
+            $nomorTagihan = 'KU.201/' . $nomorUrut . '/APTP/' . $tahun;
 
             $status = 'DRAFT';
 
@@ -685,10 +686,10 @@ class HonorariumController extends Controller
     private function generateNextNumber(): string
     {
         $year = now()->format('Y');
-        $count = Tagihan::whereYear('created_at', $year)
+        $count = Tagihan::withTrashed()->whereYear('created_at', $year)
             ->where('tipe_tagihan', 'HONORARIUM')
             ->count();
-        return 'HON-' . $year . '-' . str_pad($count + 1, 4, '0', STR_PAD_LEFT);
+        return str_pad($count + 1, 4, '0', STR_PAD_LEFT);
     }
 
     private function notifyRoles(array $roles, string $judul, string $pesan, ?string $linkUrl = null): void

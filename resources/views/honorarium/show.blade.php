@@ -1417,16 +1417,116 @@
 </div>
 
 {{-- ============================================================
+     DOKUMEN SECTION
+     ============================================================ --}}
+<div class="dokumen-section mb-4">
+    @if($tagihan->status === 'DRAFT' && !$isReady)
+        <div class="status-alert alert-rejected">
+            <div class="sa-icon"><i class="bi bi-cloud-arrow-up-fill"></i></div>
+            <div>
+                <h6>Lengkapi Dokumen Wajib</h6>
+                <p>Unggah salinan PDF pindaian <strong>Daftar Nominatif</strong> dan <strong>Dokumen Honorarium</strong> yang telah ditandatangani sebelum mengajukan verifikasi.</p>
+            </div>
+        </div>
+
+        <div class="panel-d">
+            <div class="panel-d-head">
+                <h6><i class="bi bi-cloud-upload-fill"></i> Form Upload Dokumen Wajib</h6>
+            </div>
+            <div class="panel-d-body">
+                <form action="{{ route('honorarium.dokumen.upload-wajib', $tagihan->id) }}" method="POST" enctype="multipart/form-data" id="formUploadWajib">
+                    @csrf
+                    <div class="upload-grid">
+                        <label class="upload-zone {{ $hasDaftarNominatif ? 'is-done' : '' }}" {{ $hasDaftarNominatif ? '' : 'data-target' }}>
+                            <div class="uz-label">1. Daftar Nominatif</div>
+                            <div class="uz-icon">
+                                <i class="bi bi-{{ $hasDaftarNominatif ? 'check-circle-fill' : 'cloud-arrow-up' }}"></i>
+                            </div>
+                            <div class="uz-title" id="title-nominatif">{{ $hasDaftarNominatif ? 'Sudah diunggah' : 'Klik atau seret file PDF' }}</div>
+                            <div class="uz-sub">{{ $hasDaftarNominatif ? 'File tersimpan' : 'Format PDF · Maks 10MB' }}</div>
+                            @unless($hasDaftarNominatif)
+                                <input type="file" name="file_nominatif" id="fileNominatif" accept=".pdf" class="upload-wajib-input" required>
+                            @endunless
+                        </label>
+
+                        <label class="upload-zone {{ $hasDokumenHonorarium ? 'is-done' : '' }}">
+                            <div class="uz-label">2. Dokumen Honorarium</div>
+                            <div class="uz-icon">
+                                <i class="bi bi-{{ $hasDokumenHonorarium ? 'check-circle-fill' : 'cloud-arrow-up' }}"></i>
+                            </div>
+                            <div class="uz-title" id="title-honor">{{ $hasDokumenHonorarium ? 'Sudah diunggah' : 'Klik atau seret file PDF' }}</div>
+                            <div class="uz-sub">{{ $hasDokumenHonorarium ? 'File tersimpan' : 'Format PDF · Maks 10MB' }}</div>
+                            @unless($hasDokumenHonorarium)
+                                <input type="file" name="file_honorarium" id="fileHonorarium" accept=".pdf" class="upload-wajib-input" required>
+                            @endunless
+                        </label>
+                    </div>
+
+                    @if(!$isReady)
+                        <button type="submit" class="btn-submit-verifikasi w-100 mt-3" id="btnUploadWajib" disabled style="background: linear-gradient(135deg, #6366f1, #4f46e5); box-shadow: 0 8px 22px rgba(99,102,241,.35);">
+                            <i class="bi bi-cloud-upload"></i> Unggah Dokumen
+                        </button>
+                    @endif
+                </form>
+            </div>
+        </div>
+    @endif
+
+    <div class="panel-d">
+        <div class="panel-d-head">
+            <h6><i class="bi bi-folder-fill"></i> Dokumen Tersimpan</h6>
+            <span class="role-chip" style="--vc-color:#4338ca; --vc-soft-bg: rgba(99,102,241,.12);">
+                <i class="bi bi-file-earmark-fill"></i> {{ $tagihan->arsipDokumen->count() }} file
+            </span>
+        </div>
+        <div class="panel-d-body">
+            @if($tagihan->arsipDokumen->isEmpty())
+                <div class="empty-state-d">
+                    <i class="bi bi-folder-x"></i>
+                    <h6 class="text-secondary fw-bold mb-1">Belum ada dokumen</h6>
+                    <small>Unggah dokumen pendukung untuk melengkapi tagihan ini.</small>
+                </div>
+            @else
+                <div class="doc-list">
+                    @foreach($tagihan->arsipDokumen as $arsip)
+                        <div class="doc-item">
+                            <div class="doc-icon"><i class="bi bi-file-earmark-pdf"></i></div>
+                            <div class="doc-info">
+                                <div class="doc-type">{{ $arsip->jenis_dokumen }}</div>
+                                <div class="doc-name" title="{{ $arsip->nama_file_asli }}">{{ $arsip->nama_file_asli }}</div>
+                                <div class="doc-time"><i class="bi bi-clock"></i> {{ $arsip->created_at->isoFormat('D MMM YYYY HH:mm') }}</div>
+                            </div>
+                            <div class="doc-actions">
+                                <a href="{{ Storage::url($arsip->path_file) }}" target="_blank" class="doc-action-btn btn-dl" title="Unduh">
+                                    <i class="bi bi-download"></i>
+                                </a>
+                                @if($tagihan->status === 'DRAFT')
+                                    <form action="{{ route('honorarium.dokumen.delete', ['id' => $tagihan->id, 'arsip_id' => $arsip->id]) }}" method="POST" class="m-0" onsubmit="return confirm('Hapus dokumen ini?')">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="doc-action-btn btn-rm" title="Hapus"><i class="bi bi-trash3"></i></button>
+                                    </form>
+                                @endif
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            @endif
+        </div>
+    </div>
+
+    @if($tagihan->status === 'DRAFT')
+        {{-- Submit zone dipindahkan ke luar tabs --}}
+    @endif
+</div>
+
+{{-- ============================================================
      TABS NAVIGATION
      ============================================================ --}}
 <div class="tabs-bar" id="tabsBar">
     <button class="tab-btn active" data-tab="rincian">
         <i class="bi bi-people-fill"></i> Rincian Penerima
         <span class="tab-count">{{ $jumlahPenerima }}</span>
-    </button>
-    <button class="tab-btn" data-tab="dokumen">
-        <i class="bi bi-folder-fill"></i> Dokumen
-        <span class="tab-count">{{ $tagihan->arsipDokumen->count() }}</span>
     </button>
     <button class="tab-btn" data-tab="riwayat">
         <i class="bi bi-clock-history"></i> Riwayat
@@ -1632,110 +1732,6 @@
             </div>
         </div>
 @endif
-
-{{-- ============================================================
-     TAB: DOKUMEN
-     ============================================================ --}}
-<div class="tab-pane-d" data-pane="dokumen">
-    @if($tagihan->status === 'DRAFT' && !$isReady)
-        <div class="status-alert alert-rejected">
-            <div class="sa-icon"><i class="bi bi-cloud-arrow-up-fill"></i></div>
-            <div>
-                <h6>Lengkapi Dokumen Wajib</h6>
-                <p>Unggah salinan PDF pindaian <strong>Daftar Nominatif</strong> dan <strong>Dokumen Honorarium</strong> yang telah ditandatangani sebelum mengajukan verifikasi.</p>
-            </div>
-        </div>
-
-        <div class="panel-d">
-            <div class="panel-d-head">
-                <h6><i class="bi bi-cloud-upload-fill"></i> Form Upload Dokumen Wajib</h6>
-            </div>
-            <div class="panel-d-body">
-                <form action="{{ route('honorarium.dokumen.upload-wajib', $tagihan->id) }}" method="POST" enctype="multipart/form-data" id="formUploadWajib">
-                    @csrf
-                    <div class="upload-grid">
-                        <label class="upload-zone {{ $hasDaftarNominatif ? 'is-done' : '' }}" {{ $hasDaftarNominatif ? '' : 'data-target' }}>
-                            <div class="uz-label">1. Daftar Nominatif</div>
-                            <div class="uz-icon">
-                                <i class="bi bi-{{ $hasDaftarNominatif ? 'check-circle-fill' : 'cloud-arrow-up' }}"></i>
-                            </div>
-                            <div class="uz-title" id="title-nominatif">{{ $hasDaftarNominatif ? 'Sudah diunggah' : 'Klik atau seret file PDF' }}</div>
-                            <div class="uz-sub">{{ $hasDaftarNominatif ? 'File tersimpan' : 'Format PDF · Maks 10MB' }}</div>
-                            @unless($hasDaftarNominatif)
-                                <input type="file" name="file_nominatif" id="fileNominatif" accept=".pdf" class="upload-wajib-input" required>
-                            @endunless
-                        </label>
-
-                        <label class="upload-zone {{ $hasDokumenHonorarium ? 'is-done' : '' }}">
-                            <div class="uz-label">2. Dokumen Honorarium</div>
-                            <div class="uz-icon">
-                                <i class="bi bi-{{ $hasDokumenHonorarium ? 'check-circle-fill' : 'cloud-arrow-up' }}"></i>
-                            </div>
-                            <div class="uz-title" id="title-honor">{{ $hasDokumenHonorarium ? 'Sudah diunggah' : 'Klik atau seret file PDF' }}</div>
-                            <div class="uz-sub">{{ $hasDokumenHonorarium ? 'File tersimpan' : 'Format PDF · Maks 10MB' }}</div>
-                            @unless($hasDokumenHonorarium)
-                                <input type="file" name="file_honorarium" id="fileHonorarium" accept=".pdf" class="upload-wajib-input" required>
-                            @endunless
-                        </label>
-                    </div>
-
-                    @if(!$isReady)
-                        <button type="submit" class="btn-submit-verifikasi w-100 mt-3" id="btnUploadWajib" disabled style="background: linear-gradient(135deg, #6366f1, #4f46e5); box-shadow: 0 8px 22px rgba(99,102,241,.35);">
-                            <i class="bi bi-cloud-upload"></i> Unggah Dokumen
-                        </button>
-                    @endif
-                </form>
-            </div>
-        </div>
-    @endif
-
-    <div class="panel-d">
-        <div class="panel-d-head">
-            <h6><i class="bi bi-folder-fill"></i> Dokumen Tersimpan</h6>
-            <span class="role-chip" style="--vc-color:#4338ca; --vc-soft-bg: rgba(99,102,241,.12);">
-                <i class="bi bi-file-earmark-fill"></i> {{ $tagihan->arsipDokumen->count() }} file
-            </span>
-        </div>
-        <div class="panel-d-body">
-            @if($tagihan->arsipDokumen->isEmpty())
-                <div class="empty-state-d">
-                    <i class="bi bi-folder-x"></i>
-                    <h6 class="text-secondary fw-bold mb-1">Belum ada dokumen</h6>
-                    <small>Unggah dokumen pendukung untuk melengkapi tagihan ini.</small>
-                </div>
-            @else
-                <div class="doc-list">
-                    @foreach($tagihan->arsipDokumen as $arsip)
-                        <div class="doc-item">
-                            <div class="doc-icon"><i class="bi bi-file-earmark-pdf"></i></div>
-                            <div class="doc-info">
-                                <div class="doc-type">{{ $arsip->jenis_dokumen }}</div>
-                                <div class="doc-name" title="{{ $arsip->nama_file_asli }}">{{ $arsip->nama_file_asli }}</div>
-                                <div class="doc-time"><i class="bi bi-clock"></i> {{ $arsip->created_at->isoFormat('D MMM YYYY HH:mm') }}</div>
-                            </div>
-                            <div class="doc-actions">
-                                <a href="{{ Storage::url($arsip->path_file) }}" target="_blank" class="doc-action-btn btn-dl" title="Unduh">
-                                    <i class="bi bi-download"></i>
-                                </a>
-                                @if($tagihan->status === 'DRAFT')
-                                    <form action="{{ route('honorarium.dokumen.delete', ['id' => $tagihan->id, 'arsip_id' => $arsip->id]) }}" method="POST" class="m-0" onsubmit="return confirm('Hapus dokumen ini?')">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="doc-action-btn btn-rm" title="Hapus"><i class="bi bi-trash3"></i></button>
-                                    </form>
-                                @endif
-                            </div>
-                        </div>
-                    @endforeach
-                </div>
-            @endif
-        </div>
-    </div>
-
-    @if($tagihan->status === 'DRAFT')
-        {{-- Submit zone dipindahkan ke luar tabs --}}
-    @endif
-</div>
 
 {{-- ============================================================
      TAB: RIWAYAT

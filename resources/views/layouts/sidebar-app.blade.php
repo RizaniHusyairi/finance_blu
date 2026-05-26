@@ -379,11 +379,13 @@
                 <i class="material-icons-outlined">arrow_right</i>Honorarium
               </a>
             </li>
+            @unlessrole('PPK')
             <li>
               <a href="{{ route('verifikasi-tagihan-jasa.index') }}">
                 <i class="material-icons-outlined">arrow_right</i>Tagihan Jasa
               </a>
             </li>
+            @endunlessrole
             @endif
           </ul>
         </li>
@@ -569,20 +571,7 @@
           </ul>
         </li>
 
-        {{-- 6. Monitoring & Laporan --}}
-        <li>
-          <a href="javascript:;" class="has-arrow">
-            <div class="parent-icon"><i class="material-icons-outlined">article</i></div>
-            <div class="menu-title">Monitoring & Laporan</div>
-          </a>
-          <ul>
-            <li><a href="#"><i class="material-icons-outlined">arrow_right</i>Pengawasan DIPA</a></li>
-            <li><a href="#"><i class="material-icons-outlined">arrow_right</i>Arsip Kontrak</a></li>
-            <li><a href="{{ route('perjaldin-blu.history') }}"><i class="material-icons-outlined">arrow_right</i>Arsip Perjaldin</a></li>
-            <li><a href="#"><i class="material-icons-outlined">arrow_right</i>Arsip Honorarium</a></li>
-            <li><a href="#"><i class="material-icons-outlined">arrow_right</i>Pelacakan SP2D</a></li>
-          </ul>
-        </li>
+
         @endhasrole
         @hasrole('Kepala Subbagian Keuangan dan Tata Usaha')
 
