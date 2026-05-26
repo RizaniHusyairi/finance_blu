@@ -4,6 +4,7 @@
     $status = $tagihan->status;
     $workflow = collect($tagihan->workflowInstances ?? [])->sortByDesc('created_at')->first();
     $approvals = collect($workflow?->approvals ?? [])->sortBy([['urutan_step', 'asc'], ['id', 'asc']])->values();
+    $parallelVerifierLabel = 'PPK, PPSPM, Koordinator Keuangan, Bend. Penerimaan, Bend. Pengeluaran';
 
     $stateFromApproval = function ($approval) use ($workflow) {
         if (!$approval) return 'pending';
@@ -43,7 +44,7 @@
             ],
             [
                 'label' => 'Verifikasi Paralel',
-                'sublabel' => 'PPSPM, Bend. Penerimaan, Bend. Pengeluaran, PPK',
+                'sublabel' => $parallelVerifierLabel,
                 'icon' => 'bi-clipboard2-check-fill',
                 'state' => $paralelState,
                 'acted_at' => $latestActedAt ? \Carbon\Carbon::parse($latestActedAt) : null,
@@ -62,7 +63,7 @@
     } else {
         $steps = collect([
             ['label' => 'Pengajuan', 'sublabel' => 'Operator Perjaldin', 'icon' => 'bi-send-fill', 'state' => 'done', 'acted_at' => null],
-            ['label' => 'Verifikasi Paralel', 'sublabel' => 'PPSPM, Bend. Penerimaan, Bend. Pengeluaran, PPK', 'icon' => 'bi-clipboard2-check-fill', 'state' => str_starts_with($status, 'PENDING_') ? 'active' : 'pending', 'acted_at' => null],
+            ['label' => 'Verifikasi Paralel', 'sublabel' => $parallelVerifierLabel, 'icon' => 'bi-clipboard2-check-fill', 'state' => str_starts_with($status, 'PENDING_') ? 'active' : 'pending', 'acted_at' => null],
             ['label' => 'Persetujuan Kasubbag', 'sublabel' => 'Kepala Subbagian Keu & TU', 'icon' => 'bi-patch-check-fill', 'state' => $status === 'PENDING_KASUBBAG' ? 'active' : ($status === 'DISETUJUI_PERJALDIN' ? 'done' : 'pending'), 'acted_at' => null],
         ]);
     }

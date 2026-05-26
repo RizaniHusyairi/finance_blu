@@ -618,6 +618,7 @@
     .vk-card:nth-child(3) { animation-delay: .19s; }
     .vk-card:nth-child(4) { animation-delay: .26s; }
     .vk-card:nth-child(5) { animation-delay: .33s; }
+    .vk-card:nth-child(6) { animation-delay: .40s; }
     .vk-card::before {
         content: '';
         position: absolute;
@@ -1590,21 +1591,24 @@
 
     $statusInfoMap = [
         'DRAFT'                          => ['hero' => 'hero-draft',    'alert' => 'alert-draft',    'icon' => 'bi-pencil-square',          'label' => 'Draft',                'msg' => 'Data belum diajukan. Silakan lengkapi dan ajukan dokumen.'],
-        'PENDING_VERIFIKASI_PERJALDIN'   => ['hero' => 'hero-pending',  'alert' => 'alert-pending',  'icon' => 'bi-hourglass-split',        'label' => 'Verifikasi Berjalan',  'msg' => 'Dokumen sedang diverifikasi paralel oleh PPSPM, Bendahara Penerimaan, Bendahara Pengeluaran, dan PPK.'],
+        'PENDING_VERIFIKASI_PERJALDIN'   => ['hero' => 'hero-pending',  'alert' => 'alert-pending',  'icon' => 'bi-hourglass-split',        'label' => 'Verifikasi Berjalan',  'msg' => 'Dokumen sedang diverifikasi paralel oleh PPK, PPSPM, Koordinator Keuangan, Bendahara Penerimaan, dan Bendahara Pengeluaran.'],
         'PENDING_PPK'                    => ['hero' => 'hero-pending',  'alert' => 'alert-pending',  'icon' => 'bi-hourglass-split',        'label' => 'Menunggu PPK',         'msg' => 'Dokumen sedang menunggu verifikasi oleh PPK.'],
         'PENDING_PPSPM'                  => ['hero' => 'hero-pending',  'alert' => 'alert-pending',  'icon' => 'bi-hourglass-split',        'label' => 'Menunggu PPSPM',       'msg' => 'Dokumen sedang menunggu verifikasi oleh PPSPM.'],
+        'PENDING_KOORDINATOR_KEUANGAN'   => ['hero' => 'hero-pending',  'alert' => 'alert-pending',  'icon' => 'bi-hourglass-split',        'label' => 'Menunggu Koordinator', 'msg' => 'Dokumen sedang menunggu verifikasi oleh Koordinator Keuangan.'],
         'PENDING_BENDAHARA'              => ['hero' => 'hero-pending',  'alert' => 'alert-pending',  'icon' => 'bi-hourglass-split',        'label' => 'Menunggu Bendahara',   'msg' => 'Menunggu verifikasi oleh Bendahara Pengeluaran.'],
         'PENDING_BENDAHARA_PENERIMAAN'   => ['hero' => 'hero-pending',  'alert' => 'alert-pending',  'icon' => 'bi-hourglass-split',        'label' => 'Menunggu Bend. Penerimaan', 'msg' => 'Menunggu verifikasi oleh Bendahara Penerimaan.'],
         'PENDING_BENDAHARA_PENGELUARAN'  => ['hero' => 'hero-pending',  'alert' => 'alert-pending',  'icon' => 'bi-hourglass-split',        'label' => 'Menunggu Bend. Pengeluaran', 'msg' => 'Menunggu verifikasi oleh Bendahara Pengeluaran.'],
         'PENDING_KASUBBAG'               => ['hero' => 'hero-info',     'alert' => 'alert-info',     'icon' => 'bi-shield-check',           'label' => 'Menunggu Kasubbag',    'msg' => 'Seluruh verifikator sudah menyetujui. Menunggu persetujuan akhir Kasubbag.'],
         'REVISI_PPK'                     => ['hero' => 'hero-warning',  'alert' => 'alert-warning',  'icon' => 'bi-arrow-counterclockwise', 'label' => 'Revisi PPK',           'msg' => 'PPK meminta perbaikan. Silakan edit data dan ajukan kembali.'],
         'REVISI_PPSPM'                   => ['hero' => 'hero-warning',  'alert' => 'alert-warning',  'icon' => 'bi-arrow-counterclockwise', 'label' => 'Revisi PPSPM',         'msg' => 'PPSPM meminta perbaikan. Silakan edit data dan ajukan kembali.'],
+        'REVISI_KOORDINATOR_KEUANGAN'    => ['hero' => 'hero-warning',  'alert' => 'alert-warning',  'icon' => 'bi-arrow-counterclockwise', 'label' => 'Revisi Koordinator',   'msg' => 'Koordinator Keuangan meminta perbaikan. Silakan edit data dan ajukan kembali.'],
         'REVISI_BENDAHARA'               => ['hero' => 'hero-warning',  'alert' => 'alert-warning',  'icon' => 'bi-arrow-counterclockwise', 'label' => 'Revisi Bendahara',     'msg' => 'Bendahara meminta perbaikan. Silakan edit data dan ajukan kembali.'],
         'REVISI_BENDAHARA_PENERIMAAN'    => ['hero' => 'hero-warning',  'alert' => 'alert-warning',  'icon' => 'bi-arrow-counterclockwise', 'label' => 'Revisi Bend. Penerimaan', 'msg' => 'Bendahara Penerimaan meminta perbaikan. Silakan edit data dan ajukan kembali.'],
         'REVISI_BENDAHARA_PENGELUARAN'   => ['hero' => 'hero-warning',  'alert' => 'alert-warning',  'icon' => 'bi-arrow-counterclockwise', 'label' => 'Revisi Bend. Pengeluaran', 'msg' => 'Bendahara Pengeluaran meminta perbaikan. Silakan edit data dan ajukan kembali.'],
         'REVISI_KASUBBAG'                => ['hero' => 'hero-warning',  'alert' => 'alert-warning',  'icon' => 'bi-arrow-counterclockwise', 'label' => 'Revisi Kasubbag',      'msg' => 'Kasubbag meminta perbaikan. Silakan edit data dan ajukan kembali.'],
         'DITOLAK_PPK'                    => ['hero' => 'hero-rejected', 'alert' => 'alert-rejected', 'icon' => 'bi-x-octagon-fill',         'label' => 'Ditolak PPK',          'msg' => 'Dokumen ditolak oleh PPK. Cek catatan pada riwayat untuk detail.'],
         'DITOLAK_PPSPM'                  => ['hero' => 'hero-rejected', 'alert' => 'alert-rejected', 'icon' => 'bi-x-octagon-fill',         'label' => 'Ditolak PPSPM',        'msg' => 'Dokumen ditolak oleh PPSPM. Cek catatan pada riwayat untuk detail.'],
+        'DITOLAK_KOORDINATOR_KEUANGAN'   => ['hero' => 'hero-rejected', 'alert' => 'alert-rejected', 'icon' => 'bi-x-octagon-fill',         'label' => 'Ditolak Koordinator',  'msg' => 'Dokumen ditolak oleh Koordinator Keuangan. Cek catatan pada riwayat untuk detail.'],
         'DITOLAK_BENDAHARA'              => ['hero' => 'hero-rejected', 'alert' => 'alert-rejected', 'icon' => 'bi-x-octagon-fill',         'label' => 'Ditolak Bendahara',    'msg' => 'Dokumen ditolak oleh Bendahara Pengeluaran.'],
         'DITOLAK_BENDAHARA_PENERIMAAN'   => ['hero' => 'hero-rejected', 'alert' => 'alert-rejected', 'icon' => 'bi-x-octagon-fill',         'label' => 'Ditolak Bend. Penerimaan', 'msg' => 'Dokumen ditolak oleh Bendahara Penerimaan.'],
         'DITOLAK_BENDAHARA_PENGELUARAN'  => ['hero' => 'hero-rejected', 'alert' => 'alert-rejected', 'icon' => 'bi-x-octagon-fill',         'label' => 'Ditolak Bend. Pengeluaran', 'msg' => 'Dokumen ditolak oleh Bendahara Pengeluaran.'],
@@ -1621,7 +1625,7 @@
     $defaultStatusInfo = ['hero' => 'hero-pending', 'alert' => 'alert-pending', 'icon' => 'bi-info-circle-fill', 'label' => str_replace('_', ' ', $status), 'msg' => 'Dokumen sedang dalam proses workflow.'];
     $statusInfo = $statusInfoMap[$status] ?? $defaultStatusInfo;
 
-    $canEdit = in_array($status, ['DRAFT', 'REVISI_PPK', 'REVISI_PPSPM', 'REVISI_BENDAHARA', 'REVISI_BENDAHARA_PENERIMAAN', 'REVISI_BENDAHARA_PENGELUARAN', 'REVISI_KASUBBAG', 'DITOLAK_PPK', 'DITOLAK_PPSPM', 'DITOLAK_BENDAHARA_PENERIMAAN', 'DITOLAK_BENDAHARA_PENGELUARAN', 'DITOLAK_KASUBBAG']);
+    $canEdit = in_array($status, ['DRAFT', 'REVISI_PPK', 'REVISI_PPSPM', 'REVISI_KOORDINATOR_KEUANGAN', 'REVISI_BENDAHARA', 'REVISI_BENDAHARA_PENERIMAAN', 'REVISI_BENDAHARA_PENGELUARAN', 'REVISI_KASUBBAG', 'DITOLAK_PPK', 'DITOLAK_PPSPM', 'DITOLAK_KOORDINATOR_KEUANGAN', 'DITOLAK_BENDAHARA_PENERIMAAN', 'DITOLAK_BENDAHARA_PENGELUARAN', 'DITOLAK_KASUBBAG']);
     $canSubmit = $canEdit;
     $isApprovedPerjaldin = in_array($status, ['DISETUJUI_PERJALDIN', 'PROSES_COA', 'PROSES_SPP', 'SEBAGIAN_SPP_TERBIT', 'SPP_LENGKAP']);
     $isOperatorPerjaldin = auth()->user()->hasRole('Operator Perjaldin');
@@ -1750,7 +1754,7 @@
 
     @if($isOperatorPerjaldin && $canSubmit)
         <form action="{{ route('perjaldin.workflow.submit', $tagihan->id) }}" method="POST"
-              onsubmit="return confirm('Ajukan dokumen Perjaldin ke PPSPM, Bendahara Penerimaan, Bendahara Pengeluaran, dan PPK?')"
+              onsubmit="return confirm('Ajukan dokumen Perjaldin ke PPK, PPSPM, Koordinator Keuangan, Bendahara Penerimaan, dan Bendahara Pengeluaran?')"
               class="m-0">
             @csrf
             <button type="submit" class="btn-act btn-act-primary">

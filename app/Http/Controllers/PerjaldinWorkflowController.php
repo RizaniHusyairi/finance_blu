@@ -23,7 +23,7 @@ class PerjaldinWorkflowController extends Controller
         try {
             $this->workflowService->submit($tagihan, $request->user(), $request->ip());
 
-            return redirect()->back()->with('success', 'Dokumen Perjaldin berhasil diajukan ke PPSPM, Bendahara Penerimaan, Bendahara Pengeluaran, dan PPK.');
+            return redirect()->back()->with('success', 'Dokumen Perjaldin berhasil diajukan ke PPK, PPSPM, Koordinator Keuangan, Bendahara Penerimaan, dan Bendahara Pengeluaran.');
         } catch (\Exception $e) {
             return redirect()->back()->with('error', $e->getMessage());
         }
