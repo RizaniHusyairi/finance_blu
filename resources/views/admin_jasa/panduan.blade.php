@@ -211,6 +211,7 @@
             linear-gradient(90deg, rgba(37, 99, 235, .08) 1px, transparent 1px),
             linear-gradient(0deg, rgba(14, 165, 233, .08) 1px, transparent 1px);
         background-size: 48px 48px;
+        -webkit-mask-image: linear-gradient(180deg, rgba(0,0,0,.8), rgba(0,0,0,.12));
         mask-image: linear-gradient(180deg, rgba(0,0,0,.8), rgba(0,0,0,.12));
         animation: boardDrift 18s linear infinite;
         pointer-events: none;
@@ -234,11 +235,12 @@
         background:
             linear-gradient(180deg, rgba(255, 255, 255, .94) 0%, rgba(248, 250, 252, .96) 100%);
         box-shadow: 0 14px 28px rgba(15, 23, 42, .06);
+        translate: 0 0;
         transform: translateY(0);
         animation: cardFloat 4.8s ease-in-out infinite;
         animation-delay: var(--delay);
         transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease;
-        will-change: transform;
+        will-change: translate, transform;
     }
     .flow-card::after {
         content: "";
@@ -314,6 +316,7 @@
         flex-wrap: wrap;
         gap: 6px;
         margin-top: 14px;
+        padding-bottom: 18px;
     }
     .flow-mini span {
         border: 1px solid #dbeafe;
@@ -365,8 +368,8 @@
         to { transform: translate3d(48px, 48px, 0); }
     }
     @keyframes cardFloat {
-        0%, 100% { transform: translateY(0); }
-        50% { transform: translateY(-7px); }
+        0%, 100% { translate: 0 0; }
+        50% { translate: 0 -7px; }
     }
     @keyframes cardShine {
         0%, 46% { transform: translateX(-120%); opacity: 0; }
