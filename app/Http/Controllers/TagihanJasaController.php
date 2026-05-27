@@ -20,6 +20,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Http\UploadedFile;
 use Spatie\Permission\Models\Role;
 
 class TagihanJasaController extends Controller
@@ -51,7 +52,9 @@ class TagihanJasaController extends Controller
                 ->where('status', 'diverifikasi')
                 ->whereNull('tagihan_jasa_id')
                 ->findOrFail($request->integer('penjualan_id'));
-            $isPjp2uPenjualan = ! empty($penjualan->penerbangan_details);
+            abort_unless($penjualan->can_create_tagihan, 403, 'Tagihan untuk laporan ini belum dapat dibuat.');
+
+            $isPjp2uPenjualan = $penjualan->is_pjp2u_report;
 
             $prefillTagihan = [
                 'penjualan_id' => $penjualan->id,
@@ -257,6 +260,12 @@ class TagihanJasaController extends Controller
                     ->where('status', 'diverifikasi')
                     ->whereNull('tagihan_jasa_id')
                     ->findOrFail($validated['penjualan_id']);
+
+                if (! $penjualan->can_create_tagihan) {
+                    return back()
+                        ->withInput()
+                        ->with('error', 'Tagihan untuk laporan ini belum dapat dibuat.');
+                }
             }
 
             $kontrak = null;
@@ -325,6 +334,7 @@ class TagihanJasaController extends Controller
                 });
 
                 $tipe = $validated['tipe_pnbp'];
+                $nomorTagihanVariant = $penjualan?->is_pjp2u_report ? 'PJP2U' : null;
                 $kpaPenandatangan = $this->getKpaPenandatanganData();
 
                 $tagihan = TagihanJasa::create([
@@ -335,7 +345,7 @@ class TagihanJasaController extends Controller
                     'nomor_kontrak' => $kontrak?->nomor_kontrak,
                     'tanggal_mulai_kontrak' => optional($kontrak?->tanggal_mulai)->format('Y-m-d'),
                     'tanggal_selesai_kontrak' => optional($kontrak?->tanggal_selesai)->format('Y-m-d'),
-                    'nomor_tagihan' => $this->generateNomorTagihan($tipe),
+                    'nomor_tagihan' => $this->generateNomorTagihan($tipe, $nomorTagihanVariant),
                     'tanggal_surat_pengantar' => $validated['tanggal_tagihan'],
                     'perihal_surat_pengantar' => 'Penyampaian Tagihan PNBP Jasa',
                     'pejabat_penandatangan_nama' => $kpaPenandatangan['nama'],
@@ -363,7 +373,7 @@ class TagihanJasaController extends Controller
 
                     $tagihan->details()->create([
                         'layanan_jasa_id' => $row['id'],
-                        'kode_akun' => $row['kode_akun'] ?? $layananJasa?->kode_akun,
+                        'kode_akun' => $layananJasa?->kode_pembayaran_lengkap ?: ($layananJasa?->kode_akun ?: ($layananJasa?->kode_mak ?: ($row['kode_akun'] ?? null))),
                         'qty' => $qty,
                         'harga_satuan' => $hargaSatuan,
                         'kurs' => $kurs,
@@ -410,6 +420,326 @@ class TagihanJasaController extends Controller
         }
     }
 
+    public function edit(Request $request, $id, JasaAccessService $jasaAccessService)
+    {
+        abort_unless($this->canCreateTagihanJasa(), 403, 'Koordinator Jasa hanya dapat melihat dan memverifikasi tagihan.');
+
+        $tagihan = TagihanJasa::with([
+            'details.layananJasa',
+            'mitra.kontrak.layananJasa',
+        ])->findOrFail($id);
+        $this->abortIfAdminJasaCannotAccess($tagihan);
+
+        if (! in_array($tagihan->status, ['REVISI', 'DITOLAK'], true)) {
+            return redirect()
+                ->route('tagihan-jasa.show', $tagihan->id)
+                ->with('error', 'Tagihan hanya dapat diedit saat berstatus REVISI atau DITOLAK.');
+        }
+
+        $tipe = $tagihan->tipe_pnbp ?: 'FUNGSI';
+        $mode = $tipe === 'KONSESI' ? 'konsesi' : 'pnbp';
+        $prefillTagihan = [
+            'mitra_jasa_id' => $tagihan->mitra_jasa_id,
+            'kontrak_mitra_jasa_id' => $tagihan->kontrak_mitra_jasa_id,
+        ];
+        $detailPrefills = $tagihan->details->map(function ($detail) {
+            $payload = is_array($detail->calculation_payload) ? $detail->calculation_payload : [];
+
+            return [
+                'layanan_jasa_id' => $detail->layanan_jasa_id,
+                'kode_akun' => $detail->kode_akun,
+                'qty' => (float) $detail->qty,
+                'harga_satuan' => (float) $detail->harga_satuan,
+                'kurs' => (float) ($detail->kurs ?: 1),
+                'keterangan' => $detail->keterangan,
+                'calculation_mode' => ($payload['rule'] ?? null) === 'PERSENTASE' ? 'PERSENTASE' : 'TARIF',
+                'calculation_payload' => $payload,
+                'satuan' => $detail->layananJasa?->satuan,
+            ];
+        })->values();
+
+        $prefillLayananIds = $detailPrefills->pluck('layanan_jasa_id')->filter()->map(fn ($id) => (int) $id)->values();
+        $user = Auth::user();
+        $mitraQuery = MitraJasa::query()
+            ->with(['kontrak' => fn ($query) => $query->with('layananJasa')->orderByDesc('tanggal_kontrak')->orderByDesc('id')])
+            ->where(function ($query) use ($tagihan) {
+                $query->where('status_aktif', true)
+                    ->orWhere('id', $tagihan->mitra_jasa_id);
+            });
+
+        if ($user?->hasRole('Admin Jasa') && ! $user->hasAnyRole(['Super Admin', 'Super Admin Jasa', 'Koordinator Jasa'])) {
+            $adminLayananIds = $user->layananJasaDikelolaAktif()
+                ->where('layanan_jasas.is_active', true)
+                ->pluck('layanan_jasas.id')
+                ->all();
+            $mitraQuery->whereHas('layananJasa', fn ($q) => $q->whereIn('layanan_jasas.id', $adminLayananIds));
+        }
+
+        $mitras = $mitraQuery->orderBy('nama_mitra')->get();
+        $pjp2uLayananIds = LayananJasa::all()->filter(fn($l) => $l->isPjp2u())->pluck('id');
+
+        $eligibleLeafLayanans = LayananJasa::query()
+            ->where(function ($query) use ($prefillLayananIds, $mode, $pjp2uLayananIds) {
+                $query->where(function ($activeQuery) use ($mode, $pjp2uLayananIds) {
+                    $activeQuery->where('is_active', true)
+                        ->where('is_leaf', true)
+                        ->when($mode === 'konsesi', function ($q) {
+                            $q->where(function ($sub) {
+                                $sub->where('tipe_layanan', 'KONSESI')
+                                    ->orWhere('mendukung_konsesi', true)
+                                    ->orWhere('satuan', 'like', '%\%%');
+                            });
+                        })
+                        ->when($mode !== 'konsesi', function ($q) use ($pjp2uLayananIds) {
+                            $q->whereNotIn('id', $pjp2uLayananIds)
+                                ->where('mendukung_konsesi', false)
+                                ->where('tipe_layanan', '!=', 'KONSESI')
+                                ->where('satuan', 'not like', '%\%%');
+                        });
+                });
+
+                if ($prefillLayananIds->isNotEmpty()) {
+                    $query->orWhereIn('id', $prefillLayananIds);
+                }
+            })
+            ->orderBy('level')
+            ->orderBy('id')
+            ->get();
+
+        $treeLayananIds = $eligibleLeafLayanans->pluck('id')->map(fn ($id) => (int) $id)->all();
+        $allTreeCandidates = LayananJasa::query()
+            ->where('is_active', true)
+            ->orWhereIn('id', $prefillLayananIds)
+            ->get(['id', 'parent_id'])
+            ->keyBy('id');
+
+        foreach ($eligibleLeafLayanans as $layanan) {
+            $parentId = $layanan->parent_id;
+            $guard = 0;
+
+            while ($parentId && $guard < 10) {
+                $treeLayananIds[] = (int) $parentId;
+                $parent = $allTreeCandidates->get($parentId);
+                $parentId = $parent?->parent_id;
+                $guard++;
+            }
+        }
+
+        $layanans = LayananJasa::query()
+            ->whereIn('id', array_values(array_unique($treeLayananIds)))
+            ->orderBy('level')
+            ->orderBy('id')
+            ->get();
+
+        $mitraLayananMap = [];
+        foreach ($mitras as $mitra) {
+            $allowedIds = $jasaAccessService
+                ->getAllowedLayananForTagihan(Auth::user(), $mitra)
+                ->pluck('id')
+                ->map(fn ($id) => (int) $id)
+                ->values()
+                ->all();
+
+            if ((int) $tagihan->mitra_jasa_id === (int) $mitra->id) {
+                $allowedIds = array_values(array_unique(array_merge($allowedIds, $prefillLayananIds->all())));
+            }
+
+            $mitraLayananMap[$mitra->id] = $allowedIds;
+        }
+
+        $mitraMetaMap = $mitras->mapWithKeys(function (MitraJasa $mitra) {
+            return [
+                $mitra->id => [
+                    'id' => $mitra->id,
+                    'kode_mitra' => $mitra->kode_mitra,
+                    'nama_mitra' => $mitra->nama_mitra,
+                    'jenis_mitra' => $mitra->jenis_mitra,
+                    'npwp' => $mitra->npwp,
+                    'email' => $mitra->email,
+                    'no_telepon' => $mitra->no_telepon,
+                    'alamat' => $mitra->alamat,
+                    'nama_penanggung_jawab' => $mitra->nama_penanggung_jawab,
+                    'jabatan_penanggung_jawab' => $mitra->jabatan_penanggung_jawab,
+                    'kontrak' => $mitra->kontrak->map(fn (KontrakMitraJasa $kontrak) => [
+                        'id' => $kontrak->id,
+                        'nomor_kontrak' => $kontrak->nomor_kontrak,
+                        'nama_kontrak' => $kontrak->nama_kontrak,
+                        'jenis_dokumen' => $kontrak->jenis_dokumen,
+                        'tanggal_kontrak' => optional($kontrak->tanggal_kontrak)->format('Y-m-d'),
+                        'tanggal_mulai' => optional($kontrak->tanggal_mulai)->format('Y-m-d'),
+                        'tanggal_selesai' => optional($kontrak->tanggal_selesai)->format('Y-m-d'),
+                        'file_url' => $kontrak->file_kontrak ? asset('storage/' . $kontrak->file_kontrak) : null,
+                        'status_kontrak' => $kontrak->status_kontrak,
+                        'layanan_ids' => $kontrak->layananJasa->pluck('id')->map(fn ($id) => (int) $id)->values(),
+                    ])->values(),
+                ],
+            ];
+        });
+
+        return view('tagihan_jasa.create', compact('mitras', 'layanans', 'tipe', 'mode', 'mitraLayananMap', 'mitraMetaMap', 'prefillTagihan', 'detailPrefills', 'tagihan'));
+    }
+
+    public function update(Request $request, $id, JasaAccessService $jasaAccessService, TagihanJasaCalculationService $calculationService)
+    {
+        abort_unless($this->canCreateTagihanJasa(), 403, 'Koordinator Jasa hanya dapat melihat dan memverifikasi tagihan.');
+
+        $tagihan = TagihanJasa::with('details')->findOrFail($id);
+        $this->abortIfAdminJasaCannotAccess($tagihan);
+
+        if (! in_array($tagihan->status, ['REVISI', 'DITOLAK'], true)) {
+            return redirect()
+                ->route('tagihan-jasa.show', $tagihan->id)
+                ->with('error', 'Tagihan hanya dapat diperbarui saat berstatus REVISI atau DITOLAK.');
+        }
+
+        $validated = $this->validateTagihanJasaInput($request);
+
+        try {
+            $mitra = MitraJasa::findOrFail($validated['mitra_jasa_id']);
+            if (! $mitra->status_aktif && (int) $tagihan->mitra_jasa_id !== (int) $mitra->id) {
+                return back()->withInput()->with('error', 'Mitra nonaktif tidak dapat dipilih untuk revisi tagihan.');
+            }
+
+            $kontrak = null;
+            if (! empty($validated['kontrak_mitra_jasa_id'])) {
+                $kontrak = KontrakMitraJasa::with('layananJasa')
+                    ->where('mitra_jasa_id', $mitra->id)
+                    ->findOrFail($validated['kontrak_mitra_jasa_id']);
+            }
+
+            if ($kontrak && $kontrak->layananJasa->isNotEmpty()) {
+                $kontrakLayananIds = $kontrak->layananJasa->pluck('id')->map(fn ($kontrakLayananId) => (int) $kontrakLayananId);
+                $outsideScope = collect($validated['layanan'])
+                    ->pluck('id')
+                    ->map(fn ($layananId) => (int) $layananId)
+                    ->unique()
+                    ->reject(fn ($layananId) => $kontrakLayananIds->contains($layananId));
+
+                if ($outsideScope->isNotEmpty()) {
+                    return back()
+                        ->withInput()
+                        ->with('error', 'Kontrak/dokumen dasar yang dipilih tidak mencakup semua layanan pada tagihan.');
+                }
+            }
+
+            foreach ($validated['layanan'] as $row) {
+                if (! $jasaAccessService->canUseLayananForMitra(Auth::user(), $mitra, (int) $row['id'])) {
+                    return back()
+                        ->withInput()
+                        ->with('error', 'Terdapat layanan yang belum aktif untuk mitra atau belum ditugaskan kepada Admin Jasa login.');
+                }
+            }
+
+            $requestedLayanans = LayananJasa::query()
+                ->whereIn('id', collect($validated['layanan'])->pluck('id')->unique()->values())
+                ->get()
+                ->keyBy('id');
+
+            foreach ($validated['layanan'] as $row) {
+                if (($row['mode'] ?? 'TARIF') === 'TARIF' && (float) $row['qty'] <= 0) {
+                    return back()
+                        ->withInput()
+                        ->with('error', 'Volume layanan tarif rupiah harus lebih dari 0.');
+                }
+
+                if (($row['mode'] ?? 'TARIF') === 'PERSENTASE' && ! $this->canUsePercentageCalculation($requestedLayanans->get($row['id']))) {
+                    return back()
+                        ->withInput()
+                        ->with('error', 'Terdapat layanan yang tidak dapat dihitung sebagai persentase omzet.');
+                }
+            }
+
+            DB::transaction(function () use ($tagihan, $validated, $kontrak, $requestedLayanans, $calculationService) {
+                $totalTagihan = collect($validated['layanan'])->sum(function ($row) use ($requestedLayanans, $calculationService) {
+                    return $calculationService->calculateSubtotal($row, $requestedLayanans->get($row['id']));
+                });
+
+                $tagihan->update([
+                    'tipe_pnbp' => $validated['tipe_pnbp'],
+                    'mitra_jasa_id' => $validated['mitra_jasa_id'],
+                    'kontrak_mitra_jasa_id' => $kontrak?->id,
+                    'file_kontrak' => $kontrak?->file_kontrak,
+                    'nomor_kontrak' => $kontrak?->nomor_kontrak,
+                    'tanggal_mulai_kontrak' => optional($kontrak?->tanggal_mulai)->format('Y-m-d'),
+                    'tanggal_selesai_kontrak' => optional($kontrak?->tanggal_selesai)->format('Y-m-d'),
+                    'tanggal_tagihan' => $validated['tanggal_tagihan'],
+                    'tanggal_surat_pengantar' => $validated['tanggal_tagihan'],
+                    'total_tagihan' => $totalTagihan,
+                    'status' => 'REVISI',
+                    'final_verifier_role' => $validated['final_verifier_role'],
+                    'status_dokumen_pengantar' => 'DRAFT',
+                ]);
+
+                $tagihan->details()->delete();
+                foreach ($validated['layanan'] as $row) {
+                    $layananJasa = $requestedLayanans->get($row['id']);
+                    $calculationPayload = $calculationService->buildPayload($row, $layananJasa);
+
+                    $tagihan->details()->create([
+                        'layanan_jasa_id' => $row['id'],
+                        'kode_akun' => $layananJasa?->kode_pembayaran_lengkap ?: ($layananJasa?->kode_akun ?: ($layananJasa?->kode_mak ?: ($row['kode_akun'] ?? null))),
+                        'qty' => (float) $calculationPayload['billable_qty'],
+                        'harga_satuan' => (float) $row['harga_satuan'],
+                        'kurs' => (float) ($row['kurs'] ?? 1),
+                        'subtotal' => $calculationService->calculateSubtotal($row, $layananJasa),
+                        'keterangan' => $row['keterangan'] ?? null,
+                        'calculation_payload' => $calculationPayload,
+                    ]);
+                }
+
+                $utilitas = \App\Models\LaporanUtilitas::where('tagihan_jasa_id', $tagihan->id)->first();
+                if ($utilitas) {
+                    $firstDetail = $tagihan->details()->first();
+                    $utilitas->update([
+                        'mitra_jasa_id' => $validated['mitra_jasa_id'],
+                        'layanan_jasa_id' => $firstDetail?->layanan_jasa_id,
+                        'tarif_per_unit' => $firstDetail?->harga_satuan,
+                        'total_biaya' => $totalTagihan,
+                    ]);
+                }
+            });
+
+            return redirect()
+                ->route('tagihan-jasa.show', $tagihan->id)
+                ->with('success', 'Revisi tagihan berhasil disimpan. Kirim ulang tagihan untuk memulai workflow verifikasi baru.');
+        } catch (\Throwable $e) {
+            return back()
+                ->withInput()
+                ->with('error', 'Gagal menyimpan revisi tagihan jasa: ' . $e->getMessage());
+        }
+    }
+
+    public function resubmit($id, WorkflowService $workflowService)
+    {
+        abort_unless($this->canCreateTagihanJasa(), 403, 'Koordinator Jasa hanya dapat melihat dan memverifikasi tagihan.');
+
+        $tagihan = TagihanJasa::with('details')->findOrFail($id);
+        $this->abortIfAdminJasaCannotAccess($tagihan);
+
+        if (! in_array($tagihan->status, ['REVISI', 'DITOLAK'], true)) {
+            return back()->with('error', 'Hanya tagihan berstatus REVISI atau DITOLAK yang dapat dikirim ulang.');
+        }
+
+        if ($tagihan->details->isEmpty()) {
+            return back()->with('error', 'Tagihan belum memiliki detail layanan.');
+        }
+
+        try {
+            DB::transaction(function () use ($tagihan, $workflowService) {
+                $tagihan->update([
+                    'status' => 'VERIFIKASI_KOORDINATOR',
+                    'status_dokumen_pengantar' => 'DRAFT',
+                ]);
+
+                $workflowService->startWorkflow('TAGIHAN_JASA', $tagihan->fresh());
+            });
+
+            return back()->with('success', 'Tagihan berhasil dikirim ulang ke alur verifikasi.');
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Gagal mengirim ulang tagihan jasa: ' . $e->getMessage());
+        }
+    }
+
     public function show($id)
     {
         $tagihan = TagihanJasa::with([
@@ -417,6 +747,7 @@ class TagihanJasaController extends Controller
             'mitraLegacy',
             'kontrakMitraJasa',
             'creator',
+            'arsipDokumen.uploader',
             'details.layananJasa.parent.parent.parent.parent.parent',
             'workflowInstance.approvals.actedByUser',
         ])->findOrFail($id);
@@ -428,6 +759,7 @@ class TagihanJasaController extends Controller
             'mitraLegacy',
             'kontrakMitraJasa',
             'creator',
+            'arsipDokumen.uploader',
             'details.layananJasa.parent.parent.parent.parent.parent',
             'workflowInstance.approvals.actedByUser',
         ]);
@@ -482,12 +814,27 @@ class TagihanJasaController extends Controller
             ->setPaper('a4', 'portrait');
 
         $fileName = 'surat-pengantar-' . str_replace(['/', '\\'], '-', $tagihan->nomor_tagihan) . '.pdf';
+        $pdfContent = $pdf->output();
+
+        $this->archiveSuratPengantarContent(
+            $tagihan,
+            'SURAT_PENGANTAR_DRAFT',
+            $fileName,
+            $pdfContent,
+            'Arsip draft surat pengantar tagihan jasa.'
+        );
 
         if ($request->boolean('download')) {
-            return $pdf->download($fileName);
+            return response($pdfContent, 200, [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
+            ]);
         }
 
-        return $pdf->stream($fileName);
+        return response($pdfContent, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="' . $fileName . '"',
+        ]);
     }
 
     public function updateSuratPengantarDraft(Request $request, $id)
@@ -531,11 +878,14 @@ class TagihanJasaController extends Controller
             return back()->with('error', 'Surat pengantar final hanya dapat diunggah setelah seluruh verifikasi disetujui.');
         }
 
-        if ($tagihan->file_surat_pengantar_final) {
-            Storage::disk('public')->delete($tagihan->file_surat_pengantar_final);
-        }
-
         $path = $request->file('file_surat_pengantar_final')->store('tagihan-jasa/surat-pengantar-final', 'public');
+        $this->archiveUploadedSuratPengantar(
+            $tagihan,
+            'SURAT_PENGANTAR_FINAL_TTD',
+            $request->file('file_surat_pengantar_final'),
+            $path,
+            'Arsip surat pengantar final bertanda tangan yang diunggah manual.'
+        );
 
         $tagihan->update([
             'file_surat_pengantar_final' => $path,
@@ -545,6 +895,80 @@ class TagihanJasaController extends Controller
         ]);
 
         return back()->with('success', 'Surat pengantar final bertanda tangan berhasil diunggah.');
+    }
+
+    public function generateSuratPengantarFinal($id)
+    {
+        abort_unless($this->canManageTagihanJasa(), 403);
+
+        $tagihan = TagihanJasa::with([
+            'mitra',
+            'mitraLegacy',
+            'kontrakMitraJasa',
+            'details.layananJasa',
+            'workflowInstance.approvals.actedByUser',
+        ])->findOrFail($id);
+        $this->abortIfAdminJasaCannotAccess($tagihan);
+
+        if (! $tagihan->workflowInstance || $tagihan->workflowInstance->status !== 'APPROVED') {
+            return back()->with('error', 'Surat final hanya dapat digenerate setelah seluruh verifikasi disetujui.');
+        }
+
+        try {
+            $this->ensureSuratPengantarDefaults($tagihan);
+
+            $finalApproval = $tagihan->workflowInstance->approvals
+                ->where('status', 'APPROVED')
+                ->sortByDesc('urutan_step')
+                ->first();
+            $approver = $finalApproval?->actedByUser ?: Auth::user();
+            $pegawai = $approver?->pegawai;
+
+            $tagihan->forceFill([
+                'pejabat_penandatangan_nama' => $pegawai?->nama_lengkap ?: ($approver?->name ?: $tagihan->pejabat_penandatangan_nama),
+                'pejabat_penandatangan_nip' => $pegawai?->nip ?: $tagihan->pejabat_penandatangan_nip,
+                'pejabat_penandatangan_jabatan' => $pegawai?->jabatan
+                    ?: ($approver?->hasRole('PLT/PLH') ? 'PLT/PLH Kepala Badan Layanan Umum' : ($tagihan->pejabat_penandatangan_jabatan ?: 'Kepala Badan Layanan Umum')),
+                'tanggal_surat_pengantar' => $tagihan->tanggal_surat_pengantar ?: $tagihan->tanggal_tagihan,
+                'perihal_surat_pengantar' => $tagihan->perihal_surat_pengantar ?: 'Penyampaian Tagihan PNBP Jasa',
+            ])->save();
+
+            $signedTagihan = $tagihan->fresh([
+                'mitra',
+                'mitraLegacy',
+                'kontrakMitraJasa',
+                'details.layananJasa',
+            ]);
+
+            $pdf = Pdf::loadView('tagihan_jasa.surat_pengantar_pdf', [
+                'tagihan' => $signedTagihan,
+                'signed' => true,
+            ])->setPaper('a4', 'portrait');
+
+            $fileName = 'surat-pengantar-final-' . str_replace(['/', '\\'], '-', $signedTagihan->nomor_tagihan) . '-' . now()->format('YmdHis') . '.pdf';
+            $path = 'tagihan-jasa/surat-pengantar-final/' . $fileName;
+
+            $pdfContent = $pdf->output();
+            Storage::disk('public')->put($path, $pdfContent);
+            $this->archiveStoredSuratPengantar(
+                $tagihan,
+                'SURAT_PENGANTAR_FINAL_TTD',
+                $fileName,
+                $path,
+                'Arsip surat pengantar final bertanda tangan elektronik.'
+            );
+
+            $tagihan->forceFill([
+                'file_surat_pengantar_final' => $path,
+                'uploaded_surat_pengantar_by' => $approver?->id ?: Auth::id(),
+                'uploaded_surat_pengantar_at' => $finalApproval?->acted_at ?: now(),
+                'status_dokumen_pengantar' => 'SUDAH_DITANDATANGANI',
+            ])->save();
+
+            return back()->with('success', 'Surat pengantar final bertanda tangan berhasil digenerate.');
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Gagal generate surat pengantar final: ' . $e->getMessage());
+        }
     }
 
     public function publish(Request $request, $id, WhatsappService $whatsappService, BtnVirtualAccountService $btnVirtualAccountService)
@@ -562,8 +986,8 @@ class TagihanJasaController extends Controller
             return back()->with('error', 'Tagihan belum selesai diverifikasi.');
         }
 
-        if (! $tagihan->file_surat_pengantar_final) {
-            return back()->with('error', 'Upload surat pengantar final bertanda tangan terlebih dahulu sebelum publish ke mitra.');
+        if (! $tagihan->file_surat_pengantar_final || $tagihan->status_dokumen_pengantar !== 'SUDAH_DITANDATANGANI') {
+            return back()->with('error', 'Generate surat pengantar final TTD terlebih dahulu sebelum publish ke mitra.');
         }
 
         if (! $tagihan->mitra) {
@@ -623,10 +1047,12 @@ class TagihanJasaController extends Controller
             return back()->with('error', 'Hanya tagihan yang sudah dipublish yang dapat ditandai lunas.');
         }
 
+        $totalTagihanBerjalan = (float) $tagihan->total_dengan_denda;
+
         $tagihan->update([
             'status' => 'LUNAS',
             'status_pembayaran' => 'lunas',
-            'jumlah_dibayar' => $tagihan->total_tagihan,
+            'jumlah_dibayar' => $totalTagihanBerjalan,
             'sisa_tagihan' => 0,
             'tanggal_lunas' => now()->toDateString(),
         ]);
@@ -638,7 +1064,7 @@ class TagihanJasaController extends Controller
             app(\App\Services\Pembukuan\PiutangSyncService::class)->syncFromLunas(
                 $freshTagihan,
                 [
-                    'amount' => (float) $freshTagihan->total_tagihan,
+                    'amount' => $totalTagihanBerjalan,
                     'paid_at' => now(),
                     'reference' => 'MANUAL/' . $freshTagihan->nomor_tagihan,
                 ]
@@ -654,7 +1080,7 @@ class TagihanJasaController extends Controller
             app(\App\Services\BtnVirtualAccountService::class)->sendLunasNotification(
                 $freshTagihan,
                 [
-                    'amount' => (float) $freshTagihan->total_tagihan,
+                    'amount' => $totalTagihanBerjalan,
                     'paid_at' => now(),
                     'reference' => 'MANUAL/' . $freshTagihan->nomor_tagihan,
                 ]
@@ -706,11 +1132,87 @@ class TagihanJasaController extends Controller
         }
     }
 
-    private function generateNomorTagihan(string $tipe = 'FUNGSI'): string
+    private function archiveSuratPengantarContent(
+        TagihanJasa $tagihan,
+        string $jenisDokumen,
+        string $fileName,
+        string $content,
+        ?string $keterangan = null
+    ): void {
+        $safeNomor = Str::slug(str_replace(['/', '\\'], '-', $tagihan->nomor_tagihan ?: ('tagihan-' . $tagihan->id)), '-');
+        $path = 'arsip-dokumen/TagihanJasa/' . $safeNomor . '/' . now()->format('YmdHis') . '-' . Str::random(6) . '-' . $fileName;
+
+        Storage::disk('public')->put($path, $content);
+
+        $this->archiveStoredSuratPengantar($tagihan, $jenisDokumen, $fileName, $path, $keterangan, strlen($content));
+    }
+
+    private function archiveUploadedSuratPengantar(
+        TagihanJasa $tagihan,
+        string $jenisDokumen,
+        UploadedFile $file,
+        string $path,
+        ?string $keterangan = null
+    ): void {
+        $this->deactivateSuratPengantarArchives($tagihan, $jenisDokumen);
+
+        $tagihan->arsipDokumen()->create([
+            'jenis_dokumen' => $jenisDokumen,
+            'nama_file_asli' => $file->getClientOriginalName(),
+            'path_file' => $path,
+            'disk' => 'public',
+            'mime_type' => $file->getMimeType() ?: 'application/pdf',
+            'ukuran_file' => $file->getSize(),
+            'checksum' => hash_file('sha256', $file->getRealPath()),
+            'uploaded_by' => Auth::id(),
+            'uploaded_at' => now(),
+            'keterangan' => $keterangan,
+            'is_active' => true,
+        ]);
+    }
+
+    private function archiveStoredSuratPengantar(
+        TagihanJasa $tagihan,
+        string $jenisDokumen,
+        string $fileName,
+        string $path,
+        ?string $keterangan = null,
+        ?int $size = null
+    ): void {
+        $this->deactivateSuratPengantarArchives($tagihan, $jenisDokumen);
+        $fullPath = Storage::disk('public')->path($path);
+
+        $tagihan->arsipDokumen()->create([
+            'jenis_dokumen' => $jenisDokumen,
+            'nama_file_asli' => $fileName,
+            'path_file' => $path,
+            'disk' => 'public',
+            'mime_type' => 'application/pdf',
+            'ukuran_file' => $size ?? (Storage::disk('public')->exists($path) ? Storage::disk('public')->size($path) : null),
+            'checksum' => is_file($fullPath) ? hash_file('sha256', $fullPath) : null,
+            'uploaded_by' => Auth::id(),
+            'uploaded_at' => now(),
+            'keterangan' => $keterangan,
+            'is_active' => true,
+        ]);
+    }
+
+    private function deactivateSuratPengantarArchives(TagihanJasa $tagihan, string $jenisDokumen): void
     {
-        $label = $tipe === 'KONSESI' ? 'TAG-KONSESI' : 'TAG-JASA';
+        $tagihan->arsipDokumen()
+            ->where('jenis_dokumen', $jenisDokumen)
+            ->where('is_active', true)
+            ->update(['is_active' => false]);
+    }
+
+    private function generateNomorTagihan(string $tipe = 'FUNGSI', ?string $variant = null): string
+    {
+        $label = match ($variant) {
+            'PJP2U' => 'TAG-PJP2U',
+            default => $tipe === 'KONSESI' ? 'TAG-KONSESI' : 'TAG-JASA',
+        };
         $prefix = $label . '/' . now()->format('Ymd');
-        $count = TagihanJasa::where('tipe_pnbp', $tipe)
+        $count = TagihanJasa::where('nomor_tagihan', 'like', $prefix . '/%')
             ->whereDate('created_at', now()->toDateString())
             ->count() + 1;
 
@@ -741,6 +1243,26 @@ class TagihanJasaController extends Controller
         return $layanan->tipe_layanan === 'KONSESI'
             || (bool) $layanan->mendukung_konsesi
             || str_contains((string) $layanan->satuan, '%');
+    }
+
+    private function validateTagihanJasaInput(Request $request): array
+    {
+        return $request->validate([
+            'tipe_pnbp' => ['required', 'in:FUNGSI,NON_FUNGSI,KONSESI'],
+            'mitra_jasa_id' => ['required', 'exists:mitra_jasa,id'],
+            'tanggal_tagihan' => ['required', 'date'],
+            'final_verifier_role' => ['required', 'in:KPA,PLT/PLH'],
+            'kontrak_mitra_jasa_id' => ['nullable', 'exists:kontrak_mitra_jasa,id'],
+            'layanan' => ['required', 'array', 'min:1'],
+            'layanan.*.id' => ['required', 'exists:layanan_jasas,id'],
+            'layanan.*.mode' => ['nullable', 'in:TARIF,PERSENTASE'],
+            'layanan.*.kode_akun' => ['nullable', 'string', 'max:255'],
+            'layanan.*.qty' => ['required', 'numeric', 'min:0'],
+            'layanan.*.harga_satuan' => ['required', 'numeric', 'min:0'],
+            'layanan.*.kurs' => ['nullable', 'numeric', 'min:0'],
+            'layanan.*.keterangan' => ['nullable', 'string', 'max:1000'],
+            'layanan.*.calculation_payload' => ['nullable', 'json'],
+        ]);
     }
 
     private function generateNomorVa(TagihanJasa $tagihan): string

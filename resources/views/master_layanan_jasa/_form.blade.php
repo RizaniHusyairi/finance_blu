@@ -2,6 +2,11 @@
     $isEdit = isset($layanan);
     $selectedNodeType = old('node_type', $isEdit && $layanan->is_leaf ? 'item' : 'category');
     $selectedTipe = old('tipe_layanan', $isEdit ? ($layanan->tipe_layanan ?? 'PNBP') : 'PNBP');
+    $selectedKodeMak = old('kode_mak', $isEdit ? ($layanan->kode_mak ?? '') : '');
+    $selectedKodeJenisPembayaran = old('kode_jenis_pembayaran', $isEdit ? ($layanan->kode_jenis_pembayaran ?? '') : '');
+    $selectedKodePembayaran = $selectedKodeMak && $selectedKodeJenisPembayaran
+        ? $selectedKodeMak . '.' . $selectedKodeJenisPembayaran
+        : ($isEdit ? ($layanan->kode_pembayaran_lengkap ?? '') : '');
 @endphp
 
 @push('css')
@@ -367,10 +372,24 @@
 
                     <div class="col-lg-3">
                         <label class="form-label">Kode MAK</label>
-                        <input type="text" name="kode_mak" class="form-control @error('kode_mak') is-invalid @enderror" value="{{ old('kode_mak', $isEdit ? $layanan->kode_mak : '') }}" placeholder="Contoh: 424115">
+                        <input type="text" id="kode_mak" name="kode_mak" class="form-control @error('kode_mak') is-invalid @enderror" value="{{ $selectedKodeMak }}" placeholder="Contoh: 424115">
                         @error('kode_mak')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
+                    </div>
+
+                    <div class="col-lg-3">
+                        <label class="form-label">Kode Jenis Pembayaran</label>
+                        <input type="text" id="kode_jenis_pembayaran" name="kode_jenis_pembayaran" class="form-control @error('kode_jenis_pembayaran') is-invalid @enderror" value="{{ $selectedKodeJenisPembayaran }}" placeholder="Contoh: 901" maxlength="3" inputmode="numeric">
+                        @error('kode_jenis_pembayaran')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
+
+                    <div class="col-lg-3">
+                        <label class="form-label">Kode Pembayaran</label>
+                        <input type="text" id="kode_pembayaran_preview" class="form-control bg-light fw-bold" value="{{ $selectedKodePembayaran }}" placeholder="Otomatis" readonly>
+                        <div class="form-text">Gabungan Kode MAK + Kode Jenis.</div>
                     </div>
 
                     <div class="col-lg-3">
@@ -528,6 +547,9 @@
         const tipeInput = document.getElementById('tipe_layanan');
         const tarifInput = document.getElementById('tarif_dasar');
         const satuanInput = document.getElementById('satuan');
+        const kodeMakInput = document.getElementById('kode_mak');
+        const kodeJenisPembayaranInput = document.getElementById('kode_jenis_pembayaran');
+        const kodePembayaranPreview = document.getElementById('kode_pembayaran_preview');
         const managedInputs = [
             document.querySelector('input[name="mendukung_konsesi"]'),
             document.querySelector('input[name="persentase_konsesi"]'),
@@ -564,7 +586,17 @@
             return 'Rp ' + number.toLocaleString('id-ID');
         }
 
+        function updateKodePembayaranPreview() {
+            const kodeMak = kodeMakInput?.value?.trim() || '';
+            const kodeJenis = kodeJenisPembayaranInput?.value?.trim() || '';
+
+            if (kodePembayaranPreview) {
+                kodePembayaranPreview.value = kodeMak && kodeJenis ? kodeMak + '.' + kodeJenis : '';
+            }
+        }
+
         function updatePreview() {
+            updateKodePembayaranPreview();
             const name = nameInput?.value?.trim() || 'Nama layanan belum diisi';
             const isCategory = selectedNodeType() === 'category';
 
@@ -597,7 +629,7 @@
             });
         });
 
-        [nameInput, tipeInput, tarifInput, satuanInput].forEach((input) => {
+        [nameInput, tipeInput, tarifInput, satuanInput, kodeMakInput, kodeJenisPembayaranInput].forEach((input) => {
             input?.addEventListener('input', updatePreview);
             input?.addEventListener('change', updatePreview);
         });

@@ -1,0 +1,331 @@
+[
+  {
+    "kode_mak": "424115",
+    "kode_jenis_pembayaran": "901",
+    "uraian_jenis_pembayaran": "Pendaratan Pesawat",
+    "kode_pembayaran_lengkap": "424115.901",
+    "aliases": ["pendaratan pesawat"]
+  },
+  {
+    "kode_mak": "424115",
+    "kode_jenis_pembayaran": "902",
+    "uraian_jenis_pembayaran": "Penempatan Pesawat",
+    "kode_pembayaran_lengkap": "424115.902",
+    "aliases": ["penempatan pesawat"]
+  },
+  {
+    "kode_mak": "424115",
+    "kode_jenis_pembayaran": "903",
+    "uraian_jenis_pembayaran": "Penyimpanan Pesawat",
+    "kode_pembayaran_lengkap": "424115.903",
+    "aliases": ["penyimpanan pesawat"]
+  },
+  {
+    "kode_mak": "424115",
+    "kode_jenis_pembayaran": "904",
+    "uraian_jenis_pembayaran": "Konter Pelaporan (PJPC)",
+    "kode_pembayaran_lengkap": "424115.904",
+    "aliases": ["konter pelaporan", "tempat pelaporan keberangkatan", "check in counter"]
+  },
+  {
+    "kode_mak": "424115",
+    "kode_jenis_pembayaran": "905",
+    "uraian_jenis_pembayaran": "PJP2U",
+    "kode_pembayaran_lengkap": "424115.905",
+    "aliases": ["pjp2u", "jasa penumpang pesawat udara", "penumpang pesawat udara"]
+  },
+  {
+    "kode_mak": "424115",
+    "kode_jenis_pembayaran": "906",
+    "uraian_jenis_pembayaran": "JKP2U (Jasa Layanan Kargo dan Pos Pesawat Udara)",
+    "kode_pembayaran_lengkap": "424115.906",
+    "aliases": ["jasa layanan kargo dan pos", "layanan kargo dan pos pesawat udara"]
+  },
+  {
+    "kode_mak": "424115",
+    "kode_jenis_pembayaran": "907",
+    "uraian_jenis_pembayaran": "Garbarata",
+    "kode_pembayaran_lengkap": "424115.907",
+    "aliases": ["garbarata", "aviobridge"]
+  },
+  {
+    "kode_mak": "424115",
+    "kode_jenis_pembayaran": "908",
+    "uraian_jenis_pembayaran": "Penggunaan Bandar Udara Diluar Jam Operasional (Extend)",
+    "kode_pembayaran_lengkap": "424115.908",
+    "aliases": ["di luar jam operasi", "diluar jam operasional", "extend"]
+  },
+  {
+    "kode_mak": "424115",
+    "kode_jenis_pembayaran": "909",
+    "uraian_jenis_pembayaran": "Penggunaan Bandara sebagai Bandara Alternatif (Standby Alternate Aerodrome)",
+    "kode_pembayaran_lengkap": "424115.909",
+    "aliases": ["bandar udara alternatif", "stand by alternate", "standby alternate"]
+  },
+  {
+    "kode_mak": "424115",
+    "kode_jenis_pembayaran": "910",
+    "uraian_jenis_pembayaran": "Penanganan Jenazah",
+    "kode_pembayaran_lengkap": "424115.910",
+    "aliases": ["penanganan jenazah"]
+  },
+  {
+    "kode_mak": "424115",
+    "kode_jenis_pembayaran": "942",
+    "uraian_jenis_pembayaran": "JKP2U (Jasa Penyimpanan Kargo dan Pos Pesawat Udara)",
+    "kode_pembayaran_lengkap": "424115.942",
+    "aliases": ["penyimpanan barang antar bandara", "jasa penyimpanan kargo", "jasa penyimpanan barang"]
+  },
+  {
+    "kode_mak": "424921",
+    "kode_jenis_pembayaran": "911",
+    "uraian_jenis_pembayaran": "Penggunaan Lahan",
+    "kode_pembayaran_lengkap": "424921.911",
+    "aliases": ["penggunaan lahan", "penggunaan tanah"]
+  },
+  {
+    "kode_mak": "424923",
+    "kode_jenis_pembayaran": "912",
+    "uraian_jenis_pembayaran": "Penggunaan Ruangan",
+    "kode_pembayaran_lengkap": "424923.912",
+    "aliases": ["penggunaan ruangan"]
+  },
+  {
+    "kode_mak": "424923",
+    "kode_jenis_pembayaran": "913",
+    "uraian_jenis_pembayaran": "Penempatan Mesin ATM",
+    "kode_pembayaran_lengkap": "424923.913",
+    "aliases": ["penempatan mesin atm", "anjungan tunai mandiri"]
+  },
+  {
+    "kode_mak": "424923",
+    "kode_jenis_pembayaran": "914",
+    "uraian_jenis_pembayaran": "Pemotretan Shooting",
+    "kode_pembayaran_lengkap": "424923.914",
+    "aliases": ["pemotretan", "shooting film", "shooting", "promosi"]
+  },
+  {
+    "kode_mak": "424923",
+    "kode_jenis_pembayaran": "930",
+    "uraian_jenis_pembayaran": "Penggunaan Hanggar",
+    "kode_pembayaran_lengkap": "424923.930",
+    "aliases": ["penggunaan hanggar", "hanggar"]
+  },
+  {
+    "kode_mak": "424923",
+    "kode_jenis_pembayaran": "943",
+    "uraian_jenis_pembayaran": "Sewa Ruang Rapat",
+    "kode_pembayaran_lengkap": "424923.943",
+    "aliases": ["ruang rapat"]
+  },
+  {
+    "kode_mak": "424924",
+    "kode_jenis_pembayaran": "915",
+    "uraian_jenis_pembayaran": "Tiang Pancang Reklame",
+    "kode_pembayaran_lengkap": "424924.915",
+    "aliases": ["tiang pancang reklame"]
+  },
+  {
+    "kode_mak": "424924",
+    "kode_jenis_pembayaran": "916",
+    "uraian_jenis_pembayaran": "Pemasangan Reklame",
+    "kode_pembayaran_lengkap": "424924.916",
+    "aliases": ["pemasangan reklame", "papan reklame", "billboard", "spanduk", "banner", "umbul umbul", "baleho", "sticker", "penempatan booklet", "penempatan brosur"]
+  },
+  {
+    "kode_mak": "424924",
+    "kode_jenis_pembayaran": "917",
+    "uraian_jenis_pembayaran": "Bis Apron",
+    "kode_pembayaran_lengkap": "424924.917",
+    "aliases": ["bis apron"]
+  },
+  {
+    "kode_mak": "424924",
+    "kode_jenis_pembayaran": "918",
+    "uraian_jenis_pembayaran": "Kendaraan/Peralatan dan Mesin",
+    "kode_pembayaran_lengkap": "424924.918",
+    "aliases": ["traktor pendorong", "push back tractor", "peralatan dan mesin", "kursi", "asbak", "tempat sampah"]
+  },
+  {
+    "kode_mak": "424924",
+    "kode_jenis_pembayaran": "919",
+    "uraian_jenis_pembayaran": "Sewa Kendaraan Bermotor Roda 4 atau lebih",
+    "kode_pembayaran_lengkap": "424924.919",
+    "aliases": ["sewa kendaraan bermotor", "kendaraan bermotor roda 4"]
+  },
+  {
+    "kode_mak": "424924",
+    "kode_jenis_pembayaran": "920",
+    "uraian_jenis_pembayaran": "Penggunaan Xray Cabin",
+    "kode_pembayaran_lengkap": "424924.920",
+    "aliases": ["xray cabin", "x ray cabin", "pemeriksaan orang dan barang"]
+  },
+  {
+    "kode_mak": "424924",
+    "kode_jenis_pembayaran": "935",
+    "uraian_jenis_pembayaran": "Pemasangan REKLAME",
+    "kode_pembayaran_lengkap": "424924.935",
+    "aliases": []
+  },
+  {
+    "kode_mak": "424924",
+    "kode_jenis_pembayaran": "940",
+    "uraian_jenis_pembayaran": "SEWA PERALATAN WORKSHOP",
+    "kode_pembayaran_lengkap": "424924.940",
+    "aliases": ["peralatan workshop", "workshop", "air compressor", "battery charger", "hand drill", "genset", "angle grinder", "bench grinder", "heat gun"]
+  },
+  {
+    "kode_mak": "424919",
+    "kode_jenis_pembayaran": "921",
+    "uraian_jenis_pembayaran": "Tagihan Listrik",
+    "kode_pembayaran_lengkap": "424919.921",
+    "aliases": ["tagihan listrik", "penggunaan listrik"]
+  },
+  {
+    "kode_mak": "424919",
+    "kode_jenis_pembayaran": "922",
+    "uraian_jenis_pembayaran": "PAS ORANG",
+    "kode_pembayaran_lengkap": "424919.922",
+    "aliases": ["pas orang"]
+  },
+  {
+    "kode_mak": "424919",
+    "kode_jenis_pembayaran": "923",
+    "uraian_jenis_pembayaran": "PAS TIM",
+    "kode_pembayaran_lengkap": "424919.923",
+    "aliases": ["pas tim"]
+  },
+  {
+    "kode_mak": "424919",
+    "kode_jenis_pembayaran": "924",
+    "uraian_jenis_pembayaran": "Telekomunikasi",
+    "kode_pembayaran_lengkap": "424919.924",
+    "aliases": ["telekomunikasi", "intercom", "telepon"]
+  },
+  {
+    "kode_mak": "424919",
+    "kode_jenis_pembayaran": "925",
+    "uraian_jenis_pembayaran": "Tagihan Air",
+    "kode_pembayaran_lengkap": "424919.925",
+    "aliases": ["tagihan air", "penggunaan air bandar"]
+  },
+  {
+    "kode_mak": "424919",
+    "kode_jenis_pembayaran": "926",
+    "uraian_jenis_pembayaran": "Pemeriksaan Kargo dan Pos",
+    "kode_pembayaran_lengkap": "424919.926",
+    "aliases": ["pemeriksaan kargo dan pos"]
+  },
+  {
+    "kode_mak": "424919",
+    "kode_jenis_pembayaran": "927",
+    "uraian_jenis_pembayaran": "Field Trip",
+    "kode_pembayaran_lengkap": "424919.927",
+    "aliases": ["field trip", "studi lapangan", "penelitian dan observasi"]
+  },
+  {
+    "kode_mak": "424919",
+    "kode_jenis_pembayaran": "928",
+    "uraian_jenis_pembayaran": "Bengkel Kendaraan Bermotor",
+    "kode_pembayaran_lengkap": "424919.928",
+    "aliases": ["bengkel kendaraan bermotor", "bengkel"]
+  },
+  {
+    "kode_mak": "424919",
+    "kode_jenis_pembayaran": "929",
+    "uraian_jenis_pembayaran": "Parkir Inap",
+    "kode_pembayaran_lengkap": "424919.929",
+    "aliases": ["parkir inap"]
+  },
+  {
+    "kode_mak": "424919",
+    "kode_jenis_pembayaran": "933",
+    "uraian_jenis_pembayaran": "BUNGA Rek. OPS PENERIMAAN",
+    "kode_pembayaran_lengkap": "424919.933",
+    "aliases": ["bunga rek ops penerimaan", "bunga rekening ops penerimaan"]
+  },
+  {
+    "kode_mak": "424919",
+    "kode_jenis_pembayaran": "934",
+    "uraian_jenis_pembayaran": "Pengembalian Belanja",
+    "kode_pembayaran_lengkap": "424919.934",
+    "aliases": ["pengembalian belanja"]
+  },
+  {
+    "kode_mak": "424919",
+    "kode_jenis_pembayaran": "936",
+    "uraian_jenis_pembayaran": "Penggunaan Fasilitas dan Personil di Luar Jam Operasional Bandar Udara",
+    "kode_pembayaran_lengkap": "424919.936",
+    "aliases": ["penggunaan fasilitas dan personil di luar jam operasional", "fasilitas dan personil"]
+  },
+  {
+    "kode_mak": "424919",
+    "kode_jenis_pembayaran": "937",
+    "uraian_jenis_pembayaran": "PAS KENDARAAN",
+    "kode_pembayaran_lengkap": "424919.937",
+    "aliases": ["pas kendaraan"]
+  },
+  {
+    "kode_mak": "424919",
+    "kode_jenis_pembayaran": "938",
+    "uraian_jenis_pembayaran": "Bunga Rekening BEND PENGELUARAN",
+    "kode_pembayaran_lengkap": "424919.938",
+    "aliases": ["bunga rekening bend pengeluaran", "bunga rek bend pengeluaran"]
+  },
+  {
+    "kode_mak": "424919",
+    "kode_jenis_pembayaran": "939",
+    "uraian_jenis_pembayaran": "DENDA Pekerjaan Tahun lalu",
+    "kode_pembayaran_lengkap": "424919.939",
+    "aliases": ["denda pekerjaan tahun lalu"]
+  },
+  {
+    "kode_mak": "424919",
+    "kode_jenis_pembayaran": "946",
+    "uraian_jenis_pembayaran": "DENDA Pekerjaan Tahun ini",
+    "kode_pembayaran_lengkap": "424919.946",
+    "aliases": ["denda pekerjaan tahun ini"]
+  },
+  {
+    "kode_mak": "424312",
+    "kode_jenis_pembayaran": "931",
+    "uraian_jenis_pembayaran": "Konsesi",
+    "kode_pembayaran_lengkap": "424312.931",
+    "aliases": ["konsesi"]
+  },
+  {
+    "kode_mak": "424922",
+    "kode_jenis_pembayaran": "932",
+    "uraian_jenis_pembayaran": "Gedung/Bangunan",
+    "kode_pembayaran_lengkap": "424922.932",
+    "aliases": ["gedung", "bangunan"]
+  },
+  {
+    "kode_mak": "424212",
+    "kode_jenis_pembayaran": "941",
+    "uraian_jenis_pembayaran": "UANG",
+    "kode_pembayaran_lengkap": "424212.941",
+    "aliases": ["uang"]
+  },
+  {
+    "kode_mak": "424911",
+    "kode_jenis_pembayaran": "947",
+    "uraian_jenis_pembayaran": "BUNGA Rekening OPS PENERIMAAN",
+    "kode_pembayaran_lengkap": "424911.947",
+    "aliases": ["bunga rekening ops penerimaan"]
+  },
+  {
+    "kode_mak": "424911",
+    "kode_jenis_pembayaran": "948",
+    "uraian_jenis_pembayaran": "BUNGA Rekening BEND PENGELUARAN",
+    "kode_pembayaran_lengkap": "424911.948",
+    "aliases": ["bunga rekening bend pengeluaran"]
+  },
+  {
+    "kode_mak": "424911",
+    "kode_jenis_pembayaran": "949",
+    "uraian_jenis_pembayaran": "BUNGA Rekening DEPOSITO",
+    "kode_pembayaran_lengkap": "424911.949",
+    "aliases": ["bunga rekening deposito", "deposito"]
+  }
+]

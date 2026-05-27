@@ -129,7 +129,7 @@
                     {{-- Biaya Transportasi & Penginapan --}}
                     <div class="col-md-2">
                         <label class="form-label mb-1 small" style="font-size: 0.75rem;">Tiket</label>
-                        <input type="text" data-kode="TIKET" class="form-control form-control-sm text-end biaya-input tiket-amount-input komponen-input @error("peserta.{$index}.biaya_tiket") is-invalid @enderror" name="peserta[{{ $index }}][biaya_tiket]" placeholder="0" onkeyup="calculateJumlah(this); toggleTiketFile(this);" value="{{ isset($row['biaya_tiket']) ? (int) $row['biaya_tiket'] : '' }}">
+                        <input type="text" data-kode="TIKET" class="form-control form-control-sm text-end biaya-input tiket-amount-input komponen-input @error("peserta.{$index}.biaya_tiket") is-invalid @enderror" name="peserta[{{ $index }}][biaya_tiket]" placeholder="0" onkeyup="calculateJumlah(this); toggleBuktiFile(this, 'tiket');" value="{{ isset($row['biaya_tiket']) ? (int) $row['biaya_tiket'] : '' }}">
                         <div class="tiket-file-wrapper mt-1 {{ ((int)($row['biaya_tiket'] ?? 0) > 0) ? '' : 'd-none' }}">
                             <input type="file" class="form-control form-control-sm tiket-file-input @error("peserta.{$index}.tiket_file") is-invalid @enderror" name="peserta[{{ $index }}][tiket_file]" accept=".pdf,.jpg,.jpeg,.png" style="font-size: 0.7rem;">
                             @if(isset($row['tiket_file_path']))
@@ -142,11 +142,29 @@
                     </div>
                     <div class="col-md-2">
                         <label class="form-label mb-1 small" style="font-size: 0.75rem;">Transport</label>
-                        <input type="text" data-kode="TRANSPORT" class="form-control form-control-sm text-end biaya-input komponen-input @error("peserta.{$index}.biaya_transport") is-invalid @enderror" name="peserta[{{ $index }}][biaya_transport]" placeholder="0" onkeyup="calculateJumlah(this)" value="{{ isset($row['biaya_transport']) ? (int) $row['biaya_transport'] : '' }}">
+                        <input type="text" data-kode="TRANSPORT" class="form-control form-control-sm text-end biaya-input transport-amount-input komponen-input @error("peserta.{$index}.biaya_transport") is-invalid @enderror" name="peserta[{{ $index }}][biaya_transport]" placeholder="0" onkeyup="calculateJumlah(this); toggleBuktiFile(this, 'transport');" value="{{ isset($row['biaya_transport']) ? (int) $row['biaya_transport'] : '' }}">
+                        <div class="transport-file-wrapper mt-1 {{ ((int)($row['biaya_transport'] ?? 0) > 0) ? '' : 'd-none' }}">
+                            <input type="file" class="form-control form-control-sm transport-file-input @error("peserta.{$index}.transport_file") is-invalid @enderror" name="peserta[{{ $index }}][transport_file]" accept=".pdf,.jpg,.jpeg,.png" style="font-size: 0.7rem;">
+                            @if(isset($row['transport_file_path']))
+                                <small class="text-success d-block mt-1 transport-existing-notice" style="font-size: 0.65rem;">
+                                    <i class="bi bi-check-circle"></i> <a href="{{ Storage::url($row['transport_file_path']) }}" target="_blank">{{ $row['transport_file_name'] ?? 'Lihat Bukti' }}</a>
+                                </small>
+                            @endif
+                            <small class="text-muted d-block" style="font-size: 0.65rem;">Bukti transport (PDF/JPG/PNG, maks 5MB)</small>
+                        </div>
                     </div>
                     <div class="col-md-2">
                         <label class="form-label mb-1 small" style="font-size: 0.75rem;">Penginapan</label>
-                        <input type="text" data-kode="PENGINAPAN" class="form-control form-control-sm text-end biaya-input komponen-input @error("peserta.{$index}.biaya_penginapan") is-invalid @enderror" name="peserta[{{ $index }}][biaya_penginapan]" placeholder="0" onkeyup="calculateJumlah(this)" value="{{ isset($row['biaya_penginapan']) ? (int) $row['biaya_penginapan'] : '' }}">
+                        <input type="text" data-kode="PENGINAPAN" class="form-control form-control-sm text-end biaya-input penginapan-amount-input komponen-input @error("peserta.{$index}.biaya_penginapan") is-invalid @enderror" name="peserta[{{ $index }}][biaya_penginapan]" placeholder="0" onkeyup="calculateJumlah(this); toggleBuktiFile(this, 'penginapan');" value="{{ isset($row['biaya_penginapan']) ? (int) $row['biaya_penginapan'] : '' }}">
+                        <div class="penginapan-file-wrapper mt-1 {{ ((int)($row['biaya_penginapan'] ?? 0) > 0) ? '' : 'd-none' }}">
+                            <input type="file" class="form-control form-control-sm penginapan-file-input @error("peserta.{$index}.penginapan_file") is-invalid @enderror" name="peserta[{{ $index }}][penginapan_file]" accept=".pdf,.jpg,.jpeg,.png" style="font-size: 0.7rem;">
+                            @if(isset($row['penginapan_file_path']))
+                                <small class="text-success d-block mt-1 penginapan-existing-notice" style="font-size: 0.65rem;">
+                                    <i class="bi bi-check-circle"></i> <a href="{{ Storage::url($row['penginapan_file_path']) }}" target="_blank">{{ $row['penginapan_file_name'] ?? 'Lihat Bukti' }}</a>
+                                </small>
+                            @endif
+                            <small class="text-muted d-block" style="font-size: 0.65rem;">Bukti penginapan (PDF/JPG/PNG, maks 5MB)</small>
+                        </div>
                     </div>
 
                     {{-- Grup Uang Harian (Uang Harian + Representasi + Rapat) --}}
@@ -173,6 +191,18 @@
                                     <label class="form-label mb-1 text-muted" style="font-size: 0.65rem;">+ Rapat </label>
                                     <input type="text" data-kode="UANG_HARIAN" class="form-control form-control-sm text-end biaya-input uang-harian-component komponen-input @error("peserta.{$index}.uang_rapat") is-invalid @enderror" name="peserta[{{ $index }}][uang_rapat]" placeholder="0" onkeyup="calculateJumlah(this)" value="{{ isset($row['uang_rapat']) && (int) $row['uang_rapat'] > 0 ? (int) $row['uang_rapat'] : '' }}">
                                 </div>
+                            </div>
+                            @php
+                                $uhGroupTotal = (int)($row['uang_harian'] ?? 0) + (int)($row['uang_representasi'] ?? 0) + (int)($row['uang_rapat'] ?? 0);
+                            @endphp
+                            <div class="uang-harian-file-wrapper mt-2 {{ $uhGroupTotal > 0 ? '' : 'd-none' }}">
+                                <input type="file" class="form-control form-control-sm uang-harian-file-input @error("peserta.{$index}.uang_harian_file") is-invalid @enderror" name="peserta[{{ $index }}][uang_harian_file]" accept=".pdf,.jpg,.jpeg,.png" style="font-size: 0.7rem;">
+                                @if(isset($row['uang_harian_file_path']))
+                                    <small class="text-success d-block mt-1 uang-harian-existing-notice" style="font-size: 0.65rem;">
+                                        <i class="bi bi-check-circle"></i> <a href="{{ Storage::url($row['uang_harian_file_path']) }}" target="_blank">{{ $row['uang_harian_file_name'] ?? 'Lihat Bukti' }}</a>
+                                    </small>
+                                @endif
+                                <small class="text-muted d-block" style="font-size: 0.65rem;">Bukti uang harian (PDF/JPG/PNG, maks 5MB)</small>
                             </div>
                         </div>
                     </div>

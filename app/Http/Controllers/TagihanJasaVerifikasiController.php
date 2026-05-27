@@ -6,8 +6,10 @@ use Illuminate\Http\Request;
 use App\Models\TagihanJasa;
 use App\Models\WorkflowInstance;
 use App\Models\WorkflowApproval;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use App\Services\WorkflowService;
 
 class TagihanJasaVerifikasiController extends Controller
@@ -87,6 +89,7 @@ class TagihanJasaVerifikasiController extends Controller
                 // Seluruh tahap verifikasi (termasuk KPA / Kabandara) sudah selesai.
                 $tagihan->status = 'DISETUJUI';
                 $tagihan->save();
+                $this->generateFinalSuratPengantar($tagihan);
             } elseif ($currentApproval) {
                 $statusMap = [
                     'Koordinator Jasa'                          => 'VERIFIKASI_KOORDINATOR',
@@ -107,6 +110,71 @@ class TagihanJasaVerifikasiController extends Controller
             DB::rollBack();
             return back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
         }
+    }
+
+    private function generateFinalSuratPengantar(TagihanJasa $tagihan): void
+    {
+        $approver = Auth::user();
+        $pegawai = $approver?->pegawai;
+
+        $tagihan->forceFill([
+            'pejabat_penandatangan_nama' => $pegawai?->nama_lengkap ?: ($approver?->name ?: $tagihan->pejabat_penandatangan_nama),
+            'pejabat_penandatangan_nip' => $pegawai?->nip ?: $tagihan->pejabat_penandatangan_nip,
+            'pejabat_penandatangan_jabatan' => $pegawai?->jabatan
+                ?: ($approver?->hasRole('PLT/PLH') ? 'PLT/PLH Kepala Badan Layanan Umum' : ($tagihan->pejabat_penandatangan_jabatan ?: 'Kepala Badan Layanan Umum')),
+            'tanggal_surat_pengantar' => $tagihan->tanggal_surat_pengantar ?: $tagihan->tanggal_tagihan,
+            'perihal_surat_pengantar' => $tagihan->perihal_surat_pengantar ?: 'Penyampaian Tagihan PNBP Jasa',
+        ])->save();
+
+        $signedTagihan = $tagihan->fresh([
+            'mitra',
+            'mitraLegacy',
+            'kontrakMitraJasa',
+            'details.layananJasa',
+        ]);
+
+        $pdf = Pdf::loadView('tagihan_jasa.surat_pengantar_pdf', [
+            'tagihan' => $signedTagihan,
+            'signed' => true,
+        ])->setPaper('a4', 'portrait');
+
+        $fileName = 'surat-pengantar-final-' . str_replace(['/', '\\'], '-', $signedTagihan->nomor_tagihan) . '-' . now()->format('YmdHis') . '.pdf';
+        $path = 'tagihan-jasa/surat-pengantar-final/' . $fileName;
+
+        $pdfContent = $pdf->output();
+        Storage::disk('public')->put($path, $pdfContent);
+        $this->archiveFinalSuratPengantar($tagihan, $fileName, $path, strlen($pdfContent));
+
+        $tagihan->forceFill([
+            'file_surat_pengantar_final' => $path,
+            'uploaded_surat_pengantar_by' => Auth::id(),
+            'uploaded_surat_pengantar_at' => now(),
+            'status_dokumen_pengantar' => 'SUDAH_DITANDATANGANI',
+        ])->save();
+    }
+
+    private function archiveFinalSuratPengantar(TagihanJasa $tagihan, string $fileName, string $path, ?int $size = null): void
+    {
+        $tagihan->arsipDokumen()
+            ->where('jenis_dokumen', 'SURAT_PENGANTAR_FINAL_TTD')
+            ->where('is_active', true)
+            ->update(['is_active' => false]);
+
+        $fullPath = Storage::disk('public')->path($path);
+
+        $tagihan->arsipDokumen()->create([
+            'jenis_dokumen' => 'SURAT_PENGANTAR_FINAL_TTD',
+            'nama_file_asli' => $fileName,
+            'path_file' => $path,
+            'disk' => 'public',
+            'mime_type' => 'application/pdf',
+            'ukuran_file' => $size ?? (Storage::disk('public')->exists($path) ? Storage::disk('public')->size($path) : null),
+            'checksum' => is_file($fullPath) ? hash_file('sha256', $fullPath) : null,
+            'uploaded_by' => Auth::id(),
+            'uploaded_at' => now(),
+            'keterangan' => 'Arsip surat pengantar final bertanda tangan elektronik dari approval final.',
+            'is_active' => true,
+        ]);
     }
 
     public function reject(Request $request, $id)
@@ -133,6 +201,36 @@ class TagihanJasaVerifikasiController extends Controller
 
             DB::commit();
             return back()->with('success', 'Tagihan Jasa berhasil ditolak/dikembalikan.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
+        }
+    }
+
+    public function revision(Request $request, $id)
+    {
+        $request->validate([
+            'catatan' => 'required|string',
+        ]);
+
+        $tagihan = TagihanJasa::findOrFail($id);
+        $workflowInstance = $tagihan->workflowInstance;
+
+        if (!$workflowInstance) {
+            return back()->with('error', 'Workflow tidak ditemukan.');
+        }
+
+        try {
+            DB::beginTransaction();
+
+            $workflowService = app(WorkflowService::class);
+            $workflowService->requestRevision($tagihan, Auth::id(), $request->catatan);
+
+            $tagihan->status = 'REVISI';
+            $tagihan->save();
+
+            DB::commit();
+            return back()->with('success', 'Tagihan Jasa dikembalikan untuk revisi.');
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());

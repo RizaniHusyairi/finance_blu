@@ -56,14 +56,8 @@
 @section('content')
 @php
     $rupiah = fn ($value) => 'Rp ' . number_format((float) $value, 0, ',', '.');
+    $angka = fn ($value) => number_format((float) $value, 0, ',', '.');
     $tanggal = fn ($value) => $value ? \Carbon\Carbon::parse($value)->format('d/m/Y') : '-';
-    $statusClass = fn ($status) => match ($status) {
-        'diajukan' => 'bg-warning text-dark',
-        'diverifikasi' => 'bg-success',
-        'ditolak' => 'bg-danger',
-        'ditagihkan' => 'bg-primary',
-        default => 'bg-secondary',
-    };
 @endphp
 
 <div class="tw-scope">
@@ -76,7 +70,7 @@
             </div>
             <div>
                 <h4 class="mb-1 text-xl font-black text-white lg:text-2xl">Verifikasi Laporan PAX PJP2U</h4>
-                <p class="mb-0 text-sm font-semibold text-blue-100/80">Daftar laporan penumpang PJP2U dari mitra untuk dasar penagihan.</p>
+                <p class="mb-0 text-sm font-semibold text-blue-100/80">Rekap bulanan laporan penumpang PJP2U dari mitra untuk dasar penagihan.</p>
             </div>
         </div>
         <a href="{{ route('jasa.mitra.index') }}" class="inline-flex items-center justify-center rounded-xl bg-white px-4 py-2 text-sm font-bold text-blue-700 shadow-lg shadow-slate-950/15 transition hover:-translate-y-0.5 hover:bg-blue-50">
@@ -145,8 +139,8 @@
         <div class="d-flex align-items-center gap-2">
             <span class="d-inline-flex align-items-center justify-content-center rounded-3 bg-primary text-white shadow-sm" style="width:34px;height:34px;"><i class="bi bi-table"></i></span>
             <div>
-                <div class="fw-bold" style="color:#1e3a8a;">Daftar Laporan PAX PJP2U</div>
-                <div class="small fw-semibold text-muted">Laporan penumpang yang menjadi dasar tagihan PJP2U.</div>
+                <div class="fw-bold" style="color:#1e3a8a;">Rekap Laporan PAX PJP2U</div>
+                <div class="small fw-semibold text-muted">Data utama diringkas per mitra, layanan, dan bulan. Detail harian tersedia di detail mitra.</div>
             </div>
         </div>
     </div>
@@ -158,78 +152,87 @@
                     <th>Mitra</th>
                     <th>Layanan</th>
                     <th>Periode</th>
-                    <th>Omzet / Pax</th>
-                    <th>Nilai Konsesi</th>
-                    <th>Nilai Tagihan</th>
-                    <th>Status</th>
+                    <th>Laporan Harian</th>
+                    <th>Total Pax</th>
+                    <th>Total Tagihan</th>
+                    <th>Status Rekap</th>
                     <th>Tagihan</th>
                     <th>Aksi</th>
                 </tr>
             </thead>
             <tbody>
-                @forelse($penjualans as $penjualan)
+                @forelse($rekapPjp2u as $row)
                     <tr>
-                        <td>{{ $penjualans->firstItem() + $loop->index }}</td>
-                        <td class="fw-semibold">{{ $penjualan->mitraJasa->nama_mitra ?? '-' }}</td>
+                        <td>{{ $rekapPjp2u->firstItem() + $loop->index }}</td>
                         <td>
-                            <a href="{{ route('jasa.mitra.penjualan.show', [$penjualan->mitra_jasa_id, $penjualan]) }}" class="text-decoration-none">
-                                {{ $penjualan->layananJasa->nama_layanan ?? '-' }}
+                            <a href="{{ route('jasa.mitra.pjp2u.rekap.show', [$row->mitra_jasa_id, $row->layanan_jasa_id, $row->tahun, $row->bulan]) }}" class="fw-semibold text-decoration-none">
+                                {{ $row->mitra->nama_mitra ?? '-' }}
                             </a>
                         </td>
-                        <td>{{ $tanggal($penjualan->periode_mulai) }} s.d. {{ $tanggal($penjualan->periode_selesai) }}</td>
-                        <td>{{ $rupiah($penjualan->total_omzet) }}</td>
-                        <td>{{ $rupiah($penjualan->nilai_konsesi) }}</td>
-                        <td class="fw-bold text-success">{{ $rupiah($penjualan->nilai_tagihan) }}</td>
-                        <td><span class="badge {{ $statusClass($penjualan->status) }}">{{ ucfirst($penjualan->status) }}</span></td>
                         <td>
-                            @if($penjualan->tagihanJasa)
-                                <a href="{{ route('tagihan-jasa.show', $penjualan->tagihanJasa) }}" class="btn btn-sm btn-light border">{{ $penjualan->tagihanJasa->nomor_tagihan }}</a>
+                            <div class="fw-semibold">{{ $row->layanan->nama_layanan ?? '-' }}</div>
+                            <div class="small text-muted">{{ $row->layanan->kode_layanan ?? '' }}</div>
+                        </td>
+                        <td>
+                            <div class="fw-semibold">{{ \Carbon\Carbon::create($row->tahun, $row->bulan, 1)->translatedFormat('F Y') }}</div>
+                            <div class="small text-muted">{{ $tanggal($row->periode_mulai) }} s.d. {{ $tanggal($row->periode_selesai) }}</div>
+                        </td>
+                        <td>
+                            <div class="fw-bold">{{ $row->jumlah_laporan }} laporan</div>
+                            <div class="small text-muted">{{ $row->file_count }} file terlampir</div>
+                        </td>
+                        <td class="fw-semibold">{{ $angka($row->total_pax) }} pax</td>
+                        <td>
+                            <div class="fw-bold text-success">{{ $rupiah($row->nilai_tagihan) }}</div>
+                            <div class="small text-muted">{{ $angka($row->total_pax) }} pax tercatat</div>
+                        </td>
+                        <td>
+                            <span class="badge {{ $row->status_class }}">{{ $row->status_label }}</span>
+                            <div class="small text-muted mt-1">
+                                @foreach($row->status_counts as $status => $count)
+                                    <span class="me-2">{{ ucfirst($status) }}: {{ $count }}</span>
+                                @endforeach
+                            </div>
+                        </td>
+                        <td>
+                            @if($row->tagihan_count > 0)
+                                @if($row->tagihan_count === 1 && $row->first_tagihan)
+                                    <a href="{{ route('tagihan-jasa.show', $row->first_tagihan) }}" class="btn btn-sm btn-light border">{{ $row->first_tagihan->nomor_tagihan }}</a>
+                                @else
+                                    <span class="badge bg-primary">{{ $row->tagihan_count }} tagihan</span>
+                                @endif
                             @else
                                 <span class="text-muted">Belum</span>
                             @endif
                         </td>
                         <td>
                             <div class="d-flex gap-1 flex-wrap align-items-center">
-                                <a href="{{ route('jasa.mitra.penjualan.show', [$penjualan->mitra_jasa_id, $penjualan]) }}" class="btn btn-sm btn-light border text-primary fw-semibold jasa-icon-btn" title="Detail" aria-label="Detail"><i class="bi bi-eye"></i></a>
-                                @if($penjualan->file_laporan)
-                                    <a href="{{ asset('storage/' . $penjualan->file_laporan) }}" target="_blank" class="btn btn-sm btn-light border text-primary fw-semibold jasa-icon-btn" title="File laporan" aria-label="File laporan"><i class="bi bi-paperclip"></i></a>
+                                <a href="{{ route('jasa.mitra.pjp2u.rekap.show', [$row->mitra_jasa_id, $row->layanan_jasa_id, $row->tahun, $row->bulan]) }}" class="btn btn-sm btn-light border text-primary fw-semibold jasa-icon-btn" title="Detail rekap harian" aria-label="Detail rekap harian"><i class="bi bi-list-ul"></i></a>
+                                @if($row->latest_report)
+                                    <a href="{{ route('jasa.mitra.penjualan.show', [$row->mitra_jasa_id, $row->latest_report]) }}" class="btn btn-sm btn-light border text-primary fw-semibold jasa-icon-btn" title="Laporan terbaru" aria-label="Laporan terbaru"><i class="bi bi-eye"></i></a>
                                 @endif
-                                @if($penjualan->status === 'diajukan' && $penjualan->can_be_verified)
-                                    <form method="POST" action="{{ route('jasa.mitra.penjualan.verify', [$penjualan->mitra_jasa_id, $penjualan]) }}">
-                                        @csrf
-                                        <button class="btn btn-sm btn-success jasa-icon-btn" title="Verifikasi" aria-label="Verifikasi"><i class="bi bi-check2-circle"></i></button>
-                                    </form>
-                                    <form method="POST" action="{{ route('jasa.mitra.penjualan.reject', [$penjualan->mitra_jasa_id, $penjualan]) }}" onsubmit="return confirm('Tolak laporan ini? Pastikan catatan sudah diisi.');" class="d-flex gap-1">
-                                        @csrf
-                                        <input type="text" name="catatan_verifikator" class="form-control form-control-sm" placeholder="Catatan" required style="width: 130px;">
-                                        <button class="btn btn-sm btn-danger jasa-icon-btn" title="Tolak" aria-label="Tolak"><i class="bi bi-x-circle"></i></button>
-                                    </form>
+                                @if($row->needs_verification_count > 0)
+                                    <span class="badge bg-warning text-dark" title="Buka detail mitra untuk verifikasi per laporan">{{ $row->needs_verification_count }} perlu verifikasi</span>
                                 @endif
-                                @if($penjualan->status === 'diajukan' && ! $penjualan->can_be_verified)
-                                    <span class="badge bg-warning text-dark" title="Verifikasi setelah bulan pelaporan berakhir">
-                                        <i class="bi bi-hourglass-split"></i> Tunggu
-                                    </span>
+                                @if($row->waiting_verification_count > 0)
+                                    <span class="badge bg-info text-dark" title="Menunggu syarat verifikasi laporan">{{ $row->waiting_verification_count }} tunggu</span>
                                 @endif
-                                @if($penjualan->status === 'diverifikasi' && ! $penjualan->tagihan_jasa_id && $penjualan->layanan_jasa_id)
-                                    @if($penjualan->can_create_tagihan)
-                                        <a href="{{ route('tagihan-jasa.create', ['penjualan_id' => $penjualan->id]) }}" class="btn btn-sm btn-primary jasa-icon-btn" title="Buat tagihan" aria-label="Buat tagihan"><i class="bi bi-receipt"></i></a>
-                                    @else
-                                        <span class="badge bg-info text-dark" title="Tagihan tersedia mulai {{ $penjualan->tagihan_available_date }}">
-                                            <i class="bi bi-calendar-check"></i> {{ $penjualan->tagihan_available_date }}
-                                        </span>
-                                    @endif
+                                @if($row->can_create_tagihan_count > 0 && $row->createable_report)
+                                    <a href="{{ route('jasa.mitra.pjp2u.rekap.show', [$row->mitra_jasa_id, $row->layanan_jasa_id, $row->tahun, $row->bulan]) }}" class="btn btn-sm btn-primary fw-semibold" title="Buka daftar tagihan harian">
+                                        <i class="bi bi-receipt me-1"></i>{{ $row->can_create_tagihan_count }}
+                                    </a>
                                 @endif
                             </div>
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="10" class="text-center text-muted py-4">Belum ada laporan PAX PJP2U mitra.</td></tr>
+                    <tr><td colspan="10" class="text-center text-muted py-4">Belum ada rekap laporan PAX PJP2U mitra.</td></tr>
                 @endforelse
             </tbody>
         </table>
     </div>
-    @if($penjualans->hasPages())
-        <div class="card-footer bg-white">{{ $penjualans->links() }}</div>
+    @if($rekapPjp2u->hasPages())
+        <div class="card-footer bg-white">{{ $rekapPjp2u->links() }}</div>
     @endif
 </div>
 </div>

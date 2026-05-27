@@ -7,7 +7,9 @@ use App\Models\MitraJasa;
 use App\Models\MitraJasaPenjualan;
 use App\Models\TagihanJasa;
 use App\Services\MitraJasaKonsesiService;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
@@ -92,8 +94,7 @@ class MitraJasaPenjualanController extends Controller
             ->latest('id');
 
         // PJP2U: any Admin Jasa can see all PJP2U reports (shared responsibility)
-        $user = auth()->user();
-        if (! $user?->hasAnyRole(['Super Admin', 'Super Admin Jasa', 'Koordinator Jasa', 'Admin Jasa'])) {
+        if (! $this->canViewPjp2uReports()) {
             $query->whereRaw('1 = 0');
         }
 
@@ -109,10 +110,153 @@ class MitraJasaPenjualanController extends Controller
                 });
             });
 
-        $penjualans = $query->paginate(15)->withQueryString();
+        $rekapPjp2u = $this->paginateCollection(
+            $this->buildPjp2uRekapRows($query->get()),
+            $request
+        );
         $mitras = MitraJasa::query()->orderBy('nama_mitra')->get(['id', 'nama_mitra']);
 
-        return view('super_admin_jasa.mitra.pjp2u-index', compact('penjualans', 'mitras', 'filters'));
+        return view('super_admin_jasa.mitra.pjp2u-index', compact('rekapPjp2u', 'mitras', 'filters'));
+    }
+
+    private function buildPjp2uRekapRows(Collection $penjualans): Collection
+    {
+        return $penjualans
+            ->groupBy(fn (MitraJasaPenjualan $penjualan) => implode('|', [
+                $penjualan->mitra_jasa_id,
+                $penjualan->layanan_jasa_id,
+                $penjualan->tahun,
+                $penjualan->bulan,
+            ]))
+            ->map(function (Collection $items) {
+                /** @var MitraJasaPenjualan $latestReport */
+                $latestReport = $items->first();
+                $statusCounts = $items->groupBy('status')->map->count();
+                [$statusLabel, $statusClass] = $this->resolvePjp2uRekapStatus($statusCounts);
+
+                $createableReport = $items->first(fn (MitraJasaPenjualan $penjualan) => $penjualan->status === 'diverifikasi'
+                    && ! $penjualan->tagihan_jasa_id
+                    && $penjualan->layanan_jasa_id
+                    && $penjualan->can_create_tagihan);
+
+                $firstTagihan = $items
+                    ->pluck('tagihanJasa')
+                    ->filter()
+                    ->first();
+
+                return (object) [
+                    'mitra_jasa_id' => $latestReport->mitra_jasa_id,
+                    'layanan_jasa_id' => $latestReport->layanan_jasa_id,
+                    'mitra' => $latestReport->mitraJasa,
+                    'layanan' => $latestReport->layananJasa,
+                    'bulan' => (int) $latestReport->bulan,
+                    'tahun' => (int) $latestReport->tahun,
+                    'periode_mulai' => $items->pluck('periode_mulai')->filter()->sort()->first(),
+                    'periode_selesai' => $items->pluck('periode_selesai')->filter()->sortDesc()->first(),
+                    'jumlah_laporan' => $items->count(),
+                    'total_pax' => $items->sum(fn (MitraJasaPenjualan $penjualan) => (float) $penjualan->total_omzet),
+                    'nilai_konsesi' => $items->sum(fn (MitraJasaPenjualan $penjualan) => (float) $penjualan->nilai_konsesi),
+                    'nilai_tagihan' => $items->sum(fn (MitraJasaPenjualan $penjualan) => (float) $penjualan->nilai_tagihan),
+                    'status_counts' => $statusCounts,
+                    'status_label' => $statusLabel,
+                    'status_class' => $statusClass,
+                    'latest_report' => $latestReport,
+                    'createable_report' => $createableReport,
+                    'needs_verification_count' => $items->filter(fn (MitraJasaPenjualan $penjualan) => $penjualan->status === 'diajukan' && $penjualan->can_be_verified)->count(),
+                    'waiting_verification_count' => $items->filter(fn (MitraJasaPenjualan $penjualan) => $penjualan->status === 'diajukan' && ! $penjualan->can_be_verified)->count(),
+                    'can_create_tagihan_count' => $items->filter(fn (MitraJasaPenjualan $penjualan) => $penjualan->status === 'diverifikasi'
+                        && ! $penjualan->tagihan_jasa_id
+                        && $penjualan->layanan_jasa_id
+                        && $penjualan->can_create_tagihan)->count(),
+                    'tagihan_count' => $items->pluck('tagihan_jasa_id')->filter()->unique()->count(),
+                    'first_tagihan' => $firstTagihan,
+                    'file_count' => $items->filter(fn (MitraJasaPenjualan $penjualan) => filled($penjualan->file_laporan))->count(),
+                ];
+            })
+            ->sortByDesc(fn ($row) => sprintf('%04d%02d%010d%010d', $row->tahun, $row->bulan, $row->mitra_jasa_id, $row->layanan_jasa_id))
+            ->values();
+    }
+
+    private function resolvePjp2uRekapStatus(Collection $statusCounts): array
+    {
+        if (($statusCounts->get('diajukan') ?? 0) > 0) {
+            return ['Menunggu Verifikasi', 'bg-warning text-dark'];
+        }
+
+        if (($statusCounts->get('ditolak') ?? 0) > 0) {
+            return ['Ada Ditolak', 'bg-danger'];
+        }
+
+        if (($statusCounts->get('diverifikasi') ?? 0) > 0) {
+            return ['Siap Tagih', 'bg-success'];
+        }
+
+        if (($statusCounts->get('ditagihkan') ?? 0) > 0) {
+            return [$statusCounts->count() === 1 ? 'Ditagihkan' : 'Sebagian Ditagihkan', 'bg-primary'];
+        }
+
+        return ['Draft', 'bg-secondary'];
+    }
+
+    private function paginateCollection(Collection $items, Request $request, int $perPage = 15): LengthAwarePaginator
+    {
+        $page = LengthAwarePaginator::resolveCurrentPage();
+
+        return new LengthAwarePaginator(
+            $items->forPage($page, $perPage)->values(),
+            $items->count(),
+            $perPage,
+            $page,
+            [
+                'path' => $request->url(),
+                'query' => $request->query(),
+            ]
+        );
+    }
+
+    public function showPjp2uRekap(Request $request, MitraJasa $mitra, LayananJasa $layanan, int $tahun, int $bulan)
+    {
+        abort_unless($this->canViewPjp2uReports(), 403);
+        abort_unless($layanan->isPjp2u(), 404);
+        abort_unless($bulan >= 1 && $bulan <= 12 && $tahun >= 2020 && $tahun <= 2100, 404);
+
+        $baseQuery = MitraJasaPenjualan::with(['mitraJasa', 'layananJasa', 'tagihanJasa', 'sourceTagihanJasa'])
+            ->where('mitra_jasa_id', $mitra->id)
+            ->where('layanan_jasa_id', $layanan->id)
+            ->where('tahun', $tahun)
+            ->where('bulan', $bulan);
+
+        $summaryItems = (clone $baseQuery)
+            ->orderByDesc('periode_mulai')
+            ->orderByDesc('id')
+            ->get();
+
+        $rekap = $this->buildPjp2uRekapRows($summaryItems)->first() ?: (object) [
+            'jumlah_laporan' => 0,
+            'total_pax' => 0,
+            'nilai_konsesi' => 0,
+            'nilai_tagihan' => 0,
+            'status_counts' => collect(),
+            'status_label' => 'Kosong',
+            'status_class' => 'bg-secondary',
+            'tagihan_count' => 0,
+            'file_count' => 0,
+        ];
+
+        $penjualans = (clone $baseQuery)
+            ->orderBy('periode_mulai')
+            ->orderBy('id')
+            ->paginate(31)
+            ->withQueryString();
+
+        return view('super_admin_jasa.mitra.pjp2u-rekap-show', compact(
+            'mitra',
+            'layanan',
+            'tahun',
+            'bulan',
+            'rekap',
+            'penjualans'
+        ));
     }
 
     public function show(MitraJasa $mitra, MitraJasaPenjualan $penjualan)
@@ -270,7 +414,7 @@ class MitraJasaPenjualanController extends Controller
         $this->ensureCanVerifyPenjualan($mitra, $penjualan);
         abort_unless($penjualan->status === 'diajukan', 403);
 
-        // Guard: verifikasi hanya bisa dilakukan setelah berganti bulan
+        // Guard: konsesi menunggu bulan berakhir, PJP2U harian langsung bisa diverifikasi.
         if (! $penjualan->can_be_verified) {
             return back()->with('error', 'Laporan belum dapat diverifikasi. Verifikasi hanya dapat dilakukan setelah bulan pelaporan berakhir (berganti bulan).');
         }
@@ -407,5 +551,15 @@ class MitraJasaPenjualanController extends Controller
     private function hasSourceTagihanColumn(): bool
     {
         return Schema::hasColumn('mitra_jasa_penjualan', 'source_tagihan_jasa_id');
+    }
+
+    private function canViewPjp2uReports(): bool
+    {
+        return auth()->user()?->hasAnyRole([
+            'Super Admin',
+            'Super Admin Jasa',
+            'Koordinator Jasa',
+            'Admin Jasa',
+        ]) === true;
     }
 }

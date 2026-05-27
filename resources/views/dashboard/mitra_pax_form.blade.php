@@ -110,7 +110,7 @@
     <div class="alert alert-danger rounded-3"><i class="bi bi-exclamation-triangle me-1"></i>{{ session('error') }}</div>
 @endif
 @if(! $konsesiLayanan)
-    <div class="alert alert-warning rounded-3"><i class="bi bi-info-circle me-1"></i>Belum ada layanan Konsesi yang ditugaskan kepada mitra ini. Hubungi Admin Jasa untuk pengaturan layanan aktif.</div>
+    <div class="alert alert-warning rounded-3"><i class="bi bi-info-circle me-1"></i>Belum ada layanan PAX PJP2U yang ditugaskan kepada mitra ini. Hubungi Admin Jasa untuk pengaturan layanan aktif.</div>
 @endif
 
 {{-- Kontrak Info --}}
@@ -246,6 +246,10 @@
                     <input type="number" id="inputGrandTotal" class="form-control omzet-input bg-white" value="0" readonly>
                 </div>
             </div>
+            <div class="alert alert-info mt-3 mb-0 small">
+                <i class="bi bi-info-circle me-1"></i>
+                <strong>Catatan:</strong> Total tagihan dihitung dari (Pax Dewasa + Pax Anak-anak + Pax Bayi) &times; tarif dasar. <strong>Pax Transit tidak dikenakan tagihan</strong> (hanya tercatat pada Grand Total Pax).
+            </div>
         </div>
     </div>
 
@@ -269,7 +273,7 @@
 
     {{-- Submit --}}
     <div class="d-flex justify-content-between align-items-center">
-        <a href="{{ route('mitra.konsesi-penjualan') }}" class="btn btn-light border fw-bold px-4">Batal</a>
+        <a href="{{ route('mitra.pjp2u-penjualan') }}" class="btn btn-light border fw-bold px-4">Batal</a>
         <button type="submit" class="btn btn-primary fw-bold px-5 py-2" {{ ! $konsesiLayanan ? 'disabled' : '' }}>
             <i class="bi bi-send me-1"></i>Kirim Laporan
         </button>
@@ -383,19 +387,23 @@ document.addEventListener('DOMContentLoaded', function () {
                 </div>
             </div>
             <div class="row g-3">
-                <div class="col-md-3">
+                <div class="col-6 col-md">
                     <label class="form-label fw-bold text-muted small text-uppercase">Pax Dewasa</label>
                     <input type="number" min="0" name="penerbangan[${idx}][pax_dewasa]" class="form-control omzet-input pax-dewasa" value="0" required>
                 </div>
-                <div class="col-md-3">
+                <div class="col-6 col-md">
                     <label class="form-label fw-bold text-muted small text-uppercase">Pax Anak-anak</label>
                     <input type="number" min="0" name="penerbangan[${idx}][pax_anak]" class="form-control omzet-input pax-anak" value="0" required>
                 </div>
-                <div class="col-md-3">
+                <div class="col-6 col-md">
                     <label class="form-label fw-bold text-muted small text-uppercase">Pax Bayi</label>
                     <input type="number" min="0" name="penerbangan[${idx}][pax_bayi]" class="form-control omzet-input pax-bayi" value="0" required>
                 </div>
-                <div class="col-md-3">
+                <div class="col-6 col-md">
+                    <label class="form-label fw-bold text-muted small text-uppercase">Pax Transit</label>
+                    <input type="number" min="0" name="penerbangan[${idx}][pax_transit]" class="form-control omzet-input pax-transit" value="0" required>
+                </div>
+                <div class="col-12 col-md">
                     <label class="form-label fw-bold text-muted small text-uppercase">Total Pax</label>
                     <input type="number" class="form-control omzet-input bg-light row-total" value="0" readonly>
                 </div>
@@ -420,7 +428,8 @@ document.addEventListener('DOMContentLoaded', function () {
             const dewasa = parseInt(row.querySelector('.pax-dewasa').value) || 0;
             const anak = parseInt(row.querySelector('.pax-anak').value) || 0;
             const bayi = parseInt(row.querySelector('.pax-bayi').value) || 0;
-            const rowTotal = dewasa + anak + bayi;
+            const transit = parseInt(row.querySelector('.pax-transit').value) || 0;
+            const rowTotal = dewasa + anak + bayi + transit;
             row.querySelector('.row-total').value = rowTotal;
             grandTotal += rowTotal;
         });

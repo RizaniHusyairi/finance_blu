@@ -31,6 +31,38 @@ class PerjaldinController extends Controller
     }
 
     /**
+     * Helper: Mapping input file bukti ke kolom DB & folder storage.
+     * Key = nama input dari form (peserta[i][<key>])
+     */
+    private function buktiFileMap(): array
+    {
+        return [
+            'spt_file' => ['path' => 'spt_file_path', 'name' => 'spt_file_name', 'dir' => 'perjaldin/spt'],
+            'tiket_file' => ['path' => 'tiket_file_path', 'name' => 'tiket_file_name', 'dir' => 'perjaldin/tiket'],
+            'transport_file' => ['path' => 'transport_file_path', 'name' => 'transport_file_name', 'dir' => 'perjaldin/transport'],
+            'penginapan_file' => ['path' => 'penginapan_file_path', 'name' => 'penginapan_file_name', 'dir' => 'perjaldin/penginapan'],
+            'uang_harian_file' => ['path' => 'uang_harian_file_path', 'name' => 'uang_harian_file_name', 'dir' => 'perjaldin/uang-harian'],
+        ];
+    }
+
+    /**
+     * Helper: Cek apakah komponen biaya untuk bukti tersebut bernilai > 0.
+     * Jika 0, file lama harus dihapus bersamaan dengan zero-kan nilainya.
+     */
+    private function buktiAmountForInput(string $inputKey, array $pesertaData): float
+    {
+        return match ($inputKey) {
+            'tiket_file' => (float) ($pesertaData['biaya_tiket'] ?? 0),
+            'transport_file' => (float) ($pesertaData['biaya_transport'] ?? 0),
+            'penginapan_file' => (float) ($pesertaData['biaya_penginapan'] ?? 0),
+            'uang_harian_file' => (float) ($pesertaData['uang_harian'] ?? 0)
+                + (float) ($pesertaData['uang_representasi'] ?? 0)
+                + (float) ($pesertaData['uang_rapat'] ?? 0),
+            default => 1, // SPT always relevant
+        };
+    }
+
+    /**
      * Helper: Hitung total masing-masing row peserta.
      */
     private function calculatePesertaRowTotal(array $p): float
@@ -253,6 +285,9 @@ class PerjaldinController extends Controller
             'peserta.*.tipe_perjalanan' => 'required|string|in:luar_kota,dalam_kota_lebih_8_jam,diklat',
             'peserta.*.spt_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
             'peserta.*.tiket_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
+            'peserta.*.transport_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
+            'peserta.*.penginapan_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
+            'peserta.*.uang_harian_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
             'peserta.*.tujuan' => 'nullable|string|max:255',
             'peserta.*.rekening' => 'nullable|string|max:100',
             'peserta.*.tgl_berangkat' => 'required|date',
@@ -325,22 +360,15 @@ class PerjaldinController extends Controller
 
             // Insert detail per peserta
             foreach ($request->peserta as $index => $pesertaData) {
-                // Upload file handler
-                $sptFilePath = null;
-                $sptFileName = null;
-                $tiketFilePath = null;
-                $tiketFileName = null;
-
-                if ($request->hasFile("peserta.{$index}.spt_file")) {
-                    $file = $request->file("peserta.{$index}.spt_file");
-                    $sptFileName = $file->getClientOriginalName();
-                    $sptFilePath = $file->store('perjaldin/spt', 'public');
-                }
-
-                if ($request->hasFile("peserta.{$index}.tiket_file")) {
-                    $file = $request->file("peserta.{$index}.tiket_file");
-                    $tiketFileName = $file->getClientOriginalName();
-                    $tiketFilePath = $file->store('perjaldin/tiket', 'public');
+                $files = [];
+                foreach ($this->buktiFileMap() as $inputKey => $cfg) {
+                    $files[$cfg['path']] = null;
+                    $files[$cfg['name']] = null;
+                    if ($request->hasFile("peserta.{$index}.{$inputKey}")) {
+                        $f = $request->file("peserta.{$index}.{$inputKey}");
+                        $files[$cfg['name']] = $f->getClientOriginalName();
+                        $files[$cfg['path']] = $f->store($cfg['dir'], 'public');
+                    }
                 }
 
                 DetailPerjaldin::create([
@@ -361,10 +389,7 @@ class PerjaldinController extends Controller
                     'uang_harian' => $pesertaData['uang_harian'] ?? 0,
                     'uang_representasi' => $pesertaData['uang_representasi'] ?? 0,
                     'uang_rapat' => $pesertaData['uang_rapat'] ?? 0,
-                    'spt_file_path' => $sptFilePath,
-                    'spt_file_name' => $sptFileName,
-                    'tiket_file_path' => $tiketFilePath,
-                    'tiket_file_name' => $tiketFileName,
+                    ...$files,
                 ]);
             }
 
@@ -556,6 +581,9 @@ class PerjaldinController extends Controller
             'peserta.*.tipe_perjalanan' => 'required|string|in:luar_kota,dalam_kota_lebih_8_jam,diklat',
             'peserta.*.spt_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
             'peserta.*.tiket_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
+            'peserta.*.transport_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
+            'peserta.*.penginapan_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
+            'peserta.*.uang_harian_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
             'peserta.*.tujuan' => 'nullable|string|max:255',
             'peserta.*.rekening' => 'nullable|string|max:100',
             'peserta.*.tgl_berangkat' => 'required|date',
@@ -622,18 +650,19 @@ class PerjaldinController extends Controller
                 'status' => 'DRAFT', // Reset ke draft saat diedit
             ]);
 
-            // Ambil detail lama untuk mempertahankan spt_file jika tidak diupload baru
+            // Ambil detail lama untuk mempertahankan file lampiran jika tidak diupload baru
             $oldDetails = DetailPerjaldin::where('tagihan_id', $tagihan->id)->get()->keyBy('id');
             $keptDetailIds = array_filter(array_column($request->peserta, 'detail_id'));
-            
+            $buktiMap = $this->buktiFileMap();
+            $storage = \Illuminate\Support\Facades\Storage::disk('public');
+
             // Hapus file fisik dari detail yang di-remove user
             foreach ($oldDetails as $oldId => $oldDetail) {
                 if (!in_array($oldId, $keptDetailIds)) {
-                    if ($oldDetail->spt_file_path) {
-                        \Illuminate\Support\Facades\Storage::disk('public')->delete($oldDetail->spt_file_path);
-                    }
-                    if ($oldDetail->tiket_file_path) {
-                        \Illuminate\Support\Facades\Storage::disk('public')->delete($oldDetail->tiket_file_path);
+                    foreach ($buktiMap as $cfg) {
+                        if ($oldDetail->{$cfg['path']}) {
+                            $storage->delete($oldDetail->{$cfg['path']});
+                        }
                     }
                 }
             }
@@ -642,45 +671,33 @@ class PerjaldinController extends Controller
             DetailPerjaldin::where('tagihan_id', $tagihan->id)->delete();
 
             foreach ($request->peserta as $index => $pesertaData) {
-                $sptFilePath = null;
-                $sptFileName = null;
-                $tiketFilePath = null;
-                $tiketFileName = null;
+                $files = [];
                 $oldExisting = null;
-
                 if (!empty($pesertaData['detail_id']) && $oldDetails->has($pesertaData['detail_id'])) {
                     $oldExisting = $oldDetails->get($pesertaData['detail_id']);
-                    $sptFilePath = $oldExisting->spt_file_path;
-                    $sptFileName = $oldExisting->spt_file_name;
-                    $tiketFilePath = $oldExisting->tiket_file_path;
-                    $tiketFileName = $oldExisting->tiket_file_name;
                 }
 
-                if ($request->hasFile("peserta.{$index}.spt_file")) {
-                    $file = $request->file("peserta.{$index}.spt_file");
-                    $sptFileName = $file->getClientOriginalName();
-                    $sptFilePath = $file->store('perjaldin/spt', 'public');
+                foreach ($buktiMap as $inputKey => $cfg) {
+                    // Default: pertahankan file lama
+                    $files[$cfg['path']] = $oldExisting?->{$cfg['path']};
+                    $files[$cfg['name']] = $oldExisting?->{$cfg['name']};
 
-                    if ($oldExisting && $oldExisting->spt_file_path) {
-                        \Illuminate\Support\Facades\Storage::disk('public')->delete($oldExisting->spt_file_path);
+                    // Upload baru → replace, hapus file lama
+                    if ($request->hasFile("peserta.{$index}.{$inputKey}")) {
+                        $f = $request->file("peserta.{$index}.{$inputKey}");
+                        if ($oldExisting && $oldExisting->{$cfg['path']}) {
+                            $storage->delete($oldExisting->{$cfg['path']});
+                        }
+                        $files[$cfg['name']] = $f->getClientOriginalName();
+                        $files[$cfg['path']] = $f->store($cfg['dir'], 'public');
                     }
-                }
 
-                if ($request->hasFile("peserta.{$index}.tiket_file")) {
-                    $file = $request->file("peserta.{$index}.tiket_file");
-                    $tiketFileName = $file->getClientOriginalName();
-                    $tiketFilePath = $file->store('perjaldin/tiket', 'public');
-
-                    if ($oldExisting && $oldExisting->tiket_file_path) {
-                        \Illuminate\Support\Facades\Storage::disk('public')->delete($oldExisting->tiket_file_path);
+                    // Jika nilai komponen di-zero-kan, hapus file bukti yang nyangkut
+                    if ($this->buktiAmountForInput($inputKey, $pesertaData) <= 0 && $files[$cfg['path']]) {
+                        $storage->delete($files[$cfg['path']]);
+                        $files[$cfg['path']] = null;
+                        $files[$cfg['name']] = null;
                     }
-                }
-
-                // Hapus file tiket lama jika nilai biaya_tiket di-zero-kan
-                if (($pesertaData['biaya_tiket'] ?? 0) <= 0 && $tiketFilePath) {
-                    \Illuminate\Support\Facades\Storage::disk('public')->delete($tiketFilePath);
-                    $tiketFilePath = null;
-                    $tiketFileName = null;
                 }
 
                 DetailPerjaldin::create([
@@ -701,10 +718,7 @@ class PerjaldinController extends Controller
                     'uang_harian' => $pesertaData['uang_harian'] ?? 0,
                     'uang_representasi' => $pesertaData['uang_representasi'] ?? 0,
                     'uang_rapat' => $pesertaData['uang_rapat'] ?? 0,
-                    'spt_file_path' => $sptFilePath,
-                    'spt_file_name' => $sptFileName,
-                    'tiket_file_path' => $tiketFilePath,
-                    'tiket_file_name' => $tiketFileName,
+                    ...$files,
                 ]);
             }
 

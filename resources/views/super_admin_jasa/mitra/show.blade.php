@@ -1436,8 +1436,8 @@
                                                 </form>
                                             @endif
                                             @if($penjualan->status === 'diajukan' && ! $penjualan->can_be_verified)
-                                                <span class="badge bg-warning text-dark" title="Verifikasi hanya dapat dilakukan setelah bulan pelaporan berakhir">
-                                                    <i class="bi bi-hourglass-split"></i> Tunggu Ganti Bulan
+                                                <span class="badge bg-warning text-dark" title="Menunggu syarat verifikasi laporan">
+                                                    <i class="bi bi-hourglass-split"></i> Tunggu
                                                 </span>
                                             @endif
                                             @if($penjualan->status === 'diverifikasi' && ! $penjualan->tagihan_jasa_id && $penjualan->layanan_jasa_id)
@@ -1469,7 +1469,7 @@
             </div>
         </div>
 
-        <div class="card mitra-section-card mt-4">
+        <div class="card mitra-section-card mt-4" id="riwayat-pax-pjp2u">
             <div class="card-header d-flex justify-content-between align-items-center gap-3 flex-wrap">
                 <h5 class="mitra-section-title"><span class="mitra-section-icon"><i class="bi bi-airplane"></i></span>Riwayat Laporan PAX PJP2U</h5>
             </div>
@@ -1523,8 +1523,8 @@
                                                 </form>
                                             @endif
                                             @if($penjualan->status === 'diajukan' && ! $penjualan->can_be_verified)
-                                                <span class="badge bg-warning text-dark" title="Verifikasi hanya dapat dilakukan setelah bulan pelaporan berakhir">
-                                                    <i class="bi bi-hourglass-split"></i> Tunggu Ganti Bulan
+                                                <span class="badge bg-warning text-dark" title="Menunggu syarat verifikasi laporan">
+                                                    <i class="bi bi-hourglass-split"></i> Tunggu
                                                 </span>
                                             @endif
                                             @if($penjualan->status === 'diverifikasi' && ! $penjualan->tagihan_jasa_id && $penjualan->layanan_jasa_id)

@@ -1,8 +1,23 @@
 @extends('layouts.app')
-@section('title', 'Detail Laporan Penjualan')
+@section('title', optional($penjualan->layananJasa)->isPjp2u() ? 'Detail Laporan PAX PJP2U' : 'Detail Laporan Penjualan')
 
 @section('content')
 @php
+    $isPjp2u = optional($penjualan->layananJasa)->isPjp2u();
+    $pageTitle = $isPjp2u ? 'Detail Laporan PAX PJP2U' : 'Detail Laporan Penjualan';
+    $cardLabel = $isPjp2u ? 'Laporan PAX PJP2U' : 'Laporan Pendapatan Konsesi';
+    $backUrl = $isPjp2u
+        ? route('jasa.mitra.pjp2u.rekap.show', [$mitra, $penjualan->layanan_jasa_id, $penjualan->tahun, $penjualan->bulan])
+        : route('jasa.mitra.show', $mitra);
+    $backTitle = $isPjp2u ? 'Kembali ke rekap PJP2U' : 'Kembali ke mitra';
+    $listUrl = $isPjp2u
+        ? route('jasa.mitra.pjp2u.index', [
+            'mitra_jasa_id' => $mitra->id,
+            'bulan' => $penjualan->bulan,
+            'tahun' => $penjualan->tahun,
+        ])
+        : route('jasa.mitra.penjualan.index');
+    $listTitle = $isPjp2u ? 'Semua rekap PJP2U' : 'Semua laporan';
     $rupiah = fn ($value) => 'Rp ' . number_format((float) $value, 0, ',', '.');
     $tanggal = fn ($value) => $value ? \Carbon\Carbon::parse($value)->format('d/m/Y') : '-';
     $tanggalWaktu = fn ($value) => $value ? \Carbon\Carbon::parse($value)->format('d/m/Y H:i') : '-';
@@ -24,12 +39,17 @@
 
 <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
     <div>
-        <h4 class="mb-0 fw-bold">Detail Laporan Penjualan</h4>
-        <p class="mb-0 small text-muted">{{ $mitra->nama_mitra }}</p>
+        <h4 class="mb-0 fw-bold">{{ $pageTitle }}</h4>
+        <p class="mb-0 small text-muted">
+            {{ $mitra->nama_mitra }}
+            @if($isPjp2u)
+                <span class="mx-1">-</span>{{ \Carbon\Carbon::create($penjualan->tahun, $penjualan->bulan, 1)->translatedFormat('F Y') }}
+            @endif
+        </p>
     </div>
     <div class="d-flex gap-2">
-        <a href="{{ route('jasa.mitra.show', $mitra) }}" class="btn btn-secondary fw-bold jasa-icon-btn" title="Kembali ke mitra" aria-label="Kembali ke mitra"><i class="bi bi-arrow-left"></i></a>
-        <a href="{{ route('jasa.mitra.penjualan.index') }}" class="btn btn-light border fw-bold jasa-icon-btn" title="Semua laporan" aria-label="Semua laporan"><i class="bi bi-list-ul"></i></a>
+        <a href="{{ $backUrl }}" class="btn btn-secondary fw-bold jasa-icon-btn" title="{{ $backTitle }}" aria-label="{{ $backTitle }}"><i class="bi bi-arrow-left"></i></a>
+        <a href="{{ $listUrl }}" class="btn btn-light border fw-bold jasa-icon-btn" title="{{ $listTitle }}" aria-label="{{ $listTitle }}"><i class="bi bi-list-ul"></i></a>
     </div>
 </div>
 
@@ -47,7 +67,7 @@
             <div class="p-4 text-white" style="background: linear-gradient(135deg, #0f2f57, #1d6fb8);">
                 <div class="d-flex justify-content-between align-items-start">
                     <div>
-                        <div class="small text-white-50 fw-bold text-uppercase mb-1">Laporan Pendapatan Konsesi</div>
+                        <div class="small text-white-50 fw-bold text-uppercase mb-1">{{ $cardLabel }}</div>
                         <h5 class="fw-bold mb-1 text-white">
                             {{ $penjualan->layananJasa->nama_layanan ?? 'Layanan tidak diketahui' }}
                         </h5>
@@ -81,12 +101,28 @@
                 @endif
 
                 {{-- Detail Angka --}}
+                @php
+                    $details = $penjualan->penerbangan_details ?? [];
+                    $grandTotalPax = 0;
+                    $billablePax = 0;
+                    foreach ($details as $f) {
+                        $d = (int) ($f['pax_dewasa'] ?? 0);
+                        $a = (int) ($f['pax_anak'] ?? 0);
+                        $b = (int) ($f['pax_bayi'] ?? 0);
+                        $t = (int) ($f['pax_transit'] ?? 0);
+                        $billablePax += $d + $a + $b;
+                        $grandTotalPax += $d + $a + $b + $t;
+                    }
+                @endphp
                 <div class="row g-3">
                     <div class="col-md-6">
                         <div class="p-3 rounded-3 border bg-light">
                             @if($penjualan->penerbangan_details)
                                 <div class="small text-muted fw-bold"><i class="bi bi-people me-1 text-primary"></i>Total Pax</div>
-                                <div class="fs-5 fw-bold text-dark">{{ number_format($penjualan->total_omzet, 0, ',', '.') }} Pax</div>
+                                <div class="fs-5 fw-bold text-dark">{{ number_format($grandTotalPax, 0, ',', '.') }} Pax</div>
+                                @if($grandTotalPax !== $billablePax)
+                                    <div class="small text-muted">{{ number_format($billablePax, 0, ',', '.') }} kena tagihan (tanpa transit)</div>
+                                @endif
                             @else
                                 <div class="small text-muted fw-bold"><i class="bi bi-cash-stack me-1 text-primary"></i>Total Omzet</div>
                                 <div class="fs-5 fw-bold text-dark">{{ $rupiah($penjualan->total_omzet) }}</div>
@@ -115,7 +151,16 @@
                     <div class="col-md-6">
                         <div class="p-3 rounded-3 border" style="background: #e8f5e9;">
                             <div class="small text-muted fw-bold"><i class="bi bi-receipt me-1 text-success"></i>Nilai Tagihan</div>
-                            <div class="fs-5 fw-bold text-success">{{ $rupiah($penjualan->nilai_tagihan) }}</div>
+                            @php
+                                $tarifDasar = (float) ($penjualan->layananJasa->tarif_dasar ?? 0);
+                                $nilaiTagihanDisplay = $penjualan->penerbangan_details
+                                    ? $billablePax * $tarifDasar
+                                    : (float) $penjualan->nilai_tagihan;
+                            @endphp
+                            <div class="fs-5 fw-bold text-success">{{ $rupiah($nilaiTagihanDisplay) }}</div>
+                            @if($penjualan->penerbangan_details)
+                                <div class="small text-muted">{{ number_format($billablePax, 0, ',', '.') }} Pax &times; {{ $rupiah($tarifDasar) }}</div>
+                            @endif
                         </div>
                     </div>
                     @if($penjualan->nilai_minimum_guarantee)
@@ -156,25 +201,28 @@
                                         <th class="small text-uppercase">Dewasa</th>
                                         <th class="small text-uppercase">Anak</th>
                                         <th class="small text-uppercase">Bayi</th>
+                                        <th class="small text-uppercase">Transit</th>
                                         <th class="small text-uppercase">Total</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     @php
-                                        $gtDewasa = 0; $gtAnak = 0; $gtBayi = 0;
+                                        $gtDewasa = 0; $gtAnak = 0; $gtBayi = 0; $gtTransit = 0;
                                     @endphp
                                     @foreach($penjualan->penerbangan_details as $flight)
                                         @php
                                             $gtDewasa += (int)($flight['pax_dewasa'] ?? 0);
                                             $gtAnak += (int)($flight['pax_anak'] ?? 0);
                                             $gtBayi += (int)($flight['pax_bayi'] ?? 0);
+                                            $gtTransit += (int)($flight['pax_transit'] ?? 0);
                                         @endphp
                                         <tr>
                                             <td class="fw-bold">{{ $flight['nomor_penerbangan'] ?? '-' }}</td>
                                             <td>{{ $flight['pax_dewasa'] ?? 0 }}</td>
                                             <td>{{ $flight['pax_anak'] ?? 0 }}</td>
                                             <td>{{ $flight['pax_bayi'] ?? 0 }}</td>
-                                            <td class="fw-bold bg-light">{{ ($flight['pax_dewasa'] ?? 0) + ($flight['pax_anak'] ?? 0) + ($flight['pax_bayi'] ?? 0) }}</td>
+                                            <td>{{ $flight['pax_transit'] ?? 0 }}</td>
+                                            <td class="fw-bold bg-light">{{ ($flight['pax_dewasa'] ?? 0) + ($flight['pax_anak'] ?? 0) + ($flight['pax_bayi'] ?? 0) + ($flight['pax_transit'] ?? 0) }}</td>
                                         </tr>
                                     @endforeach
                                 </tbody>
@@ -184,10 +232,15 @@
                                         <td>{{ $gtDewasa }}</td>
                                         <td>{{ $gtAnak }}</td>
                                         <td>{{ $gtBayi }}</td>
-                                        <td>{{ $gtDewasa + $gtAnak + $gtBayi }}</td>
+                                        <td>{{ $gtTransit }}</td>
+                                        <td>{{ $gtDewasa + $gtAnak + $gtBayi + $gtTransit }}</td>
                                     </tr>
                                 </tfoot>
                             </table>
+                        </div>
+                        <div class="small text-muted mt-2">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Total tagihan dihitung dari (Dewasa + Anak + Bayi) &times; tarif dasar. <strong>Pax Transit tidak dikenakan tagihan</strong>.
                         </div>
                     </div>
                 @endif

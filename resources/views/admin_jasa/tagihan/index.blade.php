@@ -86,6 +86,14 @@
             </div>
         </div>
         <div class="flex flex-wrap gap-2">
+            @if($page['mode'] === 'log')
+                <a href="{{ route('admin-jasa.tagihan.log-bulanan.export', array_merge(request()->query(), ['format' => 'pdf'])) }}" class="inline-flex items-center rounded-xl bg-rose-600 px-4 py-2 text-sm font-bold text-white shadow-lg shadow-rose-600/20 transition hover:-translate-y-0.5 hover:bg-rose-700">
+                    <i class="bi bi-file-earmark-pdf me-2"></i>PDF
+                </a>
+                <a href="{{ route('admin-jasa.tagihan.log-bulanan.export', array_merge(request()->query(), ['format' => 'excel'])) }}" class="inline-flex items-center rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white shadow-lg shadow-emerald-600/20 transition hover:-translate-y-0.5 hover:bg-emerald-700">
+                    <i class="bi bi-file-earmark-spreadsheet me-2"></i>Excel
+                </a>
+            @endif
             <a href="{{ route('tagihan-jasa.create') }}" class="inline-flex items-center rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white shadow-lg shadow-blue-600/20 transition hover:-translate-y-0.5 hover:bg-blue-700">
                 <i class="bi bi-plus-lg me-2"></i>Buat Tagihan
             </a>

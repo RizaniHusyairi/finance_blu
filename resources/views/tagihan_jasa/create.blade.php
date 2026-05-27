@@ -1,10 +1,13 @@
 @extends('layouts.app')
 @php
+    $isEditMode = isset($tagihan) && $tagihan?->exists;
     $isKonsesiMode = ($mode ?? 'pnbp') === 'konsesi' || !empty($prefillTagihan['penjualan_id']);
     $isKonsesiSetupMode = $isKonsesiMode && empty($prefillTagihan['penjualan_id']);
-    $pageTitle = $isKonsesiMode
+    $pageTitle = $isEditMode
+        ? 'Edit Ulang Tagihan Jasa'
+        : ($isKonsesiMode
         ? ($isKonsesiSetupMode ? 'Penetapan Layanan Konsesi' : 'Buat Tagihan Konsesi')
-        : 'Buat Tagihan Jasa';
+        : 'Buat Tagihan Jasa');
     $detailTitle = $isKonsesiSetupMode
         ? 'Daftar Layanan Konsesi Awal'
         : ($isKonsesiMode ? 'Daftar Tagihan Konsesi' : 'Daftar Layanan Jasa');
@@ -411,8 +414,11 @@
     </div>
 @endif
 
-<form action="{{ route('tagihan-jasa.store') }}" method="POST" enctype="multipart/form-data" class="tw-invoice-input">
+<form action="{{ $isEditMode ? route('tagihan-jasa.update', $tagihan->id) : route('tagihan-jasa.store') }}" method="POST" enctype="multipart/form-data" class="tw-invoice-input">
     @csrf
+    @if($isEditMode)
+        @method('PUT')
+    @endif
     <input type="hidden" name="tipe_pnbp" value="{{ $tipe }}">
     @if(!empty($prefillTagihan['penjualan_id']))
         <input type="hidden" name="penjualan_id" value="{{ $prefillTagihan['penjualan_id'] }}">
@@ -455,7 +461,7 @@
                         <select name="mitra_jasa_id" id="mitraSelect" class="form-select select2" required>
                             <option value="">-- Pilih Mitra --</option>
                             @foreach($mitras as $mitra)
-                                <option value="{{ $mitra->id }}" {{ (string) old('mitra_jasa_id', $prefillTagihan['mitra_jasa_id'] ?? '') === (string) $mitra->id ? 'selected' : '' }}>
+                                <option value="{{ $mitra->id }}" {{ (string) old('mitra_jasa_id', $prefillTagihan['mitra_jasa_id'] ?? $tagihan->mitra_jasa_id ?? '') === (string) $mitra->id ? 'selected' : '' }}>
                                     {{ $mitra->nama_mitra }}
                                 </option>
                             @endforeach
@@ -514,7 +520,7 @@
                             </div>
                             <div class="col-lg-8">
                                 <label class="form-label fw-bold">Tanggal Tagihan <span class="text-danger">*</span></label>
-                                <input type="date" name="tanggal_tagihan" class="form-control" value="{{ old('tanggal_tagihan', date('Y-m-d')) }}" required>
+                                <input type="date" name="tanggal_tagihan" class="form-control" value="{{ old('tanggal_tagihan', isset($tagihan) && $tagihan->tanggal_tagihan ? $tagihan->tanggal_tagihan->format('Y-m-d') : date('Y-m-d')) }}" required>
                             </div>
                         </div>
                     </div>
@@ -530,7 +536,7 @@
                             <div class="col-lg-8">
                                 <label class="form-label fw-bold">Verifikasi Final Dilakukan Oleh <span class="text-danger">*</span></label>
                                 @php
-                                    $finalVerifierRole = old('final_verifier_role', 'KPA');
+                                    $finalVerifierRole = old('final_verifier_role', $tagihan->final_verifier_role ?? 'KPA');
                                 @endphp
                                 <div class="row g-2">
                                     <div class="col-md-6">
@@ -702,7 +708,7 @@
                                 <tr>
                                     <th width="3%" class="text-center"><input type="checkbox" class="form-check-input" disabled></th>
                                     <th width="18%">Jenis Penerimaan</th>
-                                    <th width="10%">Kode MAK</th>
+                                    <th width="10%">Kode Pembayaran</th>
                                     <th width="11%">Tarif</th>
                                     <th width="20%">Volume</th>
                                     <th width="11%">Satuan</th>
@@ -763,7 +769,7 @@
         </td>
         <td>
             <div class="invoice-field">
-                <div class="invoice-field-label"><i class="bi bi-bank"></i>Kode MAK</div>
+                <div class="invoice-field-label"><i class="bi bi-bank"></i>Kode Pembayaran</div>
                 <input type="text" name="layanan[__INDEX__][kode_akun]" class="form-control invoice-muted-input kode-akun-input" readonly placeholder="Otomatis">
             </div>
         </td>
@@ -845,6 +851,7 @@
         let mitraLayananMap = @json($mitraLayananMap ?? []);
         let mitraMetaMap = @json($mitraMetaMap ?? []);
         let prefillTagihan = @json($prefillTagihan ?? null);
+        let detailPrefills = @json($detailPrefills ?? []);
         let oldKontrakMitraJasaId = @json(old('kontrak_mitra_jasa_id', $prefillTagihan['kontrak_mitra_jasa_id'] ?? null));
         let layanansById = {};
         let layanansByParent = { root: [] };
@@ -1351,7 +1358,7 @@
 
             row.find('.layanan-id-input').val(service.id);
             row.find('.jenis-penerimaan-input').val(service.kode_layanan || padCode(service.id));
-            row.find('.kode-akun-input').val(service.kode_mak || service.kode_akun || '');
+            row.find('.kode-akun-input').val(servicePaymentCode(service));
             row.find('.price-input').val(serviceRateValue(service));
             row.find('.kurs-input').val(1);
             row.find('.qty-input').val(isPercentageService(service) ? 0 : 1);
@@ -1387,10 +1394,14 @@
             return $('<div>').text(value || '').html();
         }
 
+        function servicePaymentCode(service) {
+            return service?.kode_pembayaran_lengkap || service?.kode_akun || service?.kode_mak || '';
+        }
+
         function matchesSearch(item, searchTerm) {
             if (!searchTerm) return true;
 
-            let ownText = `${item.nama_layanan || ''} ${item.kode_layanan || ''} ${item.kode_akun || ''}`.toLowerCase();
+            let ownText = `${item.nama_layanan || ''} ${item.kode_layanan || ''} ${item.kode_mak || ''} ${item.kode_jenis_pembayaran || ''} ${item.kode_pembayaran_lengkap || ''} ${item.kode_akun || ''}`.toLowerCase();
             if (ownText.includes(searchTerm)) return true;
 
             return (layanansByParent[item.id] || []).some(child => matchesSearch(child, searchTerm));
@@ -1421,6 +1432,7 @@
                 let badgeClass = depth === 0 ? 'bg-primary' : (isLeaf ? 'bg-success' : 'bg-warning text-dark');
                 let branch = depth === 0 ? '' : '|_';
                 let tariffText = formatServiceTariff(item);
+                let kodePembayaran = servicePaymentCode(item);
 
                 if (isLeaf) {
                     if (!isAllowedLeaf(item)) {
@@ -1436,7 +1448,7 @@
                                     <span class="tree-label">${escapeHtml(item.nama_layanan)}</span>
                                     <div class="tree-meta ms-4">
                                         ${escapeHtml(item.kode_layanan || padCode(item.id))}
-                                        ${item.kode_akun ? ' | Akun ' + escapeHtml(item.kode_akun) : ''}
+                                        ${kodePembayaran ? ' | Kode bayar ' + escapeHtml(kodePembayaran) : ''}
                                         ${tariffText ? ' | ' + escapeHtml(tariffText) : (item.satuan ? ' | ' + escapeHtml(item.satuan) : '')}
                                     </div>
                                 </div>
@@ -1594,6 +1606,42 @@
         }
 
         function applyPrefillTagihan() {
+            if (Array.isArray(detailPrefills) && detailPrefills.length > 0) {
+                $('#serviceList').empty();
+                rowIndex = 0;
+
+                detailPrefills.forEach(detail => {
+                    addServiceRow();
+                    let row = $('.service-row').last();
+                    let service = layanansById[detail.layanan_jasa_id];
+
+                    if (!service) {
+                        return;
+                    }
+
+                    applyServiceToRow(row, service, {
+                        calculatorInputs: detail.calculation_payload?.inputs || null,
+                        skipCalculate: true,
+                    });
+
+                    row.find('.qty-input').val(detail.qty || 1);
+                    row.find('.price-input').val(detail.harga_satuan || 0);
+                    row.find('.kurs-input').val(detail.kurs || 1);
+                    row.find('.satuan-input').val(detail.satuan || service.satuan || '');
+                    row.find('.keterangan-input').val(detail.keterangan || buildServicePath(service));
+
+                    if (detail.calculation_mode) {
+                        row.find('.calculation-mode-input').val(detail.calculation_mode);
+                    }
+
+                    syncRowCalculation(row);
+                });
+
+                calculateTotals();
+                refreshKontrakOptions();
+                return;
+            }
+
             if (!prefillTagihan || !prefillTagihan.layanan_jasa_id) {
                 return;
             }

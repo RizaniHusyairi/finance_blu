@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\MasterCoa;
 use App\Models\Tagihan;
 use App\Models\TransaksiPenerimaan;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Validation\Rule;
@@ -18,36 +19,28 @@ class CoaController extends Controller
 
     public function index(Request $request)
     {
-        $baseQuery = MasterCoa::query()->withCount('dipaRevisionItems');
+        $search = trim((string) $request->string('search'));
+        $jenisAkun = trim((string) $request->string('jenis_akun'));
+        $statusAktif = trim((string) $request->string('status_aktif'));
 
-        $coas = (clone $baseQuery)
-            ->when($request->filled('search'), function ($builder) use ($request) {
-                $search = trim((string) $request->string('search'));
-
-                $builder->where(function ($query) use ($search) {
-                    $query->where('kode_mak_lengkap', 'like', '%' . $search . '%')
-                        ->orWhere('kd_akun', 'like', '%' . $search . '%')
-                        ->orWhere('nama_akun', 'like', '%' . $search . '%');
-                });
-            })
-            ->when($request->filled('jenis_akun'), function ($builder) use ($request) {
-                $builder->where('jenis_akun', $request->string('jenis_akun'));
-            })
-            ->when($request->filled('status_aktif'), function ($builder) use ($request) {
-                $builder->where('status_aktif', $request->string('status_aktif') === 'aktif');
-            })
+        $coas = MasterCoa::query()
+            ->withCount('dipaRevisionItems')
+            ->when($search !== '', fn ($builder) => $this->applySearchFilter($builder, $search))
+            ->when($jenisAkun !== '', fn ($builder) => $builder->where('jenis_akun', $jenisAkun))
+            ->when($statusAktif !== '', fn ($builder) => $builder->where('status_aktif', $statusAktif === 'aktif'))
             ->orderBy('kd_akun')
             ->orderBy('kode_mak_lengkap')
             ->paginate(15)
             ->withQueryString();
 
-        $allCoas = $baseQuery->get();
-
         $summary = [
-            'total_coa' => $allCoas->count(),
-            'coa_aktif' => $allCoas->where('status_aktif', true)->count(),
-            'kode_akun_unik' => $allCoas->pluck('kd_akun')->filter()->unique()->count(),
-            'coa_dipakai_di_dipa' => $allCoas->where('dipa_revision_items_count', '>', 0)->count(),
+            'total_coa' => MasterCoa::query()->count(),
+            'coa_aktif' => MasterCoa::query()->where('status_aktif', true)->count(),
+            'kode_akun_unik' => MasterCoa::query()
+                ->whereNotNull('kd_akun')
+                ->distinct('kd_akun')
+                ->count('kd_akun'),
+            'coa_dipakai_di_dipa' => MasterCoa::query()->whereHas('dipaRevisionItems')->count(),
         ];
 
         $jenisAkunOptions = MasterCoa::query()
@@ -57,6 +50,17 @@ class CoaController extends Controller
             ->pluck('jenis_akun');
 
         return view('coas.index', compact('coas', 'summary', 'jenisAkunOptions'));
+    }
+
+    private function applySearchFilter(Builder $builder, string $search): void
+    {
+        $likeSearch = '%' . addcslashes($search, '%_\\') . '%';
+
+        $builder->where(function ($query) use ($likeSearch) {
+            $query->where('kode_mak_lengkap', 'like', $likeSearch)
+                ->orWhere('kd_akun', 'like', $likeSearch)
+                ->orWhere('nama_akun', 'like', $likeSearch);
+        });
     }
 
     public function store(Request $request)

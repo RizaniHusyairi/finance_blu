@@ -9,13 +9,24 @@
     $canApprove = false;
     $workflowApproved = $wfInstance && $wfInstance->status === 'APPROVED';
     $canManageTagihanJasa = Auth::user()->hasAnyRole(['Super Admin', 'Super Admin Jasa', 'Admin Jasa']);
+    $suratFinalReady = ! empty($tagihan->file_surat_pengantar_final)
+        && $tagihan->status_dokumen_pengantar === 'SUDAH_DITANDATANGANI';
+    $canReviseTagihanJasa = Auth::user()->hasAnyRole(['Super Admin', 'Super Admin Jasa', 'Admin Jasa', 'Admin Konsesi'])
+        && in_array($tagihan->status, ['REVISI', 'DITOLAK'], true);
     $canEditSuratPengantar = $canManageTagihanJasa
         && ! in_array($tagihan->status, ['PUBLISHED', 'LUNAS']);
     $canUploadSuratPengantarFinal = $canManageTagihanJasa
         && $workflowApproved
         && ! in_array($tagihan->status, ['PUBLISHED', 'LUNAS']);
 
-    if ($wfInstance && $wfInstance->status === 'IN_PROGRESS' && $currentApproval && Auth::user()->hasRole($currentApproval->role_code)) {
+    $currentApprovalRole = $currentApproval?->role_code;
+    $userCanActAsCurrentRole = $currentApprovalRole && (
+        Auth::user()->hasRole($currentApprovalRole)
+        || ($currentApprovalRole === 'KPA' && Auth::user()->hasRole('PLT/PLH'))
+        || ($currentApprovalRole === 'PLT/PLH' && Auth::user()->hasRole('KPA'))
+    );
+
+    if ($wfInstance && $wfInstance->status === 'IN_PROGRESS' && $currentApproval && $userCanActAsCurrentRole) {
         $canApprove = true;
     }
 
@@ -426,6 +437,7 @@
                 <span class="badge tj-status-badge {{ match($tagihan->status) {
                     'PUBLISHED', 'LUNAS', 'DISETUJUI' => 'bg-success',
                     'DRAFT' => 'bg-secondary',
+                    'REVISI' => 'bg-info text-dark',
                     'DITOLAK' => 'bg-danger',
                     default => 'bg-warning text-dark',
                 } }} px-3 py-2 fs-6">{{ str_replace('_', ' ', $tagihan->status) }}</span>
@@ -547,7 +559,7 @@
                                             <br><small class="text-primary fw-semibold">Perhitungan: {{ $detail->calculation_payload['formula'] }}</small>
                                         @endif
                                     </td>
-                                    <td>{{ $detail->kode_akun ?: ($layanan->kode_akun ?? '-') }}</td>
+                                    <td>{{ $detail->kode_akun ?: ($layanan->kode_pembayaran_lengkap ?? $layanan->kode_akun ?? '-') }}</td>
                                     <td class="text-center">{{ rtrim(rtrim(number_format($detail->qty, 2, ',', '.'), '0'), ',') }}</td>
                                     <td class="text-end">
                                         @if($isPercentageDetail)
@@ -565,6 +577,18 @@
                                 <td colspan="5" class="text-end fw-bold">TOTAL TAGIHAN :</td>
                                 <td class="text-end fw-bold text-success fs-5">Rp {{ number_format($tagihan->total_tagihan, 0, ',', '.') }}</td>
                             </tr>
+                            @if($tagihan->nominal_denda_keterlambatan > 0)
+                                <tr>
+                                    <td colspan="5" class="text-end fw-bold text-danger">
+                                        DENDA KETERLAMBATAN 2% x {{ $tagihan->hari_terlambat }} HARI :
+                                    </td>
+                                    <td class="text-end fw-bold text-danger">Rp {{ number_format($tagihan->nominal_denda_keterlambatan, 0, ',', '.') }}</td>
+                                </tr>
+                                <tr>
+                                    <td colspan="5" class="text-end fw-bold">TOTAL HARUS DIBAYAR :</td>
+                                    <td class="text-end fw-bold text-primary fs-5">Rp {{ number_format($tagihan->total_dengan_denda, 0, ',', '.') }}</td>
+                                </tr>
+                            @endif
                         </tfoot>
                     </table>
                 </div>
@@ -614,6 +638,15 @@
                         @if($tagihan->catatan_jatuh_tempo)
                             <div class="small text-muted mt-2">{{ $tagihan->catatan_jatuh_tempo }}</div>
                         @endif
+                        @if($tagihan->nominal_denda_keterlambatan > 0)
+                            <div class="alert alert-danger small mt-3 mb-0">
+                                <i class="bi bi-exclamation-triangle me-1"></i>
+                                Denda berjalan: 2% per hari x {{ $tagihan->hari_terlambat }} hari = 
+                                <strong>Rp {{ number_format($tagihan->nominal_denda_keterlambatan, 0, ',', '.') }}</strong>.
+                                Total tagihan berjalan menjadi
+                                <strong>Rp {{ number_format($tagihan->total_dengan_denda, 0, ',', '.') }}</strong>.
+                            </div>
+                        @endif
                     </div>
                 @endif
             </div>
@@ -643,6 +676,27 @@
                     <button type="button" class="btn btn-outline-danger w-100 fw-bold" data-bs-toggle="modal" data-bs-target="#modalTolak">
                         <i class="bi bi-x-lg me-1"></i> Tolak Dokumen
                     </button>
+                    <button type="button" class="btn btn-outline-warning w-100 fw-bold mt-2" data-bs-toggle="modal" data-bs-target="#modalRevisi">
+                        <i class="bi bi-arrow-counterclockwise me-1"></i> Minta Revisi
+                    </button>
+                </div>
+            </div>
+        @endif
+
+        @if($canReviseTagihanJasa)
+            <div class="card tj-card border-0 mb-4 border-start border-4 border-info">
+                <div class="card-body p-4">
+                    <h5 class="fw-bold mb-3"><i class="bi bi-pencil-square text-info me-2"></i>Edit Ulang Tagihan Jasa</h5>
+                    <p class="small text-muted mb-4">Tagihan sedang dikembalikan untuk perbaikan. Simpan perubahan terlebih dahulu, lalu kirim ulang agar workflow verifikasi dimulai lagi dari awal.</p>
+                    <a href="{{ route('tagihan-jasa.edit', $tagihan->id) }}" class="btn btn-outline-primary w-100 fw-bold mb-2">
+                        <i class="bi bi-pencil me-1"></i> Edit Ulang Tagihan Jasa
+                    </a>
+                    <form action="{{ route('tagihan-jasa.resubmit', $tagihan->id) }}" method="POST">
+                        @csrf
+                        <button type="submit" class="btn btn-info text-white w-100 fw-bold" onclick="return confirm('Kirim ulang tagihan ini ke workflow verifikasi?')">
+                            <i class="bi bi-send-check me-1"></i> Kirim Ulang ke Verifikasi
+                        </button>
+                    </form>
                 </div>
             </div>
         @endif
@@ -701,7 +755,46 @@
                             <i class="bi bi-file-earmark-check me-1"></i> Lihat Surat Pengantar TTD
                         </a>
                     @endif
+                    @if($workflowApproved && $canManageTagihanJasa)
+                        <form action="{{ route('tagihan-jasa.surat-pengantar-final.generate', $tagihan->id) }}" method="POST">
+                            @csrf
+                            <button type="submit" class="btn btn-warning w-100 fw-bold" onclick="return confirm('Generate surat pengantar final bertanda tangan elektronik?')">
+                                <i class="bi bi-qr-code me-1"></i>
+                                {{ $tagihan->file_surat_pengantar_final ? 'Generate Ulang Surat Final TTD' : 'Generate Surat Final TTD' }}
+                            </button>
+                        </form>
+                    @endif
                 </div>
+
+                @php
+                    $arsipSuratPengantar = $tagihan->arsipDokumen
+                        ->whereIn('jenis_dokumen', ['SURAT_PENGANTAR_DRAFT', 'SURAT_PENGANTAR_FINAL_TTD'])
+                        ->sortByDesc('uploaded_at');
+                @endphp
+                @if($arsipSuratPengantar->isNotEmpty())
+                    <hr>
+                    <div class="mb-3">
+                        <div class="small text-muted fw-bold mb-2">
+                            <i class="bi bi-archive me-1"></i> Arsip Surat Pengantar
+                        </div>
+                        <div class="list-group small">
+                            @foreach($arsipSuratPengantar->take(5) as $arsip)
+                                <a href="{{ Storage::disk($arsip->disk ?: 'public')->url($arsip->path_file) }}" target="_blank" class="list-group-item list-group-item-action d-flex justify-content-between gap-2 align-items-start">
+                                    <span>
+                                        <span class="fw-bold d-block">
+                                            {{ $arsip->jenis_dokumen === 'SURAT_PENGANTAR_FINAL_TTD' ? 'Final TTD' : 'Draft' }}
+                                            @if($arsip->is_active)
+                                                <span class="badge bg-success ms-1">Aktif</span>
+                                            @endif
+                                        </span>
+                                        <span class="text-muted">{{ $arsip->uploaded_at?->format('d M Y H:i') ?? '-' }} oleh {{ $arsip->uploader->name ?? 'Sistem' }}</span>
+                                    </span>
+                                    <i class="bi bi-box-arrow-up-right text-primary"></i>
+                                </a>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
 
                 @if($canEditSuratPengantar)
                     <hr>
@@ -738,7 +831,7 @@
                     </div>
                 @endif
 
-                @if($canUploadSuratPengantarFinal)
+                @if($canUploadSuratPengantarFinal && ! $tagihan->file_surat_pengantar_final)
                     <hr>
                     <form action="{{ route('tagihan-jasa.surat-pengantar-final.upload', $tagihan->id) }}" method="POST" enctype="multipart/form-data">
                         @csrf
@@ -754,6 +847,11 @@
                             <i class="bi bi-upload me-1"></i> Simpan Surat Final
                         </button>
                     </form>
+                @elseif($tagihan->file_surat_pengantar_final)
+                    <div class="alert alert-success small mb-0">
+                        <i class="bi bi-check-circle-fill me-1"></i>
+                        Surat pengantar final sudah tersimpan otomatis setelah persetujuan final.
+                    </div>
                 @elseif(! $workflowApproved)
                     <div class="alert alert-light border small mb-0">
                         Upload surat pengantar final tersedia setelah seluruh verifikasi disetujui.
@@ -768,9 +866,9 @@
                     <h5 class="fw-bold mb-3"><i class="bi bi-send text-success me-2"></i>Terbitkan Tagihan</h5>
                     <p class="small text-muted mb-4">Tagihan telah disetujui sepenuhnya oleh Kabandara. Anda dapat mem-publish tagihan ini untuk men-generate VA dan mengirim notifikasi otomatis ke Mitra.</p>
 
-                    @if(! $tagihan->file_surat_pengantar_final)
+                    @if(! $suratFinalReady)
                         <div class="alert alert-warning small">
-                            Upload surat pengantar final yang sudah ditandatangani terlebih dahulu sebelum publish ke mitra.
+                            Generate surat pengantar final TTD terlebih dahulu sebelum publish ke mitra.
                         </div>
                         <button type="button" class="btn btn-secondary w-100 fw-bold mb-2" disabled>
                             <i class="bi bi-lock me-1"></i> Publish Terkunci
@@ -833,8 +931,9 @@
                             @php
                                 $isApproved = $approval->status === 'APPROVED';
                                 $isRejected = $approval->status === 'REJECTED';
-                                $color = $isApproved ? 'success' : ($isRejected ? 'danger' : 'warning');
-                                $icon = $isApproved ? 'bi-check2' : ($isRejected ? 'bi-x-lg' : 'bi-hourglass-split');
+                                $isRevision = $approval->status === 'REVISION';
+                                $color = $isApproved ? 'success' : ($isRejected ? 'danger' : ($isRevision ? 'info' : 'warning'));
+                                $icon = $isApproved ? 'bi-check2' : ($isRejected ? 'bi-x-lg' : ($isRevision ? 'bi-arrow-counterclockwise' : 'bi-hourglass-split'));
                             @endphp
                             <div class="tj-timeline-item">
                                 <div class="tj-timeline-dot {{ $color }}"><i class="bi {{ $icon }}"></i></div>
@@ -905,6 +1004,34 @@
     </div>
 </div>
 
+<!-- Modal Revisi -->
+<div class="modal fade" id="modalRevisi" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <form action="{{ route('tagihan-jasa.revision', $tagihan->id) }}" method="POST">
+                @csrf
+                <div class="modal-header bg-warning text-dark border-0">
+                    <h5 class="modal-title fw-bold">Minta Revisi Tagihan</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="alert alert-light border mb-4 small">
+                        Tagihan akan masuk status REVISI. Admin Jasa dapat mengedit detail tagihan lalu mengirim ulang ke alur verifikasi.
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Catatan Revisi <span class="text-danger">*</span></label>
+                        <textarea name="catatan" class="form-control" rows="3" required placeholder="Tuliskan bagian yang perlu diperbaiki..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 bg-light">
+                    <button type="button" class="btn btn-secondary fw-bold" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-warning fw-bold"><i class="bi bi-arrow-counterclockwise me-1"></i> Minta Revisi</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <!-- Modal Tolak -->
 <div class="modal fade" id="modalTolak" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
@@ -917,7 +1044,7 @@
                 </div>
                 <div class="modal-body p-4">
                     <div class="alert alert-light border mb-4 small">
-                        Dokumen yang ditolak akan dikembalikan ke status DITOLAK dan kreator harus memperbaikinya.
+                        Penolakan menutup workflow berjalan dan memberi status DITOLAK. Untuk perbaikan dengan workflow revisi, gunakan tombol Minta Revisi.
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-bold">Alasan Penolakan <span class="text-danger">*</span></label>

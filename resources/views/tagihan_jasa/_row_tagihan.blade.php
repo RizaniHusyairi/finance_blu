@@ -12,6 +12,11 @@
     </td>
     <td>
         <span class="fw-bold text-success">Rp {{ number_format($tagihan->total_tagihan, 0, ',', '.') }}</span><br>
+        @if($tagihan->nominal_denda_keterlambatan > 0)
+            <small class="text-danger fw-semibold">
+                + denda Rp {{ number_format($tagihan->nominal_denda_keterlambatan, 0, ',', '.') }}
+            </small><br>
+        @endif
         <small><i class="bi bi-calendar-event me-1"></i>{{ \Carbon\Carbon::parse($tagihan->tanggal_tagihan)->format('d M Y') }}</small>
     </td>
     <td>

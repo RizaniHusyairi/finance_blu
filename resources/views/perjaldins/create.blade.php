@@ -1089,18 +1089,36 @@
         return n.toString().replace(/\D/g, "").replace(/\B(?=(\d{3})+(?!\d))/g, ",");
     }
 
-    window.toggleTiketFile = function (element) {
+    // key: 'tiket' | 'transport' | 'penginapan' | 'uang-harian'
+    window.toggleBuktiFile = function (element, key) {
         let card = $(element).closest('.item-row');
         let val = parseFloat(String($(element).val()).replace(/,/g, '')) || 0;
-        let wrapper = card.find('.tiket-file-wrapper');
+        let wrapper = card.find('.' + key + '-file-wrapper');
         if (val > 0) {
             wrapper.removeClass('d-none');
         } else {
             wrapper.addClass('d-none');
-            wrapper.find('.tiket-file-input').val('');
-            wrapper.find('.tiket-existing-notice').remove();
+            wrapper.find('.' + key + '-file-input').val('');
+            wrapper.find('.' + key + '-existing-notice').remove();
         }
     };
+    window.toggleTiketFile = function (element) { return toggleBuktiFile(element, 'tiket'); };
+
+    function toggleUangHarianFile(card) {
+        let total = 0;
+        card.find('.uang-harian-component').each(function () {
+            let n = parseFloat(String($(this).val()).replace(/,/g, ''));
+            if (!isNaN(n)) total += n;
+        });
+        let wrapper = card.find('.uang-harian-file-wrapper');
+        if (total > 0) {
+            wrapper.removeClass('d-none');
+        } else {
+            wrapper.addClass('d-none');
+            wrapper.find('.uang-harian-file-input').val('');
+            wrapper.find('.uang-harian-existing-notice').remove();
+        }
+    }
 
     function calculateUangHarianGroup(card) {
         let total = 0;
@@ -1109,6 +1127,7 @@
             if (!isNaN(num)) total += num;
         });
         card.find('.uang-harian-total').text(formatNumber(total));
+        toggleUangHarianFile(card);
     }
 
     function evaluateCoaPagu(row, total) {
@@ -1306,7 +1325,10 @@
         $('.select2').select2({ theme: 'bootstrap-5', width: '100%' });
 
         $('.biaya-input').each(function() { calculateJumlah(this); });
-        $('.tiket-amount-input').each(function() { toggleTiketFile(this); });
+        $('.tiket-amount-input').each(function() { toggleBuktiFile(this, 'tiket'); });
+        $('.transport-amount-input').each(function() { toggleBuktiFile(this, 'transport'); });
+        $('.penginapan-amount-input').each(function() { toggleBuktiFile(this, 'penginapan'); });
+        $('.item-row').each(function() { toggleUangHarianFile($(this)); });
 
         $('#ppkUserId').change(function() {
             let s = $(this).find(':selected');
@@ -1378,8 +1400,8 @@
             newRow.find('.summary-total').text('0');
             newRow.find('.uang-harian-total').text('0');
             newRow.find('.file-existing-notice').remove();
-            newRow.find('.tiket-existing-notice').remove();
-            newRow.find('.tiket-file-wrapper').addClass('d-none');
+            newRow.find('.tiket-existing-notice, .transport-existing-notice, .penginapan-existing-notice, .uang-harian-existing-notice').remove();
+            newRow.find('.tiket-file-wrapper, .transport-file-wrapper, .penginapan-file-wrapper, .uang-harian-file-wrapper').addClass('d-none');
             newRow.find('.file-status-badge').removeClass('bg-success').addClass('bg-secondary').html('<i class="bi bi-paperclip"></i> SPT Kosong');
             newRow.find('.nip-input').val('').prop('readonly', true);
             newRow.find('.rekening-input').val('').prop('readonly', false);

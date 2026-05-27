@@ -286,12 +286,28 @@
                 @endif
 
                 {{-- Detail Angka --}}
+                @php
+                    $details = $penjualan->penerbangan_details ?? [];
+                    $grandTotalPax = 0;
+                    $billablePax = 0;
+                    foreach ($details as $f) {
+                        $d = (int) ($f['pax_dewasa'] ?? 0);
+                        $a = (int) ($f['pax_anak'] ?? 0);
+                        $b = (int) ($f['pax_bayi'] ?? 0);
+                        $t = (int) ($f['pax_transit'] ?? 0);
+                        $billablePax += $d + $a + $b;
+                        $grandTotalPax += $d + $a + $b + $t;
+                    }
+                @endphp
                 <div class="row g-3">
                     <div class="col-md-6">
                         <div class="p-3 rounded-3 border bg-light">
                             @if($penjualan->penerbangan_details)
                                 <div class="small text-muted fw-bold"><i class="bi bi-people me-1 text-primary"></i>Total Pax</div>
-                                <div class="fs-5 fw-bold text-dark">{{ number_format($penjualan->total_omzet, 0, ',', '.') }} Pax</div>
+                                <div class="fs-5 fw-bold text-dark">{{ number_format($grandTotalPax, 0, ',', '.') }} Pax</div>
+                                @if($grandTotalPax !== $billablePax)
+                                    <div class="small text-muted">{{ number_format($billablePax, 0, ',', '.') }} kena tagihan (tanpa transit)</div>
+                                @endif
                             @else
                                 <div class="small text-muted fw-bold"><i class="bi bi-cash-stack me-1 text-primary"></i>Total Omzet</div>
                                 <div class="fs-5 fw-bold text-dark">{{ $rupiah($penjualan->total_omzet) }}</div>
@@ -320,7 +336,16 @@
                     <div class="col-md-6">
                         <div class="p-3 rounded-3 border" style="background: #e8f5e9;">
                             <div class="small text-muted fw-bold"><i class="bi bi-receipt me-1 text-success"></i>Nilai Tagihan</div>
-                            <div class="fs-5 fw-bold text-success">{{ $rupiah($penjualan->nilai_tagihan) }}</div>
+                            @php
+                                $tarifDasar = (float) ($penjualan->layananJasa->tarif_dasar ?? 0);
+                                $nilaiTagihanDisplay = $penjualan->penerbangan_details
+                                    ? $billablePax * $tarifDasar
+                                    : (float) $penjualan->nilai_tagihan;
+                            @endphp
+                            <div class="fs-5 fw-bold text-success">{{ $rupiah($nilaiTagihanDisplay) }}</div>
+                            @if($penjualan->penerbangan_details)
+                                <div class="small text-muted">{{ number_format($billablePax, 0, ',', '.') }} Pax &times; {{ $rupiah($tarifDasar) }}</div>
+                            @endif
                         </div>
                     </div>
                     @if($penjualan->nilai_minimum_guarantee)
@@ -361,25 +386,28 @@
                                         <th class="small text-uppercase">Dewasa</th>
                                         <th class="small text-uppercase">Anak</th>
                                         <th class="small text-uppercase">Bayi</th>
+                                        <th class="small text-uppercase">Transit</th>
                                         <th class="small text-uppercase">Total</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     @php
-                                        $gtDewasa = 0; $gtAnak = 0; $gtBayi = 0;
+                                        $gtDewasa = 0; $gtAnak = 0; $gtBayi = 0; $gtTransit = 0;
                                     @endphp
                                     @foreach($penjualan->penerbangan_details as $flight)
                                         @php
                                             $gtDewasa += (int)($flight['pax_dewasa'] ?? 0);
                                             $gtAnak += (int)($flight['pax_anak'] ?? 0);
                                             $gtBayi += (int)($flight['pax_bayi'] ?? 0);
+                                            $gtTransit += (int)($flight['pax_transit'] ?? 0);
                                         @endphp
                                         <tr>
                                             <td class="fw-bold">{{ $flight['nomor_penerbangan'] ?? '-' }}</td>
                                             <td>{{ $flight['pax_dewasa'] ?? 0 }}</td>
                                             <td>{{ $flight['pax_anak'] ?? 0 }}</td>
                                             <td>{{ $flight['pax_bayi'] ?? 0 }}</td>
-                                            <td class="fw-bold bg-light">{{ ($flight['pax_dewasa'] ?? 0) + ($flight['pax_anak'] ?? 0) + ($flight['pax_bayi'] ?? 0) }}</td>
+                                            <td>{{ $flight['pax_transit'] ?? 0 }}</td>
+                                            <td class="fw-bold bg-light">{{ ($flight['pax_dewasa'] ?? 0) + ($flight['pax_anak'] ?? 0) + ($flight['pax_bayi'] ?? 0) + ($flight['pax_transit'] ?? 0) }}</td>
                                         </tr>
                                     @endforeach
                                 </tbody>
@@ -389,10 +417,15 @@
                                         <td>{{ $gtDewasa }}</td>
                                         <td>{{ $gtAnak }}</td>
                                         <td>{{ $gtBayi }}</td>
-                                        <td>{{ $gtDewasa + $gtAnak + $gtBayi }}</td>
+                                        <td>{{ $gtTransit }}</td>
+                                        <td>{{ $gtDewasa + $gtAnak + $gtBayi + $gtTransit }}</td>
                                     </tr>
                                 </tfoot>
                             </table>
+                        </div>
+                        <div class="small text-muted mt-2">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Total tagihan dihitung dari (Dewasa + Anak + Bayi) &times; tarif dasar. <strong>Pax Transit tidak dikenakan tagihan</strong>.
                         </div>
                     </div>
                 @endif

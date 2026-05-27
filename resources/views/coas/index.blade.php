@@ -79,15 +79,15 @@
 
     <div class="card shadow-sm border-0 rounded-4 mb-4">
         <div class="card-body p-4">
-            <form method="GET" action="{{ route('coas.index') }}">
+            <form method="GET" action="{{ route('coas.index') }}" id="coaFilterForm">
                 <div class="row g-3 align-items-end">
                     <div class="col-md-5">
                         <label class="form-label fw-semibold">Cari COA</label>
-                        <input type="text" name="search" value="{{ $search }}" class="form-control" placeholder="Kode MAK lengkap, kode akun, atau nama akun">
+                        <input type="text" name="search" value="{{ $search }}" class="form-control" placeholder="Kode MAK lengkap, kode akun, atau nama akun" autocomplete="off" data-auto-submit="input">
                     </div>
                     <div class="col-md-3">
                         <label class="form-label fw-semibold">Jenis Akun</label>
-                        <select name="jenis_akun" class="form-select">
+                        <select name="jenis_akun" class="form-select" data-auto-submit="change">
                             <option value="">Semua</option>
                             @foreach($jenisAkunOptions as $option)
                                 <option value="{{ $option }}" {{ (string) $jenisAkun === (string) $option ? 'selected' : '' }}>{{ $option }}</option>
@@ -96,7 +96,7 @@
                     </div>
                     <div class="col-md-2">
                         <label class="form-label fw-semibold">Status Aktif</label>
-                        <select name="status_aktif" class="form-select">
+                        <select name="status_aktif" class="form-select" data-auto-submit="change">
                             <option value="">Semua</option>
                             <option value="aktif" {{ $statusAktif === 'aktif' ? 'selected' : '' }}>Aktif</option>
                             <option value="nonaktif" {{ $statusAktif === 'nonaktif' ? 'selected' : '' }}>Nonaktif</option>
@@ -203,3 +203,43 @@
         </div>
     </div>
 @endsection
+
+@push('script')
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const form = document.getElementById('coaFilterForm');
+            if (!form) {
+                return;
+            }
+
+            let debounceTimer;
+            const submitFilter = function () {
+                const params = new URLSearchParams(new FormData(form));
+
+                for (const [key, value] of Array.from(params.entries())) {
+                    if (String(value).trim() === '') {
+                        params.delete(key);
+                    }
+                }
+
+                const queryString = params.toString();
+                const targetUrl = form.action + (queryString ? '?' + queryString : '');
+
+                if (targetUrl !== window.location.href) {
+                    window.location.href = targetUrl;
+                }
+            };
+
+            form.querySelectorAll('[data-auto-submit="input"]').forEach(function (input) {
+                input.addEventListener('input', function () {
+                    clearTimeout(debounceTimer);
+                    debounceTimer = setTimeout(submitFilter, 500);
+                });
+            });
+
+            form.querySelectorAll('[data-auto-submit="change"]').forEach(function (field) {
+                field.addEventListener('change', submitFilter);
+            });
+        });
+    </script>
+@endpush

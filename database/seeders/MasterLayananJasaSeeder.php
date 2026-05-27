@@ -81,6 +81,7 @@ class MasterLayananJasaSeeder extends Seeder
                 'is_active' => (bool) ($row['is_active'] ?? true),
                 'tipe_layanan' => $row['tipe'] ?? 'PNBP',
                 'kode_mak' => $row['kode_mak'] ?? null,
+                'kode_jenis_pembayaran' => $row['kode_jenis_pembayaran'] ?? null,
                 'kode_akun' => $row['kode_akun'] ?? null,
                 'mendukung_konsesi' => (bool) ($row['mendukung_konsesi'] ?? false),
                 'persentase_konsesi' => $row['persentase_konsesi'] ?? null,
@@ -114,6 +115,7 @@ class MasterLayananJasaSeeder extends Seeder
         }
 
         $this->command->info("✓ Master Layanan Jasa: {$deleted} data lama dihapus, {$created} dibuat dari seed Excel, {$parentLinked} parent-link diatur.");
+        $this->call(KodePembayaranLayananJasaSeeder::class);
     }
 
     /**

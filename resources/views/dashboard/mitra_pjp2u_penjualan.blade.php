@@ -68,6 +68,25 @@
             </thead>
             <tbody>
                 @forelse($penjualans as $penjualan)
+                    @php
+                        $details = $penjualan->penerbangan_details ?? [];
+                        $grandTotalPax = 0;
+                        $billablePax = 0;
+                        foreach ($details as $f) {
+                            $d = (int) ($f['pax_dewasa'] ?? 0);
+                            $a = (int) ($f['pax_anak'] ?? 0);
+                            $b = (int) ($f['pax_bayi'] ?? 0);
+                            $t = (int) ($f['pax_transit'] ?? 0);
+                            $billablePax += $d + $a + $b;
+                            $grandTotalPax += $d + $a + $b + $t;
+                        }
+                        if ($grandTotalPax === 0) {
+                            $grandTotalPax = (int) $penjualan->total_omzet;
+                            $billablePax = (int) $penjualan->total_omzet;
+                        }
+                        $tarifDasar = (float) ($penjualan->layananJasa->tarif_dasar ?? 0);
+                        $nilaiTagihanRecalc = $billablePax * $tarifDasar;
+                    @endphp
                     <tr>
                         <td>{{ $penjualans->firstItem() + $loop->index }}</td>
                         <td>
@@ -76,9 +95,14 @@
                             </a>
                         </td>
                         <td>{{ $tanggal($penjualan->periode_mulai) }} s.d. {{ $tanggal($penjualan->periode_selesai) }}</td>
-                        <td class="fw-bold">{{ number_format($penjualan->total_omzet, 0, ',', '.') }} Pax</td>
-                        <td>{{ $rupiah($penjualan->layananJasa->tarif_dasar ?? 0) }}</td>
-                        <td class="fw-bold text-success">{{ $rupiah($penjualan->nilai_tagihan) }}</td>
+                        <td class="fw-bold">
+                            {{ number_format($grandTotalPax, 0, ',', '.') }} Pax
+                            @if($grandTotalPax !== $billablePax)
+                                <div class="small text-muted fw-normal">{{ number_format($billablePax, 0, ',', '.') }} kena tagihan</div>
+                            @endif
+                        </td>
+                        <td>{{ $rupiah($tarifDasar) }}</td>
+                        <td class="fw-bold text-success">{{ $rupiah($nilaiTagihanRecalc) }}</td>
                         <td><span class="badge rounded-pill {{ $statusClass($penjualan->status) }} px-3 py-2 fw-medium">{{ ucfirst($penjualan->status) }}</span></td>
                         <td>
                             @if($penjualan->file_laporan)

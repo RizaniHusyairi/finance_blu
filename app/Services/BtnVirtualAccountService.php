@@ -93,7 +93,9 @@ class BtnVirtualAccountService
                 ]
             );
 
-            if ($tagihan && $amount >= (float) $tagihan->total_tagihan) {
+            $totalTagihanBerjalan = $tagihan ? (float) $tagihan->total_dengan_denda : 0;
+
+            if ($tagihan && $amount >= $totalTagihanBerjalan) {
                 $tagihan->update([
                     'status' => 'LUNAS',
                     'status_pembayaran' => 'lunas',
@@ -108,7 +110,7 @@ class BtnVirtualAccountService
             } elseif ($tagihan) {
                 $tagihan->update([
                     'jumlah_dibayar' => $amount,
-                    'sisa_tagihan' => max(0, (float) $tagihan->total_tagihan - $amount),
+                    'sisa_tagihan' => max(0, $totalTagihanBerjalan - $amount),
                     'payment_reference' => $externalReference,
                     'payment_channel' => $channel,
                     'last_payment_sync_at' => now(),

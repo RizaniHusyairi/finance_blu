@@ -343,6 +343,8 @@
             $layanan->nama_layanan,
             $layanan->kode_layanan,
             $layanan->kode_mak,
+            $layanan->kode_jenis_pembayaran,
+            $layanan->kode_pembayaran_lengkap,
             $layanan->kode_akun,
             $layanan->satuan,
             $layanan->tarif_dasar,
@@ -369,7 +371,9 @@
                 <div class="min-w-0">
                     <div class="tree-title">{{ $layanan->nama_layanan }}</div>
                     <div class="tree-meta">
-                        @if($layanan->kode_mak)
+                        @if($layanan->kode_pembayaran_lengkap)
+                            Kode bayar {{ $layanan->kode_pembayaran_lengkap }}
+                        @elseif($layanan->kode_mak)
                             MAK {{ $layanan->kode_mak }}
                         @else
                             -

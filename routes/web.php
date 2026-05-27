@@ -32,6 +32,9 @@ Route::get('/p/tagihan-jasa/{id}', [\App\Http\Controllers\PublicTagihanJasaContr
 Route::get('/p/tagihan-jasa/{id}/pdf', [\App\Http\Controllers\PublicTagihanJasaController::class, 'pdf'])
     ->middleware('signed')
     ->name('public.tagihan-jasa.pdf');
+Route::get('/p/tagihan-jasa/{id}/verify', [\App\Http\Controllers\PublicTagihanJasaVerificationController::class, 'show'])
+    ->middleware('signed')
+    ->name('public.tagihan-jasa.verify');
 
 // Short link redirector — link pendek di WhatsApp di-resolve ke URL publik signed.
 Route::get('/i/{slug}', [\App\Http\Controllers\ShortLinkController::class, 'show'])
@@ -76,6 +79,8 @@ Route::middleware(['auth', 'account.active'])->group(function () use ($internalR
                 ->name('dashboard');
             Route::get('/mitra', [\App\Http\Controllers\AdminJasaTagihanController::class, 'mitra'])
                 ->name('mitra');
+            Route::view('/panduan', 'admin_jasa.panduan')
+                ->name('panduan');
         });
 
     // Jatuh Tempo — diperluas ke KPA/PLT/PLH (read-only akses untuk monitoring)
@@ -94,6 +99,32 @@ Route::middleware(['auth', 'account.active'])->group(function () use ($internalR
         ->group(function () {
             Route::get('/tagihan/log-bulanan', [\App\Http\Controllers\AdminJasaTagihanController::class, 'logBulanan'])
                 ->name('tagihan.log-bulanan');
+            Route::get('/tagihan/log-bulanan/export/{format}', [\App\Http\Controllers\AdminJasaTagihanController::class, 'exportLogBulanan'])
+                ->where('format', 'pdf|excel')
+                ->name('tagihan.log-bulanan.export');
+        });
+
+    // Laporan — Super Admin Jasa: rekap tagihan, terima setor, pembayaran, piutang, performa mitra
+    Route::middleware('role:Super Admin|Super Admin Jasa')
+        ->prefix('super-admin-jasa/laporan')
+        ->name('super-admin-jasa.laporan.')
+        ->group(function () {
+            Route::get('/rekap-tagihan', [\App\Http\Controllers\SuperAdminJasaLaporanController::class, 'rekapTagihan'])
+                ->name('rekap-tagihan');
+            Route::get('/rekap-layanan', [\App\Http\Controllers\SuperAdminJasaLaporanController::class, 'rekapLayanan'])
+                ->name('rekap-layanan');
+            Route::get('/rekap-terima-setor', [\App\Http\Controllers\SuperAdminJasaLaporanController::class, 'rekapTerimaSetor'])
+                ->name('rekap-terima-setor');
+            Route::get('/rekap-pembayaran', [\App\Http\Controllers\SuperAdminJasaLaporanController::class, 'rekapPembayaran'])
+                ->name('rekap-pembayaran');
+            Route::get('/rekap-piutang', [\App\Http\Controllers\SuperAdminJasaLaporanController::class, 'rekapPiutang'])
+                ->name('rekap-piutang');
+            Route::get('/performa-mitra', [\App\Http\Controllers\SuperAdminJasaLaporanController::class, 'performaMitra'])
+                ->name('performa-mitra');
+            Route::get('/{report}/export/{format}', [\App\Http\Controllers\SuperAdminJasaLaporanController::class, 'export'])
+                ->where('report', 'rekap-tagihan|rekap-layanan|rekap-terima-setor|rekap-pembayaran|rekap-piutang|performa-mitra')
+                ->where('format', 'pdf|excel')
+                ->name('export');
         });
 
     // Workflow Engine General Routes
@@ -241,6 +272,10 @@ Route::middleware(['auth', 'account.active'])->group(function () use ($internalR
     Route::middleware('role:Super Admin|Super Admin Jasa|Operator BLU|Koordinator Keuangan|Admin Jasa|Admin Konsesi|Koordinator Jasa|KPA|PLT/PLH|Kepala Seksi Pelayanan dan Kerjasama|Kepala Subbagian Keuangan dan Tata Usaha')->group(function () {
         Route::get('/jasa/laporan-penjualan', [\App\Http\Controllers\MitraJasaPenjualanController::class, 'index'])->name('jasa.mitra.penjualan.index');
         Route::get('/jasa/laporan-pjp2u', [\App\Http\Controllers\MitraJasaPenjualanController::class, 'indexPjp2u'])->name('jasa.mitra.pjp2u.index');
+        Route::get('/jasa/laporan-pjp2u/rekap/{mitra}/{layanan}/{tahun}/{bulan}', [\App\Http\Controllers\MitraJasaPenjualanController::class, 'showPjp2uRekap'])
+            ->whereNumber('tahun')
+            ->whereNumber('bulan')
+            ->name('jasa.mitra.pjp2u.rekap.show');
         Route::get('/jasa/mitra/{mitra}/penjualan/{penjualan}', [\App\Http\Controllers\MitraJasaPenjualanController::class, 'show'])->name('jasa.mitra.penjualan.show');
     });
 
@@ -270,12 +305,16 @@ Route::middleware(['auth', 'account.active'])->group(function () use ($internalR
     Route::middleware('role:Super Admin|Super Admin Jasa|Admin Jasa|Admin Konsesi')->group(function () {
         Route::get('/tagihan-jasa/create', [\App\Http\Controllers\TagihanJasaController::class, 'create'])->name('tagihan-jasa.create');
         Route::post('/tagihan-jasa', [\App\Http\Controllers\TagihanJasaController::class, 'store'])->name('tagihan-jasa.store');
+        Route::get('/tagihan-jasa/{id}/edit', [\App\Http\Controllers\TagihanJasaController::class, 'edit'])->name('tagihan-jasa.edit');
+        Route::put('/tagihan-jasa/{id}', [\App\Http\Controllers\TagihanJasaController::class, 'update'])->name('tagihan-jasa.update');
+        Route::post('/tagihan-jasa/{id}/resubmit', [\App\Http\Controllers\TagihanJasaController::class, 'resubmit'])->name('tagihan-jasa.resubmit');
     });
 
     Route::middleware('role:Super Admin|Super Admin Jasa|Admin Jasa|Admin Konsesi|Koordinator Jasa|Kepala Seksi Pelayanan dan Kerjasama|Kepala Subbagian Keuangan dan Tata Usaha|KPA|PLT/PLH')->group(function () {
         Route::get('/tagihan-jasa', [\App\Http\Controllers\TagihanJasaController::class, 'index'])->name('tagihan-jasa.index');
         Route::get('/tagihan-jasa/{id}/surat-pengantar', [\App\Http\Controllers\TagihanJasaController::class, 'generateSuratPengantarPdf'])->name('tagihan-jasa.surat-pengantar');
         Route::put('/tagihan-jasa/{id}/surat-pengantar', [\App\Http\Controllers\TagihanJasaController::class, 'updateSuratPengantarDraft'])->name('tagihan-jasa.surat-pengantar.update');
+        Route::post('/tagihan-jasa/{id}/surat-pengantar-final/generate', [\App\Http\Controllers\TagihanJasaController::class, 'generateSuratPengantarFinal'])->name('tagihan-jasa.surat-pengantar-final.generate');
         Route::post('/tagihan-jasa/{id}/surat-pengantar-final', [\App\Http\Controllers\TagihanJasaController::class, 'uploadSuratPengantarFinal'])->name('tagihan-jasa.surat-pengantar-final.upload');
         Route::get('/tagihan-jasa/{id}', [\App\Http\Controllers\TagihanJasaController::class, 'show'])->name('tagihan-jasa.show');
         Route::get('/tagihan-jasa/{id}/pdf', [\App\Http\Controllers\TagihanJasaController::class, 'generateInvoicePdf'])->name('tagihan-jasa.pdf');
@@ -285,6 +324,7 @@ Route::middleware(['auth', 'account.active'])->group(function () use ($internalR
 
         // Verifikasi Tagihan Jasa
         Route::post('/tagihan-jasa/{id}/approve', [\App\Http\Controllers\TagihanJasaVerifikasiController::class, 'approve'])->name('tagihan-jasa.approve');
+        Route::post('/tagihan-jasa/{id}/revision', [\App\Http\Controllers\TagihanJasaVerifikasiController::class, 'revision'])->name('tagihan-jasa.revision');
         Route::post('/tagihan-jasa/{id}/reject', [\App\Http\Controllers\TagihanJasaVerifikasiController::class, 'reject'])->name('tagihan-jasa.reject');
     });
 

@@ -199,6 +199,11 @@
                 <i class="material-icons-outlined">arrow_right</i>Jatuh Tempo
               </a>
             </li>
+            <li>
+              <a href="{{ route('admin-jasa.panduan') }}">
+                <i class="material-icons-outlined">arrow_right</i>Panduan Admin Jasa
+              </a>
+            </li>
           </ul>
         </li>
         <li>
@@ -482,6 +487,46 @@
             </li>
           </ul>
         </li>
+        @hasanyrole('Super Admin|Super Admin Jasa')
+        <li>
+          <a href="javascript:;" class="has-arrow">
+            <div class="parent-icon"><i class="material-icons-outlined">assessment</i></div>
+            <div class="menu-title">Laporan</div>
+          </a>
+          <ul>
+            <li>
+              <a href="{{ route('super-admin-jasa.laporan.rekap-tagihan') }}">
+                <i class="material-icons-outlined">arrow_right</i>Rekap Tagihan
+              </a>
+            </li>
+            <li>
+              <a href="{{ route('super-admin-jasa.laporan.rekap-layanan') }}">
+                <i class="material-icons-outlined">arrow_right</i>Rekap per Layanan
+              </a>
+            </li>
+            <li>
+              <a href="{{ route('super-admin-jasa.laporan.rekap-terima-setor') }}">
+                <i class="material-icons-outlined">arrow_right</i>Rekap Terima Setor
+              </a>
+            </li>
+            <li>
+              <a href="{{ route('super-admin-jasa.laporan.rekap-pembayaran') }}">
+                <i class="material-icons-outlined">arrow_right</i>Rekap Pembayaran
+              </a>
+            </li>
+            <li>
+              <a href="{{ route('super-admin-jasa.laporan.rekap-piutang') }}">
+                <i class="material-icons-outlined">arrow_right</i>Rekap Piutang
+              </a>
+            </li>
+            <li>
+              <a href="{{ route('super-admin-jasa.laporan.performa-mitra') }}">
+                <i class="material-icons-outlined">arrow_right</i>Performa Pembayaran Mitra
+              </a>
+            </li>
+          </ul>
+        </li>
+        @endhasanyrole
         <li>
           <a href="javascript:;" class="has-arrow">
             <div class="parent-icon"><i class="material-icons-outlined">settings</i></div>

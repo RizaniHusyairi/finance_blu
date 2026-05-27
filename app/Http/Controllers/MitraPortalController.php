@@ -387,6 +387,7 @@ class MitraPortalController extends Controller
             'penerbangan.*.pax_dewasa' => ['required', 'integer', 'min:0'],
             'penerbangan.*.pax_anak' => ['required', 'integer', 'min:0'],
             'penerbangan.*.pax_bayi' => ['required', 'integer', 'min:0'],
+            'penerbangan.*.pax_transit' => ['required', 'integer', 'min:0'],
             'file_laporan' => ['required', 'file', 'mimes:pdf,xlsx,xls,csv,jpg,jpeg,png', 'max:5120'],
             'catatan_mitra' => ['nullable', 'string', 'max:1000'],
         ]);
@@ -404,19 +405,22 @@ class MitraPortalController extends Controller
         $totalPaxDewasa = 0;
         $totalPaxAnak = 0;
         $totalPaxBayi = 0;
+        $totalPaxTransit = 0;
         $nomorPenerbangans = [];
 
         foreach ($validated['penerbangan'] as $flight) {
             $totalPaxDewasa += (int) $flight['pax_dewasa'];
             $totalPaxAnak += (int) $flight['pax_anak'];
             $totalPaxBayi += (int) $flight['pax_bayi'];
+            $totalPaxTransit += (int) $flight['pax_transit'];
             $nomorPenerbangans[] = trim($flight['nomor_penerbangan']);
         }
 
-        $totalPax = $totalPaxDewasa + $totalPaxAnak + $totalPaxBayi;
-        
+        $totalPax = $totalPaxDewasa + $totalPaxAnak + $totalPaxBayi + $totalPaxTransit;
+        $totalPaxBillable = $totalPaxDewasa + $totalPaxAnak + $totalPaxBayi;
+
         $tarifDasar = (float) ($layanan->tarif_dasar ?? 0);
-        $nilaiTagihan = $totalPax * $tarifDasar;
+        $nilaiTagihan = $totalPaxBillable * $tarifDasar;
 
         if ($request->hasFile('file_laporan')) {
             $validated['file_laporan'] = $request->file('file_laporan')->store('mitra-jasa/pax', 'public');
@@ -441,7 +445,7 @@ class MitraPortalController extends Controller
             'tahun' => (int) date('Y', strtotime($validated['periode_mulai'])),
             'nomor_penerbangan' => implode(', ', array_unique($nomorPenerbangans)),
             'penerbangan_details' => $validated['penerbangan'],
-            'total_omzet' => $totalPax, 
+            'total_omzet' => $totalPaxBillable,
             'persentase_konsesi' => 0,
             'nilai_konsesi' => 0,
             'nilai_minimum_guarantee' => null,

@@ -20,7 +20,9 @@
     </style>
 </head>
 <body>
-    @php($mitraTagihan = $tagihan->mitra ?? $tagihan->mitraLegacy)
+    @php
+        $mitraTagihan = $tagihan->mitra ?? $tagihan->mitraLegacy;
+    @endphp
     <div class="header">
         <h1>INVOICE TAGIHAN JASA (PNBP)</h1>
         <p>Nomor: {{ $tagihan->nomor_tagihan }} | Tanggal: {{ \Carbon\Carbon::parse($tagihan->tanggal_tagihan)->format('d F Y') }}</p>
@@ -76,7 +78,7 @@
                         <br><small>Perhitungan: {{ $detail->calculation_payload['formula'] }}</small>
                     @endif
                 </td>
-                <td>{{ $detail->kode_akun ?: ($detail->layananJasa->kode_akun ?? '-') }}</td>
+                <td>{{ $detail->kode_akun ?: ($detail->layananJasa->kode_pembayaran_lengkap ?? $detail->layananJasa->kode_akun ?? '-') }}</td>
                 <td class="text-center">{{ rtrim(rtrim(number_format($detail->qty, 2, ',', '.'), '0'), ',') }}</td>
                 <td class="text-right">{{ number_format((float) ($detail->kurs ?? 1), 4, ',', '.') }}</td>
                 <td class="text-right">

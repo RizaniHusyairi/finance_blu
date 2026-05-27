@@ -449,6 +449,16 @@
                                     <td colspan="4" class="text-end">Total Tagihan</td>
                                     <td class="text-end total-amount">Rp {{ number_format((float) $tagihan->total_tagihan, 0, ',', '.') }}</td>
                                 </tr>
+                                @if($tagihan->nominal_denda_keterlambatan > 0)
+                                    <tr>
+                                        <td colspan="4" class="text-end text-danger fw-bold">Denda 2% x {{ $tagihan->hari_terlambat }} hari</td>
+                                        <td class="text-end text-danger fw-bold">Rp {{ number_format($tagihan->nominal_denda_keterlambatan, 0, ',', '.') }}</td>
+                                    </tr>
+                                    <tr class="total-row">
+                                        <td colspan="4" class="text-end">Total Harus Dibayar</td>
+                                        <td class="text-end total-amount">Rp {{ number_format($tagihan->total_dengan_denda, 0, ',', '.') }}</td>
+                                    </tr>
+                                @endif
                             </tbody>
                         </table>
                     </div>
@@ -527,8 +537,15 @@
                     <p class="pc-text">
                         Jatuh tempo tagihan adalah <strong>30 (tiga puluh) hari</strong> sesuai dengan nota tagihan,
                         sehingga apabila pada tanggal tersebut tagihan belum dibayar maka akan dikenakan
-                        <span class="pc-percent">denda 2%</span> dari total tagihan.
+                        <span class="pc-percent">denda 2% per hari</span> dari total tagihan.
                     </p>
+                    @if($tagihan->nominal_denda_keterlambatan > 0)
+                        <div class="alert alert-danger small mt-3 mb-0">
+                            Terlambat {{ $tagihan->hari_terlambat }} hari:
+                            denda Rp {{ number_format($tagihan->nominal_denda_keterlambatan, 0, ',', '.') }}.
+                            Total harus dibayar Rp {{ number_format($tagihan->total_dengan_denda, 0, ',', '.') }}.
+                        </div>
+                    @endif
                 </div>
             </div>
             @endunless

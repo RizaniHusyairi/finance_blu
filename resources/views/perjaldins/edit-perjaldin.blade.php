@@ -346,19 +346,39 @@
             return n.toString().replace(/\D/g, "").replace(/\B(?=(\d{3})+(?!\d))/g, ",");
         }
 
-        // Toggle visibility of input file tiket berdasarkan nilai biaya_tiket.
-        window.toggleTiketFile = function (element) {
+        // Toggle visibility input file bukti berdasarkan nilai komponen biaya.
+        // key: 'tiket' | 'transport' | 'penginapan' | 'uang-harian'
+        window.toggleBuktiFile = function (element, key) {
             let card = $(element).closest('.item-row');
             let val = parseFloat(String($(element).val()).replace(/,/g, '')) || 0;
-            let wrapper = card.find('.tiket-file-wrapper');
+            let wrapper = card.find('.' + key + '-file-wrapper');
             if (val > 0) {
                 wrapper.removeClass('d-none');
             } else {
                 wrapper.addClass('d-none');
-                wrapper.find('.tiket-file-input').val('');
-                wrapper.find('.tiket-existing-notice').remove();
+                wrapper.find('.' + key + '-file-input').val('');
+                wrapper.find('.' + key + '-existing-notice').remove();
             }
         };
+        // Backward-compat alias
+        window.toggleTiketFile = function (element) { return toggleBuktiFile(element, 'tiket'); };
+
+        // Toggle file uang harian berdasarkan total grup (Harian + Representasi + Rapat)
+        function toggleUangHarianFile(card) {
+            let total = 0;
+            card.find('.uang-harian-component').each(function () {
+                let n = parseFloat(String($(this).val()).replace(/,/g, ''));
+                if (!isNaN(n)) total += n;
+            });
+            let wrapper = card.find('.uang-harian-file-wrapper');
+            if (total > 0) {
+                wrapper.removeClass('d-none');
+            } else {
+                wrapper.addClass('d-none');
+                wrapper.find('.uang-harian-file-input').val('');
+                wrapper.find('.uang-harian-existing-notice').remove();
+            }
+        }
 
         // Hitung total tampilan grup Uang Harian (Harian + Representasi + Rapat)
         function calculateUangHarianGroup(card) {
@@ -368,6 +388,7 @@
                 if (!isNaN(num)) total += num;
             });
             card.find('.uang-harian-total').text(formatNumber(total));
+            toggleUangHarianFile(card);
         }
 
         // Cek sisa pagu COA terpilih vs total komponen, tampilkan warning bila kurang.
@@ -492,10 +513,11 @@
                calculateJumlah(this);
             });
 
-            // Initialize toggle file tiket based on initial biaya_tiket value
-            $('.tiket-amount-input').each(function() {
-                toggleTiketFile(this);
-            });
+            // Initialize toggle file bukti berdasar nilai awal masing-masing komponen
+            $('.tiket-amount-input').each(function() { toggleBuktiFile(this, 'tiket'); });
+            $('.transport-amount-input').each(function() { toggleBuktiFile(this, 'transport'); });
+            $('.penginapan-amount-input').each(function() { toggleBuktiFile(this, 'penginapan'); });
+            $('.item-row').each(function() { toggleUangHarianFile($(this)); });
 
             // Auto-fill PPK
             $('#ppkUserId').change(function() {
@@ -568,8 +590,8 @@
                 newRow.find('.summary-total').text('0');
                 newRow.find('.uang-harian-total').text('0');
                 newRow.find('.file-existing-notice').remove();
-                newRow.find('.tiket-existing-notice').remove();
-                newRow.find('.tiket-file-wrapper').addClass('d-none');
+                newRow.find('.tiket-existing-notice, .transport-existing-notice, .penginapan-existing-notice, .uang-harian-existing-notice').remove();
+                newRow.find('.tiket-file-wrapper, .transport-file-wrapper, .penginapan-file-wrapper, .uang-harian-file-wrapper').addClass('d-none');
                 newRow.find('.file-status-badge').removeClass('bg-success').addClass('bg-secondary').html('<i class="bi bi-paperclip"></i> SPT Kosong');
                 newRow.find('.nip-input').val('').prop('readonly', true);
                 newRow.find('.rekening-input').val('').prop('readonly', false);

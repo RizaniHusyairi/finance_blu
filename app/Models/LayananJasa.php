@@ -12,6 +12,9 @@ class LayananJasa extends Model
 
     protected $table = 'layanan_jasas';
     protected $guarded = ['id'];
+    protected $appends = [
+        'kode_pembayaran_lengkap',
+    ];
     protected $casts = [
         'tarif_dasar' => 'decimal:2',
         'persentase_konsesi' => 'decimal:4',
@@ -71,6 +74,18 @@ class LayananJasa extends Model
         }
 
         return implode(' > ', $names);
+    }
+
+    public function getKodePembayaranLengkapAttribute()
+    {
+        $kodeMak = trim((string) ($this->kode_mak ?? ''));
+        $kodeJenisPembayaran = trim((string) ($this->kode_jenis_pembayaran ?? ''));
+
+        if ($kodeMak === '' || $kodeJenisPembayaran === '') {
+            return null;
+        }
+
+        return $kodeMak . '.' . $kodeJenisPembayaran;
     }
 
     public function isPjp2u()

@@ -98,12 +98,16 @@ class MitraJasaPenjualan extends Model
         }
     }
 
-    /* ── Accessor: Verifikasi hanya setelah berganti bulan ── */
+    /* ── Accessor: Verifikasi konsesi setelah berganti bulan, PJP2U harian langsung ── */
 
     public function getCanBeVerifiedAttribute(): bool
     {
         if ($this->status !== 'diajukan') {
             return false;
+        }
+
+        if ($this->is_pjp2u_report) {
+            return true;
         }
 
         $now = now();
@@ -112,12 +116,16 @@ class MitraJasaPenjualan extends Model
             || ($now->year === (int) $this->tahun && $now->month > (int) $this->bulan);
     }
 
-    /* ── Accessor: Buat Tagihan setelah 1 bulan dari submitted_at ── */
+    /* ── Accessor: Buat tagihan konsesi setelah 1 bulan, PJP2U harian langsung ── */
 
     public function getCanCreateTagihanAttribute(): bool
     {
         if ($this->status !== 'diverifikasi' || $this->tagihan_jasa_id) {
             return false;
+        }
+
+        if ($this->is_pjp2u_report) {
+            return true;
         }
 
         if (! $this->submitted_at) {
@@ -133,11 +141,28 @@ class MitraJasaPenjualan extends Model
 
     public function getTagihanAvailableDateAttribute(): ?string
     {
+        if ($this->is_pjp2u_report) {
+            return 'Sekarang';
+        }
+
         if (! $this->submitted_at) {
             return null;
         }
 
         return Carbon::parse($this->submitted_at)->addMonth()->format('d/m/Y');
+    }
+
+    public function getIsPjp2uReportAttribute(): bool
+    {
+        if (is_array($this->penerbangan_details) && count($this->penerbangan_details) > 0) {
+            return true;
+        }
+
+        $layanan = $this->relationLoaded('layananJasa')
+            ? $this->layananJasa
+            : $this->layananJasa()->first();
+
+        return $layanan?->isPjp2u() === true;
     }
 
     /* ── Accessor: Label status deskriptif ── */

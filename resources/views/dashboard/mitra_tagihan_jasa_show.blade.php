@@ -258,7 +258,7 @@
                                             <div class="small text-muted">Keterangan: {{ $detail->keterangan }}</div>
                                         @endif
                                     </td>
-                                    <td>{{ $detail->kode_akun ?: ($detail->layananJasa->kode_akun ?? '-') }}</td>
+                                    <td>{{ $detail->kode_akun ?: ($detail->layananJasa->kode_pembayaran_lengkap ?? $detail->layananJasa->kode_akun ?? '-') }}</td>
                                     <td class="text-center">{{ rtrim(rtrim(number_format($detail->qty, 2, ',', '.'), '0'), ',') }}</td>
                                     <td class="text-end">
                                         @if($isPercentageDetail)
