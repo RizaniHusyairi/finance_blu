@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\DocumentTte;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -126,5 +127,20 @@ class DokumenSpp extends Model
             ->where('jenis_dokumen', self::STANDING_INSTRUCTION_SIGNED_ARCHIVE_TYPE)
             ->where('is_active', true)
             ->exists();
+    }
+
+    public function isFullyVerifiedForTte(): bool
+    {
+        return DocumentTte::isFullyVerified($this);
+    }
+
+    public function tteHashPayload(): array
+    {
+        return DocumentTte::hashPayload($this);
+    }
+
+    public function tteHash(): string
+    {
+        return DocumentTte::hash($this);
     }
 }

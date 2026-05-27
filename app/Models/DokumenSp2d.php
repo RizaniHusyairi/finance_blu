@@ -52,6 +52,11 @@ class DokumenSp2d extends Model
         return $this->morphMany(WorkflowInstance::class, 'workflowable');
     }
 
+    public function workflowInstance()
+    {
+        return $this->morphOne(WorkflowInstance::class, 'workflowable')->latestOfMany();
+    }
+
 
     public function getSppIdAttribute()
     {

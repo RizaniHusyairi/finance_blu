@@ -354,7 +354,11 @@ class NpiController extends Controller
 
     public function cetakPdf($npi_id)
     {
-        $npi = DokumenNpi::with(['spm.spp', 'bendaharaPenerimaan.profilable'])->findOrFail($npi_id);
+        $npi = DokumenNpi::with([
+            'spm.spp.tagihan',
+            'bendaharaPenerimaan.profilable',
+            'workflowInstance.approvals',
+        ])->findOrFail($npi_id);
         $spm = $npi->spm;
         $spp = $spm?->spp;
 
