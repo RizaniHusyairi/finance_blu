@@ -25,6 +25,21 @@ Route::get('/aktivitas-tagihan/{id}', [\App\Http\Controllers\PublicTagihanActivi
     ->middleware('signed')
     ->name('public.tagihan.aktivitas');
 
+Route::get('/tte/spp/{id}', [\App\Http\Controllers\PublicSppSignatureController::class, 'show'])
+    ->middleware('signed')
+    ->name('public.spp-tte.show');
+Route::get('/tte/spp/{id}/dokumen', [\App\Http\Controllers\PublicSppSignatureController::class, 'document'])
+    ->middleware('signed')
+    ->name('public.spp-tte.document');
+Route::get('/tte/{type}/{id}', [\App\Http\Controllers\PublicDocumentSignatureController::class, 'show'])
+    ->whereIn('type', ['spp', 'spm', 'npi', 'sp2d'])
+    ->middleware('signed')
+    ->name('public.document-tte.show');
+Route::get('/tte/{type}/{id}/dokumen', [\App\Http\Controllers\PublicDocumentSignatureController::class, 'document'])
+    ->whereIn('type', ['spp', 'spm', 'npi', 'sp2d'])
+    ->middleware('signed')
+    ->name('public.document-tte.document');
+
 // Route publik (signed URL) untuk Tagihan Jasa yang dikirim ke mitra via WhatsApp.
 Route::get('/p/tagihan-jasa/{id}', [\App\Http\Controllers\PublicTagihanJasaController::class, 'show'])
     ->middleware('signed')

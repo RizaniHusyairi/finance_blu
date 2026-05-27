@@ -41,26 +41,8 @@
 </head>
 <body>
 @php
-    // QR code: signed URL ke halaman aktivitas tagihan terkait SP2D ini.
-    // DomPDF tidak handle inline <svg> dari simple-qrcode dengan stabil,
-    // jadi kita tulis ke file SVG temp dan reference via <img src="{absolute_path}">.
-    $qrTagihanId = ($spp ?? null)?->tagihan_id ?? optional($tagihan ?? null)->id;
-    $qrFilePath = null;
-    $qrUrl = null;
-    if ($qrTagihanId) {
-        $qrUrl = \Illuminate\Support\Facades\URL::signedRoute('public.tagihan.aktivitas', ['id' => $qrTagihanId]);
-        $qrCacheDir = storage_path('app/qr-cache');
-        if (! is_dir($qrCacheDir)) {
-            @mkdir($qrCacheDir, 0775, true);
-        }
-        $qrFilePath = $qrCacheDir . DIRECTORY_SEPARATOR . 'tagihan_' . $qrTagihanId . '_' . md5($qrUrl) . '.svg';
-        if (! file_exists($qrFilePath)) {
-            $qrSvg = (string) \SimpleSoftwareIO\QrCode\Facades\QrCode::format('svg')
-                ->size(300)->margin(1)->errorCorrection('M')->generate($qrUrl);
-            file_put_contents($qrFilePath, $qrSvg);
-        }
-        $qrFilePath = str_replace('\\', '/', $qrFilePath);
-    }
+    $activityQrFilePath = \App\Support\DocumentTte::activityQrFilePath(\App\Support\DocumentTte::tagihanIdFor($sp2d));
+    $tteQrFilePath = \App\Support\DocumentTte::tteQrFilePath($sp2d);
 @endphp
 
 <div class="box-container">
@@ -128,14 +110,22 @@
             </td>
             <td>
                 <div style="margin-bottom: 5px;">Samarinda, {{ $sp2d->tanggal_sp2d ? \Carbon\Carbon::parse($sp2d->tanggal_sp2d)->locale('id')->isoFormat('D MMMM Y') : date('d M Y') }}</div>
-                <div class="sig-title">Bendahara Pengeluaran</div>
+                <div style="margin-bottom: 4px;">Bendahara Pengeluaran</div>
+                @if($tteQrFilePath)
+                    <div style="margin: 4px auto 5px; width: 82px; text-align: center;">
+                        <img src="{{ $tteQrFilePath }}" alt="QR TTE SP2D" style="width: 82px; height: 82px;">
+                        <div style="font-size: 8px; line-height: 1.2; margin-top: 2px;">QR TTE SP2D</div>
+                    </div>
+                @else
+                    <div style="height: 70px;"></div>
+                @endif
                 <div><span style="text-decoration: underline; font-weight: bold;">{{ strtoupper($bendaharaPengeluaran->name ?? 'BENDAHARA PENGELUARAN') }}</span></div>
                 <div>NIP {{ $bendaharaPengeluaran->nip ?? '-' }}</div>
             </td>
         </tr>
     </table>
 
-    @if($qrFilePath)
+    @if(false && $activityQrFilePath)
         <table style="width: 100%; border: none; border-collapse: collapse; margin-top: 25px;">
             <tr>
                 <td style="border: none; width: 90px; vertical-align: top; padding: 0;">
@@ -149,6 +139,22 @@
         </table>
     @endif
 </div>
+
+@if($activityQrFilePath)
+    <div style="margin-top: 8px; padding: 6px 8px; border: 1px solid #cfd7e3; font-size: 8px; color: #333;">
+        <table style="width: 100%; border: none; border-collapse: collapse;">
+            <tr>
+                <td style="border: none; width: 54px; vertical-align: top; padding: 0;">
+                    <img src="{{ $activityQrFilePath }}" alt="QR Aktivitas Tagihan" style="width: 50px; height: 50px;">
+                </td>
+                <td style="border: none; vertical-align: top; padding: 3px 0 0 7px;">
+                    <strong>Scan untuk lihat aktivitas tagihan</strong><br>
+                    Status verifikasi, SPP, SPM, NPI, hingga SP2D — beserta verifikator di tiap tahap.
+                </td>
+            </tr>
+        </table>
+    </div>
+@endif
 
 </body>
 </html>

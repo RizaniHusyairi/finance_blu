@@ -1076,6 +1076,7 @@ class SppController extends Controller
             'tagihan.dipaRevisionItem.dipaRevision.masterDipa',
             'tagihan.potonganTagihan.pajak',
             'tagihan.potonganTagihan.akunPotongan',
+            'workflowInstance.approvals',
         ])->find($spp_id);
 
         if ($dokumenSpp) {
@@ -1131,6 +1132,7 @@ class SppController extends Controller
             'tagihan.dipaRevisionItem.dipaRevision.masterDipa',
             'tagihan.pihak.rekening',
             'tagihan.detailKontrak.kontrakTermin.kontrak.vendor.rekening',
+            'workflowInstance.approvals',
         ])->findOrFail($spp_id);
         $sppable = $spp->sppable;
         
