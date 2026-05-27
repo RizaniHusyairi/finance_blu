@@ -93,7 +93,8 @@ class SpmController extends Controller
             'spp.tagihan.dipaRevisionItem.dipaRevision.masterDipa',
             'spp.tagihan.potonganTagihan.pajak',
             'spp.tagihan.potonganTagihan.akunPotongan',
-            'ppspm',
+            'ppspm.profilable',
+            'workflowInstance.approvals',
         ])->findOrFail($spm_id);
         $spp = $spm->spp;
         $sppable = $spp?->tagihan;

@@ -166,6 +166,7 @@ class DocumentController extends Controller
             'npi.spm.spp.tagihan.detailKontrak.kontrakTermin.kontrak.vendor.rekening',
             'npi.spm.spp.tagihan.potonganTagihan.pajak',
             'bendaharaPengeluaran',
+            'workflowInstance.approvals',
             'workflowInstances.approvals.actedByUser'
         ]);
 

@@ -54,27 +54,40 @@
         'uraian' => $uraianSupplier ?? '-',
     ];
 
-    // QR code: signed URL ke halaman aktivitas tagihan terkait SPP ini.
     // DomPDF tidak handle inline <svg> dari simple-qrcode dengan stabil
     // (XML prolog & viewBox-only sizing), jadi kita tulis ke file SVG temp
     // dan reference via <img src="{absolute_path}">.
-    $qrTagihanId = $spp->tagihan_id ?? optional($spp->tagihan)->id;
-    $qrFilePath = null;
-    $qrUrl = null;
-    if ($qrTagihanId) {
-        $qrUrl = \Illuminate\Support\Facades\URL::signedRoute('public.tagihan.aktivitas', ['id' => $qrTagihanId]);
+    $buildQrFilePath = function (string $url, string $filePrefix) {
         $qrCacheDir = storage_path('app/qr-cache');
         if (! is_dir($qrCacheDir)) {
             @mkdir($qrCacheDir, 0775, true);
         }
-        $qrFilePath = $qrCacheDir . DIRECTORY_SEPARATOR . 'tagihan_' . $qrTagihanId . '_' . md5($qrUrl) . '.svg';
+
+        $qrFilePath = $qrCacheDir . DIRECTORY_SEPARATOR . $filePrefix . '_' . md5($url) . '.svg';
         if (! file_exists($qrFilePath)) {
             $qrSvg = (string) \SimpleSoftwareIO\QrCode\Facades\QrCode::format('svg')
-                ->size(300)->margin(1)->errorCorrection('M')->generate($qrUrl);
+                ->size(300)->margin(1)->errorCorrection('M')->generate($url);
             file_put_contents($qrFilePath, $qrSvg);
         }
-        // Normalisasi separator agar DomPDF di Windows tetap dapat membaca file
-        $qrFilePath = str_replace('\\', '/', $qrFilePath);
+
+        return str_replace('\\', '/', $qrFilePath);
+    };
+
+    $activityQrFilePath = null;
+    $qrTagihanId = $spp->tagihan_id ?? optional($spp->tagihan)->id;
+    if ($qrTagihanId) {
+        $activityQrUrl = \Illuminate\Support\Facades\URL::signedRoute('public.tagihan.aktivitas', ['id' => $qrTagihanId]);
+        $activityQrFilePath = $buildQrFilePath($activityQrUrl, 'tagihan_' . $qrTagihanId);
+    }
+
+    $tteQrFilePath = null;
+    $isSppTteReady = method_exists($spp, 'isFullyVerifiedForTte') && $spp->isFullyVerifiedForTte();
+    if ($isSppTteReady) {
+        $tteQrUrl = \Illuminate\Support\Facades\URL::signedRoute('public.spp-tte.show', [
+            'id' => $spp->id,
+            'hash' => method_exists($spp, 'tteHash') ? $spp->tteHash() : null,
+        ]);
+        $tteQrFilePath = $buildQrFilePath($tteQrUrl, 'spp_tte_' . $spp->id);
     }
 @endphp
 
@@ -315,30 +328,41 @@
                 Kebenaran perhitungan dan isi yang tertuang dalam SPP ini menjadi tanggung <br>
                 jawab Pejabat Pembuat Komitmen.
 
-                @if($qrFilePath)
-                    <table style="width: 100%; border: none; margin-top: 12px;">
-                        <tr>
-                            <td style="border: none; width: 90px; vertical-align: top; padding: 0;">
-                                <img src="{{ $qrFilePath }}" alt="QR Aktivitas Tagihan" style="width: 90px; height: 90px;">
-                            </td>
-                            <td style="border: none; vertical-align: top; padding: 4px 0 0 10px; font-size: 9px; color: #333;">
-                                <strong>Scan untuk lihat aktivitas tagihan</strong><br>
-                                Status verifikasi, SPP, SPM, NPI, hingga SP2D — beserta verifikator di tiap tahap.
-                            </td>
-                        </tr>
-                    </table>
-                @endif
             </td>
             <td colspan="2" style="padding: 10px; width: 40%; vertical-align: top; text-align: center;">
                 Samarinda, {{ \Carbon\Carbon::parse($spp->tanggal_spp)->locale('id')->isoFormat('D MMMM Y') }} <br>
                 A.n. Kuasa Pengguna Anggaran <br>
-                Pejabat Pembuat Komitmen <br><br><br><br><br><br>
+                Pejabat Pembuat Komitmen <br>
+                @if($tteQrFilePath)
+                    <div style="margin: 8px auto 5px; width: 86px; text-align: center;">
+                        <img src="{{ $tteQrFilePath }}" alt="QR TTE SPP" style="width: 86px; height: 86px;">
+                        <div style="font-size: 8px; line-height: 1.2; margin-top: 2px;">QR TTE SPP</div>
+                    </div>
+                @else
+                    <br><br><br><br><br><br>
+                @endif
                 <span style="text-decoration: underline; font-weight: bold;">{{ strtoupper($spp->penandatangan_nama) }}</span> <br>
                 NIP {{ $spp->penandatangan_nip }}
             </td>
         </tr>
 
     </table>
+
+    @if($activityQrFilePath)
+        <div style="margin-top: 8px; padding: 6px 8px; border: 1px solid #cfd7e3; font-size: 8px; color: #333;">
+            <table style="width: 100%; border: none; border-collapse: collapse;">
+                <tr>
+                    <td style="border: none; width: 54px; vertical-align: top; padding: 0;">
+                        <img src="{{ $activityQrFilePath }}" alt="QR Aktivitas Tagihan" style="width: 50px; height: 50px;">
+                    </td>
+                    <td style="border: none; vertical-align: top; padding: 3px 0 0 7px;">
+                        <strong>Scan untuk lihat aktivitas tagihan</strong><br>
+                        Status verifikasi, SPP, SPM, NPI, hingga SP2D — beserta verifikator di tiap tahap.
+                    </td>
+                </tr>
+            </table>
+        </div>
+    @endif
 
 </body>
 </html>
