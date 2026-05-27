@@ -82,8 +82,14 @@
             <form method="GET" action="{{ route('coas.index') }}" id="coaFilterForm">
                 <div class="row g-3 align-items-end">
                     <div class="col-md-5">
-                        <label class="form-label fw-semibold">Cari COA</label>
-                        <input type="text" name="search" value="{{ $search }}" class="form-control" placeholder="Kode MAK lengkap, kode akun, atau nama akun" autocomplete="off" data-auto-submit="input">
+                        <label class="form-label fw-semibold" for="coaSearchInput">Cari Kode COA</label>
+                        <div class="position-relative">
+                            <input type="text" name="search" id="coaSearchInput" value="{{ $search }}" class="form-control pe-5" placeholder="Ketik kode MAK lengkap atau kode akun" autocomplete="off" inputmode="search">
+                            <span class="position-absolute top-50 end-0 translate-middle-y me-3 text-muted d-none" id="coaSearchSpinner" aria-hidden="true">
+                                <span class="spinner-border spinner-border-sm" role="status"></span>
+                            </span>
+                        </div>
+                        <small class="text-muted">Pencarian hanya berdasarkan kode COA (kode MAK lengkap / kode akun).</small>
                     </div>
                     <div class="col-md-3">
                         <label class="form-label fw-semibold">Jenis Akun</label>
@@ -103,10 +109,7 @@
                         </select>
                     </div>
                     <div class="col-md-2">
-                        <div class="d-grid gap-2">
-                            <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-funnel me-1"></i> Filter
-                            </button>
+                        <div class="d-grid">
                             <a href="{{ route('coas.index') }}" class="btn btn-outline-secondary">
                                 <i class="bi bi-arrow-counterclockwise me-1"></i> Reset
                             </a>
@@ -119,87 +122,9 @@
 
     <div class="card shadow-sm border-0 rounded-4">
         <div class="card-body p-4">
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th class="text-center" width="5%">No</th>
-                            <th width="24%">COA Lengkap</th>
-                            <th width="11%">Kode Akun</th>
-                            <th width="22%">Nama Akun</th>
-                            <th width="12%">Jenis Akun</th>
-                            <th width="10%" class="text-center">Dipakai di DIPA</th>
-                            <th width="8%" class="text-center">Status</th>
-                            <th width="18%" class="text-center">Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse($coas as $coa)
-                            <tr>
-                                <td class="text-center">{{ $coas->firstItem() + $loop->index }}</td>
-                                <td>
-                                    <div class="fw-bold text-primary">{{ $coa->kode_mak_lengkap ?: '-' }}</div>
-                                    <div class="small text-muted">{{ $coa->kd_program ?: '-' }} / {{ $coa->kd_giat ?: '-' }} / {{ $coa->kd_output ?: '-' }}</div>
-                                </td>
-                                <td><span class="badge bg-light text-dark border">{{ $coa->kd_akun ?: '-' }}</span></td>
-                                <td class="fw-semibold">{{ $coa->nama_akun }}</td>
-                                <td>{{ $coa->jenis_akun ?: '-' }}</td>
-                                <td class="text-center">
-                                    <span class="badge {{ $coa->dipa_revision_items_count > 0 ? 'bg-info text-dark' : 'bg-light text-dark border' }}">
-                                        {{ number_format($coa->dipa_revision_items_count) }}
-                                    </span>
-                                </td>
-                                <td class="text-center">
-                                    <span class="badge {{ $coa->status_aktif ? 'bg-success' : 'bg-secondary' }}">
-                                        {{ $coa->status_aktif ? 'Aktif' : 'Nonaktif' }}
-                                    </span>
-                                </td>
-                                <td class="text-center">
-                                    <div class="btn-group">
-                                        <a href="{{ route('coas.show', $coa) }}" class="btn btn-sm btn-primary">Detail</a>
-                                        <button type="button" class="btn btn-sm btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
-                                            <span class="visually-hidden">Toggle Dropdown</span>
-                                        </button>
-                                        <ul class="dropdown-menu dropdown-menu-end shadow-sm">
-                                            <li><a class="dropdown-item" href="{{ route('coas.edit', $coa) }}">Edit</a></li>
-                                            <li>
-                                                <form action="{{ route('coas.toggle', $coa) }}" method="POST">
-                                                    @csrf
-                                                    <button type="submit" class="dropdown-item">
-                                                        {{ $coa->status_aktif ? 'Nonaktifkan' : 'Aktifkan' }}
-                                                    </button>
-                                                </form>
-                                            </li>
-                                            <li><hr class="dropdown-divider"></li>
-                                            <li>
-                                                @if($coa->dipa_revision_items_count > 0)
-                                                    <button type="button" class="dropdown-item text-muted" disabled>Tidak bisa dihapus (sudah dipakai)</button>
-                                                @else
-                                                    <form action="{{ route('coas.destroy', $coa) }}" method="POST" onsubmit="return confirm('Hapus COA ini secara permanen?');">
-                                                        @csrf
-                                                        @method('DELETE')
-                                                        <button type="submit" class="dropdown-item text-danger">Hapus</button>
-                                                    </form>
-                                                @endif
-                                            </li>
-                                        </ul>
-                                    </div>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="8" class="text-center py-5 text-muted">Belum ada data COA yang sesuai dengan filter.</td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
+            <div id="coaTableContainer" data-coa-table>
+                @include('coas._table')
             </div>
-
-            @if($coas->hasPages())
-                <div class="mt-4 d-flex justify-content-end">
-                    {{ $coas->withQueryString()->links() }}
-                </div>
-            @endif
         </div>
     </div>
 @endsection
@@ -208,37 +133,166 @@
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             const form = document.getElementById('coaFilterForm');
-            if (!form) {
+            const tableContainer = document.getElementById('coaTableContainer');
+            const searchInput = document.getElementById('coaSearchInput');
+            const spinner = document.getElementById('coaSearchSpinner');
+
+            if (!form || !tableContainer || !searchInput) {
                 return;
             }
 
-            let debounceTimer;
-            const submitFilter = function () {
-                const params = new URLSearchParams(new FormData(form));
+            const DEBOUNCE_MS = 400;
 
+            let debounceTimer = null;
+            let abortController = null;
+            let lastQueryString = null;
+
+            const buildParams = function () {
+                const params = new URLSearchParams(new FormData(form));
                 for (const [key, value] of Array.from(params.entries())) {
                     if (String(value).trim() === '') {
                         params.delete(key);
                     }
                 }
+                // Reset paginator setiap kali query berubah.
+                params.delete('page');
+                return params;
+            };
 
-                const queryString = params.toString();
-                const targetUrl = form.action + (queryString ? '?' + queryString : '');
+            const setLoading = function (loading) {
+                if (!spinner) return;
+                spinner.classList.toggle('d-none', !loading);
+            };
 
-                if (targetUrl !== window.location.href) {
-                    window.location.href = targetUrl;
+            const fetchTable = async function () {
+                const params = buildParams();
+                const userQueryString = params.toString();
+
+                // Skip jika query sama persis dengan request terakhir (hindari request kembar).
+                if (userQueryString === lastQueryString) {
+                    return;
+                }
+                lastQueryString = userQueryString;
+
+                // Batalkan request sebelumnya yang masih berjalan (user masih mengetik).
+                if (abortController) {
+                    abortController.abort();
+                }
+                abortController = new AbortController();
+
+                params.set('partial', '1');
+                const requestUrl = form.action + '?' + params.toString();
+
+                setLoading(true);
+
+                try {
+                    const response = await fetch(requestUrl, {
+                        method: 'GET',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'text/html',
+                        },
+                        signal: abortController.signal,
+                        credentials: 'same-origin',
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Gagal memuat data COA (HTTP ' + response.status + ').');
+                    }
+
+                    const html = await response.text();
+                    tableContainer.innerHTML = html;
+
+                    // Sinkronkan URL browser agar hasil pencarian tetap dapat disalin/dibookmark.
+                    const newUrl = userQueryString
+                        ? form.action + '?' + userQueryString
+                        : form.action;
+                    window.history.replaceState({}, '', newUrl);
+                } catch (err) {
+                    if (err.name === 'AbortError') {
+                        return;
+                    }
+                    console.error(err);
+                    // Reset cache supaya user bisa mencoba lagi dengan input yang sama.
+                    lastQueryString = null;
+                } finally {
+                    setLoading(false);
                 }
             };
 
-            form.querySelectorAll('[data-auto-submit="input"]').forEach(function (input) {
-                input.addEventListener('input', function () {
-                    clearTimeout(debounceTimer);
-                    debounceTimer = setTimeout(submitFilter, 500);
-                });
+            const triggerImmediate = function () {
+                clearTimeout(debounceTimer);
+                // Paksa fetch meski query string sama (mis. user klik tombol Filter ulang).
+                lastQueryString = null;
+                fetchTable();
+            };
+
+            searchInput.addEventListener('input', function () {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(fetchTable, DEBOUNCE_MS);
             });
 
+            // Submit form (klik tombol Filter / Enter) — langsung jalankan tanpa menunggu debounce.
+            form.addEventListener('submit', function (event) {
+                event.preventDefault();
+                triggerImmediate();
+            });
+
+            // Dropdown filter — jalankan langsung saat berubah.
             form.querySelectorAll('[data-auto-submit="change"]').forEach(function (field) {
-                field.addEventListener('change', submitFilter);
+                field.addEventListener('change', triggerImmediate);
+            });
+
+            // Intercept klik paginasi agar tetap AJAX (tidak full reload).
+            tableContainer.addEventListener('click', async function (event) {
+                const link = event.target.closest('.pagination a');
+                if (!link) {
+                    return;
+                }
+                event.preventDefault();
+
+                const targetUrl = new URL(link.href, window.location.origin);
+                const pageNumber = targetUrl.searchParams.get('page');
+                if (!pageNumber) {
+                    return;
+                }
+
+                if (abortController) {
+                    abortController.abort();
+                }
+                abortController = new AbortController();
+
+                const params = buildParams();
+                params.set('page', pageNumber);
+                const userQueryString = params.toString();
+                lastQueryString = userQueryString;
+                params.set('partial', '1');
+
+                setLoading(true);
+                try {
+                    const response = await fetch(form.action + '?' + params.toString(), {
+                        method: 'GET',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'text/html',
+                        },
+                        signal: abortController.signal,
+                        credentials: 'same-origin',
+                    });
+                    if (!response.ok) {
+                        throw new Error('Gagal memuat halaman (HTTP ' + response.status + ').');
+                    }
+                    tableContainer.innerHTML = await response.text();
+                    window.history.replaceState({}, '', form.action + '?' + userQueryString);
+                    tableContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                } catch (err) {
+                    if (err.name !== 'AbortError') {
+                        console.error(err);
+                        lastQueryString = null;
+                    }
+                } finally {
+                    setLoading(false);
+                }
             });
         });
     </script>

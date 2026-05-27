@@ -74,15 +74,21 @@
 
     <div class="card shadow-sm border-0 rounded-4 mb-4">
         <div class="card-body p-4">
-            <form method="GET" action="{{ route('dipas.index') }}">
+            <form method="GET" action="{{ route('dipas.index') }}" id="dipaFilterForm">
                 <div class="row g-3 align-items-end">
                     <div class="col-md-4">
-                        <label class="form-label fw-semibold">Cari Nomor DIPA</label>
-                        <input type="text" name="search" value="{{ $search }}" class="form-control" placeholder="Ketik nomor DIPA">
+                        <label class="form-label fw-semibold" for="dipaSearchInput">Cari Nomor DIPA</label>
+                        <div class="position-relative">
+                            <input type="text" name="search" id="dipaSearchInput" value="{{ $search }}" class="form-control pe-5" placeholder="Ketik nomor DIPA" autocomplete="off" inputmode="search">
+                            <span class="position-absolute top-50 end-0 translate-middle-y me-3 text-muted d-none" id="dipaSearchSpinner" aria-hidden="true">
+                                <span class="spinner-border spinner-border-sm" role="status"></span>
+                            </span>
+                        </div>
+                        <small class="text-muted">Pencarian hanya berdasarkan nomor DIPA.</small>
                     </div>
                     <div class="col-md-2">
                         <label class="form-label fw-semibold">Tahun Anggaran</label>
-                        <select name="tahun_anggaran" class="form-select">
+                        <select name="tahun_anggaran" class="form-select" data-auto-submit="change">
                             <option value="">Semua</option>
                             @foreach($tahunOptions as $tahun)
                                 <option value="{{ $tahun }}" {{ (string) $tahunAnggaran === (string) $tahun ? 'selected' : '' }}>{{ $tahun }}</option>
@@ -91,7 +97,7 @@
                     </div>
                     <div class="col-md-2">
                         <label class="form-label fw-semibold">Status Aktif</label>
-                        <select name="status_aktif" class="form-select">
+                        <select name="status_aktif" class="form-select" data-auto-submit="change">
                             <option value="">Semua</option>
                             <option value="aktif" {{ $statusAktif === 'aktif' ? 'selected' : '' }}>Aktif</option>
                             <option value="nonaktif" {{ $statusAktif === 'nonaktif' ? 'selected' : '' }}>Nonaktif</option>
@@ -99,7 +105,7 @@
                     </div>
                     <div class="col-md-2">
                         <label class="form-label fw-semibold">Revisi Aktif</label>
-                        <select name="revisi_aktif_ke" class="form-select">
+                        <select name="revisi_aktif_ke" class="form-select" data-auto-submit="change">
                             <option value="">Semua</option>
                             @foreach($revisiOptions as $revisi)
                                 <option value="{{ $revisi }}" {{ (string) $revisiAktif === (string) $revisi ? 'selected' : '' }}>Revisi {{ $revisi }}</option>
@@ -107,10 +113,7 @@
                         </select>
                     </div>
                     <div class="col-md-2">
-                        <div class="d-grid gap-2">
-                            <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-funnel me-1"></i> Filter
-                            </button>
+                        <div class="d-grid">
                             <a href="{{ route('dipas.index') }}" class="btn btn-outline-secondary">
                                 <i class="bi bi-arrow-counterclockwise me-1"></i> Reset
                             </a>
@@ -123,87 +126,118 @@
 
     <div class="card shadow-sm border-0 rounded-4">
         <div class="card-body p-4">
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th class="text-center" width="5%">No</th>
-                            <th width="22%">Nomor DIPA</th>
-                            <th width="10%">Tahun</th>
-                            <th width="12%">Tanggal Disahkan</th>
-                            <th width="10%">Revisi Aktif</th>
-                            <th width="16%" class="text-end">Total Pagu Revisi Aktif</th>
-                            <th width="10%" class="text-center">Status</th>
-                            <th width="10%" class="text-center">Jumlah Item</th>
-                            <th width="15%" class="text-center">Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse($dipas as $dipa)
-                            @php
-                                $activeRevision = $dipa->activeRevision;
-                                $activeItems = collect(optional($activeRevision)->items)->where('status_aktif', true);
-                            @endphp
-                            <tr>
-                                <td class="text-center">{{ $loop->iteration }}</td>
-                                <td>
-                                    <div class="fw-bold text-primary">{{ $dipa->nomor_dipa }}</div>
-                                    <div class="small text-muted">Dokumen induk DIPA</div>
-                                </td>
-                                <td>
-                                    <span class="badge bg-light text-dark border">{{ $dipa->tahun_anggaran }}</span>
-                                </td>
-                                <td>{{ optional($dipa->tanggal_disahkan)->format('d M Y') ?? '-' }}</td>
-                                <td>
-                                    <span class="badge bg-info text-dark">Revisi {{ $dipa->revisi_aktif_ke ?? 0 }}</span>
-                                </td>
-                                <td class="text-end fw-bold">
-                                    Rp {{ number_format(optional($activeRevision)->total_pagu ?? 0, 0, ',', '.') }}
-                                </td>
-                                <td class="text-center">
-                                    @if($dipa->status_aktif)
-                                        <span class="badge bg-success">Aktif</span>
-                                    @else
-                                        <span class="badge bg-secondary">Nonaktif</span>
-                                    @endif
-                                </td>
-                                <td class="text-center">
-                                    <span class="badge bg-light text-dark border">{{ $activeItems->count() }} Item</span>
-                                </td>
-                                <td class="text-center">
-                                    <div class="btn-group">
-                                        <a href="{{ route('dipas.show', $dipa) }}" class="btn btn-sm btn-primary">
-                                            Detail
-                                        </a>
-                                        <button type="button" class="btn btn-sm btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
-                                            <span class="visually-hidden">Toggle Dropdown</span>
-                                        </button>
-                                        <ul class="dropdown-menu dropdown-menu-end shadow-sm">
-                                            <li><a class="dropdown-item" href="{{ route('dipas.edit', $dipa) }}">Edit Header</a></li>
-                                            <li><a class="dropdown-item" href="{{ route('dipas.revisions.create', $dipa) }}">Tambah Revisi</a></li>
-                                            <li><hr class="dropdown-divider"></li>
-                                            <li>
-                                                <form action="{{ route('dipas.toggle', $dipa) }}" method="POST">
-                                                    @csrf
-                                                    <button type="submit" class="dropdown-item">
-                                                        {{ $dipa->status_aktif ? 'Nonaktifkan' : 'Aktifkan' }}
-                                                    </button>
-                                                </form>
-                                            </li>
-                                        </ul>
-                                    </div>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="9" class="text-center py-5 text-muted">
-                                    Belum ada data DIPA yang sesuai dengan filter.
-                                </td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
+            <div id="dipaTableContainer">
+                @include('dipas._table')
             </div>
         </div>
     </div>
 @endsection
+
+@push('script')
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const form = document.getElementById('dipaFilterForm');
+            const tableContainer = document.getElementById('dipaTableContainer');
+            const searchInput = document.getElementById('dipaSearchInput');
+            const spinner = document.getElementById('dipaSearchSpinner');
+
+            if (!form || !tableContainer || !searchInput) {
+                return;
+            }
+
+            const DEBOUNCE_MS = 400;
+
+            let debounceTimer = null;
+            let abortController = null;
+            let lastQueryString = null;
+
+            const buildParams = function () {
+                const params = new URLSearchParams(new FormData(form));
+                for (const [key, value] of Array.from(params.entries())) {
+                    if (String(value).trim() === '') {
+                        params.delete(key);
+                    }
+                }
+                return params;
+            };
+
+            const setLoading = function (loading) {
+                if (!spinner) return;
+                spinner.classList.toggle('d-none', !loading);
+            };
+
+            const fetchTable = async function () {
+                const params = buildParams();
+                const userQueryString = params.toString();
+
+                // Skip jika query sama persis dengan request terakhir (hindari request kembar).
+                if (userQueryString === lastQueryString) {
+                    return;
+                }
+                lastQueryString = userQueryString;
+
+                // Batalkan request sebelumnya yang masih berjalan (user masih mengetik).
+                if (abortController) {
+                    abortController.abort();
+                }
+                abortController = new AbortController();
+
+                params.set('partial', '1');
+                const requestUrl = form.action + '?' + params.toString();
+
+                setLoading(true);
+
+                try {
+                    const response = await fetch(requestUrl, {
+                        method: 'GET',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'text/html',
+                        },
+                        signal: abortController.signal,
+                        credentials: 'same-origin',
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Gagal memuat data DIPA (HTTP ' + response.status + ').');
+                    }
+
+                    tableContainer.innerHTML = await response.text();
+
+                    const newUrl = userQueryString
+                        ? form.action + '?' + userQueryString
+                        : form.action;
+                    window.history.replaceState({}, '', newUrl);
+                } catch (err) {
+                    if (err.name === 'AbortError') {
+                        return;
+                    }
+                    console.error(err);
+                    lastQueryString = null;
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            const triggerImmediate = function () {
+                clearTimeout(debounceTimer);
+                lastQueryString = null;
+                fetchTable();
+            };
+
+            searchInput.addEventListener('input', function () {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(fetchTable, DEBOUNCE_MS);
+            });
+
+            form.addEventListener('submit', function (event) {
+                event.preventDefault();
+                triggerImmediate();
+            });
+
+            form.querySelectorAll('[data-auto-submit="change"]').forEach(function (field) {
+                field.addEventListener('change', triggerImmediate);
+            });
+        });
+    </script>
+@endpush

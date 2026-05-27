@@ -33,6 +33,10 @@ class CoaController extends Controller
             ->paginate(15)
             ->withQueryString();
 
+        if ($request->ajax() && $request->boolean('partial')) {
+            return response()->view('coas._table', compact('coas'));
+        }
+
         $summary = [
             'total_coa' => MasterCoa::query()->count(),
             'coa_aktif' => MasterCoa::query()->where('status_aktif', true)->count(),
@@ -54,12 +58,12 @@ class CoaController extends Controller
 
     private function applySearchFilter(Builder $builder, string $search): void
     {
+        // Pencarian hanya berdasarkan kode COA (kode_mak_lengkap & kd_akun) — bukan nama akun.
         $likeSearch = '%' . addcslashes($search, '%_\\') . '%';
 
         $builder->where(function ($query) use ($likeSearch) {
             $query->where('kode_mak_lengkap', 'like', $likeSearch)
-                ->orWhere('kd_akun', 'like', $likeSearch)
-                ->orWhere('nama_akun', 'like', $likeSearch);
+                ->orWhere('kd_akun', 'like', $likeSearch);
         });
     }
 

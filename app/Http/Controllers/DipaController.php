@@ -35,6 +35,10 @@ class DipaController extends Controller
 
         $dipas = $query->get();
 
+        if ($request->ajax() && $request->boolean('partial')) {
+            return response()->view('dipas._table', compact('dipas'));
+        }
+
         $allDipas = $baseQuery->get();
         $tahunBerjalan = (int) now()->year;
         $summary = [

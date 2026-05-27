@@ -18,11 +18,9 @@ class MasterTarifPajakController extends Controller
 
         $query = MasterTarifPajak::query()
             ->when($search, function ($q) use ($search) {
+                // Pencarian hanya berdasarkan kode pajak.
                 $s = strtolower(trim($search));
-                $q->where(function ($sq) use ($s) {
-                    $sq->whereRaw('LOWER(kode_pajak) LIKE ?', ["%{$s}%"])
-                       ->orWhereRaw('LOWER(jenis_pajak) LIKE ?', ["%{$s}%"]);
-                });
+                $q->whereRaw('LOWER(kode_pajak) LIKE ?', ["%{$s}%"]);
             })
             ->when($statusFilter !== null && $statusFilter !== '', function ($q) use ($statusFilter) {
                 $q->where('status_aktif', $statusFilter === 'aktif');
@@ -53,6 +51,10 @@ class MasterTarifPajakController extends Controller
             ->orderByDesc('created_at');
 
         $pajaks = $query->paginate(15)->withQueryString();
+
+        if ($request->ajax() && $request->boolean('partial')) {
+            return response()->view('master-pajak._table', compact('pajaks', 'today'));
+        }
 
         // Summary calculations
         $allPajaks = MasterTarifPajak::all();
