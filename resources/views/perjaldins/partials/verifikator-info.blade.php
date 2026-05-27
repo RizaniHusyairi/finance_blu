@@ -30,6 +30,7 @@
                     'BENDAHARA_PENGELUARAN' => 'Bendahara Pengeluaran',
                     'PPK' => 'PPK',
                     'KASUBBAG' => 'Kepala Subbagian Keuangan dan Tata Usaha',
+                    'KOORDINATOR_KEUANGAN' => 'Koordinator Keuangan',
                     default => $roleCodes[0]
                 };
                 $fallbackUser = \App\Models\User::role($spatieRole)->orderBy('name')->first();
@@ -58,6 +59,7 @@
     $verifikators = [
         ['short' => 'PPK', 'label' => 'PPK', 'color' => 'vk-primary', 'data' => $getVerifierInfo('PPK', $tagihan->ppk_nama_snapshot)],
         ['short' => 'PPSPM', 'label' => 'PPSPM', 'color' => 'vk-success', 'data' => $getVerifierInfo('PPSPM', $tagihan->ppspm_nama_snapshot)],
+        ['short' => 'Koor. Keu', 'label' => 'Koordinator Keuangan', 'color' => 'vk-warning', 'data' => $getVerifierInfo(['KOORDINATOR_KEUANGAN', 'Koordinator Keuangan'], $tagihan->koordinator_keuangan_nama_snapshot)],
         ['short' => 'Bend. Penerimaan', 'label' => 'Bendahara Penerimaan', 'color' => 'vk-info', 'data' => $getVerifierInfo('BENDAHARA_PENERIMAAN', $tagihan->bendahara_penerimaan_nama_snapshot)],
         ['short' => 'Bend. Pengeluaran', 'label' => 'Bendahara Pengeluaran', 'color' => 'vk-danger', 'data' => $getVerifierInfo('BENDAHARA_PENGELUARAN', $tagihan->bendahara_pengeluaran_nama_snapshot)],
         ['short' => 'Kasubbag', 'label' => 'Kepala Subbagian Keu & TU', 'color' => 'vk-violet', 'data' => $getVerifierInfo(['KASUBBAG', 'Kepala Subbagian Keuangan dan Tata Usaha'], $tagihan->kasubbag_nama_snapshot)],

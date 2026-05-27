@@ -562,12 +562,14 @@
             'DRAFT',
             'REVISI_PPK',
             'REVISI_PPSPM',
+            'REVISI_KOORDINATOR_KEUANGAN',
             'REVISI_BENDAHARA',
             'REVISI_BENDAHARA_PENERIMAAN',
             'REVISI_BENDAHARA_PENGELUARAN',
             'REVISI_KASUBBAG',
             'DITOLAK_PPK',
             'DITOLAK_PPSPM',
+            'DITOLAK_KOORDINATOR_KEUANGAN',
             'DITOLAK_BENDAHARA_PENERIMAAN',
             'DITOLAK_BENDAHARA_PENGELUARAN',
             'DITOLAK_KASUBBAG',
@@ -578,7 +580,7 @@
     @php
         $totalAll      = $tagihans->count();
         $countDraft    = $tagihans->whereIn('status', $revisiDraftStatuses)->count();
-        $countMenunggu = $tagihans->whereIn('status', ['PENDING_VERIFIKASI_PERJALDIN', 'PENDING_PPK', 'PENDING_PPSPM', 'PENDING_BENDAHARA', 'PENDING_BENDAHARA_PENERIMAAN', 'PENDING_BENDAHARA_PENGELUARAN', 'PENDING_KASUBBAG', 'MENUNGGU_UPLOAD_NOMINATIF_TTD'])->count();
+        $countMenunggu = $tagihans->whereIn('status', ['PENDING_VERIFIKASI_PERJALDIN', 'PENDING_PPK', 'PENDING_PPSPM', 'PENDING_KOORDINATOR_KEUANGAN', 'PENDING_BENDAHARA', 'PENDING_BENDAHARA_PENERIMAAN', 'PENDING_BENDAHARA_PENGELUARAN', 'PENDING_KASUBBAG', 'MENUNGGU_UPLOAD_NOMINATIF_TTD'])->count();
         $countSelesai  = $tagihans->whereIn('status', ['DISETUJUI_PERJALDIN', 'PROSES_COA', 'PROSES_SPP', 'SEBAGIAN_SPP_TERBIT', 'SPP_LENGKAP'])->count();
 
         $pct = fn ($n) => $totalAll > 0 ? round(($n / $totalAll) * 100) : 0;
@@ -749,6 +751,7 @@
                                     @case('PENDING_BENDAHARA')
                                     @case('PENDING_BENDAHARA_PENERIMAAN')
                                     @case('PENDING_BENDAHARA_PENGELUARAN')
+                                    @case('PENDING_KOORDINATOR_KEUANGAN')
                                     @case('PENDING_PPSPM')
                                         <span class="status-badge-premium status-pending">
                                             <i class="bi bi-hourglass-split"></i> Menunggu Verifikasi
@@ -763,6 +766,8 @@
                                     @case('DITOLAK_PPK')
                                     @case('REVISI_PPSPM')
                                     @case('DITOLAK_PPSPM')
+                                    @case('REVISI_KOORDINATOR_KEUANGAN')
+                                    @case('DITOLAK_KOORDINATOR_KEUANGAN')
                                     @case('REVISI_BENDAHARA')
                                     @case('REVISI_BENDAHARA_PENERIMAAN')
                                     @case('DITOLAK_BENDAHARA_PENERIMAAN')

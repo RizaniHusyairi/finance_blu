@@ -117,7 +117,7 @@
         </li>
         @endhasrole
 
-        @hasanyrole('Super Admin|KPA|PLT/PLH|Kepala Subbagian Keuangan dan Tata Usaha|Pejabat Pengadaan|Operator BLU|Koordinator Keuangan')
+        @hasanyrole('Super Admin|KPA|PLT/PLH|Kepala Subbagian Keuangan dan Tata Usaha|Pejabat Pengadaan|Operator BLU')
         <li>
           <a href="javascript:;" class="has-arrow">
             <div class="parent-icon"><i class="material-icons-outlined">folder</i>
@@ -444,7 +444,7 @@
         @endunlessrole
         @endhasanyrole
 
-        @hasanyrole('Super Admin|Super Admin Jasa|Koordinator Keuangan|Kepala Seksi Pelayanan dan Kerjasama|Kepala Subbagian Keuangan dan Tata Usaha|KPA|PLT/PLH')
+        @hasanyrole('Super Admin|Super Admin Jasa|Kepala Seksi Pelayanan dan Kerjasama|Kepala Subbagian Keuangan dan Tata Usaha|KPA|PLT/PLH')
         <li>
           <a href="javascript:;" class="has-arrow">
             <div class="parent-icon"><i class="material-icons-outlined">fact_check</i></div>
@@ -463,7 +463,7 @@
             </li>
           </ul>
         </li>
-        @hasanyrole('Super Admin|Super Admin Jasa|Koordinator Keuangan|Kepala Subbagian Keuangan dan Tata Usaha')
+        @hasanyrole('Super Admin|Super Admin Jasa|Kepala Subbagian Keuangan dan Tata Usaha')
         <li>
           <a href="javascript:;" class="has-arrow">
             <div class="parent-icon"><i class="material-icons-outlined">receipt_long</i></div>
@@ -841,7 +841,7 @@
           </ul>
         </li>
         @endhasrole
-        
+
       @endauth
       <!--end navigation-->
   </div>

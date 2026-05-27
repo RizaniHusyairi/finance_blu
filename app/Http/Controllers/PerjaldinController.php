@@ -263,8 +263,8 @@ class PerjaldinController extends Controller
             'kasubbag_user_id' => 'required|exists:users,id',
             'kasubbag_nama_snapshot' => 'required|string|max:150',
             'kasubbag_nip_snapshot' => 'nullable|string|max:100',
-            'koordinator_keuangan_user_id' => 'nullable|exists:users,id',
-            'koordinator_keuangan_nama_snapshot' => 'nullable|string|max:150',
+            'koordinator_keuangan_user_id' => 'required|exists:users,id',
+            'koordinator_keuangan_nama_snapshot' => 'required|string|max:150',
             'koordinator_keuangan_nip_snapshot' => 'nullable|string|max:100',
 
             'mekanisme_pembayaran' => [
@@ -442,6 +442,7 @@ class PerjaldinController extends Controller
             try {
                 $verifikators = \App\Models\User::role([
                     'PPSPM',
+                    'Koordinator Keuangan',
                     'Bendahara Penerimaan',
                     'Bendahara Pengeluaran',
                     'PPK',
@@ -558,8 +559,8 @@ class PerjaldinController extends Controller
             'kasubbag_user_id' => 'required|exists:users,id',
             'kasubbag_nama_snapshot' => 'required|string|max:150',
             'kasubbag_nip_snapshot' => 'nullable|string|max:100',
-            'koordinator_keuangan_user_id' => 'nullable|exists:users,id',
-            'koordinator_keuangan_nama_snapshot' => 'nullable|string|max:150',
+            'koordinator_keuangan_user_id' => 'required|exists:users,id',
+            'koordinator_keuangan_nama_snapshot' => 'required|string|max:150',
             'koordinator_keuangan_nip_snapshot' => 'nullable|string|max:100',
 
             'mekanisme_pembayaran' => [
@@ -914,12 +915,14 @@ class PerjaldinController extends Controller
             'DRAFT',
             'REVISI_PPK',
             'REVISI_PPSPM',
+            'REVISI_KOORDINATOR_KEUANGAN',
             'REVISI_BENDAHARA',
             'REVISI_BENDAHARA_PENERIMAAN',
             'REVISI_BENDAHARA_PENGELUARAN',
             'REVISI_KASUBBAG',
             'DITOLAK_PPK',
             'DITOLAK_PPSPM',
+            'DITOLAK_KOORDINATOR_KEUANGAN',
             'DITOLAK_BENDAHARA_PENERIMAAN',
             'DITOLAK_BENDAHARA_PENGELUARAN',
             'DITOLAK_KASUBBAG',

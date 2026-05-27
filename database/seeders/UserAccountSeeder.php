@@ -45,7 +45,7 @@ class UserAccountSeeder extends Seeder
             ['MELLYARTI RAHMAN',                 'super.admin.jasa@sikeren.id',     ['Super Admin Jasa']],
             ['DIAH DESTIANA',                    'admin.jasa@sikeren.id',           ['Admin Jasa']],
             ['ANDI AMIRAH AFIFAH',               'admin.konsesi@sikeren.id',        ['Admin Konsesi']],
-            ['MUHAMMAD KEMAL HIKMA',             'koordinator.jasa@sikeren.id',     ['Koordinator Jasa']],
+            ['MUHAMAD SAPRIANSYAH',              'koordinator.jasa@sikeren.id',     ['Koordinator Jasa']],
             ['FAJRUL SYAMSI',                    'admin.listrik@sikeren.id',        ['Admin Listrik']],
             ['AGOES YULIANTORO',                 'agoes.yuliantoro@sikeren.id',     ['Admin Listrik']],
             ['ANDHIKA SURYA PRADANA',            'andhika.surya@sikeren.id',        ['Admin Listrik']],
