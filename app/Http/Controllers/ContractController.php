@@ -14,6 +14,7 @@ use App\Notifications\WorkflowNotification;
 use App\Services\DocumentNumberService;
 use Illuminate\Support\Facades\Notification;
 use App\Support\DipaBudgetOptionService;
+use App\Support\ContractDocumentTte;
 use Barryvdh\DomPDF\Facade\Pdf;
 
 class ContractController extends Controller
@@ -69,8 +70,10 @@ class ContractController extends Controller
             $query->where('status_kontrak', 'PENDING_REVIEW');
         } elseif ($filter === 'DRAFT') {
             $query->where('status_kontrak', 'DRAFT');
+        } elseif ($filter === 'REVISI') {
+            $query->where('status_kontrak', 'REVISI');
         } elseif ($filter === 'ALL') {
-            $query->whereIn('status_kontrak', ['PENDING_REVIEW', 'DRAFT']); 
+            $query->whereIn('status_kontrak', ['PENDING_REVIEW', 'DRAFT', 'REVISI']); 
         }
 
         if (Auth::user()?->hasRole('PPK')) {
@@ -78,7 +81,19 @@ class ContractController extends Controller
         }
 
         $contracts = $query->get();
-        return view('contracts.verifikasi_index', compact('contracts', 'filter'));
+
+        $historyQuery = \App\Models\KontrakPengadaan::with(['vendor', 'ppkUser.profilable', 'dipa', 'ppkApprover.profilable'])
+            ->whereNotNull('ppk_approved_at')
+            ->whereIn('status_kontrak', ['AKTIF', 'SELESAI'])
+            ->orderByDesc('ppk_approved_at');
+
+        if (Auth::user()?->hasRole('PPK')) {
+            $historyQuery->where('ppk_user_id', Auth::id());
+        }
+
+        $historyContracts = $historyQuery->get();
+
+        return view('contracts.verifikasi_index', compact('contracts', 'filter', 'historyContracts'));
     }
 
     /**
@@ -162,6 +177,7 @@ class ContractController extends Controller
 
             // Uploads
             'file_jaminan_um' => 'nullable|file|mimes:pdf|max:5120',
+            'gambar_rab' => 'nullable|image|mimes:jpg,jpeg,png|max:5120',
             
             // Termin progress + retensi
             'progress_keterangan' => 'nullable|array',
@@ -207,6 +223,7 @@ class ContractController extends Controller
 
             // Upload files
             $pathJaminanUm = $request->hasFile('file_jaminan_um') ? $request->file('file_jaminan_um')->store('kontrak/jaminan-uang-muka', 'public') : null;
+            $pathGambarRab = $request->hasFile('gambar_rab') ? $request->file('gambar_rab')->store('kontrak/gambar-rab', 'public') : null;
 
             $adaUangMuka = $request->has('ada_uang_muka');
             $nilaiUangMuka = $adaUangMuka ? (float) ($validated['nilai_uang_muka'] ?? 0) : 0;
@@ -242,6 +259,7 @@ class ContractController extends Controller
 
             $this->syncKontrakArsip($kontrak, [
                 'JAMINAN_UANG_MUKA' => $pathJaminanUm,
+                'GAMBAR_RAB' => $pathGambarRab,
             ]);
 
             if ($validated['metode_pembayaran'] === 'TERMIN') {
@@ -423,6 +441,7 @@ class ContractController extends Controller
             
             // Uploads
             'file_jaminan_um' => 'nullable|file|mimes:pdf|max:5120',
+            'gambar_rab' => 'nullable|image|mimes:jpg,jpeg,png|max:5120',
             
             // Termin progress + retensi
             'progress_keterangan' => 'nullable|array',
@@ -472,6 +491,13 @@ class ContractController extends Controller
                 $validated['file_jaminan_um'] = $kontrak->file_jaminan_uang_muka;
             }
 
+            if ($request->hasFile('gambar_rab')) {
+                if ($kontrak->file_gambar_rab) \Illuminate\Support\Facades\Storage::disk('public')->delete($kontrak->file_gambar_rab);
+                $validated['gambar_rab'] = $request->file('gambar_rab')->store('kontrak/gambar-rab', 'public');
+            } else {
+                $validated['gambar_rab'] = $kontrak->file_gambar_rab;
+            }
+
             $ada_uang_muka = $request->has('ada_uang_muka') ? 1 : 0;
             $nilai_uang_muka = $ada_uang_muka ? (float) ($validated['nilai_uang_muka'] ?? 0) : 0;
 
@@ -510,6 +536,7 @@ class ContractController extends Controller
 
             $this->syncKontrakArsip($kontrak, [
                 'JAMINAN_UANG_MUKA' => $ada_uang_muka ? $validated['file_jaminan_um'] : null,
+                'GAMBAR_RAB' => $validated['gambar_rab'],
             ]);
 
             // Hapus Termin Lama
@@ -572,6 +599,118 @@ class ContractController extends Controller
         $contract->delete();
 
         return redirect()->route('contracts.index')->with('success', 'Kontrak berhasil dihapus.');
+    }
+
+    public function submit($id)
+    {
+        abort_unless(Auth::user()?->hasAnyRole(['Super Admin', 'Pejabat Pengadaan']), 403);
+
+        $kontrak = \App\Models\KontrakPengadaan::findOrFail($id);
+
+        if (! in_array($kontrak->status_kontrak, ['DRAFT', 'REVISI'], true)) {
+            return back()->with('error', 'Kontrak hanya dapat diajukan dari status DRAFT atau REVISI.');
+        }
+
+        $statusSebelumnya = $kontrak->status_kontrak;
+
+        $kontrak->update([
+            'status_kontrak' => 'PENDING_REVIEW',
+            'diajukan_at' => now(),
+            'ppk_catatan' => null,
+        ]);
+
+        \App\Models\LogStatusDokumen::create([
+            'dokumen_type' => \App\Models\KontrakPengadaan::class,
+            'dokumen_id' => $kontrak->id,
+            'user_id' => Auth::id(),
+            'role_saat_itu' => Auth::user()?->getRoleNames()->first() ?? 'Sistem',
+            'status_sebelumnya' => $statusSebelumnya,
+            'status_baru' => 'PENDING_REVIEW',
+            'aksi' => 'SUBMIT',
+            'catatan' => 'Kontrak diajukan ke PPK tanpa upload dokumen final TTD.',
+            'ip_address' => request()->ip(),
+        ]);
+
+        if ($kontrak->ppkUser) {
+            Notification::send($kontrak->ppkUser, new WorkflowNotification([
+                'title' => 'Kontrak Menunggu Persetujuan PPK',
+                'message' => 'Kontrak ' . $kontrak->nomor_spk . ' telah diajukan untuk disetujui.',
+                'url' => route('contracts.verifikasi.show', $kontrak->id),
+                'icon' => 'task_alt',
+                'color' => 'primary',
+            ]));
+        }
+
+        return back()->with('success', 'Kontrak berhasil diajukan ke PPK.');
+    }
+
+    public function approve($id)
+    {
+        $kontrak = \App\Models\KontrakPengadaan::findOrFail($id);
+        $this->ensureAssignedPpk($kontrak);
+
+        abort_unless(Auth::user()?->hasAnyRole(['Super Admin', 'PPK']), 403);
+
+        if ($kontrak->status_kontrak !== 'PENDING_REVIEW') {
+            return back()->with('error', 'Kontrak hanya dapat disetujui saat status PENDING REVIEW.');
+        }
+
+        $kontrak->update([
+            'status_kontrak' => 'AKTIF',
+            'ppk_approved_at' => now(),
+            'ppk_approved_by' => Auth::id(),
+            'ppk_catatan' => null,
+        ]);
+
+        \App\Models\LogStatusDokumen::create([
+            'dokumen_type' => \App\Models\KontrakPengadaan::class,
+            'dokumen_id' => $kontrak->id,
+            'user_id' => Auth::id(),
+            'role_saat_itu' => Auth::user()?->getRoleNames()->first() ?? 'Sistem',
+            'status_sebelumnya' => 'PENDING_REVIEW',
+            'status_baru' => 'AKTIF',
+            'aksi' => 'APPROVE',
+            'catatan' => 'Kontrak disetujui PPK. Dokumen SPK, SPMK, dan Ringkasan Kontrak kini menggunakan TTE QR.',
+            'ip_address' => request()->ip(),
+        ]);
+
+        return redirect()->route('contracts.show', $kontrak->id)
+            ->with('success', 'Kontrak disetujui dan aktif. PDF SPK, SPMK, dan Ringkasan Kontrak kini ber-TTE QR.');
+    }
+
+    public function reject(Request $request, $id)
+    {
+        $kontrak = \App\Models\KontrakPengadaan::findOrFail($id);
+        $this->ensureAssignedPpk($kontrak);
+
+        abort_unless(Auth::user()?->hasAnyRole(['Super Admin', 'PPK']), 403);
+
+        if ($kontrak->status_kontrak !== 'PENDING_REVIEW') {
+            return back()->with('error', 'Kontrak hanya dapat dikembalikan saat status PENDING REVIEW.');
+        }
+
+        $validated = $request->validate([
+            'notes' => 'required|string|min:10',
+        ]);
+
+        $kontrak->update([
+            'status_kontrak' => 'REVISI',
+            'ppk_catatan' => $validated['notes'],
+        ]);
+
+        \App\Models\LogStatusDokumen::create([
+            'dokumen_type' => \App\Models\KontrakPengadaan::class,
+            'dokumen_id' => $kontrak->id,
+            'user_id' => Auth::id(),
+            'role_saat_itu' => Auth::user()?->getRoleNames()->first() ?? 'Sistem',
+            'status_sebelumnya' => 'PENDING_REVIEW',
+            'status_baru' => 'REVISI',
+            'aksi' => 'REVISION',
+            'catatan' => $validated['notes'],
+            'ip_address' => request()->ip(),
+        ]);
+
+        return redirect()->route('contracts.verifikasi')->with('success', 'Kontrak dikembalikan untuk revisi.');
     }
 
     public function uploadSpkFinal(Request $request, $id)
@@ -683,6 +822,7 @@ class ContractController extends Controller
             'terbilangNilaiKontrak' => function_exists('terbilang_rupiah')
                 ? terbilang_rupiah((float) $kontrak->nilai_total_kontrak)
                 : null,
+            'tteQrFilePath' => ContractDocumentTte::tteQrFilePath($kontrak, 'spk'),
         ])->setPaper('a4', 'portrait');
 
         $safeNomor = str_replace(['/', '\\', ' '], ['-', '-', '_'], $kontrak->nomor_spk);
@@ -751,6 +891,7 @@ class ContractController extends Controller
             'activeRevision' => optional($kontrak->dipa)->activeRevision,
             'itemAnggaran' => $kontrak->dipaRevisionItem,
             'coa' => optional($kontrak->dipaRevisionItem)->coa,
+            'tteQrFilePath' => ContractDocumentTte::tteQrFilePath($kontrak, 'spmk'),
         ])->setPaper('a4', 'portrait');
 
         $safeNomor = str_replace(['/', '\\', ' '], ['-', '-', '_'], $kontrak->nomor_spmk ?: $kontrak->nomor_spk);
@@ -787,6 +928,7 @@ class ContractController extends Controller
             'itemAnggaran' => $kontrak->dipaRevisionItem,
             'coa' => optional($kontrak->dipaRevisionItem)->coa,
             'caraPembayaran' => $caraPembayaran,
+            'tteQrFilePath' => ContractDocumentTte::tteQrFilePath($kontrak, 'ringkasan_kontrak'),
         ])->setPaper('a4', 'portrait');
 
         $safeNomor = str_replace(['/', '\\', ' '], ['-', '-', '_'], $kontrak->nomor_spk ?: 'ringkasan-kontrak');

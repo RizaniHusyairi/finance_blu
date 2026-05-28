@@ -39,6 +39,22 @@ Route::get('/tte/{type}/{id}/dokumen', [\App\Http\Controllers\PublicDocumentSign
     ->whereIn('type', ['spp', 'spm', 'npi', 'sp2d'])
     ->middleware('signed')
     ->name('public.document-tte.document');
+Route::get('/tte/kontrak/{type}/{id}', [\App\Http\Controllers\PublicContractSignatureController::class, 'show'])
+    ->whereIn('type', ['spk', 'spmk', 'ringkasan_kontrak'])
+    ->middleware('signed')
+    ->name('public.contract-tte.show');
+Route::get('/tte/kontrak/{type}/{id}/dokumen', [\App\Http\Controllers\PublicContractSignatureController::class, 'document'])
+    ->whereIn('type', ['spk', 'spmk', 'ringkasan_kontrak'])
+    ->middleware('signed')
+    ->name('public.contract-tte.document');
+
+// Route publik (signed URL) untuk Vendor Upload Dokumen Kontrak Final (TTD Basah)
+Route::get('/p/kontrak/{id}/vendor-upload', [\App\Http\Controllers\PublicContractVendorUploadController::class, 'show'])
+    ->middleware('signed')
+    ->name('public.vendor.contract-upload.show');
+Route::post('/p/kontrak/{id}/vendor-upload', [\App\Http\Controllers\PublicContractVendorUploadController::class, 'store'])
+    ->middleware('signed')
+    ->name('public.vendor.contract-upload.store');
 
 // Route publik (signed URL) untuk Tagihan Jasa yang dikirim ke mitra via WhatsApp.
 Route::get('/p/tagihan-jasa/{id}', [\App\Http\Controllers\PublicTagihanJasaController::class, 'show'])
@@ -50,6 +66,17 @@ Route::get('/p/tagihan-jasa/{id}/pdf', [\App\Http\Controllers\PublicTagihanJasaC
 Route::get('/p/tagihan-jasa/{id}/verify', [\App\Http\Controllers\PublicTagihanJasaVerificationController::class, 'show'])
     ->middleware('signed')
     ->name('public.tagihan-jasa.verify');
+
+// Public Magic Link untuk TTE Dokumen Berita Acara (BAPP, BAST, BAP)
+Route::get('/public/tte/sign/{token}', [\App\Http\Controllers\PublicMagicLinkSignatureController::class, 'show'])->name('public.magic-link.show');
+Route::get('/public/tte/document/{token}', [\App\Http\Controllers\PublicMagicLinkSignatureController::class, 'documentPdf'])->name('public.magic-link.document');
+Route::post('/public/tte/sign/{token}', [\App\Http\Controllers\PublicMagicLinkSignatureController::class, 'sign'])->name('public.magic-link.sign');
+Route::get('/public/tte/signed/{token}', [\App\Http\Controllers\PublicMagicLinkSignatureController::class, 'signed'])->name('public.magic-link.signed');
+
+// QR Code Verification untuk Dokumen Berita Acara
+Route::get('/p/tagihan/{id}/document-tte/{type}', [\App\Http\Controllers\PublicMagicLinkSignatureController::class, 'verifyQr'])
+    ->middleware('signed')
+    ->name('public.tagihan-document-tte.show');
 
 // Short link redirector — link pendek di WhatsApp di-resolve ke URL publik signed.
 Route::get('/i/{slug}', [\App\Http\Controllers\ShortLinkController::class, 'show'])
@@ -205,7 +232,7 @@ Route::middleware(['auth', 'account.active'])->group(function () use ($internalR
     });
 
     // Master Data — DIPA
-    Route::middleware('role:Super Admin|KPA|PLT/PLH|Operator BLU|Kepala Subbagian Keuangan dan Tata Usaha|Kepala Seksi Pelayanan dan Kerjasama')->group(function () {
+    Route::middleware('role:Super Admin|KPA|PLT/PLH|Operator BLU|PPK|Kepala Subbagian Keuangan dan Tata Usaha|Kepala Seksi Pelayanan dan Kerjasama')->group(function () {
         Route::get('/dipas', [DipaController::class, 'index'])->name('dipas.index');
         Route::get('/dipas/create', [DipaController::class, 'create'])->name('dipas.create');
         Route::post('/dipas', [DipaController::class, 'store'])->name('dipas.store');
@@ -309,6 +336,7 @@ Route::middleware(['auth', 'account.active'])->group(function () use ($internalR
         Route::get('/tagihan/kontrak/create', [\App\Http\Controllers\TagihanController::class, 'createKontrak'])->name('tagihan.kontrak.create');
         Route::post('/tagihan/kontrak/store', [\App\Http\Controllers\TagihanController::class, 'storeKontrak'])->name('tagihan.kontrak.store');
         Route::get('/tagihan/kontrak/{id}', [\App\Http\Controllers\TagihanController::class, 'showKontrak'])->name('tagihan.kontrak.show');
+        Route::post('/tagihan/kontrak/{id}/send-tte', [\App\Http\Controllers\TagihanTteController::class, 'sendTte'])->name('tagihan.kontrak.send-tte');
         Route::post('/tagihan/kontrak/{id}/submit', [\App\Http\Controllers\TagihanController::class, 'submitKontrak'])->name('tagihan.kontrak.submit');
         Route::post('/tagihan/kontrak/{id}/arsip', [\App\Http\Controllers\TagihanController::class, 'uploadArsipKontrak'])->name('tagihan.kontrak.upload-arsip');
         Route::get('/tagihan/kontrak/{id}/arsip/{arsipId}', [\App\Http\Controllers\TagihanController::class, 'viewArsipKontrak'])->name('tagihan.kontrak.view-arsip');
@@ -379,6 +407,7 @@ Route::middleware(['auth', 'account.active'])->group(function () use ($internalR
         Route::get('/contracts/{contract}/spk/gambar-rab', [ContractController::class, 'viewSpkGambarRab'])->name('contracts.spk.gambar-rab');
         Route::post('/contracts/{contract}/spk/upload-final', [ContractController::class, 'uploadSpkFinal'])->name('contracts.spk.upload-final');
         Route::get('/contracts/{contract}/spmk/export-pdf', [ContractController::class, 'exportSpmkPdf'])->name('contracts.spmk.export-pdf');
+        Route::post('/contracts/{contract}/send-wa-vendor', [ContractController::class, 'sendWaVendor'])->name('contracts.send-wa-vendor');
         Route::post('/contracts/{contract}/spmk/upload-final', [ContractController::class, 'uploadSpmkFinal'])->name('contracts.spmk.upload-final');
         Route::resource('contracts', ContractController::class);
 

@@ -775,6 +775,11 @@
                                 <label class="form-label modern"><i class="bi bi-exclamation-circle"></i> Ketentuan Denda</label>
                                 <textarea class="form-control modern" rows="2" name="ketentuan_denda" placeholder="Contoh: Denda keterlambatan dikenakan 1/1000 dari nilai kontrak per hari kalender.">{{ old('ketentuan_denda') }}</textarea>
                             </div>
+                            <div class="col-12 mt-3">
+                                <label class="form-label modern"><i class="bi bi-image"></i> Gambar RAB (JPG/PNG) <small class="text-muted">(Opsional, untuk Lampiran SPK)</small></label>
+                                <input type="file" class="form-control modern" name="gambar_rab" id="gambar_rab" accept=".jpg,.jpeg,.png">
+                                <small class="text-muted d-block mt-1"><i class="bi bi-info-circle me-1"></i>Unggah gambar screenshot RAB jika diperlukan untuk cetak lampiran Draft SPK.</small>
+                            </div>
                         </div>
                     </div>
                 </div>

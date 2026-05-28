@@ -1062,6 +1062,31 @@
                         </div>
                         <label class="form-label modern" style="font-size:.7rem;color:#94a3b8;">Tanggal BAPP</label>
                         <input type="date" class="form-control modern" name="tanggal_bapp" value="{{ old('tanggal_bapp', now()->format('Y-m-d')) }}">
+                        <label class="form-label modern mt-3" for="gambar_rab_bapp">
+                            <i class="bi bi-file-earmark-image text-success"></i> Gambar RAB
+                            <span class="text-muted fw-normal ms-1">(Opsional)</span>
+                        </label>
+                        <label class="file-drop" data-accept=".jpg,.jpeg,.png" data-max-mb="5" data-target="gambar_rab_bapp">
+                            <input type="file" id="gambar_rab_bapp" name="gambar_rab_bapp" accept=".jpg,.jpeg,.png">
+                            <div class="fd-default">
+                                <div class="fd-icon"><i class="bi bi-cloud-arrow-up-fill"></i></div>
+                                <div class="fd-title">Tarik &amp; lepaskan, atau <strong>klik untuk memilih</strong></div>
+                                <div class="fd-sub">Gambar RAB yang akan ditampilkan pada draft PDF BAPP.</div>
+                                <div class="fd-meta"><i class="bi bi-file-earmark-image"></i> JPG / PNG &middot; Maks 5MB</div>
+                            </div>
+                            <div class="fd-preview">
+                                <div class="fp-icon is-img"><i class="bi bi-file-earmark-image-fill"></i></div>
+                                <div class="fp-info">
+                                    <div class="fp-name">-</div>
+                                    <div class="fp-detail">
+                                        <span class="fp-size">0 KB</span>
+                                        <span class="fp-type text-muted">Gambar</span>
+                                    </div>
+                                    <div class="fp-bar"><span style="width:0%"></span></div>
+                                </div>
+                                <button type="button" class="fp-remove" title="Hapus berkas"><i class="bi bi-x-lg"></i></button>
+                            </div>
+                        </label>
                     </div>
                     <div class="col-md-4" id="wrapper_bast_fields" style="display: none;">
                         <label class="form-label modern"><i class="bi bi-truck text-warning"></i> Nomor BAST <span class="text-danger ms-1">*</span> <span class="text-muted fw-normal ms-1">(Serah Terima)</span></label>
@@ -1091,7 +1116,7 @@
                             </span>
                         </div>
                         <div class="row g-3">
-                            <div class="col-md-4">
+                            <div class="col-md-3">
                                 <label class="form-label modern" for="namaPemeriksaSelect">
                                     <i class="bi bi-person-badge text-primary"></i> Nama Pemeriksa
                                     <span class="text-danger ms-1">*</span>
@@ -1103,19 +1128,25 @@
                                             value="{{ $peg->nama_lengkap }}"
                                             data-nip="{{ $peg->nip }}"
                                             data-jabatan="{{ $peg->jabatan }}"
+                                            data-wa="{{ $peg->nomor_hp }}"
                                             @selected(old('nama_pemeriksa') === $peg->nama_lengkap)
                                         >{{ $peg->nama_lengkap }}</option>
                                     @endforeach
                                 </select>
-                                <small class="text-muted d-block mt-1" style="font-size:.74rem;"><i class="bi bi-magic me-1"></i>NIP &amp; Jabatan akan terisi otomatis.</small>
+                                <small class="text-muted d-block mt-1" style="font-size:.74rem;"><i class="bi bi-magic me-1"></i>NIP &amp; Jabatan otomatis.</small>
                             </div>
-                            <div class="col-md-4">
-                                <label class="form-label modern"><i class="bi bi-hash text-secondary"></i> NIP Pemeriksa <span class="text-muted fw-normal ms-1">(Otomatis)</span></label>
+                            <div class="col-md-3">
+                                <label class="form-label modern"><i class="bi bi-hash text-secondary"></i> NIP Pemeriksa</label>
                                 <input type="text" class="form-control modern" name="nip_pemeriksa" id="nipPemeriksaInput" placeholder="Akan terisi setelah memilih nama" value="{{ old('nip_pemeriksa') }}" readonly>
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md-3">
                                 <label class="form-label modern"><i class="bi bi-briefcase text-secondary"></i> Jabatan Pemeriksa <span class="text-danger ms-1">*</span></label>
                                 <input type="text" class="form-control modern" name="jabatan_pemeriksa" id="jabatanPemeriksaInput" placeholder="Akan terisi setelah memilih nama" value="{{ old('jabatan_pemeriksa') }}" required readonly>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label modern"><i class="bi bi-whatsapp text-success"></i> No. WA Pemeriksa <span class="text-danger ms-1">*</span></label>
+                                <input type="text" class="form-control modern" name="wa_pemeriksa" id="waPemeriksaInput" placeholder="Contoh: 0812..." value="{{ old('wa_pemeriksa') }}" required>
+                                <small class="text-muted d-block mt-1" style="font-size:.74rem;">Digunakan untuk link TTE BAPP.</small>
                             </div>
                         </div>
                     </div>
@@ -1631,23 +1662,26 @@
         });
     });
 
-    // Auto-fill NIP & Jabatan saat memilih Nama Pemeriksa dari dropdown pegawai
+    // Auto-fill NIP, Jabatan & WA saat memilih Nama Pemeriksa dari dropdown pegawai
     $(document).ready(function () {
         const $namaSelect = $('#namaPemeriksaSelect');
         const $nipInput = $('#nipPemeriksaInput');
         const $jabatanInput = $('#jabatanPemeriksaInput');
+        const $waInput = $('#waPemeriksaInput');
 
-        if (!$namaSelect.length || !$nipInput.length || !$jabatanInput.length) return;
+        if (!$namaSelect.length || !$nipInput.length || !$jabatanInput.length || !$waInput.length) return;
 
         function syncPemeriksa() {
             const $opt = $namaSelect.find(':selected');
             if (!$opt.val()) {
                 $nipInput.val('');
                 $jabatanInput.val('');
+                $waInput.val('');
                 return;
             }
             $nipInput.val($opt.data('nip') || '');
             $jabatanInput.val($opt.data('jabatan') || '');
+            $waInput.val($opt.data('wa') || '');
         }
 
         $namaSelect.on('change', syncPemeriksa);

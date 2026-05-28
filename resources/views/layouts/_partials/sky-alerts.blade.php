@@ -644,14 +644,20 @@
 <div class="sky-alert-stack" id="sky-alert-stack"></div>
 
 @php
+    // Di halaman login, jangan munculkan toast sky-alert. Kegagalan login cukup
+    // ditampilkan lewat kotak alert inline pada form login.
+    $skyAlertsEnabled = ! request()->routeIs('login');
+
     $skyMessages = [];
-    foreach (['success' => 'success', 'error' => 'danger', 'warning' => 'warning', 'info' => 'info', 'status' => 'success'] as $key => $type) {
-        if (session()->has($key)) {
-            $skyMessages[] = ['type' => $type, 'message' => (string) session($key)];
+    if ($skyAlertsEnabled) {
+        foreach (['success' => 'success', 'error' => 'danger', 'warning' => 'warning', 'info' => 'info', 'status' => 'success'] as $key => $type) {
+            if (session()->has($key)) {
+                $skyMessages[] = ['type' => $type, 'message' => (string) session($key)];
+            }
         }
-    }
-    if ($errors->any()) {
-        $skyMessages[] = ['type' => 'danger', 'message' => $errors->first(), 'title' => 'Validasi gagal'];
+        if ($errors->any()) {
+            $skyMessages[] = ['type' => 'danger', 'message' => $errors->first(), 'title' => 'Validasi gagal'];
+        }
     }
 @endphp
 
@@ -1073,6 +1079,11 @@
             document.querySelectorAll('.alert').forEach((el) => {
                 if (el.dataset.skyHandled) return;
                 if (el.closest('.sky-alert')) return;
+                // Jangan ubah alert statis di dalam modal/offcanvas (mis. peringatan
+                // pada form Tolak) menjadi toast — itu bukan flash message.
+                if (el.closest('.modal, .offcanvas')) return;
+                // Lewati juga alert yang ditandai eksplisit agar tidak di-toast-kan.
+                if (el.hasAttribute('data-sky-ignore')) return;
 
                 let type = null;
                 for (const cls of Object.keys(map)) {
@@ -1096,7 +1107,9 @@
         //   ditambahkan dari $errors atau alert blade lama), toast pertama akan muncul.
         // - Lalu server message dengan teks X yang sama akan di-skip oleh _isDuplicate.
         document.addEventListener('DOMContentLoaded', () => {
+            @if($skyAlertsEnabled)
             renderBootstrapAlerts();
+            @endif
 
             const serverMessages = @json($skyMessages);
             serverMessages.forEach((m, idx) => {

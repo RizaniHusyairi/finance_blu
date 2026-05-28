@@ -37,6 +37,15 @@ class KontrakPengadaan extends Model
         'tanggal_selesai_pemeliharaan',
         'ketentuan_denda',
         'status_kontrak',
+        'diajukan_at',
+        'ppk_approved_at',
+        'ppk_approved_by',
+        'ppk_catatan',
+    ];
+
+    protected $casts = [
+        'diajukan_at' => 'datetime',
+        'ppk_approved_at' => 'datetime',
     ];
 
     public function vendor()
@@ -47,6 +56,19 @@ class KontrakPengadaan extends Model
     public function ppkUser()
     {
         return $this->belongsTo(User::class, 'ppk_user_id');
+    }
+
+    public function ppkApprover()
+    {
+        return $this->belongsTo(User::class, 'ppk_approved_by');
+    }
+
+    /**
+     * Kontrak sudah disetujui PPK sehingga dokumen SPK/SPMK/Ringkasan boleh ber-TTE QR.
+     */
+    public function isTteApproved(): bool
+    {
+        return $this->status_kontrak === 'AKTIF' && ! is_null($this->ppk_approved_at);
     }
 
     public function dipa()
@@ -204,30 +226,18 @@ class KontrakPengadaan extends Model
 
     public function canActivateContract()
     {
-        // Must reload the relationship to verify fresh data if just written
-        return $this->has_spk_final_ttd && $this->has_spmk_final_ttd && $this->has_ringkasan_kontrak_final_ttd;
+        return $this->isTteApproved();
     }
 
-    public function activateIfDocumentsComplete()
+    public function hasVendorUploadedFinalDocs()
     {
-        // Must explicitly refresh in case relations were cached before the new doc was inserted
-        $this->refresh();
-        if ($this->status_kontrak === 'DRAFT' && $this->canActivateContract()) {
-            $this->update(['status_kontrak' => 'AKTIF']);
+        $requiredDocs = ['SPK_FINAL_TTD', 'SPMK_FINAL_TTD', 'RINGKASAN_KONTRAK_FINAL_TTD'];
+        $uploadedDocs = $this->arsipDokumen()
+            ->whereIn('jenis_dokumen', $requiredDocs)
+            ->where('is_active', true)
+            ->pluck('jenis_dokumen')
+            ->toArray();
             
-            \App\Models\LogStatusDokumen::create([
-                'dokumen_type'      => self::class,
-                'dokumen_id'        => $this->id,
-                'user_id'           => \Illuminate\Support\Facades\Auth::id(),
-                'role_saat_itu'     => \Illuminate\Support\Facades\Auth::user()?->getRoleNames()->first() ?? 'Sistem',
-                'status_sebelumnya' => 'DRAFT',
-                'status_baru'       => 'AKTIF',
-                'aksi'              => 'AUTO_ACTIVATE',
-                'catatan'           => 'Kontrak aktif otomatis setelah seluruh dokumen final bertandatangan lengkap.',
-                'ip_address'        => request()->ip(),
-            ]);
-            return true;
-        }
-        return false;
+        return count(array_intersect($requiredDocs, $uploadedDocs)) === count($requiredDocs);
     }
 }

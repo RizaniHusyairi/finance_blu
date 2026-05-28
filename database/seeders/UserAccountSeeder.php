@@ -50,6 +50,7 @@ class UserAccountSeeder extends Seeder
             ['AGOES YULIANTORO',                 'agoes.yuliantoro@sikeren.id',     ['Admin Listrik']],
             ['ANDHIKA SURYA PRADANA',            'andhika.surya@sikeren.id',        ['Admin Listrik']],
             ['PALUNG PURNAMA HENDRAYANA',        'admin.air@sikeren.id',            ['Admin Air']],
+            ['PALUNG PURNAMA HENDRAYANA',        'admin.air@sikeren.id',            ['Admin Air']],
             ['DWI AHMAD NUR AZIZ',               'nur.aziz@sikeren.id',             ['Admin Air']],
         ];
 

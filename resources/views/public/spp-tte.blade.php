@@ -491,6 +491,7 @@
             }
         }
     </style>
+    <link rel="icon" href="{{ asset('logo/minilogo-sikeren.png') }}" type="image/png">
 </head>
 <body>
     <header class="hero">

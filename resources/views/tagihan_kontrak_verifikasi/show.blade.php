@@ -806,6 +806,8 @@
             {{-- Dokumen Kontrak Induk --}}
             @php
                 $kontrakArsip = $kontrak?->arsipDokumen->where('is_active', true) ?? collect();
+                $isTteApproved = $kontrak ? \App\Support\ContractDocumentTte::isApproved($kontrak) : false;
+                
                 $spkFinal       = $kontrakArsip->firstWhere('jenis_dokumen', 'SPK_FINAL_TTD');
                 $spmkFinal      = $kontrakArsip->firstWhere('jenis_dokumen', 'SPMK_FINAL_TTD');
                 $ringkasanFinal = $kontrakArsip->firstWhere('jenis_dokumen', 'RINGKASAN_KONTRAK_FINAL_TTD');
@@ -819,30 +821,62 @@
                     <div class="row g-3">
                         @php
                             $kontrakDocs = [
-                                ['jenis' => 'SPK_FINAL_TTD',                'label' => 'SPK Final',               'arsip' => $spkFinal,       'icon' => 'file-earmark-text',  'color' => 'primary'],
-                                ['jenis' => 'SPMK_FINAL_TTD',               'label' => 'SPMK Final',              'arsip' => $spmkFinal,      'icon' => 'file-earmark-check', 'color' => 'info'],
-                                ['jenis' => 'RINGKASAN_KONTRAK_FINAL_TTD',  'label' => 'Ringkasan Kontrak Final', 'arsip' => $ringkasanFinal, 'icon' => 'file-earmark-bar-graph', 'color' => 'success'],
+                                [
+                                    'jenis' => 'SPK_FINAL_TTD',                
+                                    'label' => 'SPK Final',               
+                                    'arsip' => $spkFinal,       
+                                    'icon' => 'file-earmark-text',  
+                                    'color' => 'primary',
+                                    'tte_type' => 'spk',
+                                    'tte_url' => $isTteApproved && $kontrak ? \Illuminate\Support\Facades\URL::signedRoute('public.contract-tte.document', ['type' => 'spk', 'id' => $kontrak->id]) : null,
+                                ],
+                                [
+                                    'jenis' => 'SPMK_FINAL_TTD',               
+                                    'label' => 'SPMK Final',              
+                                    'arsip' => $spmkFinal,      
+                                    'icon' => 'file-earmark-check', 
+                                    'color' => 'info',
+                                    'tte_type' => 'spmk',
+                                    'tte_url' => $isTteApproved && $kontrak ? \Illuminate\Support\Facades\URL::signedRoute('public.contract-tte.document', ['type' => 'spmk', 'id' => $kontrak->id]) : null,
+                                ],
+                                [
+                                    'jenis' => 'RINGKASAN_KONTRAK_FINAL_TTD',  
+                                    'label' => 'Ringkasan Kontrak Final', 
+                                    'arsip' => $ringkasanFinal, 
+                                    'icon' => 'file-earmark-bar-graph', 
+                                    'color' => 'success',
+                                    'tte_type' => 'ringkasan_kontrak',
+                                    'tte_url' => $isTteApproved && $kontrak ? \Illuminate\Support\Facades\URL::signedRoute('public.contract-tte.document', ['type' => 'ringkasan_kontrak', 'id' => $kontrak->id]) : null,
+                                ],
                             ];
                         @endphp
                         @foreach($kontrakDocs as $doc)
+                            @php
+                                $hasDoc = $doc['arsip'] || $doc['tte_url'];
+                            @endphp
                             <div class="col-md-4">
                                 <div class="document-card-slot shadow-sm">
                                     <div class="d-flex align-items-center gap-2 mb-2">
                                         <i class="bi bi-{{ $doc['icon'] }} fs-4 text-{{ $doc['color'] }}"></i>
                                         <div>
                                             <div class="fw-bold text-dark">{{ $doc['label'] }}</div>
-                                            @if($doc['arsip'])
+                                            @if($hasDoc)
                                                 <div class="small text-success"><i class="bi bi-check-circle-fill me-1"></i>Tersedia</div>
                                             @else
                                                 <div class="small text-muted"><i class="bi bi-x-circle me-1"></i>Belum diunggah</div>
                                             @endif
                                         </div>
                                     </div>
-                                    @if($doc['arsip'])
-                                        <div class="small text-muted text-truncate mb-3" title="{{ $doc['arsip']->nama_file_asli }}">
-                                            {{ $doc['arsip']->nama_file_asli }}
+                                    @if($hasDoc)
+                                        <div class="small text-muted text-truncate mb-3" title="{{ $doc['arsip'] ? $doc['arsip']->nama_file_asli : 'TTE PDF Dinamis' }}">
+                                            {{ $doc['arsip'] ? $doc['arsip']->nama_file_asli : 'TTE PDF Dinamis' }}
                                         </div>
-                                        <a href="{{ route('verifikasi-tagihan-kontrak.kontrak-arsip', [$tagihan->id, $doc['jenis']]) }}"
+                                        @php
+                                            $viewUrl = $doc['arsip'] 
+                                                ? route('verifikasi-tagihan-kontrak.kontrak-arsip', [$tagihan->id, $doc['jenis']])
+                                                : $doc['tte_url'];
+                                        @endphp
+                                        <a href="{{ $viewUrl }}"
                                            target="_blank"
                                            class="btn-doc-pill btn btn-sm btn-outline-{{ $doc['color'] }} mt-auto w-100 text-center">
                                             <i class="bi bi-eye me-1"></i>Lihat Dokumen

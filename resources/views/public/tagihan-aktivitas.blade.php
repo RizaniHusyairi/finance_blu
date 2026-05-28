@@ -10,6 +10,7 @@
         body { background:#f5f7fa; }
         .page-header { background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%); color:#fff; }
     </style>
+    <link rel="icon" href="{{ asset('logo/minilogo-sikeren.png') }}" type="image/png">
 </head>
 <body>
     <div class="page-header py-4 shadow-sm">

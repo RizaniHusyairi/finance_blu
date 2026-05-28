@@ -25,7 +25,7 @@
                     class="col-12 col-xl-5 col-xxl-5 auth-cover-right align-items-center justify-content-center border-top border-4 border-primary border-gradient-1">
                     <div class="card rounded-0 m-3 mb-0 border-0 shadow-none bg-none">
                         <div class="card-body p-sm-5">
-                            <img src="{{ URL::asset('logo/minilogo-sikeren.png') }}" class="mb-4" width="145"
+                            <img src="{{ URL::asset('logo/minilogo-sikeren.png') }}" class="mb-4" width="120"
                                 alt="">
                             <h4 class="fw-bold">Sistem Informasi Keuangan dan Penagihan Terpadu</h4>
                             <p class="mb-0">BLU Kantor UPBU kelas 1 Aji Pangeran Tumenggung Pranoto - Samarinda</p>
@@ -91,7 +91,11 @@
                                     </div>
 
                                     <div class="col-12">
-                                       
+                                        <div class="text-center mt-2">
+                                            <a href="https://aptpairport.id" class="text-decoration-none text-secondary d-inline-flex align-items-center gap-1">
+                                                <i class="bi bi-arrow-left"></i> Kembali ke aptpairport.id
+                                            </a>
+                                        </div>
                                     </div>
                                 </form>
                             </div>

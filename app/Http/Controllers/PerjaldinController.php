@@ -85,84 +85,6 @@ class PerjaldinController extends Controller
     }
 
     /**
-     * Helper: Hitung total per kode komponen biaya (TIKET, TRANSPORT, PENGINAPAN, UANG_HARIAN).
-     * Dipakai untuk validasi conditional COA wajib jika komponen punya nilai.
-     */
-    private function aggregateKomponenTotals(array $peserta): array
-    {
-        $totals = [
-            'TIKET' => 0.0,
-            'TRANSPORT' => 0.0,
-            'PENGINAPAN' => 0.0,
-            'UANG_HARIAN' => 0.0,
-        ];
-        foreach ($peserta as $p) {
-            $totals['TIKET'] += (float) ($p['biaya_tiket'] ?? 0);
-            $totals['TRANSPORT'] += (float) ($p['biaya_transport'] ?? 0);
-            $totals['PENGINAPAN'] += (float) ($p['biaya_penginapan'] ?? 0);
-            // UANG_HARIAN menggabungkan uang_harian + uang_representasi + uang_rapat
-            $totals['UANG_HARIAN'] += (float) ($p['uang_harian'] ?? 0)
-                + (float) ($p['uang_representasi'] ?? 0)
-                + (float) ($p['uang_rapat'] ?? 0);
-        }
-        return $totals;
-    }
-
-    /**
-     * Helper: Validasi sisa pagu COA untuk tiap komponen biaya yang dipilih.
-     * Throw ValidationException jika ada komponen yang totalnya melebihi sisa pagu COA-nya.
-     */
-    private function validateCoaPagu(Request $request, array $komponenTotals): void
-    {
-        $errors = [];
-        foreach (['TIKET', 'TRANSPORT', 'PENGINAPAN', 'UANG_HARIAN'] as $kode) {
-            $coaId = $request->input("komponen_coa.{$kode}");
-            if (! $coaId) {
-                continue;
-            }
-            $item = \App\Models\DetailDipa::with('coa')->find($coaId);
-            if (! $item) {
-                continue;
-            }
-            $totalKomp = (float) ($komponenTotals[$kode] ?? 0);
-            $sisa = (float) $item->sisa_pagu;
-            if ($sisa < $totalKomp) {
-                $kodeMak = $item->coa->kode_mak_lengkap ?? '-';
-                $errors["komponen_coa.{$kode}"] = sprintf(
-                    'Sisa pagu COA %s (Rp %s) tidak mencukupi total komponen %s sebesar Rp %s.',
-                    $kodeMak,
-                    number_format($sisa, 0, ',', '.'),
-                    $kode,
-                    number_format($totalKomp, 0, ',', '.')
-                );
-            }
-        }
-        if (! empty($errors)) {
-            throw \Illuminate\Validation\ValidationException::withMessages($errors);
-        }
-    }
-
-    /**
-     * Helper: Terapkan pilihan COA dari form ke komponen perjaldin.
-     * Lewati komponen yang sudah punya dokumen turunan (SPP/SPM/NPI/SP2D).
-     */
-    private function syncKomponenCoaFromRequest(Tagihan $tagihan, Request $request): void
-    {
-        $service = app(PerjaldinKomponenService::class);
-        foreach (['TIKET', 'TRANSPORT', 'PENGINAPAN', 'UANG_HARIAN'] as $kode) {
-            $coaId = $request->input("komponen_coa.{$kode}");
-            if (! $coaId) {
-                continue;
-            }
-            $komponen = $tagihan->komponenPerjaldin()->where('kode_komponen', $kode)->first();
-            if (! $komponen || $komponen->hasDokumenTurunan()) {
-                continue;
-            }
-            $service->updateKomponenCoa($komponen, (int) $coaId);
-        }
-    }
-
-    /**
      * Helper: Dapatkan role name.
      */
     private function resolveCurrentRoleName(): string
@@ -208,7 +130,6 @@ class PerjaldinController extends Controller
      */
     public function create()
     {
-        $budgetGroups = DipaBudgetOptionService::groupedOptions();
         $masterProvinsi = MasterUangHarianPerjaldin::orderBy('provinsi')->get();
         $ppkUsers = User::role('PPK')->with('profilable')->orderByDisplayName()->get();
         $ppspmUsers = User::role('PPSPM')->with('profilable')->orderByDisplayName()->get();
@@ -224,7 +145,7 @@ class PerjaldinController extends Controller
             ->count();
         $nextNumber = str_pad($count + 1, 4, '0', STR_PAD_LEFT);
 
-        return view('perjaldins.create', compact('budgetGroups', 'masterProvinsi', 'ppkUsers', 'ppspmUsers', 'bendaharaPenerimaanUsers', 'bendaharaUsers', 'kasubbagUser', 'koorKeuanganUsers', 'masterPegawai', 'nextNumber'));
+        return view('perjaldins.create', compact('masterProvinsi', 'ppkUsers', 'ppspmUsers', 'bendaharaPenerimaanUsers', 'bendaharaUsers', 'kasubbagUser', 'koorKeuanganUsers', 'masterPegawai', 'nextNumber'));
     }
 
     /**
@@ -238,8 +159,6 @@ class PerjaldinController extends Controller
             $input['peserta'] = $this->normalizePesertaNominals($input['peserta']);
             $request->merge($input);
         }
-
-        $komponenTotals = $this->aggregateKomponenTotals($request->peserta ?? []);
 
         $request->validate([
             'deskripsi' => 'required|string|max:255',
@@ -298,18 +217,7 @@ class PerjaldinController extends Controller
             'peserta.*.uang_harian' => 'nullable|numeric|min:0',
             'peserta.*.uang_representasi' => 'nullable|numeric|min:0',
             'peserta.*.uang_rapat' => 'nullable|numeric|min:0',
-
-            'komponen_coa' => 'nullable|array',
-            'komponen_coa.TIKET' => [\Illuminate\Validation\Rule::requiredIf($komponenTotals['TIKET'] > 0), 'nullable', 'exists:dipa_revision_items,id'],
-            'komponen_coa.TRANSPORT' => [\Illuminate\Validation\Rule::requiredIf($komponenTotals['TRANSPORT'] > 0), 'nullable', 'exists:dipa_revision_items,id'],
-            'komponen_coa.PENGINAPAN' => [\Illuminate\Validation\Rule::requiredIf($komponenTotals['PENGINAPAN'] > 0), 'nullable', 'exists:dipa_revision_items,id'],
-            'komponen_coa.UANG_HARIAN' => [\Illuminate\Validation\Rule::requiredIf($komponenTotals['UANG_HARIAN'] > 0), 'nullable', 'exists:dipa_revision_items,id'],
-        ], [
-            'komponen_coa.*.required' => 'COA wajib dipilih untuk komponen yang memiliki nilai.',
         ]);
-
-        // Validasi sisa pagu pada COA yang dipilih
-        $this->validateCoaPagu($request, $komponenTotals);
 
         try {
             DB::beginTransaction();
@@ -396,11 +304,9 @@ class PerjaldinController extends Controller
             // Log status awal dengan schema v2
             $this->writeTagihanLog($tagihan, null, 'DRAFT', 'CREATE', 'Tagihan Perjaldin dibuat oleh Operator.');
 
-            // Rebuild rekap komponen otomatis
+            // Rebuild rekap komponen otomatis. COA dipilih kemudian oleh Operator BLU
+            // pada halaman pembuatan SPP, bukan saat input perjaldin.
             app(PerjaldinKomponenService::class)->rebuildFromTagihan($tagihan);
-
-            // Terapkan pilihan COA dari operator (Bagian D)
-            $this->syncKomponenCoaFromRequest($tagihan->fresh(), $request);
 
             DB::commit();
             return redirect()->route('perjaldins.index')->with('success', 'Data Perjaldin berhasil ditambahkan.');
@@ -503,7 +409,6 @@ class PerjaldinController extends Controller
                 ->withErrors(['error' => 'Tagihan tidak bisa diedit karena statusnya sudah: ' . $tagihan->status]);
         }
 
-        $budgetGroups = DipaBudgetOptionService::groupedOptions();
         $masterProvinsi = MasterUangHarianPerjaldin::orderBy('provinsi')->get();
         $ppkUsers = User::role('PPK')->with('profilable')->orderByDisplayName()->get();
         $ppspmUsers = User::role('PPSPM')->with('profilable')->orderByDisplayName()->get();
@@ -513,7 +418,7 @@ class PerjaldinController extends Controller
         $koorKeuanganUsers = User::role('Koordinator Keuangan')->with('profilable')->orderByDisplayName()->get();
         $masterPegawai = MasterPegawai::where('status_aktif', true)->orderBy('nama_lengkap')->get();
 
-        return view('perjaldins.edit-perjaldin', compact('tagihan', 'budgetGroups', 'masterProvinsi', 'ppkUsers', 'ppspmUsers', 'bendaharaPenerimaanUsers', 'bendaharaUsers', 'kasubbagUser', 'koorKeuanganUsers', 'masterPegawai'));
+        return view('perjaldins.edit-perjaldin', compact('tagihan', 'masterProvinsi', 'ppkUsers', 'ppspmUsers', 'bendaharaPenerimaanUsers', 'bendaharaUsers', 'kasubbagUser', 'koorKeuanganUsers', 'masterPegawai'));
     }
 
     /**
@@ -534,8 +439,6 @@ class PerjaldinController extends Controller
             $input['peserta'] = $this->normalizePesertaNominals($input['peserta']);
             $request->merge($input);
         }
-
-        $komponenTotals = $this->aggregateKomponenTotals($request->peserta ?? []);
 
         $request->validate([
             'deskripsi' => 'required|string|max:255',
@@ -595,18 +498,7 @@ class PerjaldinController extends Controller
             'peserta.*.uang_harian' => 'nullable|numeric|min:0',
             'peserta.*.uang_representasi' => 'nullable|numeric|min:0',
             'peserta.*.uang_rapat' => 'nullable|numeric|min:0',
-
-            'komponen_coa' => 'nullable|array',
-            'komponen_coa.TIKET' => [\Illuminate\Validation\Rule::requiredIf($komponenTotals['TIKET'] > 0), 'nullable', 'exists:dipa_revision_items,id'],
-            'komponen_coa.TRANSPORT' => [\Illuminate\Validation\Rule::requiredIf($komponenTotals['TRANSPORT'] > 0), 'nullable', 'exists:dipa_revision_items,id'],
-            'komponen_coa.PENGINAPAN' => [\Illuminate\Validation\Rule::requiredIf($komponenTotals['PENGINAPAN'] > 0), 'nullable', 'exists:dipa_revision_items,id'],
-            'komponen_coa.UANG_HARIAN' => [\Illuminate\Validation\Rule::requiredIf($komponenTotals['UANG_HARIAN'] > 0), 'nullable', 'exists:dipa_revision_items,id'],
-        ], [
-            'komponen_coa.*.required' => 'COA wajib dipilih untuk komponen yang memiliki nilai.',
         ]);
-
-        // Validasi sisa pagu pada COA yang dipilih
-        $this->validateCoaPagu($request, $komponenTotals);
 
         try {
             DB::beginTransaction();
@@ -726,11 +618,9 @@ class PerjaldinController extends Controller
             // Log status dengan schema v2
             $this->writeTagihanLog($tagihan, $oldStatus, 'DRAFT', 'UPDATE', 'Data perjaldin diperbarui oleh Operator.');
 
-            // Rebuild rekap komponen otomatis
+            // Rebuild rekap komponen otomatis. COA dipilih kemudian oleh Operator BLU
+            // pada halaman pembuatan SPP, bukan saat input perjaldin.
             app(PerjaldinKomponenService::class)->rebuildFromTagihan($tagihan);
-
-            // Terapkan pilihan COA dari operator (Bagian D)
-            $this->syncKomponenCoaFromRequest($tagihan->fresh(), $request);
 
             DB::commit();
             return redirect()->route('perjaldins.index')->with('success', 'Data Perjaldin berhasil diperbarui.');

@@ -7,7 +7,7 @@
     <title>@yield('title') | Laravel 11 & Bootstrap 5 Admin Dashboard Template</title>
     <!-- CSRF Token -->
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <link rel="icon" href="{{ URL::asset('build/images/favicon-32x32.png') }}" type="image/png">
+    
 
     @include('layouts.theme-head')
 
@@ -78,6 +78,7 @@
             line-height: 1;
         }
     </style>
+    <link rel="icon" href="{{ asset('logo/minilogo-sikeren.png') }}" type="image/png">
 </head>
 
 <body>

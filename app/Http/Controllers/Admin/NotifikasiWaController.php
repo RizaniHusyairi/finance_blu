@@ -39,6 +39,7 @@ class NotifikasiWaController extends Controller
             'reminder_template' => ['required', 'string', 'max:4000'],
             'lunas_enabled' => ['nullable', 'boolean'],
             'lunas_template' => ['required', 'string', 'max:4000'],
+            'pengajuan_tagihan_enabled' => ['nullable', 'boolean'],
         ], [
             'reminder_days_before.regex' => 'Rentang hari harus berupa angka dipisah koma, contoh: 7,3,1,0',
         ]);
@@ -57,6 +58,7 @@ class NotifikasiWaController extends Controller
         IntegrationSetting::setValue('whatsapp.reminder.template', $validated['reminder_template'], 'whatsapp', 'Template reminder', 'textarea');
         IntegrationSetting::setValue('whatsapp.lunas.enabled', $request->boolean('lunas_enabled'), 'whatsapp', 'Aktifkan notifikasi lunas', 'boolean');
         IntegrationSetting::setValue('whatsapp.lunas.template', $validated['lunas_template'], 'whatsapp', 'Template lunas', 'textarea');
+        IntegrationSetting::setValue('whatsapp.pengajuan_tagihan.enabled', $request->boolean('pengajuan_tagihan_enabled'), 'whatsapp', 'Aktifkan notifikasi pengajuan tagihan kontrak', 'boolean');
 
         return back()->with('success', 'Pengaturan notifikasi WhatsApp berhasil disimpan.');
     }
@@ -92,6 +94,7 @@ class NotifikasiWaController extends Controller
             'reminder_template' => (string) IntegrationSetting::getValue('whatsapp.reminder.template', ''),
             'lunas_enabled' => (bool) IntegrationSetting::getValue('whatsapp.lunas.enabled', true),
             'lunas_template' => (string) IntegrationSetting::getValue('whatsapp.lunas.template', ''),
+            'pengajuan_tagihan_enabled' => (bool) IntegrationSetting::getValue('whatsapp.pengajuan_tagihan.enabled', true),
         ];
     }
 }

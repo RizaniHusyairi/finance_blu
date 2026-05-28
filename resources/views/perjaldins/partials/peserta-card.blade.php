@@ -137,7 +137,7 @@
                                     <i class="bi bi-check-circle"></i> <a href="{{ Storage::url($row['tiket_file_path']) }}" target="_blank">{{ $row['tiket_file_name'] ?? 'Lihat Tiket' }}</a>
                                 </small>
                             @endif
-                            <small class="text-muted d-block" style="font-size: 0.65rem;">Bukti tiket (PDF/JPG/PNG, maks 5MB)</small>
+                            <small class="text-muted d-block" style="font-size: 0.65rem;">Bukti tiket <span class="text-danger">*</span> (PDF/JPG/PNG, maks 5MB)</small>
                         </div>
                     </div>
                     <div class="col-md-2">
@@ -150,7 +150,7 @@
                                     <i class="bi bi-check-circle"></i> <a href="{{ Storage::url($row['transport_file_path']) }}" target="_blank">{{ $row['transport_file_name'] ?? 'Lihat Bukti' }}</a>
                                 </small>
                             @endif
-                            <small class="text-muted d-block" style="font-size: 0.65rem;">Bukti transport (PDF/JPG/PNG, maks 5MB)</small>
+                            <small class="text-muted d-block" style="font-size: 0.65rem;">Bukti transport <span class="text-danger">*</span> (PDF/JPG/PNG, maks 5MB)</small>
                         </div>
                     </div>
                     <div class="col-md-2">
@@ -163,7 +163,7 @@
                                     <i class="bi bi-check-circle"></i> <a href="{{ Storage::url($row['penginapan_file_path']) }}" target="_blank">{{ $row['penginapan_file_name'] ?? 'Lihat Bukti' }}</a>
                                 </small>
                             @endif
-                            <small class="text-muted d-block" style="font-size: 0.65rem;">Bukti penginapan (PDF/JPG/PNG, maks 5MB)</small>
+                            <small class="text-muted d-block" style="font-size: 0.65rem;">Bukti penginapan <span class="text-danger">*</span> (PDF/JPG/PNG, maks 5MB)</small>
                         </div>
                     </div>
 
@@ -202,7 +202,7 @@
                                         <i class="bi bi-check-circle"></i> <a href="{{ Storage::url($row['uang_harian_file_path']) }}" target="_blank">{{ $row['uang_harian_file_name'] ?? 'Lihat Bukti' }}</a>
                                     </small>
                                 @endif
-                                <small class="text-muted d-block" style="font-size: 0.65rem;">Bukti uang harian (PDF/JPG/PNG, maks 5MB)</small>
+                                <small class="text-muted d-block" style="font-size: 0.65rem;">Bukti uang harian <span class="text-danger">*</span> (PDF/JPG/PNG, maks 5MB)</small>
                             </div>
                         </div>
                     </div>

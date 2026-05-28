@@ -670,6 +670,14 @@
                                     <a href="{{ route('addendums.index', $kontrak->id) }}" class="btn-act btn-act-addm" title="Kelola Addendum">
                                         <i class="bi bi-journal-text"></i> Addm. <span>{{ $kontrak->addendums->count() }}</span>
                                     </a>
+                                    @if(Auth::user()->hasAnyRole(['Super Admin', 'Pejabat Pengadaan']) && in_array($kontrak->status_kontrak, ['DRAFT', 'REVISI'], true))
+                                        <form action="{{ route('contracts.submit', $kontrak->id) }}" method="POST" class="d-inline m-0" onsubmit="return confirm('Ajukan kontrak ini ke PPK?')">
+                                            @csrf
+                                            <button type="submit" class="btn-act btn-act-tagih" title="Ajukan ke PPK">
+                                                <i class="bi bi-send"></i> Ajukan
+                                            </button>
+                                        </form>
+                                    @endif
                                     @if(Auth::user()->hasRole('Pejabat Pengadaan') && $kontrak->status_kontrak === 'DRAFT')
                                         <form action="{{ route('contracts.destroy', $kontrak->id) }}" method="POST" class="d-inline m-0" onsubmit="return confirm('Yakin hapus draf kontrak ini? Arsip terkait akan ikut terhapus permanen.')">
                                             @csrf

@@ -16,6 +16,14 @@ class Tagihan extends Model
         'mekanisme_pembayaran' => \App\Enums\MekanismePembayaran::class,
     ];
 
+    /**
+     * TTE signatures for this Tagihan (e.g. BAPP, BAST, BAP from Vendor and Pemeriksa).
+     */
+    public function documentSignatures()
+    {
+        return $this->morphMany(DocumentSignature::class, 'documentable');
+    }
+
     protected static function booted(): void
     {
         static::updating(function (Tagihan $tagihan) {

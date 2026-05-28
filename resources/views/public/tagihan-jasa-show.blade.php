@@ -335,6 +335,7 @@
             box-shadow: 0 2px 6px rgba(244, 63, 94, .25);
         }
     </style>
+    <link rel="icon" href="{{ asset('logo/minilogo-sikeren.png') }}" type="image/png">
 </head>
 <body>
 

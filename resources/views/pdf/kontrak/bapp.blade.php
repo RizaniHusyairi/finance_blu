@@ -169,33 +169,47 @@
 
     <p>Demikian Berita Acara Pemeriksaan Pekerjaan ini dibuat untuk dipergunakan sebagaimana mestinya.</p>
 
-    <table class="ttd-table mt-4">
+    <style>
+        .qr-tte { width: 80px; height: 80px; margin-top: 5px; margin-bottom: 5px; }
+        .ttd-placeholder { height: 80px; }
+    </style>
+
+    <table class="ttd-table mt-4" style="width: 100%; text-align: center; border: none;">
         <tr>
-            <td>
+            <td style="width: 50%; vertical-align: top; padding-bottom: 20px;">
                 Penyedia,<br>
-                <strong>{{ $vendor->nama_pihak }}</strong>
-                <div class="ttd-space"></div>
+                <strong>{{ $vendor->nama_pihak }}</strong><br>
+                @if(!empty($tteQrFilePath))
+                    <img src="{{ $tteQrFilePath }}" alt="QR TTE BAPP" class="qr-tte"><br>
+                @else
+                    <div class="ttd-placeholder"></div>
+                @endif
                 <u><strong>{{ strtoupper($vendor->nama_direktur ?? '-') }}</strong></u><br>
                 Direktur
             </td>
-            <td>
+            <td style="width: 50%; vertical-align: top; padding-bottom: 20px;">
                 Pemeriksa Hasil Pekerjaan,<br>
-                Kantor UPBU Kelas I A.P.T. Pranoto-Samarinda
-                <div class="ttd-space"></div>
+                Kantor UPBU Kelas I A.P.T. Pranoto-Samarinda<br>
+                @if(!empty($tteQrFilePath))
+                    <img src="{{ $tteQrFilePath }}" alt="QR TTE BAPP" class="qr-tte"><br>
+                @else
+                    <div class="ttd-placeholder"></div>
+                @endif
                 <u><strong>{{ strtoupper($detail->nama_pemeriksa ?? '-') }}</strong></u><br>
                 NIP. {{ $detail->nip_pemeriksa ?? '-' }}
             </td>
         </tr>
-    </table>
-
-    <table class="mt-4" style="width: 100%;">
         <tr>
-            <td class="text-center">
+            <td colspan="2" style="text-align: center; padding-top: 20px;">
                 Mengetahui,<br>
                 Pejabat Pembuat Komitmen<br>
                 Badan Layanan Umum<br>
-                Kantor UPBU Kelas I A.P.T. Pranoto-Samarinda
-                <div class="ttd-space"></div>
+                Kantor UPBU Kelas I A.P.T. Pranoto-Samarinda<br>
+                @if(!empty($tteQrFilePath) && !empty($ppkSigned))
+                    <img src="{{ $tteQrFilePath }}" alt="QR TTE BAPP" class="qr-tte"><br>
+                @else
+                    <div class="ttd-placeholder"></div>
+                @endif
                 <u><strong>{{ $kontrak->ppkUser->name ?? '-' }}</strong></u><br>
                 NIP. {{ $kontrak->ppkUser->pegawai->nip ?? '-' }}
             </td>

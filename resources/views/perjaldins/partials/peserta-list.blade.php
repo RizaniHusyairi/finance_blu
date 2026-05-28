@@ -6,6 +6,22 @@
         'dalam_kota_lebih_8_jam' => 'Dalam Kota > 8 Jam',
         'diklat' => 'Diklat',
     ];
+
+    // Jenis bukti dukung yang bisa diunggah tiap peserta (dipakai di body kartu).
+    $buktiTypes = [
+        ['key' => 'spt',         'label' => 'SPT',         'icon' => 'bi-file-earmark-text-fill', 'accent' => '#6366f1', 'shadow' => 'rgba(99,102,241,.30)'],
+        ['key' => 'tiket',       'label' => 'Tiket',       'icon' => 'bi-ticket-detailed-fill',   'accent' => '#0ea5e9', 'shadow' => 'rgba(14,165,233,.30)'],
+        ['key' => 'transport',   'label' => 'Transport',   'icon' => 'bi-car-front-fill',         'accent' => '#f59e0b', 'shadow' => 'rgba(245,158,11,.30)'],
+        ['key' => 'penginapan',  'label' => 'Penginapan',  'icon' => 'bi-building-fill',           'accent' => '#8b5cf6', 'shadow' => 'rgba(139,92,246,.30)'],
+        ['key' => 'uang_harian', 'label' => 'Uang Harian', 'icon' => 'bi-wallet-fill',            'accent' => '#10b981', 'shadow' => 'rgba(16,185,129,.30)'],
+    ];
+
+    $totalBuktiSemua = 0;
+    foreach ($tagihan->detailPerjaldin as $d) {
+        foreach ($buktiTypes as $bt) {
+            if ($d->{$bt['key'] . '_file_path'}) $totalBuktiSemua++;
+        }
+    }
 @endphp
 
 <div class="modern-card">
@@ -13,13 +29,16 @@
         <div class="mc-head-left">
             <div class="mc-icon"><i class="bi bi-people-fill"></i></div>
             <div>
-                <h6 class="mc-title">Daftar Peserta Perjalanan Dinas</h6>
-                <p class="mc-sub">Klik kartu untuk melihat rincian biaya dan informasi peserta</p>
+                <h6 class="mc-title">Daftar Peserta &amp; Bukti Dukung</h6>
+                <p class="mc-sub">Klik kartu untuk melihat rincian biaya, informasi peserta, dan berkas bukti</p>
             </div>
         </div>
         <div class="d-flex gap-2 flex-wrap">
             <span class="mc-pill mc-pill-primary">
                 <i class="bi bi-people-fill"></i> {{ $tagihan->detailPerjaldin->count() }} Peserta
+            </span>
+            <span class="mc-pill mc-pill-info">
+                <i class="bi bi-paperclip"></i> {{ $totalBuktiSemua }} Berkas Bukti
             </span>
             <span class="mc-pill mc-pill-success">
                 <i class="bi bi-cash-stack"></i> Rp {{ number_format($tagihan->total_bruto, 0, ',', '.') }}
@@ -106,43 +125,97 @@
                                         <span class="pi-label"><i class="bi bi-hourglass-split"></i> Lama Hari</span>
                                         <span class="pi-value">{{ $detail->lama_hari ?? 0 }} Hari</span>
                                     </div>
-                                    @if($detail->spt_file_path)
-                                        <div class="pi-cell pi-attachment">
-                                            <span class="pi-label" style="color: #be123c;"><i class="bi bi-paperclip"></i> Lampiran SPT</span>
-                                            <a href="{{ Storage::url($detail->spt_file_path) }}" target="_blank" class="pi-link">
-                                                <i class="bi bi-eye-fill me-1"></i>{{ \Illuminate\Support\Str::limit($detail->spt_file_name ?? 'Lihat', 18) }}
-                                            </a>
-                                        </div>
-                                    @endif
                                 </div>
 
-                                {{-- Rincian Biaya --}}
+                                {{-- Rincian Biaya — struktur selaras dengan form tambah perjaldin --}}
+                                @php
+                                    $uhTotal = (float)($detail->uang_harian ?? 0)
+                                             + (float)($detail->uang_representasi ?? 0)
+                                             + (float)($detail->uang_rapat ?? 0);
+                                @endphp
                                 <div class="biaya-card">
                                     <div class="biaya-title"><i class="bi bi-cash-coin"></i> Rincian Biaya</div>
-                                    <div class="biaya-grid">
-                                        @php
-                                            $biayaItems = [
-                                                ['Tiket', $detail->biaya_tiket],
-                                                ['Transport', $detail->biaya_transport],
-                                                ['Penginapan', $detail->biaya_penginapan],
-                                                ['Uang Harian', $detail->uang_harian],
-                                                ['Representasi', $detail->uang_representasi],
-                                            ];
-                                            if (!is_null($detail->uang_rapat ?? null) && (float)$detail->uang_rapat > 0) {
-                                                $biayaItems[] = ['Rapat', $detail->uang_rapat];
-                                            }
-                                        @endphp
-                                        @foreach($biayaItems as [$bl, $bv])
-                                            <div class="biaya-cell">
-                                                <span class="b-label">{{ $bl }}</span>
-                                                <span class="b-value">Rp {{ number_format((float)($bv ?? 0), 0, ',', '.') }}</span>
+                                    <div class="biaya-layout">
+                                        <div class="biaya-cell">
+                                            <span class="b-label">Tiket</span>
+                                            <span class="b-value">Rp {{ number_format((float)($detail->biaya_tiket ?? 0), 0, ',', '.') }}</span>
+                                        </div>
+                                        <div class="biaya-cell">
+                                            <span class="b-label">Transport</span>
+                                            <span class="b-value">Rp {{ number_format((float)($detail->biaya_transport ?? 0), 0, ',', '.') }}</span>
+                                        </div>
+                                        <div class="biaya-cell">
+                                            <span class="b-label">Penginapan</span>
+                                            <span class="b-value">Rp {{ number_format((float)($detail->biaya_penginapan ?? 0), 0, ',', '.') }}</span>
+                                        </div>
+
+                                        {{-- Grup Uang Harian (Harian + Representasi + Rapat) --}}
+                                        <div class="uh-group">
+                                            <div class="uh-group-head">
+                                                <span class="uh-group-title"><i class="bi bi-wallet2"></i> Uang Harian</span>
+                                                <span class="uh-group-total">Rp {{ number_format($uhTotal, 0, ',', '.') }}</span>
                                             </div>
-                                        @endforeach
+                                            <div class="uh-group-grid">
+                                                <div class="uh-sub">
+                                                    <span class="b-label">Harian</span>
+                                                    <span class="b-value">Rp {{ number_format((float)($detail->uang_harian ?? 0), 0, ',', '.') }}</span>
+                                                </div>
+                                                <div class="uh-sub">
+                                                    <span class="b-label">+ Representasi</span>
+                                                    <span class="b-value">Rp {{ number_format((float)($detail->uang_representasi ?? 0), 0, ',', '.') }}</span>
+                                                </div>
+                                                <div class="uh-sub">
+                                                    <span class="b-label">+ Rapat</span>
+                                                    <span class="b-value">Rp {{ number_format((float)($detail->uang_rapat ?? 0), 0, ',', '.') }}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
                                         <div class="biaya-cell subtotal">
                                             <span class="b-label">Subtotal</span>
                                             <span class="b-value">Rp {{ number_format($sub, 0, ',', '.') }}</span>
                                         </div>
                                     </div>
+                                </div>
+
+                                {{-- Bukti Dukung peserta --}}
+                                @php
+                                    $pesertaFiles = [];
+                                    foreach ($buktiTypes as $bt) {
+                                        $path = $detail->{$bt['key'] . '_file_path'} ?? null;
+                                        if ($path) {
+                                            $pesertaFiles[] = $bt + [
+                                                'path' => $path,
+                                                'name' => $detail->{$bt['key'] . '_file_name'} ?? basename($path),
+                                            ];
+                                        }
+                                    }
+                                @endphp
+                                <div class="peserta-bukti">
+                                    <div class="biaya-title"><i class="bi bi-paperclip"></i> Bukti Dukung</div>
+                                    @if(!empty($pesertaFiles))
+                                        <div class="bukti-files">
+                                            @foreach($pesertaFiles as $f)
+                                                @php $ext = strtoupper(pathinfo($f['name'], PATHINFO_EXTENSION) ?: pathinfo($f['path'], PATHINFO_EXTENSION)); @endphp
+                                                <a href="{{ Storage::url($f['path']) }}" target="_blank" rel="noopener"
+                                                   class="bukti-file"
+                                                   style="--bf-accent: {{ $f['accent'] }}; --bf-shadow: {{ $f['shadow'] }};"
+                                                   title="{{ $f['name'] }}">
+                                                    <span class="bf-icon"><i class="bi {{ $f['icon'] }}"></i></span>
+                                                    <span class="bf-meta">
+                                                        <span class="bf-type">{{ $f['label'] }}</span>
+                                                        <span class="bf-name">{{ $f['name'] }}</span>
+                                                        @if($ext)<span class="bf-ext">{{ $ext }}</span>@endif
+                                                    </span>
+                                                    <i class="bi bi-box-arrow-up-right bf-view"></i>
+                                                </a>
+                                            @endforeach
+                                        </div>
+                                    @else
+                                        <div class="peserta-bukti-empty">
+                                            <i class="bi bi-folder2-open me-1"></i> Peserta ini belum mengunggah berkas bukti.
+                                        </div>
+                                    @endif
                                 </div>
                             </div>
                         </div>

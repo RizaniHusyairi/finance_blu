@@ -324,6 +324,28 @@
         </div>
     </div>
 
+    {{-- C. Notifikasi Pengajuan Tagihan Kontrak --}}
+    <div class="nwa-card">
+        <div class="nwa-head">
+            <span class="nwa-icon icon-info"><i class="bi bi-file-earmark-text-fill"></i></span>
+            <div>
+                <h6 class="nwa-title">Notifikasi Pengajuan Tagihan (Verifikator)</h6>
+                <div class="nwa-sub">Otomatis dikirim ke 5 pejabat verifikator saat tagihan kontrak diajukan.</div>
+            </div>
+            <div class="nwa-toggle">
+                <div class="form-check form-switch m-0">
+                    <input class="form-check-input" type="checkbox" name="pengajuan_tagihan_enabled" id="pengajuanTagihanEnabled" value="1" {{ $settings['pengajuan_tagihan_enabled'] ? 'checked' : '' }}>
+                    <label class="form-check-label" for="pengajuanTagihanEnabled">{{ $settings['pengajuan_tagihan_enabled'] ? 'Aktif' : 'Nonaktif' }}</label>
+                </div>
+            </div>
+        </div>
+        <div class="nwa-body">
+            <div class="alert alert-info mb-0 small">
+                <i class="bi bi-info-circle me-1"></i> Jika diaktifkan, sistem akan otomatis mengirimkan notifikasi via WhatsApp ke nomor HP Pejabat Verifikator (PPK, PPSPM, Koor Keu, Bend. Keluar, Bend. Terima) yang terdaftar di Master Pegawai ketika ada tagihan kontrak yang baru diajukan (status DRAFT -> PENDING_VERIFIKASI_KONTRAK).
+            </div>
+        </div>
+    </div>
+
     <div class="nwa-action-bar mb-4">
         <button type="reset" class="btn btn-nwa-secondary">
             <i class="bi bi-arrow-counterclockwise me-1"></i> Reset

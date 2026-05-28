@@ -1,313 +1,618 @@
 @extends('layouts.app')
-@section('title', 'Review Kontrak: ' . $kontrak->nomor_spk)
+@section('title', 'Review Kontrak PPK')
 
 @push('css')
 <style>
-    .split-container {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 1.5rem;
+    /* Premium UI Styles */
+    :root {
+        --primary: #4f46e5;
+        --primary-light: #818cf8;
+        --secondary: #ec4899;
+        --success: #10b981;
+        --warning: #f59e0b;
+        --danger: #ef4444;
+        --dark: #0f172a;
+        --gray: #64748b;
+        --light: #f8fafc;
+        --glass-bg: rgba(255, 255, 255, 0.85);
+        --glass-border: rgba(255, 255, 255, 0.3);
     }
-    .pdf-viewer {
-        flex: 1 1 55%;
-        min-width: 300px;
-        height: 85vh;
-        background: #f8f9fa;
-        border-radius: 12px;
+    
+    .review-hero {
+        background: linear-gradient(135deg, var(--dark) 0%, #1e293b 100%);
+        border-radius: 20px;
+        padding: 40px;
+        color: white;
+        margin-bottom: 30px;
+        position: relative;
         overflow: hidden;
-        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+        box-shadow: 0 20px 40px -10px rgba(15, 23, 42, 0.4);
     }
-    .action-panel {
-        flex: 1 1 40%;
-        min-width: 300px;
-        height: 85vh;
-        overflow-y: auto;
-        padding-right: 0.5rem;
+    .review-hero::after {
+        content: '';
+        position: absolute;
+        top: -50%; right: -10%;
+        width: 400px; height: 400px;
+        background: radial-gradient(circle, var(--primary) 0%, transparent 70%);
+        opacity: 0.3;
+        filter: blur(50px);
     }
-    .action-panel::-webkit-scrollbar {
-        width: 6px;
+
+    .status-badge-lg {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: rgba(245, 158, 11, 0.2);
+        color: #fbbf24;
+        border: 1px solid rgba(245, 158, 11, 0.3);
+        padding: 8px 20px;
+        border-radius: 30px;
+        font-weight: 700;
+        letter-spacing: 1px;
+        font-size: 14px;
+        backdrop-filter: blur(10px);
+        margin-bottom: 20px;
+        animation: pulseStatus 2s infinite;
     }
-    .action-panel::-webkit-scrollbar-thumb {
-        background-color: #adb5bd;
-        border-radius: 10px;
+
+    .status-badge-lg.approved {
+        background: rgba(16, 185, 129, 0.18);
+        color: #86efac;
+        border-color: rgba(16, 185, 129, 0.35);
+        animation: none;
     }
-    iframe {
-        width: 100%;
-        height: 100%;
+
+    .status-badge-lg.neutral {
+        background: rgba(148, 163, 184, 0.18);
+        color: #e2e8f0;
+        border-color: rgba(148, 163, 184, 0.35);
+        animation: none;
+    }
+
+    @keyframes pulseStatus {
+        0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4); }
+        70% { box-shadow: 0 0 0 10px rgba(245, 158, 11, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+    }
+
+    .contract-title {
+        font-size: 28px;
+        font-weight: 800;
+        margin-bottom: 10px;
+        line-height: 1.3;
+        z-index: 2;
+        position: relative;
+        color: #ffffff;
+    }
+
+    .contract-meta {
+        display: flex;
+        gap: 20px;
+        color: #f8fafc;
+        font-size: 15px;
+        z-index: 2;
+        position: relative;
+        flex-wrap: wrap;
+    }
+    
+    .meta-item i { color: var(--primary-light); margin-right: 6px; }
+
+    .card-glass {
+        background: var(--glass-bg);
+        backdrop-filter: blur(16px);
+        border: 1px solid var(--glass-border);
+        border-radius: 20px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+        padding: 30px;
+        margin-bottom: 30px;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .card-glass:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 35px rgba(0,0,0,0.08);
+    }
+
+    .section-title {
+        font-size: 18px;
+        font-weight: 800;
+        color: var(--dark);
+        margin-bottom: 24px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    .section-icon {
+        width: 40px; height: 40px;
+        background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+        color: white;
+        border-radius: 12px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 18px;
+        box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+    }
+
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 24px;
+    }
+    .info-box {
+        background: #f8fafc;
+        padding: 16px;
+        border-radius: 12px;
+        border: 1px solid #e2e8f0;
+        transition: all 0.3s;
+    }
+    .info-box:hover {
+        border-color: var(--primary-light);
+        background: white;
+    }
+    .info-label {
+        font-size: 12px;
+        text-transform: uppercase;
+        color: var(--gray);
+        font-weight: 700;
+        margin-bottom: 6px;
+        letter-spacing: 0.5px;
+    }
+    .info-value {
+        font-size: 15px;
+        color: var(--dark);
+        font-weight: 600;
+        word-break: break-word;
+        overflow-wrap: break-word;
+    }
+
+    .budget-progress {
+        margin-top: 20px;
+        background: #f1f5f9;
+        height: 12px;
+        border-radius: 6px;
+        overflow: hidden;
+        display: flex;
+    }
+    .budget-used { background: var(--gray); transition: width 1s ease-in-out; }
+    .budget-current { background: var(--warning); transition: width 1s ease-in-out; }
+    .budget-remaining { background: var(--success); transition: width 1s ease-in-out; }
+
+    .budget-legends {
+        display: flex; gap: 20px; margin-top: 12px; font-size: 13px; font-weight: 600;
+    }
+    .legend-dot {
+        width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 6px;
+    }
+
+    .termin-table th {
+        background: #f8fafc;
+        font-weight: 700;
+        color: var(--gray);
+        text-transform: uppercase;
+        font-size: 12px;
+        letter-spacing: 0.5px;
+        padding: 16px;
+        border-bottom: 2px solid #e2e8f0;
+    }
+    .termin-table td {
+        padding: 16px;
+        vertical-align: middle;
+        font-weight: 500;
+        color: var(--dark);
+    }
+    .termin-table tr:hover { background: #f8fafc; }
+
+    .action-bar {
+        position: sticky;
+        bottom: 30px;
+        background: var(--glass-bg);
+        backdrop-filter: blur(20px);
+        border: 1px solid var(--glass-border);
+        padding: 20px 30px;
+        border-radius: 24px;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        z-index: 100;
+    }
+
+    .btn-approve {
+        background: linear-gradient(135deg, var(--success) 0%, #059669 100%);
+        color: white !important;
         border: none;
+        padding: 14px 32px;
+        border-radius: 16px;
+        font-weight: 800;
+        font-size: 16px;
+        box-shadow: 0 10px 20px rgba(16, 185, 129, 0.3);
+        transition: all 0.3s;
+    }
+    .btn-approve:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 15px 25px rgba(16, 185, 129, 0.4);
+    }
+
+    .btn-reject {
+        background: white;
+        color: var(--danger) !important;
+        border: 2px solid var(--danger);
+        padding: 12px 28px;
+        border-radius: 16px;
+        font-weight: 700;
+        font-size: 15px;
+        transition: all 0.3s;
+    }
+    .btn-reject:hover {
+        background: var(--danger);
+        color: white !important;
+        box-shadow: 0 10px 20px rgba(239, 68, 68, 0.2);
+    }
+
+    .tte-document-bar {
+        background: linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(79, 70, 229, 0.10));
+        border: 1px solid rgba(16, 185, 129, 0.22);
+        padding: 24px 28px;
+        border-radius: 24px;
+        box-shadow: 0 18px 36px rgba(15, 23, 42, 0.08);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 20px;
+        flex-wrap: wrap;
+    }
+
+    .tte-document-title {
+        color: var(--dark);
+        font-weight: 800;
+        margin-bottom: 4px;
+    }
+
+    .tte-document-subtitle {
+        color: var(--gray);
+        font-size: 13px;
+    }
+
+    .tte-document-actions {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+    .btn-tte-doc {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: white;
+        color: var(--dark) !important;
+        border: 1px solid rgba(15, 23, 42, 0.08);
+        border-radius: 14px;
+        padding: 12px 18px;
+        font-weight: 800;
+        font-size: 14px;
+        text-decoration: none;
+        box-shadow: 0 10px 20px rgba(15, 23, 42, 0.08);
+        transition: all 0.25s ease;
+    }
+
+    .btn-tte-doc i {
+        color: var(--success);
+        font-size: 16px;
+    }
+
+    .btn-tte-doc:hover {
+        transform: translateY(-2px);
+        border-color: rgba(16, 185, 129, 0.35);
+        box-shadow: 0 14px 24px rgba(15, 23, 42, 0.12);
     }
 </style>
 @endpush
 
 @section('content')
 @php
-    $ringkasanFinalArsip = $kontrak->ringkasan_kontrak_final_ttd_arsip;
+    $isPendingReview = $kontrak->status_kontrak === 'PENDING_REVIEW';
+    $isApproved = method_exists($kontrak, 'isTteApproved') ? $kontrak->isTteApproved() : !empty($kontrak->ppk_approved_at);
 @endphp
-@if(session('success'))
-    <div class="alert alert-success border-0 shadow-sm d-flex align-items-center mb-4" role="alert">
-        <i class="bi bi-check-circle-fill me-2"></i>
-        <div>{{ session('success') }}</div>
-    </div>
-@endif
 
-@if(session('error'))
-    <div class="alert alert-danger border-0 shadow-sm d-flex align-items-center mb-4" role="alert">
-        <i class="bi bi-exclamation-triangle-fill me-2"></i>
-        <div>{{ session('error') }}</div>
-    </div>
-@endif
-
-@if($errors->any())
-    <div class="alert alert-danger border-0 shadow-sm mb-4" role="alert">
-        <div class="fw-bold mb-1">Tindakan belum bisa diproses.</div>
-        <div>{{ $errors->first() }}</div>
-    </div>
-@endif
-
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div class="d-flex align-items-center gap-3">
-        <a href="{{ route('contracts.verifikasi') }}" class="btn btn-light text-secondary border shadow-sm rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;" title="Kembali">
-            <i class="bi bi-arrow-left fs-5"></i>
-        </a>
-        <div>
-            <h4 class="mb-0 fw-bold text-dark"><i class="bi bi-shield-check text-primary me-2"></i>Review & Keputusan Kontrak</h4>
-            <div class="text-muted small mt-1">
-                Ref: <strong class="text-dark">{{ $kontrak->nomor_spk }}</strong> &bull; {{ Str::limit($kontrak->nama_pekerjaan, 50) }}
+<div class="container-fluid pb-5">
+    
+    <div class="review-hero">
+        @if($isPendingReview)
+            <div class="status-badge-lg">
+                <i class="bi bi-hourglass-split"></i> MENUNGGU REVIEW PPK
             </div>
-        </div>
-    </div>
-</div>
-
-<div class="split-container">
-    {{-- KIRI: PDF VIEWER (60%) --}}
-    <div class="pdf-viewer d-flex flex-column bg-white border border-secondary-subtle">
-        <div class="p-2 border-bottom shadow-sm bg-light">
-            <ul class="nav nav-pills nav-fill" id="pdfTabs" role="tablist">
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link active fw-bold border" id="spk-tab" data-bs-toggle="tab" data-bs-target="#spk-pdf" type="button" role="tab">
-                        <i class="bi bi-file-earmark-pdf text-danger me-1"></i> SPK Final
-                    </button>
-                </li>
-                @if($kontrak->file_spmk)
-                <li class="nav-item ms-2" role="presentation">
-                    <button class="nav-link fw-bold border" id="spmk-tab" data-bs-toggle="tab" data-bs-target="#spmk-pdf" type="button" role="tab">
-                        <i class="bi bi-file-earmark-pdf text-danger me-1"></i> SPMK
-                    </button>
-                </li>
-                @endif
-                @if($kontrak->file_ringkasan_kontrak_final_ttd)
-                <li class="nav-item ms-2" role="presentation">
-                    <button class="nav-link fw-bold border" id="ringkasan-tab" data-bs-toggle="tab" data-bs-target="#ringkasan-pdf" type="button" role="tab">
-                        <i class="bi bi-file-earmark-pdf text-danger me-1"></i> Ringkasan
-                    </button>
-                </li>
-                @endif
-            </ul>
-        </div>
-        <div class="tab-content flex-grow-1" id="pdfTabsContent">
-            <div class="tab-pane fade show active h-100" id="spk-pdf" role="tabpanel">
-                @if($kontrak->file_spk_final_ttd)
-                    <iframe src="{{ Storage::url($kontrak->file_spk_final_ttd) }}"></iframe>
-                @else
-                    <div class="d-flex justify-content-center align-items-center h-100 text-muted bg-light">
-                        <div class="text-center">
-                            <i class="bi bi-file-x display-1 d-block mb-3 text-secondary"></i> 
-                            <h5 class="fw-bold">SPK Final Bertandatangan Belum Diunggah</h5>
-                        </div>
-                    </div>
-                @endif
+        @elseif($isApproved)
+            <div class="status-badge-lg approved">
+                <i class="bi bi-check2-circle"></i> SUDAH DISETUJUI PPK
             </div>
-            @if($kontrak->file_spmk)
-            <div class="tab-pane fade h-100" id="spmk-pdf" role="tabpanel">
-                <iframe src="{{ Storage::url($kontrak->file_spmk) }}"></iframe>
+        @else
+            <div class="status-badge-lg neutral">
+                <i class="bi bi-info-circle"></i> {{ str_replace('_', ' ', $kontrak->status_kontrak) }}
             </div>
-            @endif
-            @if($kontrak->file_ringkasan_kontrak_final_ttd)
-            <div class="tab-pane fade h-100" id="ringkasan-pdf" role="tabpanel">
-                <iframe src="{{ Storage::url($kontrak->file_ringkasan_kontrak_final_ttd) }}"></iframe>
-            </div>
+        @endif
+        <h1 class="contract-title">{{ $kontrak->nama_pekerjaan }}</h1>
+        <div class="contract-meta">
+            <span class="meta-item"><i class="bi bi-file-earmark-text"></i> SPK: {{ $kontrak->nomor_spk }}</span>
+            <span class="meta-item"><i class="bi bi-building"></i> Vendor: {{ $kontrak->vendor->nama_pihak ?? $kontrak->vendor->nama_perusahaan ?? 'N/A' }}</span>
+            <span class="meta-item"><i class="bi bi-cash-stack"></i> Nilai: Rp {{ number_format($kontrak->nilai_total_kontrak, 0, ',', '.') }}</span>
+            @if($isApproved && $kontrak->ppk_approved_at)
+                <span class="meta-item"><i class="bi bi-calendar-check"></i> Disetujui: {{ \Carbon\Carbon::parse($kontrak->ppk_approved_at)->translatedFormat('d F Y H:i') }}</span>
             @endif
         </div>
     </div>
 
-    {{-- KANAN: PANEL AKSI (40%) --}}
-    <div class="action-panel">
-        
-        {{-- BLOK 1: INFO VENDOR --}}
-        <div class="card border-0 shadow-sm rounded-4 mb-3" style="border-left: 5px solid #0d6efd !important;">
-            <div class="card-body p-4">
-                <h6 class="fw-bold text-uppercase text-muted mb-3"><i class="bi bi-building me-2"></i>Identitas Mitra (Vendor)</h6>
-                <h5 class="fw-bold text-dark">{{ $kontrak->vendor->nama_pihak ?? '-' }}</h5>
-                <div class="row mt-3">
-                    <div class="col-6">
-                        <small class="text-muted d-block">Nama Direktur</small>
-                        <span class="fw-medium">{{ $kontrak->vendor->nama_direktur ?? '-' }}</span>
-                    </div>
-                    <div class="col-6">
-                        <small class="text-muted d-block">NPWP</small>
-                        <span class="fw-medium font-monospace">{{ $kontrak->vendor->npwp ?? '-' }}</span>
-                    </div>
+    @if(session('error'))
+    <div class="alert alert-danger border-0 shadow-sm alert-dismissible fade show" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i> {{ session('error') }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    @endif
+
+    <div class="row">
+        <div class="col-xl-8">
+            <!-- Informasi Pekerjaan -->
+            <div class="card-glass">
+                <div class="section-title">
+                    <div class="section-icon"><i class="bi bi-briefcase-fill"></i></div>
+                    Informasi Pekerjaan & Waktu
                 </div>
-                
-                @php $rek = $kontrak->vendor->rekening->first(); @endphp
-                <div class="mt-3 p-3 rounded-3 d-flex align-items-center gap-3 border shadow-sm" style="background-color: #f8f9fa;">
-                    <div class="bg-white p-2 text-center rounded shadow-sm border border-secondary-subtle" style="width: 45px; height: 45px;">
-                        <i class="bi bi-bank2 text-primary fs-5"></i>
+                <div class="info-grid">
+                    <div class="info-box">
+                        <div class="info-label">No. SPMK</div>
+                        <div class="info-value">{{ $kontrak->nomor_spmk ?: '-' }}</div>
                     </div>
-                    <div>
-                        <small class="text-muted d-block fw-bold mb-1" style="font-size: 11px;">REKENING PENCAIRAN</small>
-                        @if($rek)
-                            <span class="fw-bold d-block text-dark font-monospace fs-6">{{ $rek->nomor_rekening }}</span>
-                            <small class="text-muted">Bank {{ $rek->nama_bank }} (A.N: {{ Str::limit($rek->nama_rekening, 20) }})</small>
-                        @else
-                            <span class="text-danger small fw-bold fst-italic"><i class="bi bi-exclamation-triangle"></i> Data Bank Kosong!</span>
-                        @endif
+                    <div class="info-box">
+                        <div class="info-label">Tanggal SPK</div>
+                        <div class="info-value">{{ $kontrak->tanggal_spk ? \Carbon\Carbon::parse($kontrak->tanggal_spk)->translatedFormat('d F Y') : '-' }}</div>
+                    </div>
+                    <div class="info-box">
+                        <div class="info-label">Jangka Waktu</div>
+                        <div class="info-value">{{ $kontrak->jangka_waktu }} {{ ucfirst(strtolower($kontrak->satuan_waktu)) }}</div>
+                    </div>
+                    <div class="info-box">
+                        <div class="info-label">Periode Pelaksanaan</div>
+                        <div class="info-value">
+                            {{ $kontrak->tanggal_mulai ? \Carbon\Carbon::parse($kontrak->tanggal_mulai)->format('d/m/Y') : '-' }} 
+                            s.d 
+                            {{ $kontrak->tanggal_selesai ? \Carbon\Carbon::parse($kontrak->tanggal_selesai)->format('d/m/Y') : '-' }}
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        {{-- BLOK 2: KALKULATOR ANGGARAN (KRUSIAL) --}}
-        <div class="card border-0 shadow-sm rounded-4 mb-3" style="border-left: 5px solid #0dcaf0 !important;">
-            <div class="card-body p-4">
-                <h6 class="fw-bold text-uppercase text-muted mb-3"><i class="bi bi-calculator me-2"></i>Pengecekan Anggaran DIPA</h6>
-                <div class="d-flex justify-content-between mb-2 pb-2 border-bottom border-light-subtle">
-                    <span class="text-muted fw-medium">Beban DIPA:</span>
-                    <span class="badge bg-light text-dark border shadow-sm font-monospace">{{ $kontrak->dipa->nomor_dipa ?? '-' }}</span>
+            <!-- Skema Pembayaran -->
+            <div class="card-glass">
+                <div class="section-title">
+                    <div class="section-icon" style="background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);"><i class="bi bi-wallet2"></i></div>
+                    Skema Pembayaran ({{ $kontrak->metode_pembayaran }})
                 </div>
-                
-                <div class="d-flex justify-content-between mt-3 mb-2">
-                    <span class="text-secondary fw-bold">Pagu Tersedia Saat Ini</span>
-                    <span class="fw-bold fs-6">Rp {{ number_format($sisaPagu, 0, ',', '.') }}</span>
-                </div>
-                <div class="d-flex justify-content-between mb-2 border-bottom border-2 border-secondary pb-3">
-                    <span class="text-secondary fw-bold">Nilai SPK Ini <i class="bi bi-dash-circle-fill text-danger ms-1"></i></span>
-                    <span class="fw-bold text-danger fs-6">Rp {{ number_format($kontrak->nilai_total_kontrak, 0, ',', '.') }}</span>
-                </div>
-
-                <div class="p-3 mt-3 rounded-4 shadow-sm position-relative overflow-hidden @if($sisaPaguNanti >= 0) bg-success bg-opacity-10 border border-success @else bg-danger border border-danger shadow @endif">
-                    @if($sisaPaguNanti >= 0)
-                        <div class="position-absolute end-0 top-0 mt-n1 me-n2 opacity-25" style="transform: rotate(15deg); font-size: 4rem;">
-                            <i class="bi bi-shield-check text-success"></i>
-                        </div>
-                    @else
-                        <div class="position-absolute end-0 top-0 mt-n1 me-n2 opacity-25" style="transform: rotate(15deg); font-size: 4rem;">
-                            <i class="bi bi-exclamation-octagon-fill text-white"></i>
-                        </div>
-                    @endif
-                    
-                    <div class="d-flex justify-content-between align-items-center position-relative z-1">
-                        <span class="fw-bold @if($sisaPaguNanti >= 0) text-success @else text-white @endif">Estimasi Sisa Pagu:</span>
-                        <h4 class="fw-bold mb-0 @if($sisaPaguNanti >= 0) text-success @else text-white @endif">Rp {{ number_format($sisaPaguNanti, 0, ',', '.') }}</h4>
-                    </div>
-                </div>
-                
-                @if($sisaPaguNanti < 0)
-                    <div class="alert alert-danger mt-3 mb-0 small border-0 fw-bold shadow-sm d-flex align-items-center">
-                        <i class="bi bi-exclamation-triangle-fill fs-5 me-2 flex-shrink-0"></i> 
-                        <div>Kontrak ini menyebabkan <u>defisit anggaran (Minus)</u> pada DIPA. Evaluasi sangat dianjurkan!</div>
-                    </div>
-                @endif
-            </div>
-        </div>
-
-        {{-- BLOK 3: SKEMA TERMIN --}}
-        <div class="card border-0 shadow-sm rounded-4 mb-4" style="border-left: 5px solid #ffc107 !important;">
-            <div class="card-body p-4">
-                <h6 class="fw-bold text-uppercase text-muted mb-3"><i class="bi bi-list-check me-2"></i>Rencana Skema Tagihan</h6>
-                
-                @if($kontrak->metode_pembayaran === 'LUMPSUM')
-                    <div class="p-3 bg-light border rounded-3 d-flex align-items-center gap-3">
-                        <i class="bi bi-box-seam-fill text-success fs-1"></i>
-                        <div>
-                            <span class="badge bg-success mb-1">LUMPSUM 100%</span>
-                            <div class="text-dark fw-bold small">Pembayaran dilakukan secara penuh (sekaligus) setelah penyelesaian BAST.</div>
-                        </div>
-                    </div>
-                @else
-                    <div class="badge bg-primary px-3 py-2 rounded-pill shadow-sm mb-3">
-                        <i class="bi bi-signpost-split me-1"></i> TERMIN BERTAHAP ({{ $kontrak->termin->count() }} Tahap)
-                    </div>
-                    <ul class="list-group list-group-flush small border rounded-3 overflow-hidden shadow-sm">
-                        @foreach($kontrak->termin as $t)
-                        <li class="list-group-item p-3 d-flex justify-content-between align-items-center bg-white border-bottom">
-                            <div>
-                                <span class="fw-bold text-dark fs-6 d-block mb-1">Termin Ke-{{ $t->termin_ke }} <span class="ms-1 badge bg-secondary">{{ $t->persentase }}%</span></span>
-                                <span class="text-muted" style="font-size:11px;"><i class="bi bi-tag me-1"></i>{{ str_replace('_', ' ', $t->jenis_termin) }}</span>
-                            </div>
-                            <span class="fw-bold text-success fs-6">Rp {{ number_format($t->nilai_bruto_termin, 0, ',', '.') }}</span>
-                        </li>
-                        @endforeach
-                    </ul>
-                @endif
                 
                 @if($kontrak->ada_uang_muka)
-                    <div class="alert alert-warning py-3 px-3 mt-3 mb-0 border-0 shadow-sm d-flex justify-content-between align-items-center rounded-3">
-                        <span class="fw-bold text-dark"><i class="bi bi-wallet2 me-2"></i> Porsi Uang Muka</span>
-                        <span class="fw-bold text-dark fs-6">Rp {{ number_format($kontrak->nilai_uang_muka, 0, ',', '.') }}</span>
+                <div class="alert alert-info border-0 bg-info bg-opacity-10 d-flex align-items-center mb-4">
+                    <i class="bi bi-info-circle-fill fs-4 text-info me-3"></i>
+                    <div>
+                        <div class="fw-bold text-dark mb-1">Kontrak ini memiliki Uang Muka</div>
+                        <div class="text-muted">Senilai <strong>Rp {{ number_format($kontrak->nilai_uang_muka, 0, ',', '.') }}</strong> yang akan dipotong secara proporsional pada tiap termin pembayaran.</div>
                     </div>
+                </div>
+                @endif
+
+                <div class="table-responsive rounded-3 border border-light">
+                    <table class="table mb-0 termin-table">
+                        <thead>
+                            <tr>
+                                <th>Termin</th>
+                                <th>Keterangan</th>
+                                <th class="text-end">Nilai Bruto</th>
+                                <th class="text-end">Potongan UM</th>
+                                <th class="text-end">Bersih (Net)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($kontrak->termin as $t)
+                            <tr>
+                                <td>
+                                    <span class="badge bg-light text-dark border px-2 py-1">Ke-{{ $t->termin_ke }}</span>
+                                </td>
+                                <td>{{ $t->keterangan_termin }} ({{ floatval($t->persentase) }}%)</td>
+                                <td class="text-end fw-bold">Rp {{ number_format($t->nilai_bruto_termin, 0, ',', '.') }}</td>
+                                <td class="text-end text-danger">-Rp {{ number_format($t->potongan_angsuran_uang_muka, 0, ',', '.') }}</td>
+                                <td class="text-end text-success fw-bold">Rp {{ number_format($t->nilai_bruto_termin - $t->potongan_angsuran_uang_muka, 0, ',', '.') }}</td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                        <tfoot style="background: #f8fafc;">
+                            <tr>
+                                <th colspan="2" class="text-end py-3">Total Kontrak:</th>
+                                <th class="text-end fw-bolder fs-5 text-dark py-3">Rp {{ number_format($kontrak->nilai_total_kontrak, 0, ',', '.') }}</th>
+                                <th colspan="2"></th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-4">
+            <!-- Pagu DIPA -->
+            <div class="card-glass">
+                <div class="section-title">
+                    <div class="section-icon" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);"><i class="bi bi-safe"></i></div>
+                    Kesiapan Pagu DIPA
+                </div>
+                
+                @php
+                    $totalPagu = $kontrak->dipa->total_pagu ?? 0;
+                    $pctTerpakai = $totalPagu > 0 ? ($terpakai / $totalPagu) * 100 : 0;
+                    $pctKontrakIni = $totalPagu > 0 ? ($kontrak->nilai_total_kontrak / $totalPagu) * 100 : 0;
+                    $pctSisa = 100 - $pctTerpakai - $pctKontrakIni;
+                @endphp
+
+                <div class="mb-3 d-flex justify-content-between align-items-center">
+                    <span class="text-muted fw-bold">Pagu Tersedia</span>
+                    <span class="fs-4 fw-bolder text-dark">Rp {{ number_format($sisaPagu, 0, ',', '.') }}</span>
+                </div>
+
+                <div class="budget-progress">
+                    <div class="budget-used" style="width: {{ $pctTerpakai }}%" title="Sudah Terpakai: Rp {{ number_format($terpakai,0,',','.') }}"></div>
+                    <div class="budget-current" style="width: {{ $pctKontrakIni }}%" title="Kontrak Ini: Rp {{ number_format($kontrak->nilai_total_kontrak,0,',','.') }}"></div>
+                    <div class="budget-remaining" style="width: {{ $pctSisa }}%" title="Sisa Nanti: Rp {{ number_format($sisaPaguNanti,0,',','.') }}"></div>
+                </div>
+
+                <div class="budget-legends">
+                    <div><span class="legend-dot budget-used"></span>Terpakai</div>
+                    <div><span class="legend-dot budget-current"></span>Kontrak Ini</div>
+                    <div><span class="legend-dot budget-remaining"></span>Sisa Nanti</div>
+                </div>
+
+                <hr class="my-4 border-light">
+                
+                <div class="info-box mb-3">
+                    <div class="info-label">COA (Mata Anggaran)</div>
+                    <div class="info-value text-break">
+                        {{ $kontrak->dipaRevisionItem->coa->kode_mak_lengkap ?? 'N/A' }} - 
+                        {{ $kontrak->dipaRevisionItem->coa->nama_akun ?? 'N/A' }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Vendor -->
+            <div class="card-glass">
+                <div class="section-title">
+                    <div class="section-icon" style="background: linear-gradient(135deg, #f59e0b 0%, #ea580c 100%);"><i class="bi bi-buildings"></i></div>
+                    Detail Vendor
+                </div>
+                
+                <div class="d-flex align-items-center mb-4">
+                    <div class="bg-light rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 50px; height: 50px; font-size: 24px; color: var(--warning);">
+                        <i class="bi bi-shop"></i>
+                    </div>
+                    <div>
+                        <div class="fw-bolder fs-5">{{ $kontrak->vendor->nama_pihak ?? $kontrak->vendor->nama_perusahaan ?? 'N/A' }}</div>
+                        <div class="text-muted small">NPWP: {{ $kontrak->vendor->npwp ?? '-' }}</div>
+                    </div>
+                </div>
+
+                @php $rekening = optional($kontrak->vendor)->rekening ? $kontrak->vendor->rekening->first() : null; @endphp
+                @if($rekening)
+                <div class="info-box">
+                    <div class="info-label">Rekening Pembayaran</div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="fw-bold">{{ $rekening->nama_bank }}</div>
+                        <div class="text-muted">{{ $rekening->nomor_rekening }}</div>
+                    </div>
+                    <div class="text-muted small mt-1">a.n {{ $rekening->nama_pemilik }}</div>
+                </div>
+                @else
+                <div class="alert alert-warning mb-0 border-0 bg-warning bg-opacity-10 py-2">
+                    <i class="bi bi-exclamation-circle me-1"></i> Data rekening vendor belum tersedia.
+                </div>
                 @endif
             </div>
         </div>
+    </div>
 
-        {{-- BLOK 4: THE VERDICT (KEPUTUSAN) --}}
-        <div class="card border-0 shadow rounded-4 bg-dark text-white mb-2 sticky-bottom" style="bottom: 15px; z-index:10; border: 1px solid rgba(255,255,255,0.1) !important;">
-            <div class="card-body p-4">
-                <h6 class="fw-bold text-center text-uppercase tracking-wider text-light opacity-75 mb-3" style="letter-spacing: 2px; font-size:12px;">Pusat Keputusan</h6>
-                <div class="d-flex flex-column gap-3">
-                    
-                    <button type="button" class="btn btn-outline-light btn-lg rounded-pill fw-bold" data-bs-toggle="modal" data-bs-target="#modalTolak" style="border-width: 2px;">
-                        <i class="bi bi-x-circle me-1"></i> Kembalikan untuk Revisi
+    @if($isPendingReview)
+        <!-- Action Bar Sticky -->
+        <div class="action-bar mt-4">
+            <div>
+                <h5 class="mb-1 fw-bold">Keputusan PPK</h5>
+                <div class="text-muted small">Tinjau seluruh data dengan teliti sebelum menyetujui kontrak ini.</div>
+            </div>
+            <div class="d-flex gap-3">
+                <button type="button" class="btn btn-reject" data-bs-toggle="modal" data-bs-target="#rejectModal">
+                    <i class="bi bi-x-circle me-2"></i> Kembalikan / Revisi
+                </button>
+                <form action="{{ route('contracts.approve', $kontrak->id) }}" method="POST" class="d-inline" id="formApprove">
+                    @csrf
+                    <button type="button" class="btn btn-approve" onclick="confirmApprove()">
+                        <i class="bi bi-check2-circle me-2"></i> Setujui Kontrak
                     </button>
-                    
-                    <form action="{{ route('contracts.approve', $kontrak->id) }}" method="POST" id="formApprove" class="m-0 d-grid">
-                        @csrf
-                        <button type="button" class="btn btn-primary btn-lg rounded-pill fw-bold shadow-lg" onclick="confirmApproval()" style="background: linear-gradient(135deg, #0d6efd, #0b5ed7); border:none;">
-                            <i class="bi bi-check-circle-fill me-2"></i> Setujui & Aktifkan Kontrak
-                        </button>
-                    </form>
-
-                </div>
+                </form>
             </div>
         </div>
-        
-    </div>
+    @elseif($isApproved)
+        <div class="tte-document-bar mt-4">
+            <div>
+                <h5 class="tte-document-title"><i class="bi bi-patch-check-fill text-success me-2"></i>Dokumen Kontrak Ber-TTE</h5>
+                <div class="tte-document-subtitle">SPK, SPMK, dan Ringkasan Kontrak sudah memuat QR TTE persetujuan PPK.</div>
+            </div>
+            <div class="tte-document-actions">
+                <a href="{{ route('contracts.spk.export-pdf', $kontrak->id) }}" target="_blank" class="btn-tte-doc">
+                    <i class="bi bi-file-earmark-check"></i> Lihat SPK
+                </a>
+                <a href="{{ route('contracts.spmk.export-pdf', $kontrak->id) }}" target="_blank" class="btn-tte-doc">
+                    <i class="bi bi-file-earmark-text"></i> Lihat SPMK
+                </a>
+                <a href="{{ route('contracts.ringkasan.export-pdf', $kontrak->id) }}" target="_blank" class="btn-tte-doc">
+                    <i class="bi bi-journal-richtext"></i> Lihat Ringkasan Kontrak
+                </a>
+            </div>
+        </div>
+    @endif
+
 </div>
 
-{{-- MODAL TOLAK (REVISI) --}}
-<div class="modal fade" id="modalTolak" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
-    <div class="modal-dialog modal-dialog-centered">
-        <form method="POST" action="{{ route('contracts.reject', $kontrak->id) }}" class="modal-content border-0 rounded-4 shadow-lg overflow-hidden">
-            @csrf
-            <div class="modal-header bg-danger text-white border-bottom-0 pb-4 pt-4 px-4">
-                <h5 class="modal-title fw-bold"><i class="bi bi-exclamation-triangle-fill me-2 text-warning fs-4"></i> Tolak & Kembalikan</h5>
-                <button type="button" class="btn-close btn-close-white shadow-none" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body p-4 mt-n3 bg-white rounded-top-4 relative" style="border-top-left-radius: 1.5rem !important; border-top-right-radius: 1.5rem !important; position: relative; z-index: 2;">
-                <p class="mb-4 text-muted" style="font-size: 14px; line-height: 1.6;">Berkas Draf SPK <strong>{{ $kontrak->nomor_spk }}</strong> akan dikembalikan ke Pejabat Pengadaan. Silahkan isi catatan evaluasi minimum 10 karakter.</p>
-                <div class="form-floating mb-2">
-                    <textarea name="notes" class="form-control fw-medium bg-light border-0 shadow-inner" id="catatanRevisi" style="height: 140px; resize:none;" placeholder="Catatan untuk Pejabat Pengadaan" required minlength="10"></textarea>
-                    <label for="catatanRevisi" class="text-danger fw-bold"><i class="bi bi-pencil me-1"></i> Alasan / Catatan Perbaikan*</label>
+<!-- Modal Reject -->
+@if($isPendingReview)
+    <div class="modal fade" id="rejectModal" tabindex="-1" aria-labelledby="rejectModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <form action="{{ route('contracts.reject', $kontrak->id) }}" method="POST" class="modal-content border-0 shadow-lg" style="border-radius: 20px; overflow: hidden;">
+                @csrf
+                <div class="modal-header bg-danger text-white border-0 py-3">
+                    <h5 class="modal-title fw-bold" id="rejectModalLabel"><i class="bi bi-exclamation-octagon me-2"></i>Kembalikan Kontrak (Revisi)</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-            </div>
-            <div class="modal-footer bg-light border-top-0 pt-3 pb-3 px-4 d-flex justify-content-between">
-                <button type="button" class="btn btn-light fw-bold text-secondary px-4 rounded-pill" data-bs-dismiss="modal">Batal</button>
-                <button type="submit" class="btn btn-danger fw-bold shadow-sm px-4 rounded-pill d-flex align-items-center">
-                    <i class="bi bi-send me-2"></i>Kirim Catatan
-                </button>
-            </div>
-        </form>
+                <div class="modal-body p-4">
+                    <p class="text-muted mb-3">Tuliskan catatan atau alasan mengapa kontrak ini dikembalikan ke Pejabat Pengadaan untuk direvisi.</p>
+                    <div class="form-group">
+                        <label for="notes" class="fw-bold mb-2">Catatan Revisi <span class="text-danger">*</span></label>
+                        <textarea name="notes" id="notes" rows="4" class="form-control" style="border-radius: 12px; resize: none;" required placeholder="Contoh: Nilai kontrak tidak sesuai, atau DIPA salah sasaran..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 p-4 pt-0">
+                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-danger rounded-pill px-4 fw-bold shadow-sm">Kirim Catatan</button>
+                </div>
+            </form>
+        </div>
     </div>
-</div>
+@endif
 
 @endsection
 
 @push('script')
-<script>
-    function confirmApproval() {
-        if(confirm("Apakah Anda yakin menyetujui Pejanjian / Kontrak ini?\nMengeklik OK akan mengaktifkan kontrak dan mencatat Legitimasi Anda secara permanen.")) {
-            document.getElementById('formApprove').submit();
+@if($isPendingReview)
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        function confirmApprove() {
+            Swal.fire({
+                title: 'Setujui Kontrak?',
+                text: "Anda yakin semua data kontrak ini sudah benar? Setelah disetujui, kontrak akan aktif.",
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#10b981',
+                cancelButtonColor: '#64748b',
+                confirmButtonText: 'Ya, Setujui',
+                cancelButtonText: 'Periksa Lagi',
+                reverseButtons: true,
+                customClass: {
+                    confirmButton: 'rounded-pill px-4 fw-bold',
+                    cancelButton: 'rounded-pill px-4'
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    Swal.fire({
+                        title: 'Memproses...',
+                        text: 'Mohon tunggu, sistem sedang menyiapkan persetujuan kontrak.',
+                        allowOutsideClick: false,
+                        showConfirmButton: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                            document.getElementById('formApprove').submit();
+                        }
+                    });
+                }
+            });
         }
-    }
-</script>
+    </script>
+@endif
 @endpush

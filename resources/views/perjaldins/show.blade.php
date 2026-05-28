@@ -1019,6 +1019,77 @@
         font-variant-numeric: tabular-nums;
     }
 
+    /* Layout rincian biaya — selaras dengan form tambah (Tiket/Transport/Penginapan + grup Uang Harian + Subtotal) */
+    .biaya-layout {
+        display: flex;
+        flex-wrap: wrap;
+        gap: .55rem;
+        align-items: stretch;
+    }
+    .biaya-layout > .biaya-cell { flex: 1 1 120px; }
+    .biaya-layout > .biaya-cell.subtotal { flex: 1 1 150px; display: flex; flex-direction: column; justify-content: center; }
+    .uh-group {
+        flex: 2 1 320px;
+        background: #fff;
+        border: 1px solid rgba(99,102,241,.18);
+        border-radius: .65rem;
+        padding: .55rem .75rem;
+        display: flex;
+        flex-direction: column;
+    }
+    .uh-group-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: .5rem;
+        margin-bottom: .45rem;
+    }
+    .uh-group-title {
+        display: inline-flex;
+        align-items: center;
+        gap: .3rem;
+        font-size: .65rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: .05em;
+        color: #4338ca;
+    }
+    .uh-group-total {
+        font-size: .8rem;
+        font-weight: 800;
+        color: #4338ca;
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+    }
+    .uh-group-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: .4rem;
+    }
+    .uh-sub {
+        background: #f8fafc;
+        border: 1px solid #eef0f4;
+        border-radius: .5rem;
+        padding: .4rem .5rem;
+        text-align: center;
+    }
+    .uh-sub .b-label {
+        display: block;
+        font-size: .58rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+        color: #94a3b8;
+        margin-bottom: .1rem;
+    }
+    .uh-sub .b-value {
+        display: block;
+        font-size: .76rem;
+        font-weight: 700;
+        color: #1e293b;
+        font-variant-numeric: tabular-nums;
+    }
+
     /* ===== TIMELINE / AUDIT ===== */
     .timeline-modern {
         position: relative;
@@ -1579,6 +1650,141 @@
         margin: 0;
         line-height: 1.4;
     }
+
+    /* ============ BUKTI DUKUNG SECTION (premium) ============ */
+    .bukti-section {
+        background: #fff;
+        border: 1px solid #eef0f4;
+        border-radius: 1.25rem;
+        padding: 1.5rem;
+        box-shadow: 0 4px 12px rgba(15,23,42,.04);
+        overflow: hidden;
+        position: relative;
+    }
+    .bukti-section::before {
+        content: '';
+        position: absolute;
+        right: -120px; top: -120px;
+        width: 280px; height: 280px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(14,165,233,.10), transparent 70%);
+        z-index: 0; pointer-events: none;
+    }
+    .bukti-section > * { position: relative; z-index: 1; }
+    .bukti-head {
+        display: flex; justify-content: space-between; align-items: flex-start;
+        gap: 1rem; flex-wrap: wrap; margin-bottom: 1.25rem;
+    }
+    .bukti-head-icon {
+        width: 56px; height: 56px; border-radius: 16px;
+        display: inline-flex; align-items: center; justify-content: center;
+        background: linear-gradient(135deg, #38bdf8, #6366f1, #a855f7);
+        color: #fff; font-size: 1.55rem; flex-shrink: 0;
+        box-shadow: 0 10px 24px rgba(99,102,241,.35);
+    }
+    .bukti-title { font-weight: 800; color: #0f172a; margin: 0 0 .15rem; font-size: 1.1rem; letter-spacing: -.01em; }
+    .bukti-sub { margin: 0; font-size: .82rem; color: #64748b; }
+    .bukti-stats { display: flex; gap: .5rem; flex-wrap: wrap; }
+    .bukti-stat {
+        background: #f8fafc; border: 1px solid #eef0f4; border-radius: .65rem;
+        padding: .55rem .9rem; min-width: 92px; text-align: center;
+    }
+    .bukti-stat .bs-label { display: block; font-size: .62rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #94a3b8; margin-bottom: .1rem; }
+    .bukti-stat .bs-value { display: block; font-size: 1.25rem; font-weight: 800; color: #0f172a; line-height: 1; font-variant-numeric: tabular-nums; }
+    .bukti-stat .bs-value.text-success { color: #047857; }
+
+    .bukti-group {
+        border: 1px solid #eef0f4;
+        border-radius: 1rem;
+        overflow: hidden;
+        margin-bottom: .85rem;
+        background: #fff;
+        animation: vkIn .45s cubic-bezier(.22,1,.36,1) both;
+    }
+    .bukti-group:last-child { margin-bottom: 0; }
+    .bukti-group-head {
+        display: flex; align-items: center; gap: .75rem;
+        padding: .8rem 1.1rem;
+        background: linear-gradient(135deg, rgba(99,102,241,.07), rgba(14,165,233,.04));
+        border-bottom: 1px solid #f1f3f7;
+    }
+    .bukti-pnum {
+        width: 30px; height: 30px; border-radius: 50%;
+        display: inline-flex; align-items: center; justify-content: center;
+        background: linear-gradient(135deg, #818cf8, #6366f1);
+        color: #fff; font-weight: 800; font-size: .8rem; flex-shrink: 0;
+        box-shadow: 0 4px 10px rgba(99,102,241,.35);
+    }
+    .bukti-pname { font-weight: 700; color: #0f172a; font-size: .92rem; margin: 0; line-height: 1.2; }
+    .bukti-pmeta { font-size: .72rem; color: #64748b; }
+    .bukti-pcount {
+        margin-left: auto; flex-shrink: 0;
+        font-size: .7rem; font-weight: 700;
+        padding: .25rem .7rem; border-radius: 999px;
+        background: rgba(16,185,129,.12); color: #047857;
+        white-space: nowrap;
+    }
+    .bukti-files {
+        display: grid; grid-template-columns: repeat(auto-fill, minmax(225px, 1fr));
+        gap: .65rem; padding: 1rem 1.1rem;
+    }
+    .bukti-file {
+        display: flex; align-items: center; gap: .7rem;
+        padding: .65rem .75rem;
+        border: 1px solid #eef0f4; border-radius: .8rem;
+        background: #fafbff;
+        text-decoration: none;
+        transition: all .25s cubic-bezier(.22,1,.36,1);
+        position: relative; overflow: hidden;
+    }
+    .bukti-file::before {
+        content: ''; position: absolute; inset: 0 auto 0 0; width: 3px;
+        background: var(--bf-accent, #6366f1); opacity: .85;
+    }
+    .bukti-file:hover {
+        border-color: var(--bf-accent, #6366f1);
+        background: #fff;
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px rgba(15,23,42,.08);
+    }
+    .bf-icon {
+        width: 40px; height: 40px; border-radius: 11px; flex-shrink: 0;
+        display: inline-flex; align-items: center; justify-content: center;
+        font-size: 1.2rem; color: #fff;
+        background: var(--bf-accent, #6366f1);
+        box-shadow: 0 6px 14px var(--bf-shadow, rgba(99,102,241,.30));
+    }
+    .bf-meta { min-width: 0; flex: 1; }
+    .bf-type { display: block; font-size: .68rem; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; color: var(--bf-accent, #4338ca); }
+    .bf-name { display: block; font-size: .8rem; font-weight: 600; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .bf-ext { display: block; font-size: .6rem; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; color: #94a3b8; }
+    .bf-view {
+        margin-left: auto; flex-shrink: 0;
+        color: #cbd5e1; font-size: 1rem;
+        transition: color .2s ease, transform .2s ease;
+    }
+    .bukti-file:hover .bf-view { color: var(--bf-accent, #6366f1); transform: translateX(2px); }
+
+    .bukti-empty { text-align: center; padding: 2.5rem 1rem; color: #94a3b8; }
+    .bukti-empty i {
+        font-size: 2.75rem;
+        background: linear-gradient(135deg, #bae6fd, #818cf8);
+        -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+        display: block; margin-bottom: .5rem;
+    }
+
+    /* Bukti dukung di dalam kartu peserta (gabungan) */
+    .peserta-bukti { margin-top: 1.25rem; }
+    .peserta-bukti .bukti-files { padding: 0; }
+    .peserta-bukti-empty {
+        font-size: .82rem;
+        color: #94a3b8;
+        background: #f8fafc;
+        border: 1px dashed #e2e8f0;
+        border-radius: .75rem;
+        padding: .85rem 1rem;
+        text-align: center;
+    }
 </style>
 @endpush
 
@@ -1797,161 +2003,6 @@
 <div class="standalone-section section-peserta">
     @include('perjaldins.partials.peserta-list', ['tagihan' => $tagihan])
 </div>
-
-{{-- ═══ STANDALONE: INFORMASI COA TAGIHAN ═══ --}}
-@if($jumlahKomponen > 0)
-@php
-    $komponenList = $tagihan->komponenPerjaldin->where('total_nominal', '>', 0)->sortBy('kode_komponen');
-    $totalNominalSemua = $komponenList->sum('total_nominal');
-    $jumlahDenganCoa = $komponenList->whereNotNull('dipa_revision_item_id')->count();
-    $coaPct = $jumlahKomponen > 0 ? round(($jumlahDenganCoa / $jumlahKomponen) * 100) : 0;
-@endphp
-
-<section class="coa-section">
-    {{-- Section Header --}}
-    <div class="coa-section-head">
-        <div class="d-flex align-items-center gap-3 flex-grow-1">
-            <div class="coa-section-icon">
-                <i class="bi bi-bank2"></i>
-            </div>
-            <div>
-                <h5 class="coa-section-title">Informasi COA Tagihan</h5>
-                <p class="coa-section-sub">Pemetaan COA per komponen biaya untuk tagihan perjalanan dinas ini</p>
-            </div>
-        </div>
-        <div class="coa-mini-stats">
-            <div class="coa-mini-stat">
-                <span class="cms-label">Komponen</span>
-                <span class="cms-value">{{ $jumlahKomponen }}</span>
-            </div>
-            <div class="coa-mini-stat">
-                <span class="cms-label">Sudah COA</span>
-                <span class="cms-value text-success">{{ $jumlahDenganCoa }}</span>
-            </div>
-            <div class="coa-mini-stat">
-                <span class="cms-label">Total</span>
-                <span class="cms-value-money">Rp {{ number_format($totalNominalSemua, 0, ',', '.') }}</span>
-            </div>
-        </div>
-    </div>
-
-    {{-- Progress bar --}}
-    <div class="coa-progress-bar">
-        <div class="coa-progress-fill" style="width: {{ $coaPct }}%"></div>
-        <span class="coa-progress-label">{{ $coaPct }}% komponen sudah memiliki COA</span>
-    </div>
-
-    {{-- Cards Grid --}}
-    <div class="coa-grid">
-        @foreach($komponenList as $komponen)
-            @php
-                $kode = $komponen->kode_komponen;
-                $icon = $komponenIconMap[$kode] ?? 'bi-box-fill';
-                $color = $komponenColorMap[$kode] ?? ['accent' => '#6366f1', 'soft' => 'rgba(99,102,241,.10)'];
-                $hasCoa = !is_null($komponen->dipa_revision_item_id);
-                $coaItem = $komponen->dipaRevisionItem;
-                $coaCoa = $coaItem?->coa;
-                $paguItem = (float)($coaItem->nilai_pagu ?? 0);
-                $realisasiItem = $coaItem ? (float)$coaItem->realisasiAnggarans()->sum('nominal_cair') : 0;
-                $sisaPagu = max(0, $paguItem - $realisasiItem);
-                $persenSerap = $paguItem > 0 ? min(100, round(($realisasiItem / $paguItem) * 100)) : 0;
-                $persenAlokasi = $paguItem > 0 ? min(100, round(((float)$komponen->total_nominal / $paguItem) * 100)) : 0;
-            @endphp
-
-            <div class="coa-card {{ $hasCoa ? 'has-coa' : 'no-coa' }}"
-                 style="--coa-accent: {{ $color['accent'] }}; --coa-soft: {{ $color['soft'] }};">
-                {{-- Decorative blob --}}
-                <div class="coa-blob"></div>
-
-                {{-- Card head --}}
-                <div class="coa-card-head">
-                    <div class="coa-icon"><i class="bi {{ $icon }}"></i></div>
-                    <div class="flex-grow-1 min-w-0">
-                        <h6 class="coa-komp-name">{{ $komponen->nama_komponen }}</h6>
-                        <span class="coa-komp-code">{{ $kode }}</span>
-                    </div>
-                    @if($hasCoa)
-                        <span class="coa-pill coa-pill-ok">
-                            <i class="bi bi-check-circle-fill"></i> Terpilih
-                        </span>
-                    @else
-                        <span class="coa-pill coa-pill-empty">
-                            <i class="bi bi-clock-history"></i> Belum
-                        </span>
-                    @endif
-                </div>
-
-                {{-- Hero number --}}
-                <div class="coa-hero-num">
-                    <span class="chn-currency">Rp</span>
-                    <span class="chn-value">{{ number_format($komponen->total_nominal, 0, ',', '.') }}</span>
-                </div>
-                <div class="coa-hero-meta">
-                    <span class="coa-meta-pill">
-                        <i class="bi bi-people-fill"></i> {{ $komponen->jumlah_peserta }} peserta
-                    </span>
-                    @if($hasCoa && $paguItem > 0)
-                        <span class="coa-meta-pill">
-                            <i class="bi bi-pie-chart-fill"></i> {{ $persenAlokasi }}% pagu
-                        </span>
-                    @endif
-                </div>
-
-                @if($hasCoa && $coaCoa)
-                    {{-- Divider --}}
-                    <div class="coa-divider"></div>
-
-                    {{-- COA detail --}}
-                    <div class="coa-detail">
-                        <div class="coa-detail-row">
-                            <div class="coa-mini-icon"><i class="bi bi-tag-fill"></i></div>
-                            <div class="flex-grow-1">
-                                <span class="coa-detail-label">Kode MAK</span>
-                                <span class="coa-mak-chip">{{ $coaCoa->kode_mak_lengkap }}</span>
-                            </div>
-                        </div>
-
-                        <div class="coa-detail-row">
-                            <div class="coa-mini-icon"><i class="bi bi-card-text"></i></div>
-                            <div class="flex-grow-1 min-w-0">
-                                <span class="coa-detail-label">Nama Akun</span>
-                                <p class="coa-nama-value" title="{{ $coaCoa->nama_akun }}">{{ $coaCoa->nama_akun }}</p>
-                            </div>
-                        </div>
-
-                        @if($paguItem > 0)
-                            <div class="coa-pagu-card">
-                                <div class="coa-pagu-grid">
-                                    <div class="coa-pagu-cell">
-                                        <span class="cpc-label"><i class="bi bi-bank"></i> Pagu Item</span>
-                                        <span class="cpc-value">Rp {{ number_format($paguItem, 0, ',', '.') }}</span>
-                                    </div>
-                                    <div class="coa-pagu-cell text-end">
-                                        <span class="cpc-label"><i class="bi bi-piggy-bank-fill"></i> Sisa</span>
-                                        <span class="cpc-value text-success">Rp {{ number_format($sisaPagu, 0, ',', '.') }}</span>
-                                    </div>
-                                </div>
-                                <div class="coa-pagu-progress">
-                                    <div class="cpp-track">
-                                        <div class="cpp-fill" style="width: {{ $persenSerap }}%"></div>
-                                    </div>
-                                    <span class="cpp-text">{{ $persenSerap }}% terserap</span>
-                                </div>
-                            </div>
-                        @endif
-                    </div>
-                @else
-                    {{-- Empty state when no COA --}}
-                    <div class="coa-empty">
-                        <div class="coa-empty-icon"><i class="bi bi-hourglass-split"></i></div>
-                        <p class="coa-empty-text">COA akan ditetapkan oleh Operator BLU pada tahap berikutnya.</p>
-                    </div>
-                @endif
-            </div>
-        @endforeach
-    </div>
-</section>
-@endif
 
 {{-- ═══ UPLOAD NOMINATIF (ALWAYS VISIBLE WHEN APPLICABLE) ═══ --}}
 @if($showUploadCard)

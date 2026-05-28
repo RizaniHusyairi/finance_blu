@@ -139,7 +139,8 @@ class WhatsappService
         ];
 
         try {
-            $response = Http::withToken($apiKey)
+            $response = Http::withoutVerifying()
+                ->withToken($apiKey)
                 ->acceptJson()
                 ->asJson()
                 ->timeout(20)

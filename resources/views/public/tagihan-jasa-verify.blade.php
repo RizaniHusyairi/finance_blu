@@ -178,6 +178,7 @@
             padding: 1rem 0;
         }
     </style>
+    <link rel="icon" href="{{ asset('logo/minilogo-sikeren.png') }}" type="image/png">
 </head>
 <body>
 @php

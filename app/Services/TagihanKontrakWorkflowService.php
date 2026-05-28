@@ -153,4 +153,52 @@ class TagihanKontrakWorkflowService extends PerjaldinWorkflowService
             default                                    => $normalized,
         };
     }
+
+    /**
+     * Override approve untuk memicu finalisasi dokumen Tagihan (BAPP, BAST, BAP)
+     * saat PPK menyetujui.
+     */
+    public function approve(\App\Models\WorkflowApproval $approval, \App\Models\User $actor, ?string $catatan = null, ?string $ipAddress = null): WorkflowInstance
+    {
+        $instance = parent::approve($approval, $actor, $catatan, $ipAddress);
+
+        if ($this->normalizeRoleCode($approval->role_code) === 'PPK') {
+            $tagihan = $instance->workflowable;
+            
+            // Generate final PDFs
+            $types = ['BAPP', 'BAP'];
+            if ($tagihan->detailKontrak->termin->jenis_termin === 'PELUNASAN') {
+                $types[] = 'BAST';
+            }
+
+            foreach ($types as $type) {
+                // We use TagihanController to generate the view then we convert to PDF
+                // Pass $ppkSigned = true so the QR code for PPK is rendered
+                $html = app(\App\Http\Controllers\TagihanController::class)->exportPdfKontrakHtml($tagihan->id, $type, true);
+                if ($html) {
+                    $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML($html)->setPaper('a4', 'portrait');
+                    $pdfContent = $pdf->output();
+
+                    $fileName = 'tagihan_final_' . strtolower($type) . '_' . time() . '.pdf';
+                    $path = 'arsip/tagihan/' . $tagihan->id . '/' . $fileName;
+
+                    \Illuminate\Support\Facades\Storage::disk('public')->put($path, $pdfContent);
+
+                    // Deactivate old final TTD if any
+                    $tagihan->detailKontrak->arsipDokumen()->where('jenis_dokumen', $type . '_FINAL_TTD')->update(['is_active' => false]);
+
+                    // Save new final TTD
+                    $tagihan->detailKontrak->arsipDokumen()->create([
+                        'jenis_dokumen' => $type . '_FINAL_TTD',
+                        'path_file' => $path,
+                        'nama_file_asli' => $fileName,
+                        'is_active' => true,
+                        'disk' => 'public',
+                    ]);
+                }
+            }
+        }
+
+        return $instance;
+    }
 }

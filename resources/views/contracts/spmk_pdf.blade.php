@@ -28,6 +28,8 @@
 
         .signatures { margin-top: 40px; }
         .signatures td { width: 50%; text-align: center; vertical-align: top; padding-top: 20px;}
+        .qr-tte { width: 82px; height: 82px; margin: 2px auto 4px auto; }
+        .qr-label { font-size: 8px; line-height: 1.2; color: #444; }
         
         footer {
             position: fixed;
@@ -192,7 +194,12 @@
                 Badan Layanan Umum<br>
                 Kantor UPBU Kelas I A.P.T. Pranoto Samarinda<br>
                 Pejabat Penandatangan Kontrak<br>
-                <br><br><br><br>
+                @if(!empty($tteQrFilePath))
+                    <img src="{{ $tteQrFilePath }}" alt="" class="qr-tte">
+                    <div class="qr-label"></div>
+                @else
+                    <br><br><br><br>
+                @endif
                 <b><u>{{ $kontrak->nama_ppk ?? '-' }}</u></b><br>
                 NIP. {{ $kontrak->nip_ppk ?? '-' }}
             </td>

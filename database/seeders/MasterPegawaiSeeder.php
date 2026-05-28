@@ -1435,7 +1435,31 @@ class MasterPegawaiSeeder extends Seeder
             ],
         ];
 
+        // Normalisasi nomor HP: hapus simbol non-digit (-, spasi, +) lalu
+        // pastikan berformat 62xxxx (awalan 0 diubah menjadi 62).
+        $normalizePhone = function (?string $hp): ?string {
+            if (empty($hp)) {
+                return $hp;
+            }
+
+            $digits = preg_replace('/\D/', '', $hp);
+
+            if ($digits === '') {
+                return null;
+            }
+
+            if (str_starts_with($digits, '0')) {
+                $digits = '62' . substr($digits, 1);
+            } elseif (! str_starts_with($digits, '62')) {
+                $digits = '62' . $digits;
+            }
+
+            return $digits;
+        };
+
         foreach ($data as $item) {
+            $item['nomor_hp'] = $normalizePhone($item['nomor_hp'] ?? null);
+
             MasterPegawai::updateOrCreate(
                 ['nip' => $item['nip']],
                 $item

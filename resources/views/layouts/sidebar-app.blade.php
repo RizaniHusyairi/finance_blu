@@ -117,7 +117,7 @@
         </li>
         @endhasrole
 
-        @hasanyrole('Super Admin|KPA|PLT/PLH|Kepala Subbagian Keuangan dan Tata Usaha|Pejabat Pengadaan|Operator BLU')
+        @hasanyrole('Super Admin|KPA|PLT/PLH|Kepala Subbagian Keuangan dan Tata Usaha|Pejabat Pengadaan|Operator BLU|PPK')
         <li>
           <a href="javascript:;" class="has-arrow">
             <div class="parent-icon"><i class="material-icons-outlined">folder</i>
@@ -131,11 +131,13 @@
             <li><a href="{{ route('suppliers.index') }}"><i class="material-icons-outlined">arrow_right</i>Vendor</a>
             </li>
             @endhasanyrole
-            @hasanyrole('Super Admin|KPA|PLT/PLH|Operator BLU|Kepala Subbagian Keuangan dan Tata Usaha')
+            @hasanyrole('Super Admin|KPA|PLT/PLH|Operator BLU|PPK|Kepala Subbagian Keuangan dan Tata Usaha')
             <li><a href="{{ route('dipas.index') }}"><i class="material-icons-outlined">arrow_right</i>DIPA</a>
             </li>
             <li><a href="{{ route('coas.index') }}"><i class="material-icons-outlined">arrow_right</i>COA</a>
             </li>
+            @endhasanyrole
+            @hasanyrole('Super Admin|KPA|PLT/PLH|Operator BLU|Kepala Subbagian Keuangan dan Tata Usaha')
             <li><a href="{{ route('master-pajak.index') }}"><i class="material-icons-outlined">arrow_right</i>Pajak</a>
             </li>
             @endhasanyrole
@@ -274,6 +276,15 @@
           </a>
         </li>
         @endhasanyrole
+        @hasrole('PPK')
+        <li>
+          <a href="{{ route('contracts.verifikasi') }}">
+            <div class="parent-icon"><i class="material-icons-outlined">verified</i>
+            </div>
+            <div class="menu-title">Approve Kontrak</div>
+          </a>
+        </li>
+        @endhasrole
         @hasrole('Operator Perjaldin')
         <li>
           <a href="javascript:;" class="has-arrow">
@@ -384,13 +395,13 @@
                 <i class="material-icons-outlined">arrow_right</i>Honorarium
               </a>
             </li>
-            @unlessrole('PPK')
+            @unless($u?->hasAnyRole(['PPK', 'PPSPM', 'Koordinator Keuangan', 'Bendahara Pengeluaran', 'Bendahara Penerimaan']))
             <li>
               <a href="{{ route('verifikasi-tagihan-jasa.index') }}">
                 <i class="material-icons-outlined">arrow_right</i>Tagihan Jasa
               </a>
             </li>
-            @endunlessrole
+            @endunless
             @endif
           </ul>
         </li>

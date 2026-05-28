@@ -73,6 +73,18 @@
             text-align: center;
         }
 
+        .qr-tte {
+            width: 86px;
+            height: 86px;
+            margin: 2px auto 4px auto;
+        }
+
+        .qr-label {
+            font-size: 8px;
+            line-height: 1.2;
+            color: #444;
+        }
+
         footer {
     position: fixed;
     bottom: 0; /* jangan minus biar nggak aneh di PDF */
@@ -239,7 +251,12 @@
                 Untuk dan atas nama<br>
                 BLU Kantor UPBU Kelas I A.P.T.Pranoto<br>
                 Pejabat Pembuat Komitmen<br>
-                <br><br><br><br><br>
+                @if(!empty($tteQrFilePath))
+                    <img src="{{ $tteQrFilePath }}" alt="QR TTE SPK" class="qr-tte">
+                    <div class="qr-label"></div>
+                @else
+                    <br><br><br><br><br>
+                @endif
                 <b><u>{{ $kontrak->nama_ppk ?? '-' }}</u></b><br>
                 NIP. {{ $kontrak->nip_ppk ?? '-' }}
             </td>

@@ -97,7 +97,9 @@ class TagihanController extends Controller
             'nama_pemeriksa' => 'required|string|max:150',
             'nip_pemeriksa' => 'nullable|string|max:50',
             'jabatan_pemeriksa' => 'required|string|max:150',
+            'wa_pemeriksa' => 'required|string|max:30',
             'total_bruto' => 'required|numeric|min:0',
+            'gambar_rab_bapp' => 'nullable|file|mimes:jpg,jpeg,png|max:5120',
             'file_invoice' => 'required|file|mimes:pdf|max:5120',
             'file_lampiran_lainnya' => 'nullable|file|mimes:pdf,zip|max:5120',
             // Verifikator (PPK ditentukan dari kontrak, 5 lainnya dipilih)
@@ -189,6 +191,7 @@ class TagihanController extends Controller
                 'nama_pemeriksa' => $validated['nama_pemeriksa'],
                 'nip_pemeriksa' => $validated['nip_pemeriksa'] ?? null,
                 'jabatan_pemeriksa' => $validated['jabatan_pemeriksa'],
+                'wa_pemeriksa' => $validated['wa_pemeriksa'],
             ]);
 
             if ($request->hasFile('file_invoice')) {
@@ -199,6 +202,20 @@ class TagihanController extends Controller
                     'disk' => 'public',
                     'mime_type' => $request->file('file_invoice')->getMimeType(),
                     'ukuran_file' => $request->file('file_invoice')->getSize(),
+                    'uploaded_by' => Auth::id(),
+                    'uploaded_at' => now(),
+                    'is_active' => true,
+                ]);
+            }
+
+            if ($request->hasFile('gambar_rab_bapp')) {
+                $detailKontrak->arsipDokumen()->create([
+                    'jenis_dokumen' => 'BAPP_GAMBAR_RAB',
+                    'nama_file_asli' => $request->file('gambar_rab_bapp')->getClientOriginalName(),
+                    'path_file' => $request->file('gambar_rab_bapp')->store('tagihan/bapp_gambar_rab', 'public'),
+                    'disk' => 'public',
+                    'mime_type' => $request->file('gambar_rab_bapp')->getMimeType(),
+                    'ukuran_file' => $request->file('gambar_rab_bapp')->getSize(),
                     'uploaded_by' => Auth::id(),
                     'uploaded_at' => now(),
                     'is_active' => true,
@@ -268,6 +285,7 @@ class TagihanController extends Controller
             'detailKontrak.termin.kontrak.vendor',
             'detailKontrak.termin.kontrak.ppkUser.profilable',
             'potonganTagihan',
+            'documentSignatures',
             'workflowInstance.approvals.actedByUser',
             'workflowInstance.approvals.assignedUser',
             // Eager load rantai dokumen + workflow untuk modal "Lihat Aktivitas"
@@ -291,20 +309,25 @@ class TagihanController extends Controller
         
         $arsip = $detailKontrak->arsipDokumen->where('is_active', true);
         
-        $hasBappFinal = $arsip->contains('jenis_dokumen', 'BAPP_FINAL_TTD');
-        $hasBapFinal = $arsip->contains('jenis_dokumen', 'BAP_FINAL_TTD');
         $hasGambarRabBapp = $arsip->contains('jenis_dokumen', 'BAPP_GAMBAR_RAB');
         $gambarRabBapp = $arsip->firstWhere('jenis_dokumen', 'BAPP_GAMBAR_RAB');
 
+        $signatures = $tagihan->documentSignatures->groupBy('document_label');
+        
+        $hasBappFinal = $this->isTteSelesai($signatures, 'BAPP');
+        $hasBapFinal = $this->isTteSelesai($signatures, 'BAP');
+
         $wajibBast = ($termin->jenis_termin === 'PELUNASAN');
-        $hasBastFinal = $arsip->contains('jenis_dokumen', 'BAST_FINAL_TTD');
+        $hasBastFinal = $wajibBast ? $this->isTteSelesai($signatures, 'BAST') : false;
 
         $isReadyToSubmit = $this->isTagihanReadyToSubmit($tagihan);
+        
+        $signatures = $tagihan->documentSignatures->groupBy('document_label');
 
         return view('tagihan.show_kontrak', compact(
             'tagihan', 'detailKontrak', 'termin', 'kontrak',
             'hasBappFinal', 'hasBapFinal', 'hasBastFinal', 'wajibBast', 'isReadyToSubmit',
-            'hasGambarRabBapp', 'gambarRabBapp'
+            'hasGambarRabBapp', 'gambarRabBapp', 'signatures'
         ));
     }
 
@@ -431,6 +454,10 @@ class TagihanController extends Controller
             ]);
 
             // Notifikasi paralel ke semua 5 verifikator step 1
+            $waService = app(\App\Services\WhatsappService::class);
+            $baseUrl = config('app.url');
+            $waEnabled = (bool) \App\Models\IntegrationSetting::getValue('whatsapp.pengajuan_tagihan.enabled', true);
+
             foreach ([
                 $tagihan->ppk_user_id,
                 $tagihan->ppspm_user_id,
@@ -441,13 +468,26 @@ class TagihanController extends Controller
                 if (! $uid) continue;
                 $u = User::find($uid);
                 if (! $u) continue;
+                
+                $message = "Tagihan {$tagihan->nomor_tagihan} menunggu verifikasi Anda.";
+                $url = route('verifikasi-tagihan-kontrak.show', $tagihan->id);
+
                 Notification::send($u, new WorkflowNotification([
                     'title' => 'Tagihan Kontrak Menunggu Verifikasi',
-                    'message' => "Tagihan {$tagihan->nomor_tagihan} menunggu verifikasi Anda.",
-                    'url' => route('verifikasi-tagihan-kontrak.show', $tagihan->id),
+                    'message' => $message,
+                    'url' => $url,
                     'icon' => 'receipt_long',
                     'color' => 'primary',
                 ]));
+
+                // Kirim notifikasi WA jika profilable adalah MasterPegawai, punya nomor_hp, dan setting diaktifkan
+                if ($waEnabled && $u->profilable instanceof \App\Models\MasterPegawai && $u->profilable->nomor_hp) {
+                    $waPhone = preg_replace('/\D+/', '', $u->profilable->nomor_hp);
+                    if (strlen($waPhone) >= 9) {
+                        $waMsg = "*Notifikasi SIKEREN*\n\n" . $message . "\n\nSilakan cek di aplikasi melalui link berikut:\n" . $url;
+                        $waService->sendMessage($waPhone, $waMsg);
+                    }
+                }
             }
 
             DB::commit();
@@ -468,6 +508,8 @@ class TagihanController extends Controller
         $terbilang = ucwords(terbilang($kontrak->nilai_total_kontrak)) . ' Rupiah';
         $terbilangTagihan = ucwords(terbilang($tagihan->total_bruto)) . ' Rupiah';
 
+        $signatures = $tagihan->documentSignatures->groupBy('document_label');
+        
         $data = [
             'tagihan' => $tagihan,
             'detail' => $detailKontrak,
@@ -475,43 +517,95 @@ class TagihanController extends Controller
             'kontrak' => $kontrak,
             'vendor' => $kontrak->vendor,
             'terbilang' => $terbilang,
-            'terbilangTagihan' => $terbilangTagihan
+            'terbilangTagihan' => $terbilangTagihan,
+            'signatures' => $signatures,
         ];
 
+        // Generate QR code for the specific document type (BAPP, BAST, BAP)
+        $sigType = $signatures->get($type);
+        $data['tteQrFilePath'] = null;
+        if ($sigType && $sigType->count() > 0 && $sigType->every(fn($s) => $s->status === 'signed')) {
+            // Once Vendor and Pemeriksa signed, we can generate a QR code.
+            // Ideally, PPK signature should also be checked, but we'll show the QR if magic links are signed.
+            $url = route('public.tagihan-document-tte.show', ['id' => $tagihan->id, 'type' => $type]);
+            $data['tteQrFilePath'] = \App\Support\DocumentTte::qrFilePath($url, 'tagihan_' . $type . '_' . $tagihan->id);
+        }
+
         if ($type === 'BAPP') {
-            // Guard: gambar RAB wajib diunggah dulu sebelum export PDF draft BAPP
-            $gambarRab = $detailKontrak->arsipDokumen
-                ->where('jenis_dokumen', 'BAPP_GAMBAR_RAB')
-                ->where('is_active', true)
-                ->first();
-
-            if (! $gambarRab) {
-                return back()->withErrors([
-                    'error' => 'Gambar RAB BAPP wajib diunggah terlebih dahulu sebelum mengekspor PDF draft BAPP.',
-                ]);
-            }
-
-            // Encode gambar ke data URI agar dompdf dapat menampilkannya tanpa request HTTP
-            $disk = Storage::disk($gambarRab->disk ?: 'public');
-            if (! $disk->exists($gambarRab->path_file)) {
-                return back()->withErrors(['error' => 'File gambar RAB tidak ditemukan di storage. Silakan unggah ulang.']);
-            }
-
-            $mime = $gambarRab->mime_type ?: 'image/png';
-            $data['gambarRabBase64'] = 'data:' . $mime . ';base64,' . base64_encode($disk->get($gambarRab->path_file));
-
-            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.kontrak.bapp', $data)->setPaper('a4', 'portrait');
+            $html = $this->exportPdfKontrakHtml($id, 'BAPP');
+            if (!$html) return back()->withErrors(['error' => 'Gambar RAB BAPP wajib diunggah terlebih dahulu sebelum mengekspor PDF draft BAPP.']);
+            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML($html)->setPaper('a4', 'portrait');
             return $pdf->stream('BAPP_' . str_replace('/', '_', $detailKontrak->nomor_bapp ?? 'draft') . '.pdf');
         } elseif ($type === 'BAST') {
-            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.kontrak.bast', $data)->setPaper('a4', 'portrait');
+            $html = $this->exportPdfKontrakHtml($id, 'BAST');
+            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML($html)->setPaper('a4', 'portrait');
             return $pdf->stream('BAST_' . str_replace('/', '_', $detailKontrak->nomor_bast ?? 'draft') . '.pdf');
         } elseif ($type === 'BAP') {
-            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.kontrak.bap', $data)->setPaper('a4', 'portrait');
+            $html = $this->exportPdfKontrakHtml($id, 'BAP');
+            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML($html)->setPaper('a4', 'portrait');
             return $pdf->stream('BAP_' . str_replace('/', '_', $detailKontrak->nomor_bap ?? 'draft') . '.pdf');
         }
 
         abort(404);
     }
+
+    public function exportPdfKontrakHtml($id, $type, $ppkSigned = false)
+    {
+        $tagihan = Tagihan::with(['detailKontrak.termin.kontrak.vendor', 'detailKontrak.termin.kontrak.ppkUser.profilable', 'potonganTagihan'])->findOrFail($id);
+        $detailKontrak = $tagihan->detailKontrak;
+        $termin = $detailKontrak->termin;
+        $kontrak = $termin->kontrak;
+        
+        $terbilang = ucwords(terbilang($kontrak->nilai_total_kontrak)) . ' Rupiah';
+        $terbilangTagihan = ucwords(terbilang($tagihan->total_bruto)) . ' Rupiah';
+
+        $signatures = $tagihan->documentSignatures->groupBy('document_label');
+        
+        $data = [
+            'tagihan' => $tagihan,
+            'detail' => $detailKontrak,
+            'termin' => $termin,
+            'kontrak' => $kontrak,
+            'vendor' => $kontrak->vendor,
+            'terbilang' => $terbilang,
+            'terbilangTagihan' => $terbilangTagihan,
+            'signatures' => $signatures,
+            'ppkSigned' => $ppkSigned, // Pass down to the view
+        ];
+
+        // Generate QR code for the specific document type (BAPP, BAST, BAP)
+        $sigType = $signatures->get($type);
+        $data['tteQrFilePath'] = null;
+        if ($sigType && $sigType->count() > 0 && $sigType->every(fn($s) => $s->status === 'signed')) {
+            $url = \Illuminate\Support\Facades\URL::signedRoute('public.tagihan-document-tte.show', ['id' => $tagihan->id, 'type' => $type]);
+            $data['tteQrFilePath'] = \App\Support\DocumentTte::qrFilePath($url, 'tagihan_' . $type . '_' . $tagihan->id);
+        }
+
+        if ($type === 'BAPP') {
+            $gambarRab = $detailKontrak->arsipDokumen
+                ->where('jenis_dokumen', 'BAPP_GAMBAR_RAB')
+                ->where('is_active', true)
+                ->first();
+
+            if (! $gambarRab) return null;
+
+            $disk = Storage::disk($gambarRab->disk ?: 'public');
+            if (! $disk->exists($gambarRab->path_file)) return null;
+
+            $mime = $gambarRab->mime_type ?: 'image/png';
+            $data['gambarRabBase64'] = 'data:' . $mime . ';base64,' . base64_encode($disk->get($gambarRab->path_file));
+
+            return view('pdf.kontrak.bapp', $data)->render();
+        } elseif ($type === 'BAST') {
+            return view('pdf.kontrak.bast', $data)->render();
+        } elseif ($type === 'BAP') {
+            return view('pdf.kontrak.bap', $data)->render();
+        }
+
+        return null;
+    }
+
+
 
     public function ppkIndex()
     {
@@ -714,26 +808,29 @@ class TagihanController extends Controller
 
     private function isTagihanReadyToSubmit(Tagihan $tagihan): bool
     {
-        $arsip = optional($tagihan->detailKontrak)->arsipDokumen;
-        if (!$arsip) return false;
+        $signatures = $tagihan->documentSignatures->groupBy('document_label');
 
-        $arsipAktif = $arsip->where('is_active', true);
-        
-        $hasBappFinal = $arsipAktif->contains('jenis_dokumen', 'BAPP_FINAL_TTD');
-        $hasBapFinal = $arsipAktif->contains('jenis_dokumen', 'BAP_FINAL_TTD');
-        
-        if (!$hasBappFinal || !$hasBapFinal) {
+        $hasBappSelesai = $this->isTteSelesai($signatures, 'BAPP');
+        $hasBapSelesai = $this->isTteSelesai($signatures, 'BAP');
+
+        if (!$hasBappSelesai || !$hasBapSelesai) {
             return false;
         }
 
         $jenisTermin = optional(optional($tagihan->detailKontrak)->termin)->jenis_termin;
-        if ($jenisTermin === 'PELUNASAN' && !$arsipAktif->contains('jenis_dokumen', 'BAST_FINAL_TTD')) {
+        if ($jenisTermin === 'PELUNASAN' && !$this->isTteSelesai($signatures, 'BAST')) {
             return false;
         }
 
         return true;
     }
 
+    private function isTteSelesai($signatures, $label): bool
+    {
+        $sig = $signatures->get($label);
+        if (!$sig || $sig->count() == 0) return false;
+        return $sig->every(fn($s) => $s->status === 'signed');
+    }
     private function notifyRoles(array $roles, string $judul, string $pesan, ?string $linkUrl = null): void
     {
         Notification::send(User::role($roles)->get(), new WorkflowNotification([

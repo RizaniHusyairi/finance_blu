@@ -178,8 +178,8 @@
         <div class="integration-title">
             <span class="integration-icon"><i class="bi bi-whatsapp"></i></span>
             <div>
-                <h6 class="mb-0 fw-black text-primary">WhatsApp Invoice & Struk</h6>
-                <small class="text-muted fw-semibold">Provider Fonnte, template invoice, dan template struk pembayaran.</small>
+                <h6 class="mb-0 fw-black text-primary">Notifikasi WhatsApp Gateway</h6>
+                <small class="text-muted fw-semibold">Pengaturan provider dan fitur notifikasi otomatis (TTE Kontrak, Tagihan, Invoice, Struk).</small>
             </div>
         </div>
         <div class="form-check form-switch mb-0">
