@@ -76,6 +76,9 @@ Route::get('/p/tagihan-jasa/{id}/pdf', [\App\Http\Controllers\PublicTagihanJasaC
 Route::get('/p/tagihan-jasa/{id}/verify', [\App\Http\Controllers\PublicTagihanJasaVerificationController::class, 'show'])
     ->middleware('signed')
     ->name('public.tagihan-jasa.verify');
+Route::get('/p/tagihan-jasa/{id}/surat-pengantar-tte', [\App\Http\Controllers\PublicTagihanJasaVerificationController::class, 'document'])
+    ->middleware('signed')
+    ->name('public.tagihan-jasa.surat-pengantar-tte.document');
 
 // Public Magic Link untuk TTE Dokumen Berita Acara (BAPP, BAST, BAP)
 Route::get('/public/tte/sign/{token}', [\App\Http\Controllers\PublicMagicLinkSignatureController::class, 'show'])->name('public.magic-link.show');
@@ -355,7 +358,7 @@ Route::middleware(['auth', 'account.active'])->group(function () use ($internalR
 
     // Tagihan Jasa (PNBP) — pembuatan tagihan dibatasi ke role pembuat (admin),
     // verifikator jasa hanya boleh melihat/approve.
-    Route::middleware('role:Super Admin|Super Admin Jasa|Admin Jasa|Admin Konsesi')->group(function () {
+    Route::middleware('role:Super Admin|Admin Jasa|Admin Konsesi')->group(function () {
         Route::get('/tagihan-jasa/create', [\App\Http\Controllers\TagihanJasaController::class, 'create'])->name('tagihan-jasa.create');
         Route::post('/tagihan-jasa', [\App\Http\Controllers\TagihanJasaController::class, 'store'])->name('tagihan-jasa.store');
         Route::get('/tagihan-jasa/{id}/edit', [\App\Http\Controllers\TagihanJasaController::class, 'edit'])->name('tagihan-jasa.edit');
@@ -367,8 +370,9 @@ Route::middleware(['auth', 'account.active'])->group(function () use ($internalR
         Route::get('/tagihan-jasa', [\App\Http\Controllers\TagihanJasaController::class, 'index'])->name('tagihan-jasa.index');
         Route::get('/tagihan-jasa/{id}/surat-pengantar', [\App\Http\Controllers\TagihanJasaController::class, 'generateSuratPengantarPdf'])->name('tagihan-jasa.surat-pengantar');
         Route::put('/tagihan-jasa/{id}/surat-pengantar', [\App\Http\Controllers\TagihanJasaController::class, 'updateSuratPengantarDraft'])->name('tagihan-jasa.surat-pengantar.update');
-        Route::post('/tagihan-jasa/{id}/surat-pengantar-final/generate', [\App\Http\Controllers\TagihanJasaController::class, 'generateSuratPengantarFinal'])->name('tagihan-jasa.surat-pengantar-final.generate');
+        Route::get('/tagihan-jasa/{id}/surat-pengantar-final', [\App\Http\Controllers\TagihanJasaController::class, 'viewSuratPengantarFinal'])->name('tagihan-jasa.surat-pengantar-final.view');
         Route::post('/tagihan-jasa/{id}/surat-pengantar-final', [\App\Http\Controllers\TagihanJasaController::class, 'uploadSuratPengantarFinal'])->name('tagihan-jasa.surat-pengantar-final.upload');
+        Route::get('/tagihan-jasa/{id}/surat-pengantar-arsip/{arsipId}', [\App\Http\Controllers\TagihanJasaController::class, 'viewSuratPengantarArchive'])->name('tagihan-jasa.surat-pengantar-arsip.view');
         Route::get('/tagihan-jasa/{id}', [\App\Http\Controllers\TagihanJasaController::class, 'show'])->name('tagihan-jasa.show');
         Route::get('/tagihan-jasa/{id}/pdf', [\App\Http\Controllers\TagihanJasaController::class, 'generateInvoicePdf'])->name('tagihan-jasa.pdf');
         Route::post('/tagihan-jasa/{id}/publish', [\App\Http\Controllers\TagihanJasaController::class, 'publish'])->name('tagihan-jasa.publish');

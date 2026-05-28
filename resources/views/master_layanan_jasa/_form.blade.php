@@ -14,10 +14,10 @@
         .service-form-hero {
             position: relative;
             overflow: hidden;
-            border: 1px solid rgba(37, 99, 235, .16);
-            border-radius: 22px;
-            background: linear-gradient(120deg, #12355c 0%, #174f86 52%, #1d65a6 100%);
-            box-shadow: 0 18px 48px rgba(18, 53, 92, .18);
+            border: 1px solid rgba(15, 76, 129, .18);
+            border-radius: 8px;
+            background: linear-gradient(120deg, #14375d 0%, #1d5d95 64%, #207560 100%);
+            box-shadow: 0 14px 34px rgba(15, 23, 42, .12);
         }
 
         .service-form-hero,
@@ -30,29 +30,25 @@
             opacity: .82;
         }
 
-        .service-form-hero::before {
-            content: "";
-            position: absolute;
-            width: 360px;
-            height: 360px;
-            right: 8%;
-            top: -190px;
-            border-radius: 999px;
-            background: radial-gradient(circle, rgba(125, 211, 252, .28), rgba(59, 130, 246, .18) 48%, transparent 70%);
-            pointer-events: none;
+        .service-form-shell {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 360px;
+            gap: 18px;
+            align-items: start;
         }
 
-        .service-form-card {
-            border: 1px solid rgba(37, 99, 235, .12);
-            border-radius: 20px;
+        .service-form-card,
+        .service-side-card {
+            border: 1px solid rgba(148, 163, 184, .28);
+            border-radius: 8px;
             background: #fff;
-            box-shadow: 0 18px 46px rgba(15, 23, 42, .08);
+            box-shadow: 0 12px 30px rgba(15, 23, 42, .07);
             overflow: hidden;
         }
 
         .service-form-section {
-            border-bottom: 1px solid #e2e8f0;
-            padding: 22px 24px;
+            border-bottom: 1px solid #e6edf5;
+            padding: 20px 22px;
         }
 
         .service-form-section:last-child {
@@ -63,24 +59,33 @@
             display: flex;
             align-items: center;
             gap: 10px;
-            margin-bottom: 16px;
+            margin-bottom: 14px;
         }
 
         .section-icon {
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            width: 38px;
-            height: 38px;
-            border-radius: 12px;
-            background: #1d4ed8;
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            background: #1e5b89;
             color: #fff;
-            box-shadow: 0 12px 24px rgba(37, 99, 235, .18);
+            box-shadow: 0 10px 20px rgba(30, 91, 137, .16);
+            flex: 0 0 36px;
+        }
+
+        .step-kicker {
+            color: #0f766e;
+            font-size: 10px;
+            font-weight: 900;
+            text-transform: uppercase;
+            margin-bottom: 1px;
         }
 
         .section-title h6 {
             margin: 0;
-            color: #1e3a8a;
+            color: #14375d;
             font-weight: 900;
         }
 
@@ -102,8 +107,8 @@
         .service-form-card .form-select,
         .service-form-card .select2-selection {
             border-color: #dbe3ef !important;
-            border-radius: 13px !important;
-            min-height: 42px;
+            border-radius: 8px !important;
+            min-height: 44px;
             box-shadow: 0 1px 2px rgba(15, 23, 42, .03);
         }
 
@@ -113,7 +118,7 @@
             box-shadow: 0 0 0 4px rgba(37, 99, 235, .12) !important;
         }
 
-        .choice-grid {
+        .type-choice-grid {
             display: grid;
             grid-template-columns: repeat(2, minmax(0, 1fr));
             gap: 12px;
@@ -122,9 +127,9 @@
         .type-choice {
             cursor: pointer;
             border: 1px solid #dbe3ef;
-            border-radius: 16px;
+            border-radius: 8px;
             background: #f8fafc;
-            padding: 14px;
+            padding: 15px;
             transition: border-color .2s ease, background .2s ease, box-shadow .2s ease;
         }
 
@@ -147,7 +152,7 @@
             width: 34px;
             height: 34px;
             flex: 0 0 34px;
-            border-radius: 11px;
+            border-radius: 8px;
             background: #e0ecff;
             color: #1d4ed8;
             font-size: 17px;
@@ -173,39 +178,47 @@
         }
 
         .type-choice.is-selected {
-            border-color: #2563eb;
-            background: #eff6ff;
-            box-shadow: 0 12px 28px rgba(37, 99, 235, .1);
+            border-color: #1e5b89;
+            background: #f0f7fb;
+            box-shadow: 0 10px 22px rgba(30, 91, 137, .1);
         }
 
         .type-choice.is-selected .type-choice-icon {
-            background: #1d4ed8;
+            background: #1e5b89;
             color: #fff;
         }
 
-        .helper-panel {
-            border: 1px solid #bfdbfe;
-            border-radius: 16px;
-            background: linear-gradient(135deg, #eff6ff 0%, #f8fbff 100%);
+        .field-note {
+            border: 1px solid #dbe3ef;
+            border-radius: 8px;
+            background: #f8fafc;
+            padding: 12px 14px;
             color: #475569;
-            padding: 14px;
-            height: 100%;
+            font-size: 12px;
         }
 
-        .helper-panel strong {
-            color: #1e3a8a;
+        .field-note strong {
+            color: #14375d;
         }
 
         .tariff-panel {
-            border: 1px solid #bfdbfe;
-            border-radius: 18px;
-            background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
+            border: 1px solid #cfe0ef;
+            border-radius: 8px;
+            background: #fbfdff;
             padding: 16px;
+        }
+
+        .tariff-group-title {
+            color: #14375d;
+            font-size: 12px;
+            font-weight: 900;
+            text-transform: uppercase;
+            margin: 4px 0 10px;
         }
 
         .form-check-card {
             border: 1px solid #dbe3ef;
-            border-radius: 16px;
+            border-radius: 8px;
             background: #f8fafc;
             padding: 12px 14px;
             height: 100%;
@@ -213,7 +226,7 @@
 
         .live-preview {
             border: 1px solid #dbe3ef;
-            border-radius: 16px;
+            border-radius: 8px;
             background: #f8fafc;
             padding: 14px;
         }
@@ -231,8 +244,91 @@
             margin-top: 2px;
         }
 
+        .service-side-card {
+            position: sticky;
+            top: 86px;
+        }
+
+        .side-section {
+            padding: 18px;
+            border-bottom: 1px solid #e6edf5;
+        }
+
+        .side-section:last-child {
+            border-bottom: 0;
+        }
+
+        .side-title {
+            color: #14375d;
+            font-size: 13px;
+            font-weight: 900;
+            margin-bottom: 8px;
+        }
+
+        .side-list {
+            margin: 0;
+            padding-left: 18px;
+            color: #475569;
+            font-size: 12px;
+            line-height: 1.55;
+        }
+
+        .decision-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            border: 1px solid #dbe3ef;
+            border-radius: 999px;
+            padding: 5px 9px;
+            background: #fff;
+            color: #334155;
+            font-size: 11px;
+            font-weight: 800;
+        }
+
+        .parent-path-preview {
+            border: 1px dashed #cbd5e1;
+            border-radius: 8px;
+            background: #f8fafc;
+            padding: 9px 11px;
+            color: #475569;
+            font-size: 12px;
+            min-height: 38px;
+        }
+
+        .select2-container--default .select2-selection--single .select2-selection__rendered {
+            line-height: 42px;
+            padding-left: 12px;
+            color: #334155;
+        }
+
+        .select2-container--default .select2-selection--single .select2-selection__arrow {
+            height: 42px;
+        }
+
+        .select2-dropdown {
+            border-color: #cbd5e1;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 16px 34px rgba(15, 23, 42, .14);
+        }
+
+        .select2-results__option {
+            padding: 8px 10px;
+            font-size: 13px;
+        }
+
         @media (max-width: 768px) {
-            .choice-grid {
+            .service-form-shell {
+                grid-template-columns: 1fr;
+            }
+
+            .service-side-card {
+                position: static;
+                order: -1;
+            }
+
+            .type-choice-grid {
                 grid-template-columns: 1fr;
             }
 
@@ -251,7 +347,7 @@
             </span>
             <div>
                 <h4 class="mb-1 fw-black">{{ $isEdit ? 'Edit Master Layanan Jasa' : 'Tambah Master Layanan Jasa' }}</h4>
-                <p class="mb-0 fw-semibold small">Susun struktur layanan sebagai folder, lalu isi item tarif yang dapat dipilih saat membuat tagihan.</p>
+                <p class="mb-0 fw-semibold small">Mulai dari nama dan posisi, pilih jenis data, lalu isi tarif hanya jika layanan ini bisa ditagihkan.</p>
             </div>
         </div>
         <a href="{{ route('master-layanan-jasa.index') }}" class="btn btn-light text-primary fw-bold shadow-sm">
@@ -266,18 +362,20 @@
         @method($method)
     @endisset
 
+    <div class="service-form-shell">
     <div class="service-form-card">
         <div class="service-form-section">
             <div class="section-title">
                 <span class="section-icon"><i class="bi bi-card-text"></i></span>
                 <div>
+                    <div class="step-kicker">Langkah 1</div>
                     <h6>Identitas Layanan</h6>
-                    <p>Nama dan posisi layanan di dalam struktur tree.</p>
+                    <p>Tentukan nama yang terlihat di daftar dan tempatnya di struktur layanan.</p>
                 </div>
             </div>
 
             <div class="row g-3">
-                <div class="col-lg-5">
+                <div class="col-lg-6">
                     <label class="form-label">Nama Layanan <span class="text-danger">*</span></label>
                     <input type="text" name="nama_layanan" id="nama_layanan" class="form-control @error('nama_layanan') is-invalid @enderror" value="{{ old('nama_layanan', $isEdit ? $layanan->nama_layanan : '') }}" required placeholder="Contoh: a) bobot pesawat s.d. 40.000 kg">
                     <div class="form-text">Gunakan nama seperti yang akan muncul di struktur layanan.</div>
@@ -286,27 +384,20 @@
                     @enderror
                 </div>
 
-                <div class="col-lg-4">
+                <div class="col-lg-6">
                     <label class="form-label">Letakkan di Bawah Kategori</label>
                     <select name="parent_id" id="parent_id" class="form-select select2-parent @error('parent_id') is-invalid @enderror" data-placeholder="Cari kategori induk">
                         <option value="">Tidak ada - jadikan kategori utama</option>
                         @foreach($parentOptions as $option)
                             <option value="{{ $option['id'] }}" data-path="{{ $option['path'] }}" {{ old('parent_id', $isEdit ? $layanan->parent_id : null) == $option['id'] ? 'selected' : '' }}>
-                                {{ str_repeat('-- ', $option['depth']) }}{{ $option['label'] }}
+                                {{ str_repeat('  ', $option['depth']) }}{{ $option['label'] }}
                             </option>
                         @endforeach
                     </select>
-                    <div class="form-text">Cari jalur kategori, contoh: C. Jasa Pendaratan &gt; Dalam Negeri.</div>
+                    <div class="parent-path-preview mt-2" id="parentPathPreview">Kategori utama</div>
                     @error('parent_id')
                         <div class="invalid-feedback">{{ $message }}</div>
                     @enderror
-                </div>
-
-                <div class="col-lg-3">
-                    <div class="helper-panel">
-                        <strong>Tips struktur</strong>
-                        <div class="small mt-1">Kategori hanya menjadi folder. Item tarif adalah baris akhir yang punya tarif dan bisa dipakai di tagihan.</div>
-                    </div>
                 </div>
             </div>
         </div>
@@ -315,12 +406,13 @@
             <div class="section-title">
                 <span class="section-icon"><i class="bi bi-ui-checks-grid"></i></span>
                 <div>
+                    <div class="step-kicker">Langkah 2</div>
                     <h6>Jenis Data</h6>
-                    <p>Pilih apakah data ini folder struktur atau item tarif final.</p>
+                    <p>Pilih folder jika hanya untuk pengelompokan, atau item tarif jika dapat ditagihkan.</p>
                 </div>
             </div>
 
-            <div class="choice-grid">
+            <div class="type-choice-grid">
                 <label class="type-choice" data-type-choice="category">
                     <input type="radio" name="node_type" value="category" {{ $selectedNodeType === 'category' ? 'checked' : '' }}>
                     <span class="type-choice-inner">
@@ -352,12 +444,14 @@
             <div class="section-title">
                 <span class="section-icon"><i class="bi bi-cash-coin"></i></span>
                 <div>
+                    <div class="step-kicker">Langkah 3</div>
                     <h6>Tarif dan Akun</h6>
                     <p>Bagian ini hanya berlaku untuk item tarif yang ditagihkan.</p>
                 </div>
             </div>
 
             <div class="tariff-panel">
+                <div class="tariff-group-title">Kode pembayaran</div>
                 <div class="row g-3">
                     <div class="col-lg-3">
                         <label class="form-label">Tipe Tagihan <span class="text-danger">*</span></label>
@@ -400,6 +494,9 @@
                         @enderror
                     </div>
 
+                    <div class="col-12"><hr class="my-1"></div>
+                    <div class="col-12"><div class="tariff-group-title mb-0">Nilai tarif</div></div>
+
                     <div class="col-lg-3">
                         <label class="form-label">Tarif Dasar</label>
                         <div class="input-group">
@@ -419,6 +516,9 @@
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
                     </div>
+
+                    <div class="col-12"><hr class="my-1"></div>
+                    <div class="col-12"><div class="tariff-group-title mb-0">Konsesi dan aturan khusus</div></div>
 
                     <div class="col-lg-4">
                         <div class="form-check-card">
@@ -456,6 +556,7 @@
             <div class="section-title">
                 <span class="section-icon"><i class="bi bi-clock-history"></i></span>
                 <div>
+                    <div class="step-kicker">Langkah 4</div>
                     <h6>Aturan Tagihan</h6>
                     <p>Kontrol jatuh tempo, toleransi, dan status pemakaian layanan.</p>
                 </div>
@@ -497,10 +598,9 @@
                 </div>
 
                 <div class="col-lg-7">
-                    <div class="live-preview">
-                        <div class="live-preview-label">Ringkasan pilihan</div>
-                        <div class="live-preview-value" id="serviceFormPreview">-</div>
-                        <div class="small text-muted mt-1" id="serviceFormPreviewHelp">-</div>
+                    <div class="field-note h-100">
+                        <strong>Aturan ini ikut terbawa saat membuat tagihan.</strong>
+                        <div class="mt-1">Jika beberapa layanan digabung dalam satu tagihan, sistem akan memakai jatuh tempo paling ketat dari layanan yang dipilih.</div>
                     </div>
                 </div>
             </div>
@@ -514,6 +614,36 @@
                 </button>
             </div>
         </div>
+    </div>
+    <aside class="service-side-card">
+        <div class="side-section">
+            <div class="side-title">Cara Membaca Form</div>
+            <ol class="side-list">
+                <li>Buat folder dulu untuk struktur besar.</li>
+                <li>Buat item tarif di bawah folder paling spesifik.</li>
+                <li>Isi tarif, satuan, dan kode hanya untuk item tarif.</li>
+            </ol>
+        </div>
+        <div class="side-section">
+            <div class="side-title">Folder vs Item Tarif</div>
+            <div class="d-flex flex-wrap gap-2 mb-3">
+                <span class="decision-chip"><i class="bi bi-folder2"></i> Folder: pengelompokan</span>
+                <span class="decision-chip"><i class="bi bi-receipt"></i> Item: bisa ditagihkan</span>
+            </div>
+            <div class="field-note">
+                <strong>Contoh struktur</strong>
+                <div class="mt-1">Jasa Pendaratan Pesawat Udara &gt; Domestik &gt; Bobot pesawat s.d. 40.000 kg</div>
+            </div>
+        </div>
+        <div class="side-section">
+            <div class="side-title">Ringkasan Saat Ini</div>
+            <div class="live-preview">
+                <div class="live-preview-label">Pilihan</div>
+                <div class="live-preview-value" id="serviceFormPreview">-</div>
+                <div class="small text-muted mt-1" id="serviceFormPreviewHelp">-</div>
+            </div>
+        </div>
+    </aside>
     </div>
 </form>
 
@@ -550,13 +680,17 @@
         const kodeMakInput = document.getElementById('kode_mak');
         const kodeJenisPembayaranInput = document.getElementById('kode_jenis_pembayaran');
         const kodePembayaranPreview = document.getElementById('kode_pembayaran_preview');
+        const parentInput = document.getElementById('parent_id');
+        const parentPathPreview = document.getElementById('parentPathPreview');
         const managedInputs = [
             document.querySelector('input[name="mendukung_konsesi"]'),
             document.querySelector('input[name="persentase_konsesi"]'),
+            document.querySelector('input[name="kode_akun"]'),
+            kodeMakInput,
+            kodeJenisPembayaranInput,
             tarifInput,
             satuanInput,
             document.querySelector('input[name="wajib_tagihan_terpisah"]'),
-            tipeInput,
         ].filter(Boolean);
 
         function selectedNodeType() {
@@ -595,14 +729,27 @@
             }
         }
 
+        function updateParentPathPreview() {
+            if (!parentInput || !parentPathPreview) {
+                return;
+            }
+
+            const selectedOption = parentInput.options[parentInput.selectedIndex];
+            const path = selectedOption?.dataset?.path || '';
+            parentPathPreview.textContent = path ? 'Disimpan di: ' + path : 'Disimpan sebagai kategori utama';
+        }
+
         function updatePreview() {
             updateKodePembayaranPreview();
+            updateParentPathPreview();
             const name = nameInput?.value?.trim() || 'Nama layanan belum diisi';
             const isCategory = selectedNodeType() === 'category';
+            const selectedOption = parentInput?.options[parentInput.selectedIndex];
+            const parentPath = selectedOption?.dataset?.path || 'Kategori utama';
 
             if (isCategory) {
                 preview.textContent = name + ' akan disimpan sebagai kategori/folder.';
-                previewHelp.textContent = 'Kategori hanya mengatur struktur dan tidak muncul sebagai pilihan item tarif di tagihan.';
+                previewHelp.textContent = 'Lokasi: ' + parentPath + '. Kategori hanya mengatur struktur dan tidak muncul sebagai pilihan item tarif di tagihan.';
                 return;
             }
 
@@ -610,7 +757,7 @@
             const tarif = formatRupiah(tarifInput?.value || 0);
             const satuan = satuanInput?.value?.trim() || 'satuan belum diisi';
             preview.textContent = name + ' - ' + tipe + ' - ' + tarif + ' / ' + satuan;
-            previewHelp.textContent = 'Item tarif ini akan bisa dipilih di form Buat Tagihan jika statusnya aktif dan ditugaskan ke mitra/admin.';
+            previewHelp.textContent = 'Lokasi: ' + parentPath + '. Item ini bisa dipilih di form Buat Tagihan jika aktif dan ditugaskan ke mitra/admin.';
         }
 
         function renderForm() {
@@ -629,10 +776,14 @@
             });
         });
 
-        [nameInput, tipeInput, tarifInput, satuanInput, kodeMakInput, kodeJenisPembayaranInput].forEach((input) => {
+        [nameInput, tipeInput, tarifInput, satuanInput, kodeMakInput, kodeJenisPembayaranInput, parentInput].forEach((input) => {
             input?.addEventListener('input', updatePreview);
             input?.addEventListener('change', updatePreview);
         });
+
+        if (window.jQuery) {
+            window.jQuery(parentInput).on('select2:select select2:clear change', updatePreview);
+        }
 
         renderForm();
     });

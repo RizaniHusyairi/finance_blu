@@ -4,6 +4,8 @@
 @section('content')
 @php
     $isPjp2u = optional($penjualan->layananJasa)->isPjp2u();
+    $canCreateTagihanJasa = auth()->user()?->hasRole('Super Admin') === true
+        || (auth()->user()?->hasAnyRole(['Admin Jasa', 'Admin Konsesi']) === true && ! auth()->user()?->hasRole('Super Admin Jasa'));
     $pageTitle = $isPjp2u ? 'Detail Laporan PAX PJP2U' : 'Detail Laporan Penjualan';
     $cardLabel = $isPjp2u ? 'Laporan PAX PJP2U' : 'Laporan Pendapatan Konsesi';
     $backUrl = $isPjp2u
@@ -383,11 +385,11 @@
 
                 {{-- Status: Diverifikasi --}}
                 @if($penjualan->status === 'diverifikasi' && ! $penjualan->tagihan_jasa_id && $penjualan->layanan_jasa_id)
-                    @if($penjualan->can_create_tagihan)
+                    @if($canCreateTagihanJasa && $penjualan->can_create_tagihan)
                         <a href="{{ route('tagihan-jasa.create', ['penjualan_id' => $penjualan->id]) }}" class="btn btn-primary fw-bold jasa-icon-btn" title="Buat tagihan" aria-label="Buat tagihan">
                             <i class="bi bi-receipt"></i>
                         </a>
-                    @else
+                    @elseif($canCreateTagihanJasa)
                         <div class="alert alert-info mb-0">
                             <i class="bi bi-calendar-check me-1"></i>
                             <strong>Tagihan Belum Tersedia</strong>

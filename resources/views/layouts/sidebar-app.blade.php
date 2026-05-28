@@ -186,11 +186,13 @@
             <div class="menu-title">Tagihan</div>
           </a>
           <ul>
-            <li>
-              <a href="{{ route('tagihan-jasa.create') }}">
-                <i class="material-icons-outlined">arrow_right</i>Buat Tagihan
-              </a>
-            </li>
+            @unlessrole('Super Admin Jasa')
+              <li>
+                <a href="{{ route('tagihan-jasa.create') }}">
+                  <i class="material-icons-outlined">arrow_right</i>Buat Tagihan
+                </a>
+              </li>
+            @endunlessrole
             <li>
               <a href="{{ route('admin-jasa.tagihan.log-bulanan') }}">
                 <i class="material-icons-outlined">arrow_right</i>Log Tagihan Bulanan
@@ -481,11 +483,13 @@
             <div class="menu-title">Tagihan</div>
           </a>
           <ul>
-            <li>
-              <a href="{{ route('tagihan-jasa.create') }}">
-                <i class="material-icons-outlined">arrow_right</i>Buat Tagihan
-              </a>
-            </li>
+            @hasrole('Super Admin')
+              <li>
+                <a href="{{ route('tagihan-jasa.create') }}">
+                  <i class="material-icons-outlined">arrow_right</i>Buat Tagihan
+                </a>
+              </li>
+            @endhasrole
             <li>
               <a href="{{ route('admin-jasa.tagihan.log-bulanan') }}">
                 <i class="material-icons-outlined">arrow_right</i>Log Tagihan Bulanan
@@ -558,11 +562,6 @@
             <li>
               <a href="{{ route('master-layanan-jasa.index') }}">
                 <i class="material-icons-outlined">arrow_right</i>Layanan Jasa
-              </a>
-            </li>
-            <li>
-              <a href="{{ route('tarif-layanan.index') }}">
-                <i class="material-icons-outlined">arrow_right</i>Tarif Jasa
               </a>
             </li>
             @hasrole('Super Admin')

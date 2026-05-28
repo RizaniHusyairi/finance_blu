@@ -295,6 +295,89 @@
             line-height: 1.35;
             padding: .45rem .6rem;
         }
+        .garbarata-detail-row > td {
+            padding: 0 .5rem .9rem 4.2rem !important;
+            background: #f8fbff;
+        }
+        .garbarata-panel {
+            border: 1px solid #bfdbfe;
+            border-radius: 16px;
+            background: linear-gradient(180deg, #ffffff, #f8fbff);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,.8);
+            overflow: hidden;
+        }
+        .garbarata-panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 12px 14px;
+            border-bottom: 1px solid #dbeafe;
+            background: #eff6ff;
+        }
+        .garbarata-panel-title {
+            color: #1e3a8a;
+            font-size: .8rem;
+            font-weight: 900;
+            letter-spacing: .01em;
+            margin: 0;
+        }
+        .garbarata-panel-note {
+            color: #64748b;
+            font-size: .72rem;
+            font-weight: 700;
+            margin: 2px 0 0;
+        }
+        .garbarata-scroll {
+            overflow-x: auto;
+        }
+        .garbarata-table {
+            min-width: 1180px;
+            margin: 0;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+        .garbarata-table th {
+            background: #f8fafc;
+            color: #475569;
+            font-size: .65rem;
+            font-weight: 900;
+            letter-spacing: .02em;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+        .garbarata-table td,
+        .garbarata-table th {
+            border-bottom: 1px solid #e2e8f0;
+            padding: .4rem;
+            vertical-align: top;
+        }
+        .garbarata-table .form-control {
+            min-height: 34px;
+            border-radius: .65rem !important;
+            font-size: .76rem;
+            padding: .32rem .45rem;
+        }
+        .garbarata-output {
+            min-height: 34px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #dbeafe;
+            border-radius: .65rem;
+            background: #ffffff;
+            color: #0f172a;
+            font-size: .76rem;
+            font-weight: 800;
+            padding: .32rem .45rem;
+            white-space: nowrap;
+        }
+        .garbarata-footer {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 10px 14px 12px;
+        }
         .invoice-search-button {
             border-color: #bfdbfe !important;
             background: #eff6ff !important;
@@ -812,6 +895,48 @@
             </button>
         </td>
     </tr>
+    <tr class="garbarata-detail-row d-none" data-garbarata-row-for="__INDEX__">
+        <td colspan="9">
+            <div class="garbarata-panel">
+                <div class="garbarata-panel-header">
+                    <div>
+                        <p class="garbarata-panel-title"><i class="bi bi-airplane-engines me-1"></i>Rincian Pemakaian Garbarata</p>
+                        <p class="garbarata-panel-note">Isi per penerbangan. Durasi, rentang per 2 jam, volume, dan total dihitung otomatis dari Docking sampai Undocking.</p>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-primary fw-bold btn-add-garbarata-line">
+                        <i class="bi bi-plus-lg me-1"></i>Tambah Rincian
+                    </button>
+                </div>
+                <div class="garbarata-scroll">
+                    <table class="table garbarata-table">
+                        <thead>
+                            <tr>
+                                <th style="width:42px;">No</th>
+                                <th style="width:94px;">Tanggal</th>
+                                <th style="width:90px;">Reg</th>
+                                <th style="width:78px;">ARR</th>
+                                <th style="width:78px;">DEP</th>
+                                <th style="width:120px;">Route</th>
+                                <th style="width:86px;">Docking</th>
+                                <th style="width:96px;">Undocking</th>
+                                <th style="width:96px;">Type</th>
+                                <th style="width:92px;">Bobot Ton</th>
+                                <th style="width:92px;">Waktu</th>
+                                <th style="width:90px;">Rentang</th>
+                                <th style="width:120px;">Total</th>
+                                <th style="width:44px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody class="garbarata-lines"></tbody>
+                    </table>
+                </div>
+                <div class="garbarata-footer">
+                    <div class="small fw-bold text-slate-500">Jasa pemakaian mengikuti tarif layanan di baris utama.</div>
+                    <div class="small fw-black text-primary garbarata-summary">0 rentang pemakaian</div>
+                </div>
+            </div>
+        </td>
+    </tr>
 </template>
 
 <div class="modal fade" id="modalPilihLayanan" tabindex="-1" aria-hidden="true">
@@ -1111,6 +1236,177 @@
             return calculatorDefinitions.find(definition => definition.match(unit)) || null;
         }
 
+        function isGarbarataService(service) {
+            if (!service) {
+                return false;
+            }
+
+            const text = `${buildServicePath(service)} ${service.nama_layanan || ''} ${service.satuan || ''}`.toLowerCase();
+            return text.includes('garbarata');
+        }
+
+        function garbarataDetailRow(row) {
+            return row.next('.garbarata-detail-row');
+        }
+
+        function parseTimeToMinutes(value) {
+            const match = String(value || '').match(/^(\d{1,2}):(\d{2})$/);
+            if (!match) {
+                return null;
+            }
+
+            const hours = parseInt(match[1], 10);
+            const minutes = parseInt(match[2], 10);
+            if (hours > 23 || minutes > 59) {
+                return null;
+            }
+
+            return (hours * 60) + minutes;
+        }
+
+        function formatDuration(minutes) {
+            if (!minutes || minutes <= 0) {
+                return '00:00';
+            }
+
+            const hours = Math.floor(minutes / 60);
+            const rest = minutes % 60;
+            return `${String(hours).padStart(2, '0')}:${String(rest).padStart(2, '0')}`;
+        }
+
+        function calculateGarbarataDuration(docking, undocking) {
+            const start = parseTimeToMinutes(docking);
+            let end = parseTimeToMinutes(undocking);
+
+            if (start === null || end === null) {
+                return 0;
+            }
+
+            if (end < start) {
+                end += 24 * 60;
+            }
+
+            return Math.max(0, end - start);
+        }
+
+        function garbarataLineHtml(data = {}) {
+            const value = key => escapeHtml(data[key] ?? '');
+
+            return `
+                <tr class="garbarata-line">
+                    <td class="text-center fw-bold garbarata-no"></td>
+                    <td><input type="text" class="form-control garbarata-input garbarata-tanggal" value="${value('tanggal')}" placeholder="01032026"></td>
+                    <td><input type="text" class="form-control garbarata-input garbarata-reg" value="${value('reg')}" placeholder="PK-SAT"></td>
+                    <td><input type="text" class="form-control garbarata-input garbarata-arr" value="${value('flight_arr')}" placeholder="IU658"></td>
+                    <td><input type="text" class="form-control garbarata-input garbarata-dep" value="${value('flight_dep')}" placeholder="IU641"></td>
+                    <td><input type="text" class="form-control garbarata-input garbarata-route" value="${value('route')}" placeholder="YIA-AAP-SUB"></td>
+                    <td><input type="time" class="form-control garbarata-input garbarata-docking" value="${value('docking')}"></td>
+                    <td><input type="time" class="form-control garbarata-input garbarata-undocking" value="${value('undocking')}"></td>
+                    <td><input type="text" class="form-control garbarata-input garbarata-type" value="${value('type_pesawat')}" placeholder="A320"></td>
+                    <td><input type="number" class="form-control garbarata-input garbarata-bobot text-end" value="${value('bobot_ton')}" step="0.01" min="0" placeholder="77"></td>
+                    <td><span class="garbarata-output garbarata-waktu">00:00</span></td>
+                    <td><span class="garbarata-output garbarata-rentang">0</span></td>
+                    <td><span class="garbarata-output garbarata-total">Rp 0</span></td>
+                    <td class="text-center">
+                        <button type="button" class="btn btn-sm btn-outline-danger btn-remove-garbarata-line" title="Hapus rincian"><i class="bi bi-x-lg"></i></button>
+                    </td>
+                </tr>
+            `;
+        }
+
+        function addGarbarataLine(panel, data = {}) {
+            panel.find('.garbarata-lines').append(garbarataLineHtml(data));
+            renumberGarbarataLines(panel);
+        }
+
+        function renumberGarbarataLines(panel) {
+            panel.find('.garbarata-line').each(function(index) {
+                $(this).find('.garbarata-no').text(index + 1);
+            });
+        }
+
+        function showGarbarataPanel(row, rows = null) {
+            const detailRow = garbarataDetailRow(row);
+            const panel = detailRow.find('.garbarata-panel');
+            detailRow.removeClass('d-none');
+            row.find('.qty-input').addClass('d-none').prop('readonly', true);
+            row.find('.qty-mode-help').text('Volume dihitung dari rentang pemakaian per 2 jam.');
+            row.find('.smart-calc-wrapper').addClass('d-none').empty();
+
+            if (Array.isArray(rows)) {
+                panel.find('.garbarata-lines').empty();
+                rows.forEach(item => addGarbarataLine(panel, item));
+            }
+
+            if (panel.find('.garbarata-line').length === 0) {
+                addGarbarataLine(panel);
+            }
+
+            syncGarbarataCalculation(row);
+        }
+
+        function hideGarbarataPanel(row) {
+            garbarataDetailRow(row).addClass('d-none').find('.garbarata-lines').empty();
+            row.find('.qty-input').removeClass('d-none').prop('readonly', false);
+        }
+
+        function collectGarbarataRows(row) {
+            const price = positiveNumber(row.find('.price-input').val());
+            let totalRentang = 0;
+            let rows = [];
+
+            garbarataDetailRow(row).find('.garbarata-line').each(function() {
+                const line = $(this);
+                const docking = line.find('.garbarata-docking').val();
+                const undocking = line.find('.garbarata-undocking').val();
+                const minutes = calculateGarbarataDuration(docking, undocking);
+                const rentang = minutes > 0 ? Math.max(1, Math.ceil(minutes / 120)) : 0;
+                const total = rentang * price;
+
+                totalRentang += rentang;
+                line.find('.garbarata-waktu').text(formatDuration(minutes));
+                line.find('.garbarata-rentang').text(formatCleanNumber(rentang));
+                line.find('.garbarata-total').text('Rp ' + formatMoney(total));
+
+                rows.push({
+                    tanggal: line.find('.garbarata-tanggal').val(),
+                    reg: line.find('.garbarata-reg').val(),
+                    flight_arr: line.find('.garbarata-arr').val(),
+                    flight_dep: line.find('.garbarata-dep').val(),
+                    route: line.find('.garbarata-route').val(),
+                    docking,
+                    undocking,
+                    type_pesawat: line.find('.garbarata-type').val(),
+                    bobot_ton: positiveNumber(line.find('.garbarata-bobot').val()),
+                    jasa_pemakaian_garbarata: price,
+                    waktu: formatDuration(minutes),
+                    rentang_pemakaian: rentang,
+                    total,
+                });
+            });
+
+            garbarataDetailRow(row).find('.garbarata-summary').text(`${formatCleanNumber(totalRentang)} rentang pemakaian`);
+
+            return { rows, totalRentang };
+        }
+
+        function syncGarbarataCalculation(row) {
+            const { rows, totalRentang } = collectGarbarataRows(row);
+            row.find('.qty-input').val(totalRentang);
+            row.find('.calculation-payload-input').val(JSON.stringify({
+                rule: 'GARBARATA_DETAIL',
+                label: 'Rincian pemakaian garbarata',
+                inputs: { rows },
+                rows,
+                billable_qty: totalRentang,
+                formula: `${formatCleanNumber(totalRentang)} rentang pemakaian x tarif per 2 jam`,
+            }));
+            row.data('weight-range-invalid', '');
+            showSmartCalcWarning(row, '');
+
+            return { qty: totalRentang, definition: null };
+        }
+
         function parseLandingWeightRange(service) {
             if (!service) {
                 return null;
@@ -1239,6 +1535,10 @@
 
         function syncRowCalculation(row) {
             const service = layanansById[row.find('.layanan-id-input').val()];
+            if (isGarbarataService(service)) {
+                return syncGarbarataCalculation(row);
+            }
+
             const definition = getCalculationDefinition(service);
             const mode = row.find('.calculation-mode-input').val();
             let qty = positiveNumber(row.find('.qty-input').val());
@@ -1335,6 +1635,7 @@
 
         function renderCalculationMode(row, service) {
             const isPercentage = isPercentageService(service);
+            const usesGarbarataDetail = isGarbarataService(service);
             row.find('.calculation-mode-input').val(isPercentage ? 'PERSENTASE' : 'TARIF');
             row.toggleClass('percentage-service-row', isPercentage);
             row.find('.price-input')
@@ -1346,6 +1647,13 @@
             row.find('.calc-mode-help').text(isPercentage ? 'Persen (%)' : 'Rp per satuan');
             row.find('.qty-mode-help').text(isPercentage ? 'Dasar hitung: total omzet/nilai transaksi' : 'Volume');
             renderSmartCalculator(row, service);
+
+            if (usesGarbarataDetail) {
+                showGarbarataPanel(row);
+                return;
+            }
+
+            hideGarbarataPanel(row);
 
             const definition = getCalculationDefinition(service);
             if (definition) {
@@ -1371,6 +1679,10 @@
                 Object.entries(options.calculatorInputs).forEach(([key, value]) => {
                     row.find(`.calc-factor-input[data-factor="${key}"]`).val(value);
                 });
+            }
+
+            if (isGarbarataService(service) && Array.isArray(options.garbarataRows)) {
+                showGarbarataPanel(row, options.garbarataRows);
             }
 
             syncRowCalculation(row);
@@ -1619,8 +1931,14 @@
                         return;
                     }
 
+                    const payload = detail.calculation_payload || {};
+                    const garbarataRows = payload.rule === 'GARBARATA_DETAIL'
+                        ? (payload.rows || payload.inputs?.rows || [])
+                        : null;
+
                     applyServiceToRow(row, service, {
-                        calculatorInputs: detail.calculation_payload?.inputs || null,
+                        calculatorInputs: payload.rule === 'GARBARATA_DETAIL' ? null : (payload.inputs || null),
+                        garbarataRows,
                         skipCalculate: true,
                     });
 
@@ -1730,7 +2048,9 @@
 
         $(document).on('click', '.btn-remove-service', function() {
             if ($('.service-row').length > 1) {
-                $(this).closest('tr').remove();
+                const row = $(this).closest('tr');
+                garbarataDetailRow(row).remove();
+                row.remove();
                 calculateTotals();
                 refreshKontrakOptions();
             } else {
@@ -1738,7 +2058,29 @@
             }
         });
 
-        $(document).on('input', '.qty-input, .price-input, .calc-factor-input', function() {
+        $(document).on('click', '.btn-add-garbarata-line', function() {
+            const detailRow = $(this).closest('.garbarata-detail-row');
+            addGarbarataLine(detailRow.find('.garbarata-panel'));
+            calculateTotals();
+        });
+
+        $(document).on('click', '.btn-remove-garbarata-line', function() {
+            const panel = $(this).closest('.garbarata-panel');
+            const detailRow = $(this).closest('.garbarata-detail-row');
+            const ownerRow = detailRow.prev('.service-row');
+
+            if (panel.find('.garbarata-line').length > 1) {
+                $(this).closest('.garbarata-line').remove();
+            } else {
+                panel.find('.garbarata-line input').val('');
+            }
+
+            renumberGarbarataLines(panel);
+            syncGarbarataCalculation(ownerRow);
+            calculateTotals();
+        });
+
+        $(document).on('input change', '.qty-input, .price-input, .calc-factor-input, .garbarata-input', function() {
             calculateTotals();
         });
         

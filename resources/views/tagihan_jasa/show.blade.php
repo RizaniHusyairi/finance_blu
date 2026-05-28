@@ -751,18 +751,9 @@
                         <i class="bi bi-eye me-1"></i> Preview Draft Surat Pengantar
                     </a>
                     @if($tagihan->file_surat_pengantar_final)
-                        <a href="{{ Storage::url($tagihan->file_surat_pengantar_final) }}" target="_blank" class="btn btn-success fw-bold">
+                        <a href="{{ route('tagihan-jasa.surat-pengantar-final.view', $tagihan->id) }}" target="_blank" class="btn btn-success fw-bold">
                             <i class="bi bi-file-earmark-check me-1"></i> Lihat Surat Pengantar TTD
                         </a>
-                    @endif
-                    @if($workflowApproved && $canManageTagihanJasa)
-                        <form action="{{ route('tagihan-jasa.surat-pengantar-final.generate', $tagihan->id) }}" method="POST">
-                            @csrf
-                            <button type="submit" class="btn btn-warning w-100 fw-bold" onclick="return confirm('Generate surat pengantar final bertanda tangan elektronik?')">
-                                <i class="bi bi-qr-code me-1"></i>
-                                {{ $tagihan->file_surat_pengantar_final ? 'Generate Ulang Surat Final TTD' : 'Generate Surat Final TTD' }}
-                            </button>
-                        </form>
                     @endif
                 </div>
 
@@ -779,7 +770,7 @@
                         </div>
                         <div class="list-group small">
                             @foreach($arsipSuratPengantar->take(5) as $arsip)
-                                <a href="{{ Storage::disk($arsip->disk ?: 'public')->url($arsip->path_file) }}" target="_blank" class="list-group-item list-group-item-action d-flex justify-content-between gap-2 align-items-start">
+                                <a href="{{ route('tagihan-jasa.surat-pengantar-arsip.view', [$tagihan->id, $arsip->id]) }}" target="_blank" class="list-group-item list-group-item-action d-flex justify-content-between gap-2 align-items-start">
                                     <span>
                                         <span class="fw-bold d-block">
                                             {{ $arsip->jenis_dokumen === 'SURAT_PENGANTAR_FINAL_TTD' ? 'Final TTD' : 'Draft' }}

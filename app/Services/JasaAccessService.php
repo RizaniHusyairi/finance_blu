@@ -27,7 +27,7 @@ class JasaAccessService
             ->orderBy('level')
             ->orderBy('id');
 
-        if ($mitra) {
+        if ($mitra && ! $this->canManageAllJasa($user)) {
             $mitraIds = $mitra->layananJasaAktif()
                 ->where('layanan_jasas.is_active', true)
                 ->where('layanan_jasas.is_leaf', true)

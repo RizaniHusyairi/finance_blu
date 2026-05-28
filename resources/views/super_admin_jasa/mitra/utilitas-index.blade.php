@@ -1,5 +1,9 @@
 @extends('layouts.app')
 @section('title', 'Verifikasi & Tagihan Utilitas')
+@php
+    $canCreateTagihanJasa = auth()->user()?->hasRole('Super Admin') === true
+        || (auth()->user()?->hasAnyRole(['Admin Jasa', 'Admin Konsesi']) === true && ! auth()->user()?->hasRole('Super Admin Jasa'));
+@endphp
 
 @push('css')
     <script>
@@ -170,7 +174,9 @@
                         <td class="pe-3 text-end">
                             <a href="{{ route('jasa.utilitas.show', $lap->id) }}" class="btn btn-sm btn-light border text-primary fw-semibold me-1 jasa-icon-btn" title="Detail" aria-label="Detail"><i class="bi bi-eye"></i></a>
                             @if($lap->status == 'dikirim_ke_admin_jasa')
-                                <a href="{{ route('tagihan-jasa.create', ['utilitas_id' => $lap->id]) }}" class="btn btn-sm btn-primary jasa-icon-btn" title="Buat tagihan" aria-label="Buat tagihan"><i class="bi bi-receipt"></i></a>
+                                @if($canCreateTagihanJasa)
+                                    <a href="{{ route('tagihan-jasa.create', ['utilitas_id' => $lap->id]) }}" class="btn btn-sm btn-primary jasa-icon-btn" title="Buat tagihan" aria-label="Buat tagihan"><i class="bi bi-receipt"></i></a>
+                                @endif
                                 <button class="btn btn-sm btn-outline-danger jasa-icon-btn" data-bs-toggle="modal" data-bs-target="#modalTolak-{{ $lap->id }}" title="Tolak" aria-label="Tolak"><i class="bi bi-x-circle"></i></button>
                             @elseif($lap->status == 'ditagihkan' && $lap->tagihan_jasa_id)
                                 <a href="{{ route('tagihan-jasa.show', $lap->tagihan_jasa_id) }}" class="btn btn-sm btn-light border text-primary fw-semibold jasa-icon-btn" title="Lihat tagihan" aria-label="Lihat tagihan"><i class="bi bi-receipt"></i></a>
