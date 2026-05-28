@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
 use App\Models\ArsipDokumen;
 use App\Models\User;
 use App\Notifications\WorkflowNotification;
@@ -674,7 +675,7 @@ class ContractController extends Controller
             'ip_address' => request()->ip(),
         ]);
 
-        return redirect()->route('contracts.show', $kontrak->id)
+        return redirect()->route('contracts.verifikasi')
             ->with('success', 'Kontrak disetujui dan aktif. PDF SPK, SPMK, dan Ringkasan Kontrak kini ber-TTE QR.');
     }
 
@@ -872,6 +873,51 @@ class ContractController extends Controller
         if ($activated) $msg .= ' Kontrak kini telah AKTIF secara otomatis.';
 
         return back()->with('success', $msg);
+    }
+
+    /**
+     * Kirim link portal upload dokumen final (TTD basah) ke nomor WhatsApp vendor.
+     * Portal publik memuat form upload SPK, SPMK, dan Ringkasan Kontrak yang sudah ditandatangani.
+     */
+    public function sendWaVendor($id)
+    {
+        $kontrak = \App\Models\KontrakPengadaan::with('vendor')->findOrFail($id);
+
+        abort_unless(Auth::user()?->hasAnyRole(['Super Admin', 'Pejabat Pengadaan', 'PPK']), 403);
+
+        if (! ContractDocumentTte::isApproved($kontrak)) {
+            return back()->with('error', 'Kontrak belum disetujui PPK secara elektronik.');
+        }
+
+        $vendor = $kontrak->vendor;
+        $noHp = $vendor?->no_telepon;
+
+        if (empty($noHp)) {
+            return back()->with('error', 'Nomor telepon vendor belum diisi pada Master Pihak.');
+        }
+
+        $portalUrl = URL::signedRoute('public.vendor.contract-upload.show', ['id' => $kontrak->id]);
+
+        $pesan = "*Portal Upload Dokumen Kontrak*\n\n"
+            . "Yth. " . ($vendor->nama_pihak ?? 'Vendor') . ",\n\n"
+            . "Berikut link unggah dokumen kontrak final bertandatangan untuk pekerjaan:\n"
+            . "*" . $kontrak->nama_pekerjaan . "*\n"
+            . "Nomor SPK: " . ($kontrak->nomor_spk ?? '-') . "\n\n"
+            . "Mohon unggah dokumen berikut melalui tautan ini (sudah ditandatangani lengkap):\n"
+            . "1. SPK Final\n"
+            . "2. SPMK Final\n"
+            . "3. Ringkasan Kontrak Final\n\n"
+            . "Link Portal Upload:\n" . $portalUrl . "\n\n"
+            . "Terima kasih.";
+
+        $waService = app(\App\Services\WhatsappService::class);
+        $ok = $waService->sendMessage($noHp, $pesan);
+
+        if (! $ok) {
+            return back()->with('error', 'Gagal mengirim pesan WhatsApp ke vendor. Silakan cek log integrasi.');
+        }
+
+        return back()->with('success', 'Link portal upload berhasil dikirim ke WhatsApp vendor (' . $noHp . ').');
     }
 
     public function exportSpmkPdf($id)

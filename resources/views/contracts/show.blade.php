@@ -297,6 +297,11 @@
                     <a href="{{ route('contracts.ringkasan.export-pdf', $kontrak->id) }}" target="_blank" class="btn-act-modern btn-act-pdf">
                         <i class="bi bi-filetype-pdf"></i> {{ $isContractTteApproved ? 'Export PDF TTE' : 'Export PDF Draft' }}
                     </a>
+                    @if($ringkasanFinalArsip)
+                        <a href="{{ Storage::url($ringkasanFinalArsip->path_file) }}" target="_blank" class="btn-act-modern btn-act-success">
+                            <i class="bi bi-file-earmark-check"></i> Lihat Dokumen Final
+                        </a>
+                    @endif
                 </div>
             </div>
             <div class="mc-body">
@@ -353,13 +358,10 @@
                             <i class="bi bi-image"></i> Lihat RAB
                         </a>
                     @endif
-                    @if($isContractTteApproved)
-                        <form action="{{ route('contracts.send-wa-vendor', $kontrak->id) }}" method="POST" class="d-inline">
-                            @csrf
-                            <button type="submit" class="btn-act-modern" style="background-color: #25D366; color: white; border: none;" onclick="return confirm('Kirim link portal upload ke WhatsApp vendor?')">
-                                <i class="bi bi-whatsapp"></i> Kirim Akses Vendor
-                            </button>
-                        </form>
+                    @if($spkFinalArsip)
+                        <a href="{{ Storage::url($spkFinalArsip->path_file) }}" target="_blank" class="btn-act-modern btn-act-success">
+                            <i class="bi bi-file-earmark-check"></i> Lihat Dokumen Final
+                        </a>
                     @endif
                 </div>
             </div>
@@ -418,6 +420,11 @@
                     <a href="{{ route('contracts.spmk.export-pdf', $kontrak->id) }}" target="_blank" class="btn-act-modern btn-act-pdf">
                         <i class="bi bi-filetype-pdf"></i> {{ $isContractTteApproved ? 'Export PDF TTE' : 'Export PDF Draft' }}
                     </a>
+                    @if($spmkFinalArsip)
+                        <a href="{{ Storage::url($spmkFinalArsip->path_file) }}" target="_blank" class="btn-act-modern btn-act-success">
+                            <i class="bi bi-file-earmark-check"></i> Lihat Dokumen Final
+                        </a>
+                    @endif
                 </div>
             </div>
             <div class="mc-body">
@@ -452,6 +459,51 @@
                 </div>
             </div>
         </div>
+
+        {{-- ═══ BAGIAN: KIRIM AKSES VENDOR (Portal Upload TTD Basah) ═══ --}}
+        @if($isContractTteApproved)
+            @php
+                $vendorNoHp = $kontrak->vendor->no_telepon ?? null;
+            @endphp
+            <div class="modern-card" style="animation: secIn .55s cubic-bezier(.22,1,.36,1) .72s both;">
+                <div class="mc-head">
+                    <div>
+                        <h6><i class="bi bi-whatsapp mc-h-icon" style="color:#25D366;"></i> Kirim Akses Upload ke Vendor</h6>
+                        <small class="text-muted d-block mt-1">
+                            Kirim link portal publik ke WhatsApp vendor untuk mengunggah <strong>SPK</strong>, <strong>SPMK</strong>, dan <strong>Ringkasan Kontrak</strong> yang sudah ditandatangani (TTD basah).
+                        </small>
+                    </div>
+                </div>
+                <div class="mc-body">
+                    <div class="row g-3 align-items-center">
+                        <div class="col-md-8">
+                            <div class="doc-status-card">
+                                <div class="dsc-label"><i class="bi bi-telephone me-1"></i> Nomor WhatsApp Vendor</div>
+                                @if($vendorNoHp)
+                                    <div class="dsc-value">{{ $vendorNoHp }}</div>
+                                    <div class="dsc-meta">{{ $kontrak->vendor->nama_pihak ?? '-' }}</div>
+                                @else
+                                    <span class="badge-doc badge-doc-danger"><i class="bi bi-exclamation-triangle-fill"></i> Nomor Belum Diisi</span>
+                                    <div class="dsc-meta mt-2">Lengkapi nomor telepon vendor di Master Pihak terlebih dahulu.</div>
+                                @endif
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-md-end">
+                            <form action="{{ route('contracts.send-wa-vendor', $kontrak->id) }}" method="POST" class="d-inline">
+                                @csrf
+                                <button type="submit"
+                                        class="btn-act-modern"
+                                        style="{{ $vendorNoHp ? 'background-color:#25D366; color:white;' : 'background-color:#9ca3af; color:white; opacity:.6; cursor:not-allowed;' }} border:none; padding:.65rem 1.25rem; font-weight:600;"
+                                        onclick="return confirm('Kirim link portal upload ke WhatsApp vendor?')"
+                                        @disabled(!$vendorNoHp)>
+                                    <i class="bi bi-whatsapp"></i> Kirim Akses Vendor
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        @endif
 
         {{-- ═══ BAGIAN: TABS DETAIL ═══ --}}
         <div class="modern-card" style="animation: secIn .55s cubic-bezier(.22,1,.36,1) .74s both;">

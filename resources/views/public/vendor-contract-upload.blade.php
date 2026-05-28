@@ -1,8 +1,11 @@
-@extends('layouts.app_public')
-
-@section('title', 'Portal Unggah Dokumen Kontrak Vendor')
-
-@section('content')
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal Unggah Dokumen Kontrak Vendor &middot; SIKEREN</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
 <style>
     body {
         background-color: #f4f7f6;
@@ -118,6 +121,8 @@
         color: #475569;
     }
 </style>
+</head>
+<body>
 
 <div class="hero-section">
     <div class="container">
@@ -174,7 +179,7 @@
                         </ul>
                     </div>
 
-                    <form action="{{ route('public.vendor.contract-upload.store', $kontrak->id) }}" method="POST" enctype="multipart/form-data">
+                    <form action="{{ \Illuminate\Support\Facades\URL::signedRoute('public.vendor.contract-upload.store', ['id' => $kontrak->id]) }}" method="POST" enctype="multipart/form-data">
                         @csrf
                         
                         {{-- 1. SPK --}}
@@ -290,4 +295,7 @@
         </div>
     </div>
 </div>
-@endsection
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
