@@ -48,6 +48,16 @@ Route::get('/tte/kontrak/{type}/{id}/dokumen', [\App\Http\Controllers\PublicCont
     ->middleware('signed')
     ->name('public.contract-tte.document');
 
+// TTE QR untuk dokumen turunan Tagihan (Perjaldin & Honorarium)
+Route::get('/tte/tagihan/{type}/{id}', [\App\Http\Controllers\PublicTagihanSignatureController::class, 'show'])
+    ->whereIn('type', ['nominatif_perjaldin', 'daftar_nominatif_pembayaran_perjaldin', 'rekap_honorarium', 'nominatif_honorarium'])
+    ->middleware('signed')
+    ->name('public.tagihan-tte.show');
+Route::get('/tte/tagihan/{type}/{id}/dokumen', [\App\Http\Controllers\PublicTagihanSignatureController::class, 'document'])
+    ->whereIn('type', ['nominatif_perjaldin', 'daftar_nominatif_pembayaran_perjaldin', 'rekap_honorarium', 'nominatif_honorarium'])
+    ->middleware('signed')
+    ->name('public.tagihan-tte.document');
+
 // Route publik (signed URL) untuk Vendor Upload Dokumen Kontrak Final (TTD Basah)
 Route::get('/p/kontrak/{id}/vendor-upload', [\App\Http\Controllers\PublicContractVendorUploadController::class, 'show'])
     ->middleware('signed')

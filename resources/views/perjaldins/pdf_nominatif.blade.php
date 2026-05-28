@@ -37,6 +37,8 @@
         .ttd-kiri { width: 40%; }
         .ttd-tengah { width: 20%; }
         .ttd-kanan { width: 40%; }
+        .qr-tte { width: 90px; height: 90px; display: block; margin: 4px 0; }
+        .qr-label { font-size: 8px; color: #555; font-style: italic; margin-top: 2px; }
     </style>
 </head>
 <body>
@@ -103,11 +105,18 @@
             <td class="ttd-kiri">
                 <p>Mengetahui,</p>
                 <p>Pejabat Pembuat Komitmen</p>
+                @if(!empty($tteQrFilePath))
+                    <img src="{{ $tteQrFilePath }}" alt="QR TTE Nominatif Perjaldin" class="qr-tte">
+                    <div class="qr-label">Ditandatangani Secara Elektronik</div>
+                @else
+                    <br><br><br><br>
+                @endif
             </td>
             <td class="ttd-tengah"></td>
             <td class="ttd-kanan">
                 <p>{{ $kotaTtd }}, {{ $tglTtd }}</p>
                 <p>Bendahara Pengeluaran</p>
+                <br><br><br><br>
             </td>
         </tr>
         <tr>

@@ -38,6 +38,8 @@
         .ttd-kanan { width: 40%; text-align: right; }
         .ttd-nama { text-decoration: underline; font-weight: bold; margin-bottom: 2px; }
         .ttd-sig-space { height: 60px; }
+        .qr-tte { width: 80px; height: 80px; display: block; margin: 4px 0; }
+        .qr-label { font-size: 7px; color: #555; font-style: italic; margin-top: 2px; }
     </style>
 </head>
 <body>
@@ -142,6 +144,10 @@
         <td class="ttd-kiri">
             <p style="margin-bottom:3px;">Mengetahui</p>
             <p style="margin-bottom:0;">Pejabat Pembuat Komitmen</p>
+            @if(!empty($tteQrFilePath))
+                <img src="{{ $tteQrFilePath }}" alt="QR TTE Rekap Honorarium" class="qr-tte">
+                <div class="qr-label">Ditandatangani Secara Elektronik</div>
+            @endif
         </td>
         <td class="ttd-tengah"></td>
         <td class="ttd-kanan">
@@ -150,7 +156,7 @@
         </td>
     </tr>
     <tr>
-        <td class="ttd-kiri" style="padding-top:60px;">
+        <td class="ttd-kiri" style="padding-top:{{ !empty($tteQrFilePath) ? '6px' : '60px' }};">
             <p class="ttd-nama">{{ strtoupper($ppkNama) }}</p>
             <p style="margin-top:0;">NIP. {{ $ppkNip }}</p>
         </td>

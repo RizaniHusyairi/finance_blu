@@ -575,15 +575,10 @@ class HonorariumController extends Controller
             return redirect()->back()->withErrors(['error' => 'Honorarium tidak dalam status DRAFT / REVISI.']);
         }
 
-        // Cek dokumen wajib
-        $requiredDocs = ['Daftar Nominatif Bertandatangan', 'Dokumen Honorarium Bertandatangan'];
-        $uploadedDocs = $tagihan->arsipDokumen()->pluck('jenis_dokumen')->toArray();
-
-        foreach ($requiredDocs as $doc) {
-            if (!in_array($doc, $uploadedDocs)) {
-                return redirect()->back()->withErrors(['error' => "Dokumen wajib \"{$doc}\" belum diunggah."]);
-            }
-        }
+        // Dokumen Nominatif & Rekap Honorarium kini di-generate sistem dengan
+        // TTE QR otomatis setelah workflow approved (lihat App\Support\TagihanDocumentTte),
+        // sehingga tidak perlu lagi upload scan TTD basah sebagai prasyarat submit.
+        // Operator tetap boleh meng-upload arsip secara opsional untuk backward-compat.
 
         // Pastikan semua verifikator sudah terisi
         $missingVerif = collect([
@@ -656,12 +651,13 @@ class HonorariumController extends Controller
     public function exportPdf($id)
     {
         $tagihan = Tagihan::where('tipe_tagihan', 'HONORARIUM')
-            ->with(['detailHonorarium', 'dipaRevisionItem.coa'])
+            ->with(['detailHonorarium', 'dipaRevisionItem.coa', 'workflowInstance.approvals'])
             ->findOrFail($id);
 
         $data = [
             'tagihan' => $tagihan,
             'details' => $tagihan->detailHonorarium,
+            'tteQrFilePath' => \App\Support\TagihanDocumentTte::tteQrFilePath($tagihan, 'rekap_honorarium'),
         ];
 
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('honorarium.pdf', $data);
@@ -673,10 +669,12 @@ class HonorariumController extends Controller
     public function exportNominatifPdf($id)
     {
         $tagihan = Tagihan::where('tipe_tagihan', 'HONORARIUM')
+            ->with(['workflowInstance.approvals'])
             ->findOrFail($id);
 
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('honorarium.pdf-nominatif', [
             'tagihan' => $tagihan,
+            'tteQrFilePath' => \App\Support\TagihanDocumentTte::tteQrFilePath($tagihan, 'nominatif_honorarium'),
         ]);
         $pdf->setPaper('a4', 'portrait');
 

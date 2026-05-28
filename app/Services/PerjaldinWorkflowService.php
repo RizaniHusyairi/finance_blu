@@ -276,17 +276,12 @@ class PerjaldinWorkflowService
                 $mappedStatus = "DITOLAK_{$rolePrefix}";
                 break;
             case 'APPROVED':
-                // Untuk Perjaldin: setelah seluruh verifikator (Kasubbag final) approve,
-                // tagihan masih HARUS menunggu Operator Perjaldin mengunggah dua file
-                // bertandatangan (Nominatif + Daftar Nominatif Pembayaran) sebelum
-                // boleh diteruskan ke Operator BLU untuk dibuatkan SPP.
-                if ($tagihan->tipe_tagihan === 'PERJALDIN') {
-                    $mappedStatus = $this->hasNominatifTtdComplete($tagihan)
-                        ? 'DISETUJUI_PERJALDIN'
-                        : 'MENUNGGU_UPLOAD_NOMINATIF_TTD';
-                } else {
-                    $mappedStatus = 'DISETUJUI_PERJALDIN';
-                }
+                // Setelah seluruh verifikator approve, dokumen Nominatif Perjaldin
+                // dan Daftar Nominatif Pembayaran Perjaldin otomatis menerima TTE QR
+                // (lihat App\Support\TagihanDocumentTte) sehingga tidak perlu lagi
+                // upload scan TTD basah. Backward-compat: bila operator masih
+                // meng-upload arsip TTD, tetap dianggap valid.
+                $mappedStatus = 'DISETUJUI_PERJALDIN';
                 break;
             default:
                 $mappedStatus = $instance->status;

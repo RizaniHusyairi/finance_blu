@@ -652,12 +652,17 @@ class PerjaldinController extends Controller
     public function exportPdfNominatif($id)
     {
         $tagihan = Tagihan::where('tipe_tagihan', 'PERJALDIN')
-            ->with(['detailPerjaldin.pegawai', 'detailPerjaldin.provinsi'])
+            ->with([
+                'detailPerjaldin.pegawai',
+                'detailPerjaldin.provinsi',
+                'workflowInstance.approvals',
+            ])
             ->findOrFail($id);
 
         $data = [
             'tagihan' => $tagihan,
             'details' => $tagihan->detailPerjaldin,
+            'tteQrFilePath' => \App\Support\TagihanDocumentTte::tteQrFilePath($tagihan, 'nominatif_perjaldin'),
         ];
 
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('perjaldins.pdf_nominatif', $data);
@@ -669,12 +674,17 @@ class PerjaldinController extends Controller
     public function exportPdfLampiran($id)
     {
         $tagihan = Tagihan::where('tipe_tagihan', 'PERJALDIN')
-            ->with(['detailPerjaldin.pegawai', 'detailPerjaldin.provinsi'])
+            ->with([
+                'detailPerjaldin.pegawai',
+                'detailPerjaldin.provinsi',
+                'workflowInstance.approvals',
+            ])
             ->findOrFail($id);
 
         $data = [
             'tagihan' => $tagihan,
             'details' => $tagihan->detailPerjaldin,
+            'tteQrFilePath' => \App\Support\TagihanDocumentTte::tteQrFilePath($tagihan, 'daftar_nominatif_pembayaran_perjaldin'),
         ];
 
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('perjaldins.pdf_lampiran', $data);

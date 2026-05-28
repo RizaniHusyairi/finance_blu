@@ -36,6 +36,7 @@ class UserAccountSeeder extends Seeder
             ['MUTIA RACHMI',                     'ppspm@sikeren.id',                ['PPSPM', 'Koordinator Keuangan']],
             ['YENY PUJI ASTUTI',                 'bendahara.pengeluaran@sikeren.id',['Bendahara Pengeluaran']],
             ['SITI KHOLIFAH',                    'bendahara.penerimaan@sikeren.id', ['Bendahara Penerimaan']],
+            ['KHANINA RIZKI SEKAR ANDARINI',     'demo.keuangan@sikeren.id',        ['PPK', 'PPSPM', 'Koordinator Keuangan', 'Bendahara Pengeluaran', 'Bendahara Penerimaan']],
             ['GUSTI AYU KHARISMA MAHARANI',      'perjaldin@sikeren.id',            ['Operator Perjaldin']],
             ['RIZKI AULIA',                      'ppabp@sikeren.id',                ['PPABP']],
             ['VERNALDY REVIMAPUTRA SAMPE LALAN', 'pengadaan@sikeren.id',            ['Pejabat Pengadaan']],
