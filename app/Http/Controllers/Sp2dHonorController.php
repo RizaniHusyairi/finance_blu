@@ -115,6 +115,7 @@ class Sp2dHonorController extends Controller
             'spm.spp.tagihan.detailHonorarium',
             'spm.spp.tagihan.dipaRevisionItem.coa',
             'spm.spp.tagihan.arsipDokumen',
+            'spm.spp.tagihan.bkuPengeluaran.sumberRekening',
             'bendaharaPenerimaan',
             'sp2d.logs.user',
             'sp2d.workflowInstances.approvals.actedByUser',

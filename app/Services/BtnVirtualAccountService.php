@@ -77,6 +77,9 @@ class BtnVirtualAccountService
             ->first();
 
         $transaction = DB::transaction(function () use ($tagihan, $payload, $virtualAccount, $externalReference, $amount, $paidAt, $channel) {
+            $totalTagihanBerjalan = $tagihan ? (float) $tagihan->total_dengan_denda : 0;
+            $isFullPayment = $tagihan && $totalTagihanBerjalan > 0 && $amount >= $totalTagihanBerjalan;
+
             $transaction = PaymentTransaction::updateOrCreate(
                 [
                     'provider' => 'btn',
@@ -86,16 +89,14 @@ class BtnVirtualAccountService
                     'tagihan_jasa_id' => $tagihan?->id,
                     'virtual_account' => $virtualAccount,
                     'amount' => $amount,
-                    'status' => $tagihan ? 'paid' : 'unmatched',
+                    'status' => $tagihan ? ($isFullPayment ? 'paid' : 'partial') : 'unmatched',
                     'payment_channel' => $channel,
                     'paid_at' => $paidAt ? Carbon::parse($paidAt) : now(),
                     'payload' => $payload,
                 ]
             );
 
-            $totalTagihanBerjalan = $tagihan ? (float) $tagihan->total_dengan_denda : 0;
-
-            if ($tagihan && $amount >= $totalTagihanBerjalan) {
+            if ($isFullPayment) {
                 $tagihan->update([
                     'status' => 'LUNAS',
                     'status_pembayaran' => 'lunas',
@@ -132,7 +133,23 @@ class BtnVirtualAccountService
             'message' => $tagihan ? 'Callback pembayaran BTN diproses.' : 'Callback diterima tetapi tagihan tidak ditemukan.',
         ]);
 
-        if ($tagihan && $transaction->status === 'paid' && $transaction->wasRecentlyCreated) {
+        if ($tagihan && $transaction->status === 'partial') {
+            $freshTagihan = $tagihan->fresh(['mitra', 'mitraLegacy', 'details']);
+
+            try {
+                app(\App\Services\Pembukuan\PiutangSyncService::class)->syncFromPartial(
+                    $freshTagihan,
+                    [
+                        'amount' => (float) $transaction->amount,
+                        'paid_at' => $transaction->paid_at,
+                    ]
+                );
+            } catch (\Throwable $e) {
+                \Log::error('PiutangSync partial gagal di callback BTN: ' . $e->getMessage());
+            }
+        }
+
+        if ($tagihan && $transaction->status === 'paid') {
             $freshTagihan = $tagihan->fresh(['mitra', 'mitraLegacy', 'details']);
 
             // Sync ke piutang LUNAS + catat BKU
@@ -149,7 +166,9 @@ class BtnVirtualAccountService
                 \Log::error('PiutangSync gagal di callback BTN: ' . $e->getMessage());
             }
 
-            $this->sendPaymentReceipt($freshTagihan, $transaction);
+            if ($transaction->wasRecentlyCreated || $transaction->wasChanged('status')) {
+                $this->sendPaymentReceipt($freshTagihan, $transaction);
+            }
         }
 
         return [

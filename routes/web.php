@@ -160,7 +160,7 @@ Route::middleware(['auth', 'account.active'])->group(function () use ($internalR
         });
 
     // Laporan — Super Admin Jasa: rekap tagihan, terima setor, pembayaran, piutang, performa mitra
-    Route::middleware('role:Super Admin|Super Admin Jasa')
+    Route::middleware('role:Super Admin|Super Admin Jasa|Bendahara Penerimaan')
         ->prefix('super-admin-jasa/laporan')
         ->name('super-admin-jasa.laporan.')
         ->group(function () {

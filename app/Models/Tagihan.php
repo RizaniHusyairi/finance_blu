@@ -117,6 +117,11 @@ class Tagihan extends Model
         return $this->hasMany(Spp::class, 'tagihan_id');
     }
 
+    public function bkuPengeluaran()
+    {
+        return $this->hasMany(BukuKasUmum::class, 'referensi_pengeluaran_id');
+    }
+
     public function workflowInstances()
     {
         return $this->morphMany(WorkflowInstance::class, 'workflowable');

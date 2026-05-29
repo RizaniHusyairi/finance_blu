@@ -211,6 +211,7 @@
 
     <!-- KOLOM KANAN (Aksi, Form SP2D, Checklist) -->
     <div class="col-12 col-lg-4">
+        @include('sp2ds.partials.bku-status', ['tagihan' => $tagihan, 'sp2d' => $sp2d])
 
         <!-- A. FORM SP2D (Hanya muncul jika DRAFT/REVISI/BLM DIBUAT) -->
         @if(!$sp2d || in_array($sp2d->status, [\App\Models\DokumenSp2d::STATUS_DRAFT, \App\Models\DokumenSp2d::STATUS_REVISI]))

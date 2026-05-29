@@ -750,6 +750,7 @@ class TagihanJasaController extends Controller
             'creator',
             'arsipDokumen.uploader',
             'details.layananJasa.parent.parent.parent.parent.parent',
+            'transaksiPenerimaan.bukuKasUmums.sumberRekening',
             'workflowInstance.approvals.actedByUser',
         ])->findOrFail($id);
 
@@ -767,6 +768,7 @@ class TagihanJasaController extends Controller
             'creator',
             'arsipDokumen.uploader',
             'details.layananJasa.parent.parent.parent.parent.parent',
+            'transaksiPenerimaan.bukuKasUmums.sumberRekening',
             'workflowInstance.approvals.actedByUser',
         ]);
 

@@ -118,6 +118,7 @@ class Sp2dPerjaldinController extends Controller
             'spm.spp.tagihan.detailPerjaldin.pegawai',
             'spm.spp.tagihan.detailPerjaldin.provinsi',
             'spm.spp.tagihan.komponenPerjaldin',
+            'spm.spp.tagihan.bkuPengeluaran.sumberRekening',
             'spm.spp.tagihanPerjaldinKomponen.dipaRevisionItem.coa',
             'bendaharaPenerimaan',
             'sp2d.logs.user',
