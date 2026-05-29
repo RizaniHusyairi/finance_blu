@@ -22,9 +22,7 @@ class DokumenNpi extends Model
     public const STATUS_REVISI = 'REVISI';
     public const STATUS_MENUNGGU_UPLOAD = 'MENUNGGU_UPLOAD';
     public const STATUS_NPI_TERBIT = 'NPI_TERBIT';
-    
-    public const NPI_SIGNED_ARCHIVE_TYPE = 'Signed NPI FIsik';
-    
+
     // Legacy constants (sequential)
     public const STATUS_SUBMITTED_BENPEN = 'SUBMITTED_BENPEN';
     public const STATUS_REJECTED_BENPEN = 'REJECTED_BENPEN';
@@ -69,17 +67,7 @@ class DokumenNpi extends Model
         return $this->morphOne(WorkflowInstance::class, 'workflowable')->latestOfMany();
     }
 
-    public function signedNpiArsip()
-    {
-        return $this->morphOne(ArsipDokumen::class, 'documentable')
-            ->where('jenis_dokumen', self::NPI_SIGNED_ARCHIVE_TYPE)
-            ->latestOfMany();
-    }
-
-    public function hasSignedNpiFile(): bool
-    {
-        return $this->signedNpiArsip()->exists();
-    }    public function getSppIdAttribute()
+    public function getSppIdAttribute()
     {
         return optional($this->spm)->spp_id;
     }

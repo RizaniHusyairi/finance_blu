@@ -1,397 +1,257 @@
 @extends('layouts.app')
 @section('title', 'Detail SP2D Kontrak')
 
+@section('content')
+@include('sp2ds.partials.detail-styles')
+
 @php
-    $badgeStatus = match($statusSp2d) {
-        'BELUM DIBUAT' => 'bg-warning text-dark',
-        'DRAFT' => 'bg-secondary',
-        'REVISI' => 'bg-danger',
-        'MENUNGGU_VERIFIKASI' => 'bg-info text-dark',
-        'DISETUJUI_FINAL' => 'bg-success',
-        'MENUNGGU_UPLOAD' => 'bg-success',
-        'SP2D_TERBIT' => 'bg-success',
-        'EXECUTED' => 'bg-primary',
-        default => 'bg-light text-dark'
+    use App\Models\DokumenSp2d;
+
+    $statusVariant = match($statusSp2d) {
+        'BELUM DIBUAT'        => 'amber',
+        'DRAFT'               => 'slate',
+        'REVISI'              => 'rose',
+        'MENUNGGU_VERIFIKASI' => 'cyan',
+        'DISETUJUI_FINAL', 'MENUNGGU_UPLOAD', 'SP2D_TERBIT' => 'green',
+        'EXECUTED'            => 'primary',
+        default               => 'slate',
+    };
+    $statusLabel = match($statusSp2d) {
+        'BELUM DIBUAT'        => 'Belum Dibuat',
+        'DRAFT'               => 'Draft',
+        'REVISI'              => 'Draft Revisi',
+        'MENUNGGU_VERIFIKASI' => 'Menunggu Verifikasi',
+        'DISETUJUI_FINAL'     => 'Disetujui Final',
+        'MENUNGGU_UPLOAD'     => 'Menunggu Upload SP2D',
+        'SP2D_TERBIT'         => 'SP2D Terbit',
+        'EXECUTED'            => 'Lunas / BKU',
+        default               => $statusSp2d,
     };
 
-    $formatStatus = fn($status) => match($status) {
-        'BELUM DIBUAT' => 'Belum Dibuat',
-        'DRAFT' => 'Draft',
-        'REVISI' => 'Draft Revisi',
-        'MENUNGGU_VERIFIKASI' => 'Menunggu Verifikasi',
-        'DISETUJUI_FINAL' => 'Disetujui Final',
-        'MENUNGGU_UPLOAD' => 'Menunggu Upload SP2D',
-        'SP2D_TERBIT' => 'SP2D Terbit',
-        'EXECUTED' => 'Lunas / BKU',
-        default => $status
+    $progressStep = match($statusSp2d) {
+        'BELUM DIBUAT', 'DRAFT', 'REVISI' => 1,
+        'MENUNGGU_VERIFIKASI'             => 2,
+        default                           => 3,
     };
+    $stepFail = in_array('REVISION', [$ppkApproval?->status, $kasubbagApproval?->status, $ppspmApproval?->status, $koordinatorApproval?->status], true);
 @endphp
 
-@section('content')
-{{-- Alerts --}}
-@if(session('success'))
-    <div class="alert alert-success border-0 shadow-sm alert-dismissible fade show mb-3">
-        <div class="d-flex align-items-center gap-2">
-            <i class="material-icons-outlined">check_circle</i>
-            <div>{{ session('success') }}</div>
+{{-- flash --}}
+@foreach (['success' => ['check_circle','success'], 'error' => ['error','danger']] as $key => $cfg)
+    @if(session($key))
+        <div class="alert alert-{{ $cfg[1] }} border-0 shadow-sm alert-dismissible fade show mb-3">
+            <i class="material-icons-outlined align-middle me-1">{{ $cfg[0] }}</i> {{ session($key) }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-@endif
-@if(session('error'))
-    <div class="alert alert-danger border-0 shadow-sm alert-dismissible fade show mb-3">
-        <div class="d-flex align-items-center gap-2">
-            <i class="material-icons-outlined">error</i>
-            <div>{{ session('error') }}</div>
-        </div>
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-@endif
+    @endif
+@endforeach
 
-{{-- 1. HEADER KERJA --}}
-<div class="card border-0 shadow-sm mb-4" style="background: linear-gradient(135deg, #f8f9fc, #eef2ff); border-left: 4px solid #4361ee !important;">
-    <div class="card-body p-4">
-        <div class="d-flex flex-column flex-xl-row justify-content-between gap-3">
-            <div class="flex-grow-1">
-                <div class="d-flex align-items-center gap-2 mb-2">
-                    <h4 class="fw-bold mb-0 text-dark">Detail SP2D Kontrak</h4>
-                    <span class="badge {{ $badgeStatus }} px-2 py-1">{{ $formatStatus($statusSp2d) }}</span>
+<div class="sp2dd">
+
+    {{-- ===== HERO ===== --}}
+    <div class="sp2dd-hero">
+        <span class="sp2dd-hero__bar"></span>
+        <div class="sp2dd-hero__in d-flex flex-column flex-xl-row justify-content-between gap-3">
+            <div>
+                <span class="sp2dd-eyebrow"><i class="material-icons-outlined" style="font-size:15px;">description</i> Detail Pencatatan SP2D · Kontrak</span>
+                <h1>{{ $kontrak?->nama_pekerjaan ?? 'Pencairan SP2D Kontrak' }}</h1>
+                <p class="sub">{{ $vendor?->nama_pihak ?? 'Vendor' }} &bull; Ref Tagihan {{ $tagihan?->nomor_tagihan ?? '-' }}</p>
+
+                <div class="sp2dd-hero__meta">
+                    <div><div class="k">Nomor SP2D</div><div class="v">{{ $sp2d?->nomor_sp2d ?? 'Belum ada' }}</div></div>
+                    <div><div class="k">Nomor NPI</div><div class="v">{{ $npi->nomor_npi ?? '-' }}</div></div>
+                    <div><div class="k">Nomor SPM</div><div class="v">{{ $spm?->nomor_spm ?? '-' }}</div></div>
+                    <div><div class="k">Nomor SPK</div><div class="v">{{ $kontrak?->nomor_spk ?? '-' }}</div></div>
                 </div>
-                <div class="row g-2 mt-2" style="font-size: 13px;">
-                    <div class="col-md-6"><span class="text-muted">Nomor SP2D:</span> <strong class="text-primary">{{ $sp2d?->nomor_sp2d ?? 'Belum ada' }}</strong></div>
-                    <div class="col-md-6"><span class="text-muted">Nomor NPI:</span> <strong>{{ $npi->nomor_npi ?? '-' }}</strong></div>
-                    <div class="col-md-6"><span class="text-muted">Nomor SPM:</span> <strong>{{ $spm?->nomor_spm ?? '-' }}</strong></div>
-                    <div class="col-md-6"><span class="text-muted">Nomor SPP:</span> <strong>{{ $spp?->nomor_spp ?? '-' }}</strong></div>
-                    <div class="col-md-6"><span class="text-muted">Pekerjaan:</span> <strong>{{ $kontrak?->nama_pekerjaan ?? '-' }}</strong></div>
-                    <div class="col-md-6"><span class="text-muted">Vendor:</span> <strong>{{ $vendor?->nama_pihak ?? '-' }}</strong></div>
-                </div>
-                <div class="mt-3 fs-5">
-                    <span class="text-muted" style="font-size: 14px;">Nilai SP2D:</span> <strong class="text-success">Rp {{ number_format($nominalSp2d, 0, ',', '.') }}</strong>
-                </div>
+                <div class="sp2dd-hero__amount"><span class="k">Nilai SP2D</span><span class="v">Rp {{ number_format($nominalSp2d, 0, ',', '.') }}</span></div>
             </div>
 
-            <div class="d-flex flex-column gap-2" style="min-width: 200px;">
-                <div class="d-flex flex-wrap gap-1 justify-content-end mb-2">
-                    @if($sp2d && !in_array($statusSp2d, ['BELUM DIBUAT', 'DRAFT']))
-                        <span class="badge {{ $ppkApproval?->status === 'APPROVED' ? 'bg-success' : ($ppkApproval?->status === 'PENDING' ? 'bg-warning text-dark' : (in_array($ppkApproval?->status, ['REVISION','REJECTED']) ? 'bg-danger' : 'bg-light text-dark border')) }}">
-                            PPK: {{ $ppkApproval?->status ?? 'N/A' }}
-                        </span>
-                        <span class="badge {{ $kasubbagApproval?->status === 'APPROVED' ? 'bg-success' : ($kasubbagApproval?->status === 'PENDING' ? 'bg-warning text-dark' : (in_array($kasubbagApproval?->status, ['REVISION','REJECTED']) ? 'bg-danger' : 'bg-light text-dark border')) }}">
-                            KSB: {{ $kasubbagApproval?->status ?? 'N/A' }}
-                        </span>
-                        <span class="badge {{ $ppspmApproval?->status === 'APPROVED' ? 'bg-success' : ($ppspmApproval?->status === 'PENDING' ? 'bg-warning text-dark' : (in_array($ppspmApproval?->status, ['REVISION','REJECTED']) ? 'bg-danger' : 'bg-light text-dark border')) }}">
-                            PPSPM: {{ $ppspmApproval?->status ?? 'N/A' }}
-                        </span>
-                        <span class="badge {{ $koordinatorApproval?->status === 'APPROVED' ? 'bg-success' : ($koordinatorApproval?->status === 'PENDING' ? 'bg-warning text-dark' : (in_array($koordinatorApproval?->status, ['REVISION','REJECTED']) ? 'bg-danger' : 'bg-light text-dark border')) }}">
-                            Koor: {{ $koordinatorApproval?->status ?? 'N/A' }}
-                        </span>
-                    @endif
-                </div>
-
-                <a href="{{ route('sp2ds.kontrak.index') }}" class="btn btn-outline-secondary btn-sm">
-                    <i class="material-icons-outlined" style="font-size:14px; vertical-align: middle;">arrow_back</i> Kembali
-                </a>
-
+            <div class="d-flex flex-column gap-2 align-items-stretch align-items-xl-end" style="min-width: 210px;">
+                <span class="sp2dd-status sp2dd-status--{{ $statusVariant }}"><span class="dot"></span> {{ $statusLabel }}</span>
+                <a href="{{ route('sp2ds.kontrak.index') }}" class="sp2dd-hbtn"><i class="material-icons-outlined">arrow_back</i> Kembali</a>
                 @if(in_array($statusSp2d, ['DISETUJUI_FINAL', 'MENUNGGU_UPLOAD', 'SP2D_TERBIT', 'EXECUTED']))
-                    <a href="{{ route('sp2ds.cetak-pdf', $sp2d->id) }}" target="_blank" class="btn btn-outline-primary btn-sm">
-                        <i class="material-icons-outlined" style="font-size:14px; vertical-align: middle;">print</i> Cetak PDF
-                    </a>
+                    <a href="{{ route('sp2ds.cetak-pdf', $sp2d->id) }}" target="_blank" class="sp2dd-hbtn sp2dd-hbtn--solid"><i class="material-icons-outlined">print</i> Cetak PDF</a>
                 @endif
-
                 @if($canSubmit)
-                    <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalSubmit">
-                        <i class="material-icons-outlined" style="font-size:14px; vertical-align: middle;">publish</i> Ajukan Verifikasi
-                    </button>
+                    <button type="button" class="sp2dd-hbtn sp2dd-hbtn--solid" data-bs-toggle="modal" data-bs-target="#modalSubmit"><i class="material-icons-outlined">publish</i> Ajukan Verifikasi</button>
                 @endif
             </div>
         </div>
     </div>
-</div>
 
-{{-- 2. PANEL STATUS & PROGRESS --}}
-<div class="card border-0 shadow-sm mb-4">
-    <div class="card-body p-4">
-        <h6 class="fw-bold text-primary mb-3"><i class="material-icons-outlined align-middle me-1" style="font-size: 20px;">checklist</i> Status & Kesiapan SP2D</h6>
-        <div class="row g-4">
-            {{-- Bagian Kiri: Checklist Visual --}}
-            <div class="col-md-6 border-end">
-                <ul class="list-unstyled mb-0" style="font-size: 13px;">
-                    <li class="mb-2 d-flex align-items-center">
-                        <i class="material-icons-outlined {{ $npi ? 'text-success' : 'text-danger' }} me-2" style="font-size: 18px;">{{ $npi ? 'check_circle' : 'cancel' }}</i> NPI Sumber Tersedia
-                    </li>
-                    <li class="mb-2 d-flex align-items-center">
-                        <i class="material-icons-outlined {{ $sp2d?->nomor_sp2d && $sp2d?->tanggal_sp2d ? 'text-success' : 'text-danger' }} me-2" style="font-size: 18px;">{{ $sp2d?->nomor_sp2d && $sp2d?->tanggal_sp2d ? 'check_circle' : 'cancel' }}</i> Nomor & Tanggal Tersedia
-                    </li>
-                    <li class="mb-2 d-flex align-items-center">
-                        <i class="material-icons-outlined {{ $nominalSp2d > 0 ? 'text-success' : 'text-warning' }} me-2" style="font-size: 18px;">{{ $nominalSp2d > 0 ? 'check_circle' : 'warning' }}</i> Nominal SP2D Terkalibrasi (Rp {{ number_format($nominalSp2d,0,',','.') }})
-                    </li>
-                    <li class="mb-0 d-flex align-items-center">
-                        <i class="material-icons-outlined {{ count($documentStatuses ?? []) > 0 ? 'text-success' : 'text-secondary' }} me-2" style="font-size: 18px;">folder</i> Dokumen Pendukung Lengkap
-                    </li>
-                </ul>
+    {{-- ===== STEPPER ===== --}}
+    @include('sp2ds.partials.detail-stepper', ['progressStep' => $progressStep, 'stepFail' => $stepFail])
+
+    {{-- ===== VERIFIKATOR ===== --}}
+    @if($sp2d && !in_array($statusSp2d, ['BELUM DIBUAT', 'DRAFT']))
+        @include('sp2ds.partials.detail-verifikator', ['verifikators' => [
+            'PPK' => $ppkApproval,
+            'Kasubbag' => $kasubbagApproval,
+            'PPSPM' => $ppspmApproval,
+            'Koordinator' => $koordinatorApproval,
+        ]])
+    @endif
+
+    <div class="row g-4">
+        {{-- ===== LEFT: SOURCE DATA ===== --}}
+        <div class="col-xl-7">
+            {{-- Ringkasan SP2D & NPI --}}
+            <div class="sp2dd-card">
+                <div class="sp2dd-card__head"><div class="sp2dd-card__title"><i class="material-icons-outlined">receipt_long</i> Ringkasan SP2D &amp; NPI</div></div>
+                <div class="sp2dd-card__body">
+                    <div class="sp2dd-grid">
+                        <div class="sp2dd-field"><span class="k">Nomor SP2D</span><span class="v mono">{{ $sp2d?->nomor_sp2d ?? '-' }}</span></div>
+                        <div class="sp2dd-field"><span class="k">Tanggal SP2D</span><span class="v">{{ $sp2d?->tanggal_sp2d ? \Carbon\Carbon::parse($sp2d->tanggal_sp2d)->format('d M Y') : '-' }}</span></div>
+                        <div class="sp2dd-field"><span class="k">Nomor NPI</span><span class="v">{{ $npi->nomor_npi ?? '-' }}</span></div>
+                        <div class="sp2dd-field"><span class="k">Tanggal NPI</span><span class="v">{{ $npi->tanggal_npi ? \Carbon\Carbon::parse($npi->tanggal_npi)->format('d M Y') : '-' }}</span></div>
+                        <div class="sp2dd-field"><span class="k">Status NPI</span><span class="v">{{ str_replace('_',' ',$npi->status) }}</span></div>
+                        <div class="sp2dd-field"><span class="k">Uraian</span><span class="v">{{ $kontrak?->nama_pekerjaan ?? '-' }}</span></div>
+                    </div>
+                </div>
             </div>
-            {{-- Bagian Kanan: Progress Verifikasi Paralel --}}
-            <div class="col-md-6">
-                <div class="fw-semibold mb-2" style="font-size: 13px;">Progress Verifikasi SP2D:</div>
-                <div class="d-flex flex-wrap gap-2">
-                    <div class="border rounded p-2 text-center {{ $sp2d ? 'border-primary bg-primary bg-opacity-10' : 'bg-light' }}" style="flex: 1; min-width: 100px;">
-                        <div class="fw-bold" style="font-size: 12px;">Bend. Peng.</div>
-                        <div style="font-size: 10px;">{{ $sp2d ? 'SUBMITTED' : 'DRAFT' }}</div>
+
+            {{-- SPM & SPP --}}
+            <div class="sp2dd-card">
+                <div class="sp2dd-card__head"><div class="sp2dd-card__title"><i class="material-icons-outlined">request_quote</i> Ringkasan SPM &amp; SPP</div></div>
+                <div class="sp2dd-card__body">
+                    <div class="sp2dd-grid">
+                        <div class="sp2dd-field"><span class="k">Nomor SPM</span><span class="v">{{ $spm?->nomor_spm ?? '-' }}</span></div>
+                        <div class="sp2dd-field"><span class="k">Nomor SPP</span><span class="v">{{ $spp?->nomor_spp ?? '-' }}</span></div>
+                        <div class="sp2dd-field"><span class="k">Nomor Tagihan</span><span class="v">{{ $tagihan?->nomor_tagihan ?? '-' }}</span></div>
+                        <div class="sp2dd-field"><span class="k">Nilai Tagihan Akhir</span><span class="v" style="color:var(--d-green);">Rp {{ number_format($nominalSp2d, 0, ',', '.') }}</span></div>
                     </div>
-                    <div class="border rounded p-2 text-center {{ $ppkApproval?->status === 'APPROVED' ? 'border-success bg-success bg-opacity-10' : ($ppkApproval?->status === 'PENDING' ? 'border-warning bg-warning bg-opacity-10' : (in_array($ppkApproval?->status, ['REVISION','REJECTED']) ? 'border-danger bg-danger bg-opacity-10' : 'bg-light')) }}" style="flex: 1; min-width: 100px;">
-                        <div class="fw-bold" style="font-size: 12px;">PPK</div>
-                        <div style="font-size: 10px;">{{ $ppkApproval?->status ?? 'WAITING' }}</div>
+                </div>
+            </div>
+
+            {{-- Dasar Kontrak --}}
+            <div class="sp2dd-card">
+                <div class="sp2dd-card__head"><div class="sp2dd-card__title"><i class="material-icons-outlined">assignment</i> Dasar Kontrak</div></div>
+                <div class="sp2dd-card__body">
+                    <div class="sp2dd-grid">
+                        <div class="sp2dd-field" style="grid-column: 1 / -1;"><span class="k">Nama Pekerjaan</span><span class="v">{{ $kontrak?->nama_pekerjaan ?? '-' }}</span></div>
+                        <div class="sp2dd-field"><span class="k">Nomor SPK</span><span class="v">{{ $kontrak?->nomor_spk ?? '-' }}</span></div>
+                        <div class="sp2dd-field"><span class="k">Termin</span><span class="v">{{ $termin?->termin_ke ?? '-' }} ({{ $termin?->jenis_termin ?? '-' }})</span></div>
+                        <div class="sp2dd-field"><span class="k">BAST</span><span class="v">{{ $detailKontrak?->nomor_bast ?? '-' }}</span></div>
+                        <div class="sp2dd-field"><span class="k">BAPP</span><span class="v">{{ $detailKontrak?->nomor_bapp ?? '-' }}</span></div>
+                        <div class="sp2dd-field"><span class="k">BAP</span><span class="v">{{ $detailKontrak?->nomor_bap ?? '-' }}</span></div>
                     </div>
-                    <div class="border rounded p-2 text-center {{ $kasubbagApproval?->status === 'APPROVED' ? 'border-success bg-success bg-opacity-10' : ($kasubbagApproval?->status === 'PENDING' ? 'border-warning bg-warning bg-opacity-10' : (in_array($kasubbagApproval?->status, ['REVISION','REJECTED']) ? 'border-danger bg-danger bg-opacity-10' : 'bg-light')) }}" style="flex: 1; min-width: 100px;">
-                        <div class="fw-bold" style="font-size: 12px;">Kasubbag</div>
-                        <div style="font-size: 10px;">{{ $kasubbagApproval?->status ?? 'WAITING' }}</div>
-                    </div>
-                    <div class="border rounded p-2 text-center {{ $ppspmApproval?->status === 'APPROVED' ? 'border-success bg-success bg-opacity-10' : ($ppspmApproval?->status === 'PENDING' ? 'border-warning bg-warning bg-opacity-10' : (in_array($ppspmApproval?->status, ['REVISION','REJECTED']) ? 'border-danger bg-danger bg-opacity-10' : 'bg-light')) }}" style="flex: 1; min-width: 100px;">
-                        <div class="fw-bold" style="font-size: 12px;">PPSPM</div>
-                        <div style="font-size: 10px;">{{ $ppspmApproval?->status ?? 'WAITING' }}</div>
-                    </div>
-                    <div class="border rounded p-2 text-center {{ $koordinatorApproval?->status === 'APPROVED' ? 'border-success bg-success bg-opacity-10' : ($koordinatorApproval?->status === 'PENDING' ? 'border-warning bg-warning bg-opacity-10' : (in_array($koordinatorApproval?->status, ['REVISION','REJECTED']) ? 'border-danger bg-danger bg-opacity-10' : 'bg-light')) }}" style="flex: 1; min-width: 100px;">
-                        <div class="fw-bold" style="font-size: 12px;">Koordinator</div>
-                        <div style="font-size: 10px;">{{ $koordinatorApproval?->status ?? 'WAITING' }}</div>
+                </div>
+            </div>
+
+            {{-- Vendor & Rekening --}}
+            <div class="sp2dd-card">
+                <div class="sp2dd-card__head"><div class="sp2dd-card__title"><i class="material-icons-outlined">account_balance</i> Vendor &amp; Rekening Tujuan</div></div>
+                <div class="sp2dd-card__body">
+                    <div class="sp2dd-grid">
+                        <div class="sp2dd-field" style="grid-column: 1 / -1;"><span class="k">Nama Vendor</span><span class="v">{{ $vendor?->nama_pihak ?? '-' }}</span></div>
+                        <div class="sp2dd-field"><span class="k">Bank</span><span class="v">{{ $rekening?->nama_bank ?? '-' }}</span></div>
+                        <div class="sp2dd-field"><span class="k">No. Rekening</span><span class="v mono">{{ $rekening?->nomor_rekening ?? '-' }}</span></div>
+                        <div class="sp2dd-field" style="grid-column: 1 / -1;"><span class="k">Atas Nama</span><span class="v">{{ $rekening?->nama_rekening ?? '-' }}</span></div>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
-</div>
 
-<div class="row g-4 mb-4">
-    {{-- KOLOM KIRI: Data Sumber --}}
-    <div class="col-xl-6">
-        {{-- Card NPI & SP2D --}}
-        <div class="card border-0 shadow-sm mb-4">
-            <div class="card-header bg-white border-bottom py-3">
-                <h6 class="mb-0 fw-bold"><i class="material-icons-outlined align-middle me-1" style="font-size:18px;">receipt</i> Ringkasan SP2D & NPI</h6>
-            </div>
-            <div class="card-body">
-                <div class="row g-2" style="font-size: 13px;">
-                    <div class="col-6"><span class="text-muted d-block">Nomor SP2D</span><strong class="text-primary">{{ $sp2d?->nomor_sp2d ?? '-' }}</strong></div>
-                    <div class="col-6"><span class="text-muted d-block">Tanggal SP2D</span><strong>{{ $sp2d?->tanggal_sp2d ? \Carbon\Carbon::parse($sp2d->tanggal_sp2d)->format('d M Y') : '-' }}</strong></div>
-                    <div class="col-6"><span class="text-muted d-block">Nomor NPI</span><strong>{{ $npi->nomor_npi ?? '-' }}</strong></div>
-                    <div class="col-6"><span class="text-muted d-block">Tanggal NPI</span><strong>{{ $npi->tanggal_npi ? \Carbon\Carbon::parse($npi->tanggal_npi)->format('d M Y') : '-' }}</strong></div>
-                    <div class="col-6"><span class="text-muted d-block">Status NPI</span><span class="badge bg-secondary">{{ $npi->status }}</span></div>
-                    <div class="col-6"><span class="text-muted d-block">Uraian SP2D</span><strong>{{ $kontrak?->nama_pekerjaan ?? '-' }}</strong></div>
-                </div>
-            </div>
-        </div>
+        {{-- ===== RIGHT: ACTION ===== --}}
+        <div class="col-xl-5">
+            <div class="sticky-side d-flex flex-column gap-4">
 
-        {{-- Card SPM & SPP --}}
-        <div class="card border-0 shadow-sm mb-4">
-            <div class="card-header bg-white border-bottom py-3">
-                <h6 class="mb-0 fw-bold"><i class="material-icons-outlined align-middle me-1" style="font-size:18px;">request_quote</i> Ringkasan SPM & SPP </h6>
-            </div>
-            <div class="card-body">
-                <div class="row g-2" style="font-size: 13px;">
-                    <div class="col-6"><span class="text-muted d-block">Nomor SPM</span><strong>{{ $spm?->nomor_spm ?? '-' }}</strong></div>
-                    <div class="col-6"><span class="text-muted d-block">Nomor SPP</span><strong>{{ $spp?->nomor_spp ?? '-' }}</strong></div>
-                    <div class="col-6"><span class="text-muted d-block">Nomor Tagihan</span><strong>{{ $tagihan?->nomor_tagihan ?? '-' }}</strong></div>
-                    <div class="col-6"><span class="text-muted d-block">Nilai Tagihan Akhir</span><strong class="text-success">Rp {{ number_format($nominalSp2d, 0, ',', '.') }}</strong></div>
-                </div>
-            </div>
-        </div>
+                {{-- Form / state card --}}
+                <div class="sp2dd-form-card">
+                    <div class="sp2dd-form-card__head"><i class="material-icons-outlined">draw</i> Informasi SP2D</div>
+                    <div class="sp2dd-form-card__body">
+                        <div class="sp2dd-readline"><span class="k">Nomor SP2D</span><span class="v mono" style="color:var(--d-primary);">{{ $sp2d?->nomor_sp2d ?? '[ Belum diisi ]' }}</span></div>
+                        <div class="sp2dd-readline"><span class="k">Tanggal SP2D</span><span class="v">{{ $sp2d?->tanggal_sp2d ? \Carbon\Carbon::parse($sp2d->tanggal_sp2d)->format('d M Y') : '[ Belum diisi ]' }}</span></div>
+                        <div class="sp2dd-amount-box"><span class="k">Nilai Netto SP2D</span><span class="v">Rp {{ number_format($nominalSp2d, 0, ',', '.') }}</span></div>
 
-        {{-- Card Kontrak & BAST --}}
-        <div class="card border-0 shadow-sm">
-            <div class="card-header bg-white border-bottom py-3">
-                <h6 class="mb-0 fw-bold"><i class="material-icons-outlined align-middle me-1" style="font-size:18px;">assignment</i> Dasar Kontrak</h6>
-            </div>
-            <div class="card-body">
-                <div class="row g-2" style="font-size: 13px;">
-                    <div class="col-12"><span class="text-muted d-block">Nama Pekerjaan</span><strong>{{ $kontrak?->nama_pekerjaan ?? '-' }}</strong></div>
-                    <div class="col-6"><span class="text-muted d-block">Nomor SPK</span><strong>{{ $kontrak?->nomor_spk ?? '-' }}</strong></div>
-                    <div class="col-6"><span class="text-muted d-block">Termin</span><strong>{{ $termin?->termin_ke ?? '-' }} ({{ $termin?->jenis_termin ?? '-' }})</strong></div>
-                    <div class="col-4"><span class="text-muted d-block">BAST</span><strong>{{ $detailKontrak?->nomor_bast ?? '-' }}</strong></div>
-                    <div class="col-4"><span class="text-muted d-block">BAPP</span><strong>{{ $detailKontrak?->nomor_bapp ?? '-' }}</strong></div>
-                    <div class="col-4"><span class="text-muted d-block">BAP</span><strong>{{ $detailKontrak?->nomor_bap ?? '-' }}</strong></div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    {{-- KOLOM KANAN: Form Validasi & Draft --}}
-    <div class="col-xl-6">
-        <div class="sticky-top" style="top: 1rem;">
-            
-            {{-- Form SP2D Kontrak --}}
-            <div class="card border-0 shadow-sm mb-4">
-                <div class="card-header {{ $isEditable ? 'bg-primary text-white' : 'bg-white text-dark' }} border-bottom py-3">
-                    <h6 class="mb-0 fw-bold"><i class="material-icons-outlined align-middle me-1" style="font-size:18px;">draw</i> Informasi SP2D</h6>
-                </div>
-                <div class="card-body bg-light">
-                    @if($isEditable)
-                        {{-- Read-Only Summary + Edit Button --}}
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold text-muted">Nomor SP2D</label>
-                            <div class="fw-bold fs-5 text-primary">{{ $sp2d?->nomor_sp2d ?? '[ BELUM DIISI ]' }}</div>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold text-muted">Tanggal SP2D</label>
-                            <div class="fw-bold">{{ $sp2d?->tanggal_sp2d ? \Carbon\Carbon::parse($sp2d->tanggal_sp2d)->format('d M Y') : '[ BELUM DIISI ]' }}</div>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold text-muted">Nominal SP2D</label>
-                            <div class="fw-bold text-success fs-5">Rp {{ number_format($nominalSp2d, 0, ',', '.') }}</div>
-                        </div>
-                        <button type="button" class="btn btn-warning fw-bold w-100 shadow-sm border border-warning" data-bs-toggle="modal" data-bs-target="#modalDraftSave">
-                            <i class="material-icons-outlined me-1" style="font-size: 16px; vertical-align: middle;">edit</i> Edit Draft SP2D
-                        </button>
-                    @else
-                        {{-- Mode Read-Only --}}
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold text-muted">Nomor SP2D</label>
-                            <div class="fw-bold fs-5">{{ $sp2d->nomor_sp2d }}</div>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold text-muted">Tanggal SP2D</label>
-                            <div class="fw-bold">{{ \Carbon\Carbon::parse($sp2d->tanggal_sp2d)->format('d M Y') }}</div>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold text-muted">Nominal SP2D</label>
-                            <div class="fw-bold text-success fs-5">Rp {{ number_format($nominalSp2d, 0, ',', '.') }}</div>
-                        </div>
-                        @php $signedSp2dArsip = $sp2d?->signed_arsip; @endphp
-
-                        @if($statusSp2d === 'DISETUJUI_FINAL')
-                            <div class="alert alert-success border-0 d-flex align-items-start gap-2">
-                                <i class="material-icons-outlined">check_circle</i>
-                                <div>
-                                    <div class="fw-semibold">SP2D telah disetujui seluruh verifikator.</div>
-                                    <div class="small">Unggah file SP2D bertandatangan terlebih dahulu, kemudian lanjutkan upload bukti transfer.</div>
-                                </div>
-                            </div>
-                            <form action="{{ route('sp2ds.kontrak.upload-signed-sp2d', $sp2d->id) }}" method="POST" enctype="multipart/form-data" class="border rounded-3 bg-white p-3">
-                                @csrf
-                                <div class="mb-3">
-                                    <label class="form-label fw-semibold">File SP2D Bertandatangan <span class="text-danger">*</span></label>
-                                    <input type="file" name="file_sp2d_ttd" class="form-control" accept=".pdf,.jpg,.jpeg,.png" required>
-                                    <div class="form-text">PDF / JPG / PNG, maksimal 10MB.</div>
-                                </div>
-                                <button type="submit" class="btn btn-primary w-100 fw-semibold" onclick="return confirm('Unggah file SP2D bertandatangan sekarang?')">
-                                    <i class="material-icons-outlined align-middle me-1" style="font-size: 18px;">upload_file</i>
-                                    Unggah SP2D Bertandatangan
-                                </button>
-                            </form>
-                        @elseif(in_array($statusSp2d, ['SP2D_TERBIT', 'MENUNGGU_UPLOAD']))
-                            <div class="alert alert-success border-0 d-flex align-items-start gap-2">
-                                <i class="material-icons-outlined">check_circle</i>
-                                <div>
-                                    <div class="fw-semibold">SP2D bertandatangan sudah diunggah.</div>
-                                    @if($signedSp2dArsip)
-                                        <a href="{{ \Illuminate\Support\Facades\Storage::url($signedSp2dArsip->path_file) }}" target="_blank" class="small fw-semibold text-primary d-block">
-                                            Lihat file SP2D: {{ $signedSp2dArsip->nama_file_asli }}
-                                        </a>
-                                    @endif
-                                    <div class="small mt-1">Selanjutnya upload bukti transfer untuk menyelesaikan tagihan.</div>
-                                </div>
-                            </div>
-
-                            <form action="{{ route('sp2ds.kontrak.upload-signed-sp2d', $sp2d->id) }}" method="POST" enctype="multipart/form-data" class="border rounded-3 bg-light p-3 mb-3">
-                                @csrf
-                                <div class="mb-2">
-                                    <label class="form-label fw-semibold small">Ganti File SP2D Bertandatangan <span class="text-muted">(opsional)</span></label>
-                                    <input type="file" name="file_sp2d_ttd" class="form-control form-control-sm" accept=".pdf,.jpg,.jpeg,.png">
-                                </div>
-                                <button type="submit" class="btn btn-outline-secondary btn-sm" onclick="return confirm('Ganti file SP2D bertandatangan?')">
-                                    <i class="material-icons-outlined align-middle me-1" style="font-size: 14px;">refresh</i>
-                                    Ganti File
-                                </button>
-                            </form>
-
-                            <form action="{{ route('sp2ds.catat-bku', $sp2d->id) }}" method="POST" enctype="multipart/form-data" class="border rounded-3 bg-white p-3">
-                                @csrf
-                                <div class="mb-3">
-                                    <label class="form-label fw-semibold">Keterangan Transfer <span class="text-muted">(opsional)</span></label>
-                                    <textarea name="catatan_bku" class="form-control" rows="3" placeholder="Contoh: Transfer pembayaran kontrak {{ $tagihan?->nomor_tagihan }}"></textarea>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label fw-semibold">Bukti Transfer SP2D <span class="text-danger">*</span></label>
-                                    <input type="file" name="bukti_transfer" class="form-control" accept=".pdf,.jpg,.jpeg,.png" required>
-                                    <div class="form-text">PDF / JPG / PNG, maksimal 5MB.</div>
-                                </div>
-                                <button type="submit" class="btn btn-success w-100 fw-semibold" onclick="return confirm('Upload bukti transfer dan selesaikan tagihan ini?')">
-                                    <i class="material-icons-outlined align-middle me-1" style="font-size: 18px;">upload_file</i>
-                                    Upload Bukti Transfer & Selesaikan Tagihan
-                                </button>
-                            </form>
-                        @elseif($statusSp2d === 'EXECUTED')
+                        @if($isEditable)
+                            <button type="button" class="sp2dd-btn sp2dd-btn--warn" data-bs-toggle="modal" data-bs-target="#modalDraftSave"><i class="material-icons-outlined">edit</i> Edit Draft SP2D</button>
+                            @if($canSubmit)
+                                <button type="button" class="sp2dd-btn sp2dd-btn--primary mt-2" data-bs-toggle="modal" data-bs-target="#modalSubmit"><i class="material-icons-outlined">publish</i> Ajukan Verifikasi</button>
+                            @endif
+                        @else
                             @php $buktiTransferSp2d = $sp2d?->bukti_transfer; @endphp
-                            <div class="alert alert-primary border-0 mb-0">
-                                <div class="d-flex align-items-start gap-2">
-                                    <i class="material-icons-outlined">task_alt</i>
+
+                            @if(in_array($statusSp2d, ['DISETUJUI_FINAL', 'SP2D_TERBIT', 'MENUNGGU_UPLOAD']))
+                                <div class="sp2dd-pay">
+                                    <div class="sp2dd-pay__banner">
+                                        <i class="material-icons-outlined">verified</i>
+                                        <div>
+                                            <div class="t">SP2D disetujui seluruh verifikator</div>
+                                            <div class="s">Unggah bukti transfer untuk menyelesaikan tagihan &amp; mencatat ke BKU.</div>
+                                        </div>
+                                    </div>
+                                    <form action="{{ route('sp2ds.catat-bku', $sp2d->id) }}" method="POST" enctype="multipart/form-data" id="formBuktiTransfer">
+                                        @csrf
+                                        <label class="sp2dd-label">Keterangan Transfer <span class="text-muted">(opsional)</span></label>
+                                        <textarea name="catatan_bku" class="sp2dd-input mb-3" rows="2" placeholder="Contoh: Transfer pembayaran kontrak {{ $tagihan?->nomor_tagihan }}"></textarea>
+
+                                        <label class="sp2dd-label">Bukti Transfer SP2D <span class="text-danger">*</span></label>
+                                        <div class="sp2dd-drop" id="dropBukti">
+                                            <div class="sp2dd-drop__icon"><i class="material-icons-outlined">cloud_upload</i></div>
+                                            <div class="sp2dd-drop__title">Seret &amp; lepas file di sini</div>
+                                            <div class="sp2dd-drop__hint">atau <span class="sp2dd-drop__browse">pilih dari perangkat</span> &middot; PDF / JPG / PNG &middot; maks. 5MB</div>
+                                            <input type="file" name="bukti_transfer" id="inputBukti" accept=".pdf,.jpg,.jpeg,.png" required>
+                                        </div>
+                                        <div class="sp2dd-file-pill" id="filePill">
+                                            <span class="sp2dd-file-pill__ic"><i class="material-icons-outlined">description</i></span>
+                                            <div class="sp2dd-min-w-0">
+                                                <div class="sp2dd-file-pill__name" id="fileName">-</div>
+                                                <div class="sp2dd-file-pill__meta" id="fileMeta"></div>
+                                            </div>
+                                            <button type="button" class="sp2dd-file-pill__x" id="fileClear" title="Hapus"><i class="material-icons-outlined">close</i></button>
+                                        </div>
+
+                                        <button type="submit" class="sp2dd-btn sp2dd-btn--success mt-3" onclick="return confirm('Upload bukti transfer dan selesaikan tagihan ini?')"><i class="material-icons-outlined">paid</i> Upload Bukti &amp; Selesaikan</button>
+                                    </form>
+                                </div>
+                            @elseif($statusSp2d === 'EXECUTED')
+                                <div class="sp2dd-pay__banner" style="background:linear-gradient(120deg,#eef2ff,#e0f2fe);border-color:rgba(79,70,229,.25);">
+                                    <i class="material-icons-outlined" style="color:var(--d-primary);">task_alt</i>
                                     <div>
-                                        <div class="fw-semibold">Bukti transfer sudah diunggah dan tagihan sudah SELESAI.</div>
-                                        <div class="small">Lanjutkan penyetoran pajak kontrak. Setelah NTPN lengkap, tagihan akan masuk BKU.</div>
-                                        @if($signedSp2dArsip)
-                                            <a href="{{ \Illuminate\Support\Facades\Storage::url($signedSp2dArsip->path_file) }}" target="_blank" class="small fw-semibold text-primary d-block">
-                                                Lihat SP2D bertandatangan: {{ $signedSp2dArsip->nama_file_asli }}
-                                            </a>
-                                        @endif
+                                        <div class="t">Tagihan SELESAI &amp; bukti transfer terunggah</div>
+                                        <div class="s">Lanjutkan penyetoran pajak kontrak. Setelah NTPN lengkap, masuk BKU.</div>
                                         @if($buktiTransferSp2d)
-                                            <a href="{{ \Illuminate\Support\Facades\Storage::url($buktiTransferSp2d->path_file) }}" target="_blank" class="small fw-semibold text-primary d-block">
-                                                Lihat bukti transfer: {{ $buktiTransferSp2d->nama_file_asli }}
-                                            </a>
+                                            <a href="{{ \Illuminate\Support\Facades\Storage::url($buktiTransferSp2d->path_file) }}" target="_blank" class="small fw-semibold text-primary d-inline-flex align-items-center gap-1 mt-1"><i class="material-icons-outlined" style="font-size:15px;">visibility</i> Lihat bukti transfer</a>
                                         @endif
                                     </div>
                                 </div>
-                            </div>
+                            @endif
                         @endif
-                    @endif
-                </div>
-            </div>
-
-            {{-- Card Vendor & Rekening --}}
-            <div class="card border-0 shadow-sm mb-4">
-                <div class="card-header bg-white border-bottom py-3">
-                    <h6 class="mb-0 fw-bold"><i class="material-icons-outlined align-middle me-1" style="font-size:18px;">account_balance</i> Vendor & Rekening Tujuan</h6>
-                </div>
-                <div class="card-body">
-                    <div class="row g-2" style="font-size: 13px;">
-                        <div class="col-12"><span class="text-muted d-block">Nama Vendor</span><strong>{{ $vendor?->nama_pihak ?? '-' }}</strong></div>
-                        <div class="col-6"><span class="text-muted d-block">Bank</span><strong>{{ $rekening?->nama_bank ?? '-' }}</strong></div>
-                        <div class="col-6"><span class="text-muted d-block">No. Rekening</span><strong class="font-monospace text-primary">{{ $rekening?->nomor_rekening ?? '-' }}</strong></div>
-                        <div class="col-12"><span class="text-muted d-block">Atas Nama</span><strong>{{ $rekening?->nama_rekening ?? '-' }}</strong></div>
                     </div>
                 </div>
-            </div>
 
-            {{-- Riwayat Workflow/Revisi --}}
-            @if($revisionNotes->count() > 0)
-            <div class="card border-0 shadow-sm mb-4 border-start border-4 border-danger">
-                <div class="card-header bg-white border-bottom py-3">
-                    <h6 class="mb-0 fw-bold text-danger"><i class="material-icons-outlined align-middle me-1" style="font-size:18px;">replay</i> Catatan Revisi Verifier</h6>
-                </div>
-                <div class="card-body p-3">
-                    @foreach($revisionNotes as $note)
-                        <div class="mb-3 {{ !$loop->last ? 'border-bottom pb-3' : 'mb-0' }}">
-                            <div class="fw-bold" style="font-size: 13px;">{{ $note['role'] }}</div>
-                            <div class="text-muted" style="font-size: 11px;">{{ $note['user'] }} • {{ $note['time'] }}</div>
-                            <div class="mt-1 fst-italic text-dark px-2 border-start border-2 border-danger bg-danger bg-opacity-10 py-1" style="font-size: 13px;">
-                                "{{ $note['catatan'] }}"
-                            </div>
+                {{-- Revisi notes --}}
+                @if($revisionNotes->count() > 0)
+                <div class="sp2dd-card" style="border-color: rgba(225,29,72,.3);">
+                    <div class="sp2dd-card__head"><div class="sp2dd-card__title" style="color:var(--d-rose);"><i class="material-icons-outlined" style="color:var(--d-rose);">replay</i> Catatan Revisi Verifikator</div></div>
+                    <div class="sp2dd-card__body">
+                        <div class="sp2dd-tl">
+                            @foreach($revisionNotes as $note)
+                                <div class="sp2dd-tl__item" style="animation-delay: {{ $loop->index * 0.06 }}s;">
+                                    <span class="sp2dd-tl__dot" style="background:var(--d-rose);box-shadow:0 0 0 4px rgba(225,29,72,.15);"></span>
+                                    <div class="sp2dd-tl__t">{{ $note['role'] }}</div>
+                                    <div class="sp2dd-tl__m">{{ $note['user'] }} &bull; {{ $note['time'] }}</div>
+                                    <div class="sp2dd-tl__note">"{{ $note['catatan'] }}"</div>
+                                </div>
+                            @endforeach
                         </div>
-                    @endforeach
+                    </div>
                 </div>
+                @endif
             </div>
-            @endif
         </div>
     </div>
 </div>
 
-{{-- MODAL AREA --}}
-
-{{-- Modal Simpan Draft --}}
+{{-- ===== MODALS ===== --}}
 @if($isEditable)
 <div class="modal fade" id="modalDraftSave" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg" style="border-radius: 1rem; overflow: hidden;">
-            <div class="modal-header border-0 text-white p-4" style="background: linear-gradient(135deg, #1e293b, #334155);">
+            <div class="modal-header border-0 text-white p-4" style="background: linear-gradient(135deg, #4f46e5, #7c3aed);">
                 <div>
-                    <h5 class="modal-title fw-bold mb-1"><i class="material-icons-outlined me-1" style="font-size: 20px; vertical-align: middle;">edit</i> Edit Draft SP2D</h5>
+                    <h5 class="modal-title fw-bold mb-1"><i class="material-icons-outlined me-1" style="font-size:20px; vertical-align:middle;">edit</i> Edit Draft SP2D</h5>
                     <div class="small opacity-75">Kontrak &mdash; {{ $kontrak?->nama_pekerjaan ?? 'Pencairan SP2D' }}</div>
                 </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
@@ -400,32 +260,24 @@
                 @csrf
                 <input type="hidden" id="submitFormFlag" name="is_submit" value="0">
                 <div class="modal-body p-4">
-                    <div class="alert alert-info border-0 py-2 d-flex align-items-center gap-2 mb-4" style="font-size: 0.85rem;">
-                        <i class="material-icons-outlined" style="font-size: 18px;">info</i>
+                    <div class="alert alert-info border-0 py-2 d-flex align-items-center gap-2 mb-4" style="font-size:.85rem;">
+                        <i class="material-icons-outlined" style="font-size:18px;">info</i>
                         <span>Isi data pencatatan SP2D. Setelah disimpan, Anda dapat mengajukan verifikasi.</span>
                     </div>
-
                     <div class="mb-3">
-                        <label class="form-label fw-semibold">Nomor SP2D <span class="text-danger">*</span></label>
-                        <input type="text" name="nomor_sp2d" class="form-control fw-bold text-primary bg-light" required value="{{ old('nomor_sp2d', $sp2d?->nomor_sp2d ?? $autoNomorSp2d) }}" placeholder="Contoh: 1234/SP2D/2026">
-                        <small class="text-muted"><i class="bi bi-info-circle me-1"></i>Nomor di atas diturunkan dari SPP, ubah jika perlu.</small>
+                        <label class="sp2dd-label">Nomor SP2D <span class="text-danger">*</span></label>
+                        <input type="text" name="nomor_sp2d" class="sp2dd-input" required value="{{ old('nomor_sp2d', $sp2d?->nomor_sp2d ?? $autoNomorSp2d) }}" placeholder="Contoh: 1234/SP2D/2026">
+                        <small class="text-muted"><i class="bi bi-info-circle me-1"></i>Diturunkan dari SPP, ubah jika perlu.</small>
                     </div>
-
                     <div class="mb-3">
-                        <label class="form-label fw-semibold">Tanggal SP2D <span class="text-danger">*</span></label>
-                        <input type="date" name="tanggal_sp2d" class="form-control" required value="{{ old('tanggal_sp2d', $sp2d?->tanggal_sp2d ? \Carbon\Carbon::parse($sp2d->tanggal_sp2d)->format('Y-m-d') : date('Y-m-d')) }}">
+                        <label class="sp2dd-label">Tanggal SP2D <span class="text-danger">*</span></label>
+                        <input type="date" name="tanggal_sp2d" class="sp2dd-input" required value="{{ old('tanggal_sp2d', $sp2d?->tanggal_sp2d ? \Carbon\Carbon::parse($sp2d->tanggal_sp2d)->format('Y-m-d') : date('Y-m-d')) }}">
                     </div>
-
-                    <div class="bg-light rounded p-3 border d-flex justify-content-between align-items-center">
-                        <div class="small text-muted fw-semibold">Nilai Netto SP2D</div>
-                        <div class="fw-bold text-success fs-5">Rp {{ number_format($nominalSp2d, 0, ',', '.') }}</div>
-                    </div>
+                    <div class="sp2dd-amount-box"><span class="k">Nilai Netto SP2D</span><span class="v">Rp {{ number_format($nominalSp2d, 0, ',', '.') }}</span></div>
                 </div>
                 <div class="modal-footer border-0 bg-light px-4 py-3">
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
-                    <button type="submit" class="btn btn-warning fw-bold px-4 shadow-sm border border-warning">
-                        <i class="material-icons-outlined me-1" style="font-size: 16px; vertical-align: middle;">save</i> Simpan Draft SP2D
-                    </button>
+                    <button type="submit" class="btn btn-warning fw-bold px-4 text-white"><i class="material-icons-outlined me-1" style="font-size:16px; vertical-align:middle;">save</i> Simpan Draft</button>
                 </div>
             </form>
         </div>
@@ -433,52 +285,96 @@
 </div>
 @endif
 
-{{-- Modal Ajukan Verifikasi --}}
 @if($canSubmit)
 <div class="modal fade" id="modalSubmit" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg" style="border-radius: 1rem; overflow: hidden;">
             <form action="{{ route('sp2ds.kontrak.submit', $npi->id) }}" method="POST">
                 @csrf
-                <div class="modal-header border-0 text-white p-4" style="background: linear-gradient(135deg, #1d4ed8, #3b82f6);">
+                <div class="modal-header border-0 text-white p-4" style="background: linear-gradient(135deg, #1d4ed8, #0891b2);">
                     <div>
-                        <h5 class="modal-title fw-bold mb-1"><i class="material-icons-outlined me-1" style="font-size: 20px; vertical-align: middle;">publish</i> Ajukan Verifikasi SP2D</h5>
+                        <h5 class="modal-title fw-bold mb-1"><i class="material-icons-outlined me-1" style="font-size:20px; vertical-align:middle;">publish</i> Ajukan Verifikasi SP2D</h5>
                         <div class="small opacity-75">{{ $sp2d?->nomor_sp2d ?? '-' }} &bull; {{ $kontrak?->nama_pekerjaan ?? 'Kontrak' }}</div>
                     </div>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body p-4">
-                    <div class="alert alert-warning border-0 py-2 d-flex align-items-start gap-2 mb-4" style="font-size: 0.85rem;">
-                        <i class="material-icons-outlined mt-1" style="font-size: 18px;">warning</i>
-                        <span>Setelah pengajuan, draft SP2D akan <strong>dikunci sementara</strong> dan masuk ke proses verifikasi paralel.</span>
+                    <div class="alert alert-warning border-0 py-2 d-flex align-items-start gap-2 mb-4" style="font-size:.85rem;">
+                        <i class="material-icons-outlined mt-1" style="font-size:18px;">warning</i>
+                        <span>Setelah pengajuan, draft SP2D akan <strong>dikunci</strong> dan masuk proses verifikasi paralel.</span>
                     </div>
-
-                    <div class="bg-light rounded p-3 border mb-4">
-                        <div class="row g-2" style="font-size: 13px;">
-                            <div class="col-6"><span class="text-muted d-block">Nomor SP2D</span><strong class="text-primary">{{ $sp2d?->nomor_sp2d ?? '-' }}</strong></div>
-                            <div class="col-6"><span class="text-muted d-block">Tanggal SP2D</span><strong>{{ $sp2d?->tanggal_sp2d ? \Carbon\Carbon::parse($sp2d->tanggal_sp2d)->format('d M Y') : '-' }}</strong></div>
-                            <div class="col-12 mt-1"><span class="text-muted d-block">Nominal</span><strong class="text-success fs-6">Rp {{ number_format($nominalSp2d, 0, ',', '.') }}</strong></div>
-                        </div>
-                    </div>
-
-                    <div class="fw-semibold small mb-2">Notifikasi verifikasi akan dikirim ke:</div>
-                    <ul class="list-unstyled mb-0" style="font-size: 13px;">
-                        <li class="d-flex align-items-center gap-2 mb-2"><i class="material-icons-outlined text-primary" style="font-size: 16px;">person</i> <strong>PPK</strong></li>
-                        <li class="d-flex align-items-center gap-2 mb-2"><i class="material-icons-outlined text-primary" style="font-size: 16px;">person</i> <strong>Kepala Subbagian Keuangan dan Tata Usaha</strong></li>
-                        <li class="d-flex align-items-center gap-2 mb-2"><i class="material-icons-outlined text-primary" style="font-size: 16px;">person</i> <strong>PPSPM</strong></li>
-                        <li class="d-flex align-items-center gap-2"><i class="material-icons-outlined text-primary" style="font-size: 16px;">person</i> <strong>Koordinator Keuangan</strong></li>
+                    <div class="sp2dd-amount-box"><span class="k">Nominal SP2D</span><span class="v">Rp {{ number_format($nominalSp2d, 0, ',', '.') }}</span></div>
+                    <div class="fw-semibold small mb-2">Notifikasi dikirim ke:</div>
+                    <ul class="list-unstyled mb-0" style="font-size:13px;">
+                        <li class="d-flex align-items-center gap-2 mb-2"><i class="material-icons-outlined text-primary" style="font-size:16px;">person</i> <strong>PPK</strong></li>
+                        <li class="d-flex align-items-center gap-2 mb-2"><i class="material-icons-outlined text-primary" style="font-size:16px;">person</i> <strong>Kepala Subbagian Keuangan dan Tata Usaha</strong></li>
+                        <li class="d-flex align-items-center gap-2 mb-2"><i class="material-icons-outlined text-primary" style="font-size:16px;">person</i> <strong>PPSPM</strong></li>
+                        <li class="d-flex align-items-center gap-2"><i class="material-icons-outlined text-primary" style="font-size:16px;">person</i> <strong>Koordinator Keuangan</strong></li>
                     </ul>
                 </div>
                 <div class="modal-footer border-0 bg-light px-4 py-3">
                     <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">Batal</button>
-                    <button type="submit" class="btn btn-primary fw-bold px-4 shadow-sm">
-                        <i class="material-icons-outlined me-1" style="font-size: 16px; vertical-align: middle;">send</i> Ajukan Sekarang
-                    </button>
+                    <button type="submit" class="btn btn-primary fw-bold px-4"><i class="material-icons-outlined me-1" style="font-size:16px; vertical-align:middle;">send</i> Ajukan Sekarang</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 @endif
+
+@push('script')
+<script>
+(function () {
+    var drop = document.getElementById('dropBukti');
+    if (!drop) return;
+    var input = document.getElementById('inputBukti');
+    var pill = document.getElementById('filePill');
+    var nameEl = document.getElementById('fileName');
+    var metaEl = document.getElementById('fileMeta');
+    var clearBtn = document.getElementById('fileClear');
+
+    function humanSize(bytes) {
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+        return (bytes / 1048576).toFixed(2) + ' MB';
+    }
+
+    function render() {
+        if (input.files && input.files.length) {
+            var f = input.files[0];
+            nameEl.textContent = f.name;
+            metaEl.textContent = humanSize(f.size) + ' \u00b7 siap diunggah';
+            pill.classList.add('show');
+            drop.classList.add('has-file');
+            drop.querySelector('.sp2dd-drop__title').textContent = 'File terpilih';
+        } else {
+            pill.classList.remove('show');
+            drop.classList.remove('has-file');
+            drop.querySelector('.sp2dd-drop__title').textContent = 'Seret & lepas file di sini';
+        }
+    }
+
+    input.addEventListener('change', render);
+
+    clearBtn.addEventListener('click', function () {
+        input.value = '';
+        render();
+    });
+
+    ['dragenter', 'dragover'].forEach(function (ev) {
+        drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.add('is-drag'); });
+    });
+    ['dragleave', 'drop'].forEach(function (ev) {
+        drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.remove('is-drag'); });
+    });
+    drop.addEventListener('drop', function (e) {
+        if (e.dataTransfer && e.dataTransfer.files.length) {
+            input.files = e.dataTransfer.files;
+            render();
+        }
+    });
+})();
+</script>
+@endpush
 
 @endsection

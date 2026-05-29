@@ -18,6 +18,7 @@ use App\Support\PaymentPdfReference;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Notification;
 use App\Services\WorkflowService;
 
@@ -525,6 +526,12 @@ class SppController extends Controller
         }
 
         DB::transaction(function () use ($request, $tagihan, $existingSpp, $defaultBudgetItemId) {
+            // Bentuk/perbaharui baris potongan_tagihan PPh 21 honorarium dari
+            // agregasi detail_honorarium.pph sebelum dokumen SPP disimpan.
+            $this->syncPotonganPajakHonor($tagihan);
+
+            $tagihan->refresh();
+
             $spp = DokumenSpp::updateOrCreate(
                 ['id' => $existingSpp?->id],
                 [
@@ -556,6 +563,99 @@ class SppController extends Controller
         });
 
         return redirect()->route('spps.honor.detail', $tagihan->id)->with('success', 'Draft SPP Honorarium berhasil disimpan.');
+    }
+
+    /**
+     * Bentuk/perbaharui baris potongan_tagihan PPh 21 honorarium dari agregasi
+     * detail_honorarium.pph. Dipanggil di dalam transaksi storeHonor.
+     *
+     * - Satu baris potongan_tagihan (jenis_potongan = PAJAK) per jenis pajak.
+     * - Menolak revisi jika baris pajak sudah memiliki kode_billing atau ntpn.
+     * - Menyinkronkan tagihan.total_potongan & tagihan.total_netto.
+     */
+    private function syncPotonganPajakHonor(Tagihan $tagihan): void
+    {
+        $details = $tagihan->detailHonorarium()->get();
+        $totalPphFromDetail = (float) $details->sum('pph');
+        $totalDpp = (float) $details->sum('nilai_honor');
+
+        // Guard revisi: jangan ubah baris pajak yang sudah masuk tahap billing/setor.
+        $lockedExists = $tagihan->potonganTagihan()
+            ->where('jenis_potongan', 'PAJAK')
+            ->where(function ($q) {
+                $q->whereNotNull('kode_billing')->orWhereNotNull('ntpn');
+            })
+            ->exists();
+
+        if ($lockedExists) {
+            throw ValidationException::withMessages([
+                'error' => 'Revisi pajak honorarium tidak diperbolehkan setelah Kode Billing/NTPN terbentuk.',
+            ]);
+        }
+
+        // Hapus baris pajak honor lama (beserta arsipnya) — aman karena belum di-billing.
+        $oldPotongan = $tagihan->potonganTagihan()->where('jenis_potongan', 'PAJAK')->get();
+        foreach ($oldPotongan as $old) {
+            $old->arsipDokumen()->delete();
+            $old->delete();
+        }
+
+        // Hitung ulang total bruto dari detail honor agar konsisten.
+        $totalBruto = (float) ($tagihan->total_bruto ?: $details->sum('nilai_honor'));
+        $totalPotonganPajak = 0.0;
+
+        if ($totalPphFromDetail > 0) {
+            $pajak = MasterTarifPajak::where('status_aktif', true)
+                ->where('kode_pajak', 'PPH21-TER')
+                ->first()
+                ?? MasterTarifPajak::where('status_aktif', true)
+                    ->where('jenis_pajak', 'like', '%21%')
+                    ->orderByDesc('berlaku_mulai')
+                    ->first();
+
+            if (! $pajak) {
+                throw ValidationException::withMessages([
+                    'error' => 'Tarif pajak PPh 21 aktif belum tersedia di Master Tarif Pajak. Hubungi admin untuk menambahkannya.',
+                ]);
+            }
+
+            PotonganTagihan::create([
+                'tagihan_id' => $tagihan->id,
+                'pajak_id' => $pajak->id,
+                'jenis_potongan' => 'PAJAK',
+                'deskripsi' => 'PPh 21 honorarium',
+                'dpp' => max(0, $totalDpp),
+                'persentase_tarif_snapshot' => $pajak->persentase,
+                'nama_pajak_snapshot' => $pajak->jenis_pajak,
+                'nominal_potongan' => $totalPphFromDetail,
+            ]);
+
+            $totalPotonganPajak = $totalPphFromDetail;
+
+            // Konsistensi: jumlah baris pajak harus sama dengan total pph detail.
+            if (round($totalPotonganPajak, 2) !== round($totalPphFromDetail, 2)) {
+                throw ValidationException::withMessages([
+                    'error' => 'Selisih PPh 21 honorarium tidak konsisten.',
+                ]);
+            }
+
+            LogStatusDokumen::create([
+                'dokumen_type' => PotonganTagihan::class,
+                'dokumen_id' => $tagihan->id,
+                'user_id' => auth()->id(),
+                'role_saat_itu' => auth()->user()?->getRoleNames()->first() ?? 'Operator BLU',
+                'status_baru' => 'CREATED',
+                'aksi' => 'CREATE_PAJAK_HONOR',
+                'catatan' => 'Pembentukan potongan PPh 21 honorarium: Rp ' . number_format($totalPphFromDetail, 0, ',', '.'),
+                'ip_address' => request()->ip(),
+            ]);
+        }
+
+        // Sinkronisasi total tagihan.
+        $tagihan->update([
+            'total_potongan' => $totalPotonganPajak,
+            'total_netto' => max(0, $totalBruto - $totalPotonganPajak),
+        ]);
     }
 
     public function submitHonorToPpk($honorarium_id)

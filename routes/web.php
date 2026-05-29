@@ -839,14 +839,12 @@ Route::middleware(['auth', 'account.active'])->group(function () use ($internalR
         Route::get('/npis/perjaldin/{id}/detail', [\App\Http\Controllers\NpiPerjaldinController::class, 'show'])->name('npis.perjaldin.detail');
         Route::post('/npis/perjaldin/{id}/store', [\App\Http\Controllers\NpiPerjaldinController::class, 'store'])->name('npis.perjaldin.store');
         Route::post('/npis/perjaldin/{id}/submit', [\App\Http\Controllers\NpiPerjaldinController::class, 'submit'])->name('npis.perjaldin.submit');
-        Route::post('/npis/perjaldin/{npi}/upload-signed-npi', [\App\Http\Controllers\NpiPerjaldinController::class, 'uploadSignedNpi'])->name('npis.perjaldin.upload-signed-npi');
 
         // NPI Honorarium
         Route::get('/npis/honor', [\App\Http\Controllers\NpiHonorController::class, 'index'])->name('npis.honor.index');
         Route::get('/npis/honor/{spm}/detail', [\App\Http\Controllers\NpiHonorController::class, 'show'])->name('npis.honor.detail');
         Route::post('/npis/honor/{spm}/store', [\App\Http\Controllers\NpiHonorController::class, 'store'])->name('npis.honor.store');
         Route::post('/npis/honor/{spm}/submit', [\App\Http\Controllers\NpiHonorController::class, 'submit'])->name('npis.honor.submit');
-        Route::post('/npis/honor/{npi}/upload-signed-npi', [\App\Http\Controllers\NpiHonorController::class, 'uploadSignedNpi'])->name('npis.honor.upload-signed-npi');
 
         // NPI Legacy (if needed)
         Route::get('/npis', [\App\Http\Controllers\NpiController::class, 'index'])->name('npis.index');
@@ -857,7 +855,6 @@ Route::middleware(['auth', 'account.active'])->group(function () use ($internalR
         Route::get('/npis/kontrak/{spm}/detail', [\App\Http\Controllers\NpiKontrakController::class, 'show'])->name('npis.kontrak.detail');
         Route::post('/npis/kontrak/{spm}/store', [\App\Http\Controllers\NpiKontrakController::class, 'store'])->name('npis.kontrak.store');
         Route::post('/npis/kontrak/{spm}/submit', [\App\Http\Controllers\NpiKontrakController::class, 'submit'])->name('npis.kontrak.submit');
-        Route::post('/npis/kontrak/{npi}/upload-signed-npi', [\App\Http\Controllers\NpiKontrakController::class, 'uploadSignedNpi'])->name('npis.kontrak.upload-signed-npi');
     });
 
     // ==== MODUL SP2D & BKU — Bendahara Pengeluaran ====

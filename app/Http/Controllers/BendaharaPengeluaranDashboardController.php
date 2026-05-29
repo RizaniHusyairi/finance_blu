@@ -123,6 +123,18 @@ class BendaharaPengeluaranDashboardController extends Controller
         $pajakSudahBilling = $potonganPajak->whereNotNull('kode_billing')->whereNull('ntpn');
         $pajakSudahSetor = $potonganPajak->whereNotNull('ntpn');
 
+        // 4b. Penyetoran Pajak Honorarium
+        $potonganPajakHonor = PotonganTagihan::where('jenis_potongan', 'PAJAK')
+            ->whereHas('tagihan', fn($q) => $q->where('tipe_tagihan', 'HONORARIUM')->where('status', 'SELESAI'))
+            ->whereHas('tagihan.spps.spm.npi.sp2d', fn($q) => $q->where('status', DokumenSp2d::STATUS_EXECUTED))
+            ->with(['tagihan', 'pajak'])
+            ->latest()
+            ->get();
+
+        $pajakHonorBelumBilling = $potonganPajakHonor->whereNull('kode_billing');
+        $pajakHonorSudahBilling = $potonganPajakHonor->whereNotNull('kode_billing')->whereNull('ntpn');
+        $pajakHonorSudahSetor = $potonganPajakHonor->whereNotNull('ntpn');
+
         // 5. Pembukuan
         $bkuBulanIni = BukuKasUmum::whereMonth('tanggal_transaksi', $now->month)
             ->whereYear('tanggal_transaksi', $now->year)
@@ -203,6 +215,7 @@ class BendaharaPengeluaranDashboardController extends Controller
             'spmKontrakSiapNpi', 'spmPerjaldinSiapNpi', 'spmHonorSiapNpi', 'totalNpiSiap',
             'npiKontrakSiapSp2d', 'npiPerjaldinSiapSp2d', 'npiHonorSiapSp2d', 'totalSp2dSiap',
             'potonganPajak', 'pajakBelumBilling', 'pajakSudahBilling', 'pajakSudahSetor',
+            'potonganPajakHonor', 'pajakHonorBelumBilling', 'pajakHonorSudahBilling', 'pajakHonorSudahSetor',
             'bkuBulanIni', 'totalPengeluaranBulanIni', 'saldoTerakhirBku', 'bkuTerbaru',
             'mutasiBelumRekon', 'rekonMatched', 'mutasiPending',
             'bungaRekeningBulanIni', 'transaksiBunga',

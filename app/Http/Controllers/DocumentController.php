@@ -7,6 +7,7 @@ use App\Models\DokumenNpi;
 use App\Models\DokumenSp2d;
 use App\Models\DokumenSpp;
 use App\Models\DokumenSpm;
+use App\Models\User;
 use App\Services\DocumentArchiveService;
 use App\Support\PaymentPdfReference;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -164,8 +165,11 @@ class DocumentController extends Controller
     {
         $sp2d->load([
             'npi.spm.spp.tagihan.detailKontrak.kontrakTermin.kontrak.vendor.rekening',
+            'npi.spm.spp.tagihan.dipaRevisionItem.coa',
+            'npi.spm.spp.tagihan.pihak',
             'npi.spm.spp.tagihan.potonganTagihan.pajak',
-            'bendaharaPengeluaran',
+            'npi.spm.spp.dipaRevisionItem.coa',
+            'bendaharaPengeluaran.profilable',
             'workflowInstance.approvals',
             'workflowInstances.approvals.actedByUser'
         ]);
@@ -177,17 +181,54 @@ class DocumentController extends Controller
         $kontrak = $tagihan?->detailKontrak?->kontrakTermin?->kontrak;
         $vendor = $kontrak?->vendor;
         $rekening = $vendor?->rekening?->first();
-        
+
         $nominalSp2d = (float) ($spp?->nominal_spp ?? $tagihan?->total_netto ?? 0);
-        $terbilang = terbilang_rupiah($nominalSp2d) . ' Rupiah';
+        $terbilang = terbilang_rupiah($nominalSp2d);
+
+        // Klasifikasi belanja (nama akun COA) — dari item DIPA tagihan/SPP.
+        $coa = $tagihan?->dipaRevisionItem?->coa ?? $spp?->dipaRevisionItem?->coa;
+        $klasifikasi = $coa?->jenis_akun ?: ($coa?->nama_akun ?? 'Belanja Barang');
+
+        // Kategori cara bayar (SP2D BLU - TRF, dll).
+        $caraBayar = $spp?->kategori_pembayaran ?? $spm?->cara_bayar ?? 'SP2D BLU - TRF';
+        $tahunAnggaran = $spm?->tahun_anggaran ?? $spp?->tahun_anggaran ?? date('Y');
+
+        // Tentukan penerima sesuai tipe tagihan.
+        $tipe = $tagihan?->tipe_tagihan;
+        if ($tipe === 'KONTRAK') {
+            $penerimaNama = $vendor?->nama_pihak ?? $tagihan?->pihak?->nama_pihak ?? '-';
+            $penerimaAlamat = $vendor?->alamat ?? $tagihan?->pihak?->alamat ?? '-';
+            $penerimaNpwp = $vendor?->npwp ?? $tagihan?->pihak?->npwp ?? '-';
+            $penerimaBank = $rekening?->nama_bank ?? '-';
+            $penerimaNoRek = $rekening?->nomor_rekening ?? '-';
+            $penerimaNamaRek = $rekening?->nama_rekening ?? $penerimaNama;
+        } else {
+            // PERJALDIN & HONORARIUM: banyak penerima → "Terlampir".
+            $penerimaNama = $tagihan?->pihak?->nama_pihak ?? 'PARA PENERIMA';
+            $penerimaAlamat = $tagihan?->pihak?->alamat ?? 'Terlampir';
+            $penerimaNpwp = 'Terlampir';
+            $penerimaBank = 'Terlampir';
+            $penerimaNoRek = 'Terlampir';
+            $penerimaNamaRek = 'Terlampir';
+        }
+
+        $uraian = $tagihan?->deskripsi ?? $npi?->catatan ?? $kontrak?->nama_pekerjaan ?? '-';
 
         $approvals = collect($sp2d->workflowInstances->sortByDesc('created_at')->first()?->approvals ?? []);
         $ppkApproval = $approvals->firstWhere('role_code', 'PPK');
-        $ppk = $ppkApproval?->actedByUser;
+        $ppk = $ppkApproval?->actedByUser ?: User::role('PPK')->with('profilable')->first();
+        $ppkNip = $ppk?->pegawai?->nip ?? '-';
+
+        $bendaharaPengeluaran = $sp2d->bendaharaPengeluaran ?: User::role('Bendahara Pengeluaran')->with('profilable')->first();
+        $bendaharaNip = $bendaharaPengeluaran?->pegawai?->nip ?? '-';
 
         $pdf = Pdf::loadView('sp2ds.pdf', compact(
-            'sp2d', 'npi', 'spm', 'spp', 'tagihan', 'kontrak', 'vendor', 
-            'rekening', 'nominalSp2d', 'terbilang', 'ppk'
+            'sp2d', 'npi', 'spm', 'spp', 'tagihan', 'kontrak', 'vendor',
+            'rekening', 'nominalSp2d', 'terbilang', 'ppk', 'ppkNip',
+            'bendaharaPengeluaran', 'bendaharaNip',
+            'klasifikasi', 'caraBayar', 'tahunAnggaran',
+            'penerimaNama', 'penerimaAlamat', 'penerimaNpwp', 'penerimaBank', 'penerimaNoRek', 'penerimaNamaRek',
+            'uraian'
         ));
 
         $pdf->setPaper('a4', 'portrait');

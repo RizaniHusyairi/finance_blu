@@ -272,11 +272,7 @@
     $readyCount  = collect($readinessChecklist)->where('status', 'ready')->count();
     $totalReady  = is_countable($readinessChecklist) ? count($readinessChecklist) : 0;
 
-    $showUploadCard   = in_array($statusNpi, [
-        \App\Models\DokumenNpi::STATUS_MENUNGGU_UPLOAD,
-        \App\Models\DokumenNpi::STATUS_NPI_TERBIT,
-        \App\Models\DokumenNpi::STATUS_DISETUJUI_FINAL,
-    ], true);
+    $showTteCard      = in_array($statusNpi, $finalStatuses, true);
     $showProgressCard = !in_array($statusNpi, ['DRAFT', 'Belum Dibuat', ''], true);
 
     $pesertaList = collect($tagihan?->detailPerjaldin ?? []);
@@ -313,7 +309,7 @@
                         <i class='bx bxs-file-pdf'></i> Cetak PDF
                     </a>
                 @endif
-                @if($npiModel && $statusNpi === \App\Models\DokumenNpi::STATUS_NPI_TERBIT)
+                @if($npiModel && $statusNpi !== \App\Models\DokumenNpi::STATUS_DRAFT && $statusNpi !== \App\Models\DokumenNpi::STATUS_REVISI && in_array($npiModel->status, $finalStatuses, true))
                     <a href="{{ route('sp2ds.perjaldin.detail', $npiModel->id) }}" class="btn btn-success fw-semibold">
                         <i class='bx bx-receipt'></i> Buat SP2D
                     </a>
@@ -640,56 +636,28 @@
         </div>
         @endif
 
-        <!-- Upload NPI Bertanda Tangan -->
-        @if($showUploadCard)
+        <!-- NPI Bertanda Tangan Elektronik (TTE) -->
+        @if($showTteCard)
         <div class="npi-card c-green mb-3">
             <div class="npi-card-head">
-                <span class="ico-wrap"><i class='bx bx-cloud-upload'></i></span>
+                <span class="ico-wrap"><i class='bx bxs-badge-check'></i></span>
                 <div>
-                    <h6>Upload NPI Bertanda Tangan</h6>
-                    <span class="head-sub">File fisik scan dokumen</span>
+                    <h6>NPI Bertanda Tangan Elektronik</h6>
+                    <span class="head-sub">Dokumen ber-TTE QR otomatis</span>
                 </div>
             </div>
             <div class="npi-card-body">
-                @if($npiModel->hasSignedNpiFile())
-                    <div class="d-flex align-items-center gap-3 p-3 rounded-3 mb-3"
-                         style="background: rgba(25,135,84,.06); border: 1px solid rgba(25,135,84,.2);">
-                        <i class='bx bxs-file-pdf text-danger fs-1'></i>
-                        <div class="flex-grow-1 npi-min-w-0">
-                            <div class="fw-bold text-truncate">{{ $npiModel->signedNpiArsip->nama_file_asli ?? 'Dokumen NPI' }}</div>
-                            <small class="text-muted">Diunggah {{ $npiModel->signedNpiArsip->created_at->format('d M Y H:i') }}</small>
-                        </div>
-                        <a href="{{ Storage::url($npiModel->signedNpiArsip->path_file) }}" target="_blank"
-                           class="btn btn-outline-primary btn-sm flex-shrink-0">
-                            <i class='bx bx-download'></i> Unduh
-                        </a>
+                <div class="alert alert-success d-flex align-items-start gap-2 mb-3">
+                    <i class='bx bx-check-shield fs-4'></i>
+                    <div class="font-13">
+                        <strong class="d-block">NPI telah disetujui seluruh verifikator.</strong>
+                        Dokumen NPI sudah ditandatangani secara elektronik (TTE QR). Tidak perlu unggah dokumen fisik. Silakan unduh PDF resmi dan lanjut membuat SP2D.
                     </div>
-                    <p class="small fw-semibold text-muted mb-2">Upload Ulang File NPI Fisik (Opsional)</p>
-                @else
-                    <div class="alert alert-warning d-flex align-items-start gap-2 mb-3">
-                        <i class='bx bx-time-five fs-4'></i>
-                        <div class="font-13">
-                            <strong class="d-block">Menunggu unggahan fisik.</strong>
-                            Cetak NPI, tandatangani, lalu unggah scan/foto sebagai dasar penerbitan NPI dan SP2D.
-                        </div>
-                    </div>
-                @endif
-
-                <form action="{{ route('npis.perjaldin.upload-signed-npi', $npiModel->id) }}" method="POST" enctype="multipart/form-data">
-                    @csrf
-                    <label class="form-label small fw-semibold mb-1">File NPI Bertanda Tangan</label>
-                    <div class="input-group">
-                        <input type="file" class="form-control" name="file_npi_ttd"
-                               accept=".pdf,.jpg,.jpeg,.png" required>
-                        <button class="btn btn-success" type="submit">
-                            <i class='bx bx-upload'></i> Unggah
-                        </button>
-                    </div>
-                    <small class="text-muted d-block mt-1">Format: PDF / JPG / PNG &middot; Maks. 10MB</small>
-                    @error('file_npi_ttd')
-                        <div class="text-danger small mt-1"><i class='bx bx-error-circle'></i> {{ $message }}</div>
-                    @enderror
-                </form>
+                </div>
+                <a href="{{ route('npis.cetak-pdf', $npiModel->id) }}" target="_blank"
+                   class="btn btn-outline-danger w-100">
+                    <i class='bx bxs-file-pdf'></i> Lihat / Unduh PDF NPI ber-TTE
+                </a>
             </div>
         </div>
         @endif
@@ -797,11 +765,6 @@
                         <div class="alert alert-danger border-0 mb-0 p-2 font-13">
                             <strong><i class='bx bx-revision'></i> Dokumen Revisi.</strong>
                             Lakukan perbaikan lalu simpan ulang.
-                        </div>
-                    @elseif($statusNpi === \App\Models\DokumenNpi::STATUS_MENUNGGU_UPLOAD)
-                        <div class="alert alert-info border-0 mb-0 p-2 font-13">
-                            <strong><i class='bx bx-time'></i> Menunggu Upload.</strong>
-                            Unggah scan NPI bertanda tangan di kolom tengah.
                         </div>
                     @elseif(in_array($statusNpi, $finalStatuses, true))
                         <div class="alert alert-success border-0 mb-0 p-2 font-13">

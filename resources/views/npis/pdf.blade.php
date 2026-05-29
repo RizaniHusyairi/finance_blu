@@ -37,7 +37,9 @@
 <body>
 @php
     $activityQrFilePath = \App\Support\DocumentTte::activityQrFilePath(\App\Support\DocumentTte::tagihanIdFor($npi));
-    $tteQrFilePath = \App\Support\DocumentTte::tteQrFilePath($npi);
+    $tteQrPenerimaan = \App\Support\DocumentTte::tteQrFilePath($npi, 'penerimaan');
+    $tteQrPpk = \App\Support\DocumentTte::tteQrFilePath($npi, 'ppk');
+    $tteQrPengeluaran = \App\Support\DocumentTte::tteQrFilePath($npi, 'pengeluaran');
 @endphp
 
 <table class="table-main">
@@ -134,10 +136,9 @@
                     {{-- Kiri: Bendahara Penerimaan --}}
                     <td style="width: 33%; vertical-align: top; text-align: center; padding: 0 10px;">
                         <p style="margin: 0 0 4px 0;">Bendahara Penerimaan</p>
-                        @if($tteQrFilePath)
+                        @if($tteQrPenerimaan)
                             <div style="margin: 4px auto 5px; width: 82px; text-align: center;">
-                                <img src="{{ $tteQrFilePath }}" alt="QR TTE NPI" style="width: 82px; height: 82px;">
-                                <div style="font-size: 8px; line-height: 1.2; margin-top: 2px;">QR TTE NPI</div>
+                                <img src="{{ $tteQrPenerimaan }}" alt="QR TTE NPI Bendahara Penerimaan" style="width: 82px; height: 82px;">
                             </div>
                         @else
                             <div style="height: 60px;"></div>
@@ -152,7 +153,14 @@
                     {{-- Kanan: PPK --}}
                     <td style="width: 33%; vertical-align: top; text-align: center; padding: 0 10px;">
                         <p style="margin: 0 0 4px 0;">Samarinda, {{ $npi->tanggal_npi ? \Carbon\Carbon::parse($npi->tanggal_npi)->locale('id')->isoFormat('D MMMM Y') : \Carbon\Carbon::now()->locale('id')->isoFormat('D MMMM Y') }}</p>
-                        <p style="margin: 0 0 60px 0;">Pejabat Pembuat Komitmen</p>
+                        <p style="margin: 0 0 4px 0;">Pejabat Pembuat Komitmen</p>
+                        @if($tteQrPpk)
+                            <div style="margin: 4px auto 5px; width: 82px; text-align: center;">
+                                <img src="{{ $tteQrPpk }}" alt="QR TTE NPI PPK" style="width: 82px; height: 82px;">
+                            </div>
+                        @else
+                            <div style="height: 60px;"></div>
+                        @endif
                         <p style="margin: 0;"><span style="text-decoration: underline; font-weight: bold;">{{ strtoupper($ppk->name ?? 'PPK') }}</span></p>
                         <p style="margin: 2px 0;">NIP {{ $nipPpk ?? '-' }}</p>
                     </td>
@@ -164,25 +172,18 @@
                         <table style="width: 100%; border: none; border-collapse: collapse;">
                             <tr>
                                 <td style="border: none; width: 33%; text-align: center; vertical-align: top;">
-                                    <p style="margin: 0 0 60px 0;">Bendahara Pengeluaran</p>
+                                    <p style="margin: 0 0 4px 0;">Bendahara Pengeluaran</p>
+                                    @if($tteQrPengeluaran)
+                                        <div style="margin: 4px auto 5px; width: 82px; text-align: center;">
+                                            <img src="{{ $tteQrPengeluaran }}" alt="QR TTE NPI Bendahara Pengeluaran" style="width: 82px; height: 82px;">
+                                        </div>
+                                    @else
+                                        <div style="height: 60px;"></div>
+                                    @endif
                                     <p style="margin: 0;"><span style="text-decoration: underline; font-weight: bold;">{{ strtoupper($penandatanganPengeluaran ?? 'BENDAHARA PENGELUARAN') }}</span></p>
                                     <p style="margin: 2px 0;">NIP {{ $nipPengeluaran ?? '-' }}</p>
                                 </td>
-                                <td style="border: none; width: 67%; vertical-align: top; padding-left: 20px;">
-                                    @if(false && $activityQrFilePath)
-                                        <table style="width: 100%; border: none;">
-                                            <tr>
-                                                <td style="border: none; width: 90px; vertical-align: top; padding: 0;">
-                                                    <img src="{{ $qrFilePath }}" alt="QR Aktivitas Tagihan" style="width: 90px; height: 90px;">
-                                                </td>
-                                                <td style="border: none; vertical-align: top; padding: 4px 0 0 10px; font-size: 9px; color: #333;">
-                                                    <strong>Scan untuk lihat aktivitas tagihan</strong><br>
-                                                    Status verifikasi, SPP, SPM, NPI, hingga SP2D — beserta verifikator di tiap tahap.
-                                                </td>
-                                            </tr>
-                                        </table>
-                                    @endif
-                                </td>
+                                <td style="border: none; width: 67%; vertical-align: top; padding-left: 20px;"></td>
                             </tr>
                         </table>
                     </td>

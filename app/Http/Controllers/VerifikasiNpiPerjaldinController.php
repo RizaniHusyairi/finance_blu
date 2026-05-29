@@ -313,14 +313,14 @@ class VerifikasiNpiPerjaldinController extends Controller
                 'user_id'           => $user->id,
                 'role_saat_itu'     => $roleCode,
                 'status_sebelumnya' => $npi->status,
-                'status_baru'       => $isFullyApproved ? DokumenNpi::STATUS_MENUNGGU_UPLOAD : $npi->status,
+                'status_baru'       => $isFullyApproved ? DokumenNpi::STATUS_DISETUJUI_FINAL : $npi->status,
                 'aksi'              => 'APPROVE_' . strtoupper(str_replace(' ', '_', $roleCode)),
                 'catatan'           => $catatan,
                 'ip_address'        => $request->ip(),
             ]);
 
-            if ($isFullyApproved && $npi->status !== DokumenNpi::STATUS_MENUNGGU_UPLOAD) {
-                $npi->update(['status' => DokumenNpi::STATUS_MENUNGGU_UPLOAD]);
+            if ($isFullyApproved && $npi->status !== DokumenNpi::STATUS_DISETUJUI_FINAL) {
+                $npi->update(['status' => DokumenNpi::STATUS_DISETUJUI_FINAL]);
 
                 // Notifikasi Final
                 $pengeluaran = User::role('Bendahara Pengeluaran')->get();

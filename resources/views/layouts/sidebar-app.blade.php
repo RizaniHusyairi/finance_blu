@@ -760,8 +760,10 @@
           </a>
           <ul>
             <li><a href="{{ route('pajak-potongan.kontrak.index') }}"><i class="material-icons-outlined">arrow_right</i>Kontrak</a></li>
+            <li><a href="{{ route('pajak-potongan.honor.index') }}"><i class="material-icons-outlined">arrow_right</i>Honor</a></li>
           </ul>
         </li>
+        {{-- Penyetoran Pajak END --}}
         @endhasrole
 
         @hasanyrole('Bendahara Pengeluaran|Bendahara Penerimaan')

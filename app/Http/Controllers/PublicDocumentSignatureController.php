@@ -41,6 +41,8 @@ class PublicDocumentSignatureController extends Controller
             'hash' => $documentHash,
         ]);
 
+        $signer = $request->query('signer');
+
         return view('public.spp-tte', [
             'spp' => $document instanceof DokumenSpp ? $document : null,
             'document' => $document,
@@ -56,7 +58,7 @@ class PublicDocumentSignatureController extends Controller
             'documentHash' => $documentHash,
             'qrHash' => $qrHash,
             'hashStatus' => $hashStatus,
-            'signerInfo' => $this->buildSignerInfo($document, $workflow),
+            'signerInfo' => $this->buildSignerInfo($document, $workflow, $signer),
         ]);
     }
 
@@ -153,7 +155,7 @@ class PublicDocumentSignatureController extends Controller
             ->values();
     }
 
-    private function buildSignerInfo(Model $document, $workflow): array
+    private function buildSignerInfo(Model $document, $workflow, ?string $signer = null): array
     {
         $signedAt = collect($workflow->approvals ?? [])
             ->pluck('acted_at')
@@ -161,10 +163,20 @@ class PublicDocumentSignatureController extends Controller
             ->sort()
             ->last();
 
+        // NPI memiliki tiga penandatangan; data ditentukan oleh QR yang discan.
+        if ($document instanceof DokumenNpi) {
+            return $this->buildNpiSignerInfo($document, $workflow, $signer, $signedAt);
+        }
+
+        // SP2D memiliki dua penandatangan (PPK & Bendahara Pengeluaran);
+        // data ditentukan oleh QR yang discan.
+        if ($document instanceof DokumenSp2d) {
+            return $this->buildSp2dSignerInfo($document, $workflow, $signer, $signedAt);
+        }
+
         $user = match (true) {
             $document instanceof DokumenSpp => $document->ppkVerifikator,
             $document instanceof DokumenSpm => $document->ppspm,
-            $document instanceof DokumenNpi => $document->bendaharaPenerimaan,
             $document instanceof DokumenSp2d => $document->bendaharaPengeluaran,
             default => null,
         };
@@ -185,10 +197,77 @@ class PublicDocumentSignatureController extends Controller
             'jabatan' => $pegawai?->jabatan ?? match (true) {
                 $document instanceof DokumenSpp => 'Pejabat Pembuat Komitmen',
                 $document instanceof DokumenSpm => 'Pejabat Penandatangan SPM',
-                $document instanceof DokumenNpi => 'Bendahara Penerimaan',
                 $document instanceof DokumenSp2d => 'Bendahara Pengeluaran',
                 default => 'Penandatangan Dokumen',
             },
+            'unit_kerja' => 'Kantor UPBU Aji Pangeran Tumenggung Pranoto',
+            'instansi' => 'Kementerian Perhubungan',
+            'signed_at' => $signedAt ?? $workflow->updated_at ?? $document->updated_at,
+        ];
+    }
+
+    /**
+     * Resolusi data penandatangan NPI sesuai QR yang discan.
+     * NPI ditandatangani oleh Bendahara Penerimaan, PPK, dan Bendahara Pengeluaran.
+     */
+    private function buildNpiSignerInfo(DokumenNpi $document, $workflow, ?string $signer, $signedAt): array
+    {
+        $signer = in_array($signer, ['penerimaan', 'ppk', 'pengeluaran'], true)
+            ? $signer
+            : 'penerimaan';
+
+        $user = match ($signer) {
+            'ppk' => \App\Models\User::role('PPK')->with('profilable')->first(),
+            'pengeluaran' => \App\Models\User::role('Bendahara Pengeluaran')->with('profilable')->first(),
+            default => $document->bendaharaPenerimaan
+                ?: \App\Models\User::role('Bendahara Penerimaan')->with('profilable')->first(),
+        };
+
+        $pegawai = $user?->pegawai;
+
+        $jabatanDefault = match ($signer) {
+            'ppk' => 'Pejabat Pembuat Komitmen',
+            'pengeluaran' => 'Bendahara Pengeluaran',
+            default => 'Bendahara Penerimaan',
+        };
+
+        return [
+            'nama' => $user?->name ?? '-',
+            'nip' => $pegawai?->nip ?? '-',
+            'jabatan' => $pegawai?->jabatan ?? $jabatanDefault,
+            'unit_kerja' => 'Kantor UPBU Aji Pangeran Tumenggung Pranoto',
+            'instansi' => 'Kementerian Perhubungan',
+            'signed_at' => $signedAt ?? $workflow->updated_at ?? $document->updated_at,
+        ];
+    }
+
+    /**
+     * Resolusi data penandatangan SP2D sesuai QR yang discan.
+     * SP2D ditandatangani oleh PPK dan Bendahara Pengeluaran.
+     */
+    private function buildSp2dSignerInfo(DokumenSp2d $document, $workflow, ?string $signer, $signedAt): array
+    {
+        $signer = in_array($signer, ['ppk', 'pengeluaran'], true)
+            ? $signer
+            : 'pengeluaran';
+
+        $user = match ($signer) {
+            'ppk' => \App\Models\User::role('PPK')->with('profilable')->first(),
+            default => $document->bendaharaPengeluaran
+                ?: \App\Models\User::role('Bendahara Pengeluaran')->with('profilable')->first(),
+        };
+
+        $pegawai = $user?->pegawai;
+
+        $jabatanDefault = match ($signer) {
+            'ppk' => 'Pejabat Pembuat Komitmen',
+            default => 'Bendahara Pengeluaran',
+        };
+
+        return [
+            'nama' => $user?->name ?? '-',
+            'nip' => $pegawai?->nip ?? '-',
+            'jabatan' => $pegawai?->jabatan ?? $jabatanDefault,
             'unit_kerja' => 'Kantor UPBU Aji Pangeran Tumenggung Pranoto',
             'instansi' => 'Kementerian Perhubungan',
             'signed_at' => $signedAt ?? $workflow->updated_at ?? $document->updated_at,

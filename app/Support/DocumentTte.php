@@ -141,20 +141,29 @@ class DocumentTte
         return self::qrFilePath($url, 'tagihan_' . $tagihanId);
     }
 
-    public static function tteQrFilePath(Model $document): ?string
+    public static function tteQrFilePath(Model $document, ?string $signer = null): ?string
     {
         if (! self::isFullyVerified($document)) {
             return null;
         }
 
         $type = self::typeFor($document);
-        $url = URL::signedRoute('public.document-tte.show', [
+
+        $params = [
             'type' => $type,
             'id' => $document->getKey(),
             'hash' => self::hash($document),
-        ]);
+        ];
 
-        return self::qrFilePath($url, $type . '_tte_' . $document->getKey());
+        if ($signer) {
+            $params['signer'] = $signer;
+        }
+
+        $url = URL::signedRoute('public.document-tte.show', $params);
+
+        $prefix = $type . '_tte_' . $document->getKey() . ($signer ? '_' . $signer : '');
+
+        return self::qrFilePath($url, $prefix);
     }
 
     public static function qrFilePath(string $url, string $filePrefix): string

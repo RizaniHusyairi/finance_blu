@@ -119,14 +119,6 @@ class Sp2dController extends Controller
             return back()->with('error', 'SP2D kontrak harus disetujui final sebelum bukti transfer diunggah.');
         }
 
-        // Untuk SP2D kontrak, file SP2D bertandatangan wajib diunggah terlebih dulu
-        if (
-            $tagihanSumber?->tipe_tagihan === 'KONTRAK'
-            && ! $sp2d->has_signed_file
-        ) {
-            return back()->with('error', 'Unggah file SP2D bertandatangan terlebih dahulu sebelum bukti transfer.');
-        }
-
         $request->validate([
             'catatan_bku' => 'nullable|string|max:1000',
             'bukti_transfer' => 'required|file|mimes:pdf,jpg,jpeg,png|max:5120',
@@ -164,14 +156,16 @@ class Sp2dController extends Controller
 
             $tagihan = optional(optional(optional($sp2d->npi)->spm)->spp)->tagihan;
 
-            $hasContractTax = $tagihan
-                && $tagihan->tipe_tagihan === 'KONTRAK'
+            // Tagihan kontrak & honorarium yang memiliki potongan pajak (PPh) harus
+            // menunda posting BKU sampai seluruh pajak tersetor (NTPN lengkap).
+            $hasTax = $tagihan
+                && in_array($tagihan->tipe_tagihan, ['KONTRAK', 'HONORARIUM'], true)
                 && $tagihan->potonganTagihan()
                     ->where('jenis_potongan', 'PAJAK')
                     ->where('nominal_potongan', '>', 0)
                     ->exists();
 
-            $hasUnsettledContractTax = $hasContractTax
+            $hasUnsettledTax = $hasTax
                 && $tagihan->potonganTagihan()
                     ->where('jenis_potongan', 'PAJAK')
                     ->where('nominal_potongan', '>', 0)
@@ -180,14 +174,14 @@ class Sp2dController extends Controller
                     })
                     ->exists();
 
-            $deferBkuUntilTax = $hasContractTax && $hasUnsettledContractTax;
+            $deferBkuUntilTax = $hasTax && $hasUnsettledTax;
 
             if ($tagihan && ! $deferBkuUntilTax) {
                 app(BkuPostingService::class)->postTagihanPengeluaran(
                     $tagihan,
                     $sp2d,
                     $request->catatan_bku ?: null,
-                    $hasContractTax ? (float) ($tagihan->total_bruto ?? $tagihan->total_netto ?? 0) : null
+                    $hasTax ? (float) ($tagihan->total_bruto ?? $tagihan->total_netto ?? 0) : null
                 );
                 $postedToBku = true;
             }

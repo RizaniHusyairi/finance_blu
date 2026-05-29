@@ -711,7 +711,7 @@
         <div class="col-lg-8">
             <div class="d-flex align-items-center justify-content-between px-3 pt-3">
                 <div class="fw-bold" style="font-size:.85rem;">Pajak Perlu Tindakan</div>
-                <a href="#" class="btn btn-sm btn-link text-decoration-none">Kelola Pajak Kontrak <i class="bi bi-arrow-right"></i></a>
+                <a href="{{ route('pajak-potongan.kontrak.index') }}" class="btn btn-sm btn-link text-decoration-none">Kelola Pajak Kontrak <i class="bi bi-arrow-right"></i></a>
             </div>
             <div class="table-responsive mt-2">
                 <table class="table align-middle">
@@ -738,7 +738,7 @@
                                     @endif
                                 </td>
                                 <td class="text-end pe-3">
-                                    <a href="#" class="btn btn-sm btn-grad-danger">Proses</a>
+                                    <a href="{{ route('pajak-potongan.kontrak.detail', $pajak->id) }}" class="btn btn-sm btn-grad-danger">Proses</a>
                                 </td>
                             </tr>
                         @empty
@@ -746,6 +746,77 @@
                                 <td colspan="5" class="empty-state">
                                     <i class="bi bi-check2-circle text-success"></i>
                                     Semua tagihan pajak telah disetor.
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{-- ============ PAJAK HONORARIUM ============ --}}
+<div class="section-heading">
+    <h6>Penyetoran Pajak Honorarium</h6>
+</div>
+
+<div class="panel">
+    <div class="row g-0">
+        <div class="col-lg-4 border-end">
+            <div class="p-3">
+                <div class="pajak-stat pajak-billing">
+                    <span class="label"><i class="bi bi-receipt-cutoff me-1 text-danger"></i>Belum Billing</span>
+                    <span class="value text-danger">{{ $pajakHonorBelumBilling->count() }}</span>
+                </div>
+                <div class="pajak-stat pajak-ntpn">
+                    <span class="label"><i class="bi bi-bank2 me-1 text-warning"></i>Menunggu NTPN</span>
+                    <span class="value" style="color:#b45309;">{{ $pajakHonorSudahBilling->count() }}</span>
+                </div>
+                <div class="pajak-stat pajak-setor">
+                    <span class="label"><i class="bi bi-check2-circle me-1 text-success"></i>Sudah Setor</span>
+                    <span class="value text-success">{{ $pajakHonorSudahSetor->count() }}</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-8">
+            <div class="d-flex align-items-center justify-content-between px-3 pt-3">
+                <div class="fw-bold" style="font-size:.85rem;">PPh 21 Perlu Tindakan</div>
+                <a href="{{ route('pajak-potongan.honor.index') }}" class="btn btn-sm btn-link text-decoration-none">Kelola Pajak Honorarium <i class="bi bi-arrow-right"></i></a>
+            </div>
+            <div class="table-responsive mt-2">
+                <table class="table align-middle">
+                    <thead>
+                        <tr>
+                            <th>Jenis Pajak</th>
+                            <th>No Tagihan</th>
+                            <th class="text-end">Nominal</th>
+                            <th class="text-center">Status</th>
+                            <th class="text-end pe-3">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($potonganPajakHonor->whereNull('ntpn')->take(4) as $pajak)
+                            <tr>
+                                <td class="fw-semibold">{{ $pajak->pajak?->nama_pajak ?? ($pajak->nama_pajak_snapshot ?? 'PPh 21') }}</td>
+                                <td class="text-muted">{{ $pajak->tagihan?->nomor_tagihan ?? '-' }}</td>
+                                <td class="text-end fw-semibold">Rp {{ number_format($pajak->nominal_potongan, 0, ',', '.') }}</td>
+                                <td class="text-center">
+                                    @if(!$pajak->kode_billing)
+                                        <span class="kpi-pill tint-danger">Buat Billing</span>
+                                    @else
+                                        <span class="kpi-pill tint-warning">Input NTPN</span>
+                                    @endif
+                                </td>
+                                <td class="text-end pe-3">
+                                    <a href="{{ route('pajak-potongan.honor.detail', $pajak->id) }}" class="btn btn-sm btn-grad-danger">Proses</a>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="5" class="empty-state">
+                                    <i class="bi bi-check2-circle text-success"></i>
+                                    Semua PPh 21 honorarium telah disetor.
                                 </td>
                             </tr>
                         @endforelse

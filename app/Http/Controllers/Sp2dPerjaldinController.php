@@ -35,7 +35,8 @@ class Sp2dPerjaldinController extends Controller
             'spm.spp.tagihan.detailPerjaldin.provinsi',
             'spm.spp.tagihan.komponenPerjaldin',
             'bendaharaPenerimaan',
-            'sp2d'
+            'sp2d',
+            'sp2d.workflowInstances.approvals',
         ])
         ->whereHas('spm.spp', function($q) {
             $q->whereNotNull('tagihan_perjaldin_komponen_id');
