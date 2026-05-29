@@ -78,6 +78,11 @@ class TagihanJasa extends Model
         return $this->morphMany(ArsipDokumen::class, 'documentable');
     }
 
+    public function transaksiPenerimaan()
+    {
+        return $this->hasOne(TransaksiPenerimaan::class, 'nomor_invoice', 'nomor_tagihan');
+    }
+
     /* ── Scope Helpers ── */
 
     public function scopeFungsi($query)

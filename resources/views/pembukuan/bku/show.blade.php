@@ -49,8 +49,17 @@
             </div>
 
             <div class="card book-card mb-4">
-                <div class="card-header"><h6 class="mb-0 fw-bold">Informasi Rekening</h6></div>
+                <div class="card-header">
+                    <h6 class="mb-0 fw-bold">
+                        {{ $penerimaan ? 'Rekening Penerimaan BLU' : ($tagihan ? 'Rekening Sumber Pembayaran' : 'Informasi Rekening') }}
+                    </h6>
+                </div>
                 <div class="card-body">
+                    @if($penerimaan)
+                        <div class="alert alert-info py-2 small mb-3">
+                            Rekening di bawah adalah rekening kas BLU tempat pembayaran diterima, bukan rekening milik mitra.
+                        </div>
+                    @endif
                     <div class="row g-3">
                         <div class="col-md-4"><strong>Bank</strong><div class="text-muted">{{ $entry->sumberRekening?->nama_bank ?? '-' }}</div></div>
                         <div class="col-md-4"><strong>Nomor Rekening</strong><div class="text-muted">{{ $entry->sumberRekening?->nomor_rekening ?? '-' }}</div></div>

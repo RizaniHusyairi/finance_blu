@@ -130,6 +130,7 @@ class TagihanJasaVerifikasiController extends Controller
             'mitra',
             'mitraLegacy',
             'kontrakMitraJasa',
+            'creator',
             'details.layananJasa',
         ]);
 

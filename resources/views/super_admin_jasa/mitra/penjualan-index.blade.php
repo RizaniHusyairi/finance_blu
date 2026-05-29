@@ -1,5 +1,9 @@
 @extends('layouts.app')
 @section('title', 'Laporan Penjualan Mitra')
+@php
+    $canCreateTagihanJasa = auth()->user()?->hasRole('Super Admin') === true
+        || (auth()->user()?->hasAnyRole(['Admin Jasa', 'Admin Konsesi']) === true && ! auth()->user()?->hasRole('Super Admin Jasa'));
+@endphp
 
 @push('css')
     <script>
@@ -229,9 +233,9 @@
                                     </span>
                                 @endif
                                 @if($penjualan->status === 'diverifikasi' && ! $penjualan->tagihan_jasa_id && $penjualan->layanan_jasa_id)
-                                    @if($penjualan->can_create_tagihan)
+                                    @if($canCreateTagihanJasa && $penjualan->can_create_tagihan)
                                         <a href="{{ route('tagihan-jasa.create', ['penjualan_id' => $penjualan->id]) }}" class="btn btn-sm btn-primary jasa-icon-btn" title="Buat tagihan" aria-label="Buat tagihan"><i class="bi bi-receipt"></i></a>
-                                    @else
+                                    @elseif($canCreateTagihanJasa)
                                         <span class="badge bg-info text-dark" title="Tagihan tersedia mulai {{ $penjualan->tagihan_available_date }}">
                                             <i class="bi bi-calendar-check"></i> {{ $penjualan->tagihan_available_date }}
                                         </span>

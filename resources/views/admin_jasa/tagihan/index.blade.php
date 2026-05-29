@@ -13,6 +13,8 @@
 @php
     $rupiah = fn ($value) => 'Rp ' . number_format((float) $value, 0, ',', '.');
     $tanggal = fn ($value) => $value ? \Carbon\Carbon::parse($value)->format('d/m/Y') : '-';
+    $canCreateTagihanJasa = auth()->user()?->hasRole('Super Admin') === true
+        || (auth()->user()?->hasAnyRole(['Admin Jasa', 'Admin Konsesi']) === true && ! auth()->user()?->hasRole('Super Admin Jasa'));
     $badge = function ($tagihan) {
         return match ($tagihan->status_jatuh_tempo) {
             'LEWAT_JATUH_TEMPO' => ['Lewat Jatuh Tempo', 'bg-danger'],
@@ -22,6 +24,17 @@
             'LUNAS' => ['Lunas', 'bg-success'],
             default => ['Belum Diset', 'bg-secondary'],
         };
+    };
+    $statusClass = fn ($status) => match ($status) {
+        'LUNAS', 'DITERIMA', 'DISETUJUI', 'PUBLISHED' => 'bg-success',
+        'DITOLAK', 'BATAL' => 'bg-danger',
+        'DRAFT' => 'bg-light text-dark border',
+        default => 'bg-secondary',
+    };
+    $paymentClass = fn ($status) => match ($status) {
+        'lunas' => 'bg-success',
+        'sebagian' => 'bg-warning text-dark',
+        default => 'bg-light text-dark border',
     };
 @endphp
 
@@ -65,12 +78,26 @@
         font-weight: 900;
         margin-top: .35rem;
     }
-    .modern-table { width: 100%; border-collapse: collapse; margin-bottom: 0; }
-    .modern-table th { background-color: #eff6ff; color: #1d4ed8; text-transform: uppercase; font-size: 0.74rem; font-weight: 900; letter-spacing: 0.04em; padding: 1rem 1.25rem; border-bottom: 1px solid #bfdbfe; text-align: left; white-space: nowrap; }
-    .modern-table td { padding: 1rem 1.25rem; vertical-align: middle; font-size: 0.875rem; color: #334155; border-bottom: 1px solid #eaf2ff; transition: all 0.2s ease; }
+    .modern-table { width: 100%; border-collapse: collapse; margin-bottom: 0; table-layout: fixed; }
+    .modern-table th { background-color: #eff6ff; color: #1d4ed8; text-transform: uppercase; font-size: 0.72rem; font-weight: 900; letter-spacing: 0.04em; padding: .85rem 1rem; border-bottom: 1px solid #bfdbfe; text-align: left; white-space: nowrap; }
+    .modern-table td { padding: .9rem 1rem; vertical-align: middle; font-size: 0.875rem; color: #334155; border-bottom: 1px solid #eaf2ff; transition: all 0.2s ease; }
     .modern-table tbody tr { background-color: #ffffff; transition: all 0.2s ease; }
     .modern-table tbody tr:hover { background-color: #f0f7ff; transform: scale(1.002); box-shadow: 0 8px 18px rgba(37,99,235,.08); z-index: 10; position: relative; }
     .modern-table tbody tr:hover td { color: #0f172a; font-weight: 500; }
+    .invoice-number { color: #1e293b; font-weight: 900; line-height: 1.2; word-break: break-word; }
+    .invoice-meta { display: flex; flex-wrap: wrap; gap: .35rem .75rem; margin-top: .35rem; color: #64748b; font-size: .74rem; font-weight: 700; }
+    .invoice-meta span { display: inline-flex; align-items: center; gap: .25rem; }
+    .invoice-partner { color: #0f172a; font-weight: 800; line-height: 1.3; word-break: break-word; }
+    .invoice-total { color: #0f172a; font-weight: 900; white-space: nowrap; }
+    .date-stack { display: grid; gap: .28rem; color: #334155; font-weight: 800; }
+    .date-stack small { color: #64748b; font-size: .74rem; font-weight: 750; }
+    .compact-badges { display: flex; flex-wrap: wrap; gap: .35rem; align-items: center; }
+    .compact-badges .badge { max-width: 100%; white-space: normal; text-align: left; line-height: 1.15; }
+    .action-cell { text-align: right; }
+    .action-cell .btn { border-radius: .75rem; white-space: nowrap; }
+    @media (max-width: 767.98px) {
+        .modern-table { min-width: 760px; table-layout: auto; }
+    }
 </style>
 
 <div class="tw-scope">
@@ -94,9 +121,11 @@
                     <i class="bi bi-file-earmark-spreadsheet me-2"></i>Excel
                 </a>
             @endif
-            <a href="{{ route('tagihan-jasa.create') }}" class="inline-flex items-center rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white shadow-lg shadow-blue-600/20 transition hover:-translate-y-0.5 hover:bg-blue-700">
-                <i class="bi bi-plus-lg me-2"></i>Buat Tagihan
-            </a>
+            @if($canCreateTagihanJasa)
+                <a href="{{ route('tagihan-jasa.create') }}" class="inline-flex items-center rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white shadow-lg shadow-blue-600/20 transition hover:-translate-y-0.5 hover:bg-blue-700">
+                    <i class="bi bi-plus-lg me-2"></i>Buat Tagihan
+                </a>
+            @endif
 
         </div>
     </div>
@@ -225,36 +254,56 @@
         <table class="table modern-table">
             <thead>
                 <tr>
-                    <th>No</th>
-                    <th>No Tagihan</th>
-                    <th>Mitra Jasa</th>
-                    <th>Tanggal</th>
-                    <th>Jatuh Tempo</th>
-                    <th>Total</th>
-                    <th>Status</th>
-                    <th>Pembayaran</th>
-                    <th>Badge</th>
-                    <th>Aksi</th>
+                    <th style="width: 24%;">No Tagihan</th>
+                    <th style="width: 20%;">Mitra</th>
+                    <th style="width: 14%;">Tanggal</th>
+                    <th style="width: 13%;">Total</th>
+                    <th style="width: 14%;">Status</th>
+                    <th style="width: 10%;">Bayar</th>
+                    <th style="width: 5%;" class="text-end">Aksi</th>
                 </tr>
             </thead>
             <tbody>
                 @forelse($tagihans as $tagihan)
                     @php([$label, $class] = $badge($tagihan))
+                    @php($paymentStatus = $tagihan->status_pembayaran ?? 'belum_dibayar')
+                    @php($showDueBadge = in_array($tagihan->status_jatuh_tempo, ['LEWAT_JATUH_TEMPO', 'JATUH_TEMPO_HARI_INI', 'MENDEKATI_JATUH_TEMPO'], true))
                     <tr>
-                        <td>{{ $tagihans->firstItem() + $loop->index }}</td>
-                        <td class="fw-semibold">{{ $tagihan->nomor_tagihan }}</td>
-                        <td>{{ $tagihan->mitra->nama_mitra ?? '-' }}</td>
-                        <td>{{ $tanggal($tagihan->tanggal_tagihan) }}</td>
-                        <td>{{ $tanggal($tagihan->tanggal_jatuh_tempo) }}</td>
-                        <td>{{ $rupiah($tagihan->total_tagihan) }}</td>
-                        <td><span class="badge bg-secondary">{{ str_replace('_', ' ', $tagihan->status) }}</span></td>
-                        <td><span class="badge bg-light text-dark border">{{ str_replace('_', ' ', $tagihan->status_pembayaran ?? 'belum_dibayar') }}</span></td>
-                        <td><span class="badge {{ $class }}">{{ $label }}</span></td>
-                        <td><a href="{{ route('tagihan-jasa.show', $tagihan->id) }}" class="btn btn-sm btn-light border fw-semibold text-primary"><i class="bi bi-eye me-1"></i>Detail</a></td>
+                        <td>
+                            <div class="invoice-number">{{ $tagihan->nomor_tagihan }}</div>
+                        </td>
+                        <td>
+                            <div class="invoice-partner">{{ $tagihan->mitra->nama_mitra ?? '-' }}</div>
+                        </td>
+                        <td>
+                            <div class="date-stack">
+                                <span>{{ $tanggal($tagihan->tanggal_tagihan) }}</span>
+                                <small>JT: {{ $tanggal($tagihan->tanggal_jatuh_tempo) }}</small>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="invoice-total">{{ $rupiah($tagihan->total_tagihan) }}</div>
+                        </td>
+                        <td>
+                            <div class="compact-badges">
+                                <span class="badge {{ $statusClass($tagihan->status) }}">{{ str_replace('_', ' ', $tagihan->status) }}</span>
+                                @if($showDueBadge)
+                                    <span class="badge {{ $class }}">{{ $label }}</span>
+                                @endif
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge {{ $paymentClass($paymentStatus) }}">{{ str_replace('_', ' ', $paymentStatus) }}</span>
+                        </td>
+                        <td class="action-cell">
+                            <a href="{{ route('tagihan-jasa.show', $tagihan->id) }}" class="btn btn-sm btn-light border fw-bold text-primary" title="Lihat detail tagihan">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                        </td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="10" class="text-center text-muted py-4">{{ $page['empty'] }}</td>
+                        <td colspan="7" class="text-center text-muted py-4">{{ $page['empty'] }}</td>
                     </tr>
                 @endforelse
             </tbody>

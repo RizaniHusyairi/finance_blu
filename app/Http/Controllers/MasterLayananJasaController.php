@@ -86,6 +86,10 @@ class MasterLayananJasaController extends Controller
         $validated['mendukung_konsesi'] = $validated['is_leaf'] && $request->has('mendukung_konsesi');
         if (! $validated['is_leaf']) {
             $validated['tipe_layanan'] = 'PNBP';
+            $validated['kode_mak'] = null;
+            $validated['kode_jenis_pembayaran'] = null;
+            $validated['kode_akun'] = null;
+            $validated['persentase_konsesi'] = null;
         }
         if ($validated['is_leaf'] && $validated['tipe_layanan'] === 'KONSESI') {
             $validated['mendukung_konsesi'] = true;
@@ -170,6 +174,10 @@ class MasterLayananJasaController extends Controller
         $validated['mendukung_konsesi'] = $validated['is_leaf'] && $request->has('mendukung_konsesi');
         if (! $validated['is_leaf']) {
             $validated['tipe_layanan'] = 'PNBP';
+            $validated['kode_mak'] = null;
+            $validated['kode_jenis_pembayaran'] = null;
+            $validated['kode_akun'] = null;
+            $validated['persentase_konsesi'] = null;
         }
         if ($validated['is_leaf'] && $validated['tipe_layanan'] === 'KONSESI') {
             $validated['mendukung_konsesi'] = true;
