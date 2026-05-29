@@ -525,6 +525,10 @@ class MitraJasaPenjualanController extends Controller
 
         abort_unless($user?->hasRole('Admin Jasa'), 403);
 
+        if ($penjualan->is_pjp2u_report) {
+            return;
+        }
+
         $sourceTagihan = $this->sourceTagihanForPenjualan($mitra, $penjualan);
 
         abort_unless($sourceTagihan && (int) $sourceTagihan->created_by === (int) $user->id, 403);
