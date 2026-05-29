@@ -352,7 +352,7 @@
                     </div>
                     <div class="list-group-item py-3">
                         <div class="small text-muted">Koordinator Keuangan</div>
-                        <div class="fw-bold">{{ ($koordinatorApproval ?? null)?->actedByUser?->name ?? (($koordinatorApproval ?? null)?->assignedUser?->name ?? '-') }}</div>
+                        <div class="fw-bold">{{ ($koordinatorApproval ?? null)?->actedByUser?->name ?? (($koordinatorApproval ?? null)?->assignedUser?->name ?? \App\Models\User::role('Koordinator Keuangan')->first()?->name ?? '-') }}</div>
                         @if(!empty($koordinatorApproval))
                             <span class="badge {{ $koordinatorApproval->status === 'APPROVED' ? 'bg-success' : ($koordinatorApproval->status === 'REVISION' ? 'bg-danger' : 'bg-warning text-dark') }}">
                                 {{ $koordinatorApproval->status }}
@@ -361,7 +361,7 @@
                     </div>
                     <div class="list-group-item py-3">
                         <div class="small text-muted">Kepala Subbagian Keuangan dan Tata Usaha</div>
-                        <div class="fw-bold">{{ $kasApproval?->actedByUser?->name ?? ($kasApproval?->assignedUser?->name ?? '-') }}</div>
+                        <div class="fw-bold">{{ $kasApproval?->actedByUser?->name ?? ($kasApproval?->assignedUser?->name ?? \App\Models\User::role('Kepala Subbagian Keuangan dan Tata Usaha')->first()?->name ?? '-') }}</div>
                         @if($kasApproval)
                             <span class="badge {{ $kasApproval->status === 'APPROVED' ? 'bg-success' : ($kasApproval->status === 'REVISION' ? 'bg-danger' : 'bg-warning text-dark') }}">
                                 {{ $kasApproval->status }}

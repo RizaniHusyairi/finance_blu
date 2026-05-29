@@ -70,8 +70,8 @@
                         <input type="text" class="form-control form-control-sm @error("peserta.{$index}.no_sppd") is-invalid @enderror" name="peserta[{{ $index }}][no_sppd]" placeholder="Nomor SPPD" required value="{{ $row['no_sppd'] ?? '' }}">
                     </div>
                     <div class="mb-2">
-                        <label class="form-label mb-1 small">Upload / Lampiran SPT</label>
-                        <input type="file" class="form-control form-control-sm spt-file-input @error("peserta.{$index}.spt_file") is-invalid @enderror" name="peserta[{{ $index }}][spt_file]" accept=".pdf,.jpg,.jpeg,.png">
+                        <label class="form-label mb-1 small">Upload / Lampiran SPT <span class="text-danger">*</span></label>
+                        <input type="file" class="form-control form-control-sm spt-file-input @error("peserta.{$index}.spt_file") is-invalid @enderror" name="peserta[{{ $index }}][spt_file]" accept=".pdf,.jpg,.jpeg,.png" {{ isset($row['spt_file_path']) ? '' : 'required' }}>
                         @if(isset($row['spt_file_path']))
                             <small class="text-success d-block mt-1 file-existing-notice">
                                 <i class="bi bi-check-circle"></i> File tersimpan: <a href="{{ Storage::url($row['spt_file_path']) }}" target="_blank">{{ $row['spt_file_name'] ?? 'Lihat Dokumen' }}</a>

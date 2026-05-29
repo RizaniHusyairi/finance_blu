@@ -10,7 +10,7 @@
         /* KOP SURAT */
         .kop-surat { text-align: center; font-weight: bold; margin-bottom: 5px; }
         .kop-surat span { display: block; }
-        .kop-instansi { font-size: 14px; }
+        .kop-instansi { font-size: 14px; }r
         .kop-uk { font-size: 13px; }
         .kop-blu { font-size: 13px; margin: 3px 0; }
         .kop-bandara { font-size: 13px; }
@@ -116,7 +116,12 @@
             <td class="ttd-kanan">
                 <p>{{ $kotaTtd }}, {{ $tglTtd }}</p>
                 <p>Bendahara Pengeluaran</p>
-                <br><br><br><br>
+                @if(!empty($tteQrFilePathBendahara))
+                    <img src="{{ $tteQrFilePathBendahara }}" alt="QR TTE Bendahara Pengeluaran" class="qr-tte">
+                    <div class="qr-label">Ditandatangani Secara Elektronik</div>
+                @else
+                    <br><br><br><br>
+                @endif
             </td>
         </tr>
         <tr>

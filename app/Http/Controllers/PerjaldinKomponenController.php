@@ -32,10 +32,29 @@ class PerjaldinKomponenController extends Controller
             $this->service->updateKomponenCoa($komponen, $request->dipa_revision_item_id);
             DB::commit();
 
-            return redirect()->back()
-                ->with('success', "COA untuk komponen {$komponen->nama_komponen} berhasil disimpan.");
+            $komponen->refresh();
+            $message = "COA untuk komponen {$komponen->nama_komponen} berhasil disimpan.";
+
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => $message,
+                    'coa_selected' => true,
+                    'status_proses' => $komponen->status_proses,
+                ]);
+            }
+
+            return redirect()->back()->with('success', $message);
         } catch (\RuntimeException $e) {
             DB::rollBack();
+
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $e->getMessage(),
+                ], 422);
+            }
+
             return back()->withErrors(['error' => $e->getMessage()]);
         }
     }

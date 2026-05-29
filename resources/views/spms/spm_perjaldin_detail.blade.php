@@ -111,16 +111,9 @@
                     <a href="{{ route('spms.cetak-pdf', $spmModel->id) }}" target="_blank" class="btn btn-outline-danger shadow-sm"><i class="bi bi-file-earmark-pdf me-1"></i> Cetak PDF SPM</a>
                 @endif
 
-                {{-- Upload SPM Bertandatangan --}}
+                {{-- SPM terbit ber-TTE: tidak perlu upload manual --}}
                 @if($spmModel && in_array($spmModel->status, [\App\Models\DokumenSpm::STATUS_MENUNGGU_UPLOAD, \App\Models\DokumenSpm::STATUS_SPM_TERBIT]))
-                    <button type="button" class="btn btn-warning shadow-sm" data-bs-toggle="modal" data-bs-target="#modalUploadSpmSigned">
-                        <i class="bi bi-upload me-1"></i> {{ $hasSignedSpmFile ? 'Re-upload SPM Bertandatangan' : 'Upload Scan SPM Bertandatangan' }}
-                    </button>
-                    @if($hasSignedSpmFile)
-                        <div class="alert alert-success p-2 mb-0 small border-0"><i class="bi bi-check-circle-fill me-1"></i> File SPM bertandatangan sudah diunggah.</div>
-                    @else
-                        <div class="alert alert-warning p-2 mb-0 small border-0"><i class="bi bi-exclamation-triangle me-1"></i> Upload scan SPM bertandatangan untuk menyelesaikan proses.</div>
-                    @endif
+                    <div class="alert alert-success p-2 mb-0 small border-0"><i class="bi bi-patch-check-fill me-1"></i> SPM telah terbit ber-TTE QR dan siap dibuatkan NPI.</div>
                 @endif
 
            
@@ -508,46 +501,6 @@
         </div>
     </div>
 @endsection
-
-{{-- Modal Upload SPM Bertandatangan --}}
-@if($spmModel && in_array($spmModel->status, [\App\Models\DokumenSpm::STATUS_MENUNGGU_UPLOAD, \App\Models\DokumenSpm::STATUS_SPM_TERBIT]))
-<div class="modal fade" id="modalUploadSpmSigned" tabindex="-1" aria-labelledby="modalUploadSpmSignedLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow">
-            <div class="modal-header bg-warning bg-opacity-10 border-0">
-                <h5 class="modal-title fw-bold" id="modalUploadSpmSignedLabel">
-                    <i class="bi bi-upload me-2 text-warning"></i> Upload Scan SPM Bertandatangan
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form action="{{ route('spms.perjaldin.upload-signed-spm', $spmModel->id) }}" method="POST" enctype="multipart/form-data">
-                @csrf
-                <div class="modal-body">
-                    <div class="alert alert-info border-0 small mb-3">
-                        <i class="bi bi-info-circle me-1"></i>
-                        Unggah file scan SPM yang sudah <strong>dicetak dan ditandatangani</strong> oleh pihak berwenang.
-                        Setelah file diunggah, status SPM akan otomatis berubah menjadi <strong>SPM Terbit</strong>.
-                    </div>
-                    <div class="mb-3">
-                        <label for="file_spm_ttd_perjaldin" class="form-label fw-semibold">File SPM Bertandatangan <span class="text-danger">*</span></label>
-                        <input type="file" class="form-control" id="file_spm_ttd_perjaldin" name="file_spm_ttd" accept=".pdf,.jpg,.jpeg,.png" required>
-                        <div class="form-text">Format: PDF, JPG, PNG. Maks: 10MB</div>
-                    </div>
-                    @if($hasSignedSpmFile)
-                        <div class="alert alert-success border-0 small mb-0">
-                            <i class="bi bi-check-circle me-1"></i> File sebelumnya sudah ada. Upload ulang akan menggantikan file lama.
-                        </div>
-                    @endif
-                </div>
-                <div class="modal-footer border-0">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
-                    <button type="submit" class="btn btn-warning"><i class="bi bi-upload me-1"></i> Upload SPM</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-@endif
 
 @push('script')
 <script>

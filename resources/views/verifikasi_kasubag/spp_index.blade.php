@@ -220,8 +220,8 @@
                                 @endif
                             </td>
                             <td class="text-center">
-                                <a href="{{ route($showRoute ?? 'verifikasi-kasubag.spp.show', $spp->id) }}" class="btn btn-sm btn-primary">
-                                    <i class="bi bi-eye"></i> Detail
+                                <a href="{{ route($showRoute ?? 'verifikasi-kasubag.spp.show', $spp->id) }}" class="btn btn-sm btn-primary" title="Detail">
+                                    <i class="bi bi-eye"></i>
                                 </a>
                             </td>
                         </tr>

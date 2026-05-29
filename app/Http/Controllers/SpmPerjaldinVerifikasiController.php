@@ -158,6 +158,15 @@ class SpmPerjaldinVerifikasiController extends Controller
             ];
         }
 
+        if ($user->hasRole('Kepala Subbagian Keuangan dan Tata Usaha') && $kasApproval && $kasApproval->status === 'PENDING' && $wf->status === 'IN_PROGRESS') {
+            $activeRoleApprovals[] = [
+                'role' => 'Kepala Subbagian Keuangan dan Tata Usaha',
+                'approval_id' => $kasApproval->id,
+                'approveRoute' => route('verifikasi-kasubag.spm-perjaldin.approve', $id),
+                'revisiRoute' => route('verifikasi-kasubag.spm-perjaldin.revisi', $id)
+            ];
+        }
+
         $latestRevisionNote = $wf->approvals
             ->where('status', 'REVISION')
             ->sortByDesc('acted_at')
@@ -260,7 +269,7 @@ class SpmPerjaldinVerifikasiController extends Controller
     public function kasubbagShow(int $id)
     {
         $roleCode = 'Kepala Subbagian Keuangan dan Tata Usaha';
-        $data     = $this->buildShowData($id, $roleCode);
+        $data     = $this->buildShowData($id, [$roleCode]);
 
         $roleLabel    = 'Kepala Subbagian Keuangan dan Tata Usaha';
         $roleSlug     = 'kasubbag';
@@ -306,7 +315,7 @@ class SpmPerjaldinVerifikasiController extends Controller
     public function koordinatorShow(int $id)
     {
         $roleCode = 'Koordinator Keuangan';
-        $data     = $this->buildShowData($id, $roleCode);
+        $data     = $this->buildShowData($id, [$roleCode]);
 
         $roleLabel    = 'Koordinator Keuangan';
         $roleSlug     = 'koordinator';
@@ -356,10 +365,12 @@ class SpmPerjaldinVerifikasiController extends Controller
             $instance->refresh();
             
             $isFullyApproved = $instance->status === 'APPROVED';
-            $statusBaru = $isFullyApproved ? DokumenSpm::STATUS_MENUNGGU_UPLOAD : DokumenSpm::STATUS_MENUNGGU_VERIFIKASI;
+            // Verifikasi paralel selesai: SPM langsung TERBIT ber-TTE QR (tanpa upload manual)
+            // dan siap dibuatkan NPI oleh Bendahara Pengeluaran.
+            $statusBaru = $isFullyApproved ? DokumenSpm::STATUS_SPM_TERBIT : DokumenSpm::STATUS_MENUNGGU_VERIFIKASI;
 
-            if ($isFullyApproved && $spm->status !== DokumenSpm::STATUS_MENUNGGU_UPLOAD) {
-                $spm->update(['status' => DokumenSpm::STATUS_MENUNGGU_UPLOAD]);
+            if ($isFullyApproved && $spm->status !== DokumenSpm::STATUS_SPM_TERBIT) {
+                $spm->update(['status' => DokumenSpm::STATUS_SPM_TERBIT]);
             }
 
             LogStatusDokumen::create([
@@ -371,21 +382,35 @@ class SpmPerjaldinVerifikasiController extends Controller
                 'status_baru'       => $statusBaru,
                 'aksi'              => 'APPROVE_' . strtoupper(str_replace(' ', '_', $roleCode)),
                 'catatan'           => $isFullyApproved
-                    ? 'Dokumen SPM Perjaldin disetujui. Semua approver telah menyetujui — SPM final.'
+                    ? 'Dokumen SPM Perjaldin disetujui. SPM terbit ber-TTE QR dan siap dibuatkan NPI.'
                     : 'Dokumen SPM Perjaldin disetujui oleh ' . $roleCode . '.',
                 'ip_address'        => $request->ip(),
             ]);
 
             $operators = User::role('Operator BLU')->get();
             Notification::send($operators, new WorkflowNotification([
-                'title'   => $isFullyApproved ? 'SPM Perjaldin Menunggu Upload' : 'SPM Perjaldin Disetujui ' . $roleCode,
+                'title'   => $isFullyApproved ? 'SPM Perjaldin Terbit ber-TTE' : 'SPM Perjaldin Disetujui ' . $roleCode,
                 'message' => $isFullyApproved
-                    ? "SPM {$spm->nomor_spm} telah disetujui oleh semua pihak. Silakan cetak, tandatangani, dan upload scan SPM."
+                    ? "SPM {$spm->nomor_spm} telah disetujui semua pihak dan terbit ber-TTE QR."
                     : "SPM {$spm->nomor_spm} telah disetujui oleh {$roleCode}.",
                 'url'     => route('spms.perjaldin.detail', $spm->spp_id),
                 'icon'    => 'verified',
                 'color'   => 'success',
             ]));
+
+            // Beritahu Bendahara Pengeluaran bahwa NPI Perjaldin dapat dibuat
+            if ($isFullyApproved) {
+                $bendahara = User::role('Bendahara Pengeluaran')->get();
+                if ($bendahara->isNotEmpty()) {
+                    Notification::send($bendahara, new WorkflowNotification([
+                        'title'   => 'SPM Perjaldin Terbit — NPI Siap Dibuat',
+                        'message' => "SPM {$spm->nomor_spm} telah terbit ber-TTE. NPI Perjalanan Dinas dapat segera Anda buat.",
+                        'url'     => route('npis.perjaldin.index'),
+                        'icon'    => 'receipt_long',
+                        'color'   => 'success',
+                    ]));
+                }
+            }
 
             return back()->with('success', $isFullyApproved
                 ? "SPM {$spm->nomor_spm} telah disetujui oleh semua pihak."

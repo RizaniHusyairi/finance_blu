@@ -18,6 +18,7 @@ class PpkSp2dKontrakVerifikasiController extends Controller
         $user ??= auth()->user();
 
         return collect([
+            'Bendahara Penerimaan',
             'PPSPM',
             'PPK',
             'Kepala Subbagian Keuangan dan Tata Usaha',

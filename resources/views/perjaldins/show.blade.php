@@ -312,6 +312,56 @@
     .tab-pane-d { display: none; animation: secIn .35s cubic-bezier(.22,1,.36,1) both; }
     .tab-pane-d.active { display: block; }
 
+    /* ============ TTE PDF CARD (Dokumen Final Ber-TTE) ============ */
+    .tte-pdf-card {
+        background: linear-gradient(135deg, rgba(16,185,129,.04), rgba(5,150,105,.02));
+        border: 1px solid rgba(16,185,129,.18);
+        border-left: 4px solid #10b981;
+        border-radius: 1rem;
+        padding: 1.5rem;
+        margin-bottom: 1.25rem;
+        animation: secIn .55s cubic-bezier(.22,1,.36,1) .32s both;
+    }
+    .tte-pdf-head {
+        display: flex;
+        align-items: center;
+        gap: .85rem;
+        margin-bottom: 1.1rem;
+    }
+    .tte-pdf-icon {
+        width: 44px; height: 44px;
+        border-radius: 12px;
+        display: inline-flex; align-items: center; justify-content: center;
+        background: linear-gradient(135deg, rgba(16,185,129,.20), rgba(5,150,105,.12));
+        color: #047857;
+        font-size: 1.35rem;
+        flex-shrink: 0;
+    }
+    .tte-pdf-slot {
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        border-radius: .85rem;
+        padding: 1rem 1.1rem;
+        height: 100%;
+        transition: all .2s ease;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+    .tte-pdf-slot:hover {
+        border-color: #10b981;
+        box-shadow: 0 6px 18px -8px rgba(16,185,129,.25);
+        transform: translateY(-2px);
+    }
+    .tte-pdf-thumb {
+        width: 42px; height: 42px;
+        border-radius: 10px;
+        background: #f8fafc;
+        display: inline-flex; align-items: center; justify-content: center;
+        font-size: 1.5rem;
+        flex-shrink: 0;
+    }
+
     /* ============ UPLOAD NOMINATIF ============ */
     .upload-nominatif-card {
         background: #fff;
@@ -2003,6 +2053,69 @@
 <div class="standalone-section section-peserta">
     @include('perjaldins.partials.peserta-list', ['tagihan' => $tagihan])
 </div>
+
+{{-- ═══ DOKUMEN FINAL BER-TTE (muncul setelah seluruh verifikator approve) ═══ --}}
+@if($isApprovedPerjaldin)
+<div class="tte-pdf-card standalone-section section-tte-pdf">
+    <div class="tte-pdf-head">
+        <div class="tte-pdf-icon"><i class="bi bi-patch-check-fill"></i></div>
+        <div class="flex-fill">
+            <h6 class="fw-bold mb-1">Dokumen Final Ber-TTE QR</h6>
+            <small class="text-muted">Seluruh verifikator telah menyetujui. PDF berikut otomatis memuat QR Code TTE untuk verifikasi keaslian dokumen.</small>
+        </div>
+        <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-2 d-none d-md-inline-flex align-items-center gap-1">
+            <i class="bi bi-shield-check"></i> TTE Aktif
+        </span>
+    </div>
+
+    <div class="row g-3">
+        @php
+            $ttePdfs = [
+                [
+                    'label' => 'Nominatif Perjalanan Dinas',
+                    'desc'  => 'A4 portrait. TTE QR pada bagian tanda tangan.',
+                    'icon'  => 'bi-file-earmark-pdf-fill',
+                    'color' => '#dc2626',
+                    'route' => route('perjaldins.pdf-nominatif', $tagihan->id),
+                ],
+                [
+                    'label' => 'Daftar Nominatif Pembayaran',
+                    'desc'  => 'A4 landscape. TTE QR pada bagian tanda tangan.',
+                    'icon'  => 'bi-file-earmark-spreadsheet-fill',
+                    'color' => '#0ea5e9',
+                    'route' => route('perjaldins.pdf-lampiran', $tagihan->id),
+                ],
+            ];
+        @endphp
+        @foreach($ttePdfs as $pdf)
+            <div class="col-md-6">
+                <div class="tte-pdf-slot">
+                    <div class="d-flex align-items-start gap-3">
+                        <div class="tte-pdf-thumb" style="color: {{ $pdf['color'] }};">
+                            <i class="bi {{ $pdf['icon'] }}"></i>
+                        </div>
+                        <div class="flex-fill" style="min-width: 0;">
+                            <div class="fw-bold text-dark text-truncate">{{ $pdf['label'] }}</div>
+                            <small class="text-muted d-block">{{ $pdf['desc'] }}</small>
+                            <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill mt-2" style="font-size:.62rem;">
+                                <i class="bi bi-check-circle-fill"></i> TTE QR Aktif
+                            </span>
+                        </div>
+                    </div>
+                    <div class="d-flex gap-2 mt-3">
+                        <a href="{{ $pdf['route'] }}" target="_blank" class="btn-act btn-act-primary flex-fill">
+                            <i class="bi bi-eye-fill"></i> Lihat PDF
+                        </a>
+                        <a href="{{ $pdf['route'] }}" download class="btn-act btn-act-pdf">
+                            <i class="bi bi-download"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        @endforeach
+    </div>
+</div>
+@endif
 
 {{-- ═══ UPLOAD NOMINATIF (ALWAYS VISIBLE WHEN APPLICABLE) ═══ --}}
 @if($showUploadCard)

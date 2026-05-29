@@ -87,4 +87,63 @@ function markNotificationsAsRead() {
 }
 </script>
 
+{{-- ====== Enhancer global: COA dropdown searchable + desain konsisten ====== --}}
+<script>
+(function () {
+    function enhanceCoaSelects(root) {
+        if (!(window.jQuery && typeof window.jQuery.fn.select2 === 'function')) return;
+        var $ = window.jQuery;
+        var scope = root ? $(root) : $(document);
+
+        scope.find('select.js-coa-select').addBack('select.js-coa-select').each(function () {
+            var $el = $(this);
+
+            // Sudah dirapikan oleh enhancer ini? lewati.
+            if ($el.data('coaEnhanced')) return;
+
+            // Tentukan placeholder.
+            var placeholder = $el.attr('data-coa-placeholder')
+                || ($el.find('option[value=""]').first().text() || '').trim()
+                || 'Cari & pilih COA...';
+
+            // Dropdown menempel di modal bila berada dalam modal (agar pencarian bisa diketik).
+            var $modal = $el.closest('.modal');
+
+            // Bila sudah diinisialisasi (mis. oleh skrip halaman), reset dulu agar tema seragam.
+            try {
+                if ($el.hasClass('select2-hidden-accessible')) {
+                    $el.select2('destroy');
+                }
+            } catch (e) { /* abaikan */ }
+
+            $el.select2({
+                theme: 'bootstrap-5',
+                width: '100%',
+                placeholder: placeholder,
+                allowClear: false,
+                containerCssClass: 'coa-s2',
+                dropdownCssClass: 'coa-s2-drop',
+                dropdownParent: $modal.length ? $modal : $(document.body),
+                language: {
+                    noResults: function () { return 'COA tidak ditemukan'; },
+                    searching: function () { return 'Mencari...'; },
+                    inputTooShort: function () { return 'Ketik untuk mencari COA'; }
+                }
+            });
+
+            $el.data('coaEnhanced', true);
+        });
+    }
+
+    // Ekspos agar konten dinamis bisa memicu ulang.
+    window.enhanceCoaSelects = enhanceCoaSelects;
+
+    // Jalankan setelah seluruh init per-halaman selesai (window load > DOMContentLoaded).
+    window.addEventListener('load', function () { enhanceCoaSelects(); });
+
+    // Tangani select COA yang baru tampil di dalam modal.
+    document.addEventListener('shown.bs.modal', function (e) { enhanceCoaSelects(e.target); });
+})();
+</script>
+
 @stack('script')

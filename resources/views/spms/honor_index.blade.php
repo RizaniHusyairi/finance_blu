@@ -156,13 +156,21 @@
                                 $spm = $spp->spm;
                                 $tagihan = $spp->tagihan;
                                 
-                                $statusLabel = $spm?->status ?? 'Belum Dibuat';
-                                $statusClass = match($statusLabel) {
+                                $statusRaw = $spm?->status ?? 'Belum Dibuat';
+                                $statusLabel = match($statusRaw) {
+                                    'DRAFT' => 'Draft',
+                                    'Menunggu Verifikasi' => 'Menunggu Verifikasi',
+                                    'Revisi' => 'Revisi',
+                                    'Disetujui Final', 'Menunggu Upload SPM', 'SPM_TERBIT' => 'SPM Terbit',
+                                    'Belum Dibuat' => 'Belum Dibuat',
+                                    default => $statusRaw,
+                                };
+                                $statusClass = match($statusRaw) {
                                     'Belum Dibuat' => 'bg-secondary',
                                     'DRAFT' => 'bg-warning text-dark',
                                     'Revisi' => 'bg-danger',
                                     'Menunggu Verifikasi' => 'bg-info',
-                                    'Disetujui Final' => 'bg-success',
+                                    'Disetujui Final', 'Menunggu Upload SPM', 'SPM_TERBIT' => 'bg-success',
                                     default => 'bg-secondary',
                                 };
 

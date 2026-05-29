@@ -155,28 +155,53 @@ class PerjaldinKomponenService
      * Update COA (dipa_revision_item_id) untuk satu komponen.
      * Jika total_nominal > 0 dan belum ada SPP, status → SIAP_SPP.
      *
+     * Validasi sisa PAGU: total nominal komponen tidak boleh melebihi sisa pagu
+     * item DIPA yang dipilih. Row di-lock pakai lockForUpdate untuk hindari
+     * race condition antar operator yang pilih COA sama bersamaan.
+     *
      * @throws \RuntimeException
      */
     public function updateKomponenCoa(TagihanPerjaldinKomponen $komponen, int $dipaRevisionItemId): void
     {
-        // Validasi item DIPA
-        $item = DetailDipa::where('id', $dipaRevisionItemId)
-            ->where('status_aktif', true)
-            ->whereHas('coa')
-            ->first();
+        DB::transaction(function () use ($komponen, $dipaRevisionItemId) {
+            // Lock baris item DIPA agar perhitungan sisa pagu konsisten
+            // walau ada operator lain yang pilih COA sama bersamaan.
+            $item = DetailDipa::where('id', $dipaRevisionItemId)
+                ->where('status_aktif', true)
+                ->whereHas('coa')
+                ->lockForUpdate()
+                ->first();
 
-        if (!$item) {
-            throw new \RuntimeException("Item DIPA/COA yang dipilih tidak valid atau tidak aktif.");
-        }
+            if (!$item) {
+                throw new \RuntimeException("Item DIPA/COA yang dipilih tidak valid atau tidak aktif.");
+            }
 
-        $komponen->update([
-            'dipa_revision_item_id' => $dipaRevisionItemId,
-        ]);
+            // Validasi sisa pagu (lewati jika user re-save COA yang sama).
+            $isSameCoa = (int) $komponen->dipa_revision_item_id === (int) $dipaRevisionItemId;
+            $totalNominal = (float) $komponen->total_nominal;
 
-        // Update status jika memenuhi syarat
-        if ((float) $komponen->total_nominal > 0 && !$komponen->hasDokumenTurunan()) {
-            $komponen->update(['status_proses' => TagihanPerjaldinKomponen::STATUS_SIAP_BUAT_SPP]);
-        }
+            if (!$isSameCoa && $totalNominal > 0) {
+                $sisaPagu = (float) $item->sisa_pagu;
+                if ($totalNominal > $sisaPagu) {
+                    throw new \RuntimeException(sprintf(
+                        'Total biaya komponen %s (Rp %s) melebihi sisa pagu COA %s (Sisa: Rp %s). Silakan pilih COA lain atau revisi anggaran.',
+                        $komponen->nama_komponen,
+                        number_format($totalNominal, 0, ',', '.'),
+                        $item->coa?->kode_mak_lengkap ?? '-',
+                        number_format($sisaPagu, 0, ',', '.')
+                    ));
+                }
+            }
+
+            $komponen->update([
+                'dipa_revision_item_id' => $dipaRevisionItemId,
+            ]);
+
+            // Update status jika memenuhi syarat
+            if ($totalNominal > 0 && !$komponen->hasDokumenTurunan()) {
+                $komponen->update(['status_proses' => TagihanPerjaldinKomponen::STATUS_SIAP_BUAT_SPP]);
+            }
+        });
     }
 
     /**
@@ -197,6 +222,29 @@ class PerjaldinKomponenService
 
         if ($komponen->hasDokumenTurunan()) {
             throw new \RuntimeException("Komponen {$komponen->nama_komponen} sudah memiliki SPP aktif.");
+        }
+
+        // Defense-in-depth: validasi sisa pagu lagi saat SPP dibuat (kondisi pagu
+        // bisa berubah sejak COA dipilih jika SP2D dari komitmen lain terealisasi).
+        $detailDipa = DetailDipa::where('id', $komponen->dipa_revision_item_id)
+            ->where('status_aktif', true)
+            ->lockForUpdate()
+            ->first();
+
+        if (!$detailDipa) {
+            throw new \RuntimeException("Item DIPA/COA komponen {$komponen->nama_komponen} tidak lagi aktif. Silakan pilih ulang COA.");
+        }
+
+        $totalNominal = (float) $komponen->total_nominal;
+        $sisaPagu = (float) $detailDipa->sisa_pagu;
+        if ($totalNominal > $sisaPagu) {
+            throw new \RuntimeException(sprintf(
+                'SPP tidak dapat dibuat: Total biaya komponen %s (Rp %s) melebihi sisa pagu COA %s (Sisa: Rp %s).',
+                $komponen->nama_komponen,
+                number_format($totalNominal, 0, ',', '.'),
+                $detailDipa->coa?->kode_mak_lengkap ?? '-',
+                number_format($sisaPagu, 0, ',', '.')
+            ));
         }
 
         $tagihan = $komponen->tagihan;

@@ -10,11 +10,14 @@
         let card = $(element).closest('.item-row');
         let val = parseFloat(String($(element).val()).replace(/,/g, '')) || 0;
         let wrapper = card.find('.' + key + '-file-wrapper');
+        let input = wrapper.find('.' + key + '-file-input');
+        let hasExisting = wrapper.find('.' + key + '-existing-notice').length > 0;
         if (val > 0) {
             wrapper.removeClass('d-none');
+            if (!hasExisting) input.prop('required', true);
         } else {
             wrapper.addClass('d-none');
-            wrapper.find('.' + key + '-file-input').val('');
+            input.val('').prop('required', false);
             wrapper.find('.' + key + '-existing-notice').remove();
         }
     };
@@ -27,11 +30,14 @@
             if (!isNaN(n)) total += n;
         });
         let wrapper = card.find('.uang-harian-file-wrapper');
+        let input = wrapper.find('.uang-harian-file-input');
+        let hasExisting = wrapper.find('.uang-harian-existing-notice').length > 0;
         if (total > 0) {
             wrapper.removeClass('d-none');
+            if (!hasExisting) input.prop('required', true);
         } else {
             wrapper.addClass('d-none');
-            wrapper.find('.uang-harian-file-input').val('');
+            input.val('').prop('required', false);
             wrapper.find('.uang-harian-existing-notice').remove();
         }
     }
@@ -248,6 +254,8 @@
             newRow.find('.file-existing-notice').remove();
             newRow.find('.tiket-existing-notice, .transport-existing-notice, .penginapan-existing-notice, .uang-harian-existing-notice').remove();
             newRow.find('.tiket-file-wrapper, .transport-file-wrapper, .penginapan-file-wrapper, .uang-harian-file-wrapper').addClass('d-none');
+            newRow.find('.spt-file-input').prop('required', true);
+            newRow.find('.tiket-file-input, .transport-file-input, .penginapan-file-input, .uang-harian-file-input').prop('required', false);
             newRow.find('.file-status-badge').removeClass('bg-success').addClass('bg-secondary').html('<i class="bi bi-paperclip"></i> SPT Kosong');
             newRow.find('.nip-input').val('').prop('readonly', true);
             newRow.find('.rekening-input').val('').prop('readonly', false);

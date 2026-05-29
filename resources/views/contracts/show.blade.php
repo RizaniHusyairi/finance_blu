@@ -611,43 +611,6 @@
                                                         <i class="bi bi-clock-history"></i>
                                                     </button>
                                                 </div>
-
-                                                {{-- Modal Riwayat Aktivitas --}}
-                                                <div class="modal fade text-start" id="modalAktivitasTagihan{{ $tagihanLinked->id }}" tabindex="-1" aria-hidden="true">
-                                                    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
-                                                        <div class="modal-content">
-                                                            <div class="modal-header modal-grad-primary">
-                                                                <div>
-                                                                    <h6 class="modal-title fw-bold m-0"><i class="bi bi-clock-history me-2"></i>Riwayat Aktivitas Termin {{ $termin->termin_ke }}</h6>
-                                                                    <div class="small opacity-90">{{ $tagihanLinked->nomor_tagihan ?? '' }}</div>
-                                                                </div>
-                                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                                            </div>
-                                                            <div class="modal-body p-4" style="background: #fafbff;">
-                                                                @forelse($tagihanLinked->logs as $log)
-                                                                    <div class="d-flex mb-3 gap-3">
-                                                                        <div style="width:10px; height:10px; border-radius:50%; background:linear-gradient(135deg,#818cf8,#6366f1); margin-top:8px; flex-shrink:0; box-shadow: 0 0 0 3px rgba(99,102,241,.15);"></div>
-                                                                        <div>
-                                                                            <div class="fw-bold text-dark">{{ \Illuminate\Support\Str::title(strtolower(str_replace('_',' ',$log->status_baru))) }}</div>
-                                                                            <div class="small text-muted">{{ \Carbon\Carbon::parse($log->created_at)->translatedFormat('d M Y H:i') }} · {{ $log->user ? $log->user->name : 'Sistem' }}</div>
-                                                                            @if($log->catatan)
-                                                                                <div class="small fst-italic mt-1 p-2 rounded" style="background: rgba(99,102,241,.06); border-left: 3px solid #818cf8; color: #475569;">"{{ $log->catatan }}"</div>
-                                                                            @endif
-                                                                        </div>
-                                                                    </div>
-                                                                @empty
-                                                                    <div class="empty-cell-state">
-                                                                        <i class="bi bi-journal-x"></i>
-                                                                        <small>Belum ada riwayat aktivitas.</small>
-                                                                    </div>
-                                                                @endforelse
-                                                            </div>
-                                                            <div class="modal-footer border-0 bg-light">
-                                                                <button type="button" class="btn-act-modern btn-act-soft" data-bs-dismiss="modal">Tutup</button>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
                                             @else
                                                 <span class="text-danger small"><i class="bi bi-exclamation-triangle"></i> Data Tagihan Hilang</span>
                                             @endif
@@ -835,6 +798,49 @@
 </div>
 @endforeach
 @endif
+
+@foreach($kontrak->termin as $termin)
+    @php
+        $tagihanLinked = $termin->detailKontrak->tagihan ?? null;
+    @endphp
+    @if(in_array($termin->status_termin, ['DRAFT', 'SUDAH_DITAGIH']) && $tagihanLinked)
+        <div class="modal fade text-start" id="modalAktivitasTagihan{{ $tagihanLinked->id }}" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+                <div class="modal-content">
+                    <div class="modal-header modal-grad-primary">
+                        <div>
+                            <h6 class="modal-title fw-bold m-0"><i class="bi bi-clock-history me-2"></i>Riwayat Aktivitas Termin {{ $termin->termin_ke }}</h6>
+                            <div class="small opacity-90">{{ $tagihanLinked->nomor_tagihan ?? '' }}</div>
+                        </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body p-4" style="background: #fafbff;">
+                        @forelse($tagihanLinked->logs as $log)
+                            <div class="d-flex mb-3 gap-3">
+                                <div style="width:10px; height:10px; border-radius:50%; background:linear-gradient(135deg,#818cf8,#6366f1); margin-top:8px; flex-shrink:0; box-shadow: 0 0 0 3px rgba(99,102,241,.15);"></div>
+                                <div>
+                                    <div class="fw-bold text-dark">{{ \Illuminate\Support\Str::title(strtolower(str_replace('_',' ',$log->status_baru))) }}</div>
+                                    <div class="small text-muted">{{ \Carbon\Carbon::parse($log->created_at)->translatedFormat('d M Y H:i') }} · {{ $log->user ? $log->user->name : 'Sistem' }}</div>
+                                    @if($log->catatan)
+                                        <div class="small fst-italic mt-1 p-2 rounded" style="background: rgba(99,102,241,.06); border-left: 3px solid #818cf8; color: #475569;">"{{ $log->catatan }}"</div>
+                                    @endif
+                                </div>
+                            </div>
+                        @empty
+                            <div class="empty-cell-state">
+                                <i class="bi bi-journal-x"></i>
+                                <small>Belum ada riwayat aktivitas.</small>
+                            </div>
+                        @endforelse
+                    </div>
+                    <div class="modal-footer border-0 bg-light">
+                        <button type="button" class="btn-act-modern btn-act-soft" data-bs-dismiss="modal">Tutup</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endif
+@endforeach
 
 
 

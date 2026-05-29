@@ -471,6 +471,39 @@
             transform: translateY(-2px) scale(1.05);
         }
 
+        /* Revisi pill button (status DIKEMBALIKAN) */
+        .btn-revisi-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            border-radius: 999px;
+            padding: 0.45rem 1rem;
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #fff !important;
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            border: none;
+            text-decoration: none;
+            white-space: nowrap;
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
+            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .btn-revisi-pill i {
+            font-size: 0.9rem;
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .btn-revisi-pill:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 18px rgba(239, 68, 68, 0.32);
+            color: #fff !important;
+        }
+
+        .btn-revisi-pill:hover i {
+            transform: rotate(-180deg);
+        }
+
         /* Override DataTables elements */
         .dataTables_wrapper .dataTables_length {
             margin-bottom: 1.25rem;
@@ -560,6 +593,7 @@
     @php
         $revisiDraftStatuses = [
             'DRAFT',
+            'DIKEMBALIKAN',
             'REVISI_PPK',
             'REVISI_PPSPM',
             'REVISI_KOORDINATOR_KEUANGAN',
@@ -798,6 +832,24 @@
                                             <i class="bi bi-file-earmark-check-fill"></i> {{ str_replace('_', ' ', $tagihan->status) }}
                                         </span>
                                         @break
+                                    @case('DIKEMBALIKAN')
+                                        <span class="status-badge-premium status-revisi">
+                                            <i class="bi bi-arrow-counterclockwise"></i> Dikembalikan untuk Revisi
+                                        </span>
+                                        @php
+                                            $revLog = $tagihan->logs->firstWhere('aksi', 'KEMBALIKAN_REVISI_COA') ?? $tagihan->logs->first();
+                                            $revCatatan = $revLog?->catatan;
+                                            if ($revCatatan && \Illuminate\Support\Str::contains($revCatatan, 'Alasan:')) {
+                                                $revCatatan = trim(\Illuminate\Support\Str::after($revCatatan, 'Alasan:'));
+                                            }
+                                        @endphp
+                                        @if($revCatatan)
+                                            <div class="revisi-catatan-box mt-2 p-2 rounded-3 small">
+                                                <i class="bi bi-exclamation-triangle-fill text-danger me-1"></i>
+                                                <strong>Catatan Operator BLU:</strong> {{ $revCatatan }}
+                                            </div>
+                                        @endif
+                                        @break
                                     @default
                                         <span class="status-badge-premium status-draft">
                                             {{ str_replace('_', ' ', $tagihan->status) }}
@@ -809,7 +861,11 @@
                                     <a href="{{ route('perjaldins.show', $tagihan->id) }}" class="btn-action-view" title="Detail Tagihan">
                                         <i class="bi bi-eye-fill"></i>
                                     </a>
-                                    @if(in_array($tagihan->status, $revisiDraftStatuses))
+                                    @if($tagihan->status === 'DIKEMBALIKAN')
+                                        <a href="{{ route('perjaldins.edit-perjaldin', $tagihan->id) }}" class="btn-revisi-pill" title="Revisi tagihan yang dikembalikan Operator BLU">
+                                            <i class="bi bi-arrow-counterclockwise"></i> Revisi
+                                        </a>
+                                    @elseif(in_array($tagihan->status, $revisiDraftStatuses))
                                         <a href="{{ route('perjaldins.edit-perjaldin', $tagihan->id) }}" class="btn-action-edit-warning" title="Edit Tagihan">
                                             <i class="bi bi-pencil-fill"></i>
                                         </a>

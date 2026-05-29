@@ -26,14 +26,46 @@ class VerifikasiNpiPerjaldinController extends Controller
      * Helper to detect which role the controller should act as for the currently logged in user 
      * in the context of Verifikasi NPI.
      */
-    private function activeRoleCode(User $user): string
+    private function activeRoleCodes(User $user): array
     {
-        if ($user->hasRole('Bendahara Penerimaan')) return 'Bendahara Penerimaan';
-        if ($user->hasRole('PPK')) return 'PPK';
-        if ($user->hasRole('Kepala Subbagian Keuangan dan Tata Usaha')) return 'Kepala Subbagian Keuangan dan Tata Usaha';
-        if ($user->hasRole('Koordinator Keuangan')) return 'Koordinator Keuangan';
-        
-        return '';
+        $roles = [];
+        if ($user->hasRole('Bendahara Penerimaan')) $roles[] = 'Bendahara Penerimaan';
+        if ($user->hasRole('PPK')) $roles[] = 'PPK';
+        if ($user->hasRole('Kepala Subbagian Keuangan dan Tata Usaha')) $roles[] = 'Kepala Subbagian Keuangan dan Tata Usaha';
+        if ($user->hasRole('Koordinator Keuangan')) $roles[] = 'Koordinator Keuangan';
+
+        return $roles;
+    }
+
+    /**
+     * Cek apakah satu baris approval dapat ditindak oleh user (sesuai role, penugasan, kepemilikan BenPen).
+     */
+    private function approvalBelongsToUser($approval, array $roleCodes, User $user, DokumenNpi $npi): bool
+    {
+        if (!in_array($approval->role_code, $roleCodes, true)) return false;
+        if ($approval->assigned_user_id && (int) $approval->assigned_user_id !== (int) $user->id) return false;
+        if ($approval->role_code === 'Bendahara Penerimaan' && (int) $npi->bendahara_penerimaan_id !== (int) $user->id) return false;
+
+        return true;
+    }
+
+    /**
+     * Cari approval pending yang sedang aktif (current step) untuk ditindak user.
+     */
+    private function resolveActableApproval($wf, array $roleCodes, User $user, DokumenNpi $npi, $approvalId = null)
+    {
+        $candidates = collect($wf?->approvals ?? [])->filter(function ($a) use ($roleCodes, $user, $npi, $wf) {
+            return $a->status === 'PENDING'
+                && $wf->status === 'IN_PROGRESS'
+                && (int) $wf->step_saat_ini === (int) $a->urutan_step
+                && $this->approvalBelongsToUser($a, $roleCodes, $user, $npi);
+        });
+
+        if ($approvalId) {
+            return $candidates->firstWhere('id', (int) $approvalId);
+        }
+
+        return $candidates->first();
     }
 
     /**
@@ -56,9 +88,10 @@ class VerifikasiNpiPerjaldinController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
-        $roleCode = $this->activeRoleCode($user);
-        
-        abort_unless($roleCode !== '', 403, 'Akses ditolak. Anda tidak memiliki peran verifikator yang valid.');
+        $roleCodes = $this->activeRoleCodes($user);
+        $roleCode = $roleCodes[0] ?? '';
+
+        abort_unless(!empty($roleCodes), 403, 'Akses ditolak. Anda tidak memiliki peran verifikator yang valid.');
 
         // 1. Tampilkan hanya Dokumen NPI dari SPM yang memiliki komponen perjaldin
         $query = DokumenNpi::with([
@@ -74,28 +107,12 @@ class VerifikasiNpiPerjaldinController extends Controller
         })
         ->whereNotIn('status', [DokumenNpi::STATUS_DRAFT]); // Jangan tampilkan draft bendahara pengeluaran yang belum di-submit
 
-        // Filter Spesifik Role
-        if ($roleCode === 'Bendahara Penerimaan') {
-            // NPI ditujukan ke Bendahara Penerimaan ini
-            $query->where('bendahara_penerimaan_id', $user->id);
-            // Workflow approval filter untuk Bendahara Penerimaan is implicit if it's assigned to them, 
-            // but we can enforce it.
-            $query->whereHas('workflowInstances.approvals', function($q) use ($roleCode, $user) {
-                $q->where('role_code', $roleCode)->where(function($sq) use ($user) {
-                    $sq->whereNull('assigned_user_id')->orWhere('assigned_user_id', $user->id);
-                });
+        // Tampilkan NPI yang punya minimal satu baris approval untuk salah satu role user (multi-role)
+        $query->whereHas('workflowInstances.approvals', function($q) use ($roleCodes, $user) {
+            $q->whereIn('role_code', $roleCodes)->where(function($sq) use ($user) {
+                $sq->whereNull('assigned_user_id')->orWhere('assigned_user_id', $user->id);
             });
-        } elseif ($roleCode === 'PPK') {
-            $query->whereHas('workflowInstances.approvals', function($q) use ($roleCode, $user) {
-                $q->where('role_code', $roleCode)->where(function($sq) use ($user) {
-                    $sq->whereNull('assigned_user_id')->orWhere('assigned_user_id', $user->id);
-                });
-            });
-        } elseif (in_array($roleCode, ['Kepala Subbagian Keuangan dan Tata Usaha', 'Koordinator Keuangan'], true)) {
-            $query->whereHas('workflowInstances.approvals', function($q) use ($roleCode) {
-                $q->where('role_code', $roleCode);
-            });
-        }
+        });
 
         $allNpis = $query->latest()->get();
 
@@ -105,12 +122,16 @@ class VerifikasiNpiPerjaldinController extends Controller
             $wf = $npi->workflowInstances->first();
             if (!$wf) continue;
 
-            $myApproval = $wf->approvals->where('role_code', $roleCode)->first();
-            
-            // Re-check assignment just in case
-            if ($myApproval?->assigned_user_id && $myApproval->assigned_user_id !== $user->id) {
-                continue;
-            }
+            // Semua baris approval relevan untuk user ini (lintas role)
+            $myApprovals = collect($wf->approvals)->filter(
+                fn($a) => $this->approvalBelongsToUser($a, $roleCodes, $user, $npi)
+            );
+
+            if ($myApprovals->isEmpty()) continue;
+
+            $pendingMine  = $myApprovals->where('status', 'PENDING');
+            $revisionMine = $myApprovals->where('status', 'REVISION');
+            $approvedMine = $myApprovals->where('status', 'APPROVED');
 
             $spm = $npi->spm;
             $spp = $spm?->spp;
@@ -118,23 +139,26 @@ class VerifikasiNpiPerjaldinController extends Controller
             $npi->sppModel = $spp;
             $npi->tagihanModel = $spp?->tagihan;
             $npi->nominal = $spm?->nominal_spm ?? 0;
-            
-            $npi->myApprovalStatus = $myApproval?->status ?? 'N/A';
-            
+
+            $npi->myApprovalStatus = $pendingMine->isNotEmpty() ? 'PENDING'
+                : ($revisionMine->isNotEmpty() ? 'REVISION'
+                : ($approvedMine->isNotEmpty() ? 'APPROVED' : 'N/A'));
+
+            $npi->myRoles = $myApprovals->pluck('role_code')->unique()->values()->all();
+            $npi->pendingRoleCount = $pendingMine->count();
+
             // Compute combined status for display
             if ($wf->status === 'REVISION') {
                 $npi->statusFinal = 'Perlu Revisi';
             } elseif ($wf->status === 'APPROVED') {
                 $npi->statusFinal = 'Selesai';
             } else {
-                $npi->statusFinal = $npi->status; 
+                $npi->statusFinal = $npi->status;
             }
 
             $npi->canAct = (
-                $myApproval
-                && $myApproval->status === 'PENDING'
-                && $wf->status === 'IN_PROGRESS'
-                && (int) $wf->step_saat_ini === (int) $myApproval->urutan_step // For parallel this is usually true if they are on same step
+                $wf->status === 'IN_PROGRESS'
+                && $pendingMine->contains(fn($a) => (int) $wf->step_saat_ini === (int) $a->urutan_step)
             );
 
             $npi->workflow = $wf;
@@ -174,7 +198,7 @@ class VerifikasiNpiPerjaldinController extends Controller
         ];
 
         return view('verifikasi_npi_perjaldin.index', compact(
-            'viewNpis', 'summary', 'statusFilter', 'search', 'roleCode', 'user'
+            'viewNpis', 'summary', 'statusFilter', 'search', 'roleCode', 'roleCodes', 'user'
         ));
     }
 
@@ -184,13 +208,15 @@ class VerifikasiNpiPerjaldinController extends Controller
     public function show($id, Request $request)
     {
         $user = $request->user();
-        $roleCode = $this->activeRoleCode($user);
-        abort_unless($roleCode !== '', 403, 'Akses ditolak.');
+        $roleCodes = $this->activeRoleCodes($user);
+        $roleCode = $roleCodes[0] ?? '';
+        abort_unless(!empty($roleCodes), 403, 'Akses ditolak.');
 
         $npi = DokumenNpi::with([
             'spm.spp.tagihan.detailPerjaldin.pegawai',
             'spm.spp.tagihan.detailPerjaldin.provinsi',
             'spm.spp.tagihan.komponenPerjaldin',
+            'spm.spp.tagihan.arsipDokumen',
             'spm.spp.tagihanPerjaldinKomponen.dipaRevisionItem.coa',
             'bendaharaPenerimaan',
             'logs.user',
@@ -206,21 +232,22 @@ class VerifikasiNpiPerjaldinController extends Controller
         $wf = $npi->workflowInstances->first();
         abort_unless($wf, 404, 'Workflow tidak ditemukan untuk dokumen NPI ini.');
 
-        // Cek otorisasi detail page (Apakah ada approval line utk user ini)
-        $myApproval = $wf->approvals->where('role_code', $roleCode)->first();
-        if ($myApproval?->assigned_user_id && $myApproval->assigned_user_id !== $user->id) {
-            abort(403, 'Anda tidak berhak melihat Dokumen NPI ini.');
-        }
-        if ($roleCode === 'Bendahara Penerimaan' && (int) $npi->bendahara_penerimaan_id !== (int) $user->id) {
-            abort(403, 'NPI ini bukan tugas Bendahara Penerimaan Anda.');
-        }
+        // User harus punya minimal satu baris approval pada dokumen ini (lintas role)
+        $myApprovals = collect($wf->approvals)->filter(
+            fn($a) => $this->approvalBelongsToUser($a, $roleCodes, $user, $npi)
+        )->values();
+        abort_unless($myApprovals->isNotEmpty(), 403, 'Anda tidak memiliki peran verifikasi pada Dokumen NPI ini.');
 
-        $canAct = (
-            $myApproval
-            && $myApproval->status === 'PENDING'
-            && $wf->status === 'IN_PROGRESS'
-            && (int) $wf->step_saat_ini === (int) $myApproval->urutan_step
-        );
+        $myApproval = $myApprovals->first();
+
+        // Daftar approval pending yang dapat ditindak user saat ini (per role)
+        $activeRoleApprovals = $myApprovals->filter(function ($a) use ($wf) {
+            return $a->status === 'PENDING'
+                && $wf->status === 'IN_PROGRESS'
+                && (int) $wf->step_saat_ini === (int) $a->urutan_step;
+        })->values();
+
+        $canAct = $activeRoleApprovals->isNotEmpty();
 
         $spm = $npi->spm;
         $spp = $spm?->spp;
@@ -231,10 +258,22 @@ class VerifikasiNpiPerjaldinController extends Controller
         $approverPpk = $wf->approvals->where('role_code', 'PPK')->first();
         $approverKasubbag = $wf->approvals->where('role_code', 'Kepala Subbagian Keuangan dan Tata Usaha')->first();
 
+        // Validasi kesiapan NPI Perjaldin
+        $jumlahPeserta = collect($tagihan?->detailPerjaldin ?? [])->count();
+        $coaReady = filled($komponen?->dipaRevisionItem?->coa);
+        $checklist = collect([
+            ['label' => 'Status SPM Awal', 'status' => 'ready', 'message' => 'SPM sumber telah disetujui final.'],
+            ['label' => 'Rincian Peserta Perjaldin', 'status' => $jumlahPeserta > 0 ? 'ready' : 'missing', 'message' => $jumlahPeserta > 0 ? "$jumlahPeserta peserta perjalanan dinas tercatat." : 'Belum ada rincian peserta.'],
+            ['label' => 'Tujuan Penerimaan NPI', 'status' => filled($npi->bendahara_penerimaan_id) ? 'ready' : 'missing', 'message' => filled($npi->bendahara_penerimaan_id) ? 'Bendahara Penerimaan tervalidasi.' : 'Penunjukan bendahara rumpang.'],
+            ['label' => 'Kode COA / Mata Anggaran', 'status' => $coaReady ? 'ready' : 'missing', 'message' => $coaReady ? 'Beban anggaran DIPA tertaut.' : 'Akun DIPA belum tersedia.'],
+        ])->values();
+
+        $recentLogs = $npi->logs()->latest()->take(6)->get();
+
         return view('verifikasi_npi_perjaldin.show', compact(
             'npi', 'spm', 'spp', 'tagihan', 'komponen', 'wf',
-            'myApproval', 'canAct', 'roleCode',
-            'approverBenpen', 'approverPpk', 'approverKasubbag'
+            'myApproval', 'canAct', 'roleCode', 'roleCodes', 'activeRoleApprovals',
+            'approverBenpen', 'approverPpk', 'approverKasubbag', 'checklist', 'recentLogs'
         ));
     }
 
@@ -244,29 +283,26 @@ class VerifikasiNpiPerjaldinController extends Controller
     public function approve(Request $request, $id)
     {
         $user = $request->user();
-        $roleCode = $this->activeRoleCode($user);
-        abort_unless($roleCode !== '', 403, 'Akses ditolak.');
+        $roleCodes = $this->activeRoleCodes($user);
+        abort_unless(!empty($roleCodes), 403, 'Akses ditolak.');
 
         $npi = DokumenNpi::with('workflowInstances.approvals')->findOrFail($id);
         $wf = $this->workflowService->getActiveInstance($npi);
-        
-        abort_unless($wf, 404, 'Tidak ada antrean verifikasi aktif untuk NPI ini.');
 
-        $myApproval = $wf->approvals->where('role_code', $roleCode)->first();
-        abort_unless($myApproval && $myApproval->status === 'PENDING', 403, 'Anda tidak memiliki antrean menunggu pada Dokumen NPI ini.');
-        
-        if ($myApproval->assigned_user_id && $myApproval->assigned_user_id !== $user->id) {
-            abort(403, 'Anda bukan verifikator spesifik untuk dokumen ini.');
-        }
-        if ($roleCode === 'Bendahara Penerimaan' && (int) $npi->bendahara_penerimaan_id !== (int) $user->id) {
-            abort(403, 'NPI ini bukan tugas Bendahara Penerimaan Anda.');
-        }
+        abort_unless($wf, 404, 'Tidak ada antrean verifikasi aktif untuk NPI ini.');
+        $wf->load('approvals');
+
+        // Tentukan baris approval spesifik yang ditindak (mendukung user multi-role)
+        $myApproval = $this->resolveActableApproval($wf, $roleCodes, $user, $npi, $request->input('approval_id'));
+        abort_unless($myApproval, 403, 'Tidak ada antrean verifikasi aktif yang dapat Anda setujui pada NPI ini.');
+
+        $roleCode = $myApproval->role_code;
 
         DB::beginTransaction();
         try {
             $catatan = $request->input('catatan', 'Disetujui oleh ' . $this->roleLabel($roleCode));
-            
-            $this->workflowService->approveCurrentStep($npi, $user->id, $catatan);
+
+            $this->workflowService->approveCurrentStep($npi, $user->id, $catatan, $myApproval->id);
             $wf->refresh();
 
             $isFullyApproved = $wf->status === 'APPROVED';
@@ -311,8 +347,8 @@ class VerifikasiNpiPerjaldinController extends Controller
     public function reject(Request $request, $id)
     {
         $user = $request->user();
-        $roleCode = $this->activeRoleCode($user);
-        abort_unless($roleCode !== '', 403, 'Akses ditolak.');
+        $roleCodes = $this->activeRoleCodes($user);
+        abort_unless(!empty($roleCodes), 403, 'Akses ditolak.');
 
         $request->validate([
             'catatan' => 'required|string|min:5|max:1000'
@@ -320,21 +356,18 @@ class VerifikasiNpiPerjaldinController extends Controller
 
         $npi = DokumenNpi::with('workflowInstances.approvals')->findOrFail($id);
         $wf = $this->workflowService->getActiveInstance($npi);
-        
-        abort_unless($wf, 404, 'Tidak ada antrean verifikasi aktif untuk NPI ini.');
 
-        $myApproval = $wf->approvals->where('role_code', $roleCode)->first();
-        abort_unless($myApproval && $myApproval->status === 'PENDING', 403, 'Anda tidak memiliki antrean menunggu pada Dokumen NPI ini.');
-        if ($myApproval->assigned_user_id && $myApproval->assigned_user_id !== $user->id) {
-            abort(403, 'Anda bukan verifikator spesifik untuk dokumen ini.');
-        }
-        if ($roleCode === 'Bendahara Penerimaan' && (int) $npi->bendahara_penerimaan_id !== (int) $user->id) {
-            abort(403, 'NPI ini bukan tugas Bendahara Penerimaan Anda.');
-        }
+        abort_unless($wf, 404, 'Tidak ada antrean verifikasi aktif untuk NPI ini.');
+        $wf->load('approvals');
+
+        $myApproval = $this->resolveActableApproval($wf, $roleCodes, $user, $npi, $request->input('approval_id'));
+        abort_unless($myApproval, 403, 'Tidak ada antrean verifikasi aktif yang dapat Anda revisi pada NPI ini.');
+
+        $roleCode = $myApproval->role_code;
 
         DB::beginTransaction();
         try {
-            $this->workflowService->requestRevision($npi, $user->id, $request->catatan);
+            $this->workflowService->requestRevision($npi, $user->id, $request->catatan, $myApproval->id);
             $wf->refresh();
 
             LogStatusDokumen::create([

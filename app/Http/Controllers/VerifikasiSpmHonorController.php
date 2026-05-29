@@ -4,10 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Models\DokumenSpm;
 use App\Models\LogStatusDokumen;
+use App\Models\User;
 use App\Models\WorkflowApproval;
+use App\Notifications\WorkflowNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Notification;
 
 class VerifikasiSpmHonorController extends Controller
 {
@@ -27,6 +30,51 @@ class VerifikasiSpmHonorController extends Controller
             $roles[] = 'Koordinator Keuangan';
         }
         return $roles;
+    }
+
+    /**
+     * Resolusi approval milik user (mendukung user multi-role).
+     * Utamakan approval sesuai approval_id yang diposting, lalu fallback ke
+     * approval PENDING pertama yang sesuai dengan role & kepemilikan user.
+     */
+    private function resolveMyApproval($instance, $user, $approvalId = null)
+    {
+        $roleCodes = $this->activeRoleCodes($user);
+        $approvals = collect($instance->approvals ?? []);
+
+        if ($approvalId) {
+            $byId = $approvals->first(function ($a) use ($approvalId, $roleCodes) {
+                return (int) $a->id === (int) $approvalId
+                    && in_array($a->role_code, $roleCodes, true);
+            });
+            if ($byId) return $byId;
+        }
+
+        return $approvals->first(function ($a) use ($roleCodes, $user) {
+            return in_array($a->role_code, $roleCodes, true)
+                && $a->status === 'PENDING'
+                && (empty($a->assigned_user_id) || (int) $a->assigned_user_id === (int) $user->id);
+        });
+    }
+
+    /**
+     * Beritahu Bendahara Pengeluaran bahwa SPM telah terbit ber-TTE dan
+     * NPI Honorarium dapat segera dibuat.
+     */
+    private function notifyBendaharaPengeluaranNpiSiap(DokumenSpm $spm): void
+    {
+        $bendahara = User::role('Bendahara Pengeluaran')->get();
+        if ($bendahara->isEmpty()) {
+            return;
+        }
+
+        Notification::send($bendahara, new WorkflowNotification([
+            'title' => 'SPM Honorarium Terbit — NPI Siap Dibuat',
+            'message' => "SPM {$spm->nomor_spm} telah terbit ber-TTE. NPI Honorarium dapat segera Anda buat.",
+            'url' => route('npis.honor.index'),
+            'icon' => 'receipt_long',
+            'color' => 'success',
+        ]));
     }
 
     /**
@@ -150,8 +198,11 @@ class VerifikasiSpmHonorController extends Controller
      */
     public function show($spm_id)
     {
-        $roleCode = $this->getActiveRoleCode();
         $user = Auth::user();
+        $roleCodes = $this->activeRoleCodes($user);
+        if (empty($roleCodes)) {
+            abort(403, 'Akses ditolak. Anda bukan Verifikator SPM.');
+        }
 
         $spmModel = DokumenSpm::with([
             'spp',
@@ -173,19 +224,37 @@ class VerifikasiSpmHonorController extends Controller
         
         $nominalSpm = (float) ($spmModel->nominal_spm ?? 0);
 
-        // Dokumen pendukung
-        $arsipJenis = $tagihan->arsipDokumen->pluck('jenis_dokumen')->toArray();
-        $dokumenWajib = ['SK Honorarium', 'Daftar Nominatif Bertandatangan', 'Dokumen Honorarium Bertandatangan'];
-        
-        $documentStatuses = collect($dokumenWajib)->map(function ($jenis) use ($tagihan, $arsipJenis) {
-            $doc = $tagihan->arsipDokumen->firstWhere('jenis_dokumen', $jenis);
-            return [
-                'label' => $jenis,
-                'path' => $doc?->file_path,
-                'status' => in_array($jenis, $arsipJenis) ? 'ready' : 'missing',
-                'is_available' => in_array($jenis, $arsipJenis)
-            ];
-        });
+        // Dokumen pendukung: SK tetap dari arsip, nominatif & rekap honorarium
+        // diterbitkan otomatis oleh sistem sebagai PDF ber-TTE QR.
+        $skHonorarium = $tagihan->arsipDokumen->firstWhere('jenis_dokumen', 'SK Honorarium');
+        $skPath = $skHonorarium?->path_file ?? $skHonorarium?->file_path ?? null;
+
+        $documentStatuses = collect([
+            [
+                'label' => 'SK Honorarium',
+                'path' => $skPath,
+                'url' => $skPath ? \Illuminate\Support\Facades\Storage::url($skPath) : null,
+                'status' => $skPath ? 'ready' : 'missing',
+                'is_available' => filled($skPath),
+                'is_tte' => false,
+            ],
+            [
+                'label' => 'Daftar Nominatif Honorarium',
+                'path' => null,
+                'url' => route('honorarium.pdf-nominatif', $tagihan->id),
+                'status' => 'tte',
+                'is_available' => true,
+                'is_tte' => true,
+            ],
+            [
+                'label' => 'Dokumen Honorarium',
+                'path' => null,
+                'url' => route('honorarium.pdf', $tagihan->id),
+                'status' => 'tte',
+                'is_available' => true,
+                'is_tte' => true,
+            ],
+        ]);
 
         // Readiness checklist Verifikasi
         $semuaPunyaRekening = $tagihan->detailHonorarium->every(fn($item) => filled($item->rekening) && filled($item->nama_rekening));
@@ -194,7 +263,7 @@ class VerifikasiSpmHonorController extends Controller
             ['label' => 'SPM Lengkap dari Operator BLU', 'status' => in_array($spmModel->status, [DokumenSpm::STATUS_MENUNGGU_VERIFIKASI]) ? 'ready' : 'ready'],
             ['label' => 'Honorarium Asli Valid', 'status' => 'ready'],
             ['label' => 'Detail Rekening Personel Valid', 'status' => $semuaPunyaRekening ? 'ready' : 'missing'],
-            ['label' => 'Dokumen Fisik Wajib Ada', 'status' => collect($documentStatuses)->every(fn($d) => $d['status'] === 'ready') ? 'ready' : 'missing'],
+            ['label' => 'Dokumen Pendukung Dapat Dilihat', 'status' => collect($documentStatuses)->every(fn($d) => in_array($d['status'], ['ready', 'tte'], true)) ? 'ready' : 'missing'],
             ['label' => 'Akun COA Anggaran Valid', 'status' => filled($selectedBudgetItem?->coa) ? 'ready' : 'missing'],
         ];
 
@@ -206,15 +275,39 @@ class VerifikasiSpmHonorController extends Controller
         $kasubbagApproval = $baseApprovals->firstWhere('role_code', 'Kepala Subbagian Keuangan dan Tata Usaha');
         $koordinatorApproval = $baseApprovals->firstWhere('role_code', 'Koordinator Keuangan');
         
-        $myApproval = $baseApprovals->firstWhere('role_code', $roleCode);
-        
-        // Cek jika approval ditujukan pada saya secara spesifik
-        $isMyPendingApproval = false;
-        if ($myApproval && $myApproval->status === 'PENDING') {
-            if (empty($myApproval->assigned_user_id) || $myApproval->assigned_user_id == $user->id) {
-                $isMyPendingApproval = true;
-            }
+        // Bangun daftar approval aktif milik user (mendukung multi-role)
+        $activeRoleApprovals = [];
+        foreach ($roleCodes as $rc) {
+            $approval = $baseApprovals->firstWhere('role_code', $rc);
+            if (!$approval) continue;
+            if ($approval->status !== 'PENDING') continue;
+            if (!empty($approval->assigned_user_id) && (int) $approval->assigned_user_id !== (int) $user->id) continue;
+            if ($workflowInstance && $workflowInstance->status !== 'IN_PROGRESS') continue;
+
+            $activeRoleApprovals[] = [
+                'role' => $rc,
+                'approval_id' => $approval->id,
+                'approveRoute' => route('verifikasi-spm.honor.approve', $spmModel->id),
+                'revisiRoute' => route('verifikasi-spm.honor.reject', $spmModel->id),
+            ];
         }
+
+        // Approval representatif: utamakan yang PENDING milik user, jika tidak ada ambil pertama yang cocok
+        $myApproval = $baseApprovals->first(function ($a) use ($roleCodes, $user) {
+            return in_array($a->role_code, $roleCodes, true)
+                && $a->status === 'PENDING'
+                && (empty($a->assigned_user_id) || (int) $a->assigned_user_id === (int) $user->id);
+        }) ?: $baseApprovals->first(fn($a) => in_array($a->role_code, $roleCodes, true));
+
+        $isMyPendingApproval = !empty($activeRoleApprovals);
+
+        // Kelas warna status approval milik user (untuk tampilan)
+        $myApprovalClass = match ($myApproval->status ?? null) {
+            'APPROVED' => 'text-success',
+            'PENDING' => 'text-warning',
+            'REVISION', 'REJECTED' => 'text-danger',
+            default => 'text-secondary',
+        };
 
         // Timeline Workflow SPM Honorarium
         $activities = $spmModel->logs()->with('user')->orderBy('created_at', 'desc')->get();
@@ -223,7 +316,8 @@ class VerifikasiSpmHonorController extends Controller
             'spmModel', 'sppModel', 'tagihan', 'dipa', 'selectedBudgetItem',
             'nominalSpm', 'documentStatuses', 'readinessChecklist',
             'workflowInstance', 'ppspmApproval', 'kasubbagApproval',
-            'isMyPendingApproval', 'activities', 'roleCodes', 'activeRoleApprovals', 'koordinatorApproval'
+            'isMyPendingApproval', 'activities', 'roleCodes', 'activeRoleApprovals', 'koordinatorApproval',
+            'myApproval', 'myApprovalClass'
         ));
     }
 
@@ -232,20 +326,22 @@ class VerifikasiSpmHonorController extends Controller
      */
     public function approve(Request $request, $spm_id)
     {
-        $roleCode = $this->getActiveRoleCode();
-        if (!$roleCode) abort(403, 'Akses terbatas.');
+        $user = Auth::user();
+        $roleCodes = $this->activeRoleCodes($user);
+        if (empty($roleCodes)) abort(403, 'Akses terbatas.');
 
         $spm = DokumenSpm::with(['workflowInstances.approvals', 'spp.tagihan'])->findOrFail($spm_id);
-        $user = Auth::user();
 
         $instance = $spm->workflowInstances->sortByDesc('created_at')->first();
         if (!$instance) return back()->withErrors('Workflow tidak ditemukan.');
 
-        $myApproval = collect($instance->approvals)->firstWhere('role_code', $roleCode);
-        
+        $myApproval = $this->resolveMyApproval($instance, $user, $request->input('approval_id'));
+
         if (!$myApproval || $myApproval->status !== 'PENDING') {
             return back()->withErrors('Dokumen tidak memerlukan tindakan persetujuan Anda saat ini.');
         }
+
+        $roleCode = $myApproval->role_code;
 
         DB::transaction(function() use ($spm, $instance, $myApproval, $user, $request, $roleCode) {
             // 1. Assign dan Approve
@@ -279,7 +375,9 @@ class VerifikasiSpmHonorController extends Controller
                 // Do nothing, biar yang nolak aja yg update main status SPM
             } elseif ($semuaDisetujui) {
                 $statusLama = $spm->status;
-                $spm->update(['status' => DokumenSpm::STATUS_MENUNGGU_UPLOAD]);
+                // Verifikasi paralel selesai: SPM langsung TERBIT ber-TTE QR
+                // (tanpa upload manual), dan siap dibuatkan NPI oleh Bendahara Pengeluaran.
+                $spm->update(['status' => DokumenSpm::STATUS_SPM_TERBIT]);
                 $instance->update(['status' => 'APPROVED']);
 
                 LogStatusDokumen::create([
@@ -288,11 +386,14 @@ class VerifikasiSpmHonorController extends Controller
                     'user_id' => $user->id,
                     'role_saat_itu' => 'Sistem Verifikasi',
                     'status_sebelumnya' => $statusLama,
-                    'status_baru' => DokumenSpm::STATUS_MENUNGGU_UPLOAD,
-                    'aksi' => 'SPM_MENUNGGU_UPLOAD',
-                    'catatan' => 'Verifikasi SPM diotorisasi sepenuhnya. Menunggu operator upload dokumen SPM.',
+                    'status_baru' => DokumenSpm::STATUS_SPM_TERBIT,
+                    'aksi' => 'SPM_TERBIT_TTE',
+                    'catatan' => 'Verifikasi SPM diotorisasi sepenuhnya. SPM terbit ber-TTE QR dan siap dibuatkan NPI.',
                     'ip_address' => request()->ip()
                 ]);
+
+                // Beritahu Bendahara Pengeluaran bahwa NPI dapat dibuat
+                $this->notifyBendaharaPengeluaranNpiSiap($spm);
             }
         });
 
@@ -310,20 +411,22 @@ class VerifikasiSpmHonorController extends Controller
             'catatan.required' => 'Catatan revisi WAJIB diisi dengan jelas.',
         ]);
 
-        $roleCode = $this->getActiveRoleCode();
-        if (!$roleCode) abort(403, 'Akses terbatas.');
+        $user = Auth::user();
+        $roleCodes = $this->activeRoleCodes($user);
+        if (empty($roleCodes)) abort(403, 'Akses terbatas.');
 
         $spm = DokumenSpm::with(['workflowInstances.approvals'])->findOrFail($spm_id);
-        $user = Auth::user();
 
         $instance = $spm->workflowInstances->sortByDesc('created_at')->first();
         if (!$instance) return back()->withErrors('Workflow tidak ditemukan.');
 
-        $myApproval = collect($instance->approvals)->firstWhere('role_code', $roleCode);
-        
+        $myApproval = $this->resolveMyApproval($instance, $user, $request->input('approval_id'));
+
         if (!$myApproval || $myApproval->status !== 'PENDING') {
             return back()->withErrors('Dokumen tidak dapat di-revisi karena bukan dalam antrean Anda.');
         }
+
+        $roleCode = $myApproval->role_code;
 
         DB::transaction(function() use ($spm, $instance, $myApproval, $user, $request, $roleCode) {
             // 1. Tolak Approval Workflow

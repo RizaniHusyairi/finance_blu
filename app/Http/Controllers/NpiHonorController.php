@@ -111,6 +111,21 @@ class NpiHonorController extends Controller
         // Nominal
         $nominalNpi = (float) ($spmModel->nominal_spm ?? $tagihan->total_netto ?? 0);
 
+        // Kelengkapan dokumen pendukung (SPM + SPP + arsip dokumen tagihan)
+        $documentStatuses = collect([
+            ['label' => 'SPM Honorarium', 'path' => true, 'required' => true, 'status' => 'ready'],
+            ['label' => 'SPP', 'path' => true, 'required' => true, 'status' => 'ready'],
+        ])->concat(
+            collect($tagihan?->arsipDokumen ?? [])
+                ->filter(fn ($arsip) => ($arsip->is_active ?? true))
+                ->map(fn ($arsip) => [
+                    'label' => \Illuminate\Support\Str::title(str_replace('_', ' ', strtolower($arsip->jenis_dokumen ?? 'Dokumen Pendukung'))),
+                    'path' => $arsip->path_file,
+                    'required' => false,
+                    'status' => 'ready',
+                ])
+        )->values();
+
         // Readiness checklist
         $draftReady = $npiModel
             && filled($npiModel->nomor_npi)
@@ -168,6 +183,7 @@ class NpiHonorController extends Controller
             'tagihan',
             'bendaharaPenerimaanTagihan',
             'nominalNpi',
+            'documentStatuses',
             'readinessChecklist',
             'readinessIssues',
             'statusNpi',

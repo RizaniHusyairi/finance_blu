@@ -331,6 +331,40 @@
             line-height: 1.6;
         }
 
+        .hash-box {
+            margin-top: 8px;
+            padding: 16px;
+            border: 1px solid rgba(37, 99, 235, .18);
+            border-radius: 8px;
+            background: linear-gradient(135deg, rgba(37, 99, 235, .05), rgba(8, 145, 178, .04));
+        }
+
+        .hash-state {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 7px 12px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 900;
+        }
+
+        .hash-state.hash-ok { color: #065f46; background: #dcfce7; }
+        .hash-state.hash-bad { color: #9f1239; background: #ffe4e6; }
+
+        .hash-value {
+            margin-top: 12px;
+            padding: 12px;
+            border-radius: 8px;
+            color: #1e293b;
+            background: #f1f5f9;
+            border: 1px solid var(--line);
+            font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+            font-size: 12px;
+            line-height: 1.6;
+            word-break: break-all;
+        }
+
         @keyframes ribbon {
             to { background-position: 220% 0; }
         }
@@ -360,8 +394,23 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
+        /* Signer detail (Penandatangan & Integritas) */
+        .signer { display: grid; grid-template-columns: 1.05fr .95fr; gap: 18px; align-items: start; }
+        .signer-list { display: grid; gap: 2px; }
+        .signer-row { display: grid; grid-template-columns: 130px 1fr; gap: 10px; padding: 11px 2px; border-bottom: 1px dashed var(--line); }
+        .signer-row:last-child { border-bottom: 0; }
+        .signer-row .k { color: var(--muted); font-size: 13px; font-weight: 700; }
+        .signer-row .v { font-weight: 750; word-break: break-word; color: var(--ink); }
+        
+        .signer-aside { padding: 18px; border: 1px solid rgba(37, 99, 235, .18); border-radius: 12px;
+            background: linear-gradient(160deg, rgba(37, 99, 235, .05), rgba(8, 145, 178, .04)); }
+        .signer-aside .sa-role-pill { display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px; border-radius: 999px;
+            font-size: 11px; font-weight: 900; color: #ecfdf5; background: var(--green); letter-spacing: .06em; text-transform: uppercase; }
+        .signer-aside .sa-name { font-size: 17px; font-weight: 900; margin-top: 10px; line-height: 1.3; }
+        .signer-aside .sa-meta { color: var(--muted); font-size: 12.5px; margin-top: 4px; }
+
         @media (max-width: 840px) {
-            .hero-grid, .content, .grid, .meta-grid {
+            .hero-grid, .content, .grid, .meta-grid, .signer {
                 grid-template-columns: 1fr;
             }
             .seal { width: 104px; }
@@ -389,7 +438,7 @@
                 <p class="subtitle">Halaman ini dibuka dari QR TTE yang membuktikan keabsahan tanda tangan pada dokumen {{ $type }}.</p>
                 @if($finalArsip)
                 <div class="actionbar">
-                    <a class="doc-button" href="{{ url($finalArsip->file_path) }}" target="_blank" rel="noopener">Lihat Dokumen Final</a>
+                    <a class="doc-button" href="{{ \Illuminate\Support\Facades\Storage::url($finalArsip->path_file) }}" target="_blank" rel="noopener">Lihat Dokumen Final</a>
                 </div>
                 @endif
             </div>
@@ -479,6 +528,53 @@
                                     @endif
                                 </div>
                             </div>
+                        </div>
+                    </section>
+
+                    <section class="section">
+                        <p class="label">Penandatangan &amp; Integritas</p>
+                        <p class="small" style="margin: 0 0 14px;">
+                            Data berikut merepresentasikan penandatangan dari QR TTE yang Anda pindai pada dokumen
+                            <strong>Berita Acara {{ $type }}</strong>, beserta sidik digital (hash) dokumen.
+                        </p>
+
+                        <div class="signer" style="margin-bottom: 18px;">
+                            <div class="signer-list">
+                                <div class="signer-row"><span class="k">Nama</span><span class="v">{{ $signerInfo['nama'] }}</span></div>
+                                <div class="signer-row"><span class="k">NIP</span><span class="v">{{ $signerInfo['nip'] }}</span></div>
+                                <div class="signer-row"><span class="k">Jabatan</span><span class="v">{{ $signerInfo['jabatan'] }}</span></div>
+                                <div class="signer-row"><span class="k">Unit Kerja</span><span class="v">{{ $signerInfo['unit_kerja'] }}</span></div>
+                                <div class="signer-row"><span class="k">Instansi</span><span class="v">{{ $signerInfo['instansi'] }}</span></div>
+                                <div class="signer-row"><span class="k">Disetujui pada</span><span class="v">{{ optional($signerInfo['signed_at'])->format('d M Y H:i:s') ?? '-' }}</span></div>
+                            </div>
+                            <div class="signer-aside">
+                                <span class="sa-role-pill">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" style="margin-right:4px;"><path d="m5 13 4 4L19 7" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                    {{ $signerInfo['role'] }}
+                                </span>
+                                <div class="sa-name">{{ $signerInfo['nama'] }}</div>
+                                <div class="sa-meta">{{ $signerInfo['jabatan'] }}</div>
+                                <div class="sa-meta">NIP {{ $signerInfo['nip'] }}</div>
+                                <p class="small" style="margin-top: 12px; color: #475467;">
+                                    Pejabat pengesah final dokumen Berita Acara {{ $type }}.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="hash-box">
+                            <p class="label">Hash Dokumen (SHA-256)</p>
+                            <span class="hash-state {{ $hashStatus === 'cocok' ? 'hash-ok' : 'hash-bad' }}">
+                                @if($hashStatus === 'cocok')
+                                    &#10003; Cocok
+                                @else
+                                    &#10007; Tidak Cocok
+                                @endif
+                            </span>
+                            <div class="hash-value">{{ $documentHash }}</div>
+                            <p class="small" style="margin: 11px 0 0;">
+                                Hash dihitung dari identitas tagihan dan seluruh data tanda tangan saat halaman dibuka.
+                                Perubahan substansi dokumen pasca-penandatanganan otomatis membuat hash tidak cocok.
+                            </p>
                         </div>
                     </section>
                 </div>

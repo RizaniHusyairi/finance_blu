@@ -324,7 +324,7 @@
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Pilih COA</label>
-                                <select name="coa_id" id="coa_id" class="form-select select2-coa" required>
+                                <select name="coa_id" id="coa_id" class="form-select select2-coa js-coa-select" required>
                                     <option value="">-- Pilih COA --</option>
                                     @foreach($coaOptions as $coa)
                                         <option value="{{ $coa->id }}"

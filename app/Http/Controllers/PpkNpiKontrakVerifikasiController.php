@@ -13,16 +13,15 @@ use Illuminate\Support\Facades\Notification;
 
 class PpkNpiKontrakVerifikasiController extends Controller
 {
-    private function activeRoleCodes(): array
+    private function activeRoleCodes(?User $user = null): array
     {
-        $roles = [];
-        if (\Illuminate\Support\Facades\Auth::user()->hasRole('PPK')) {
-            $roles[] = 'PPK';
-        }
-        if (\Illuminate\Support\Facades\Auth::user()->hasRole('Koordinator Keuangan')) {
-            $roles[] = 'Koordinator Keuangan';
-        }
-        return $roles;
+        $user ??= auth()->user();
+
+        return collect([
+            'Bendahara Penerimaan',
+            'PPK',
+            'Koordinator Keuangan',
+        ])->filter(fn ($roleCode) => $user?->hasRole($roleCode))->values()->all();
     }
 
     private function routePrefix(): string
@@ -43,16 +42,80 @@ class PpkNpiKontrakVerifikasiController extends Controller
             : ($roleCodes[0] ?? '');
     }
 
+    private function roleLabel(array $roleCodes): string
+    {
+        return implode(' / ', $roleCodes);
+    }
+
+    private function approvalAccessibleToUser($approval, array $roleCodes, User $user, ?DokumenNpi $npi = null): bool
+    {
+        if (!$approval || !in_array($approval->role_code, $roleCodes, true)) {
+            return false;
+        }
+
+        if ($approval->assigned_user_id && (int) $approval->assigned_user_id !== (int) $user->id) {
+            return false;
+        }
+
+        if ($approval->role_code === 'Bendahara Penerimaan' && $npi?->bendahara_penerimaan_id) {
+            return (int) $npi->bendahara_penerimaan_id === (int) $user->id;
+        }
+
+        return true;
+    }
+
+    private function authorizedApprovals($approvals, array $roleCodes, User $user, ?DokumenNpi $npi = null)
+    {
+        return collect($approvals)
+            ->filter(fn ($approval) => $this->approvalAccessibleToUser($approval, $roleCodes, $user, $npi))
+            ->sort(function ($a, $b) use ($user) {
+                $priority = ['Bendahara Penerimaan' => 0, 'PPK' => 1, 'Koordinator Keuangan' => 2];
+
+                return [
+                    (int) $a->assigned_user_id === (int) $user->id ? 0 : 1,
+                    $priority[$a->role_code] ?? 99,
+                    $a->id,
+                ] <=> [
+                    (int) $b->assigned_user_id === (int) $user->id ? 0 : 1,
+                    $priority[$b->role_code] ?? 99,
+                    $b->id,
+                ];
+            })
+            ->values();
+    }
+
+    private function actionableApprovals($instance, array $roleCodes, User $user, ?DokumenNpi $npi = null)
+    {
+        return $this->authorizedApprovals($instance?->approvals ?? collect(), $roleCodes, $user, $npi)
+            ->filter(fn ($approval) => $approval->status === 'PENDING'
+                && $instance?->status === 'IN_PROGRESS'
+                && (int) $instance?->step_saat_ini === (int) $approval->urutan_step)
+            ->values();
+    }
+
+    private function resolveApprovalForAction($instance, array $roleCodes, User $user, DokumenNpi $npi, $approvalId = null)
+    {
+        $actionableApprovals = $this->actionableApprovals($instance, $roleCodes, $user, $npi);
+
+        if ($approvalId) {
+            return $actionableApprovals->firstWhere('id', (int) $approvalId);
+        }
+
+        return $actionableApprovals->count() === 1
+            ? $actionableApprovals->first()
+            : $actionableApprovals->firstWhere('role_code', $this->currentRoleCode($roleCodes));
+    }
+
     /**
      * Halaman antrean verifikasi NPI Kontrak untuk PPK.
      */
     public function index(Request $request)
     {
-        $roleCodes = $this->activeRoleCodes();
+        $user = $request->user();
+        $roleCodes = $this->activeRoleCodes($user);
         if (empty($roleCodes)) abort(403, 'Akses ditolak.');
-        $currentRole = $this->currentRoleCode($roleCodes);
+        $currentRole = $this->roleLabel($roleCodes);
         $routePrefix = $this->routePrefix();
-        $userId = $request->user()?->id;
 
         $npiQuery = DokumenNpi::with([
             'spm.spp.tagihan.detailKontrak.kontrakTermin.kontrak.vendor',
@@ -65,7 +128,7 @@ class PpkNpiKontrakVerifikasiController extends Controller
         ->latest()
         ->get();
 
-        $npiList = $npiQuery->map(function ($npi) use ($currentRole, $userId) {
+        $npiList = $npiQuery->map(function ($npi) use ($roleCodes, $user) {
             $latestInstance = $npi->workflowInstances->sortByDesc('created_at')->first();
             $approvals = collect($latestInstance?->approvals ?? []);
 
@@ -74,10 +137,11 @@ class PpkNpiKontrakVerifikasiController extends Controller
             $npi->_ppkApproval = $approvals->firstWhere('role_code', 'PPK');
             $npi->_kasubbagApproval = $approvals->firstWhere('role_code', 'Kepala Subbagian Keuangan dan Tata Usaha');
             $npi->_koordinatorApproval = $approvals->firstWhere('role_code', 'Koordinator Keuangan');
-            $myApprovals = $approvals
-                ->where('role_code', $currentRole)
-                ->filter(fn ($approval) => !$approval->assigned_user_id || (int) $approval->assigned_user_id === (int) $userId);
-            $npi->_currentApproval = $myApprovals->where('status', 'PENDING')->first() ?: $myApprovals->first();
+            $npi->_currentApprovals = $this->authorizedApprovals($approvals, $roleCodes, $user, $npi);
+            $actionableApprovals = $this->actionableApprovals($latestInstance, $roleCodes, $user, $npi);
+            $npi->_currentApproval = $actionableApprovals->first()
+                ?: $npi->_currentApprovals->firstWhere('status', 'PENDING')
+                ?: $npi->_currentApprovals->first();
 
             $allApproved = $approvals->every(fn ($a) => $a->status === 'APPROVED') && $approvals->isNotEmpty();
             $anyRevision = $approvals->contains(fn ($a) => in_array($a->status, ['REVISION', 'REJECTED']));
@@ -103,7 +167,7 @@ class PpkNpiKontrakVerifikasiController extends Controller
             }
 
             return $npi;
-        })->filter(fn ($npi) => $npi->_currentApproval)->values();
+        })->filter(fn ($npi) => $npi->_currentApprovals?->isNotEmpty())->values();
 
         // Filtering
         $filterPpk = $request->input('status_ppk', 'semua');
@@ -157,7 +221,7 @@ class PpkNpiKontrakVerifikasiController extends Controller
             'filterBenpen' => $filterBenpen,
             'filterKasubbag' => $filterKasubbag,
             'search' => $search,
-
+            'currentRole' => $currentRole,
             'routePrefix' => $routePrefix,
         ]);
     }
@@ -167,11 +231,11 @@ class PpkNpiKontrakVerifikasiController extends Controller
      */
     public function show($npi_id)
     {
-        $roleCodes = $this->activeRoleCodes();
+        $user = auth()->user();
+        $roleCodes = $this->activeRoleCodes($user);
         if (empty($roleCodes)) abort(403, 'Akses ditolak.');
-        $currentRole = $this->currentRoleCode($roleCodes);
+        $currentRole = $this->roleLabel($roleCodes);
         $routePrefix = $this->routePrefix();
-        $userId = auth()->id();
 
         $npi = DokumenNpi::with([
             'spm.spp.tagihan.detailKontrak.kontrakTermin.kontrak.vendor.rekening',
@@ -203,14 +267,15 @@ class PpkNpiKontrakVerifikasiController extends Controller
         $ppkApproval = $approvals->firstWhere('role_code', 'PPK');
         $kasubbagApproval = $approvals->firstWhere('role_code', 'Kepala Subbagian Keuangan dan Tata Usaha');
         $koordinatorApproval = $approvals->firstWhere('role_code', 'Koordinator Keuangan');
-        $currentUserApproval = $approvals
-            ->where('role_code', $currentRole)
-            ->filter(fn ($approval) => !$approval->assigned_user_id || (int) $approval->assigned_user_id === (int) $userId)
-            ->first();
+        $authorizedApprovals = $this->authorizedApprovals($approvals, $roleCodes, $user, $npi);
+        $actionableApprovals = $this->actionableApprovals($activeWorkflowInstance, $roleCodes, $user, $npi);
+        $currentUserApproval = $actionableApprovals->first()
+            ?: $authorizedApprovals->firstWhere('status', 'PENDING')
+            ?: $authorizedApprovals->first();
 
         abort_unless($currentUserApproval, 403, 'NPI ini bukan tugas verifikasi Anda.');
 
-        $canApprove = $currentUserApproval && $currentUserApproval->status === 'PENDING';
+        $canApprove = $actionableApprovals->isNotEmpty();
         $canRequestRevision = $canApprove;
 
         $allApproved = $approvals->every(fn ($a) => $a->status === 'APPROVED') && $approvals->isNotEmpty();
@@ -258,28 +323,12 @@ class PpkNpiKontrakVerifikasiController extends Controller
             ])->values();
 
         $bendaharaPengeluaran = User::role('Bendahara Pengeluaran')->first();
-        // Dual-role check: find all active roles the user has that are pending on this NPI
-        $user = auth()->user();
-        $activeRoleApprovals = [];
-        $wfStatus = $activeWorkflowInstance?->status ?? '';
-        
-        if ($user->hasRole('PPK') && $ppkApproval && $ppkApproval->status === 'PENDING' && in_array($wfStatus, ['IN_PROGRESS', 'REVISION'])) {
-            $activeRoleApprovals[] = [
-                'role' => 'PPK',
-                'approval_id' => $ppkApproval->id,
-                'approveRoute' => route('verifikasi-ppk.npi.kontrak.approve', $npi->id),
-                'revisiRoute' => route('verifikasi-ppk.npi.kontrak.revisi', $npi->id)
-            ];
-        }
-        
-        if ($user->hasRole('Koordinator Keuangan') && $koordinatorApproval && $koordinatorApproval->status === 'PENDING' && in_array($wfStatus, ['IN_PROGRESS', 'REVISION'])) {
-            $activeRoleApprovals[] = [
-                'role' => 'Koordinator Keuangan',
-                'approval_id' => $koordinatorApproval->id,
-                'approveRoute' => route('verifikasi-koordinator.npi.kontrak.approve', $npi->id),
-                'revisiRoute' => route('verifikasi-koordinator.npi.kontrak.revisi', $npi->id)
-            ];
-        }
+        $activeRoleApprovals = $actionableApprovals->map(fn ($approval) => [
+            'role' => $approval->role_code,
+            'approval_id' => $approval->id,
+            'approveRoute' => route($routePrefix . '.approve', $npi->id),
+            'revisiRoute' => route($routePrefix . '.revisi', $npi->id),
+        ])->values()->all();
 
         $currentUserStatus = $currentUserApproval?->status ?? 'N/A';
 
@@ -317,26 +366,26 @@ class PpkNpiKontrakVerifikasiController extends Controller
      */
     public function approve(Request $request, $npi_id)
     {
+        $request->validate([
+            'approval_id' => 'nullable|integer',
+            'catatan' => 'nullable|string',
+        ]);
+
         $npi = DokumenNpi::findOrFail($npi_id);
-        $roleCodes = $this->activeRoleCodes();
+        $user = $request->user();
+        $roleCodes = $this->activeRoleCodes($user);
         if (empty($roleCodes)) abort(403, 'Akses ditolak.');
-        $currentRole = $this->currentRoleCode($roleCodes);
         $routePrefix = $this->routePrefix();
 
-        DB::transaction(function () use ($npi, $request, $currentRole) {
+        DB::transaction(function () use ($npi, $request, $roleCodes, $user) {
             $workflowService = app(WorkflowService::class);
             $activeInstance = $workflowService->getActiveInstance($npi);
-            $approval = $activeInstance?->approvals()
-                ->where('role_code', $currentRole)
-                ->where('status', 'PENDING')
-                ->where(function ($query) {
-                    $query->whereNull('assigned_user_id')
-                        ->orWhere('assigned_user_id', auth()->id());
-                })
-                ->first();
+            $activeInstance?->loadMissing('approvals');
+            $approval = $this->resolveApprovalForAction($activeInstance, $roleCodes, $user, $npi, $request->input('approval_id'));
 
             abort_unless($approval, 403, 'Tidak ada antrean verifikasi untuk role Anda pada NPI ini.');
 
+            $currentRole = $approval->role_code;
             $instance = $workflowService->approveCurrentStep($npi, auth()->id(), $request->input('catatan'), $approval->id);
 
             LogStatusDokumen::create([
@@ -366,29 +415,25 @@ class PpkNpiKontrakVerifikasiController extends Controller
     public function revisi(Request $request, $npi_id)
     {
         $request->validate([
+            'approval_id' => 'nullable|integer',
             'catatan_revisi' => 'required|string|max:1000',
         ]);
 
         $npi = DokumenNpi::findOrFail($npi_id);
-        $roleCodes = $this->activeRoleCodes();
+        $user = $request->user();
+        $roleCodes = $this->activeRoleCodes($user);
         if (empty($roleCodes)) abort(403, 'Akses ditolak.');
-        $currentRole = $this->currentRoleCode($roleCodes);
         $routePrefix = $this->routePrefix();
 
-        DB::transaction(function () use ($npi, $request, $currentRole) {
+        DB::transaction(function () use ($npi, $request, $roleCodes, $user) {
             $workflowService = app(WorkflowService::class);
             $activeInstance = $workflowService->getActiveInstance($npi);
-            $approval = $activeInstance?->approvals()
-                ->where('role_code', $currentRole)
-                ->where('status', 'PENDING')
-                ->where(function ($query) {
-                    $query->whereNull('assigned_user_id')
-                        ->orWhere('assigned_user_id', auth()->id());
-                })
-                ->first();
+            $activeInstance?->loadMissing('approvals');
+            $approval = $this->resolveApprovalForAction($activeInstance, $roleCodes, $user, $npi, $request->input('approval_id'));
 
             abort_unless($approval, 403, 'Tidak ada antrean verifikasi untuk role Anda pada NPI ini.');
 
+            $currentRole = $approval->role_code;
             $workflowService->requestRevision($npi, auth()->id(), $request->catatan_revisi, $approval->id);
 
             $npi->update(['status' => DokumenNpi::STATUS_REVISI]);

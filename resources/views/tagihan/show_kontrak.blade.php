@@ -364,6 +364,11 @@
                     <h6><i class="bi bi-folder-check mc-h-icon icon-secondary"></i> Manajemen Dokumen Berita Acara</h6>
                 </div>
                 <div class="mc-body">
+                    @php
+                        // Dokumen dianggap FINAL (ber-TTE PPK) setelah seluruh verifikator,
+                        // termasuk PPK, menyetujui tagihan di workflow.
+                        $dokumenFinalTte = \App\Support\TagihanDocumentTte::isApproved($tagihan);
+                    @endphp
                     <div class="row g-4">
                 {{-- BAPP --}}
                 <div class="col-md-6">
@@ -399,11 +404,6 @@
 
                             <div class="d-grid gap-2">
                                 @if($tagihan->status === 'DRAFT' && !$hasBappFinal)
-                                    @php
-                                        $sigBapp = $signatures->get('BAPP');
-                                        $isSentBapp = $sigBapp && $sigBapp->count() > 0;
-                                        $allSignedBapp = $isSentBapp && $sigBapp->every(fn($s) => $s->status === 'signed');
-                                    @endphp
                                     @if($hasGambarRabBapp)
                                         <a href="{{ route('tagihan.kontrak.export-pdf', [$tagihan->id, 'BAPP']) }}" target="_blank" class="btn btn-outline-danger btn-sm">
                                             <i class="bi bi-file-pdf me-1"></i> Preview Draft BAPP
@@ -413,38 +413,12 @@
                                             <i class="bi bi-file-pdf me-1"></i> Preview Draft BAPP
                                         </button>
                                     @endif
-
-                                    @if(!$isSentBapp || !$allSignedBapp)
-                                        <form action="{{ route('tagihan.kontrak.send-tte', $tagihan->id) }}" method="POST">
-                                            @csrf
-                                            <input type="hidden" name="document_label" value="BAPP">
-                                            <button type="submit" class="btn {{ $isSentBapp ? 'btn-outline-warning' : 'btn-outline-primary' }} btn-sm w-100">
-                                                <i class="bi bi-whatsapp me-1"></i> {{ $isSentBapp ? 'Kirim Ulang TTE BAPP' : 'Kirim Akses TTE' }}
-                                            </button>
-                                        </form>
-                                    @endif
-                                    
-                                    @if($isSentBapp)
-                                        <div class="mt-1 p-2 bg-light border rounded small">
-                                            <strong>Status TTE:</strong>
-                                            @foreach($sigBapp as $s)
-                                                <div class="d-flex flex-column mt-2 pb-1 {{ !$loop->last ? 'border-bottom' : '' }}">
-                                                    <div class="d-flex justify-content-between">
-                                                        <span class="fw-medium">{{ $s->role == 'vendor' ? 'Vendor' : 'Pemeriksa' }}</span>
-                                                        @if($s->status == 'signed') <span class="text-success fw-bold"><i class="bi bi-check-circle"></i> Selesai</span>
-                                                        @else <span class="text-warning fw-bold"><i class="bi bi-clock"></i> Menunggu</span>
-                                                        @endif
-                                                    </div>
-                                                    <div class="text-muted mt-1" style="font-size: 0.85em;">
-                                                        <div class="mb-1"><i class="bi bi-whatsapp me-1"></i>{{ $s->signer_phone ?? '-' }}</div>
-                                                        <div class="d-flex"><i class="bi bi-link-45deg me-1"></i><a href="{{ url('/public/tte/sign/' . $s->magic_token) }}" target="_blank" class="text-decoration-none text-truncate d-inline-block align-middle" style="max-width: 250px;" title="{{ url('/public/tte/sign/' . $s->magic_token) }}">{{ url('/public/tte/sign/' . $s->magic_token) }}</a></div>
-                                                    </div>
-                                                </div>
-                                            @endforeach
-                                        </div>
-                                    @endif
                                 @endif
-                                @if($hasBappFinal)
+                                @if($dokumenFinalTte)
+                                    <a href="{{ route('tagihan.kontrak.export-pdf', [$tagihan->id, 'BAPP']) }}" target="_blank" class="btn btn-sm btn-primary">
+                                        <i class="bi bi-patch-check-fill me-1"></i> Lihat Dokumen Final (TTE PPK)
+                                    </a>
+                                @elseif($hasBappFinal)
                                     <a href="{{ route('tagihan.kontrak.export-pdf', [$tagihan->id, 'BAPP']) }}" target="_blank" class="btn btn-sm btn-success text-white">
                                         <i class="bi bi-file-pdf me-1"></i> Preview BAPP (Menunggu PPK)
                                     </a>
@@ -473,46 +447,15 @@
                             @if($wajibBast)
                             <div class="d-grid gap-2">
                                 @if($tagihan->status === 'DRAFT' && !$hasBastFinal)
-                                    @php
-                                        $sigBast = $signatures->get('BAST');
-                                        $isSentBast = $sigBast && $sigBast->count() > 0;
-                                        $allSignedBast = $isSentBast && $sigBast->every(fn($s) => $s->status === 'signed');
-                                    @endphp
                                     <a href="{{ route('tagihan.kontrak.export-pdf', [$tagihan->id, 'BAST']) }}" target="_blank" class="btn btn-outline-danger btn-sm">
                                         <i class="bi bi-file-pdf me-1"></i> Preview Draft BAST
                                     </a>
-
-                                    @if(!$isSentBast || !$allSignedBast)
-                                        <form action="{{ route('tagihan.kontrak.send-tte', $tagihan->id) }}" method="POST">
-                                            @csrf
-                                            <input type="hidden" name="document_label" value="BAST">
-                                            <button type="submit" class="btn {{ $isSentBast ? 'btn-outline-warning' : 'btn-outline-primary' }} btn-sm w-100">
-                                                <i class="bi bi-whatsapp me-1"></i> {{ $isSentBast ? 'Kirim Ulang TTE BAST' : 'Kirim Akses TTE' }}
-                                            </button>
-                                        </form>
-                                    @endif
-
-                                    @if($isSentBast)
-                                        <div class="mt-1 p-2 bg-light border rounded small">
-                                            <strong>Status TTE:</strong>
-                                            @foreach($sigBast as $s)
-                                                <div class="d-flex flex-column mt-2 pb-1 {{ !$loop->last ? 'border-bottom' : '' }}">
-                                                    <div class="d-flex justify-content-between">
-                                                        <span class="fw-medium">{{ $s->role == 'vendor' ? 'Vendor' : 'Pemeriksa' }}</span>
-                                                        @if($s->status == 'signed') <span class="text-success fw-bold"><i class="bi bi-check-circle"></i> Selesai</span>
-                                                        @else <span class="text-warning fw-bold"><i class="bi bi-clock"></i> Menunggu</span>
-                                                        @endif
-                                                    </div>
-                                                    <div class="text-muted mt-1" style="font-size: 0.85em;">
-                                                        <div class="mb-1"><i class="bi bi-whatsapp me-1"></i>{{ $s->signer_phone ?? '-' }}</div>
-                                                        <div class="d-flex"><i class="bi bi-link-45deg me-1"></i><a href="{{ url('/public/tte/sign/' . $s->magic_token) }}" target="_blank" class="text-decoration-none text-truncate d-inline-block align-middle" style="max-width: 250px;" title="{{ url('/public/tte/sign/' . $s->magic_token) }}">{{ url('/public/tte/sign/' . $s->magic_token) }}</a></div>
-                                                    </div>
-                                                </div>
-                                            @endforeach
-                                        </div>
-                                    @endif
                                 @endif
-                                @if($hasBastFinal)
+                                @if($dokumenFinalTte)
+                                    <a href="{{ route('tagihan.kontrak.export-pdf', [$tagihan->id, 'BAST']) }}" target="_blank" class="btn btn-sm btn-primary">
+                                        <i class="bi bi-patch-check-fill me-1"></i> Lihat Dokumen Final (TTE PPK)
+                                    </a>
+                                @elseif($hasBastFinal)
                                     <a href="{{ route('tagihan.kontrak.export-pdf', [$tagihan->id, 'BAST']) }}" target="_blank" class="btn btn-sm btn-success text-white">
                                         <i class="bi bi-file-pdf me-1"></i> Preview BAST (Menunggu PPK)
                                     </a>
@@ -539,46 +482,15 @@
                             
                             <div class="d-grid gap-2">
                                 @if($tagihan->status === 'DRAFT' && !$hasBapFinal)
-                                    @php
-                                        $sigBap = $signatures->get('BAP');
-                                        $isSentBap = $sigBap && $sigBap->count() > 0;
-                                        $allSignedBap = $isSentBap && $sigBap->every(fn($s) => $s->status === 'signed');
-                                    @endphp
                                     <a href="{{ route('tagihan.kontrak.export-pdf', [$tagihan->id, 'BAP']) }}" target="_blank" class="btn btn-outline-danger btn-sm">
                                         <i class="bi bi-file-pdf me-1"></i> Preview Draft BAP
                                     </a>
-                                    
-                                    @if(!$isSentBap || !$allSignedBap)
-                                        <form action="{{ route('tagihan.kontrak.send-tte', $tagihan->id) }}" method="POST">
-                                            @csrf
-                                            <input type="hidden" name="document_label" value="BAP">
-                                            <button type="submit" class="btn {{ $isSentBap ? 'btn-outline-warning' : 'btn-outline-primary' }} btn-sm w-100">
-                                                <i class="bi bi-whatsapp me-1"></i> {{ $isSentBap ? 'Kirim Ulang TTE BAP' : 'Kirim Akses TTE' }}
-                                            </button>
-                                        </form>
-                                    @endif
-
-                                    @if($isSentBap)
-                                        <div class="mt-1 p-2 bg-light border rounded small">
-                                            <strong>Status TTE:</strong>
-                                            @foreach($sigBap as $s)
-                                                <div class="d-flex flex-column mt-2 pb-1 {{ !$loop->last ? 'border-bottom' : '' }}">
-                                                    <div class="d-flex justify-content-between">
-                                                        <span class="fw-medium">{{ $s->role == 'vendor' ? 'Vendor' : 'Pemeriksa' }}</span>
-                                                        @if($s->status == 'signed') <span class="text-success fw-bold"><i class="bi bi-check-circle"></i> Selesai</span>
-                                                        @else <span class="text-warning fw-bold"><i class="bi bi-clock"></i> Menunggu</span>
-                                                        @endif
-                                                    </div>
-                                                    <div class="text-muted mt-1" style="font-size: 0.85em;">
-                                                        <div class="mb-1"><i class="bi bi-whatsapp me-1"></i>{{ $s->signer_phone ?? '-' }}</div>
-                                                        <div class="d-flex"><i class="bi bi-link-45deg me-1"></i><a href="{{ url('/public/tte/sign/' . $s->magic_token) }}" target="_blank" class="text-decoration-none text-truncate d-inline-block align-middle" style="max-width: 250px;" title="{{ url('/public/tte/sign/' . $s->magic_token) }}">{{ url('/public/tte/sign/' . $s->magic_token) }}</a></div>
-                                                    </div>
-                                                </div>
-                                            @endforeach
-                                        </div>
-                                    @endif
                                 @endif
-                                @if($hasBapFinal)
+                                @if($dokumenFinalTte)
+                                    <a href="{{ route('tagihan.kontrak.export-pdf', [$tagihan->id, 'BAP']) }}" target="_blank" class="btn btn-sm btn-primary">
+                                        <i class="bi bi-patch-check-fill me-1"></i> Lihat Dokumen Final (TTE PPK)
+                                    </a>
+                                @elseif($hasBapFinal)
                                     <a href="{{ route('tagihan.kontrak.export-pdf', [$tagihan->id, 'BAP']) }}" target="_blank" class="btn btn-sm btn-success text-white">
                                         <i class="bi bi-file-pdf me-1"></i> Preview BAP (Menunggu PPK)
                                     </a>
@@ -588,6 +500,92 @@
                     </div>
                 </div>
                     </div>
+
+                    {{-- Pengiriman Akses TTE Terpadu via WhatsApp --}}
+                    @php
+                        $allSigs = $tagihan->documentSignatures;
+                        $vendorSigs = $allSigs->where('role', 'vendor')->sortBy('id');
+                        $pemeriksaSigs = $allSigs->where('role', 'tim_pemeriksa')->sortBy('id');
+                        $isTteSent = $allSigs->count() > 0;
+                        $allTteSigned = $isTteSent && $allSigs->every(fn($s) => $s->status === 'signed');
+                        $vendorGroupToken = optional($vendorSigs->first())->group_token;
+                        $pemeriksaGroupToken = optional($pemeriksaSigs->first())->group_token;
+                        $vendorDocLabels = $vendorSigs->pluck('document_label')->implode(', ');
+                        $vendorSigned = $vendorSigs->count() > 0 && $vendorSigs->every(fn($s) => $s->status === 'signed');
+                        $pemeriksaSigned = $pemeriksaSigs->count() > 0 && $pemeriksaSigs->every(fn($s) => $s->status === 'signed');
+                    @endphp
+
+                    @if($tagihan->status === 'DRAFT')
+                        <div class="card border-0 shadow-sm mt-4" style="background:#f8f9fb;">
+                            <div class="card-body">
+                                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+                                    <div>
+                                        <h6 class="fw-bold mb-1"><i class="bi bi-whatsapp text-success me-1"></i> Kirim Akses TTE via WhatsApp</h6>
+                                        <p class="small text-muted mb-0">
+                                            Satu pesan ke <strong>Vendor</strong> berisi tautan untuk menyetujui dokumen
+                                            <strong>{{ $wajibBast ? 'BAPP, BAP, BAST' : 'BAPP, BAP' }}</strong>, dan satu pesan ke
+                                            <strong>Pemeriksa</strong> berisi tautan untuk menyetujui dokumen <strong>BAPP</strong>.
+                                        </p>
+                                    </div>
+                                    @unless($allTteSigned)
+                                        <form action="{{ route('tagihan.kontrak.send-tte', $tagihan->id) }}" method="POST">
+                                            @csrf
+                                            <button type="submit" class="btn {{ $isTteSent ? 'btn-outline-warning' : 'btn-success text-white' }}">
+                                                <i class="bi bi-whatsapp me-1"></i> {{ $isTteSent ? 'Kirim Ulang Akses TTE' : 'Kirim Akses TTE' }}
+                                            </button>
+                                        </form>
+                                    @endunless
+                                </div>
+
+                                @if($isTteSent)
+                                    <div class="row g-3">
+                                        {{-- Vendor --}}
+                                        <div class="col-md-6">
+                                            <div class="border rounded p-3 h-100 bg-white">
+                                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                                    <span class="fw-semibold"><i class="bi bi-shop me-1 text-primary"></i> Vendor</span>
+                                                    @if($vendorSigned)
+                                                        <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Selesai</span>
+                                                    @else
+                                                        <span class="badge bg-warning text-dark"><i class="bi bi-clock me-1"></i>Menunggu</span>
+                                                    @endif
+                                                </div>
+                                                <div class="small text-muted mb-1">{{ $vendorSigs->first()->signer_name ?? '-' }}</div>
+                                                <div class="small text-muted mb-2"><i class="bi bi-whatsapp me-1"></i>{{ $vendorSigs->first()->signer_phone ?? '-' }}</div>
+                                                <div class="small mb-2">Dokumen: <strong>{{ $vendorDocLabels ?: '-' }}</strong></div>
+                                                @if($vendorGroupToken)
+                                                    <div class="small d-flex"><i class="bi bi-link-45deg me-1"></i>
+                                                        <a href="{{ url('/public/tte/sign/' . $vendorGroupToken) }}" target="_blank" class="text-decoration-none text-truncate d-inline-block align-middle" style="max-width: 240px;" title="{{ url('/public/tte/sign/' . $vendorGroupToken) }}">{{ url('/public/tte/sign/' . $vendorGroupToken) }}</a>
+                                                    </div>
+                                                @endif
+                                            </div>
+                                        </div>
+                                        {{-- Pemeriksa --}}
+                                        <div class="col-md-6">
+                                            <div class="border rounded p-3 h-100 bg-white">
+                                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                                    <span class="fw-semibold"><i class="bi bi-person-badge me-1 text-primary"></i> Pemeriksa</span>
+                                                    @if($pemeriksaSigned)
+                                                        <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Selesai</span>
+                                                    @else
+                                                        <span class="badge bg-warning text-dark"><i class="bi bi-clock me-1"></i>Menunggu</span>
+                                                    @endif
+                                                </div>
+                                                <div class="small text-muted mb-1">{{ $pemeriksaSigs->first()->signer_name ?? '-' }}</div>
+                                                <div class="small text-muted mb-2"><i class="bi bi-whatsapp me-1"></i>{{ $pemeriksaSigs->first()->signer_phone ?? '-' }}</div>
+                                                <div class="small mb-2">Dokumen: <strong>BAPP</strong></div>
+                                                @if($pemeriksaGroupToken)
+                                                    <div class="small d-flex"><i class="bi bi-link-45deg me-1"></i>
+                                                        <a href="{{ url('/public/tte/sign/' . $pemeriksaGroupToken) }}" target="_blank" class="text-decoration-none text-truncate d-inline-block align-middle" style="max-width: 240px;" title="{{ url('/public/tte/sign/' . $pemeriksaGroupToken) }}">{{ url('/public/tte/sign/' . $pemeriksaGroupToken) }}</a>
+                                                    </div>
+                                                @endif
+                                            </div>
+                                        </div>
+                                    </div>
+                                @endif
+                            </div>
+                        </div>
+                    @endif
                 </div>
             </div>
         </div>

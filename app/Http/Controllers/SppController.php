@@ -40,7 +40,19 @@ class SppController extends Controller
             ->latest()
             ->get();
 
-        return view('spps.perjaldin_index', compact('perjaldins'));
+        // Tagihan Perjaldin yang dikembalikan untuk revisi oleh Operator BLU saat ini,
+        // agar operator mengingat dokumen yang sedang menunggu perbaikan.
+        $revisis = Tagihan::where('tipe_tagihan', 'PERJALDIN')
+            ->where('status', 'DIKEMBALIKAN')
+            ->whereHas('logs', function ($q) {
+                $q->where('aksi', 'KEMBALIKAN_REVISI_COA')
+                  ->where('user_id', auth()->id());
+            })
+            ->with(['detailPerjaldin', 'logs'])
+            ->latest()
+            ->get();
+
+        return view('spps.perjaldin_index', compact('perjaldins', 'revisis'));
     }
 
     /**
@@ -217,6 +229,57 @@ class SppController extends Controller
         return redirect()->route('spps.perjaldin.detail', $perjaldin_id)->with('success', 'SPP '.$request->kategori_biaya.' berhasil diterbitkan. Silakan cetak PDF.');
     }
 
+    /**
+     * Mengembalikan tagihan Perjaldin ke pembuat untuk direvisi jika pagu COA tidak valid.
+     */
+    public function returnRevisionPerjaldin(Request $request, $perjaldin_id)
+    {
+        $request->validate([
+            'catatan_revisi' => 'required|string|max:500'
+        ]);
+
+        $tagihan = Tagihan::where('tipe_tagihan', 'PERJALDIN')->findOrFail($perjaldin_id);
+
+        if (!in_array($tagihan->status, ['DISETUJUI_PERJALDIN', 'PROSES_SPP'])) {
+            return back()->withErrors(['error' => 'Dokumen ini tidak dalam status yang dapat dikembalikan untuk revisi.']);
+        }
+
+        try {
+            DB::transaction(function() use ($request, $tagihan) {
+                $oldStatus = $tagihan->status;
+                $tagihan->update(['status' => 'DIKEMBALIKAN']);
+
+                LogStatusDokumen::create([
+                    'dokumen_type' => Tagihan::class,
+                    'dokumen_id' => $tagihan->id,
+                    'user_id' => auth()->id(),
+                    'role_saat_itu' => auth()->user()?->getRoleNames()->first() ?? 'Operator BLU',
+                    'status_sebelumnya' => $oldStatus,
+                    'status_baru' => 'DIKEMBALIKAN',
+                    'aksi' => 'KEMBALIKAN_REVISI_COA',
+                    'catatan' => 'Dikembalikan oleh Operator BLU. Alasan: ' . $request->catatan_revisi,
+                    'ip_address' => request()->ip(),
+                ]);
+            });
+
+            // Kirim Notifikasi ke Pembuat dan PPK
+            $usersToNotify = collect([User::find($tagihan->created_by), User::find($tagihan->ppk_user_id)])->filter();
+            if ($usersToNotify->isNotEmpty()) {
+                Notification::send($usersToNotify, new WorkflowNotification([
+                    'title' => 'Perjaldin Dikembalikan (Revisi)',
+                    'message' => "Tagihan Perjaldin {$tagihan->nomor_tagihan} dikembalikan oleh Operator BLU karena kendala pagu/revisi.",
+                    'url' => route('perjaldins.show', $tagihan->id),
+                    'icon' => 'assignment_return',
+                    'color' => 'danger'
+                ]));
+            }
+
+            return redirect()->route('spps.perjaldin.index')->with('success', 'Dokumen Perjaldin berhasil dikembalikan untuk direvisi.');
+        } catch (\Exception $e) {
+            return back()->withErrors(['error' => 'Gagal mengembalikan dokumen: ' . $e->getMessage()]);
+        }
+    }
+
     // ===================================================================
     // SPP HONOR
     // ===================================================================
@@ -240,6 +303,7 @@ class SppController extends Controller
                 'arsipDokumen',
                 'potonganTagihan',
                 'logs.user',
+                'dipa',
                 'spps.dipaRevisionItem.coa',
                 'spps.ppkVerifikator',
                 'spps.dibuatOleh',
@@ -251,42 +315,57 @@ class SppController extends Controller
             ->findOrFail($honorarium_id);
 
         $sppModel = $tagihan->spps->sortByDesc('created_at')->first();
+        $itemDipaId = $sppModel?->dipa_revision_item_id ?? $tagihan->dipa_revision_item_id;
+        $selectedBudgetItem = \App\Models\DetailDipa::with(['coa', 'dipaRevision.masterDipa'])->find($itemDipaId);
         
-        // Budget item options: Honorarium has dipa_revision_item_id on tagihan
-        $selectedBudgetItem = $sppModel?->dipaRevisionItem ?? \App\Models\DetailDipa::with('coa')->find($tagihan->dipa_revision_item_id);
+        $masterDipa = $selectedBudgetItem?->dipaRevision?->masterDipa ?? $tagihan->dipa;
+        $riwayatRevisiDipa = $selectedBudgetItem?->dipaRevision;
+        
         
         $ppkUser = \App\Models\User::find($tagihan->ppk_user_id) ?? \App\Models\User::role('PPK')->orderByDisplayName()->first();
         $kasubbagUser = \App\Models\User::find($tagihan->kasubbag_user_id) ?? \App\Models\User::role('Kepala Subbagian Keuangan dan Tata Usaha')->orderByDisplayName()->first();
         $koordinatorUser = \App\Models\User::find($tagihan->koordinator_keuangan_user_id) ?? \App\Models\User::role('Koordinator Keuangan')->orderByDisplayName()->first();
         
         $skHonorarium = $tagihan->arsipDokumen->firstWhere('jenis_dokumen', 'SK Honorarium');
-        $daftarNominatif = $tagihan->arsipDokumen->firstWhere('jenis_dokumen', 'Daftar Nominatif Bertandatangan');
-        $dokumenHonorarium = $tagihan->arsipDokumen->firstWhere('jenis_dokumen', 'Dokumen Honorarium Bertandatangan');
+
+        // Nominatif & Rekap Honorarium diterbitkan sistem ber-TTE QR otomatis
+        // setelah workflow honorarium APPROVED (App\Support\TagihanDocumentTte).
+        $isHonorariumTteApproved = \App\Support\TagihanDocumentTte::isApproved($tagihan);
 
         $documentStatuses = collect([
             [
-                'key' => 'daftar_nominatif',
-                'label' => 'Daftar Nominatif',
-                'path' => $daftarNominatif?->path_file,
+                'key' => 'nominatif_honorarium_tte',
+                'label' => 'Nominatif Honorarium (TTE)',
+                'url' => $isHonorariumTteApproved ? route('honorarium.pdf-nominatif', $tagihan->id) : null,
+                'path' => null,
+                'is_tte' => true,
                 'required' => true,
             ],
             [
-                'key' => 'dokumen_honorarium',
-                'label' => 'Dokumen Honorarium Bertandatangan',
-                'path' => $dokumenHonorarium?->path_file,
+                'key' => 'rekap_honorarium_tte',
+                'label' => 'Rekap Honorarium (TTE)',
+                'url' => $isHonorariumTteApproved ? route('honorarium.pdf', $tagihan->id) : null,
+                'path' => null,
+                'is_tte' => true,
                 'required' => true,
             ],
             [
                 'key' => 'sk_honorarium',
                 'label' => 'SK Honorarium',
+                'url' => $skHonorarium ? \Illuminate\Support\Facades\Storage::url($skHonorarium->path_file) : null,
                 'path' => $skHonorarium?->path_file,
+                'is_tte' => false,
                 'required' => false,
             ],
         ])->map(function ($item) {
-            $isAvailable = !empty($item['path']);
-            $status = !$item['required']
-                ? 'not_required'
-                : ($isAvailable ? 'ready' : 'missing');
+            $isAvailable = !empty($item['url']);
+            if (! $item['required']) {
+                $status = $isAvailable ? 'ready' : 'not_required';
+            } elseif ($isAvailable) {
+                $status = !empty($item['is_tte']) ? 'tte' : 'ready';
+            } else {
+                $status = 'missing';
+            }
 
             return array_merge($item, [
                 'status' => $status,
@@ -296,8 +375,8 @@ class SppController extends Controller
 
         $semuaPunyaRekening = $tagihan->detailHonorarium->every(fn($item) => filled($item->rekening) && filled($item->nama_rekening));
         $mainDocumentsReady = $documentStatuses
-            ->whereIn('key', ['daftar_nominatif', 'dokumen_honorarium'])
-            ->every(fn ($item) => $item['status'] === 'ready');
+            ->whereIn('key', ['nominatif_honorarium_tte', 'rekap_honorarium_tte'])
+            ->every(fn ($item) => in_array($item['status'], ['tte', 'ready']));
             
         $draftReady = $sppModel
             && filled($sppModel->nomor_spp)
@@ -421,7 +500,7 @@ class SppController extends Controller
         $autoNomorSpp = \App\Services\DocumentNumberingService::generateSppNumber(date('Y'));
 
         return view('spps.detail_honor', compact(
-            'tagihan', 'sppModel', 'selectedBudgetItem', 'ppkUser', 'kasubbagUser', 'koordinatorUser', 'documentStatuses', 'readinessChecklist',
+            'tagihan', 'sppModel', 'selectedBudgetItem', 'masterDipa', 'riwayatRevisiDipa', 'ppkUser', 'kasubbagUser', 'koordinatorUser', 'documentStatuses', 'readinessChecklist',
             'readinessIssues', 'workflowSummary', 'activitySummary', 'recentActivities', 'isReadyToSubmit', 'readinessStatus',
             'ppkApproval', 'koordinatorApproval', 'kasubbagApproval', 'autoNomorSpp'
         ));
@@ -1076,6 +1155,7 @@ class SppController extends Controller
             'tagihan.dipaRevisionItem.dipaRevision.masterDipa',
             'tagihan.potonganTagihan.pajak',
             'tagihan.potonganTagihan.akunPotongan',
+            'ppkVerifikator.profilable',
             'workflowInstance.approvals',
         ])->find($spp_id);
 

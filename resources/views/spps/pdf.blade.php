@@ -89,6 +89,22 @@
         ]);
         $tteQrFilePath = $buildQrFilePath($tteQrUrl, 'spp_tte_' . $spp->id);
     }
+
+    $cleanSignerValue = function ($value) {
+        $value = trim((string) $value);
+
+        return in_array($value, ['', '-', 'NIP', 'NIP.'], true) ? null : $value;
+    };
+
+    $penandatanganUser = $spp->ppkVerifikator ?? null;
+    $penandatanganPegawai = $penandatanganUser?->pegawai;
+    $penandatanganNama = $cleanSignerValue($spp->penandatangan_nama ?? null)
+        ?? $cleanSignerValue($penandatanganPegawai?->nama_lengkap ?? null)
+        ?? $cleanSignerValue($penandatanganUser?->name ?? null)
+        ?? '-';
+    $penandatanganNip = $cleanSignerValue($spp->penandatangan_nip ?? null)
+        ?? $cleanSignerValue($penandatanganPegawai?->nip ?? null)
+        ?? '-';
 @endphp
 
     <table class="table-main">
@@ -336,13 +352,12 @@
                 @if($tteQrFilePath)
                     <div style="margin: 8px auto 5px; width: 86px; text-align: center;">
                         <img src="{{ $tteQrFilePath }}" alt="QR TTE SPP" style="width: 86px; height: 86px;">
-                        <div style="font-size: 8px; line-height: 1.2; margin-top: 2px;">QR TTE SPP</div>
                     </div>
                 @else
                     <br><br><br><br><br><br>
                 @endif
-                <span style="text-decoration: underline; font-weight: bold;">{{ strtoupper($spp->penandatangan_nama) }}</span> <br>
-                NIP {{ $spp->penandatangan_nip }}
+                <span style="text-decoration: underline; font-weight: bold;">{{ strtoupper($penandatanganNama) }}</span> <br>
+                NIP {{ $penandatanganNip }}
             </td>
         </tr>
 

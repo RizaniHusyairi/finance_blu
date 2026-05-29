@@ -109,6 +109,11 @@ class PublicSppSignatureController extends Controller
     private function buildSignerInfo(DokumenSpp $spp, $workflow): array
     {
         $pegawai = $spp->ppkVerifikator?->pegawai;
+        $cleanSignerValue = static function ($value): ?string {
+            $value = trim((string) $value);
+
+            return in_array($value, ['', '-', 'NIP', 'NIP.'], true) ? null : $value;
+        };
         $signedAt = collect($workflow->approvals ?? [])
             ->pluck('acted_at')
             ->filter()
@@ -116,8 +121,13 @@ class PublicSppSignatureController extends Controller
             ->last();
 
         return [
-            'nama' => $spp->penandatangan_nama ?? $spp->ppkVerifikator?->name ?? '-',
-            'nip' => $spp->penandatangan_nip ?? $pegawai?->nip ?? '-',
+            'nama' => $cleanSignerValue($spp->penandatangan_nama)
+                ?? $cleanSignerValue($pegawai?->nama_lengkap)
+                ?? $cleanSignerValue($spp->ppkVerifikator?->name)
+                ?? '-',
+            'nip' => $cleanSignerValue($spp->penandatangan_nip)
+                ?? $cleanSignerValue($pegawai?->nip)
+                ?? '-',
             'jabatan' => $pegawai?->jabatan ?? 'Pejabat Pembuat Komitmen',
             'unit_kerja' => 'Kantor UPBU Aji Pangeran Tumenggung Pranoto',
             'instansi' => 'Kementerian Perhubungan',
