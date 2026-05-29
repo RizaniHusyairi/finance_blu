@@ -91,41 +91,106 @@
 
 @push('css')
     <style>
-        .spp-workspace-hero { background: linear-gradient(135deg, #f8f9fc, #f1f5f9); border-bottom: 1px solid rgba(15, 23, 42, 0.08); padding-bottom: 1.5rem; margin-bottom: 2rem; position: relative; }
-        .spp-workspace-hero::before { content: ""; position: absolute; left: 0; top: 0; width: 4px; height: 100%; background: #0d6efd; }
-        .spp-summary-tile { background: #fff; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 0.75rem; padding: 1rem; height: 100%; }
-        .spp-summary-tile .label { color: #6c757d; font-size: .72rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; margin-bottom: .35rem; }
-        .spp-summary-tile .value { color: #212529; font-weight: 700; line-height: 1.35; }
-        .spp-section-card { border: 0; border-radius: 1rem; box-shadow: 0 0.125rem 0.25rem rgba(15, 23, 42, 0.04); border: 1px solid rgba(15, 23, 42, 0.08); overflow: hidden; background: #fff;}
-        .spp-section-heading { color: #475569; font-size: .8rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; margin-bottom: 1.2rem; display: flex; align-items: center; gap: .5rem; }
-        .spp-info-block { margin-bottom: 1.2rem; }
-        .spp-info-block .label { color: #64748b; font-size: .8rem; margin-bottom: .25rem; }
-        .spp-info-block .value { font-weight: 600; color: #1e293b; line-height: 1.4; }
-        .spp-readiness-item { display: flex; align-items: flex-start; gap: .85rem; padding: .65rem 0; border-bottom: 1px solid rgba(15, 23, 42, 0.04); }
-        .spp-readiness-item:last-child { border-bottom: 0; }
-        .spp-readiness-icon { width: 1.5rem; height: 1.5rem; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; font-size: .75rem; flex-shrink: 0; }
-        .spp-icon-ready { background: rgba(25, 135, 84, .12); color: #198754; }
-        .spp-icon-missing { background: rgba(220, 53, 69, .12); color: #dc3545; }
-        .spp-potongan-summary { background: #f8fafc; border: 1px solid rgba(15, 23, 42, 0.06); border-radius: .75rem; padding: 1rem; height: 100%; }
-        .spp-doc-row { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: .85rem 0; border-bottom: 1px solid rgba(15, 23, 42, 0.04); }
-        .spp-doc-row:last-child { border-bottom: 0; }
-        .spp-activity-row { position: relative; padding-left: 1.25rem; margin-bottom: 1.25rem; }
-        .spp-activity-row:last-child { margin-bottom: 0; }
-        .spp-activity-row::before { content: ""; position: absolute; left: 0; top: .35rem; width: .5rem; height: .5rem; border-radius: 999px; background: #cbd5e1; }
-        .spp-activity-active::before { background: #0d6efd; box-shadow: 0 0 0 3px rgba(13, 110, 253, .2); }
-        .spp-modal-section { border: 1px solid rgba(15, 23, 42, 0.08); border-radius: .75rem; padding: 1.25rem; background: #fff; margin-bottom: 1rem; }
-        
-        .timeline-wrapper { display: flex; align-items: center; justify-content: space-between; position: relative; padding: 2rem 0; }
-        .timeline-line { position: absolute; top: 3.25rem; left: 10%; right: 10%; height: 3px; background: #e2e8f0; z-index: 1; }
-        .timeline-step { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; text-align: center; flex: 1; }
-        .timeline-icon { width: 44px; height: 44px; border-radius: 999px; background: #fff; border: 3px solid #e2e8f0; display: inline-flex; align-items: center; justify-content: center; font-size: 1.1rem; color: #94a3b8; font-weight: bold; margin-bottom: .75rem; transition: all 0.2s; }
-        .timeline-label { font-weight: 600; color: #475569; font-size: .85rem; line-height: 1.3; }
-        .timeline-sub { font-size: .75rem; color: #94a3b8; margin-top: .25rem; max-width: 150px; }
-        
-        /* Active / Passed Steps */
-        .timeline-step.passed .timeline-icon { border-color: #10b981; background: #10b981; color: #fff; }
-        .timeline-step.active .timeline-icon { border-color: #3b82f6; color: #3b82f6; box-shadow: 0 0 0 4px rgba(59, 130, 246, .2); }
-        .timeline-step.revision .timeline-icon { border-color: #ef4444; color: #ef4444; background: #fee2e2; }
+        body[data-bs-theme="blue-theme"] .main-content { background: #f4f6fa; }
+
+        /* ============ ANIMATIONS ============ */
+        @keyframes fadeUpIn { 0% { opacity: 0; transform: translateY(20px); } 100% { opacity: 1; transform: translateY(0); } }
+        @keyframes scaleIn  { 0% { opacity: 0; transform: scale(0.95); } 100% { opacity: 1; transform: scale(1); } }
+        @keyframes floatAnim { 0%, 100% { transform: translateY(0) rotate(-5deg); } 50% { transform: translateY(-15px) rotate(2deg); } }
+        @keyframes pulseGlow { 0% { box-shadow: 0 0 0 0 rgba(13, 110, 253, 0.4); } 70% { box-shadow: 0 0 0 15px rgba(13, 110, 253, 0); } 100% { box-shadow: 0 0 0 0 rgba(13, 110, 253, 0); } }
+
+        .anim-fade-up { animation: fadeUpIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) both; }
+        .delay-1 { animation-delay: 0.1s; }
+        .delay-2 { animation-delay: 0.2s; }
+        .delay-3 { animation-delay: 0.3s; }
+        .delay-4 { animation-delay: 0.4s; }
+
+        /* ============ HERO SECTION ============ */
+        .spp-workspace-hero { 
+            background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%); 
+            color: white;
+            border-radius: 1.5rem; 
+            padding: 2.5rem 2rem; 
+            margin-bottom: 2.5rem; 
+            position: relative; 
+            overflow: hidden;
+            box-shadow: 0 20px 40px -10px rgba(59, 130, 246, 0.4);
+            animation: scaleIn 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
+        .spp-workspace-hero::before, .spp-workspace-hero::after {
+            content: ''; position: absolute; border-radius: 50%; z-index: 0;
+        }
+        .spp-workspace-hero::before { right: -50px; top: -50px; width: 300px; height: 300px; background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0) 70%); }
+        .spp-workspace-hero::after { right: 150px; bottom: -100px; width: 250px; height: 250px; background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 70%); }
+        .hero-content { position: relative; z-index: 1; }
+        .hero-title { font-weight: 800; letter-spacing: -0.03em; margin-bottom: 0.5rem; text-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .hero-floating-icon { position: absolute; right: 2rem; top: 15%; font-size: 8rem; opacity: 0.15; z-index: 0; animation: floatAnim 8s ease-in-out infinite; }
+
+        .spp-summary-tile { 
+            background: rgba(255, 255, 255, 0.1); 
+            backdrop-filter: blur(12px); 
+            -webkit-backdrop-filter: blur(12px); 
+            border: 1px solid rgba(255, 255, 255, 0.2); 
+            border-radius: 1rem; 
+            padding: 1.25rem; 
+            height: 100%; 
+            transition: all 0.3s ease;
+        }
+        .spp-summary-tile:hover { transform: translateY(-5px); background: rgba(255, 255, 255, 0.15); border-color: rgba(255, 255, 255, 0.3); }
+        .spp-summary-tile .label { color: rgba(255,255,255,0.8); font-size: 0.75rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 0.4rem; }
+        .spp-summary-tile .value { color: #fff; font-weight: 700; font-size: 1.1rem; line-height: 1.3; }
+
+        /* ============ CARDS & GLASSMORPHISM ============ */
+        .spp-section-card { 
+            border: none; 
+            border-radius: 1.25rem; 
+            box-shadow: 0 10px 30px -10px rgba(0,0,0,0.05); 
+            background: rgba(255, 255, 255, 0.85); 
+            backdrop-filter: blur(20px); 
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.6);
+            overflow: hidden; 
+            transition: all 0.3s ease;
+        }
+        .spp-section-card:hover { transform: translateY(-3px); box-shadow: 0 15px 35px -10px rgba(0,0,0,0.08); }
+        .spp-section-heading { color: #1e293b; font-size: 0.95rem; font-weight: 800; letter-spacing: 0.02em; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.6rem; }
+        .spp-section-heading i { color: #3b82f6; font-size: 1.2rem; background: #eff6ff; padding: 0.5rem; border-radius: 0.75rem; }
+
+        /* ============ INFO BLOCKS ============ */
+        .spp-info-block { margin-bottom: 1.25rem; position: relative; padding-left: 1rem; border-left: 3px solid #e2e8f0; transition: border-color 0.2s ease; }
+        .spp-info-block:hover { border-left-color: #3b82f6; }
+        .spp-info-block .label { color: #64748b; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.25rem; }
+        .spp-info-block .value { font-weight: 700; color: #0f172a; font-size: 1rem; line-height: 1.4; }
+
+        /* ============ READINESS & STATUS ============ */
+        .spp-readiness-item { display: flex; align-items: center; gap: 1rem; padding: 0.85rem 1rem; border-radius: 0.75rem; background: #f8fafc; margin-bottom: 0.5rem; transition: background 0.2s ease; border: 1px solid transparent; }
+        .spp-readiness-item:hover { background: #fff; border-color: #e2e8f0; box-shadow: 0 2px 10px rgba(0,0,0,0.02); }
+        .spp-readiness-icon { width: 2rem; height: 2rem; border-radius: 0.5rem; display: inline-flex; align-items: center; justify-content: center; font-size: 1rem; flex-shrink: 0; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .spp-icon-ready { background: linear-gradient(135deg, #10b981, #059669); color: white; }
+        .spp-icon-missing { background: linear-gradient(135deg, #ef4444, #dc2626); color: white; }
+
+        /* ============ INTERACTIVE BUTTONS ============ */
+        .btn-pulse { animation: pulseGlow 2s infinite; }
+        .btn-glow { position: relative; overflow: hidden; z-index: 1; }
+        .btn-glow::after { content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: radial-gradient(circle, rgba(255,255,255,0.3) 0%, transparent 60%); opacity: 0; transform: scale(0.5); transition: opacity 0.3s, transform 0.3s; z-index: -1; }
+        .btn-glow:hover::after { opacity: 1; transform: scale(1); }
+
+        /* ============ BADGES ============ */
+        .badge-glass { background: rgba(255,255,255,0.2) !important; color: white !important; border: 1px solid rgba(255,255,255,0.4); backdrop-filter: blur(5px); }
+
+        /* ============ VERIFICATOR LIST ============ */
+        .verificator-list .list-group-item { border: none; padding: 1rem; margin-bottom: 0.5rem; border-radius: 1rem !important; background: #f8fafc; transition: all 0.3s ease; border: 1px solid transparent; }
+        .verificator-list .list-group-item:hover { background: #fff; border-color: #e2e8f0; box-shadow: 0 5px 15px rgba(0,0,0,0.03); transform: scale(1.01); }
+        .verificator-icon { width: 45px; height: 45px; border-radius: 1rem; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; }
+
+        .spp-activity-row { position: relative; padding-left: 2rem; padding-bottom: 1.5rem; }
+        .spp-activity-row::before { content: ""; position: absolute; left: 0.35rem; top: 0.25rem; width: 0.8rem; height: 0.8rem; border-radius: 50%; background: #cbd5e1; z-index: 2; border: 2px solid #fff; box-shadow: 0 0 0 2px #e2e8f0; }
+        .spp-activity-row::after { content: ""; position: absolute; left: 0.7rem; top: 1rem; bottom: 0; width: 2px; background: #e2e8f0; z-index: 1; }
+        .spp-activity-row:last-child::after { display: none; }
+        .spp-activity-active::before { background: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3); border-color: #fff; }
+
+        .spp-doc-row { display: flex; justify-content: space-between; align-items: center; padding: 1rem; border-radius: 1rem; background: #f8fafc; margin-bottom: 0.75rem; transition: all 0.2s ease; border: 1px solid transparent; }
+        .spp-doc-row:hover { background: #fff; box-shadow: 0 4px 12px rgba(0,0,0,0.03); border-color: #e2e8f0; }
     </style>
 @endpush
 
@@ -172,72 +237,59 @@
         </div>
     @endif
 
-    <!-- A. HEADER KERJA -->
-    <div class="spp-workspace-hero p-4 rounded-3 shadow-sm">
-        <div class="d-flex flex-column flex-xl-row justify-content-between gap-4">
+    <!-- A. HEADER KERJA (HERO SECTION) -->
+    <div class="spp-workspace-hero p-5 shadow-sm">
+        <i class="bi bi-file-earmark-medical hero-floating-icon"></i>
+        <div class="hero-content d-flex flex-column flex-xl-row justify-content-between gap-4">
             <div class="flex-grow-1">
-                <h3 class="fw-bold mb-2 text-dark">{{ $kontrak->nama_pekerjaan ?? $tagihan->deskripsi ?? 'Pembuatan SPP Kontrak' }}</h3>
+                <h2 class="hero-title text-white">{{ $kontrak->nama_pekerjaan ?? $tagihan->deskripsi ?? 'Pembuatan SPP Kontrak' }}</h2>
                 <div class="d-flex flex-wrap gap-2 mb-4 align-items-center">
-                    <span class="badge {{ $statusTagihanClass }} px-3 py-2">Tagihan: {{ $tagihan->status }}</span>
-                    <span class="badge {{ $statusSppClass }} px-3 py-2">SPP: {{ $statusSppLabel }}</span>
+                    <span class="badge badge-glass px-3 py-2 fw-semibold"><i class="bi bi-tag-fill me-1"></i> Tagihan: {{ $tagihan->status }}</span>
+                    <span class="badge bg-white text-dark shadow-sm px-3 py-2 fw-semibold"><i class="bi bi-layers-fill text-primary me-1"></i> SPP: {{ $statusSppLabel }}</span>
                     @if($sppModel && $sppModel->status === 'Revisi')
-                        <span class="badge bg-danger px-3 py-2"><i class="bi bi-exclamation-circle me-1"></i> Butuh Perbaikan</span>
+                        <span class="badge bg-danger shadow-sm px-3 py-2 anim-pulse"><i class="bi bi-exclamation-triangle-fill me-1"></i> Butuh Perbaikan</span>
                     @endif
                 </div>
 
                 <div class="row g-3">
-                    <div class="col-md-3 col-6"><div class="spp-summary-tile"><div class="label">Nomor SPK</div><div class="value">{{ $kontrak->nomor_spk ?? '-' }}</div></div></div>
+                    <div class="col-md-3 col-6"><div class="spp-summary-tile"><div class="label">Nomor SPK</div><div class="value text-truncate">{{ $kontrak->nomor_spk ?? '-' }}</div></div></div>
                     <div class="col-md-3 col-6"><div class="spp-summary-tile"><div class="label">Vendor</div><div class="value text-truncate">{{ $vendor->nama_pihak ?? $vendor->nama_perusahaan ?? '-' }}</div></div></div>
-                    <div class="col-md-3 col-6"><div class="spp-summary-tile"><div class="label">Termin</div><div class="value">Termin {{ $termin->termin_ke ?? '-' }} @if(!empty($termin->persentase))/ {{ $termin->persentase }}%@endif</div></div></div>
-                    <div class="col-md-3 col-6"><div class="spp-summary-tile"><div class="label">Nilai Netto</div><div class="value text-success fs-6">Rp {{ number_format($tagihan->total_netto, 0, ',', '.') }}</div></div></div>
+                    <div class="col-md-3 col-6"><div class="spp-summary-tile"><div class="label">Termin</div><div class="value">Ke-{{ $termin->termin_ke ?? '-' }} @if(!empty($termin->persentase)) <span class="fs-6 opacity-75 fw-normal">({{ $termin->persentase }}%)</span>@endif</div></div></div>
+                    <div class="col-md-3 col-6"><div class="spp-summary-tile" style="background: rgba(16, 185, 129, 0.2); border-color: rgba(16, 185, 129, 0.4);"><div class="label text-white">Nilai Netto</div><div class="value fs-5">Rp {{ number_format($tagihan->total_netto, 0, ',', '.') }}</div></div></div>
                 </div>
             </div>
 
             @php
                 $sppFullyApproved = $sppModel && in_array($sppModel->status, ['APPROVED', 'DISETUJUI_SPP', 'SPP_TERBIT']);
             @endphp
-            <div class="d-flex flex-column gap-2" style="min-width: 200px;">
+            <div class="d-flex flex-column gap-3 justify-content-center" style="min-width: 240px; z-index: 2;">
                 @if($sppModel)
-                    <a href="{{ route('spps.cetak-pdf', $sppModel->id) }}" target="_blank" class="btn btn-outline-danger shadow-sm"><i class="bi bi-file-earmark-pdf me-1"></i> Cetak PDF SPP</a>
+                    <a href="{{ route('spps.cetak-pdf', $sppModel->id) }}" target="_blank" class="btn btn-light text-danger fw-bold shadow-sm btn-glow rounded-pill py-2"><i class="bi bi-file-earmark-pdf-fill me-1"></i> Cetak PDF SPP</a>
                 @endif
 
                 @if(!$sppFullyApproved)
-                    <button type="button" class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#modalSppKontrak" {{ $canEditSpp ? '' : 'disabled' }}>
+                    <button type="button" class="btn btn-warning text-dark fw-bold shadow-sm btn-glow rounded-pill py-2" data-bs-toggle="modal" data-bs-target="#modalSppKontrak" {{ $canEditSpp ? '' : 'disabled' }}>
                         <i class="bi bi-pencil-square me-1"></i> {{ $sppModel ? 'Edit Draft SPP' : 'Buat Draft Baru' }}
                     </button>
                 @endif
 
                 @if($sppModel)
                     @if($sppFullyApproved)
-                        <button type="button" class="btn btn-outline-primary shadow-sm w-100" data-bs-toggle="modal" data-bs-target="#modalUploadSignedSpp">
-                            <i class="bi bi-upload me-1"></i> {{ $sppModel->hasSignedSppFile() ? 'Upload Ulang SPP Scan' : 'Upload Scan SPP' }}
-                        </button>
-                        
-                        @if($sppModel->hasSignedSppFile())
-                            @hasanyrole('Super Admin|Operator BLU')
-                                <a href="{{ route('spms.kontrak.detail', $sppModel->id) }}" class="btn btn-success shadow-sm w-100 mt-1">
-                                    <i class="bi bi-arrow-right-circle me-1"></i> {{ $sppModel->spm ? 'Lanjutkan SPM' : 'Lanjut Buat SPM' }}
-                                </a>
-                                <div class="small text-success text-center mt-1">
-                                    <i class="bi bi-check-circle-fill me-1"></i> SPP disetujui & scan diunggah.
-                                </div>
-                            @else
-                                <div class="alert alert-success border-0 small mb-0 py-2 text-center mt-1">
-                                    <i class="bi bi-check-circle-fill me-1"></i> SPP telah disetujui & scan diunggah.
-                                </div>
-                            @endhasanyrole
-                        @else
-                            <div class="small text-danger text-center mt-1">
-                                <i class="bi bi-exclamation-triangle-fill me-1"></i> Wajib upload SPP scan untuk lanjut.
-                            </div>
-                        @endif
+                        <div class="badge bg-success bg-opacity-25 border border-success text-white py-2 px-3 rounded-pill text-center w-100">
+                            <i class="bi bi-patch-check-fill me-1"></i> SPP final ber-TTE otomatis
+                        </div>
+                        @hasanyrole('Super Admin|Operator BLU')
+                            <a href="{{ route('spms.kontrak.detail', $sppModel->id) }}" class="btn btn-success fw-bold shadow btn-pulse rounded-pill py-2 mt-2">
+                                <i class="bi bi-arrow-right-circle-fill me-1"></i> {{ $sppModel->spm ? 'Lanjutkan SPM' : 'Buat SPM Sekarang' }}
+                            </a>
+                        @endhasanyrole
                     @elseif($canSubmitToPpk && $isReadyToSubmit)
-                        <form action="{{ route('spps.kontrak.submit', $tagihan->id) }}" method="POST" onsubmit="return confirm('Yakin akan mengajukan SPP ini?')">
+                        <form action="{{ route('spps.kontrak.submit', $tagihan->id) }}" method="POST" onsubmit="return confirm('Yakin akan mengajukan verifikasi SPP ini? Proses ini tidak bisa dibatalkan.')">
                             @csrf
-                            <button type="submit" class="btn btn-success shadow-sm w-100"><i class="bi bi-send me-1"></i> Ajukan Verifikasi</button>
+                            <button type="submit" class="btn btn-success fw-bold shadow btn-pulse rounded-pill py-2 w-100"><i class="bi bi-send-fill me-1"></i> Ajukan Verifikasi</button>
                         </form>
                     @else
-                        <button type="button" class="btn btn-success shadow-sm w-100" disabled><i class="bi bi-send me-1"></i> Ajukan Verifikasi</button>
+                        <button type="button" class="btn btn-success opacity-50 fw-bold shadow-sm rounded-pill py-2 w-100" disabled><i class="bi bi-send-fill me-1"></i> Ajukan Verifikasi</button>
                     @endif
                 @endif
             </div>
@@ -245,9 +297,9 @@
     </div>
 
     <!-- B. PANEL STATUS & KESIAPAN -->
-    <div class="card spp-section-card mb-4 border-primary border-opacity-25" style="background-color: #f8fbff;">
+    <div class="card spp-section-card mb-4 anim-fade-up delay-1" style="background-color: #f8fbff; border: 1px solid rgba(13, 110, 253, 0.15);">
         <div class="card-body p-4">
-            <h5 class="fw-bold text-primary mb-4"><i class="bi bi-shield-check me-2"></i> Status Kesiapan & Progress Verifikasi</h5>
+            <h5 class="spp-section-heading text-primary mb-4"><i class="bi bi-shield-check-fill shadow-sm"></i> Status Kesiapan & Progress Verifikasi</h5>
             
             <div class="row g-4 align-items-center">
                 <div class="col-xl-5">
@@ -281,58 +333,46 @@
                 </div>
 
                 <div class="col-xl-7">
-                    <div class="bg-white p-3 rounded-3 border shadow-sm h-100">
-                        <h6 class="fw-bold text-secondary mb-3"><i class="bi bi-people me-2"></i> Status Verifikator SPP</h6>
-                        <ul class="list-group mb-0">
+                    <div class="bg-white p-4 rounded-4 border shadow-sm h-100">
+                        <h6 class="fw-bold text-secondary mb-4"><i class="bi bi-people-fill me-2 text-primary"></i> Tim Verifikator SPP (Paralel)</h6>
+                        <div class="list-group list-group-flush verificator-list">
                             <!-- PPK -->
-                            <li class="list-group-item px-3 py-2 border-start-0 border-end-0 border-top-0 border-bottom">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <div class="d-flex align-items-center gap-3">
-                                        <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 35px; height: 35px;">
-                                            <i class="bi bi-person-check fs-5"></i>
-                                        </div>
-                                        <div>
-                                            <div class="fw-semibold text-dark">Pejabat Pembuat Komitmen</div>
-                                            <div class="small text-muted">{{ $ppkUser?->name ?? 'Belum Ditentukan' }}</div>
-                                            @if($ppkUser?->nip)<div class="text-muted font-monospace" style="font-size: .72rem;">NIP: {{ $ppkUser->nip }}</div>@endif
-                                        </div>
+                            <div class="list-group-item d-flex justify-content-between align-items-center">
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="verificator-icon bg-primary bg-opacity-10 text-primary"><i class="bi bi-person-check-fill"></i></div>
+                                    <div>
+                                        <div class="fw-bold text-dark">Pejabat Pembuat Komitmen</div>
+                                        <div class="small text-muted">{{ $ppkUser?->name ?? 'Belum Ditentukan' }}</div>
+                                        @if($ppkUser?->nip)<div class="text-muted font-monospace opacity-75" style="font-size: .72rem;">NIP: {{ $ppkUser->nip }}</div>@endif
                                     </div>
-                                    <span class="badge {{ $ppkStatusClass }}">{{ $ppkStatusLabel }}</span>
                                 </div>
-                            </li>
-                            <!-- Koordinator Keuangan -->
-                            <li class="list-group-item px-3 py-2 border-start-0 border-end-0 border-top-0 border-bottom">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <div class="d-flex align-items-center gap-3">
-                                        <div class="bg-info bg-opacity-10 text-info rounded-circle d-flex align-items-center justify-content-center" style="width: 35px; height: 35px;">
-                                            <i class="bi bi-person-gear fs-5"></i>
-                                        </div>
-                                        <div>
-                                            <div class="fw-semibold text-dark">Koordinator Keuangan</div>
-                                            <div class="small text-muted">{{ $koordinatorUser?->name ?? 'Belum Ditentukan' }}</div>
-                                            @if($koordinatorUser?->nip)<div class="text-muted font-monospace" style="font-size: .72rem;">NIP: {{ $koordinatorUser->nip }}</div>@endif
-                                        </div>
+                                <span class="badge {{ $ppkStatusClass }} bg-light border px-3 py-2 rounded-pill">{{ $ppkStatusLabel }}</span>
+                            </div>
+                            <!-- Koordinator -->
+                            <div class="list-group-item d-flex justify-content-between align-items-center">
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="verificator-icon bg-info bg-opacity-10 text-info"><i class="bi bi-person-gear"></i></div>
+                                    <div>
+                                        <div class="fw-bold text-dark">Koordinator Keuangan</div>
+                                        <div class="small text-muted">{{ $koordinatorUser?->name ?? 'Belum Ditentukan' }}</div>
+                                        @if($koordinatorUser?->nip)<div class="text-muted font-monospace opacity-75" style="font-size: .72rem;">NIP: {{ $koordinatorUser->nip }}</div>@endif
                                     </div>
-                                    <span class="badge {{ $koordinatorStatusClass }}">{{ $koordinatorStatusLabel }}</span>
                                 </div>
-                            </li>
+                                <span class="badge {{ $koordinatorStatusClass }} bg-light border px-3 py-2 rounded-pill">{{ $koordinatorStatusLabel }}</span>
+                            </div>
                             <!-- Kasubbag -->
-                            <li class="list-group-item px-3 py-2 border-0">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <div class="d-flex align-items-center gap-3">
-                                        <div class="bg-warning bg-opacity-10 text-warning rounded-circle d-flex align-items-center justify-content-center" style="width: 35px; height: 35px;">
-                                            <i class="bi bi-person-badge fs-5"></i>
-                                        </div>
-                                        <div>
-                                            <div class="fw-semibold text-dark">Kepala Subbagian Keuangan dan Tata Usaha</div>
-                                            <div class="small text-muted">{{ $kasubbagUser?->name ?? 'Belum Ditentukan' }}</div>
-                                            @if($kasubbagUser?->nip)<div class="text-muted font-monospace" style="font-size: .72rem;">NIP: {{ $kasubbagUser->nip }}</div>@endif
-                                        </div>
+                            <div class="list-group-item d-flex justify-content-between align-items-center">
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="verificator-icon bg-warning bg-opacity-10 text-warning"><i class="bi bi-person-badge-fill"></i></div>
+                                    <div>
+                                        <div class="fw-bold text-dark">Kasubbag Keuangan</div>
+                                        <div class="small text-muted">{{ $kasubbagUser?->name ?? 'Belum Ditentukan' }}</div>
+                                        @if($kasubbagUser?->nip)<div class="text-muted font-monospace opacity-75" style="font-size: .72rem;">NIP: {{ $kasubbagUser->nip }}</div>@endif
                                     </div>
-                                    <span class="badge {{ $kasubbagStatusClass }}">{{ $kasubbagStatusLabel }}</span>
                                 </div>
-                            </li>
-                        </ul>
+                                <span class="badge {{ $kasubbagStatusClass }} bg-light border px-3 py-2 rounded-pill">{{ $kasubbagStatusLabel }}</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -345,70 +385,70 @@
         <!-- C. KOLOM KIRI (SUMBER DATA) -->
         <div class="col-xl-7">
             
-            <div class="card spp-section-card mb-4">
-                <div class="card-body p-4">
-                    <div class="spp-section-heading text-primary"><i class="bi bi-receipt"></i> 1. Ringkasan Tagihan</div>
-                    <div class="row g-3">
-                        <div class="col-md-6"><div class="spp-info-block"><div class="label">Nomor Tagihan</div><div class="value">{{ $tagihan->nomor_tagihan ?? '-' }}</div></div></div>
-                        <div class="col-md-6"><div class="spp-info-block"><div class="label">Uraian</div><div class="value">{{ $kontrak->nama_pekerjaan ?? ($tagihan->deskripsi ?? '-') }}</div></div></div>
+            <div class="card spp-section-card mb-4 anim-fade-up delay-2">
+                <div class="card-body p-4 p-xl-5">
+                    <div class="spp-section-heading"><i class="bi bi-receipt-cutoff shadow-sm"></i> 1. Ringkasan Tagihan</div>
+                    <div class="row g-4">
+                        <div class="col-md-6"><div class="spp-info-block"><div class="label">Nomor Tagihan</div><div class="value fs-6 font-monospace">{{ $tagihan->nomor_tagihan ?? '-' }}</div></div></div>
+                        <div class="col-md-6"><div class="spp-info-block"><div class="label">Uraian / Deskripsi</div><div class="value">{{ $kontrak->nama_pekerjaan ?? ($tagihan->deskripsi ?? '-') }}</div></div></div>
                         <div class="col-md-4"><div class="spp-info-block"><div class="label">Nilai Bruto</div><div class="value">Rp {{ number_format($tagihan->total_bruto, 0, ',', '.') }}</div></div></div>
                         <div class="col-md-4"><div class="spp-info-block"><div class="label">Total Potongan</div><div class="value text-danger">Rp {{ number_format($tagihan->total_potongan, 0, ',', '.') }}</div></div></div>
-                        <div class="col-md-4"><div class="spp-info-block"><div class="label">Nilai Netto</div><div class="value text-success fs-5">Rp {{ number_format($tagihan->total_netto, 0, ',', '.') }}</div></div></div>
+                        <div class="col-md-4"><div class="spp-info-block border-success border-opacity-50"><div class="label text-success">Nilai Netto</div><div class="value text-success fs-5">Rp {{ number_format($tagihan->total_netto, 0, ',', '.') }}</div></div></div>
                     </div>
                 </div>
             </div>
 
-            <div class="card spp-section-card mb-4">
-                <div class="card-body p-4">
-                    <div class="spp-section-heading text-primary"><i class="bi bi-file-ruled"></i> 2. Dasar Legal Termin & Dokumen Pribadi</div>
-                    <div class="row g-3">
-                        <div class="col-md-4"><div class="spp-info-block"><div class="label">Termin</div><div class="value">Termin {{ $termin->termin_ke ?? '-' }} <span class="badge bg-light text-dark ms-1">{{ $termin->jenis_termin ?? '-' }}</span></div></div></div>
-                        <div class="col-md-4"><div class="spp-info-block"><div class="label">Persentase</div><div class="value">{{ $termin->persentase ?? 0 }}%</div></div></div>
-                        <div class="col-md-4"><div class="spp-info-block"><div class="label">Nilai Bruto Termin</div><div class="value">Rp {{ number_format($termin->nilai_bruto_termin ?? 0, 0, ',', '.') }}</div></div></div>
+            <div class="card spp-section-card mb-4 anim-fade-up delay-2">
+                <div class="card-body p-4 p-xl-5">
+                    <div class="spp-section-heading"><i class="bi bi-file-earmark-ruled shadow-sm"></i> 2. Dasar Legal Termin & Dokumen Pribadi</div>
+                    <div class="row g-4">
+                        <div class="col-md-4"><div class="spp-info-block"><div class="label">Termin</div><div class="value fs-6">Termin {{ $termin->termin_ke ?? '-' }} <span class="badge bg-primary bg-opacity-10 text-primary ms-1 border">{{ $termin->jenis_termin ?? '-' }}</span></div></div></div>
+                        <div class="col-md-4"><div class="spp-info-block"><div class="label">Persentase</div><div class="value fs-5">{{ $termin->persentase ?? 0 }}%</div></div></div>
+                        <div class="col-md-4"><div class="spp-info-block"><div class="label">Nilai Bruto Termin</div><div class="value fs-6">Rp {{ number_format($termin->nilai_bruto_termin ?? 0, 0, ',', '.') }}</div></div></div>
                         
-                        <div class="col-12"><hr class="my-2 text-muted"></div>
+                        <div class="col-12"><hr class="my-1 border-secondary opacity-25"></div>
                         
-                        <div class="col-md-6"><div class="spp-info-block"><div class="label">BAPP</div><div class="value">{{ $detailKontrak->nomor_bapp ?? '-' }}</div><div class="small text-muted">{{ optional($detailKontrak?->tanggal_bapp)->format('d M Y') ?? '-' }}</div></div></div>
-                        <div class="col-md-6"><div class="spp-info-block"><div class="label">BAP</div><div class="value">{{ $detailKontrak->nomor_bap ?? '-' }}</div><div class="small text-muted">{{ optional($detailKontrak?->tanggal_bap)->format('d M Y') ?? '-' }}</div></div></div>
-                        <div class="col-md-6"><div class="spp-info-block"><div class="label">BAST {{ $isPelunasan ? '' : '(Opsional)' }}</div><div class="value">{{ $detailKontrak->nomor_bast ?? '-' }}</div><div class="small text-muted">{{ optional($detailKontrak?->tanggal_bast)->format('d M Y') ?? '-' }}</div></div></div>
-                        <div class="col-md-6"><div class="spp-info-block"><div class="label">Invoice</div><div class="value">{{ $detailKontrak->nomor_invoice ?? '-' }}</div><div class="small text-muted">{{ optional($detailKontrak?->tanggal_invoice)->format('d M Y') ?? '-' }}</div></div></div>
+                        <div class="col-md-6"><div class="spp-info-block"><div class="label">Berita Acara (BAPP)</div><div class="value font-monospace">{{ $detailKontrak->nomor_bapp ?? '-' }}</div><div class="small text-muted mt-1 opacity-75"><i class="bi bi-calendar-event me-1"></i>{{ optional($detailKontrak?->tanggal_bapp)->format('d M Y') ?? '-' }}</div></div></div>
+                        <div class="col-md-6"><div class="spp-info-block"><div class="label">Berita Acara (BAP)</div><div class="value font-monospace">{{ $detailKontrak->nomor_bap ?? '-' }}</div><div class="small text-muted mt-1 opacity-75"><i class="bi bi-calendar-event me-1"></i>{{ optional($detailKontrak?->tanggal_bap)->format('d M Y') ?? '-' }}</div></div></div>
+                        <div class="col-md-6"><div class="spp-info-block"><div class="label">Berita Acara (BAST) {{ $isPelunasan ? '' : '(Ops)' }}</div><div class="value font-monospace">{{ $detailKontrak->nomor_bast ?? '-' }}</div><div class="small text-muted mt-1 opacity-75"><i class="bi bi-calendar-event me-1"></i>{{ optional($detailKontrak?->tanggal_bast)->format('d M Y') ?? '-' }}</div></div></div>
+                        <div class="col-md-6"><div class="spp-info-block"><div class="label">Nomor Invoice</div><div class="value font-monospace">{{ $detailKontrak->nomor_invoice ?? '-' }}</div><div class="small text-muted mt-1 opacity-75"><i class="bi bi-calendar-event me-1"></i>{{ optional($detailKontrak?->tanggal_invoice)->format('d M Y') ?? '-' }}</div></div></div>
                         
-                        <div class="col-12"><hr class="my-2 text-muted"></div>
+                        <div class="col-12"><hr class="my-1 border-secondary opacity-25"></div>
                         
-                        <div class="col-md-4"><div class="spp-info-block"><div class="label">Nama Pemeriksa</div><div class="value">{{ $detailKontrak->nama_pemeriksa ?? '-' }}</div></div></div>
-                        <div class="col-md-4"><div class="spp-info-block"><div class="label">Jabatan Pemeriksa</div><div class="value">{{ $detailKontrak->jabatan_pemeriksa ?? '-' }}</div></div></div>
-                        <div class="col-md-4"><div class="spp-info-block"><div class="label">NIP Pemeriksa</div><div class="value">{{ $detailKontrak->nip_pemeriksa ?? '-' }}</div></div></div>
+                        <div class="col-md-4"><div class="spp-info-block border-warning border-opacity-50"><div class="label text-warning text-darken">Nama Pemeriksa</div><div class="value">{{ $detailKontrak->nama_pemeriksa ?? '-' }}</div></div></div>
+                        <div class="col-md-4"><div class="spp-info-block border-warning border-opacity-50"><div class="label text-warning text-darken">Jabatan Pemeriksa</div><div class="value">{{ $detailKontrak->jabatan_pemeriksa ?? '-' }}</div></div></div>
+                        <div class="col-md-4"><div class="spp-info-block border-warning border-opacity-50"><div class="label text-warning text-darken">NIP Pemeriksa</div><div class="value font-monospace">{{ $detailKontrak->nip_pemeriksa ?? '-' }}</div></div></div>
                     </div>
                 </div>
             </div>
 
-            <div class="card spp-section-card mb-4">
-                <div class="card-body p-4">
-                    <div class="spp-section-heading text-primary"><i class="bi bi-percent"></i> 3. Ringkasan Potongan</div>
-                    <div class="row g-3 mb-3">
-                        <div class="col-md-4"><div class="spp-potongan-summary"><div class="label text-muted small fw-bold mb-1">Angsuran Uang Muka</div><div class="fw-bold text-warning fs-5">Rp {{ number_format($potonganAngsuranUm->nominal_potongan ?? 0, 0, ',', '.') }}</div></div></div>
-                        <div class="col-md-4"><div class="spp-potongan-summary"><div class="label text-muted small fw-bold mb-1">Total Pajak</div><div class="fw-bold text-danger fs-5">Rp {{ number_format($potonganPajak->sum('nominal_potongan'), 0, ',', '.') }}</div></div></div>
-                        <div class="col-md-4"><div class="spp-potongan-summary bg-light border-dark border-opacity-25"><div class="label text-dark small fw-bold mb-1">Total Potongan</div><div class="fw-bold text-dark fs-5">Rp {{ number_format($tagihan->total_potongan, 0, ',', '.') }}</div></div></div>
+            <div class="card spp-section-card mb-4 anim-fade-up delay-3">
+                <div class="card-body p-4 p-xl-5">
+                    <div class="spp-section-heading"><i class="bi bi-percent shadow-sm text-danger"></i> 3. Ringkasan Potongan</div>
+                    <div class="row g-4 mb-3">
+                        <div class="col-md-4"><div class="spp-potongan-summary shadow-sm"><div class="label text-muted small fw-bold mb-1">Angsuran UM Tertahan</div><div class="fw-bold text-warning fs-5">Rp {{ number_format($potonganAngsuranUm->nominal_potongan ?? 0, 0, ',', '.') }}</div></div></div>
+                        <div class="col-md-4"><div class="spp-potongan-summary shadow-sm"><div class="label text-muted small fw-bold mb-1">Total Pajak</div><div class="fw-bold text-danger fs-5">Rp {{ number_format($potonganPajak->sum('nominal_potongan'), 0, ',', '.') }}</div></div></div>
+                        <div class="col-md-4"><div class="spp-potongan-summary shadow-sm" style="background: linear-gradient(135deg, #1e293b, #0f172a);"><div class="label text-white text-opacity-75 small fw-bold mb-1">Total Keseluruhan</div><div class="fw-bold text-white fs-5">Rp {{ number_format($tagihan->total_potongan, 0, ',', '.') }}</div></div></div>
                     </div>
                 </div>
             </div>
 
-            <div class="card spp-section-card mb-4">
-                <div class="card-body p-4">
-                    <div class="spp-section-heading text-primary"><i class="bi bi-paperclip"></i> 4. Lampiran Dokumen Tagihan</div>
-                    <div>
+            <div class="card spp-section-card mb-4 anim-fade-up delay-3">
+                <div class="card-body p-4 p-xl-5">
+                    <div class="spp-section-heading"><i class="bi bi-paperclip shadow-sm text-info"></i> 4. Lampiran Dokumen</div>
+                    <div class="d-flex flex-column gap-3">
                         @foreach($documentStatuses as $document)
                             @php($docMeta = $documentStatusMeta[$document['status']] ?? $documentStatusMeta['missing'])
-                            <div class="spp-doc-row">
-                                <div class="d-flex align-items-center gap-2">
-                                    <span class="badge {{ $docMeta['class'] }}" style="width: 80px;">{{ $docMeta['label'] }}</span>
-                                    <div class="fw-semibold text-dark">{{ $document['label'] }}</div>
+                            <div class="spp-doc-row shadow-sm">
+                                <div class="d-flex align-items-center gap-3">
+                                    <span class="badge {{ $docMeta['class'] }} py-2 px-3 rounded-pill" style="min-width: 90px;">{{ $docMeta['label'] }}</span>
+                                    <div class="fw-bold text-dark">{{ $document['label'] }}</div>
                                 </div>
                                 <div>
                                     @if($document['is_available'])
-                                        <a href="{{ \Illuminate\Support\Facades\Storage::url($document['path']) }}" target="_blank" class="btn btn-sm btn-outline-primary"><i class="bi bi-search me-1"></i> Lihat</a>
+                                        <a href="{{ \Illuminate\Support\Facades\Storage::url($document['path']) }}" target="_blank" class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-bold"><i class="bi bi-eye-fill me-1"></i> Lihat Dokumen</a>
                                     @else
-                                        <span class="text-muted small">-</span>
+                                        <span class="text-muted small opacity-50 fst-italic">Belum diunggah</span>
                                     @endif
                                 </div>
                             </div>
@@ -423,26 +463,26 @@
         <div class="col-xl-5">
             <div class="sticky-top" style="top: 1.5rem; z-index: 1;">
                 
-                <div class="card spp-section-card mb-4">
-                    <div class="card-body p-4">
-                        <div class="spp-section-heading text-primary"><i class="bi bi-wallet2"></i> Validasi Anggaran</div>
-                        <div class="spp-info-block mb-3"><div class="label">DIPA / Tahun / Revisi</div><div class="value">{{ $dipa->nomor_dipa ?? '-' }} <span class="text-muted fw-normal">(Thn: {{ $dipa->tahun_anggaran ?? '-' }}, Rev: {{ $dipa->revisi_aktif_ke ?? '-' }})</span></div></div>
+                <div class="card spp-section-card mb-4 anim-fade-up delay-4">
+                    <div class="card-body p-4 p-xl-5">
+                        <div class="spp-section-heading"><i class="bi bi-wallet2 shadow-sm text-primary"></i> Validasi Anggaran</div>
+                        <div class="spp-info-block mb-4"><div class="label">Nomor DIPA / Tahun / Revisi</div><div class="value font-monospace">{{ $dipa->nomor_dipa ?? '-' }} <span class="text-muted fw-normal ms-2">(Thn: {{ $dipa->tahun_anggaran ?? '-' }}, Rev: {{ $dipa->revisi_aktif_ke ?? '-' }})</span></div></div>
                         
-                        <div class="p-3 bg-light rounded border border-primary border-opacity-25">
-                            <div class="label text-primary fw-bold small mb-1">Item DIPA / COA Terpakai</div>
-                            <div class="value fs-5">@if($selectedBudgetItem?->coa) {{ $selectedBudgetItem->coa->kode_mak_lengkap }} @else <span class="text-danger">Belum Tersedia</span> @endif</div>
-                            <div class="text-muted small lh-sm mt-1">{{ $selectedBudgetItem?->coa?->nama_akun ?? 'SPP tidak memiliki tujuan mata anggaran.' }}</div>
+                        <div class="p-3 bg-light rounded-4 border border-primary border-opacity-25 shadow-sm">
+                            <div class="label text-primary fw-bold small mb-1 text-uppercase">Item DIPA / COA Terpakai</div>
+                            <div class="value fs-5 font-monospace fw-bold">@if($selectedBudgetItem?->coa) {{ $selectedBudgetItem->coa->kode_mak_lengkap }} @else <span class="text-danger">Belum Tersedia</span> @endif</div>
+                            <div class="text-muted small lh-sm mt-1 fw-semibold">{{ $selectedBudgetItem?->coa?->nama_akun ?? 'SPP tidak memiliki tujuan mata anggaran.' }}</div>
                         </div>
                     </div>
                 </div>
 
-                <div class="card spp-section-card mb-4">
-                    <div class="card-body p-4">
-                        <div class="spp-section-heading text-primary"><i class="bi bi-bank"></i> Vendor & Rekening</div>
-                        <div class="spp-info-block mb-3"><div class="label">Vendor</div><div class="value">{{ $vendor->nama_pihak ?? $vendor->nama_perusahaan ?? '-' }}</div><div class="small text-muted">NPWP: {{ $vendor->npwp ?? '-' }}</div></div>
-                        <hr class="text-muted my-2">
+                <div class="card spp-section-card mb-4 anim-fade-up delay-4">
+                    <div class="card-body p-4 p-xl-5">
+                        <div class="spp-section-heading"><i class="bi bi-bank shadow-sm text-primary"></i> Vendor & Rekening</div>
+                        <div class="spp-info-block mb-3"><div class="label">Vendor</div><div class="value">{{ $vendor->nama_pihak ?? $vendor->nama_perusahaan ?? '-' }}</div><div class="small text-muted mt-1 opacity-75">NPWP: {{ $vendor->npwp ?? '-' }}</div></div>
+                        <hr class="border-secondary opacity-25 my-3">
                         <div class="spp-info-block mb-2"><div class="label">Info Bank</div><div class="value">{{ $rekening->nama_bank ?? '-' }}</div></div>
-                        <div class="spp-info-block mb-2"><div class="label">Nomor Rekening</div><div class="value font-monospace fs-6">{{ $rekening->nomor_rekening ?? 'BELUM ADA' }}</div></div>
+                        <div class="spp-info-block mb-2"><div class="label">Nomor Rekening</div><div class="value font-monospace fs-5 text-primary">{{ $rekening->nomor_rekening ?? 'BELUM ADA' }}</div></div>
                         <div class="spp-info-block mb-0"><div class="label">Atas Nama</div><div class="value">{{ $rekening->nama_rekening ?? '-' }}</div></div>
                     </div>
                 </div>
@@ -450,40 +490,40 @@
 
 
                 <!-- HIGHLIGHT: HASIL DRAFT SPP -->
-                <div class="card spp-section-card mb-4 border-primary shadow-sm">
-                    <div class="card-header bg-primary text-white p-3">
-                        <h6 class="mb-0 fw-bold"><i class="bi bi-file-earmark-check me-2"></i> Ringkasan Draft SPP</h6>
+                <div class="card spp-section-card mb-4 border-primary shadow-sm anim-fade-up delay-4" style="background: linear-gradient(135deg, #ffffff 0%, #f0f9ff 100%);">
+                    <div class="card-header bg-primary bg-gradient text-white p-4 border-0">
+                        <h6 class="mb-0 fw-bold fs-5"><i class="bi bi-file-earmark-check-fill me-2"></i> Ringkasan Draft SPP</h6>
                     </div>
-                    <div class="card-body p-4">
-                        <div class="d-flex justify-content-between mb-3">
-                            <span class="text-muted fw-semibold">Status</span>
-                            <span class="badge {{ $statusSppClass }} fs-6">{{ $statusSppLabel }}</span>
+                    <div class="card-body p-4 p-xl-5">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <span class="text-muted fw-bold text-uppercase small">Status Dokumen</span>
+                            <span class="badge {{ $statusSppClass }} fs-6 px-3 py-2 rounded-pill shadow-sm">{{ $statusSppLabel }}</span>
                         </div>
-                        <div class="spp-info-block mb-2"><div class="label">Nomor SPP</div><div class="value">{{ $sppModel->nomor_spp ?? '-' }}</div></div>
-                        <div class="spp-info-block mb-2"><div class="label">Tanggal SPP</div><div class="value">{{ optional($sppModel?->tanggal_spp)->format('d F Y') ?? '-' }}</div></div>
-                        <div class="spp-info-block mb-3"><div class="label">Nilai SPP</div><div class="value text-primary fs-5">Rp {{ number_format($nominalSpp, 0, ',', '.') }}</div></div>
+                        <div class="spp-info-block mb-3"><div class="label">Nomor SPP</div><div class="value font-monospace fs-6">{{ $sppModel->nomor_spp ?? '-' }}</div></div>
+                        <div class="spp-info-block mb-3"><div class="label">Tanggal SPP</div><div class="value">{{ optional($sppModel?->tanggal_spp)->format('d F Y') ?? '-' }}</div></div>
+                        <div class="spp-info-block mb-4"><div class="label">Nilai SPP</div><div class="value text-primary fs-3 fw-bold">Rp {{ number_format($nominalSpp, 0, ',', '.') }}</div></div>
                         
-                        <div class="p-2 bg-light rounded text-center small text-muted">
-                            Mode Dokumen: {{ $workflowLockLabel }}
+                        <div class="p-2 bg-white rounded-pill text-center small text-muted border border-primary border-opacity-25 shadow-sm fw-semibold">
+                            <i class="bi bi-shield-lock-fill text-primary me-1"></i> Mode Dokumen: {{ $workflowLockLabel }}
                         </div>
                     </div>
                 </div>
 
-                <div class="card spp-section-card mb-4">
-                    <div class="card-body p-4">
-                        <div class="spp-section-heading text-primary"><i class="bi bi-clock-history"></i> Aktivitas Workflow</div>
+                <div class="card spp-section-card mb-4 anim-fade-up delay-4">
+                    <div class="card-body p-4 p-xl-5">
+                        <div class="spp-section-heading"><i class="bi bi-clock-history shadow-sm text-primary"></i> Aktivitas Workflow</div>
                         
-                        <div class="mt-2">
+                        <div class="mt-4">
                             @forelse($recentActivities as $idx => $activity)
                                 <div class="spp-activity-row {{ $idx === 0 ? 'spp-activity-active' : '' }}">
-                                    <div class="fw-bold text-dark">{{ $activity['title'] }}</div>
-                                    <div class="small text-muted">{{ $activity['time'] ?? '-' }} &bull; <span>{{ $activity['actor'] }}</span></div>
+                                    <div class="fw-bold text-dark mb-1">{{ $activity['title'] }}</div>
+                                    <div class="small text-muted fw-semibold"><i class="bi bi-clock me-1"></i>{{ $activity['time'] ?? '-' }} &bull; <span class="text-primary">{{ $activity['actor'] }}</span></div>
                                     @if(!empty($activity['note']))
-                                        <div class="small text-muted mt-1 lh-sm fst-italic">"{{ $activity['note'] }}"</div>
+                                        <div class="small text-muted mt-2 lh-sm fst-italic p-2 bg-light rounded border-start border-3 border-primary">"{{ $activity['note'] }}"</div>
                                     @endif
                                 </div>
                             @empty
-                                <div class="text-center text-muted small py-3">Belum ada aktivitas.</div>
+                                <div class="text-center text-muted small py-4 fw-semibold"><i class="bi bi-inbox fs-3 d-block mb-2 text-secondary opacity-50"></i> Belum ada aktivitas yang tercatat.</div>
                             @endforelse
                         </div>
                     </div>
@@ -496,109 +536,111 @@
     <!-- F. MODAL DRAFT SPP -->
     <div class="modal fade" id="modalSppKontrak" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
         <div class="modal-dialog modal-xl modal-dialog-scrollable">
-            <form action="{{ route('spps.kontrak.store', $tagihan->id) }}" method="POST" enctype="multipart/form-data" id="formSppKontrak" class="modal-content border-0 shadow">
+            <form action="{{ route('spps.kontrak.store', $tagihan->id) }}" method="POST" enctype="multipart/form-data" id="formSppKontrak" class="modal-content rounded-4 border-0 shadow-lg">
                 @csrf
                 <input type="hidden" name="jumlah_uang" id="jumlah_uang_spp" value="{{ old('jumlah_uang', $nominalSpp) }}">
 
-                <div class="modal-header bg-primary text-white border-0">
-                    <h5 class="modal-title fw-bold"><i class="bi bi-pencil-square me-2"></i>{{ $sppModel ? 'Edit Draft SPP Kontrak' : 'Buat Draft SPP Kontrak Baru' }}</h5>
+                <div class="modal-header bg-primary bg-gradient text-white border-0 rounded-top-4 p-4">
+                    <h5 class="modal-title fw-bold fs-4"><i class="bi bi-pencil-square me-2"></i>{{ $sppModel ? 'Edit Draft SPP Kontrak' : 'Buat Draft SPP Kontrak Baru' }}</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
 
-                <div class="modal-body p-4 bg-light">
+                <div class="modal-body p-4 p-xl-5 bg-light">
                     @if($sppModel && $sppModel->status === 'Revisi')
-                        <div class="alert alert-danger mb-4 shadow-sm border-0"><i class="bi bi-exclamation-triangle-fill me-2"></i> Dokumen ini dikembalikan karena memerlukan revisi. Silakan sesuaikan data.</div>
+                        <div class="alert alert-danger mb-4 shadow-sm border-0 rounded-3"><i class="bi bi-exclamation-triangle-fill me-2"></i> Dokumen ini dikembalikan karena memerlukan revisi. Silakan sesuaikan data.</div>
                     @endif
 
                     <fieldset class="border-0 p-0 m-0" {{ $canEditSpp ? '' : 'disabled' }}>
                         
                         <!-- SEC 1: INFO DASAR -->
-                        <div class="spp-modal-section shadow-sm">
-                            <h6 class="fw-bold text-primary mb-3"><i class="bi bi-1-circle me-1"></i> Informasi Dasar SPP</h6>
-                            <div class="row g-3">
+                        <div class="spp-modal-section shadow-sm bg-white p-4 rounded-4 border border-secondary border-opacity-10 mb-4">
+                            <h6 class="fw-bold text-primary mb-4 border-bottom pb-2"><i class="bi bi-1-circle-fill me-2"></i> Informasi Dasar SPP</h6>
+                            <div class="row g-4">
                                 <div class="col-md-6">
-                                    <label class="form-label fw-semibold">Nomor SPP <span class="text-danger">*</span></label>
-                                    <input type="text" name="nomor_spp" class="form-control fw-bold text-primary bg-light" required value="{{ old('nomor_spp', $sppModel->nomor_spp ?? $autoNomorSpp) }}" placeholder="Ketik nomor SPP">
-                                    <small class="text-muted"><i class="bi bi-info-circle me-1"></i>Nomor di atas digenerate otomatis, ubah jika perlu.</small>
+                                    <label class="form-label fw-bold text-secondary">Nomor SPP <span class="text-danger">*</span></label>
+                                    <input type="text" name="nomor_spp" class="form-control form-control-lg fw-bold text-primary bg-light border-0 shadow-none" required value="{{ old('nomor_spp', $sppModel->nomor_spp ?? $autoNomorSpp) }}" placeholder="Ketik nomor SPP">
+                                    <small class="text-muted mt-2 d-block"><i class="bi bi-info-circle-fill text-info me-1"></i>Nomor digenerate otomatis, ubah jika perlu.</small>
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label fw-semibold">Tanggal SPP <span class="text-danger">*</span></label>
-                                    <input type="date" name="tanggal_spp" class="form-control" required value="{{ old('tanggal_spp', optional($sppModel?->tanggal_spp)->format('Y-m-d') ?? now()->format('Y-m-d')) }}">
+                                    <label class="form-label fw-bold text-secondary">Tanggal SPP <span class="text-danger">*</span></label>
+                                    <input type="date" name="tanggal_spp" class="form-control form-control-lg" required value="{{ old('tanggal_spp', optional($sppModel?->tanggal_spp)->format('Y-m-d') ?? now()->format('Y-m-d')) }}">
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label fw-semibold">Nominal SPP Akhir (Otomatis)</label>
-                                    <input type="text" class="form-control fw-bold text-success bg-white" id="jumlah_uang_spp_display" value="Rp {{ number_format($nominalSpp, 0, ',', '.') }}" readonly>
-                                </div>
-                                <div class="col-12">
-                                    <label class="form-label fw-semibold">Uraian SPP</label>
-                                    <textarea class="form-control bg-light" rows="2" readonly>{{ $kontrak->nama_pekerjaan ?? ($tagihan->deskripsi ?? '-') }}</textarea>
+                                    <label class="form-label fw-bold text-secondary">Nominal SPP Akhir (Otomatis)</label>
+                                    <input type="text" class="form-control form-control-lg fw-bold text-success bg-success bg-opacity-10 border-success border-opacity-25" id="jumlah_uang_spp_display" value="Rp {{ number_format($nominalSpp, 0, ',', '.') }}" readonly>
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label fw-semibold">Jenis Tagihan</label>
-                                    <select name="jenis_tagihan" class="form-select">
+                                    <label class="form-label fw-bold text-secondary">Jenis Tagihan</label>
+                                    <select name="jenis_tagihan" class="form-select form-select-lg">
                                         <option value="NON REMUNERASI" {{ old('jenis_tagihan', $sppModel?->jenis_tagihan) === 'NON REMUNERASI' ? 'selected' : '' }}>NON REMUNERASI</option>
                                         <option value="REMUNERASI" {{ old('jenis_tagihan', $sppModel?->jenis_tagihan) === 'REMUNERASI' ? 'selected' : '' }}>REMUNERASI</option>
                                     </select>
-                                    <div class="form-text">Kategori tagihan yang akan ditampilkan pada PDF SPP & SPM.</div>
+                                    <div class="form-text mt-1">Kategori tagihan untuk keperluan PDF.</div>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label fw-bold text-secondary">Uraian SPP</label>
+                                    <textarea class="form-control bg-light border-0" rows="3" readonly>{{ $kontrak->nama_pekerjaan ?? ($tagihan->deskripsi ?? '-') }}</textarea>
                                 </div>
                             </div>
                         </div>
 
                         <!-- SEC 2: PAJAK -->
-                        <div class="spp-modal-section shadow-sm">
-                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                <h6 class="fw-bold text-primary mb-0"><i class="bi bi-2-circle me-1"></i> Komponen Potongan Pajak</h6>
-                                <button type="button" class="btn btn-sm btn-outline-primary" id="btnTambahPajakSpp"><i class="bi bi-plus-lg"></i> Tambah Pajak</button>
+                        <div class="spp-modal-section shadow-sm bg-white p-4 rounded-4 border border-secondary border-opacity-10 mb-4">
+                            <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-2">
+                                <h6 class="fw-bold text-primary mb-0"><i class="bi bi-2-circle-fill me-2"></i> Komponen Potongan Pajak</h6>
+                                <button type="button" class="btn btn-sm btn-primary rounded-pill px-3 shadow-sm" id="btnTambahPajakSpp"><i class="bi bi-plus-lg me-1"></i> Tambah Pajak</button>
                             </div>
                             
-                            <div class="row g-3 mb-3 pb-3 border-bottom">
-                                <div class="col-md-4"><div class="small fw-bold text-muted">Nilai Bruto Tagihan</div><div class="fs-6">Rp {{ number_format($tagihan->total_bruto, 0, ',', '.') }}</div></div>
-                                <div class="col-md-4"><div class="small fw-bold text-muted">Angsuran UM Tertahan</div><div class="fs-6 text-warning">Rp {{ number_format($potonganAngsuranUm->nominal_potongan ?? 0, 0, ',', '.') }}</div></div>
-                                <div class="col-md-4"><div class="small fw-bold text-muted">Total Potongan Pajak</div><div class="fs-6 text-danger fw-bold" id="total_potongan_pajak_spp_display">Rp {{ number_format($potonganPajak->sum('nominal_potongan'), 0, ',', '.') }}</div></div>
+                            <div class="row g-3 mb-4 pb-3 border-bottom bg-light p-3 rounded-3">
+                                <div class="col-md-4"><div class="small fw-bold text-muted text-uppercase mb-1">Nilai Bruto Tagihan</div><div class="fs-6 font-monospace">Rp {{ number_format($tagihan->total_bruto, 0, ',', '.') }}</div></div>
+                                <div class="col-md-4"><div class="small fw-bold text-muted text-uppercase mb-1">Angsuran UM Tertahan</div><div class="fs-6 text-warning font-monospace">Rp {{ number_format($potonganAngsuranUm->nominal_potongan ?? 0, 0, ',', '.') }}</div></div>
+                                <div class="col-md-4"><div class="small fw-bold text-muted text-uppercase mb-1">Total Potongan Pajak</div><div class="fs-5 text-danger fw-bold font-monospace" id="total_potongan_pajak_spp_display">Rp {{ number_format($potonganPajak->sum('nominal_potongan'), 0, ',', '.') }}</div></div>
                             </div>
 
                             <div id="containerPajakSpp">
-                                <div class="text-center text-muted p-4 bg-light rounded border border-dashed" id="pajakSppKosong">
+                                <div class="text-center text-muted p-5 bg-light rounded-4 border border-dashed border-2 opacity-75" id="pajakSppKosong">
+                                    <i class="bi bi-receipt fs-1 d-block mb-2 text-secondary opacity-50"></i>
                                     Tidak ada potongan pajak tambahan pada draft ini.
                                 </div>
                             </div>
                         </div>
 
                         <!-- SEC 3: VERIFIKATOR -->
-                        <div class="spp-modal-section shadow-sm">
-                            <h6 class="fw-bold text-primary mb-3"><i class="bi bi-3-circle me-1"></i> Penugasan Verifikator (Paralel)</h6>
-                            <div class="alert alert-info border-0 py-2 small mb-3">
-                                <i class="bi bi-info-circle me-1"></i> Mode verifikasi paralel aktif. Dokumen ini akan diperiksa oleh PPK, Koordinator Keuangan, dan Kasubbag secara bersamaan saat diajukan.
+                        <div class="spp-modal-section shadow-sm bg-white p-4 rounded-4 border border-secondary border-opacity-10 mb-4">
+                            <h6 class="fw-bold text-primary mb-4 border-bottom pb-2"><i class="bi bi-3-circle-fill me-2"></i> Penugasan Verifikator (Paralel)</h6>
+                            <div class="alert alert-info border-0 p-3 rounded-3 small mb-4 d-flex gap-3 align-items-center bg-info bg-opacity-10">
+                                <i class="bi bi-info-circle-fill text-info fs-3"></i>
+                                <div>Mode verifikasi paralel aktif. Dokumen ini akan diperiksa oleh PPK, Koordinator Keuangan, dan Kasubbag secara bersamaan saat diajukan.</div>
                             </div>
-                        <div class="row g-4">
+                            <div class="row g-4">
                                 <div class="col-md-4">
-                                    <label class="form-label fw-semibold text-dark">Verifikator PPK</label>
-                                    <input type="text" class="form-control bg-light" value="{{ $ppkUser->name ?? 'PPK Tidak Tersedia (Otomatis)' }}" readonly>
+                                    <label class="form-label fw-bold text-secondary">Verifikator PPK</label>
+                                    <input type="text" class="form-control bg-light border-0" value="{{ $ppkUser->name ?? 'PPK Tidak Tersedia (Otomatis)' }}" readonly>
                                     <input type="hidden" name="ppk_verifikator_id" value="{{ $ppkUser->id ?? '' }}">
-                                    <div class="form-text">Otomatis berdasarkan verifikator tagihan.</div>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label fw-semibold text-dark">Koordinator Keuangan</label>
-                                    <input type="text" class="form-control bg-light" value="{{ $koordinatorUser->name ?? 'Koordinator Keuangan Tidak Tersedia (Otomatis)' }}" readonly>
-                                    <div class="form-text">Koordinator Keuangan otomatis ditentukan oleh sistem.</div>
+                                    <label class="form-label fw-bold text-secondary">Koordinator Keuangan</label>
+                                    <input type="text" class="form-control bg-light border-0" value="{{ $koordinatorUser->name ?? 'Koordinator Tidak Tersedia' }}" readonly>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label fw-semibold text-dark">Verifikator Kasubbag</label>
-                                    <input type="text" class="form-control bg-light" value="{{ $kasubbagUser->name ?? 'Kasubbag Tidak Tersedia (Otomatis)' }}" readonly>
-                                    <div class="form-text">Kasubbag otomatis ditentukan oleh sistem berdasarkan otoritas.</div>
+                                    <label class="form-label fw-bold text-secondary">Kasubbag Keuangan</label>
+                                    <input type="text" class="form-control bg-light border-0" value="{{ $kasubbagUser->name ?? 'Kasubbag Tidak Tersedia' }}" readonly>
                                 </div>
                             </div>
                         </div>
 
                         <!-- SEC 4: LAMPIRAN -->
-                        <div class="spp-modal-section shadow-sm mb-0">
-                            <h6 class="fw-bold text-primary mb-3"><i class="bi bi-4-circle me-1"></i> Lampiran SPP</h6>
+                        <div class="spp-modal-section shadow-sm bg-white p-4 rounded-4 border border-secondary border-opacity-10 mb-0">
+                            <h6 class="fw-bold text-primary mb-4 border-bottom pb-2"><i class="bi bi-4-circle-fill me-2"></i> Lampiran Ekstra SPP</h6>
                             <div class="row g-4">
                                 <div class="col-12">
-                                    <label class="form-label fw-semibold">Upload Faktur Pajak</label>
-                                    <input type="file" name="file_faktur_pajak" class="form-control" accept=".pdf">
+                                    <label class="form-label fw-bold text-secondary">Upload Faktur Pajak <span class="fw-normal text-muted small">(opsional)</span></label>
+                                    <input type="file" name="file_faktur_pajak" class="form-control form-control-lg bg-light" accept=".pdf">
                                     @if($detailKontrak?->file_faktur_pajak)
-                                        <div class="mt-2 small"><a href="{{ \Illuminate\Support\Facades\Storage::url($detailKontrak->file_faktur_pajak) }}" target="_blank"><i class="bi bi-link-45deg"></i> File saat ini tersedia</a></div>
+                                        <div class="mt-3 p-2 bg-success bg-opacity-10 border border-success rounded-3 small d-inline-flex align-items-center gap-2">
+                                            <i class="bi bi-check-circle-fill text-success"></i> 
+                                            <a href="{{ \Illuminate\Support\Facades\Storage::url($detailKontrak->file_faktur_pajak) }}" target="_blank" class="text-decoration-none fw-bold text-success">File saat ini tersedia (Lihat)</a>
+                                        </div>
                                     @endif
                                 </div>
                             </div>
@@ -607,58 +649,15 @@
                     </fieldset>
                 </div>
 
-                <div class="modal-footer bg-white border-top">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
+                <div class="modal-footer bg-white border-top p-4 rounded-bottom-4">
+                    <button type="button" class="btn btn-light rounded-pill px-4 fw-bold" data-bs-dismiss="modal">Batal</button>
                     @if($canEditSpp)
-                        <button type="submit" class="btn btn-primary px-4"><i class="bi bi-save me-1"></i> Simpan Draft SPP</button>
+                        <button type="submit" class="btn btn-primary btn-pulse rounded-pill px-5 fw-bold"><i class="bi bi-save-fill me-2"></i> Simpan Draft SPP</button>
                     @endif
                 </div>
             </form>
         </div>
     </div>
-    @if($sppModel && in_array($sppModel->status, ['APPROVED', 'DISETUJUI_SPP', 'Disetujui PPK', 'SPP_TERBIT']))
-    <!-- Modal Upload Scan SPP -->
-    <div class="modal fade" id="modalUploadSignedSpp" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
-        <div class="modal-dialog">
-            <form action="{{ route('spps.upload-signed', $sppModel->id) }}" method="POST" enctype="multipart/form-data" class="modal-content border-0 shadow">
-                @csrf
-                <div class="modal-header bg-primary text-white border-0">
-                    <h5 class="modal-title fw-bold"><i class="bi bi-upload me-2"></i> Upload Scan SPP</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body p-4 bg-light">
-                    <div class="alert alert-info border-0 p-3 mb-4 small shadow-sm">
-                        <i class="bi bi-info-circle-fill me-1"></i> Silakan unggah dokumen SPP yang telah dicetak dan ditandatangani basah oleh seluruh pihak terkait.
-                    </div>
-                    @if($sppModel->hasSignedSppFile())
-                        <div class="d-flex align-items-center justify-content-between mb-4 p-3 bg-success bg-opacity-10 border border-success rounded shadow-sm">
-                            <div class="d-flex align-items-center gap-3">
-                                <div class="bg-success text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
-                                    <i class="bi bi-check-lg fs-5"></i>
-                                </div>
-                                <div>
-                                    <div class="fw-bold text-success mb-0">File Terunggah</div>
-                                    <div class="small text-muted">{{ $sppModel->signedSppArsip?->nama_file_asli ?? 'Dokumen SPP Final' }}</div>
-                                </div>
-                            </div>
-                            <a href="{{ \Illuminate\Support\Facades\Storage::url($sppModel->signedSppArsip?->path_file) }}" target="_blank" class="btn btn-sm btn-outline-success">
-                                <i class="bi bi-search"></i> Lihat
-                            </a>
-                        </div>
-                    @endif
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Pilih File Scan (PDF/JPG/PNG) <span class="text-danger">*</span></label>
-                        <input type="file" name="file_spp_ttd" class="form-control" accept=".pdf,.jpg,.jpeg,.png" required>
-                    </div>
-                </div>
-                <div class="modal-footer bg-white border-top">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
-                    <button type="submit" class="btn btn-primary px-4"><i class="bi bi-upload me-1"></i> {{ $sppModel->hasSignedSppFile() ? 'Timpa File' : 'Unggah File' }}</button>
-                </div>
-            </form>
-        </div>
-    </div>
-    @endif
 @endsection
 
 @push('script')

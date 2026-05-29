@@ -26,6 +26,7 @@
 
     $documentStatusMeta = [
         'ready' => ['label' => 'Tersedia', 'class' => 'bg-success'],
+        'tte' => ['label' => 'Dapat Dilihat', 'class' => 'bg-primary'],
         'missing' => ['label' => 'Belum Ada', 'class' => 'bg-danger'],
         'not_required' => ['label' => 'Tidak Wajib', 'class' => 'bg-secondary'],
     ];
@@ -104,7 +105,7 @@
                 <h3 class="fw-bold mb-2 text-dark">{{ $tagihan?->deskripsi ?? 'SPM Honorarium' }}</h3>
                 <div class="d-flex flex-wrap gap-2 mb-4 align-items-center">
                     <span class="badge {{ $statusSpmClass }} px-3 py-2">SPM: {{ $spmModel->status }}</span>
-                    <span class="badge bg-light text-dark px-3 py-2 border"><i class="bi bi-person-badge"></i> Saya: {{ $roleCode }}</span>
+                    <span class="badge bg-light text-dark px-3 py-2 border"><i class="bi bi-person-badge"></i> Saya: {{ implode(' / ', $roleCodes) }}</span>
                     @if($isMyPendingApproval)
                         <span class="badge bg-warning text-dark px-3 py-2 animate__animated animate__pulse animate__infinite"><i class="bi bi-bell-fill me-1"></i> Menunggu Aksi Anda</span>
                     @endif
@@ -273,17 +274,27 @@
             {{-- Dokumen Pendukung --}}
             <div class="card spm-section-card mb-4">
                 <div class="card-body p-4">
-                    <div class="spm-section-heading text-primary"><i class="bi bi-paperclip"></i> 4. Dokumen Pendukung Fisik</div>
+                    <div class="spm-section-heading text-primary"><i class="bi bi-paperclip"></i> 4. Dokumen Pendukung Honorarium</div>
                     @foreach($documentStatuses as $document)
                         @php($docMeta = $documentStatusMeta[$document['status']] ?? $documentStatusMeta['missing'])
                         <div class="spm-doc-row">
                             <div class="d-flex align-items-center gap-2">
-                                <span class="badge {{ $docMeta['class'] }}" style="width: 80px;">{{ $docMeta['label'] }}</span>
-                                <div class="fw-semibold text-dark">{{ $document['label'] }}</div>
+                                <span class="badge {{ $docMeta['class'] }}" style="width: 105px;">{{ $docMeta['label'] }}</span>
+                                <div>
+                                    <div class="fw-semibold text-dark">
+                                        {{ $document['label'] }}
+                                        @if(!empty($document['is_tte']))
+                                            <i class="bi bi-patch-check-fill text-primary ms-1" title="Dokumen otomatis dari sistem"></i>
+                                        @endif
+                                    </div>
+                                    @if(!empty($document['is_tte']))
+                                        <div class="text-muted small">Dokumen otomatis dari sistem</div>
+                                    @endif
+                                </div>
                             </div>
                             <div>
                                 @if($document['is_available'])
-                                    <a href="{{ \Illuminate\Support\Facades\Storage::url($document['path']) }}" target="_blank" class="btn btn-sm btn-outline-primary"><i class="bi bi-search me-1"></i> Lihat</a>
+                                    <a href="{{ $document['url'] ?? \Illuminate\Support\Facades\Storage::url($document['path']) }}" target="_blank" class="btn btn-sm btn-outline-primary rounded-pill px-3"><i class="bi bi-search me-1"></i> Lihat</a>
                                 @else
                                     <span class="text-muted small">-</span>
                                 @endif

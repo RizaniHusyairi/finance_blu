@@ -531,17 +531,21 @@ class TagihanController extends Controller
             $data['tteQrFilePath'] = \App\Support\DocumentTte::qrFilePath($url, 'tagihan_' . $type . '_' . $tagihan->id);
         }
 
+        // PPK TTE muncul di PDF hanya setelah seluruh verifikator (termasuk PPK)
+        // menyetujui tagihan di workflow. Saat itu dokumen dianggap final.
+        $ppkSigned = \App\Support\TagihanDocumentTte::isApproved($tagihan);
+
         if ($type === 'BAPP') {
-            $html = $this->exportPdfKontrakHtml($id, 'BAPP');
+            $html = $this->exportPdfKontrakHtml($id, 'BAPP', $ppkSigned);
             if (!$html) return back()->withErrors(['error' => 'Gambar RAB BAPP wajib diunggah terlebih dahulu sebelum mengekspor PDF draft BAPP.']);
             $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML($html)->setPaper('a4', 'portrait');
             return $pdf->stream('BAPP_' . str_replace('/', '_', $detailKontrak->nomor_bapp ?? 'draft') . '.pdf');
         } elseif ($type === 'BAST') {
-            $html = $this->exportPdfKontrakHtml($id, 'BAST');
+            $html = $this->exportPdfKontrakHtml($id, 'BAST', $ppkSigned);
             $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML($html)->setPaper('a4', 'portrait');
             return $pdf->stream('BAST_' . str_replace('/', '_', $detailKontrak->nomor_bast ?? 'draft') . '.pdf');
         } elseif ($type === 'BAP') {
-            $html = $this->exportPdfKontrakHtml($id, 'BAP');
+            $html = $this->exportPdfKontrakHtml($id, 'BAP', $ppkSigned);
             $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML($html)->setPaper('a4', 'portrait');
             return $pdf->stream('BAP_' . str_replace('/', '_', $detailKontrak->nomor_bap ?? 'draft') . '.pdf');
         }
@@ -577,7 +581,11 @@ class TagihanController extends Controller
         $sigType = $signatures->get($type);
         $data['tteQrFilePath'] = null;
         if ($sigType && $sigType->count() > 0 && $sigType->every(fn($s) => $s->status === 'signed')) {
-            $url = \Illuminate\Support\Facades\URL::signedRoute('public.tagihan-document-tte.show', ['id' => $tagihan->id, 'type' => $type]);
+            $url = \Illuminate\Support\Facades\URL::signedRoute('public.tagihan-document-tte.show', [
+                'id' => $tagihan->id,
+                'type' => $type,
+                'hash' => \App\Support\ContractBaTte::hash($tagihan, $type),
+            ]);
             $data['tteQrFilePath'] = \App\Support\DocumentTte::qrFilePath($url, 'tagihan_' . $type . '_' . $tagihan->id);
         }
 

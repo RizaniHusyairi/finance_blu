@@ -41,8 +41,6 @@ class WorkflowService
                     $assignee = $assignedUserId;
                 } elseif ($step->role_code === 'PPSPM') {
                     $assignee = $assignedUserId;
-                } elseif ($step->role_code === 'Kepala Subbagian Keuangan dan Tata Usaha') {
-                    $assignee = \App\Models\User::role('Kepala Subbagian Keuangan dan Tata Usaha')->first()?->id;
                 } elseif (in_array($step->role_code, ['Bendahara Penerimaan', 'BENDAHARA_PENERIMAAN'], true)) {
                     $documentAttributes = $document->getAttributes();
                     $assignee = $documentAttributes['bendahara_penerimaan_id']
@@ -58,8 +56,6 @@ class WorkflowService
                         $document->loadMissing('spm.spp.tagihan');
                         $assignee = $document->spm?->spp?->tagihan?->koordinator_keuangan_user_id;
                     }
-
-                    $assignee ??= \App\Models\User::role('Koordinator Keuangan')->first()?->id;
                 }
             }
 

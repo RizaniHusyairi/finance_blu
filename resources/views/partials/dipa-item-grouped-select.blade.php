@@ -4,6 +4,8 @@
     $fieldLabel = $fieldLabel ?? 'Pilih Item Anggaran (COA)';
     $fieldRequired = $fieldRequired ?? true;
     $fieldClass = $fieldClass ?? 'form-select budget-item-select';
+    // Tandai sebagai COA select agar mendapat desain & fitur pencarian global.
+    $fieldClass = trim($fieldClass . ' js-coa-select');
     $placeholder = $placeholder ?? '-- Pilih Item Anggaran dari DIPA Aktif --';
     $helpText = $helpText ?? 'Pilih item anggaran aktif. Sistem akan otomatis memetakan DIPA induk, revisi aktif, dan COA.';
     $selectedValue = old($fieldName, $selectedValue ?? null);

@@ -232,11 +232,12 @@ class KasubbagSpmKontrakVerifikasiController extends Controller
             $workflowFullyApproved = $this->finalizeWorkflowIfComplete($spm);
 
             if ($workflowFullyApproved) {
-                // Jika semua workflow (termasuk PPSPM) sudah approve, SPM -> Final
-                $spm->update(['status' => DokumenSpm::STATUS_MENUNGGU_UPLOAD]);
+                // Verifikasi paralel selesai: SPM langsung TERBIT ber-TTE QR (tanpa upload manual)
+                // dan siap dibuatkan NPI oleh Bendahara Pengeluaran.
+                $spm->update(['status' => DokumenSpm::STATUS_SPM_TERBIT]);
             }
 
-            $statusBaru = $workflowFullyApproved ? DokumenSpm::STATUS_MENUNGGU_UPLOAD : 'Disetujui Kasubbag';
+            $statusBaru = $workflowFullyApproved ? DokumenSpm::STATUS_SPM_TERBIT : 'Disetujui Kasubbag';
 
             // Catat log
             // Cek log status terbaru untuk menghindari duplicate log jika tidak perlu - tapi lebih baik catat saja
@@ -249,7 +250,7 @@ class KasubbagSpmKontrakVerifikasiController extends Controller
                 'status_baru' => $statusBaru,
                 'aksi' => 'APPROVE_KASUBBAG',
                 'catatan' => $workflowFullyApproved
-                    ? 'Dokumen SPM disetujui Kasubbag. Seluruh approver telah menyetujui — SPM disahkan.'
+                    ? 'Dokumen SPM disetujui Kasubbag. SPM terbit ber-TTE QR dan siap dibuatkan NPI.'
                     : 'Dokumen SPM disetujui Kasubbag.',
                 'ip_address' => request()->ip(),
             ]);
@@ -258,12 +259,23 @@ class KasubbagSpmKontrakVerifikasiController extends Controller
                 // Notif semua sudah selesai
                 $operators = User::role('Operator BLU')->get();
                 Notification::send($operators, new WorkflowNotification([
-                    'title' => 'SPM Kontrak Menunggu Upload',
-                    'message' => "SPM {$spm->nomor_spm} telah disetujui oleh semua pihak. Silakan cetak, tandatangani, dan upload scan SPM.",
+                    'title' => 'SPM Kontrak Terbit ber-TTE',
+                    'message' => "SPM {$spm->nomor_spm} telah disetujui semua pihak dan terbit ber-TTE QR.",
                     'url' => route('spms.kontrak.detail', $spm->spp_id),
                     'icon' => 'verified',
                     'color' => 'success'
                 ]));
+
+                $bendahara = User::role('Bendahara Pengeluaran')->get();
+                if ($bendahara->isNotEmpty()) {
+                    Notification::send($bendahara, new WorkflowNotification([
+                        'title' => 'SPM Kontrak Terbit — NPI Siap Dibuat',
+                        'message' => "SPM {$spm->nomor_spm} telah terbit ber-TTE. NPI Kontrak dapat segera Anda buat.",
+                        'url' => route('npis.kontrak.index'),
+                        'icon' => 'receipt_long',
+                        'color' => 'success'
+                    ]));
+                }
             }
 
             return redirect()->route('verifikasi-kasubag.spm.kontrak.index')->with('success', $workflowFullyApproved

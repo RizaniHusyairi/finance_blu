@@ -110,6 +110,26 @@
             color: #062b1e; background: linear-gradient(135deg, #6ee7b7, #34d399); font-size: 12.5px; font-weight: 900; }
         .status .dot { width: 7px; height: 7px; border-radius: 50%; background: #04130c; animation: pulse 1.8s ease-out infinite; }
 
+        /* Signer detail (Penandatangan & Integritas) */
+        .signer { display: grid; grid-template-columns: 1.05fr .95fr; gap: 18px; align-items: start; }
+        .signer-list { display: grid; gap: 2px; }
+        .signer-row { display: grid; grid-template-columns: 130px 1fr; gap: 10px; padding: 11px 2px; border-bottom: 1px dashed var(--line); }
+        .signer-row:last-child { border-bottom: 0; }
+        .signer-row .k { color: var(--muted); font-size: 13px; }
+        .signer-row .v { font-weight: 750; word-break: break-word; }
+        .signer-aside { padding: 18px; border: 1px solid rgba(56,189,248,.22); border-radius: 16px;
+            background: linear-gradient(160deg, rgba(56,189,248,.07), rgba(52,211,153,.04)); }
+        .signer-aside .sa-role-pill { display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px; border-radius: 999px;
+            font-size: 11px; font-weight: 900; color: #04130c; background: linear-gradient(135deg, #6ee7b7, #34d399); letter-spacing: .06em; text-transform: uppercase; }
+        .signer-aside .sa-name { font-size: 17px; font-weight: 900; margin-top: 10px; line-height: 1.3; }
+        .signer-aside .sa-meta { color: var(--muted); font-size: 12.5px; margin-top: 4px; }
+        .signer-aside .sa-hash { margin-top: 12px; padding: 10px; border-radius: 10px; border: 1px solid var(--line);
+            background: rgba(2,6,23,.55); color: #cfe6ff; font-family: 'JetBrains Mono', monospace; font-size: 10.5px; line-height: 1.55; word-break: break-all; }
+
+        @media (max-width: 900px) {
+            .signer { grid-template-columns: 1fr; }
+        }
+
         .signer-table { width: 100%; border-collapse: collapse; }
         .signer-table th { text-align: left; font-size: 11px; font-weight: 800; letter-spacing: .08em;
             text-transform: uppercase; color: var(--faint); padding: 10px 12px; border-bottom: 1px solid var(--line); }
@@ -218,8 +238,8 @@
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="2"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
                     </div>
                     <div>
-                        <div class="t-lbl">Penandatangan Akhir</div>
-                        <div class="t-val">{{ \Illuminate\Support\Str::limit($primarySigner['nama'], 22) }}</div>
+                        <div class="t-lbl">Penandatangan</div>
+                        <div class="t-val">{{ \Illuminate\Support\Str::limit($signerInfo['nama'], 22) }}</div>
                     </div>
                 </div>
             </div>
@@ -253,6 +273,40 @@
                             <div class="field">
                                 <p class="label">Total Bruto</p>
                                 <p class="value money">Rp {{ number_format((float) $tagihan->total_bruto, 0, ',', '.') }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Penandatangan & Integritas (sesuai QR yang discan) --}}
+                <div class="card">
+                    <div class="card-head">
+                        <span class="ch-ico">
+                            <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M3 17c3-1 4-4 7-4s4 3 7 1M14 5l5 5M4 20l4-1 9.5-9.5a2.1 2.1 0 0 0-3-3L5 16l-1 4Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        </span>
+                        <h2>Penandatangan &amp; Integritas</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="signer">
+                            <div class="signer-list">
+                                <div class="signer-row"><span class="k">Nama</span><span class="v">{{ $signerInfo['nama'] }}</span></div>
+                                <div class="signer-row"><span class="k">NIP</span><span class="v">{{ $signerInfo['nip'] }}</span></div>
+                                <div class="signer-row"><span class="k">Jabatan</span><span class="v">{{ $signerInfo['jabatan'] }}</span></div>
+                                <div class="signer-row"><span class="k">Unit Kerja</span><span class="v">{{ $signerInfo['unit_kerja'] }}</span></div>
+                                <div class="signer-row"><span class="k">Instansi</span><span class="v">{{ $signerInfo['instansi'] }}</span></div>
+                                <div class="signer-row"><span class="k">Disetujui pada</span><span class="v">{{ optional($signerInfo['signed_at'])->format('d M Y H:i:s') ?? '-' }}</span></div>
+                            </div>
+                            <div class="signer-aside">
+                                <span class="sa-role-pill">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="m5 13 4 4L19 7" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                    {{ $signerInfo['role'] }}
+                                </span>
+                                <div class="sa-name">{{ $signerInfo['nama'] }}</div>
+                                <div class="sa-meta">{{ $signerInfo['jabatan'] }}</div>
+                                <div class="sa-meta">NIP {{ $signerInfo['nip'] }}</div>
+                                <p class="small" style="margin-top: 12px;">
+                                    Data di atas merepresentasikan penandatangan dari QR TTE yang Anda pindai pada dokumen <strong>{{ $documentLabel }}</strong>.
+                                </p>
                             </div>
                         </div>
                     </div>

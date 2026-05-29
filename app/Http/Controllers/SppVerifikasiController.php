@@ -211,8 +211,8 @@ class SppVerifikasiController extends Controller
 
         $approval = \App\Models\WorkflowApproval::find($approvalId);
         if ($approval && $approval->role_code === 'PPK') {
-            if (!$spp->hasFinalSignedStandingInstruction()) {
-                return back()->with('error', 'File Standing Instruction bertanda tangan wajib diunggah sebelum PPK menyetujui SPP.');
+            if ($spp->kpa_approval_status !== 'APPROVED') {
+                return back()->with('error', 'Persetujuan Tagihan dari KPA belum disetujui. Silakan ajukan persetujuan via WA terlebih dahulu.');
             }
         }
 

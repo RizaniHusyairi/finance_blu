@@ -23,10 +23,8 @@ class SpmHonorController extends Controller
         // Query: SPP Honorarium yang sudah disetujui_spp atau spp_terbit dan/atau sudah punya relasi SPM
         $query = DokumenSpp::whereHas('tagihan', fn ($q) => $q->where('tipe_tagihan', 'HONORARIUM'))
             ->where(function ($q) {
-                $q->where(function ($sq) {
-                    $sq->whereIn('status', ['DISETUJUI_SPP', 'SPP_TERBIT'])
-                       ->has('signedSppArsip');
-                })->orWhereHas('spm');
+                $q->whereIn('status', ['DISETUJUI_SPP', 'SPP_TERBIT'])
+                    ->orWhereHas('spm');
             })
             ->with([
                 'tagihan.detailHonorarium',
@@ -113,19 +111,37 @@ class SpmHonorController extends Controller
         // Nominal SPM = nominal SPP (otomatis penuh, pph sudah netto)
         $nominalSpm = (float) ($sppModel->nominal_spp ?? $tagihan->total_netto ?? 0);
 
-        // Dokumen pendukung Honorarium
-        $arsipJenis = $tagihan->arsipDokumen->pluck('jenis_dokumen')->toArray();
-        $dokumenWajib = ['SK Honorarium', 'Daftar Nominatif Bertandatangan', 'Dokumen Honorarium Bertandatangan'];
-        
-        $documentStatuses = collect($dokumenWajib)->map(function ($jenis) use ($tagihan, $arsipJenis) {
-            $doc = $tagihan->arsipDokumen->firstWhere('jenis_dokumen', $jenis);
-            return [
-                'label' => $jenis,
-                'path' => $doc?->file_path,
-                'status' => in_array($jenis, $arsipJenis) ? 'ready' : 'missing',
-                'is_available' => in_array($jenis, $arsipJenis)
-            ];
-        });
+        // Dokumen pendukung Honorarium: SK dari arsip, nominatif & rekap honorarium
+        // diterbitkan otomatis oleh sistem sebagai PDF ber-TTE QR.
+        $skHonorarium = $tagihan->arsipDokumen->firstWhere('jenis_dokumen', 'SK Honorarium');
+        $skPath = $skHonorarium?->path_file ?? $skHonorarium?->file_path ?? null;
+
+        $documentStatuses = collect([
+            [
+                'label' => 'SK Honorarium',
+                'path' => $skPath,
+                'url' => $skPath ? \Illuminate\Support\Facades\Storage::url($skPath) : null,
+                'status' => $skPath ? 'ready' : 'missing',
+                'is_available' => filled($skPath),
+                'is_tte' => false,
+            ],
+            [
+                'label' => 'Daftar Nominatif Honorarium',
+                'path' => null,
+                'url' => route('honorarium.pdf-nominatif', $tagihan->id),
+                'status' => 'tte',
+                'is_available' => true,
+                'is_tte' => true,
+            ],
+            [
+                'label' => 'Dokumen Honorarium',
+                'path' => null,
+                'url' => route('honorarium.pdf', $tagihan->id),
+                'status' => 'tte',
+                'is_available' => true,
+                'is_tte' => true,
+            ],
+        ]);
 
         // Readiness checklist
         $semuaPunyaRekening = $tagihan->detailHonorarium->every(fn($item) => filled($item->rekening) && filled($item->nama_rekening));
@@ -373,7 +389,7 @@ class SpmHonorController extends Controller
             Notification::send($selectedPpspm, new WorkflowNotification([
                 'title' => 'SPM Honorarium Menunggu Anda',
                 'message' => "SPM Honorarium ({$spm->nomor_spm}) untuk pengajuan {$spp->nomor_spp} menanti verifikasi.",
-                'url' => '#', // Disesuaikan saat modul Verifikasi PPSPM Honor dibangun nanti
+                'url' => route('verifikasi-spm.honor.index'),
                 'icon' => 'fact_check',
                 'color' => 'success',
             ]));
@@ -384,7 +400,7 @@ class SpmHonorController extends Controller
             Notification::send($koordinatorUsers, new WorkflowNotification([
                 'title' => 'SPM Honorarium Diajukan',
                 'message' => "SPM Honorarium ({$spm->nomor_spm}) menunggu verifikasi Anda.",
-                'url' => route('verifikasi-koordinator.spm.honor.index'),
+                'url' => route('verifikasi-spm.honor.index'),
                 'icon' => 'fact_check',
                 'color' => 'success',
             ]));
@@ -395,7 +411,7 @@ class SpmHonorController extends Controller
             Notification::send($kasubbagUsers, new WorkflowNotification([
                 'title' => 'Ceklist SPM Honorarium',
                 'message' => "Ada SPM Honorarium yang baru diajukan ({$spm->nomor_spm}) yang menanti persetujuan Kasubbag.",
-                'url' => route('verifikasi-kasubag.spm.honor.index'),
+                'url' => route('verifikasi-spm.honor.index'),
                 'icon' => 'fact_check',
                 'color' => 'success',
             ]));

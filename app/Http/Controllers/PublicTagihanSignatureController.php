@@ -56,6 +56,37 @@ class PublicTagihanSignatureController extends Controller
             'nama' => '-', 'nip' => '-', 'jabatan' => '-', 'role' => '-', 'acted_at' => null,
         ];
 
+        // Pilih signer yang sesuai dengan QR yang discan (?signer=<role lowercase>).
+        // Bila tidak ada, fallback ke primarySigner.
+        $signerRoleParam = strtoupper((string) $request->query('signer', ''));
+        $matchingApproval = $signerRoleParam
+            ? $approvals->first(fn ($a) => strtoupper((string) $a->role_code) === $signerRoleParam)
+            : null;
+
+        if ($matchingApproval) {
+            $matchUser = $matchingApproval->actedByUser;
+            $matchPegawai = $matchUser?->profilable;
+            $signerInfo = [
+                'nama' => $matchPegawai?->nama_lengkap ?? $matchUser?->name ?? '-',
+                'nip' => $matchPegawai?->nip ?? '-',
+                'jabatan' => $matchPegawai?->jabatan ?: ($matchingApproval->nama_step ?: ($matchingApproval->role_code ?? '-')),
+                'unit_kerja' => 'Kantor UPBU Aji Pangeran Tumenggung Pranoto',
+                'instansi' => 'Kementerian Perhubungan',
+                'signed_at' => $matchingApproval->acted_at,
+                'role' => $matchingApproval->role_code,
+            ];
+        } else {
+            $signerInfo = [
+                'nama' => $primarySigner['nama'],
+                'nip' => $primarySigner['nip'],
+                'jabatan' => $primarySigner['jabatan'],
+                'unit_kerja' => 'Kantor UPBU Aji Pangeran Tumenggung Pranoto',
+                'instansi' => 'Kementerian Perhubungan',
+                'signed_at' => $primarySigner['acted_at'],
+                'role' => $primarySigner['role'] ?? '-',
+            ];
+        }
+
         $scanInfo = [
             'user_id' => $request->user()?->id ?? 'PUBLIC',
             'timestamp' => now(),
@@ -81,6 +112,7 @@ class PublicTagihanSignatureController extends Controller
             'hashStatus' => $hashStatus,
             'signers' => $signers,
             'primarySigner' => $primarySigner,
+            'signerInfo' => $signerInfo,
         ]);
     }
 

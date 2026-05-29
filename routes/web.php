@@ -88,6 +88,14 @@ Route::get('/p/tagihan/{id}/document-tte/{type}', [\App\Http\Controllers\PublicM
     ->middleware('signed')
     ->name('public.tagihan-document-tte.show');
 
+// KPA Tagihan Approval via WhatsApp (Magic Link)
+Route::get('/p/kpa-approval/spp/{sppId}', [\App\Http\Controllers\KpaApprovalController::class, 'showApproval'])
+    ->middleware(['signed', 'web'])
+    ->name('kpa.approval.show');
+Route::post('/p/kpa-approval/spp/{sppId}', [\App\Http\Controllers\KpaApprovalController::class, 'processApproval'])
+    ->middleware(['web', 'auth'])
+    ->name('kpa.approval.process');
+
 // Short link redirector — link pendek di WhatsApp di-resolve ke URL publik signed.
 Route::get('/i/{slug}', [\App\Http\Controllers\ShortLinkController::class, 'show'])
     ->where('slug', '[a-zA-Z0-9]+')
@@ -452,9 +460,13 @@ Route::middleware(['auth', 'account.active'])->group(function () use ($internalR
         Route::put('/honorarium/{id}', [HonorariumController::class, 'update'])->name('honorarium.update');
         Route::delete('/honorarium/{id}', [HonorariumController::class, 'destroy'])->name('honorarium.destroy');
         Route::post('/honorarium/{id}/dokumen-upload', [HonorariumController::class, 'uploadDokumen'])->name('honorarium.dokumen.upload');
-        Route::post('/honorarium/{id}/dokumen-upload-wajib', [HonorariumController::class, 'uploadDokumenWajib'])->name('honorarium.dokumen.upload-wajib');
         Route::delete('/honorarium/{id}/dokumen-delete/{arsip_id}', [HonorariumController::class, 'deleteDokumen'])->name('honorarium.dokumen.delete');
         Route::post('/honorarium/{id}/submit-verifikasi', [HonorariumController::class, 'submitVerifikasi'])->name('honorarium.submit-verifikasi');
+    });
+
+    // PDF Honorarium (Rekap & Nominatif) — read-only untuk pembuat, Operator BLU,
+    // dan KPA/PLT saat meninjau lampiran dari halaman persetujuan tagihan.
+    Route::middleware('role:Super Admin|PPABP|Operator BLU|KPA|PLT/PLH|PPSPM|Koordinator Keuangan|Kepala Subbagian Keuangan dan Tata Usaha')->group(function () {
         Route::get('/honorarium/{id}/pdf', [HonorariumController::class, 'exportPdf'])->name('honorarium.pdf');
         Route::get('/honorarium/{id}/pdf-nominatif', [HonorariumController::class, 'exportNominatifPdf'])->name('honorarium.pdf-nominatif');
     });
@@ -619,11 +631,7 @@ Route::middleware(['auth', 'account.active'])->group(function () use ($internalR
     });
 
     // ==== STANDING INSTRUCTION ====
-    Route::get('/standing-instructions/spp/{spp}/form', [\App\Http\Controllers\StandingInstructionController::class, 'form'])->name('standing-instructions.form');
-    Route::post('/standing-instructions/spp/{spp}/store', [\App\Http\Controllers\StandingInstructionController::class, 'storeOrUpdate'])->name('standing-instructions.store');
-    Route::post('/standing-instructions/spp/{spp}/finalize', [\App\Http\Controllers\StandingInstructionController::class, 'finalize'])->name('standing-instructions.finalize');
-    Route::get('/standing-instructions/spp/{spp}/print', [\App\Http\Controllers\StandingInstructionController::class, 'print'])->name('standing-instructions.print');
-    Route::get('/standing-instructions/spp/{spp}/signed-file', [\App\Http\Controllers\StandingInstructionController::class, 'signedFile'])->name('standing-instructions.signed-file');
+
 
     // ==== VERIFIKASI SPP KONTRAK, PERJALDIN, HONORARIUM — Terpadu 3 Role (PPK, Koordinator Keuangan, Kasubbag) ====
     Route::middleware('role:Super Admin|PPK|Kepala Subbagian Keuangan dan Tata Usaha|Koordinator Keuangan')->group(function () {
@@ -638,6 +646,9 @@ Route::middleware(['auth', 'account.active'])->group(function () use ($internalR
         Route::get('/verifikasi-spp/kontrak/{id}', [\App\Http\Controllers\SppVerifikasiController::class, 'show'])->name('verifikasi-spp.kontrak.show');
         Route::post('/verifikasi-spp/kontrak/{id}/approve', [\App\Http\Controllers\SppVerifikasiController::class, 'approve'])->name('verifikasi-spp.kontrak.approve');
         Route::post('/verifikasi-spp/kontrak/{id}/revisi', [\App\Http\Controllers\SppVerifikasiController::class, 'revisi'])->name('verifikasi-spp.kontrak.revisi');
+        
+        // KPA Approval Request dari PPK
+        Route::post('/verifikasi-spp/kontrak/{id}/kpa-approval/send-wa', [\App\Http\Controllers\KpaApprovalController::class, 'sendWa'])->name('kpa.approval.send-wa');
 
         // Perjaldin
         Route::get('/verifikasi-spp/perjaldin', [\App\Http\Controllers\SppPerjaldinVerifikasiController::class, 'index'])->name('verifikasi-spp.perjaldin.index');
@@ -699,6 +710,11 @@ Route::middleware(['auth', 'account.active'])->group(function () use ($internalR
         Route::get('/spps/perjaldin', [\App\Http\Controllers\SppController::class, 'perjaldinIndex'])->name('spps.perjaldin.index');
         Route::get('/spps/perjaldin/{perjaldin}/detail', [\App\Http\Controllers\SppController::class, 'detailPerjaldin'])->name('spps.perjaldin.detail');
         Route::post('/spps/perjaldin/{perjaldin}', [\App\Http\Controllers\SppController::class, 'storePerjaldin'])->name('spps.perjaldin.store');
+        Route::post('/spps/perjaldin/{perjaldin}/return-revision', [\App\Http\Controllers\SppController::class, 'returnRevisionPerjaldin'])->name('spps.perjaldin.return-revision');
+
+        // Dokumen ber-TTE Perjaldin (Nominatif & Daftar Pembayaran) — diakses dari Detail Multi-SPP
+        Route::get('/spps/perjaldin/{id}/pdf/nominatif', [\App\Http\Controllers\PerjaldinController::class, 'exportPdfNominatif'])->name('spps.perjaldin.pdf-nominatif');
+        Route::get('/spps/perjaldin/{id}/pdf/lampiran', [\App\Http\Controllers\PerjaldinController::class, 'exportPdfLampiran'])->name('spps.perjaldin.pdf-lampiran');
 
         // Komponen Perjaldin — COA & SPP per komponen
         Route::put('/perjaldins/komponen/{id}/coa', [\App\Http\Controllers\PerjaldinKomponenController::class, 'updateCoa'])->name('perjaldins.komponen.update-coa');
@@ -745,21 +761,18 @@ Route::middleware(['auth', 'account.active'])->group(function () use ($internalR
         Route::get('/spms/perjaldin/{spp}/detail', [\App\Http\Controllers\SpmPerjaldinController::class, 'show'])->name('spms.perjaldin.detail');
         Route::post('/spms/perjaldin/{spp}/store', [\App\Http\Controllers\SpmPerjaldinController::class, 'store'])->name('spms.perjaldin.store');
         Route::post('/spms/perjaldin/{spp}/submit', [\App\Http\Controllers\SpmPerjaldinController::class, 'submit'])->name('spms.perjaldin.submit');
-        Route::post('/spms/perjaldin/{spm}/upload-signed-spm', [\App\Http\Controllers\SpmPerjaldinController::class, 'uploadSignedSpm'])->name('spms.perjaldin.upload-signed-spm');
 
         // SPM Kontrak
         Route::get('/spms/kontrak', [\App\Http\Controllers\SpmKontrakController::class, 'index'])->name('spms.kontrak.index');
         Route::get('/spms/kontrak/{spp}/detail', [\App\Http\Controllers\SpmKontrakController::class, 'show'])->name('spms.kontrak.detail');
         Route::post('/spms/kontrak/{spp}/store', [\App\Http\Controllers\SpmKontrakController::class, 'store'])->name('spms.kontrak.store');
         Route::post('/spms/kontrak/{spp}/submit', [\App\Http\Controllers\SpmKontrakController::class, 'submit'])->name('spms.kontrak.submit');
-        Route::post('/spms/kontrak/{spm}/upload-signed-spm', [\App\Http\Controllers\SpmKontrakController::class, 'uploadSignedSpm'])->name('spms.kontrak.upload-signed-spm');
 
         // SPM Honorarium
         Route::get('/spms/honor', [\App\Http\Controllers\SpmHonorController::class, 'index'])->name('spms.honor.index');
         Route::get('/spms/honor/{spp}/detail', [\App\Http\Controllers\SpmHonorController::class, 'show'])->name('spms.honor.detail');
         Route::post('/spms/honor/{spp}/store', [\App\Http\Controllers\SpmHonorController::class, 'store'])->name('spms.honor.store');
         Route::post('/spms/honor/{spp}/submit', [\App\Http\Controllers\SpmHonorController::class, 'submit'])->name('spms.honor.submit');
-        Route::post('/spms/honor/{spm}/upload-signed-spm', [\App\Http\Controllers\SpmHonorController::class, 'uploadSignedSpm'])->name('spms.honor.upload-signed-spm');
     });
 
     // ==== MODUL VERIFIKASI SPM (PPSPM) ====

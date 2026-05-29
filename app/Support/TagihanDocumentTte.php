@@ -120,8 +120,12 @@ class TagihanDocumentTte
     /**
      * Path file SVG QR TTE; null bila tagihan belum APPROVED penuh
      * di workflow-nya, atau tipe dokumen tidak berlaku untuk tipe tagihan.
+     *
+     * Bila $signerRole diisi (mis. 'PPK', 'BENDAHARA_PENGELUARAN'), QR yang
+     * dihasilkan unik per penandatangan: query param `signer` ikut di-sign,
+     * file cache QR juga disimpan terpisah.
      */
-    public static function tteQrFilePath(Tagihan $tagihan, string $type): ?string
+    public static function tteQrFilePath(Tagihan $tagihan, string $type, ?string $signerRole = null): ?string
     {
         if (! self::isValidType($type)) {
             return null;
@@ -135,12 +139,20 @@ class TagihanDocumentTte
             return null;
         }
 
-        $url = URL::signedRoute('public.tagihan-tte.show', [
+        $params = [
             'type' => $type,
             'id' => $tagihan->getKey(),
             'hash' => self::hash($tagihan, $type),
-        ]);
+        ];
 
-        return DocumentTte::qrFilePath($url, 'tagihan_' . $type . '_tte_' . $tagihan->getKey());
+        $cacheSuffix = '';
+        if ($signerRole) {
+            $params['signer'] = strtolower($signerRole);
+            $cacheSuffix = '_' . strtolower($signerRole);
+        }
+
+        $url = URL::signedRoute('public.tagihan-tte.show', $params);
+
+        return DocumentTte::qrFilePath($url, 'tagihan_' . $type . $cacheSuffix . '_tte_' . $tagihan->getKey());
     }
 }

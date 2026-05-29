@@ -24,10 +24,8 @@ class SpmKontrakController extends Controller
         // Query: SPP Kontrak yang sudah disetujui (APPROVED / final) atau sudah punya SPM
         $query = DokumenSpp::whereHas('tagihan', fn ($q) => $q->where('tipe_tagihan', 'KONTRAK'))
             ->where(function ($q) {
-                $q->where(function ($sq) {
-                    $sq->where('status', 'APPROVED')
-                       ->has('signedSppArsip');
-                })->orWhereHas('spm');
+                $q->where('status', 'APPROVED')
+                    ->orWhereHas('spm');
             })
             ->with([
                 'tagihan.detailKontrak.kontrakTermin.kontrak.vendor',

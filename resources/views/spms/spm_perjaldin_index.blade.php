@@ -7,14 +7,14 @@
         'DRAFT' => 'bg-warning text-dark',
         'Menunggu Verifikasi' => 'bg-info',
         'Revisi' => 'bg-danger',
-        'Disetujui Final' => 'bg-success',
+        'Disetujui Final', 'Menunggu Upload SPM', 'SPM_TERBIT' => 'bg-success',
         default => 'bg-secondary',
     };
     $statusSpmLabel = fn($spp) => match ($spp->spm?->status ?? 'Belum Dibuat') {
         'DRAFT' => 'Draft',
         'Menunggu Verifikasi' => 'Menunggu Verifikasi',
         'Revisi' => 'Revisi',
-        'Disetujui Final' => 'SPM Terbit',
+        'Disetujui Final', 'Menunggu Upload SPM', 'SPM_TERBIT' => 'SPM Terbit',
         default => 'Belum Dibuat',
     };
     $verificationStatusClass = fn($status) => match ($status ?? '-') {

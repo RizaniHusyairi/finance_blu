@@ -225,8 +225,8 @@ class SppPerjaldinVerifikasiController extends Controller
         }
 
         if ($approval && $approval->role_code === 'PPK') {
-            if (!$spp->hasFinalSignedStandingInstruction()) {
-                return back()->with('error', 'File Standing Instruction bertanda tangan wajib diunggah sebelum PPK menyetujui SPP.');
+            if ($spp->kpa_approval_status !== 'APPROVED') {
+                return back()->with('error', 'Persetujuan Tagihan dari KPA belum disetujui. Silakan ajukan persetujuan via WA terlebih dahulu.');
             }
         }
 
@@ -252,7 +252,7 @@ class SppPerjaldinVerifikasiController extends Controller
                 'status_baru'       => $statusBaru,
                 'aksi'              => 'APPROVE_' . strtoupper(str_replace(' ', '_', $roleCode)),
                 'catatan'           => $isFullyApproved
-                    ? 'Dokumen SPP Perjaldin disetujui. Semua approver telah menyetujui — SPP final.'
+                    ? 'Dokumen SPP Perjaldin disetujui. Semua approver telah menyetujui â€” SPP final.'
                     : 'Dokumen SPP Perjaldin disetujui oleh ' . $roleCode . '.',
                 'ip_address'        => $request->ip(),
             ]);
@@ -378,3 +378,4 @@ class SppPerjaldinVerifikasiController extends Controller
         ]);
     }
 }
+

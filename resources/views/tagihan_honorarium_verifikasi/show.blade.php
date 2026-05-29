@@ -78,10 +78,12 @@
         }
     }
 
-    // Dokumen wajib & opsional honorarium
+    // Dokumen pendukung honorarium. Daftar Nominatif & Dokumen Honorarium kini
+    // diterbitkan sistem ber-TTE QR otomatis pasca-approval, sehingga upload
+    // scan TTD basah bersifat opsional (hanya legacy / arsip pendukung).
     $dokumenList = [
-        ['jenis' => 'Daftar Nominatif Bertandatangan',  'label' => 'Daftar Nominatif',  'icon' => 'file-earmark-text',  'color' => 'primary', 'required' => true],
-        ['jenis' => 'Dokumen Honorarium Bertandatangan','label' => 'Dokumen Honorarium','icon' => 'file-earmark-check', 'color' => 'success', 'required' => true],
+        ['jenis' => 'Daftar Nominatif Bertandatangan',  'label' => 'Daftar Nominatif',  'icon' => 'file-earmark-text',  'color' => 'primary', 'required' => false],
+        ['jenis' => 'Dokumen Honorarium Bertandatangan','label' => 'Dokumen Honorarium','icon' => 'file-earmark-check', 'color' => 'success', 'required' => false],
         ['jenis' => 'SK Honorarium',                     'label' => 'SK Honorarium',    'icon' => 'file-earmark-pdf',   'color' => 'info',    'required' => false],
     ];
     foreach ($dokumenList as &$doc) {

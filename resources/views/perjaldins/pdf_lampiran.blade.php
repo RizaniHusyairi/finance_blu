@@ -169,7 +169,12 @@
         <td class="ttd-kanan">
             <p>{{ $kotaTtd }}, {{ $tglTtd }}</p>
             <p>Bendahara Pengeluaran</p>
-            <br><br><br><br>
+            @if(!empty($tteQrFilePathBendahara))
+                <img src="{{ $tteQrFilePathBendahara }}" alt="QR TTE Bendahara Pengeluaran" class="qr-tte">
+                <div class="qr-label">Ditandatangani Secara Elektronik</div>
+            @else
+                <br><br><br><br>
+            @endif
         </td>
     </tr>
     <tr>

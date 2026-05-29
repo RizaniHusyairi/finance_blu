@@ -1160,7 +1160,9 @@
     $uploadedTypes = $tagihan->arsipDokumen->pluck('jenis_dokumen')->toArray();
     $hasDaftarNominatif = in_array('Daftar Nominatif Bertandatangan', $uploadedTypes);
     $hasDokumenHonorarium = in_array('Dokumen Honorarium Bertandatangan', $uploadedTypes);
-    $isReady = $hasDaftarNominatif && $hasDokumenHonorarium;
+    // TTE QR pada PDF Rekap & Nominatif Honorarium menggantikan kewajiban
+    // upload scan TTD basah — operator selalu siap mengajukan dari status DRAFT.
+    $isReady = true;
 
     // ===== DIPA / sumber anggaran =====
     $dipaItem = $tagihan->dipaRevisionItem;
@@ -1420,54 +1422,12 @@
      DOKUMEN SECTION
      ============================================================ --}}
 <div class="dokumen-section mb-4">
-    @if($tagihan->status === 'DRAFT' && !$isReady)
-        <div class="status-alert alert-rejected">
-            <div class="sa-icon"><i class="bi bi-cloud-arrow-up-fill"></i></div>
+    @if($tagihan->status === 'DRAFT')
+        <div class="status-alert alert-approved">
+            <div class="sa-icon"><i class="bi bi-shield-check"></i></div>
             <div>
-                <h6>Lengkapi Dokumen Wajib</h6>
-                <p>Unggah salinan PDF pindaian <strong>Daftar Nominatif</strong> dan <strong>Dokumen Honorarium</strong> yang telah ditandatangani sebelum mengajukan verifikasi.</p>
-            </div>
-        </div>
-
-        <div class="panel-d">
-            <div class="panel-d-head">
-                <h6><i class="bi bi-cloud-upload-fill"></i> Form Upload Dokumen Wajib</h6>
-            </div>
-            <div class="panel-d-body">
-                <form action="{{ route('honorarium.dokumen.upload-wajib', $tagihan->id) }}" method="POST" enctype="multipart/form-data" id="formUploadWajib">
-                    @csrf
-                    <div class="upload-grid">
-                        <label class="upload-zone {{ $hasDaftarNominatif ? 'is-done' : '' }}" {{ $hasDaftarNominatif ? '' : 'data-target' }}>
-                            <div class="uz-label">1. Daftar Nominatif</div>
-                            <div class="uz-icon">
-                                <i class="bi bi-{{ $hasDaftarNominatif ? 'check-circle-fill' : 'cloud-arrow-up' }}"></i>
-                            </div>
-                            <div class="uz-title" id="title-nominatif">{{ $hasDaftarNominatif ? 'Sudah diunggah' : 'Klik atau seret file PDF' }}</div>
-                            <div class="uz-sub">{{ $hasDaftarNominatif ? 'File tersimpan' : 'Format PDF · Maks 10MB' }}</div>
-                            @unless($hasDaftarNominatif)
-                                <input type="file" name="file_nominatif" id="fileNominatif" accept=".pdf" class="upload-wajib-input" required>
-                            @endunless
-                        </label>
-
-                        <label class="upload-zone {{ $hasDokumenHonorarium ? 'is-done' : '' }}">
-                            <div class="uz-label">2. Dokumen Honorarium</div>
-                            <div class="uz-icon">
-                                <i class="bi bi-{{ $hasDokumenHonorarium ? 'check-circle-fill' : 'cloud-arrow-up' }}"></i>
-                            </div>
-                            <div class="uz-title" id="title-honor">{{ $hasDokumenHonorarium ? 'Sudah diunggah' : 'Klik atau seret file PDF' }}</div>
-                            <div class="uz-sub">{{ $hasDokumenHonorarium ? 'File tersimpan' : 'Format PDF · Maks 10MB' }}</div>
-                            @unless($hasDokumenHonorarium)
-                                <input type="file" name="file_honorarium" id="fileHonorarium" accept=".pdf" class="upload-wajib-input" required>
-                            @endunless
-                        </label>
-                    </div>
-
-                    @if(!$isReady)
-                        <button type="submit" class="btn-submit-verifikasi w-100 mt-3" id="btnUploadWajib" disabled style="background: linear-gradient(135deg, #6366f1, #4f46e5); box-shadow: 0 8px 22px rgba(99,102,241,.35);">
-                            <i class="bi bi-cloud-upload"></i> Unggah Dokumen
-                        </button>
-                    @endif
-                </form>
+                <h6>Siap Diajukan dengan TTE Digital</h6>
+                <p>Dokumen <strong>Rekap Honorarium</strong> &amp; <strong>Nominatif Honorarium</strong> akan diterbitkan sistem ber-TTE QR otomatis setelah seluruh verifikator menyetujui. Tidak ada upload scan TTD basah yang diperlukan.</p>
             </div>
         </div>
     @endif
@@ -1620,117 +1580,145 @@
      TAB: VERIFIKASI
      ============================================================ --}}
 @if($tagihan->status !== 'DRAFT')
-    @php
-        $approvalStatusByRole = collect();
-        if ($activeWorkflowInstance ?? null) {
-            $approvalStatusByRole = collect($activeWorkflowInstance->approvals ?? [])
-                ->keyBy(fn ($a) => strtoupper(str_replace([' ', '-'], '_', $a->role_code)));
-        }
+    @include('honorarium.partials.workflow-progress', ['tagihan' => $tagihan])
+@endif
 
-        $verifikatorList = [
-            ['key' => 'ppk',                  'role_code' => 'PPK',                  'label' => 'Pejabat Pembuat Komitmen',                 'short' => 'PPK',          'color' => '#6366f1', 'soft' => 'rgba(99,102,241,.12)',  'shadow' => 'rgba(99,102,241,.30)',  'nama' => $tagihan->ppk_nama_snapshot,                  'nip' => $tagihan->ppk_nip_snapshot],
-            ['key' => 'ppspm',                'role_code' => 'PPSPM',                'label' => 'PPSPM',                                    'short' => 'PPSPM',        'color' => '#8b5cf6', 'soft' => 'rgba(139,92,246,.12)',  'shadow' => 'rgba(139,92,246,.30)',  'nama' => $tagihan->ppspm_nama_snapshot,                'nip' => $tagihan->ppspm_nip_snapshot],
-            ['key' => 'bendahara_pengeluaran','role_code' => 'BENDAHARA_PENGELUARAN','label' => 'Bendahara Pengeluaran',                    'short' => 'BEND. KELUAR', 'color' => '#ec4899', 'soft' => 'rgba(236,72,153,.12)',  'shadow' => 'rgba(236,72,153,.30)',  'nama' => $tagihan->bendahara_pengeluaran_nama_snapshot,'nip' => $tagihan->bendahara_pengeluaran_nip_snapshot],
-            ['key' => 'bendahara_penerimaan', 'role_code' => 'BENDAHARA_PENERIMAAN', 'label' => 'Bendahara Penerimaan',                     'short' => 'BEND. TERIMA', 'color' => '#f59e0b', 'soft' => 'rgba(245,158,11,.12)',  'shadow' => 'rgba(245,158,11,.30)',  'nama' => $tagihan->bendahara_penerimaan_nama_snapshot, 'nip' => $tagihan->bendahara_penerimaan_nip_snapshot],
-            ['key' => 'koordinator_keuangan', 'role_code' => 'KOORDINATOR_KEUANGAN', 'label' => 'Koordinator Keuangan',                     'short' => 'KOOR. KEU',    'color' => '#10b981', 'soft' => 'rgba(16,185,129,.12)',  'shadow' => 'rgba(16,185,129,.30)',  'nama' => $tagihan->koordinator_keuangan_nama_snapshot, 'nip' => $tagihan->koordinator_keuangan_nip_snapshot],
-            ['key' => 'kasubbag',             'role_code' => 'KASUBBAG',             'label' => 'Kepala Subbagian Keuangan dan Tata Usaha', 'short' => 'KASUBBAG',     'color' => '#0ea5e9', 'soft' => 'rgba(14,165,233,.12)',  'shadow' => 'rgba(14,165,233,.30)',  'nama' => $tagihan->kasubbag_nama_snapshot,             'nip' => $tagihan->kasubbag_nip_snapshot],
-        ];
+{{-- ============================================================
+     DOKUMEN FINAL BER-TTE (muncul setelah seluruh verifikator approve)
+     ============================================================ --}}
+@if(\App\Support\TagihanDocumentTte::isApproved($tagihan))
+@push('css')
+<style>
+    .tte-pdf-card {
+        background: linear-gradient(135deg, rgba(16,185,129,.04), rgba(5,150,105,.02));
+        border: 1px solid rgba(16,185,129,.18);
+        border-left: 4px solid #10b981;
+        border-radius: 1rem;
+        padding: 1.5rem;
+        margin-bottom: 1.25rem;
+    }
+    .tte-pdf-head {
+        display: flex;
+        align-items: center;
+        gap: .85rem;
+        margin-bottom: 1.1rem;
+    }
+    .tte-pdf-icon {
+        width: 44px; height: 44px;
+        border-radius: 12px;
+        display: inline-flex; align-items: center; justify-content: center;
+        background: linear-gradient(135deg, rgba(16,185,129,.20), rgba(5,150,105,.12));
+        color: #047857;
+        font-size: 1.35rem;
+        flex-shrink: 0;
+    }
+    .tte-pdf-slot {
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        border-radius: .85rem;
+        padding: 1rem 1.1rem;
+        height: 100%;
+        transition: all .2s ease;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+    .tte-pdf-slot:hover {
+        border-color: #10b981;
+        box-shadow: 0 6px 18px -8px rgba(16,185,129,.25);
+        transform: translateY(-2px);
+    }
+    .tte-pdf-thumb {
+        width: 42px; height: 42px;
+        border-radius: 10px;
+        background: #f8fafc;
+        display: inline-flex; align-items: center; justify-content: center;
+        font-size: 1.5rem;
+        flex-shrink: 0;
+    }
+    .tte-pdf-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: .4rem;
+        padding: .55rem .9rem;
+        border-radius: .6rem;
+        font-weight: 600;
+        font-size: .85rem;
+        text-decoration: none;
+        border: 1px solid transparent;
+        transition: all .2s ease;
+    }
+    .tte-pdf-btn-primary {
+        background: #2563eb; color: white;
+    }
+    .tte-pdf-btn-primary:hover { background: #1d4ed8; color: white; }
+    .tte-pdf-btn-pdf {
+        background: #fef2f2; color: #dc2626; border-color: #fecaca;
+    }
+    .tte-pdf-btn-pdf:hover { background: #fee2e2; color: #dc2626; }
+</style>
+@endpush
 
-        $initials = function ($name) {
-            $name = trim((string) $name);
-            if ($name === '') return '?';
-            $parts = preg_split('/\s+/', $name);
-            $first = mb_substr($parts[0] ?? '', 0, 1);
-            $last  = count($parts) > 1 ? mb_substr(end($parts), 0, 1) : '';
-            return mb_strtoupper($first . $last);
-        };
+<div class="tte-pdf-card">
+    <div class="tte-pdf-head">
+        <div class="tte-pdf-icon"><i class="bi bi-patch-check-fill"></i></div>
+        <div class="flex-fill">
+            <h6 class="fw-bold mb-1">Dokumen Final Ber-TTE QR</h6>
+            <small class="text-muted">Seluruh verifikator telah menyetujui. PDF berikut otomatis memuat QR Code TTE pada tanda tangan PPK & Bendahara Pengeluaran.</small>
+        </div>
+        <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-2 d-none d-md-inline-flex align-items-center gap-1">
+            <i class="bi bi-shield-check"></i> TTE Aktif
+        </span>
+    </div>
 
-        $statusMeta = [
-            'PENDING'  => ['cls' => 'pill-pending',  'icon' => 'hourglass-split',        'label' => 'Menunggu',  'card' => 'is-pending'],
-            'APPROVED' => ['cls' => 'pill-approved', 'icon' => 'check-circle-fill',      'label' => 'Disetujui', 'card' => 'is-approved'],
-            'REVISION' => ['cls' => 'pill-revision', 'icon' => 'arrow-counterclockwise', 'label' => 'Revisi',    'card' => 'is-revision'],
-            'REJECTED' => ['cls' => 'pill-rejected', 'icon' => 'x-circle-fill',          'label' => 'Ditolak',   'card' => 'is-rejected'],
-            'WAITING'  => ['cls' => 'pill-waiting',  'icon' => 'clock-history',          'label' => 'Belum aktif','card' => ''],
-        ];
-
-        $step1Approvals = collect($activeWorkflowInstance?->approvals ?? [])->where('urutan_step', 1);
-        $step1Total = $step1Approvals->count();
-        $step1Approved = $step1Approvals->where('status', 'APPROVED')->count();
-        $step1Percent = $step1Total > 0 ? round(($step1Approved / $step1Total) * 100) : 0;
-    @endphp
-
-    <div class="panel-d" id="panelVerifikator" style="animation-delay: .28s;">
-        <div class="panel-d-head">
-                <h6><i class="bi bi-diagram-3"></i> Progress Verifikasi (Paralel)</h6>
-                @if($step1Total > 0)
-                    <div class="d-flex align-items-center gap-2 flex-wrap">
-                        <span class="role-chip" style="--vc-color: {{ $step1Approved === $step1Total ? '#047857' : '#1d4ed8' }}; --vc-soft-bg: {{ $step1Approved === $step1Total ? 'rgba(16,185,129,.12)' : 'rgba(59,130,246,.12)' }};">
-                            <i class="bi bi-{{ $step1Approved === $step1Total ? 'check-circle' : 'people-fill' }}"></i>
-                            {{ $step1Approved }}/{{ $step1Total }} Step 1 disetujui
-                        </span>
-                        <span class="text-muted small fw-bold">{{ $step1Percent }}%</span>
-                    </div>
-                @endif
-            </div>
-            <div class="panel-d-body">
-                @if($step1Total > 0 && $step1Approved < $step1Total)
-                    <div class="flow-progress-bar"><div class="flow-progress-fill" style="width: {{ $step1Percent }}%"></div></div>
-                @endif
-
-                <div class="verif-grid">
-                    @foreach($verifikatorList as $idx => $v)
-                        @php
-                            $filled = !empty($v['nama']);
-                            $approval = $approvalStatusByRole->get($v['role_code']);
-                            $apvMeta = $approval ? ($statusMeta[$approval->status] ?? null) : null;
-                            $cardClass = $filled ? '' : 'is-empty';
-                            if ($apvMeta) $cardClass .= ' ' . $apvMeta['card'];
-                        @endphp
-                        <div class="verif-card {{ $cardClass }}" style="--vc-color: {{ $v['color'] }}; --vc-color-shadow: {{ $v['shadow'] }}; --vc-soft-bg: {{ $v['soft'] }};">
-                            <span class="verif-step">{{ $idx + 1 }}</span>
-                            @if($apvMeta)
-                                <span class="verif-status-pill {{ $apvMeta['cls'] }}">
-                                    <i class="bi bi-{{ $apvMeta['icon'] }}"></i> {{ $apvMeta['label'] }}
-                                </span>
-                            @endif
-                            <div class="d-flex align-items-start gap-3 mt-2">
-                                <div class="verif-avatar {{ !$filled ? 'empty' : '' }}">
-                                    {{ $initials($v['nama']) }}
-                                </div>
-                                <div class="flex-grow-1 min-w-0">
-                                    <div class="d-flex align-items-center gap-2 flex-wrap">
-                                        <span class="role-chip">{{ $v['short'] }}</span>
-                                        @if($v['key'] === 'kasubbag')
-                                            <span class="role-chip" style="--vc-color:#475569; --vc-soft-bg: rgba(100,116,139,.12);">
-                                                <i class="bi bi-shield-check"></i> Final
-                                            </span>
-                                        @endif
-                                    </div>
-                                    @if($filled)
-                                        <div class="verif-name" title="{{ $v['nama'] }}">{{ $v['nama'] }}</div>
-                                    @else
-                                        <div class="verif-name verif-empty-name">— belum dipilih —</div>
-                                    @endif
-                                    @if($v['nip'])
-                                        <div class="verif-nip">NIP: {{ $v['nip'] }}</div>
-                                    @endif
-                                    <div class="verif-role">{{ $v['label'] }}</div>
-                                    @if($approval && $approval->acted_at)
-                                        <div class="verif-acted">
-                                            <i class="bi bi-clock"></i>
-                                            {{ \Carbon\Carbon::parse($approval->acted_at)->isoFormat('D MMM YYYY · HH:mm') }}
-                                        </div>
-                                    @endif
-                                    @if($approval && $approval->catatan)
-                                        <div class="verif-note">"{{ \Illuminate\Support\Str::limit($approval->catatan, 90) }}"</div>
-                                    @endif
-                                </div>
-                            </div>
+    <div class="row g-3">
+        @php
+            $ttePdfs = [
+                [
+                    'label' => 'Rekap Honorarium',
+                    'desc'  => 'A4 landscape. TTE QR pada tanda tangan PPK & Bendahara Pengeluaran.',
+                    'icon'  => 'bi-file-earmark-pdf-fill',
+                    'color' => '#dc2626',
+                    'route' => route('honorarium.pdf', $tagihan->id),
+                ],
+                [
+                    'label' => 'Nominatif Honorarium',
+                    'desc'  => 'A4 portrait. TTE QR pada tanda tangan PPK & Bendahara Pengeluaran.',
+                    'icon'  => 'bi-file-earmark-text-fill',
+                    'color' => '#0ea5e9',
+                    'route' => route('honorarium.pdf-nominatif', $tagihan->id),
+                ],
+            ];
+        @endphp
+        @foreach($ttePdfs as $pdf)
+            <div class="col-md-6">
+                <div class="tte-pdf-slot">
+                    <div class="d-flex align-items-start gap-3">
+                        <div class="tte-pdf-thumb" style="color: {{ $pdf['color'] }};">
+                            <i class="bi {{ $pdf['icon'] }}"></i>
                         </div>
-                    @endforeach
+                        <div class="flex-fill" style="min-width: 0;">
+                            <div class="fw-bold text-dark text-truncate">{{ $pdf['label'] }}</div>
+                            <small class="text-muted d-block">{{ $pdf['desc'] }}</small>
+                            <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill mt-2" style="font-size:.62rem;">
+                                <i class="bi bi-check-circle-fill"></i> TTE QR Aktif
+                            </span>
+                        </div>
+                    </div>
+                    <div class="d-flex gap-2 mt-3">
+                        <a href="{{ $pdf['route'] }}" target="_blank" class="tte-pdf-btn tte-pdf-btn-primary flex-fill">
+                            <i class="bi bi-eye-fill"></i> Lihat PDF
+                        </a>
+                        <a href="{{ $pdf['route'] }}" download class="tte-pdf-btn tte-pdf-btn-pdf">
+                            <i class="bi bi-download"></i>
+                        </a>
+                    </div>
                 </div>
             </div>
-        </div>
+        @endforeach
+    </div>
+</div>
 @endif
 
 {{-- ============================================================
@@ -1799,23 +1787,19 @@
 @if($tagihan->status === 'DRAFT')
 <div class="submit-zone submit-zone-global">
     <div class="d-flex align-items-center gap-3 flex-grow-1">
-        <div class="submit-status-icon {{ $isReady ? 'is-ready' : 'is-pending' }}">
-            <i class="bi bi-{{ $isReady ? 'shield-check' : 'shield-exclamation' }}"></i>
+        <div class="submit-status-icon is-ready">
+            <i class="bi bi-shield-check"></i>
         </div>
         <div>
-            <h6 class="fw-bold mb-1 text-dark">{{ $isReady ? 'Siap diajukan untuk verifikasi' : 'Belum siap diajukan' }}</h6>
+            <h6 class="fw-bold mb-1 text-dark">Siap diajukan untuk verifikasi</h6>
             <p class="small text-muted mb-0">
-                @if($isReady)
-                    Semua dokumen wajib sudah lengkap. Klik tombol untuk meneruskan ke verifikator.
-                @else
-                    Lengkapi <strong>2 dokumen wajib</strong> di tab <a href="#" class="goto-tab" data-tab="dokumen">Dokumen</a> untuk mengaktifkan tombol pengajuan.
-                @endif
+                Setelah seluruh verifikator menyetujui, sistem akan menerbitkan PDF Rekap &amp; Nominatif Honorarium ber-TTE QR otomatis.
             </p>
         </div>
     </div>
     <form action="{{ route('honorarium.submit-verifikasi', $tagihan->id) }}" method="POST" onsubmit="return confirm('Apakah Anda yakin akan mengajukan tagihan honorarium ini? Data tidak dapat diubah setelah pengajuan.')">
         @csrf
-        <button type="submit" class="btn-submit-verifikasi" {{ !$isReady ? 'disabled' : '' }}>
+        <button type="submit" class="btn-submit-verifikasi">
             <i class="bi bi-send-check-fill"></i> Ajukan Verifikasi
         </button>
     </form>
@@ -1853,26 +1837,6 @@
         });
     });
 
-    // ===== Upload zone visual feedback =====
-    const uploadInputs = document.querySelectorAll('.upload-wajib-input');
-    uploadInputs.forEach(input => {
-        input.addEventListener('change', () => {
-            const zone = input.closest('.upload-zone');
-            if (input.files.length) {
-                zone.classList.add('has-file');
-                const titleEl = zone.querySelector('.uz-title');
-                if (titleEl) titleEl.textContent = input.files[0].name;
-            } else {
-                zone.classList.remove('has-file');
-            }
-            // Toggle submit button
-            const btn = document.getElementById('btnUploadWajib');
-            if (btn) {
-                const allFilled = Array.from(uploadInputs).every(i => i.files && i.files.length > 0);
-                btn.disabled = !allFilled;
-            }
-        });
-    });
 })();
 </script>
 @endsection

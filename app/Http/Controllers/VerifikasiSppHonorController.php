@@ -215,7 +215,10 @@ class VerifikasiSppHonorController extends Controller
 
         $selectedBudgetItem = $sppModel?->dipaRevisionItem ?? \App\Models\DetailDipa::with('coa')->find($tagihan->dipa_revision_item_id);
         
-        $dokumenWajib = ['Daftar Nominatif Bertandatangan', 'Dokumen Honorarium Bertandatangan', 'SK Honorarium'];
+        // Daftar Nominatif & Dokumen Honorarium kini diterbitkan sistem ber-TTE QR
+        // otomatis pasca-approval (App\Support\TagihanDocumentTte), sehingga tidak
+        // lagi termasuk dokumen wajib lampiran. Hanya SK Honorarium yang tetap wajib.
+        $dokumenWajib = ['SK Honorarium'];
         $arsipDaftar = $tagihan->arsipDokumen->pluck('jenis_dokumen')->toArray();
         $dokumenLengkap = collect($dokumenWajib)->every(fn($doc) => in_array($doc, $arsipDaftar));
 
@@ -288,8 +291,8 @@ class VerifikasiSppHonorController extends Controller
         }
 
         if ($myApproval->role_code === 'PPK') {
-            if (!$sppModel->hasFinalSignedStandingInstruction()) {
-                return back()->with('error', 'File Standing Instruction bertanda tangan wajib diunggah sebelum PPK menyetujui SPP.');
+            if ($sppModel->kpa_approval_status !== 'APPROVED') {
+                return back()->with('error', 'Persetujuan Tagihan dari KPA belum disetujui. Silakan ajukan persetujuan via WA terlebih dahulu.');
             }
         }
 
@@ -382,8 +385,8 @@ class VerifikasiSppHonorController extends Controller
         }
 
         if ($myApproval->role_code === 'PPK') {
-            if (!$sppModel->hasFinalSignedStandingInstruction()) {
-                return back()->with('error', 'File Standing Instruction bertanda tangan wajib diunggah sebelum PPK menyetujui SPP.');
+            if ($sppModel->kpa_approval_status !== 'APPROVED') {
+                return back()->with('error', 'Persetujuan Tagihan dari KPA belum disetujui. Silakan ajukan persetujuan via WA terlebih dahulu.');
             }
         }
 
@@ -439,3 +442,4 @@ class VerifikasiSppHonorController extends Controller
         abort_unless($spp->tagihan?->tipe_tagihan === 'HONORARIUM', 404);
     }
 }
+

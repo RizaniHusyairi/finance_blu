@@ -279,7 +279,19 @@ class BenpenNpiKontrakVerifikasiController extends Controller
         
         DB::transaction(function () use ($npi, $request) {
             $workflowService = app(WorkflowService::class);
-            $instance = $workflowService->approveCurrentStep($npi, auth()->id(), $request->input('catatan'));
+            $activeInstance = $workflowService->getActiveInstance($npi);
+            $approval = $activeInstance?->approvals()
+                ->where('role_code', 'Bendahara Penerimaan')
+                ->where('status', 'PENDING')
+                ->where(function ($query) {
+                    $query->whereNull('assigned_user_id')
+                        ->orWhere('assigned_user_id', auth()->id());
+                })
+                ->first();
+
+            abort_unless($approval, 403, 'Tidak ada antrean verifikasi Bendahara Penerimaan untuk NPI ini.');
+
+            $instance = $workflowService->approveCurrentStep($npi, auth()->id(), $request->input('catatan'), $approval->id);
 
             // Log
             LogStatusDokumen::create([
@@ -321,7 +333,19 @@ class BenpenNpiKontrakVerifikasiController extends Controller
 
         DB::transaction(function () use ($npi, $request) {
             $workflowService = app(WorkflowService::class);
-            $workflowService->requestRevision($npi, auth()->id(), $request->catatan_revisi);
+            $activeInstance = $workflowService->getActiveInstance($npi);
+            $approval = $activeInstance?->approvals()
+                ->where('role_code', 'Bendahara Penerimaan')
+                ->where('status', 'PENDING')
+                ->where(function ($query) {
+                    $query->whereNull('assigned_user_id')
+                        ->orWhere('assigned_user_id', auth()->id());
+                })
+                ->first();
+
+            abort_unless($approval, 403, 'Tidak ada antrean verifikasi Bendahara Penerimaan untuk NPI ini.');
+
+            $workflowService->requestRevision($npi, auth()->id(), $request->catatan_revisi, $approval->id);
 
             $npi->update(['status' => DokumenNpi::STATUS_REVISI]);
 

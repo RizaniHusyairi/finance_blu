@@ -91,6 +91,7 @@ class NpiPerjaldinController extends Controller
                 'spp.tagihan.detailPerjaldin.pegawai',
                 'spp.tagihan.detailPerjaldin.provinsi',
                 'spp.tagihan.komponenPerjaldin',
+                'spp.tagihan.arsipDokumen',
                 'spp.tagihan.bendaharaPenerimaanUser',
                 'spp.tagihan.koordinatorKeuanganUser',
                 'spp.tagihanPerjaldinKomponen.dipaRevisionItem.coa',
@@ -115,12 +116,27 @@ class NpiPerjaldinController extends Controller
         // Nominal
         $nominalNpi = (float) ($sppModel->nominal_spp ?? $tagihan->total_netto ?? 0);
 
+        // Kelengkapan dokumen pendukung (SPM + SPP + arsip dokumen tagihan)
+        $documentStatuses = collect([
+            ['label' => 'SPM Perjaldin', 'path' => true, 'required' => true, 'status' => 'ready'],
+            ['label' => 'SPP', 'path' => true, 'required' => true, 'status' => 'ready'],
+        ])->concat(
+            collect($tagihan?->arsipDokumen ?? [])
+                ->filter(fn ($arsip) => ($arsip->is_active ?? true))
+                ->map(fn ($arsip) => [
+                    'label' => \Illuminate\Support\Str::title(str_replace('_', ' ', strtolower($arsip->jenis_dokumen ?? 'Dokumen Pendukung'))),
+                    'path' => $arsip->path_file,
+                    'required' => false,
+                    'status' => 'ready',
+                ])
+        )->values();
+
         // Readiness checklist
         $draftReady = $npiModel
             && filled($npiModel->nomor_npi)
             && filled($npiModel->tanggal_npi)
             && filled($bendaharaPenerimaanTagihan?->id);
-        
+
         $readinessChecklist = collect([
             [
                 'label' => 'SPM sumber tersedia dan final',
@@ -173,6 +189,7 @@ class NpiPerjaldinController extends Controller
             'komponenSpp',
             'bendaharaPenerimaanTagihan',
             'nominalNpi',
+            'documentStatuses',
             'readinessChecklist',
             'readinessIssues',
             'statusNpi',

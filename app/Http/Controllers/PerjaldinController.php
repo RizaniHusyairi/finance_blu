@@ -9,6 +9,7 @@ use App\Models\DetailPerjaldin;
 use App\Models\MasterPegawai;
 use App\Models\MasterUangHarianPerjaldin;
 use App\Models\LogStatusDokumen;
+use App\Models\WorkflowInstance;
 use App\Models\User;
 use App\Support\DipaBudgetOptionService;
 use App\Services\PerjaldinKomponenService;
@@ -202,7 +203,7 @@ class PerjaldinController extends Controller
             'peserta.*.no_sppd' => 'required|string|max:100',
             'peserta.*.provinsi_id' => 'required|exists:master_uang_harian_perjaldins,id',
             'peserta.*.tipe_perjalanan' => 'required|string|in:luar_kota,dalam_kota_lebih_8_jam,diklat',
-            'peserta.*.spt_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
+            'peserta.*.spt_file' => 'required|file|mimes:pdf,jpg,jpeg,png|max:5120',
             'peserta.*.tiket_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
             'peserta.*.transport_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
             'peserta.*.penginapan_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
@@ -543,6 +544,29 @@ class PerjaldinController extends Controller
                 'status' => 'DRAFT', // Reset ke draft saat diedit
             ]);
 
+            // Batalkan persetujuan & TTE bila dokumen ini sebelumnya sudah pernah
+            // disetujui penuh (mis. dikembalikan Operator BLU dari proses SPP).
+            // Workflow instance dikembalikan ke status REVISION sehingga:
+            //  1. Dokumen Nominatif Perjaldin & Daftar Nominatif Pembayaran TIDAK
+            //     lagi ber-TTE QR (TagihanDocumentTte::isApproved() butuh instance
+            //     berstatus APPROVED dengan seluruh approval APPROVED).
+            //  2. Saat diajukan ulang, seluruh verifikator memverifikasi dari awal.
+            $instance = WorkflowInstance::where('workflowable_type', Tagihan::class)
+                ->where('workflowable_id', $tagihan->id)
+                ->latest()
+                ->first();
+
+            if ($instance && $instance->status === 'APPROVED') {
+                $instance->approvals()->update([
+                    'status' => DB::raw("CASE WHEN urutan_step = 1 THEN 'PENDING' ELSE 'WAITING' END"),
+                    'acted_by_user_id' => null,
+                    'acted_at' => null,
+                    'catatan' => null,
+                    'ip_address' => null,
+                ]);
+                $instance->update(['status' => 'REVISION', 'step_saat_ini' => 1]);
+            }
+
             // Ambil detail lama untuk mempertahankan file lampiran jika tidak diupload baru
             $oldDetails = DetailPerjaldin::where('tagihan_id', $tagihan->id)->get()->keyBy('id');
             $keptDetailIds = array_filter(array_column($request->peserta, 'detail_id'));
@@ -662,7 +686,8 @@ class PerjaldinController extends Controller
         $data = [
             'tagihan' => $tagihan,
             'details' => $tagihan->detailPerjaldin,
-            'tteQrFilePath' => \App\Support\TagihanDocumentTte::tteQrFilePath($tagihan, 'nominatif_perjaldin'),
+            'tteQrFilePath' => \App\Support\TagihanDocumentTte::tteQrFilePath($tagihan, 'nominatif_perjaldin', 'PPK'),
+            'tteQrFilePathBendahara' => \App\Support\TagihanDocumentTte::tteQrFilePath($tagihan, 'nominatif_perjaldin', 'BENDAHARA_PENGELUARAN'),
         ];
 
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('perjaldins.pdf_nominatif', $data);
@@ -684,7 +709,8 @@ class PerjaldinController extends Controller
         $data = [
             'tagihan' => $tagihan,
             'details' => $tagihan->detailPerjaldin,
-            'tteQrFilePath' => \App\Support\TagihanDocumentTte::tteQrFilePath($tagihan, 'daftar_nominatif_pembayaran_perjaldin'),
+            'tteQrFilePath' => \App\Support\TagihanDocumentTte::tteQrFilePath($tagihan, 'daftar_nominatif_pembayaran_perjaldin', 'PPK'),
+            'tteQrFilePathBendahara' => \App\Support\TagihanDocumentTte::tteQrFilePath($tagihan, 'daftar_nominatif_pembayaran_perjaldin', 'BENDAHARA_PENGELUARAN'),
         ];
 
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('perjaldins.pdf_lampiran', $data);
@@ -813,6 +839,7 @@ class PerjaldinController extends Controller
     {
         return [
             'DRAFT',
+            'DIKEMBALIKAN',
             'REVISI_PPK',
             'REVISI_PPSPM',
             'REVISI_KOORDINATOR_KEUANGAN',

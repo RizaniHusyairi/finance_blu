@@ -153,6 +153,10 @@
         <td class="ttd-kanan">
             <p style="margin-bottom:3px;">Samarinda, &nbsp; {{ $bulanNow }} {{ $tahunNow }}</p>
             <p style="margin-bottom:0;">Bendahara Pengeluaran</p>
+            @if(!empty($tteQrFilePathBendahara))
+                <img src="{{ $tteQrFilePathBendahara }}" alt="QR TTE Bendahara Pengeluaran" class="qr-tte">
+                <div class="qr-label">Ditandatangani Secara Elektronik</div>
+            @endif
         </td>
     </tr>
     <tr>
@@ -161,7 +165,7 @@
             <p style="margin-top:0;">NIP. {{ $ppkNip }}</p>
         </td>
         <td class="ttd-tengah"></td>
-        <td class="ttd-kanan" style="padding-top:60px;">
+        <td class="ttd-kanan" style="padding-top:{{ !empty($tteQrFilePathBendahara) ? '6px' : '60px' }};">
             <p class="ttd-nama">{{ strtoupper($bendaharaNama) }}</p>
             <p style="margin-top:0;">NIP. {{ $bendaharaNip }}</p>
         </td>

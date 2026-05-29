@@ -30,10 +30,8 @@ class SpmPerjaldinController extends Controller
 
         $query = DokumenSpp::whereNotNull('tagihan_perjaldin_komponen_id')
             ->where(function ($q) use ($approvedSppStatuses) {
-                $q->where(function ($sq) use ($approvedSppStatuses) {
-                    $sq->whereIn('status', $approvedSppStatuses)
-                       ->has('signedSppArsip');
-                })->orWhereHas('spm');
+                $q->whereIn('status', $approvedSppStatuses)
+                    ->orWhereHas('spm');
             })
             ->with([
                 'tagihan.detailPerjaldin',
@@ -350,7 +348,7 @@ class SpmPerjaldinController extends Controller
             Notification::send($selectedPpspm, new WorkflowNotification([
                 'title'   => 'SPM Perjaldin Diajukan',
                 'message' => "SPM Perjaldin ({$spm->nomor_spm}) menunggu verifikasi Anda.",
-                'url'     => route('verifikasi-ppspm.spm.index'),
+                'url'     => route('verifikasi-ppspm.spm-perjaldin.index'),
                 'icon'    => 'description',
                 'color'   => 'primary',
             ]));
@@ -361,7 +359,7 @@ class SpmPerjaldinController extends Controller
             Notification::send($koordinatorUsers, new WorkflowNotification([
                 'title'   => 'SPM Perjaldin Diajukan',
                 'message' => "SPM Perjaldin ({$spm->nomor_spm}) menunggu verifikasi Anda.",
-                'url'     => route('verifikasi-koordinator.spm.perjaldin.index'),
+                'url'     => route('verifikasi-koordinator.spm-perjaldin.index'),
                 'icon'    => 'description',
                 'color'   => 'primary',
             ]));
@@ -372,7 +370,7 @@ class SpmPerjaldinController extends Controller
             Notification::send($kasubbagUsers, new WorkflowNotification([
                 'title'   => 'SPM Perjaldin Diajukan',
                 'message' => "SPM Perjaldin ({$spm->nomor_spm}) menunggu verifikasi Anda.",
-                'url'     => route('verifikasi-kasubag.spm.perjaldin.index'),
+                'url'     => route('verifikasi-kasubag.spm-perjaldin.index'),
                 'icon'    => 'description',
                 'color'   => 'primary',
             ]));

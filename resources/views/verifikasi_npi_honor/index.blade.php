@@ -1,98 +1,106 @@
 @extends('layouts.app')
-@section('title', 'Verifikasi NPI Honorarium - ' . ($roleCode ?? 'Role'))
+@section('title', 'Verifikasi NPI Honorarium')
+
+@push('css')
+    @include('verifikasi_npi._styles')
+@endpush
 
 @section('content')
-<div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4">
-    <div>
-        <h5 class="fw-bold text-primary mb-0">Verifikasi NPI</h5>
-        <p class="text-muted mb-0">Honorarium - {{ $roleCode ?? '-' }}</p>
+@php
+    $totalQueue = $summary['pending'] + $summary['approved'] + $summary['revisi'] + $summary['selesai'];
+@endphp
+
+{{-- ====== HERO ====== --}}
+<div class="card vnpi-hero mb-4">
+    <div class="card-body p-4">
+        <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
+            <div class="npi-min-w-0">
+                <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                    <span class="hero-tag"><i class='bx bx-money me-1'></i> Verifikasi NPI Honorarium</span>
+                    @if($summary['pending'] > 0)
+                        <span class="vnpi-pill s-alert"><i class="bx bx-bell"></i> {{ $summary['pending'] }} Menunggu Anda</span>
+                    @endif
+                </div>
+                <h3 class="fw-bold mb-1">Meja Verifikasi NPI</h3>
+                <div class="hero-sub small d-flex flex-wrap align-items-center gap-2">
+                    <span><i class='bx bx-id-card me-1'></i> Peran Anda:</span>
+                    @forelse(($roleCodes ?? [$roleCode]) as $rc)
+                        <span class="hero-tag">{{ $rc }}</span>
+                    @empty
+                        <span class="hero-tag">-</span>
+                    @endforelse
+                </div>
+            </div>
+            <div class="hero-meta p-3 text-center" style="min-width: 150px;">
+                <div class="field-label">Total Dokumen</div>
+                <div class="nominal-hero">{{ $totalQueue }}</div>
+                <div class="field-value small">NPI Honorarium</div>
+            </div>
+        </div>
     </div>
 </div>
 
 @if(session('success'))
-    <div class="alert alert-success border-0 alert-dismissible fade show">
-        <i class="material-icons-outlined" style="font-size:16px; vertical-align: middle;">check_circle</i>
-        {{ session('success') }}
+    <div class="alert alert-success border-0 shadow-sm alert-dismissible fade show">
+        <i class="bx bx-check-circle me-1"></i> {{ session('success') }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+@endif
+@if(session('error'))
+    <div class="alert alert-danger border-0 shadow-sm alert-dismissible fade show">
+        <i class="bx bx-error-circle me-1"></i> {{ session('error') }}
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
 @endif
 @if($errors->any())
-    <div class="alert alert-danger border-0 alert-dismissible fade show">
+    <div class="alert alert-danger border-0 shadow-sm alert-dismissible fade show">
         <ul class="mb-0 ps-3">@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul>
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
 @endif
 
-{{-- Summary Cards --}}
+{{-- ====== STAT TILES ====== --}}
 <div class="row g-3 mb-4">
     <div class="col-6 col-lg-3">
-        <div class="card border-0 shadow-sm h-100">
-            <div class="card-body">
-                <div class="d-flex align-items-center gap-3">
-                    <div class="rounded-circle bg-warning bg-opacity-10 d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
-                        <i class="material-icons-outlined text-warning" style="font-size: 24px;">hourglass_top</i>
-                    </div>
-                    <div>
-                        <h3 class="mb-0 fw-bold">{{ $summary['pending'] }}</h3>
-                        <small class="text-muted">Menunggu Verifikasi Saya</small>
-                    </div>
-                </div>
+        <div class="vnpi-stat t-amber">
+            <div class="d-flex align-items-center justify-content-between">
+                <div><div class="stat-num">{{ $summary['pending'] }}</div><div class="stat-label mt-1">Menunggu Verifikasi Saya</div></div>
+                <span class="stat-ico"><i class="bx bx-hourglass"></i></span>
             </div>
         </div>
     </div>
     <div class="col-6 col-lg-3">
-        <div class="card border-0 shadow-sm h-100">
-            <div class="card-body">
-                <div class="d-flex align-items-center gap-3">
-                    <div class="rounded-circle bg-success bg-opacity-10 d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
-                        <i class="material-icons-outlined text-success" style="font-size: 24px;">check_circle</i>
-                    </div>
-                    <div>
-                        <h3 class="mb-0 fw-bold">{{ $summary['approved'] }}</h3>
-                        <small class="text-muted">Sudah Saya Setujui</small>
-                    </div>
-                </div>
+        <div class="vnpi-stat t-green">
+            <div class="d-flex align-items-center justify-content-between">
+                <div><div class="stat-num">{{ $summary['approved'] }}</div><div class="stat-label mt-1">Sudah Saya Setujui</div></div>
+                <span class="stat-ico"><i class="bx bx-check-double"></i></span>
             </div>
         </div>
     </div>
     <div class="col-6 col-lg-3">
-        <div class="card border-0 shadow-sm h-100">
-            <div class="card-body">
-                <div class="d-flex align-items-center gap-3">
-                    <div class="rounded-circle bg-danger bg-opacity-10 d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
-                        <i class="material-icons-outlined text-danger" style="font-size: 24px;">replay</i>
-                    </div>
-                    <div>
-                        <h3 class="mb-0 fw-bold">{{ $summary['revisi'] }}</h3>
-                        <small class="text-muted">Perlu Revisi</small>
-                    </div>
-                </div>
+        <div class="vnpi-stat t-rose">
+            <div class="d-flex align-items-center justify-content-between">
+                <div><div class="stat-num">{{ $summary['revisi'] }}</div><div class="stat-label mt-1">Perlu Revisi</div></div>
+                <span class="stat-ico"><i class="bx bx-undo"></i></span>
             </div>
         </div>
     </div>
     <div class="col-6 col-lg-3">
-        <div class="card border-0 shadow-sm h-100">
-            <div class="card-body">
-                <div class="d-flex align-items-center gap-3">
-                    <div class="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
-                        <i class="material-icons-outlined text-primary" style="font-size: 24px;">verified</i>
-                    </div>
-                    <div>
-                        <h3 class="mb-0 fw-bold">{{ $summary['selesai'] }}</h3>
-                        <small class="text-muted">Selesai Diverifikasi</small>
-                    </div>
-                </div>
+        <div class="vnpi-stat t-blue">
+            <div class="d-flex align-items-center justify-content-between">
+                <div><div class="stat-num">{{ $summary['selesai'] }}</div><div class="stat-label mt-1">NPI Final / Selesai</div></div>
+                <span class="stat-ico"><i class="bx bx-medal"></i></span>
             </div>
         </div>
     </div>
 </div>
 
-{{-- Filter Bar --}}
-<div class="card border-0 shadow-sm mb-4">
-    <div class="card-body py-3">
+{{-- ====== FILTER ====== --}}
+<div class="vnpi-card mb-4">
+    <div class="vnpi-card-body pt-3">
         <form method="GET" action="{{ route('verifikasi-npi.honor.index') }}" class="row g-2 align-items-end">
             <div class="col-md-3">
-                <label class="form-label small fw-semibold mb-1">Status Saya ({{ $roleCode ?? '-' }})</label>
+                <label class="field-label">Status Saya</label>
                 <select name="status" class="form-select form-select-sm">
                     <option value="semua" {{ $statusFilter === 'semua' ? 'selected' : '' }}>Semua</option>
                     <option value="pending" {{ $statusFilter === 'pending' ? 'selected' : '' }}>Menunggu Aksi Saya</option>
@@ -102,87 +110,94 @@
                 </select>
             </div>
             <div class="col-md-7">
-                <label class="form-label small fw-semibold mb-1">Pencarian</label>
-                <input type="text" name="search" class="form-control form-control-sm" placeholder="Nomor NPI, SPM, SPP, Tagihan, deskripsi..." value="{{ $search }}">
+                <label class="field-label">Pencarian</label>
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-light border-end-0"><i class="bx bx-search"></i></span>
+                    <input type="text" name="search" class="form-control border-start-0" placeholder="Nomor NPI, SPM, SPP, Tagihan, deskripsi..." value="{{ $search }}">
+                </div>
             </div>
             <div class="col-md-2 d-flex gap-1">
-                <button type="submit" class="btn btn-primary btn-sm flex-grow-1"><i class="material-icons-outlined" style="font-size:16px; vertical-align: middle;">search</i> Filter</button>
-                <a href="{{ route('verifikasi-npi.honor.index') }}" class="btn btn-outline-secondary btn-sm"><i class="material-icons-outlined" style="font-size:16px; vertical-align: middle;">refresh</i></a>
+                <button type="submit" class="btn btn-primary btn-sm flex-grow-1"><i class="bx bx-filter-alt"></i> Filter</button>
+                <a href="{{ route('verifikasi-npi.honor.index') }}" class="btn btn-outline-secondary btn-sm"><i class="bx bx-refresh"></i></a>
             </div>
         </form>
     </div>
 </div>
 
-{{-- Tabel Antrean --}}
-<div class="card border-0 shadow-sm">
-    <div class="card-body p-0">
+{{-- ====== TABLE ====== --}}
+<div class="vnpi-card">
+    <div class="vnpi-card-head">
+        <span class="ico-wrap" style="--card-accent:#7c3aed;--card-tint:rgba(124,58,237,.12);"><i class="bx bx-list-check"></i></span>
+        <div><h6>Antrean Dokumen NPI Honorarium</h6><span class="head-sub">{{ $viewNpis->count() }} dokumen ditampilkan</span></div>
+    </div>
+    <div class="vnpi-card-body px-0 pb-0">
         <div class="table-responsive">
-            <table class="table table-hover table-striped align-middle mb-0">
-                <thead class="table-light">
+            <table class="table vnpi-list align-middle mb-0">
+                <thead>
                     <tr>
-                        <th class="text-center" style="width: 40px;">No</th>
+                        <th class="ps-3" style="width: 40px;">#</th>
                         <th>Nomor NPI</th>
-                        <th>SPM / SPP / Tagihan</th>
-                        <th>Deskripsi / Bendahara Penerimaan</th>
+                        <th>Dokumen Sumber</th>
+                        <th>Deskripsi & Bendahara Penerimaan</th>
                         <th class="text-end">Nilai NPI</th>
-                        <th class="text-center">Status Anda</th>
+                        <th class="text-center">Status Saya</th>
                         <th class="text-center">Status Final</th>
-                        <th class="text-center" style="width: 110px;">Aksi</th>
+                        <th class="text-center pe-3" style="width: 120px;">Aksi</th>
                     </tr>
                 </thead>
                 <tbody>
                     @forelse($viewNpis as $idx => $npi)
-                        <tr class="{{ $npi->canAct ? 'table-warning' : '' }}">
-                            <td class="text-center text-muted">{{ $idx + 1 }}</td>
+                        @php
+                            $ms = $npi->myApprovalStatus;
+                            $msClass = $ms === 'APPROVED' ? 'bg-success' : ($ms === 'PENDING' ? 'bg-warning text-dark' : (in_array($ms, ['REVISION','REJECTED']) ? 'bg-danger' : 'bg-light text-dark border'));
+                            $sf = $npi->statusFinal;
+                            $sfClass = $sf === 'Selesai' ? 'bg-success' : ($sf === 'Perlu Revisi' ? 'bg-danger' : 'bg-info');
+                        @endphp
+                        <tr class="{{ $npi->canAct ? 'row-actionable' : '' }}">
+                            <td class="ps-3 text-muted">{{ $idx + 1 }}</td>
                             <td>
-                                <span class="fw-bold text-primary">{{ $npi->nomor_npi ?? 'Draft / Belum Bernomor' }}</span>
-                                <div class="text-muted" style="font-size: 11px;">{{ optional($npi->tanggal_npi)->format('d M Y') ?? '-' }}</div>
+                                <span class="fw-bold text-primary">{{ $npi->nomor_npi ?? 'Draft' }}</span>
+                                <div class="text-muted small">{{ optional($npi->tanggal_npi)->format('d M Y') ?? '-' }}</div>
                             </td>
                             <td>
-                                <div style="font-size: 12px; line-height: 1.6;">
+                                <div class="small lh-sm">
                                     <span class="text-muted">SPM:</span> <span class="fw-semibold">{{ $npi->spmModel?->nomor_spm ?? '-' }}</span><br>
                                     <span class="text-muted">SPP:</span> {{ $npi->sppModel?->nomor_spp ?? '-' }}<br>
                                     <span class="text-muted">Tagihan:</span> {{ $npi->tagihanModel?->nomor_tagihan ?? '-' }}
                                 </div>
                             </td>
                             <td>
-                                <div class="fw-semibold text-truncate" style="max-width: 220px;" title="{{ $npi->tagihanModel?->deskripsi }}">
-                                    {{ \Illuminate\Support\Str::limit($npi->tagihanModel?->deskripsi ?? '-', 60) }}
+                                <div class="fw-semibold text-truncate" style="max-width: 230px;" title="{{ $npi->tagihanModel?->deskripsi }}">
+                                    {{ \Illuminate\Support\Str::limit($npi->tagihanModel?->deskripsi ?? '-', 55) }}
                                 </div>
-                                <div class="text-muted text-truncate" style="max-width: 220px; font-size: 12px;">
-                                    <i class="material-icons-outlined" style="font-size:12px; vertical-align: middle;">person</i>
-                                    {{ $npi->bendaharaPenerimaan?->name ?? 'Belum ada' }}
+                                <div class="text-muted small text-truncate" style="max-width: 230px;">
+                                    <i class="bx bx-user-check"></i> {{ $npi->bendaharaPenerimaan?->name ?? 'Belum ada' }}
                                 </div>
                             </td>
                             <td class="text-end fw-bold">Rp {{ number_format($npi->nominal, 0, ',', '.') }}</td>
                             <td class="text-center">
-                                @php($ms = $npi->myApprovalStatus)
-                                <span class="badge {{ $ms === 'APPROVED' ? 'bg-success' : ($ms === 'PENDING' ? 'bg-warning text-dark' : (in_array($ms, ['REVISION', 'REJECTED']) ? 'bg-danger' : 'bg-light text-dark border')) }}">
-                                    {{ $ms ?? 'N/A' }}
-                                </span>
-                            </td>
-                            <td class="text-center">
-                                @php($sf = $npi->statusFinal)
-                                <span class="badge {{ $sf === 'Selesai' ? 'bg-success' : ($sf === 'Perlu Revisi' ? 'bg-danger' : 'bg-info') }}" style="font-size: 11px;">
-                                    {{ str_replace('_', ' ', $sf) }}
-                                </span>
-                            </td>
-                            <td class="text-center">
-                                @if($npi->canAct)
-                                    <a href="{{ route('verifikasi-npi.honor.detail', $npi->id) }}" class="btn btn-sm btn-primary px-3">
-                                        <i class="material-icons-outlined" style="font-size:14px; vertical-align: middle;">fact_check</i> Verifikasi
-                                    </a>
-                                @else
-                                    <a href="{{ route('verifikasi-npi.honor.detail', $npi->id) }}" class="btn btn-sm btn-outline-secondary px-3">
-                                        <i class="material-icons-outlined" style="font-size:14px; vertical-align: middle;">visibility</i> Detail
-                                    </a>
+                                <span class="badge {{ $msClass }}">{{ $ms ?? 'N/A' }}</span>
+                                @if(!empty($npi->myRoles) && count($npi->myRoles) > 1)
+                                    <div class="mt-1 d-flex flex-wrap gap-1 justify-content-center">
+                                        @foreach($npi->myRoles as $r)
+                                            <span class="badge bg-light text-dark border" style="font-size: 9px;">{{ $r }}</span>
+                                        @endforeach
+                                    </div>
                                 @endif
+                            </td>
+                            <td class="text-center">
+                                <span class="badge {{ $sfClass }}" style="font-size: 11px;">{{ str_replace('_', ' ', $sf) }}</span>
+                            </td>
+                            <td class="text-center pe-3">
+                                <a href="{{ route('verifikasi-npi.honor.detail', $npi->id) }}" class="btn btn-sm {{ $npi->canAct ? 'btn-primary' : 'btn-outline-secondary' }} px-3 rounded-pill">
+                                    <i class="bx {{ $npi->canAct ? 'bx-task' : 'bx-show' }}"></i> {{ $npi->canAct ? 'Verifikasi' : 'Detail' }}
+                                </a>
                             </td>
                         </tr>
                     @empty
                         <tr>
                             <td colspan="8" class="text-center py-5 text-muted">
-                                <i class="material-icons-outlined" style="font-size: 48px; opacity: 0.3;">inbox</i>
+                                <i class="bx bx-inbox" style="font-size: 48px; opacity: 0.3;"></i>
                                 <div class="mt-2">Tidak ada NPI Honorarium yang memenuhi filter.</div>
                             </td>
                         </tr>

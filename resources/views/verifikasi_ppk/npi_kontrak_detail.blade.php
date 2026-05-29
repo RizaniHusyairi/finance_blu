@@ -1,296 +1,371 @@
 @extends('layouts.app')
-@section('title', 'Detail Verifikasi NPI Kontrak — PPK')
+@section('title', 'Detail Verifikasi NPI Kontrak - ' . ($currentRole ?? 'Verifikator'))
 
-@php
-    $benpenStatus = $benpenApproval?->status ?? 'N/A';
-    $ppkStatus = $ppkApproval?->status ?? 'N/A';
-    $kasubbagStatus = $kasubbagApproval?->status ?? 'N/A';
-    $koordinatorStatus = $koordinatorApproval?->status ?? 'N/A';
-    $currentUserStatus = $currentUserApproval?->status ?? 'N/A';
-
-    $badgeClass = fn($s) => match($s) {
-        'APPROVED' => 'bg-success',
-        'PENDING' => 'bg-warning text-dark',
-        'REVISION', 'REJECTED' => 'bg-danger',
-        default => 'bg-light text-dark border',
-    };
-
-    $finalBadge = match($statusFinal) {
-        'Selesai Diverifikasi' => 'bg-success',
-        'Perlu Revisi' => 'bg-danger',
-        default => 'bg-info',
-    };
-@endphp
+@push('css')
+    @include('verifikasi_npi._styles')
+@endpush
 
 @section('content')
-{{-- Alerts --}}
+@php
+    use App\Models\DokumenNpi;
+    use Illuminate\Support\Facades\Storage;
+    use Illuminate\Support\Str;
+
+    $isNpiFinal = in_array($npi->status, [
+        DokumenNpi::STATUS_DISETUJUI_FINAL,
+        DokumenNpi::STATUS_APPROVED_KASUBAG,
+        DokumenNpi::STATUS_MENUNGGU_UPLOAD,
+        DokumenNpi::STATUS_NPI_TERBIT,
+    ], true);
+    $isRevisi = $npi->status === DokumenNpi::STATUS_REVISI || $statusFinal === 'Perlu Revisi';
+
+    if ($isNpiFinal) { $heroClass = 'is-final'; $statusKey = 's-final'; }
+    elseif ($isRevisi) { $heroClass = 'is-revisi'; $statusKey = 's-revisi'; }
+    else { $heroClass = ''; $statusKey = 's-wait'; }
+
+    $allApprovals = collect($activeWorkflowInstance?->approvals ?? [])->sortBy('urutan_step');
+    $actionApprovals = collect($activeRoleApprovals ?? []);
+    $myRoleNames = collect(explode(' / ', (string) ($currentRole ?? '')))->filter()->values();
+
+    $statusMeta = [
+        'APPROVED' => ['badge' => 'bg-success', 'cls' => 'is-approved', 'ico' => 'bx-check', 'label' => 'Disetujui'],
+        'PENDING'  => ['badge' => 'bg-warning text-dark', 'cls' => 'is-pending', 'ico' => 'bx-time-five', 'label' => 'Menunggu'],
+        'REVISION' => ['badge' => 'bg-danger', 'cls' => 'is-revision', 'ico' => 'bx-undo', 'label' => 'Revisi'],
+        'REJECTED' => ['badge' => 'bg-danger', 'cls' => 'is-revision', 'ico' => 'bx-x', 'label' => 'Ditolak'],
+        'WAITING'  => ['badge' => 'bg-light text-dark border', 'cls' => 'is-waiting', 'ico' => 'bx-minus', 'label' => 'Antri'],
+        'N/A'      => ['badge' => 'bg-light text-dark border', 'cls' => 'is-waiting', 'ico' => 'bx-minus', 'label' => 'Belum Ada'],
+    ];
+
+    $requiredDocs = collect($documentStatuses ?? [])->where('required', true);
+    $readyRequiredDocs = $requiredDocs->where('status', 'ready')->count();
+    $checklist = collect([
+        ['label' => 'Status SPM Awal', 'status' => filled($spm?->nomor_spm) ? 'ready' : 'missing', 'message' => filled($spm?->nomor_spm) ? 'SPM sumber tersedia.' : 'SPM sumber belum lengkap.'],
+        ['label' => 'Tujuan Penerimaan NPI', 'status' => filled($npi->bendahara_penerimaan_id) ? 'ready' : 'missing', 'message' => filled($npi->bendahara_penerimaan_id) ? 'Bendahara Penerimaan tervalidasi.' : 'Penunjukan bendahara rumpang.'],
+        ['label' => 'Vendor dan Rekening', 'status' => filled($vendor?->nama_pihak) && filled($rekening?->nomor_rekening) ? 'ready' : 'missing', 'message' => filled($rekening?->nomor_rekening) ? 'Data vendor dan rekening pembayaran tersedia.' : 'Rekening vendor belum lengkap.'],
+        ['label' => 'Dokumen Wajib Kontrak', 'status' => ($requiredDocs->count() === 0 || $readyRequiredDocs === $requiredDocs->count()) ? 'ready' : 'missing', 'message' => "{$readyRequiredDocs} dari {$requiredDocs->count()} dokumen wajib tersedia."],
+    ])->values();
+    $readyCount = $checklist->where('status', 'ready')->count();
+    $totalReady = $checklist->count();
+    $readyPct = $totalReady > 0 ? round($readyCount / $totalReady * 100) : 0;
+
+    $coa = $spm?->dipaRevisionItem?->coa ?? null;
+    $kontrakLabel = $kontrak?->nama_pekerjaan ?? $tagihan?->deskripsi ?? 'NPI Kontrak';
+@endphp
+
 @if(session('success'))
-    <div class="alert alert-success border-0 shadow-sm alert-dismissible fade show mb-3">
-        <div class="d-flex align-items-center gap-2">
-            <i class="material-icons-outlined">check_circle</i>
-            <div>{{ session('success') }}</div>
-        </div>
+    <div class="alert alert-success border-0 shadow-sm alert-dismissible fade show">
+        <i class="bx bx-check-circle me-1"></i> {{ session('success') }}
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
 @endif
 @if(session('error'))
-    <div class="alert alert-danger border-0 shadow-sm alert-dismissible fade show mb-3">
-        <div class="d-flex align-items-center gap-2">
-            <i class="material-icons-outlined">error</i>
-            <div>{{ session('error') }}</div>
-        </div>
+    <div class="alert alert-danger border-0 shadow-sm alert-dismissible fade show">
+        <i class="bx bx-error-circle me-1"></i> {{ session('error') }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+@endif
+@if($errors->any())
+    <div class="alert alert-danger border-0 shadow-sm alert-dismissible fade show">
+        <ul class="mb-0 ps-3">@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul>
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
 @endif
 
-{{-- HEADER KEPUTUSAN --}}
-<div class="card border-0 shadow-sm mb-4" style="background: linear-gradient(135deg, #f8f9fc, #eef2ff); border-left: 4px solid #4361ee !important;">
+{{-- ====== HERO ====== --}}
+<div class="card vnpi-hero {{ $heroClass }} mb-4">
     <div class="card-body p-4">
-        <div class="d-flex flex-column flex-xl-row justify-content-between gap-3">
-            <div class="flex-grow-1">
-                <div class="d-flex align-items-center gap-2 mb-2">
-                    <h4 class="fw-bold mb-0 text-dark">Detail Verifikasi NPI</h4>
-                    <span class="badge bg-primary px-2 py-1">Kontrak — PPK</span>
+        <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-3">
+            <div class="npi-min-w-0">
+                <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                    <span class="hero-tag"><i class="bx bx-briefcase me-1"></i> Verifikasi NPI Kontrak</span>
+                    <span class="vnpi-pill {{ $statusKey }}">{{ str_replace('_', ' ', $npi->status) }}</span>
+                    @if($canApprove)<span class="vnpi-pill s-alert"><i class="bx bx-bell"></i> Menunggu Aksi Anda</span>@endif
                 </div>
-                <div class="row g-2 mt-2" style="font-size: 13px;">
-                    <div class="col-md-6"><span class="text-muted">Nomor NPI:</span> <strong>{{ $npi->nomor_npi ?? '-' }}</strong></div>
-                    <div class="col-md-6"><span class="text-muted">Nomor SPM:</span> <strong>{{ $spm?->nomor_spm ?? '-' }}</strong></div>
-                    <div class="col-md-6"><span class="text-muted">Nomor SPP:</span> <strong>{{ $spp?->nomor_spp ?? '-' }}</strong></div>
-                    <div class="col-md-6"><span class="text-muted">Nomor SPK:</span> <strong>{{ $kontrak?->nomor_spk ?? '-' }}</strong></div>
-                    <div class="col-md-6"><span class="text-muted">Pekerjaan:</span> <strong>{{ $kontrak?->nama_pekerjaan ?? '-' }}</strong></div>
-                    <div class="col-md-6"><span class="text-muted">Vendor:</span> <strong>{{ $vendor?->nama_pihak ?? '-' }}</strong></div>
-                </div>
+                <h3 class="fw-bold mb-1 text-break">{{ $npi->nomor_npi ?? 'NPI Belum Bernomor' }}</h3>
+                <div class="hero-sub small text-break"><i class="bx bx-receipt me-1"></i>{{ $kontrakLabel }}</div>
             </div>
-
-            <div class="d-flex flex-column gap-2" style="min-width: 200px;">
-                <div class="d-flex flex-wrap gap-1 justify-content-end mb-2">
-                    <span class="badge {{ $badgeClass($benpenStatus) }}" title="Bendahara Penerimaan">BenPen: {{ $benpenStatus }}</span>
-                    <span class="badge {{ $badgeClass($ppkStatus) }}" title="PPK">PPK: {{ $ppkStatus }}</span>
-                    <span class="badge {{ $badgeClass($kasubbagStatus) }}" title="Kasubbag">KSB: {{ $kasubbagStatus }}</span>
-                    <span class="badge {{ $badgeClass($koordinatorStatus) }}" title="Koordinator Keuangan">Koor: {{ $koordinatorStatus }}</span>
-                    <span class="badge {{ $finalBadge }}">{{ $statusFinal }}</span>
-                </div>
-
-                <a href="{{ route(($routePrefix ?? 'verifikasi-ppk.npi.kontrak') . '.index') }}" class="btn btn-outline-secondary btn-sm">
-                    <i class="material-icons-outlined" style="font-size:14px; vertical-align: middle;">arrow_back</i> Kembali ke Antrean
-                </a>
-
-                @if($canApprove)
-                    <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#modalApprove">
-                        <i class="material-icons-outlined" style="font-size:14px; vertical-align: middle;">check_circle</i> Setujui
-                    </button>
-                    <button type="button" class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#modalRevisi">
-                        <i class="material-icons-outlined" style="font-size:14px; vertical-align: middle;">replay</i> Minta Revisi
-                    </button>
+            <div class="d-flex flex-wrap gap-2 justify-content-lg-end">
+                <a href="{{ route(($routePrefix ?? 'verifikasi-ppk.npi.kontrak') . '.index') }}" class="btn btn-hero-light"><i class="bx bx-arrow-back"></i> Kembali</a>
+                @if($isNpiFinal)
+                    <a href="{{ route('npis.cetak-pdf', $npi->id) }}" target="_blank" class="btn btn-light fw-semibold"><i class="bx bxs-file-pdf text-danger"></i> Cetak PDF</a>
                 @endif
             </div>
         </div>
-    </div>
-</div>
 
-{{-- PANEL PROGRESS VERIFIKASI PARALEL --}}
-<div class="card border-0 shadow-sm mb-4">
-    <div class="card-body p-4">
-        <h6 class="fw-bold text-primary mb-3"><i class="material-icons-outlined align-middle me-1" style="font-size: 20px;">account_tree</i> Progress Verifikasi (Paralel)</h6>
-        <div class="row g-3">
-            {{-- Bendahara Pengeluaran (Submitter) --}}
-            <div class="col-6 col-lg-3">
-                <div class="border rounded p-3 text-center h-100 border-success bg-success bg-opacity-10">
-                    <div class="fw-bold mb-1" style="font-size: 13px;">Bend. Pengeluaran</div>
-                    <div class="text-muted mb-2" style="font-size: 11px;">{{ $bendaharaPengeluaran?->name ?? '-' }}</div>
-                    <span class="badge bg-success">SUBMITTED</span>
+        <div class="hero-meta p-3">
+            <div class="row g-3">
+                <div class="col-6 col-md-3"><div class="field-label">Nomor SPM</div><div class="field-value text-truncate">{{ $spm?->nomor_spm ?? '-' }}</div></div>
+                <div class="col-6 col-md-3"><div class="field-label">Nomor SPP</div><div class="field-value text-truncate">{{ $spp?->nomor_spp ?? '-' }}</div></div>
+                <div class="col-6 col-md-2"><div class="field-label">Termin</div><div class="field-value">{{ $termin?->termin_ke ?? '-' }}</div></div>
+                <div class="col-6 col-md-4">
+                    <div class="field-label">Nilai NPI (Netto)</div>
+                    <div class="nominal-hero">Rp {{ number_format($nominalNpi, 0, ',', '.') }}</div>
                 </div>
             </div>
-            {{-- Bendahara Penerimaan --}}
-            <div class="col-6 col-lg-3">
-                <div class="border rounded p-3 text-center h-100 {{ $benpenStatus === 'APPROVED' ? 'border-success bg-success bg-opacity-10' : ($benpenStatus === 'PENDING' ? 'border-warning bg-warning bg-opacity-10' : (in_array($benpenStatus, ['REVISION','REJECTED']) ? 'border-danger bg-danger bg-opacity-10' : '')) }}">
-                    <div class="fw-bold mb-1" style="font-size: 13px;">Bend. Penerimaan</div>
-                    <div class="text-muted mb-2" style="font-size: 11px;">{{ $benpenApproval?->assignedUser?->name ?? $npi->bendaharaPenerimaan?->name ?? '-' }}</div>
-                    <span class="badge {{ $badgeClass($benpenStatus) }}">{{ $benpenStatus }}</span>
-                    @if($benpenApproval?->acted_at)
-                        <div class="mt-1" style="font-size: 10px; color: #6c757d;">{{ \Carbon\Carbon::parse($benpenApproval->acted_at)->format('d M Y H:i') }}</div>
-                    @endif
-                </div>
-            </div>
-            {{-- PPK --}}
-            <div class="col-6 col-lg-3">
-                <div class="border rounded p-3 text-center h-100 {{ $ppkStatus === 'APPROVED' ? 'border-success bg-success bg-opacity-10' : ($ppkStatus === 'PENDING' ? 'border-warning bg-warning bg-opacity-10' : (in_array($ppkStatus, ['REVISION','REJECTED']) ? 'border-danger bg-danger bg-opacity-10' : '')) }}">
-                    <div class="fw-bold mb-1" style="font-size: 13px;">PPK</div>
-                    <div class="text-muted mb-2" style="font-size: 11px;">{{ $ppkApproval?->assignedUser?->name ?? $spp?->ppkVerifikator?->name ?? '-' }}</div>
-                    <span class="badge {{ $badgeClass($ppkStatus) }}">{{ $ppkStatus }}</span>
-                    @if($ppkApproval?->acted_at)
-                        <div class="mt-1" style="font-size: 10px; color: #6c757d;">{{ \Carbon\Carbon::parse($ppkApproval->acted_at)->format('d M Y H:i') }}</div>
-                    @endif
-                </div>
-            </div>
-            {{-- Kasubbag --}}
-            <div class="col-6 col-lg-3">
-                <div class="border rounded p-3 text-center h-100 {{ $kasubbagStatus === 'APPROVED' ? 'border-success bg-success bg-opacity-10' : ($kasubbagStatus === 'PENDING' ? 'border-warning bg-warning bg-opacity-10' : (in_array($kasubbagStatus, ['REVISION','REJECTED']) ? 'border-danger bg-danger bg-opacity-10' : '')) }}">
-                    <div class="fw-bold mb-1" style="font-size: 13px;">Kasubbag</div>
-                    <div class="text-muted mb-2" style="font-size: 11px;">{{ $kasubbagApproval?->assignedUser?->name ?? \App\Models\User::role('Kepala Subbagian Keuangan dan Tata Usaha')->first()?->name ?? '-' }}</div>
-                    <span class="badge {{ $badgeClass($kasubbagStatus) }}">{{ $kasubbagStatus }}</span>
-                    @if($kasubbagApproval?->acted_at)
-                        <div class="mt-1" style="font-size: 10px; color: #6c757d;">{{ \Carbon\Carbon::parse($kasubbagApproval->acted_at)->format('d M Y H:i') }}</div>
-                    @endif
-                </div>
-            </div>
-            {{-- Koordinator Keuangan --}}
-            <div class="col-6 col-lg-3">
-                <div class="border rounded p-3 text-center h-100 {{ $koordinatorStatus === 'APPROVED' ? 'border-success bg-success bg-opacity-10' : ($koordinatorStatus === 'PENDING' ? 'border-warning bg-warning bg-opacity-10' : (in_array($koordinatorStatus, ['REVISION','REJECTED']) ? 'border-danger bg-danger bg-opacity-10' : '')) }}">
-                    <div class="fw-bold mb-1" style="font-size: 13px;">Koordinator</div>
-                    <div class="text-muted mb-2" style="font-size: 11px;">{{ $koordinatorApproval?->assignedUser?->name ?? \App\Models\User::role('Koordinator Keuangan')->first()?->name ?? '-' }}</div>
-                    <span class="badge {{ $badgeClass($koordinatorStatus) }}">{{ $koordinatorStatus }}</span>
-                    @if($koordinatorApproval?->acted_at)
-                        <div class="mt-1" style="font-size: 10px; color: #6c757d;">{{ \Carbon\Carbon::parse($koordinatorApproval->acted_at)->format('d M Y H:i') }}</div>
-                    @endif
-                </div>
+            <hr class="my-3" style="border-color: rgba(255,255,255,.18);">
+            <div class="row g-3">
+                <div class="col-md-6"><div class="field-label">Tujuan Penerimaan (Bendahara Penerimaan)</div><div class="field-value"><i class="bx bx-user-check"></i> {{ $npi->bendaharaPenerimaan?->name ?? 'Belum ditunjuk' }}</div></div>
+                <div class="col-md-6"><div class="field-label">Tanggal NPI</div><div class="field-value">{{ optional($npi->tanggal_npi)->format('d F Y') ?? '-' }}</div></div>
             </div>
         </div>
     </div>
 </div>
 
 <div class="row g-4">
-    {{-- KOLOM KIRI — Data Sumber --}}
-    <div class="col-xl-6">
-        {{-- 1. Card Ringkasan NPI --}}
-        <div class="card border-0 shadow-sm mb-4">
-            <div class="card-header bg-white border-bottom py-3">
-                <h6 class="mb-0 fw-bold"><i class="material-icons-outlined align-middle me-1" style="font-size:18px;">receipt_long</i> Ringkasan NPI</h6>
+    {{-- ====== KOLOM KIRI ====== --}}
+    <div class="col-xl-8">
+
+        {{-- Progress Verifikasi Paralel --}}
+        <div class="vnpi-card c-rose mb-4">
+            <div class="vnpi-card-head">
+                <span class="ico-wrap"><i class="bx bx-git-merge"></i></span>
+                <div><h6>Progress Verifikasi Paralel</h6><span class="head-sub">Persetujuan mufakat seluruh verifikator</span></div>
             </div>
-            <div class="card-body">
-                <div class="row g-2" style="font-size: 13px;">
-                    <div class="col-6"><span class="text-muted d-block">Nomor NPI</span><strong>{{ $npi->nomor_npi ?? '-' }}</strong></div>
-                    <div class="col-6"><span class="text-muted d-block">Tanggal NPI</span><strong>{{ optional($npi->tanggal_npi)->format('d M Y') ?? '-' }}</strong></div>
-                    <div class="col-6"><span class="text-muted d-block">Status NPI</span><span class="badge {{ $npi->status === 'MENUNGGU_VERIFIKASI' ? 'bg-info' : ($npi->status === 'DISETUJUI_FINAL' ? 'bg-success' : ($npi->status === 'REVISI' ? 'bg-danger' : 'bg-secondary')) }}">{{ $npi->status }}</span></div>
-                    <div class="col-6"><span class="text-muted d-block">Uraian</span><strong>{{ $npi->catatan ?? $kontrak?->nama_pekerjaan ?? '-' }}</strong></div>
-                    <div class="col-12 mt-2"><div class="bg-light p-2 rounded text-center"><span class="text-muted me-2">Nilai NPI:</span><strong class="text-primary fs-5">Rp {{ number_format($nominalNpi, 0, ',', '.') }}</strong></div></div>
+            <div class="vnpi-card-body">
+                @forelse($allApprovals as $ap)
+                    @php
+                        $meta = $statusMeta[$ap->status] ?? $statusMeta['WAITING'];
+                        $isMine = $myRoleNames->contains($ap->role_code)
+                            && (!$ap->assigned_user_id || (int) $ap->assigned_user_id === (int) auth()->id());
+                    @endphp
+                    <div class="approval-row {{ $meta['cls'] }} {{ $isMine ? 'is-mine' : '' }}">
+                        <div class="d-flex align-items-center gap-3">
+                            <span class="role-avatar"><i class="bx {{ $meta['ico'] }}"></i></span>
+                            <div class="flex-grow-1 npi-min-w-0">
+                                <div class="d-flex justify-content-between align-items-start gap-2">
+                                    <div class="fw-bold text-dark">
+                                        {{ $ap->role_code }}
+                                        @if($isMine)<span class="badge bg-primary bg-opacity-10 text-primary ms-1" style="font-size:9px;">PERAN ANDA</span>@endif
+                                    </div>
+                                    <span class="approval-badge {{ $meta['badge'] }}">{{ $meta['label'] }}</span>
+                                </div>
+                                <div class="text-muted small">{{ $ap->actedByUser?->name ?? $ap->assignedUser?->name ?? 'Semua pemegang peran' }}</div>
+                                @if($ap->acted_at)
+                                    <div class="text-muted" style="font-size:.7rem;"><i class="bx bx-time"></i> {{ \Carbon\Carbon::parse($ap->acted_at)->format('d M Y H:i') }}</div>
+                                @endif
+                                @if($ap->catatan)
+                                    <div class="small fst-italic text-muted mt-1 p-2 bg-light rounded">"{{ $ap->catatan }}"</div>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                @empty
+                    <div class="text-center text-muted small py-3">Belum ada antrean verifikasi.</div>
+                @endforelse
+            </div>
+        </div>
+
+        {{-- Dokumen Sumber --}}
+        <div class="vnpi-card c-blue mb-4">
+            <div class="vnpi-card-head">
+                <span class="ico-wrap"><i class="bx bx-file"></i></span>
+                <div><h6>Dokumen Sumber & Nilai</h6><span class="head-sub">Penelusuran SPM / SPP / Tagihan</span></div>
+            </div>
+            <div class="vnpi-card-body">
+                <div class="row g-3">
+                    <div class="col-md-4"><span class="field-label">Nomor SPM</span><span class="field-value">{{ $spm?->nomor_spm ?? '-' }}</span><div class="text-muted small">{{ optional($spm?->tanggal_spm)->format('d M Y') ?? '-' }}</div></div>
+                    <div class="col-md-4"><span class="field-label">Nomor SPP</span><span class="field-value">{{ $spp?->nomor_spp ?? '-' }}</span><div class="text-muted small">{{ optional($spp?->tanggal_spp)->format('d M Y') ?? '-' }}</div></div>
+                    <div class="col-md-4"><span class="field-label">Nomor Tagihan</span><span class="field-value">{{ $tagihan?->nomor_tagihan ?? '-' }}</span><div class="text-muted small">PPK: {{ $spp?->ppkVerifikator?->name ?? '-' }}</div></div>
+                    <div class="col-12">
+                        <span class="field-label">Kode COA (Mata Anggaran)</span>
+                        @if($coa)
+                            <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 font-monospace">{{ $coa->kode_mak_lengkap ?? $coa->kd_akun }}</span>
+                            <span class="small fw-normal d-block mt-1 text-muted">{{ $coa->nama_akun }}</span>
+                        @else
+                            <span class="text-muted fst-italic">Belum ada akun DIPA tertaut.</span>
+                        @endif
+                    </div>
+                </div>
+                <div class="row g-2 mt-2">
+                    <div class="col-md-4"><div class="mini-doc" style="--card-accent:#2563eb;"><div class="doc-label">Bruto</div><div class="fw-bold">Rp {{ number_format($tagihan?->total_bruto ?? 0, 0, ',', '.') }}</div></div></div>
+                    <div class="col-md-4"><div class="mini-doc" style="--card-accent:#e11d48;"><div class="doc-label text-danger">Potongan / Pajak</div><div class="fw-bold text-danger">Rp {{ number_format($tagihan?->total_potongan ?? 0, 0, ',', '.') }}</div></div></div>
+                    <div class="col-md-4"><div class="mini-doc" style="--card-accent:#16a34a;"><div class="doc-label text-success">Netto NPI</div><div class="fw-bold text-success">Rp {{ number_format($nominalNpi, 0, ',', '.') }}</div></div></div>
                 </div>
             </div>
         </div>
 
-        {{-- 2. Card Ringkasan SPM --}}
-        <div class="card border-0 shadow-sm mb-4">
-            <div class="card-header bg-white border-bottom py-3">
-                <h6 class="mb-0 fw-bold"><i class="material-icons-outlined align-middle me-1" style="font-size:18px;">description</i> Ringkasan SPM</h6>
+        {{-- Rincian Kontrak --}}
+        <div class="vnpi-card c-teal mb-4">
+            <div class="vnpi-card-head">
+                <span class="ico-wrap"><i class="bx bx-briefcase"></i></span>
+                <div class="flex-grow-1 d-flex justify-content-between align-items-center gap-2">
+                    <div><h6>Rincian Kontrak & Termin</h6><span class="head-sub">Dasar pembayaran dan penerima dana</span></div>
+                    <span class="badge bg-light text-dark border text-truncate">{{ $kontrak?->nomor_spk ?? 'SPK belum tersedia' }}</span>
+                </div>
             </div>
-            <div class="card-body">
-                <div class="row g-2" style="font-size: 13px;">
-                    <div class="col-6"><span class="text-muted d-block">Nomor SPM</span><strong>{{ $spm?->nomor_spm ?? '-' }}</strong></div>
-                    <div class="col-6"><span class="text-muted d-block">Tanggal SPM</span><strong>{{ optional($spm?->tanggal_spm)->format('d M Y') ?? '-' }}</strong></div>
-                    <div class="col-6"><span class="text-muted d-block">Nilai SPM</span><strong>Rp {{ number_format($spm?->nominal_spm ?? 0, 0, ',', '.') }}</strong></div>
-                    <div class="col-6"><span class="text-muted d-block">Status SPM</span><span class="badge bg-secondary">{{ $spm?->status ?? '-' }}</span></div>
+            <div class="vnpi-card-body">
+                <div class="row g-3">
+                    <div class="col-md-8">
+                        <span class="field-label">Nama Pekerjaan</span>
+                        <div class="field-value text-break">{{ $kontrak?->nama_pekerjaan ?? '-' }}</div>
+                    </div>
+                    <div class="col-md-4">
+                        <span class="field-label">Termin</span>
+                        <div class="field-value">{{ $termin?->termin_ke ?? '-' }} {{ $termin?->jenis_termin ? '(' . str_replace('_', ' ', $termin->jenis_termin) . ')' : '' }}</div>
+                    </div>
+                    <div class="col-md-4"><div class="mini-doc" style="--card-accent:#0d9488;"><div class="doc-label">BAPP</div><div class="fw-bold">{{ $detailKontrak?->nomor_bapp ?? '-' }}</div></div></div>
+                    <div class="col-md-4"><div class="mini-doc" style="--card-accent:#0d9488;"><div class="doc-label">BAST</div><div class="fw-bold">{{ $detailKontrak?->nomor_bast ?? '-' }}</div></div></div>
+                    <div class="col-md-4"><div class="mini-doc" style="--card-accent:#0d9488;"><div class="doc-label">BAP</div><div class="fw-bold">{{ $detailKontrak?->nomor_bap ?? '-' }}</div></div></div>
                 </div>
             </div>
         </div>
 
-        {{-- 3. Card Ringkasan SPP / Tagihan --}}
-        <div class="card border-0 shadow-sm mb-4">
-            <div class="card-header bg-white border-bottom py-3">
-                <h6 class="mb-0 fw-bold"><i class="material-icons-outlined align-middle me-1" style="font-size:18px;">request_quote</i> Ringkasan SPP / Tagihan</h6>
+        {{-- Kelengkapan Dokumen --}}
+        <div class="vnpi-card c-purple mb-4">
+            <div class="vnpi-card-head">
+                <span class="ico-wrap"><i class="bx bx-folder-open"></i></span>
+                <div><h6>Kelengkapan Dokumen Pendukung</h6><span class="head-sub">Dokumen yang melekat pada NPI Kontrak</span></div>
             </div>
-            <div class="card-body">
-                <div class="row g-2" style="font-size: 13px;">
-                    <div class="col-6"><span class="text-muted d-block">Nomor SPP</span><strong>{{ $spp?->nomor_spp ?? '-' }}</strong></div>
-                    <div class="col-6"><span class="text-muted d-block">Nomor Tagihan</span><strong>{{ $tagihan?->nomor_tagihan ?? '-' }}</strong></div>
-                    <div class="col-6"><span class="text-muted d-block">Nilai Netto Tagihan</span><strong class="text-success">Rp {{ number_format($tagihan?->total_netto ?? 0, 0, ',', '.') }}</strong></div>
-                    <div class="col-6"><span class="text-muted d-block">Total Potongan</span><strong class="text-danger">Rp {{ number_format($tagihan?->total_potongan ?? 0, 0, ',', '.') }}</strong></div>
-                </div>
+            <div class="vnpi-card-body">
+                @forelse($documentStatuses as $doc)
+                    @php
+                        $isReady = $doc['status'] === 'ready';
+                        $path = $doc['path'] ?? null;
+                        $docUrl = null;
+                        if (($doc['key'] ?? null) === 'spm' && $spm) {
+                            $docUrl = route('spms.cetak-pdf', $spm->id);
+                        } elseif (($doc['key'] ?? null) === 'spp' && $spp) {
+                            $docUrl = route('spps.cetak-pdf', $spp->id);
+                        } elseif (is_string($path) && filled($path)) {
+                            $docUrl = filter_var($path, FILTER_VALIDATE_URL) ? $path : Storage::url($path);
+                        }
+                    @endphp
+                    <div class="doc-row {{ $isReady ? 'is-ready' : 'is-optional' }} d-flex justify-content-between align-items-center">
+                        <div class="npi-min-w-0">
+                            <div class="fw-semibold text-truncate">
+                                <i class="bx {{ $isReady ? 'bx-check-circle text-success' : 'bx-x-circle text-danger' }} me-1"></i>{{ $doc['label'] }}
+                                @if(!($doc['required'] ?? true))<small class="text-muted">(Opsional)</small>@endif
+                            </div>
+                            <div class="text-muted small">{{ $isReady ? 'Dokumen tersedia untuk diperiksa.' : (($doc['required'] ?? true) ? 'Dokumen wajib belum tersedia.' : 'Dokumen tidak wajib.') }}</div>
+                        </div>
+                        <div class="d-flex align-items-center gap-2 ms-2">
+                            <span class="badge {{ $isReady ? 'bg-success bg-opacity-10 text-success' : (($doc['status'] ?? '') === 'missing' ? 'bg-danger' : 'bg-light text-dark border') }}">
+                                {{ $isReady ? 'Tersedia' : (($doc['status'] ?? '') === 'missing' ? 'Belum Ada' : 'Tidak Wajib') }}
+                            </span>
+                            @if($docUrl)
+                                <a href="{{ $docUrl }}" target="_blank" class="btn btn-sm btn-outline-primary"><i class="bx bx-link-external"></i> Lihat</a>
+                            @endif
+                        </div>
+                    </div>
+                @empty
+                    <div class="text-center text-muted small py-3">Belum ada dokumen pendukung.</div>
+                @endforelse
             </div>
         </div>
 
-        {{-- 4. Card Dasar Kontrak & Termin --}}
-        <div class="card border-0 shadow-sm mb-4">
-            <div class="card-header bg-white border-bottom py-3">
-                <h6 class="mb-0 fw-bold"><i class="material-icons-outlined align-middle me-1" style="font-size:18px;">assignment</i> Dasar Kontrak & Termin</h6>
-            </div>
-            <div class="card-body">
-                <div class="row g-2" style="font-size: 13px;">
-                    <div class="col-6"><span class="text-muted d-block">Nomor SPK</span><strong>{{ $kontrak?->nomor_spk ?? '-' }}</strong></div>
-                    <div class="col-6"><span class="text-muted d-block">Nama Pekerjaan</span><strong>{{ $kontrak?->nama_pekerjaan ?? '-' }}</strong></div>
-                    <div class="col-4"><span class="text-muted d-block">Termin</span><strong>{{ $termin?->termin_ke ?? '-' }} ({{ $termin?->jenis_termin ?? '-' }})</strong></div>
-                    <div class="col-4"><span class="text-muted d-block">BAST</span><strong>{{ $detailKontrak?->nomor_bast ?? '-' }}</strong></div>
-                    <div class="col-4"><span class="text-muted d-block">BAPP</span><strong>{{ $detailKontrak?->nomor_bapp ?? '-' }}</strong></div>
-                    <div class="col-4"><span class="text-muted d-block">BAP</span><strong>{{ $detailKontrak?->nomor_bap ?? '-' }}</strong></div>
-                </div>
-            </div>
-        </div>
     </div>
 
-    {{-- KOLOM KANAN — Validasi & Kelayakan --}}
-    <div class="col-xl-6">
-        <div class="sticky-top" style="top: 1rem; z-index: 1;">
+    {{-- ====== KOLOM KANAN ====== --}}
+    <div class="col-xl-4">
+        <div class="vnpi-sticky">
 
-            {{-- 1. Card Informasi NPI --}}
-            <div class="card border-0 shadow-sm mb-4">
-                <div class="card-header bg-white border-bottom py-3">
-                    <h6 class="mb-0 fw-bold"><i class="material-icons-outlined align-middle me-1" style="font-size:18px;">info</i> Informasi NPI</h6>
+            {{-- Action Hero --}}
+            @if($canApprove && $actionApprovals->isNotEmpty())
+                <div class="action-hero">
+                    <div class="ah-label"><i class="bx bx-shield-quarter"></i> Aksi Verifikasi Anda</div>
+                    <div class="small mb-3" style="color:rgba(255,255,255,.85);">Anda memegang <strong>{{ $actionApprovals->count() }}</strong> peran aktif pada NPI ini.</div>
+                    @foreach($actionApprovals as $approval)
+                        @php
+                            $roleName = $approval['role'];
+                            $approvalId = $approval['approval_id'];
+                            $modalSuffix = Str::slug($roleName) . '_' . $approvalId;
+                        @endphp
+                        <div class="role-action-box">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="fw-semibold text-white"><i class="bx bx-id-card me-1"></i>{{ $roleName }}</span>
+                                <span class="badge bg-warning text-dark">Menunggu</span>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <button type="button" class="btn btn-light btn-sm flex-fill fw-bold text-success" data-bs-toggle="modal" data-bs-target="#modalApproveKontrak{{ $modalSuffix }}"><i class="bx bx-check-circle"></i> Setujui</button>
+                                <button type="button" class="btn btn-sm flex-fill fw-bold text-white" style="background:rgba(225,29,72,.85);" data-bs-toggle="modal" data-bs-target="#modalRevisiKontrak{{ $modalSuffix }}"><i class="bx bx-x-circle"></i> Revisi</button>
+                            </div>
+                        </div>
+                    @endforeach
                 </div>
-                <div class="card-body">
-                    <div class="row g-2" style="font-size: 13px;">
-                        <div class="col-6"><span class="text-muted d-block">Nomor NPI</span><strong>{{ $npi->nomor_npi ?? '-' }}</strong></div>
-                        <div class="col-6"><span class="text-muted d-block">Tanggal NPI</span><strong>{{ optional($npi->tanggal_npi)->format('d M Y') ?? '-' }}</strong></div>
-                        <div class="col-6"><span class="text-muted d-block">Tahun Anggaran</span><strong>{{ $npi->tahun_anggaran ?? date('Y') }}</strong></div>
-                        <div class="col-6"><span class="text-muted d-block">Bend. Pengeluaran</span><strong>{{ $bendaharaPengeluaran?->name ?? '-' }}</strong></div>
-                        <div class="col-6"><span class="text-muted d-block">Bend. Penerimaan</span><strong>{{ $npi->bendaharaPenerimaan?->name ?? '-' }}</strong></div>
-                        <div class="col-6"><span class="text-muted d-block">Nominal NPI</span><strong class="text-primary">Rp {{ number_format($nominalNpi, 0, ',', '.') }}</strong></div>
+            @else
+                <div class="vnpi-card {{ $isNpiFinal ? 'c-green' : ($isRevisi ? 'c-rose' : 'c-slate') }} mb-3">
+                    <div class="vnpi-card-body pt-3 text-center">
+                        <i class="bx {{ $isNpiFinal ? 'bx-check-shield text-success' : ($isRevisi ? 'bx-error-circle text-danger' : 'bx-hourglass text-secondary') }}" style="font-size:2.5rem;"></i>
+                        <h6 class="fw-bold mt-2 mb-1">
+                            {{ $isNpiFinal ? 'Verifikasi NPI Selesai' : ($isRevisi ? 'NPI Dikembalikan untuk Revisi' : 'Menunggu Verifikator Lain') }}
+                        </h6>
+                        <p class="text-muted small mb-0">
+                            @if($isNpiFinal) Seluruh verifikator telah menyetujui NPI ini.
+                            @elseif($isRevisi) NPI dikembalikan ke meja Bendahara Pengeluaran.
+                            @elseif($currentUserApproval?->status === 'APPROVED') Anda telah menyetujui. Menunggu verifikator lain.
+                            @else Tidak ada aksi yang menunggu peran Anda saat ini.
+                            @endif
+                        </p>
                     </div>
                 </div>
-            </div>
+            @endif
 
-            {{-- 2. Card Vendor & Rekening --}}
-            <div class="card border-0 shadow-sm mb-4">
-                <div class="card-header bg-white border-bottom py-3">
-                    <h6 class="mb-0 fw-bold"><i class="material-icons-outlined align-middle me-1" style="font-size:18px;">account_balance</i> Vendor & Rekening</h6>
+            {{-- Readiness --}}
+            <div class="vnpi-card c-amber mb-3">
+                <div class="vnpi-card-head">
+                    <span class="ico-wrap"><i class="bx bx-task"></i></span>
+                    <div><h6>Validasi Kesiapan</h6><span class="head-sub">{{ $readyCount }} dari {{ $totalReady }} terpenuhi</span></div>
                 </div>
-                <div class="card-body">
-                    <div class="row g-2" style="font-size: 13px;">
-                        <div class="col-12"><span class="text-muted d-block">Nama Vendor</span><strong>{{ $vendor?->nama_pihak ?? '-' }}</strong></div>
-                        <div class="col-6"><span class="text-muted d-block">Bank</span><strong>{{ $rekening?->nama_bank ?? '-' }}</strong></div>
-                        <div class="col-6"><span class="text-muted d-block">No. Rekening</span><strong class="font-monospace">{{ $rekening?->nomor_rekening ?? '-' }}</strong></div>
-                        <div class="col-12"><span class="text-muted d-block">Atas Nama</span><strong>{{ $rekening?->nama_rekening ?? '-' }}</strong></div>
-                    </div>
-                </div>
-            </div>
-
-            {{-- 3. Dokumen Pendukung --}}
-            <div class="card border-0 shadow-sm mb-4">
-                <div class="card-header bg-white border-bottom py-3">
-                    <h6 class="mb-0 fw-bold"><i class="material-icons-outlined align-middle me-1" style="font-size:18px;">folder_open</i> Dokumen Pendukung</h6>
-                </div>
-                <div class="card-body p-0">
-                    <ul class="list-group list-group-flush">
-                        @foreach($documentStatuses as $doc)
-                            <li class="list-group-item d-flex justify-content-between align-items-center py-2 px-3">
-                                <span style="font-size: 13px;">{{ $doc['label'] }} @if(!$doc['required'])<small class="text-muted">(Opsional)</small>@endif</span>
-                                <div>
-                                    @if($doc['status'] === 'ready')
-                                        <span class="badge bg-success">Tersedia</span>
-                                    @elseif($doc['status'] === 'missing')
-                                        <span class="badge bg-danger">Belum Ada</span>
-                                    @else
-                                        <span class="badge bg-light text-dark border">Tidak Wajib</span>
-                                    @endif
-                                </div>
+                <div class="vnpi-card-body">
+                    <div class="readiness-progress"><div class="bar" style="width: {{ $readyPct }}%;"></div></div>
+                    <ul class="ready-list">
+                        @foreach($checklist as $c)
+                            <li>
+                                <span class="ico {{ $c['status'] === 'ready' ? 'ok' : 'no' }}"><i class="bx {{ $c['status'] === 'ready' ? 'bx-check' : 'bx-x' }}"></i></span>
+                                <div><div class="fw-semibold text-dark">{{ $c['label'] }}</div><div class="text-muted small lh-sm">{{ $c['message'] }}</div></div>
                             </li>
                         @endforeach
                     </ul>
                 </div>
             </div>
 
-            {{-- 4. Catatan Workflow / Revisi --}}
-            <div class="card border-0 shadow-sm mb-4">
-                <div class="card-header bg-white border-bottom py-3">
-                    <h6 class="mb-0 fw-bold"><i class="material-icons-outlined align-middle me-1" style="font-size:18px;">comment</i> Catatan Workflow / Revisi</h6>
+            {{-- Vendor --}}
+            <div class="vnpi-card c-blue mb-3">
+                <div class="vnpi-card-head">
+                    <span class="ico-wrap"><i class="bx bx-buildings"></i></span>
+                    <div><h6>Vendor & Rekening</h6><span class="head-sub">Penerima pembayaran kontrak</span></div>
                 </div>
-                <div class="card-body">
-                    @forelse($revisionNotes as $note)
-                        <div class="border-start border-3 {{ str_contains($note['role'], 'PPK') ? 'border-primary' : (str_contains($note['role'], 'Penerimaan') ? 'border-warning' : 'border-info') }} ps-3 mb-3">
-                            <div class="fw-semibold" style="font-size: 13px;">{{ $note['role'] }}</div>
-                            <div class="text-muted" style="font-size: 12px;">{{ $note['user'] }} · {{ $note['time'] }}</div>
-                            <div class="mt-1 fst-italic" style="font-size: 13px;">"{{ $note['catatan'] }}"</div>
+                <div class="vnpi-card-body">
+                    <div class="field-label">Nama Vendor</div>
+                    <div class="field-value text-break mb-3">{{ $vendor?->nama_pihak ?? '-' }}</div>
+                    <div class="row g-2">
+                        <div class="col-6"><span class="field-label">Bank</span><span class="field-value">{{ $rekening?->nama_bank ?? '-' }}</span></div>
+                        <div class="col-6"><span class="field-label">No. Rekening</span><span class="field-value font-monospace">{{ $rekening?->nomor_rekening ?? '-' }}</span></div>
+                        <div class="col-12"><span class="field-label">Atas Nama</span><span class="field-value">{{ $rekening?->nama_rekening ?? '-' }}</span></div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Catatan --}}
+            <div class="vnpi-card c-purple mb-3">
+                <div class="vnpi-card-head">
+                    <span class="ico-wrap"><i class="bx bx-message-square-detail"></i></span>
+                    <div><h6>Disposisi Internal</h6><span class="head-sub">Uraian dari pembuat NPI</span></div>
+                </div>
+                <div class="vnpi-card-body">
+                    <div class="field-label">Uraian / Teks NPI</div>
+                    <div class="bg-light p-2 rounded text-muted small fst-italic border mt-1">"{{ $npi->catatan ?? $kontrakLabel }}"</div>
+                </div>
+            </div>
+
+            {{-- Log --}}
+            <div class="vnpi-card c-slate mb-3">
+                <div class="vnpi-card-head">
+                    <span class="ico-wrap"><i class="bx bx-history"></i></span>
+                    <div><h6>Riwayat Persetujuan</h6><span class="head-sub">Jejak audit NPI</span></div>
+                </div>
+                <div class="vnpi-card-body" style="max-height: 360px; overflow-y: auto;">
+                    @forelse($recentActivities as $act)
+                        <div class="vnpi-timeline-item is-active">
+                            <div class="fw-bold text-dark small">{{ $act['title'] }}</div>
+                            <div class="small my-1"><span class="badge bg-light text-dark border">{{ $act['actor'] }}</span></div>
+                            <div class="text-muted" style="font-size:.7rem;">{{ $act['time'] }}</div>
+                            @if(!empty($act['note']))
+                                <div class="small text-muted fst-italic mt-1 p-2 bg-light rounded">"{{ $act['note'] }}"</div>
+                            @endif
                         </div>
                     @empty
-                        <div class="text-center text-muted py-3" style="font-size: 13px;">Belum ada catatan revisi.</div>
+                        <div class="text-center text-muted small py-3">Belum ada riwayat tercatat.</div>
                     @endforelse
                 </div>
             </div>
@@ -299,177 +374,68 @@
     </div>
 </div>
 
-{{-- MODALS FOR DUAL ROLE --}}
-@if(isset($activeRoleApprovals) && count($activeRoleApprovals) > 0)
-    @foreach($activeRoleApprovals as $approval)
+{{-- ====== MODALS PER ROLE ====== --}}
+@if($canApprove && $actionApprovals->isNotEmpty())
+    @foreach($actionApprovals as $approval)
         @php
             $roleName = $approval['role'];
             $approvalId = $approval['approval_id'];
             $approveRouteDynamic = $approval['approveRoute'];
             $revisiRouteDynamic = $approval['revisiRoute'];
-            $modalSuffix = \Illuminate\Support\Str::slug($roleName) . '_' . $approvalId;
+            $modalSuffix = Str::slug($roleName) . '_' . $approvalId;
         @endphp
 
-        {{-- MODAL APPROVE --}}
-        <div class="modal fade" id="modalApprove_{{ $modalSuffix }}" tabindex="-1">
+        <div class="modal fade" id="modalApproveKontrak{{ $modalSuffix }}" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content border-0 shadow">
+                    <div class="modal-header bg-success text-white border-0">
+                        <h5 class="modal-title fw-bold"><i class="bx bx-check-circle me-1"></i> Setujui sebagai {{ $roleName }}?</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
                     <form action="{{ $approveRouteDynamic }}" method="POST">
                         @csrf
                         <input type="hidden" name="approval_id" value="{{ $approvalId }}">
-                        <div class="modal-header bg-success text-white border-0">
-                            <h5 class="modal-title fw-bold"><i class="material-icons-outlined me-1">check_circle</i> Setujui NPI ini ({{ $roleName }})?</h5>
-                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                        </div>
                         <div class="modal-body">
-                            <p>Tindakan ini akan menyelesaikan verifikasi {{ $roleName }} untuk dokumen <strong>{{ $npi->nomor_npi }}</strong>.</p>
-                            <div class="mb-3">
-                                <label class="form-label">Catatan (Opsional)</label>
+                            <p>Anda akan menyetujui NPI Kontrak <strong>{{ $npi->nomor_npi ?? 'DRAFT' }}</strong> sebagai <strong>{{ $roleName }}</strong>.</p>
+                            <div class="mb-2">
+                                <label class="field-label">Catatan Persetujuan (Opsional)</label>
                                 <textarea name="catatan" class="form-control" rows="2" placeholder="Tulis catatan jika ada..."></textarea>
                             </div>
                         </div>
                         <div class="modal-footer border-0">
                             <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
-                            <button type="submit" class="btn btn-success px-4">Ya, Setujui</button>
+                            <button type="submit" class="btn btn-success px-4 fw-bold">Ya, Setujui</button>
                         </div>
                     </form>
                 </div>
             </div>
         </div>
 
-        {{-- MODAL REVISI --}}
-        <div class="modal fade" id="modalRevisi_{{ $modalSuffix }}" tabindex="-1">
+        <div class="modal fade" id="modalRevisiKontrak{{ $modalSuffix }}" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content border-0 shadow">
+                    <div class="modal-header bg-danger text-white border-0">
+                        <h5 class="modal-title fw-bold"><i class="bx bx-x-circle me-1"></i> Minta Revisi ({{ $roleName }})?</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
                     <form action="{{ $revisiRouteDynamic }}" method="POST">
                         @csrf
                         <input type="hidden" name="approval_id" value="{{ $approvalId }}">
-                        <div class="modal-header bg-danger text-white border-0">
-                            <h5 class="modal-title fw-bold"><i class="material-icons-outlined me-1">replay</i> Minta Revisi NPI ({{ $roleName }})</h5>
-                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                        </div>
                         <div class="modal-body">
-                            <p>Dokumen <strong>{{ $npi->nomor_npi }}</strong> akan dikembalikan ke Bendahara Pengeluaran untuk diperbaiki.</p>
-                            <div class="mb-3">
-                                <label class="form-label fw-semibold">Catatan Revisi <span class="text-danger">*</span></label>
-                                <textarea name="catatan_revisi" class="form-control" rows="3" required placeholder="Jelaskan apa yang perlu diperbaiki..."></textarea>
+                            <p class="text-muted small">NPI <strong>{{ $npi->nomor_npi ?? 'DRAFT' }}</strong> akan dikembalikan untuk diperbaiki oleh Bendahara Pengeluaran.</p>
+                            <div class="mb-2">
+                                <label class="field-label">Catatan Revisi <span class="text-danger">*</span></label>
+                                <textarea name="catatan_revisi" class="form-control border-danger border-opacity-50" rows="3" required placeholder="Jelaskan detail yang harus diperbaiki..."></textarea>
                             </div>
                         </div>
                         <div class="modal-footer border-0">
                             <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
-                            <button type="submit" class="btn btn-danger px-4">Kirim Revisi</button>
+                            <button type="submit" class="btn btn-danger px-4 fw-bold">Kembalikan NPI</button>
                         </div>
                     </form>
                 </div>
             </div>
         </div>
     @endforeach
-
-    {{-- FIXED BOTTOM ACTION BAR --}}
-    <div class="npi-fixed-action-bar">
-        <div class="container-fluid">
-            <div class="d-flex align-items-center justify-content-between gap-3 flex-wrap">
-                <div class="d-flex align-items-center gap-2 text-white">
-                    <i class="material-icons-outlined" style="font-size: 22px;">verified</i>
-                    <div>
-                        <div class="fw-bold" style="font-size: 0.9rem;">NPI Kontrak: {{ $npi->nomor_npi ?? '-' }}</div>
-                        <div style="font-size: 0.75rem; opacity: 0.8;">Rp {{ number_format($nominalNpi, 0, ',', '.') }} &bull; {{ $kontrak?->nama_pekerjaan ?? '-' }}</div>
-                    </div>
-                </div>
-                <div class="d-flex gap-2 flex-wrap">
-                    @foreach($activeRoleApprovals as $approval)
-                        @php $modalSuffix = \Illuminate\Support\Str::slug($approval['role']) . '_' . $approval['approval_id']; @endphp
-                        <button type="button" class="btn btn-light fw-bold px-3 py-2 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalRevisi_{{ $modalSuffix }}">
-                            <i class="material-icons-outlined me-1" style="font-size: 16px; vertical-align: middle;">replay</i> Revisi ({{ $approval['role'] }})
-                        </button>
-                        <button type="button" class="btn btn-success fw-bold px-3 py-2 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalApprove_{{ $modalSuffix }}">
-                            <i class="material-icons-outlined me-1" style="font-size: 16px; vertical-align: middle;">check_circle</i> Setujui ({{ $approval['role'] }})
-                        </button>
-                    @endforeach
-                </div>
-            </div>
-        </div>
-    </div>
-@elseif(isset($canApprove) && $canApprove)
-    <div class="alert alert-warning text-center">
-        Tombol aksi tidak tersedia. Terjadi kesalahan pada konfigurasi multi-role.
-    </div>
-@elseif($currentUserStatus === 'APPROVED')
-    <div class="card border-0 shadow-sm mb-4 border-top border-4 border-success">
-        <div class="card-body p-4 text-center">
-            <i class="material-icons-outlined text-success" style="font-size: 48px;">verified</i>
-            <h5 class="fw-bold mt-2">Anda telah menyetujui dokumen ini</h5>
-            <p class="text-muted mb-0">Disetujui pada {{ $currentUserApproval?->acted_at ? \Carbon\Carbon::parse($currentUserApproval->acted_at)->format('d M Y H:i') : '-' }}</p>
-        </div>
-    </div>
-@elseif(in_array($currentUserStatus, ['REVISION', 'REJECTED']))
-    <div class="card border-0 shadow-sm mb-4 border-top border-4 border-danger">
-        <div class="card-body p-4 text-center">
-            <i class="material-icons-outlined text-danger" style="font-size: 48px;">replay</i>
-            <h5 class="fw-bold mt-2">Anda mengembalikan dokumen ini untuk revisi</h5>
-            @if($currentUserApproval?->catatan)
-                <p class="text-muted fst-italic">"{{ $currentUserApproval->catatan }}"</p>
-            @endif
-        </div>
-    </div>
-@endif
-
-{{-- Riwayat Log --}}
-@if($recentActivities->count() > 0)
-    <div class="card border-0 shadow-sm mb-4">
-        <div class="card-header bg-white border-bottom py-3">
-            <h6 class="mb-0 fw-bold"><i class="material-icons-outlined align-middle me-1" style="font-size:18px;">history</i> Riwayat Aktivitas</h6>
-        </div>
-        <div class="card-body">
-            @foreach($recentActivities as $act)
-                <div class="d-flex align-items-start mb-3 pb-2 {{ !$loop->last ? 'border-bottom' : '' }}">
-                    <i class="material-icons-outlined text-primary me-3 mt-1" style="font-size: 20px;">schedule</i>
-                    <div class="flex-grow-1">
-                        <div class="fw-semibold" style="font-size: 13px;">{{ $act['title'] }}</div>
-                        <div class="text-muted" style="font-size: 12px;">{{ $act['actor'] }} · {{ $act['time'] }}</div>
-                        @if($act['note'])
-                            <div class="text-muted fst-italic mt-1" style="font-size: 12px;">"{{ $act['note'] }}"</div>
-                        @endif
-                    </div>
-                </div>
-            @endforeach
-        </div>
-    </div>
 @endif
 @endsection
-
-@push('css')
-<style>
-    .npi-fixed-action-bar {
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        z-index: 1050;
-        background: linear-gradient(135deg, #1e293b, #334155);
-        border-top: 3px solid #10b981;
-        padding: 0.85rem 1.5rem;
-        box-shadow: 0 -4px 20px rgba(0,0,0,0.2);
-        animation: slideUpBar 0.4s ease-out;
-    }
-    @keyframes slideUpBar {
-        from { transform: translateY(100%); opacity: 0; }
-        to { transform: translateY(0); opacity: 1; }
-    }
-    .npi-fixed-action-bar .btn-success {
-        background: linear-gradient(135deg, #10b981, #059669);
-        border: none;
-    }
-    .npi-fixed-action-bar .btn-success:hover {
-        background: linear-gradient(135deg, #059669, #047857);
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(16,185,129,0.4);
-    }
-    .npi-fixed-action-bar .btn-light:hover {
-        background: #fee2e2;
-        color: #dc2626;
-        border-color: #fca5a5;
-    }
-    body { padding-bottom: 90px; }
-</style>
-@endpush
