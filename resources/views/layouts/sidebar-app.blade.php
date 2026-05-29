@@ -430,9 +430,9 @@
         </li>
         @endhasrole
 
-        {{-- Log Tagihan Bulanan untuk Kasi PK, Kasubag TU, KPA (read-only).
+        {{-- Log Tagihan Bulanan untuk Kasi PK, KPA (read-only).
              KPA juga memperoleh akses ke Jatuh Tempo. --}}
-        @hasanyrole('Kepala Seksi Pelayanan dan Kerjasama|Kepala Subbagian Keuangan dan Tata Usaha|KPA|PLT/PLH')
+        @hasanyrole('Kepala Seksi Pelayanan dan Kerjasama|KPA|PLT/PLH')
         @unlessrole('Super Admin|Super Admin Jasa|Koordinator Jasa|Admin Jasa')
         <li>
           <a href="javascript:;" class="has-arrow">
@@ -476,7 +476,7 @@
             </li>
           </ul>
         </li>
-        @hasanyrole('Super Admin|Super Admin Jasa|Kepala Subbagian Keuangan dan Tata Usaha')
+        @hasanyrole('Super Admin|Super Admin Jasa')
         <li>
           <a href="javascript:;" class="has-arrow">
             <div class="parent-icon"><i class="material-icons-outlined">receipt_long</i></div>
@@ -804,7 +804,7 @@
           </ul>
         </li>
 
-        <li>
+        <!-- <li>
           <a href="javascript:;" class="has-arrow">
             <div class="parent-icon"><i class="material-icons-outlined">how_to_reg</i></div>
             <div class="menu-title">Verifikasi NPI</div>
@@ -814,7 +814,7 @@
             <li><a href="{{ route('verifikasi-npi.perjaldin.index') }}"><i class="material-icons-outlined">arrow_right</i>Perjaldin</a></li>
             <li><a href="{{ route('verifikasi-npi.honor.index') }}"><i class="material-icons-outlined">arrow_right</i>Honor</a></li>
           </ul>
-        </li>
+        </li> -->
         @hasanyrole('Bendahara Pengeluaran|Bendahara Penerimaan')
         <li>
           <a href="javascript:;" class="has-arrow">

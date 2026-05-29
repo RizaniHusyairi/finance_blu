@@ -22,7 +22,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '0812-4502-2015',
                 'nomor_rekening' => '2001500608504',
                 'nama_rekening' => 'I KADEK YULI SASTRAW',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -33,7 +33,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '082111179159',
                 'nomor_rekening' => '16101500406833',
                 'nama_rekening' => 'MOCHAMAD IKHSAN FADILAH',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -44,7 +44,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '082155581125',
                 'nomor_rekening' => '2001500619791',
                 'nama_rekening' => 'MURDOKO',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -55,7 +55,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '085264040404',
                 'nomor_rekening' => '2001580037333',
                 'nama_rekening' => 'ZALDI ARDIAN',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -66,7 +66,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '081297091313',
                 'nomor_rekening' => '2001500609623',
                 'nama_rekening' => 'ROSLAN',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -77,7 +77,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '082150313031',
                 'nomor_rekening' => '2001580030462',
                 'nama_rekening' => 'HERIYANTO',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -88,7 +88,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '081346210422',
                 'nomor_rekening' => '2001580030420',
                 'nama_rekening' => 'MELLYARTI RAHMAN',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -99,7 +99,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '081326219953',
                 'nomor_rekening' => '2001580030153',
                 'nama_rekening' => 'KHANINA RIZKI SEKAR ANDARINI',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -110,7 +110,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '081334989898',
                 'nomor_rekening' => '2001580030357',
                 'nama_rekening' => 'DIMAS ADITYARAMA',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -121,7 +121,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '085695331578',
                 'nomor_rekening' => '2001580030501',
                 'nama_rekening' => 'YOGIK MARSANTIA HERMAWAN',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -132,7 +132,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '08115050170',
                 'nomor_rekening' => '2001580030543',
                 'nama_rekening' => 'GUNAWAN',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -143,7 +143,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '08524924675',
                 'nomor_rekening' => '2001580031094',
                 'nama_rekening' => 'SIGIT SUBANDORO',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -154,7 +154,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '0853-3273-7386',
                 'nomor_rekening' => '2001580030145',
                 'nama_rekening' => 'VIDYA ALVIANI',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -165,7 +165,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '082262225579',
                 'nomor_rekening' => '2001580031280',
                 'nama_rekening' => 'AHMAD MAHRUS EFENDI',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -176,7 +176,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '082255800051',
                 'nomor_rekening' => '2001582882881',
                 'nama_rekening' => 'HENNY AGUSTINA SILITONGA',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -187,7 +187,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '085386471610',
                 'nomor_rekening' => '2001580030187',
                 'nama_rekening' => 'JESI SAMPE PADANG',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -198,7 +198,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '081347879867',
                 'nomor_rekening' => '2001580030632',
                 'nama_rekening' => 'ISWOYO JATI',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -209,7 +209,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '0813-5080-5800',
                 'nomor_rekening' => '2001580030276',
                 'nama_rekening' => 'RINDRA TRI HARIYANDI',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -220,7 +220,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '082154518855',
                 'nomor_rekening' => '2001580035991',
                 'nama_rekening' => 'IWAN KURNIAWAN',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -231,7 +231,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '082158193216',
                 'nomor_rekening' => '2001580031298',
                 'nama_rekening' => 'HARIYANTO',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -242,7 +242,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '0852-4732-2721',
                 'nomor_rekening' => '2001580030933',
                 'nama_rekening' => 'EKO SUSANTO',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -253,7 +253,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '082158530007',
                 'nomor_rekening' => '2001580030195',
                 'nama_rekening' => 'MUHAMMAD JAENAL NURROKIM',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -264,7 +264,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '08994438664',
                 'nomor_rekening' => '2001580030658',
                 'nama_rekening' => 'ALEXANDER GRADY',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -275,7 +275,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '082132625196',
                 'nomor_rekening' => '2001580030496',
                 'nama_rekening' => 'DWI AHMAD NUR AZIZ',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -286,7 +286,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '081250728451',
                 'nomor_rekening' => '2001580030454',
                 'nama_rekening' => 'WINDA KHARISMA BUTAR BUTAR',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -297,7 +297,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '081244004472',
                 'nomor_rekening' => '2001580030315',
                 'nama_rekening' => 'RISKI',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -308,7 +308,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '082140307225',
                 'nomor_rekening' => '2001580030705',
                 'nama_rekening' => 'RIPALDI SUWANDI',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -319,7 +319,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '087732666708',
                 'nomor_rekening' => '2001580030852',
                 'nama_rekening' => 'IBNU MIFTAKHUL AZIS',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -330,7 +330,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '082139597373',
                 'nomor_rekening' => '2001580030381',
                 'nama_rekening' => 'GIGIH YUDHA FILHAQ',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -341,7 +341,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '08977869934',
                 'nomor_rekening' => '2001580030488',
                 'nama_rekening' => 'MUHAMMAD GHANI ISTIJAR',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -352,7 +352,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '081261796793',
                 'nomor_rekening' => '2001580030585',
                 'nama_rekening' => 'PRAYUDA ELFANDRO',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -363,7 +363,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '081251111616',
                 'nomor_rekening' => '2001580030593',
                 'nama_rekening' => 'INDRA ANUGRAH ITTIHAD',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -374,7 +374,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '087864489008',
                 'nomor_rekening' => '2001580030365',
                 'nama_rekening' => 'GUSTI AYU KHARISMA MAHARANI',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -385,7 +385,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '082166989948',
                 'nomor_rekening' => '2001580030446',
                 'nama_rekening' => 'PARMEN LEON PARHITEAN',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -396,7 +396,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '081340967887',
                 'nomor_rekening' => '2001580030438',
                 'nama_rekening' => 'SAFIRA KHUSAIMA',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -407,7 +407,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '085247251273',
                 'nomor_rekening' => '2001580030179',
                 'nama_rekening' => 'ANDRIANI',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -418,7 +418,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '082232245393',
                 'nomor_rekening' => '2001580031078',
                 'nama_rekening' => 'ANDHIKA SURYA PRADANA',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -429,7 +429,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '085856474688',
                 'nomor_rekening' => '2001580032618',
                 'nama_rekening' => 'MUHAMMAD AGAM ZANUAR',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -440,7 +440,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '085600793815',
                 'nomor_rekening' => '2001580032595',
                 'nama_rekening' => 'MUHAMMAD ZUHER AMMAR DZAKI',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -451,7 +451,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '087852215559',
                 'nomor_rekening' => '2001580032579',
                 'nama_rekening' => 'ATALA DHIYA ULHAQ',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -462,7 +462,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '082149540318',
                 'nomor_rekening' => '2001580032626',
                 'nama_rekening' => 'ANDI BATARA FUSTHAATHUL',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -473,7 +473,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '0895601413672',
                 'nomor_rekening' => '2001580032600',
                 'nama_rekening' => 'ALDRIAN ALEXANDER SIMBOLON',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -484,7 +484,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '0895335664818',
                 'nomor_rekening' => '2001580032587',
                 'nama_rekening' => 'FARISAH CAHYA RAMADHAN',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -495,7 +495,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '0831 6541 6886',
                 'nomor_rekening' => '2001580031125',
                 'nama_rekening' => 'RIZKI AULIA',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -506,7 +506,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '085609015658',
                 'nomor_rekening' => '2001580030983',
                 'nama_rekening' => 'UMMU ASMA RAHMADHINI',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -517,7 +517,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '082293760481',
                 'nomor_rekening' => '2001580030323',
                 'nama_rekening' => 'VERNALDY REVIMAPUTRA SAMPE',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -528,7 +528,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '0878566678527',
                 'nomor_rekening' => '2001580030200',
                 'nama_rekening' => 'GDE RAHARDIKA',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -539,7 +539,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '085640546853',
                 'nomor_rekening' => '2001580032634',
                 'nama_rekening' => 'ZALFA AURISKA WIGA PAMUNGKAS',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -550,7 +550,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '0895639391799',
                 'nomor_rekening' => '2001580030519',
                 'nama_rekening' => 'ANDRE RAMADHAN PUTRA',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -561,7 +561,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '081210706258',
                 'nomor_rekening' => '2001580032561',
                 'nama_rekening' => 'ARIF RAHMAN',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -572,7 +572,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '087896723049',
                 'nomor_rekening' => '2001500620459',
                 'nama_rekening' => 'HARLIANSYAH HASIBUAN',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -583,7 +583,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '082134407386',
                 'nomor_rekening' => '2001500620483',
                 'nama_rekening' => 'PRIMA ANANDYTA',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -594,7 +594,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '081213077149',
                 'nomor_rekening' => '2001500620475',
                 'nama_rekening' => 'MUHAMMAD HILMI DARMA',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -605,7 +605,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '083137008625',
                 'nomor_rekening' => '2001500620467',
                 'nama_rekening' => 'HORACIO FABIANO MELI',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -616,7 +616,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '0895363208544',
                 'nomor_rekening' => '2001580030268',
                 'nama_rekening' => 'ANDRA HAFI ADITYA',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -627,7 +627,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '082274757435',
                 'nomor_rekening' => '2001500611329',
                 'nama_rekening' => 'KARTIKA FALITA',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -638,7 +638,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '088227379248',
                 'nomor_rekening' => '2001580030470',
                 'nama_rekening' => 'KANA WAHYU ABDILLAH',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -649,7 +649,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '085888193038',
                 'nomor_rekening' => '2001580030349',
                 'nama_rekening' => 'FATMA SASKIA PUTRI',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -660,7 +660,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '081398940316',
                 'nomor_rekening' => '2001580030412',
                 'nama_rekening' => 'FIKRI LISANI ZAM ZAM',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -671,7 +671,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '082251811838',
                 'nomor_rekening' => '14701500125825',
                 'nama_rekening' => 'PRATAMA RIANDAH',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -682,7 +682,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '088801915912',
                 'nomor_rekening' => '2001580030331',
                 'nama_rekening' => 'RAHMAT TJIPTO WIBOWO',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -693,7 +693,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '085247748611',
                 'nomor_rekening' => '2001580030975',
                 'nama_rekening' => 'FAJRUL SYAMSI',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -704,7 +704,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '0852-5054-6477',
                 'nomor_rekening' => '2001580030307',
                 'nama_rekening' => 'AGOES YULIANTORO',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -715,7 +715,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '0812-5561-064',
                 'nomor_rekening' => '2001580030925',
                 'nama_rekening' => 'MISNO',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -726,7 +726,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '081346446575',
                 'nomor_rekening' => '2001580030828',
                 'nama_rekening' => 'SRI SASONGKO',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -737,7 +737,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '0812-5404-0123',
                 'nomor_rekening' => '2001580031329',
                 'nama_rekening' => 'MUTIA RACHMI',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -748,7 +748,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '0813-7365-9959',
                 'nomor_rekening' => '2001580031230',
                 'nama_rekening' => 'RORA ARDIAN',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -759,7 +759,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '08170817702',
                 'nomor_rekening' => '2001580030608',
                 'nama_rekening' => 'ULFAH AGUSTINA',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -770,7 +770,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '08115572729',
                 'nomor_rekening' => '2001580030894',
                 'nama_rekening' => 'SUPIAN NOR',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -781,7 +781,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '08122779358',
                 'nomor_rekening' => '2001580030234',
                 'nama_rekening' => 'YUDHY PRASETIYO',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -792,7 +792,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '0811-5538-855',
                 'nomor_rekening' => '2001580031191',
                 'nama_rekening' => 'MILKA MELLY',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -803,7 +803,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '081346623453',
                 'nomor_rekening' => '2001580030535',
                 'nama_rekening' => 'SITI KHOLIFAH',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -814,7 +814,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '0813-4702-6520',
                 'nomor_rekening' => '2001500334016',
                 'nama_rekening' => 'JEPRI UTOMO SIMBOLON',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -825,7 +825,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '08115735450',
                 'nomor_rekening' => '2001580031793',
                 'nama_rekening' => 'RUSTAM HANAFI',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -836,7 +836,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '082266148729',
                 'nomor_rekening' => '2001580030218',
                 'nama_rekening' => 'MUSA HERRY',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -847,7 +847,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '081315243986',
                 'nomor_rekening' => '2001580030284',
                 'nama_rekening' => 'HERMAN',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -858,7 +858,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '0852-4703-0993',
                 'nomor_rekening' => '2001580031222',
                 'nama_rekening' => 'YENY PUJI ASTUTI',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -869,7 +869,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '0853-4670-4885',
                 'nomor_rekening' => '2001580030250',
                 'nama_rekening' => 'MUHAMAD SAPRIANSYAH',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -880,7 +880,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '081254035513',
                 'nomor_rekening' => '2001580030292',
                 'nama_rekening' => 'MUHAMMAD TAUFIKKURACHMAN',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -891,7 +891,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '082157156267',
                 'nomor_rekening' => '2001580030959',
                 'nama_rekening' => 'SYAHRIDA SUSANTI',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -902,7 +902,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '0812-5354-2881',
                 'nomor_rekening' => '109701500003881',
                 'nama_rekening' => 'EMA HARIFA',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -913,7 +913,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '081347641080',
                 'nomor_rekening' => '2001580031109',
                 'nama_rekening' => 'BUDI SUPANGAT',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -924,7 +924,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '0813-4707-6000',
                 'nomor_rekening' => '2001580030527',
                 'nama_rekening' => 'EDY PURWANTO',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -935,7 +935,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '0812-5515-704',
                 'nomor_rekening' => '2001580030399',
                 'nama_rekening' => 'ANANG MASDARI',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -946,7 +946,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '0813-4722-8734',
                 'nomor_rekening' => '2001580031060',
                 'nama_rekening' => 'IMAM HERU SUBAGIO',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -957,7 +957,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '081346478511',
                 'nomor_rekening' => '2001580030624',
                 'nama_rekening' => 'TRIONO',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -968,7 +968,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '082153219527',
                 'nomor_rekening' => '2001580030226',
                 'nama_rekening' => 'SUGIYONO',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -979,7 +979,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '081256785422',
                 'nomor_rekening' => '2001580031303',
                 'nama_rekening' => 'PALUNG PURNAMA HENDRAYANA',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -990,7 +990,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '0853-4964-1088',
                 'nomor_rekening' => '2001580031141',
                 'nama_rekening' => 'MASDIANSYAH',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -1001,7 +1001,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '082250810637',
                 'nomor_rekening' => '2001580030802',
                 'nama_rekening' => 'ABDUL FATAH',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -1012,7 +1012,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '0812-5813-1253',
                 'nomor_rekening' => '2001580031036',
                 'nama_rekening' => 'AHMAD',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -1023,7 +1023,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '081215138570',
                 'nomor_rekening' => '2001580036604',
                 'nama_rekening' => 'REFINALDA ARUM RAHAYU',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -1034,7 +1034,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '081250764794',
                 'nomor_rekening' => '2001500610991',
                 'nama_rekening' => 'MUHAMAD ALI',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -1045,7 +1045,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '0812-5326-9428',
                 'nomor_rekening' => '2001500611078',
                 'nama_rekening' => 'HADI DHARMA',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -1056,7 +1056,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '0812-5383-321',
                 'nomor_rekening' => '2001500611086',
                 'nama_rekening' => 'JOKO PRAYITNO',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -1067,7 +1067,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '082157435770',
                 'nomor_rekening' => '2001500611044',
                 'nama_rekening' => 'BUNTU BATU',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -1078,7 +1078,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '0813-5011-7033',
                 'nomor_rekening' => '2001500611214',
                 'nama_rekening' => 'SUR SAFII',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -1089,7 +1089,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '081331776646',
                 'nomor_rekening' => '2001500611117',
                 'nama_rekening' => 'LIAS TANDILIMBAN',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -1100,7 +1100,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '081346261084',
                 'nomor_rekening' => '2001500611206',
                 'nama_rekening' => 'SRI LANJARI NINGSIH',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -1111,7 +1111,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '0813-2809-5999',
                 'nomor_rekening' => '2001500611036',
                 'nama_rekening' => 'ANDITYAWARMAN ARIZONA MOLLET',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -1122,7 +1122,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '+6282150114011',
                 'nomor_rekening' => '2001500611248',
                 'nama_rekening' => 'ZAKIAH HANDAYANI',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -1133,7 +1133,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '0852-5080-3504',
                 'nomor_rekening' => '2001500611167',
                 'nama_rekening' => 'MUHAMMAD RIZKY MALIK',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -1144,7 +1144,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '082255665601',
                 'nomor_rekening' => '2001500611230',
                 'nama_rekening' => 'WAHYU UTOMO',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -1155,7 +1155,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '0821-5072-8669',
                 'nomor_rekening' => '2001500611191',
                 'nama_rekening' => 'RUSLINA',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -1166,7 +1166,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '0822-5166-6909',
                 'nomor_rekening' => '2001500611125',
                 'nama_rekening' => 'MARCELINA KULING',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -1177,7 +1177,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '08128533385',
                 'nomor_rekening' => '2001500611222',
                 'nama_rekening' => 'TRI HARDANTI',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -1188,7 +1188,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '0813-4763-4444',
                 'nomor_rekening' => '2001500611159',
                 'nama_rekening' => 'MUHAMMAD KEMAL HIKMA',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -1199,7 +1199,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '0852-4545-4534',
                 'nomor_rekening' => '2001880002452',
                 'nama_rekening' => 'DIAH DESTIANA',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -1210,7 +1210,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '081351487330',
                 'nomor_rekening' => '2001500611183',
                 'nama_rekening' => 'RUDI YANSYAH',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -1221,7 +1221,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '0812-4477-8717',
                 'nomor_rekening' => '2001500611094',
                 'nama_rekening' => 'JUMADI',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -1232,7 +1232,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '0821-5360-8308',
                 'nomor_rekening' => '2001500611028',
                 'nama_rekening' => 'ANDINI DWI RUSITASARI',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -1243,7 +1243,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '0821-5348-0860',
                 'nomor_rekening' => '2001500611133',
                 'nama_rekening' => 'MOHAMMAD OKTAPIANSYAH SAKTI',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -1254,7 +1254,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '0812-5884-2852',
                 'nomor_rekening' => '2001500611109',
                 'nama_rekening' => 'KARMINING',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -1265,7 +1265,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '0853-9097-9706',
                 'nomor_rekening' => '2001500611010',
                 'nama_rekening' => 'ANDI AMIRAH AFIFAH',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -1276,7 +1276,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '082150312778',
                 'nomor_rekening' => '2001500611141',
                 'nama_rekening' => 'MUHAMAD RIDUAN',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -1287,7 +1287,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '082250909517',
                 'nomor_rekening' => '2001500611002',
                 'nama_rekening' => 'ADITYA FATURRACHIM',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -1298,7 +1298,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '0822-2734-3360',
                 'nomor_rekening' => '2001500611060',
                 'nama_rekening' => 'FEBRIANUR EATON DARONGKE',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -1309,7 +1309,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '0822-5172-3335',
                 'nomor_rekening' => '2001500611052',
                 'nama_rekening' => 'DIMAS ARDI PAMUNGKAS',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -1320,7 +1320,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '082240523283',
                 'nomor_rekening' => '2001500611256',
                 'nama_rekening' => 'YUSUANIKE NURSANDI',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -1331,7 +1331,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '08998929801',
                 'nomor_rekening' => '2001500611175',
                 'nama_rekening' => 'RERE EFFENDY GOSNES',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -1342,7 +1342,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '0857-5197-7780',
                 'nomor_rekening' => '2001500611264',
                 'nama_rekening' => 'RISMA AMANDA E',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -1353,7 +1353,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '081338893833',
                 'nomor_rekening' => '2001500614157',
                 'nama_rekening' => 'SUPRIADI',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -1364,7 +1364,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '085159997745',
                 'nomor_rekening' => '2001500614165',
                 'nama_rekening' => 'AKILZAR ADLIANDA',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -1375,7 +1375,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '082127040407',
                 'nomor_rekening' => '2001500614149',
                 'nama_rekening' => 'ADE FRISCHIYANTO KAYANG',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -1386,7 +1386,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '085772377668',
                 'nomor_rekening' => '2001500615666',
                 'nama_rekening' => 'KARLINA MIRANDA PUTR',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -1397,7 +1397,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '081342345750',
                 'nomor_rekening' => '2001500615658',
                 'nama_rekening' => 'ADITYA KURNIAWAN KUS',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -1408,7 +1408,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '081273523059',
                 'nomor_rekening' => '801500843184',
                 'nama_rekening' => 'NANDA SUGANDI',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -1419,7 +1419,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => '082114676663',
                 'nomor_rekening' => '2001500614173',
                 'nama_rekening' => 'ELZA TIMBOWO',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
             [
@@ -1430,7 +1430,7 @@ class MasterPegawaiSeeder extends Seeder
                 'nomor_hp' => null,
                 'nomor_rekening' => '2001500624770',
                 'nama_rekening' => 'RIDHO ALI DHARMAWAN',
-                'nama_bank' => 'BRI',
+                'nama_bank' => 'BTN',
                 'status_aktif' => true,
             ],
         ];
