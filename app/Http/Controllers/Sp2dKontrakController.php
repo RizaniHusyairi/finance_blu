@@ -184,6 +184,7 @@ class Sp2dKontrakController extends Controller
             'sp2d.logs.user',
             'sp2d.arsipDokumen',
             'spm.spp.tagihan.detailKontrak.kontrakTermin.kontrak.vendor.rekening',
+            'spm.spp.tagihan.bkuPengeluaran.sumberRekening',
             'spm.spp.tagihan.potonganTagihan',
         ])->findOrFail($npi_id);
 

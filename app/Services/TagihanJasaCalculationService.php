@@ -25,6 +25,10 @@ class TagihanJasaCalculationService
         $postedPayload = $this->decodePostedPayload($row['calculation_payload'] ?? null);
         $postedInputs = $postedPayload['inputs'] ?? [];
 
+        if (($postedPayload['rule'] ?? null) === 'GARBARATA_DETAIL' && $this->isGarbarataService($layanan)) {
+            return $this->buildGarbarataPayload($postedPayload, (float) ($row['harga_satuan'] ?? 0));
+        }
+
         if ($mode === 'PERSENTASE') {
             $qty = $this->positiveNumber($row['qty'] ?? 0);
 
@@ -66,6 +70,110 @@ class TagihanJasaCalculationService
             'billable_qty' => $billableQty,
             'formula' => $this->buildFormula($definition, $inputs, $billableQty),
         ];
+    }
+
+    private function isGarbarataService(?LayananJasa $layanan): bool
+    {
+        if (! $layanan) {
+            return false;
+        }
+
+        $text = mb_strtolower($layanan->nama_lengkap . ' ' . $layanan->nama_layanan . ' ' . $layanan->satuan);
+
+        return str_contains($text, 'garbarata');
+    }
+
+    private function buildGarbarataPayload(array $postedPayload, float $price): array
+    {
+        $sourceRows = $postedPayload['rows'] ?? ($postedPayload['inputs']['rows'] ?? []);
+        $rows = [];
+        $billableQty = 0;
+
+        foreach (is_array($sourceRows) ? $sourceRows : [] as $sourceRow) {
+            if (! is_array($sourceRow)) {
+                continue;
+            }
+
+            $docking = $this->cleanString($sourceRow['docking'] ?? '');
+            $undocking = $this->cleanString($sourceRow['undocking'] ?? '');
+            $durationMinutes = $this->garbarataDurationMinutes($docking, $undocking);
+            $rentang = $durationMinutes > 0 ? max(1, (int) ceil($durationMinutes / 120)) : 0;
+            $total = $rentang * $price;
+            $billableQty += $rentang;
+
+            $rows[] = [
+                'tanggal' => $this->cleanString($sourceRow['tanggal'] ?? ''),
+                'reg' => $this->cleanString($sourceRow['reg'] ?? ''),
+                'flight_arr' => $this->cleanString($sourceRow['flight_arr'] ?? ''),
+                'flight_dep' => $this->cleanString($sourceRow['flight_dep'] ?? ''),
+                'route' => $this->cleanString($sourceRow['route'] ?? ''),
+                'docking' => $docking,
+                'undocking' => $undocking,
+                'type_pesawat' => $this->cleanString($sourceRow['type_pesawat'] ?? ''),
+                'bobot_ton' => $this->positiveNumber($sourceRow['bobot_ton'] ?? 0),
+                'jasa_pemakaian_garbarata' => $price,
+                'waktu' => $this->formatDuration($durationMinutes),
+                'rentang_pemakaian' => $rentang,
+                'total' => $total,
+            ];
+        }
+
+        return [
+            'rule' => 'GARBARATA_DETAIL',
+            'label' => 'Rincian pemakaian garbarata',
+            'inputs' => ['rows' => $rows],
+            'rows' => $rows,
+            'billable_qty' => $billableQty,
+            'formula' => $this->formatNumber($billableQty) . ' rentang pemakaian x tarif per 2 jam',
+        ];
+    }
+
+    private function cleanString(mixed $value): string
+    {
+        return trim((string) $value);
+    }
+
+    private function garbarataDurationMinutes(string $docking, string $undocking): int
+    {
+        $start = $this->timeToMinutes($docking);
+        $end = $this->timeToMinutes($undocking);
+
+        if ($start === null || $end === null) {
+            return 0;
+        }
+
+        if ($end < $start) {
+            $end += 24 * 60;
+        }
+
+        return max(0, $end - $start);
+    }
+
+    private function timeToMinutes(string $value): ?int
+    {
+        if (! preg_match('/^(\d{1,2}):(\d{2})$/', $value, $matches)) {
+            return null;
+        }
+
+        $hours = (int) $matches[1];
+        $minutes = (int) $matches[2];
+
+        if ($hours > 23 || $minutes > 59) {
+            return null;
+        }
+
+        return ($hours * 60) + $minutes;
+    }
+
+    private function formatDuration(int $minutes): string
+    {
+        if ($minutes <= 0) {
+            return '00:00';
+        }
+
+        return str_pad((string) intdiv($minutes, 60), 2, '0', STR_PAD_LEFT)
+            . ':'
+            . str_pad((string) ($minutes % 60), 2, '0', STR_PAD_LEFT);
     }
 
     private function decodePostedPayload(mixed $payload): array

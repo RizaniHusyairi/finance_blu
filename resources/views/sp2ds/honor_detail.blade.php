@@ -125,6 +125,8 @@
         </div>
     </div>
 
+    @include('sp2ds.partials.bku-status', ['tagihan' => $tagihan, 'sp2d' => $sp2d])
+
     {{-- B. TIMELINE --}}
     <div class="card-custom mb-4 p-4">
         <h6 class="fw-bold text-dark mb-4"><i class="bi bi-bezier2 text-primary me-2"></i> Peta Keutuhan Prosedur SP2D</h6>

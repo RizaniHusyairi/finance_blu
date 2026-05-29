@@ -43,7 +43,8 @@
 @endpush
 @section('content')
     @php
-        $canCreateTagihanJasa = auth()->user()?->hasAnyRole(['Super Admin', 'Super Admin Jasa', 'Admin Jasa', 'Admin Konsesi']) === true;
+        $canCreateTagihanJasa = auth()->user()?->hasRole('Super Admin') === true
+            || (auth()->user()?->hasAnyRole(['Admin Jasa', 'Admin Konsesi']) === true && ! auth()->user()?->hasRole('Super Admin Jasa'));
     @endphp
     <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
         <div>

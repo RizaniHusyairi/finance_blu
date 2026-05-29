@@ -186,11 +186,13 @@
             <div class="menu-title">Tagihan</div>
           </a>
           <ul>
-            <li>
-              <a href="{{ route('tagihan-jasa.create') }}">
-                <i class="material-icons-outlined">arrow_right</i>Buat Tagihan
-              </a>
-            </li>
+            @unlessrole('Super Admin Jasa')
+              <li>
+                <a href="{{ route('tagihan-jasa.create') }}">
+                  <i class="material-icons-outlined">arrow_right</i>Buat Tagihan
+                </a>
+              </li>
+            @endunlessrole
             <li>
               <a href="{{ route('admin-jasa.tagihan.log-bulanan') }}">
                 <i class="material-icons-outlined">arrow_right</i>Log Tagihan Bulanan
@@ -481,11 +483,13 @@
             <div class="menu-title">Tagihan</div>
           </a>
           <ul>
-            <li>
-              <a href="{{ route('tagihan-jasa.create') }}">
-                <i class="material-icons-outlined">arrow_right</i>Buat Tagihan
-              </a>
-            </li>
+            @hasrole('Super Admin')
+              <li>
+                <a href="{{ route('tagihan-jasa.create') }}">
+                  <i class="material-icons-outlined">arrow_right</i>Buat Tagihan
+                </a>
+              </li>
+            @endhasrole
             <li>
               <a href="{{ route('admin-jasa.tagihan.log-bulanan') }}">
                 <i class="material-icons-outlined">arrow_right</i>Log Tagihan Bulanan
@@ -558,11 +562,6 @@
             <li>
               <a href="{{ route('master-layanan-jasa.index') }}">
                 <i class="material-icons-outlined">arrow_right</i>Layanan Jasa
-              </a>
-            </li>
-            <li>
-              <a href="{{ route('tarif-layanan.index') }}">
-                <i class="material-icons-outlined">arrow_right</i>Tarif Jasa
               </a>
             </li>
             @hasrole('Super Admin')
@@ -764,6 +763,56 @@
         </li>
         @endhasrole
 
+        <li>
+          <a href="javascript:;" class="has-arrow">
+            <div class="parent-icon"><i class="material-icons-outlined">assessment</i></div>
+            <div class="menu-title">Laporan Jasa</div>
+          </a>
+          <ul>
+            <li>
+              <a href="{{ route('super-admin-jasa.laporan.rekap-tagihan') }}">
+                <i class="material-icons-outlined">arrow_right</i>Rekap Tagihan
+              </a>
+            </li>
+            <li>
+              <a href="{{ route('super-admin-jasa.laporan.rekap-layanan') }}">
+                <i class="material-icons-outlined">arrow_right</i>Rekap per Layanan
+              </a>
+            </li>
+            <li>
+              <a href="{{ route('super-admin-jasa.laporan.rekap-terima-setor') }}">
+                <i class="material-icons-outlined">arrow_right</i>Rekap Terima Setor
+              </a>
+            </li>
+            <li>
+              <a href="{{ route('super-admin-jasa.laporan.rekap-pembayaran') }}">
+                <i class="material-icons-outlined">arrow_right</i>Rekap Pembayaran
+              </a>
+            </li>
+            <li>
+              <a href="{{ route('super-admin-jasa.laporan.rekap-piutang') }}">
+                <i class="material-icons-outlined">arrow_right</i>Rekap Piutang
+              </a>
+            </li>
+            <li>
+              <a href="{{ route('super-admin-jasa.laporan.performa-mitra') }}">
+                <i class="material-icons-outlined">arrow_right</i>Performa Pembayaran Mitra
+              </a>
+            </li>
+          </ul>
+        </li>
+
+        <li>
+          <a href="javascript:;" class="has-arrow">
+            <div class="parent-icon"><i class="material-icons-outlined">how_to_reg</i></div>
+            <div class="menu-title">Verifikasi NPI</div>
+          </a>
+          <ul>
+            <li><a href="{{ route('verifikasi-bendahara-penerimaan.npi.kontrak.index') }}"><i class="material-icons-outlined">arrow_right</i>Kontrak</a></li>
+            <li><a href="{{ route('verifikasi-npi.perjaldin.index') }}"><i class="material-icons-outlined">arrow_right</i>Perjaldin</a></li>
+            <li><a href="{{ route('verifikasi-npi.honor.index') }}"><i class="material-icons-outlined">arrow_right</i>Honor</a></li>
+          </ul>
+        </li>
         @hasanyrole('Bendahara Pengeluaran|Bendahara Penerimaan')
         <li>
           <a href="javascript:;" class="has-arrow">

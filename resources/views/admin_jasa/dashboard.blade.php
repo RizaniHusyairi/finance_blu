@@ -5,6 +5,8 @@
 @php
     $rupiah = fn ($value) => 'Rp ' . number_format((float) $value, 0, ',', '.');
     $tanggal = fn ($value) => $value ? \Carbon\Carbon::parse($value)->format('d/m/Y') : '-';
+    $canCreateTagihanJasa = auth()->user()?->hasRole('Super Admin') === true
+        || (auth()->user()?->hasAnyRole(['Admin Jasa', 'Admin Konsesi']) === true && ! auth()->user()?->hasRole('Super Admin Jasa'));
     $dueBadge = function ($tagihan) {
         return match ($tagihan->status_jatuh_tempo) {
             'LEWAT_JATUH_TEMPO' => ['Lewat Jatuh Tempo', 'bg-danger'],
@@ -878,8 +880,10 @@
         <div class="card aj-card h-100 aj-quick">
             <div class="card-body d-grid gap-2">
                 <h6 class="aj-section-title mb-2">Tugas Cepat</h6>
-                <a href="{{ route('tagihan-jasa.create') }}" class="btn btn-primary fw-bold">Buat Tagihan</a>
-                <a href="{{ route('tagihan-jasa.create', ['mode' => 'konsesi']) }}" class="btn btn-outline-primary fw-bold">Atur Layanan Konsesi</a>
+                @if($canCreateTagihanJasa)
+                    <a href="{{ route('tagihan-jasa.create') }}" class="btn btn-primary fw-bold">Buat Tagihan</a>
+                    <a href="{{ route('tagihan-jasa.create', ['mode' => 'konsesi']) }}" class="btn btn-outline-primary fw-bold">Atur Layanan Konsesi</a>
+                @endif
                 <a href="{{ route('admin-jasa.tagihan.log-bulanan') }}" class="btn btn-light border fw-bold">Log Tagihan Bulanan</a>
                 <a href="{{ route('admin-jasa.tagihan.jatuh-tempo') }}" class="btn btn-light border fw-bold">Tagihan Jatuh Tempo</a>
                 <a href="{{ route('admin-jasa.mitra') }}" class="btn btn-light border fw-bold">Lihat Mitra Jasa</a>

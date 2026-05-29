@@ -49,12 +49,15 @@ class PiutangSyncService
                 }
 
                 $piutang = TransaksiPenerimaan::firstOrNew(['nomor_invoice' => $tagihan->nomor_tagihan]);
+                $existingStatus = $piutang->exists ? $piutang->status_pembayaran : null;
                 $piutang->mitra_id = $mitraPihak->id;
                 $piutang->coa_id = $coaId;
                 $piutang->tanggal_invoice = $tagihan->tanggal_publish ?? now()->toDateString();
                 $piutang->tanggal_jatuh_tempo = $tagihan->tanggal_jatuh_tempo;
                 $piutang->nominal_tagihan = (float) $tagihan->total_tagihan;
-                $piutang->status_pembayaran = 'UNPAID';
+                $piutang->status_pembayaran = in_array($existingStatus, ['PARTIAL', 'PAID'], true)
+                    ? $existingStatus
+                    : 'UNPAID';
                 $piutang->keterangan = 'Tagihan PNBP Jasa: ' . ($tagihan->nomor_tagihan)
                     . ' | Mitra: ' . ($tagihan->mitra->nama_mitra ?? '-');
                 $piutang->save();
@@ -63,6 +66,41 @@ class PiutangSyncService
             });
         } catch (\Throwable $e) {
             Log::error('PiutangSync syncFromPublished error: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Catat pembayaran sebagian ke piutang tanpa membentuk BKU.
+     *
+     * @param array{amount?: float, paid_at?: \Carbon\Carbon|string|null} $payment
+     */
+    public function syncFromPartial(TagihanJasa $tagihan, array $payment = []): ?TransaksiPenerimaan
+    {
+        try {
+            return DB::transaction(function () use ($tagihan, $payment) {
+                $piutang = TransaksiPenerimaan::where('nomor_invoice', $tagihan->nomor_tagihan)->first();
+
+                if (! $piutang) {
+                    $piutang = $this->syncFromPublished($tagihan);
+                    if (! $piutang) {
+                        return null;
+                    }
+                }
+
+                if ($piutang->status_pembayaran === 'PAID') {
+                    return $piutang;
+                }
+
+                $amount = max(0, (float) ($payment['amount'] ?? $tagihan->jumlah_dibayar ?? 0));
+                $piutang->total_dibayar = $amount;
+                $piutang->status_pembayaran = $amount > 0 ? 'PARTIAL' : 'UNPAID';
+                $piutang->save();
+
+                return $piutang;
+            });
+        } catch (\Throwable $e) {
+            Log::error('PiutangSync syncFromPartial error: ' . $e->getMessage());
             return null;
         }
     }
@@ -189,15 +227,21 @@ class PiutangSyncService
         // Pakai COA dari detail tagihan pertama, fallback ke COA penerimaan PNBP default.
         $firstDetail = $tagihan->details->first();
         if ($firstDetail && $firstDetail->kode_akun) {
-            $coa = MasterCoa::where('kode_mak_lengkap', $firstDetail->kode_akun)
-                ->orWhere('kode_akun', $firstDetail->kode_akun)
+            $kodeAkun = trim((string) $firstDetail->kode_akun);
+            $kdAkun = strtok($kodeAkun, '.') ?: $kodeAkun;
+
+            $coa = MasterCoa::query()
+                ->where('kode_mak_lengkap', $kodeAkun)
+                ->orWhere('kd_akun', $kodeAkun)
+                ->orWhere('kd_akun', $kdAkun)
                 ->first();
             if ($coa) return $coa->id;
         }
 
         // Fallback: COA penerimaan apa pun yang aktif.
-        $any = MasterCoa::where('jenis_belanja', 'PENERIMAAN')
+        $any = MasterCoa::where('jenis_akun', 'like', '4%')
             ->orWhere('nama_akun', 'like', '%PENERIMAAN%PNBP%')
+            ->orWhere('nama_akun', 'like', '%PNBP%')
             ->first();
 
         return $any?->id ?? MasterCoa::query()->value('id');

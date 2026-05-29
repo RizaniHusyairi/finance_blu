@@ -11,6 +11,18 @@
             'desc' => 'Tagihan manual, PAX PJP2U, konsesi, listrik, atau air.',
             'tone' => 'blue',
             'ui' => ['Laporan Harian', 'Data Mitra', 'Tarif Aktif'],
+            'video' => null,
+            'guide' => [
+                'Cek data mitra yang akan ditagihkan: NPWP, alamat, email, dan nomor WhatsApp.',
+                'Pastikan layanan dan tarif aktif sudah sesuai dengan jenis tagihan.',
+                'Untuk PJP2U/konsesi/utilitas, gunakan laporan yang sudah diverifikasi sebagai dasar tagihan.',
+            ],
+            'tips' => 'Jangan lanjut buat tagihan kalau layanan belum punya tarif atau kode akun.',
+            'short' => [
+                ['icon' => 'bi-search', 'title' => 'Mulai dari data sumber', 'body' => 'Pilih laporan manual, PJP2U, konsesi, listrik, air, atau rincian Garbarata.'],
+                ['icon' => 'bi-building-check', 'title' => 'Cek mitra', 'body' => 'Pastikan NPWP, alamat, email, dan WhatsApp mitra sudah benar.'],
+                ['icon' => 'bi-tags', 'title' => 'Cek tarif aktif', 'body' => 'Layanan harus aktif, punya tarif, satuan, dan kode pembayaran.'],
+            ],
         ],
         [
             'no' => '02',
@@ -19,6 +31,19 @@
             'desc' => 'Pilih mitra, layanan, volume, tarif, dan dokumen dasar.',
             'tone' => 'cyan',
             'ui' => ['Form Tagihan', 'Rincian Layanan', 'Simpan Draft'],
+            'video' => null,
+            'guide' => [
+                'Buka menu Buat Tagihan lalu pilih mitra jasa.',
+                'Pilih dokumen dasar jika tagihan terkait kontrak.',
+                'Tambahkan layanan, isi volume, tarif, satuan, dan keterangan.',
+                'Simpan draf agar sistem membuat nomor tagihan dan draft surat pengantar.',
+            ],
+            'tips' => 'Untuk Garbarata, isi rincian penerbangan agar volume per 2 jam dihitung otomatis.',
+            'short' => [
+                ['icon' => 'bi-person-vcard', 'title' => 'Pilih mitra', 'body' => 'Buka Buat Tagihan, pilih mitra, tanggal, dan dokumen dasar.'],
+                ['icon' => 'bi-list-check', 'title' => 'Tambah layanan', 'body' => 'Isi layanan, volume, tarif, satuan, serta keterangan perhitungan.'],
+                ['icon' => 'bi-save', 'title' => 'Simpan draf', 'body' => 'Sistem membuat nomor tagihan dan draft surat pengantar otomatis.'],
+            ],
         ],
         [
             'no' => '03',
@@ -27,6 +52,19 @@
             'desc' => 'Sistem membuat surat pengantar dengan QR keaslian dokumen.',
             'tone' => 'indigo',
             'ui' => ['Surat Pengantar', 'QR Validasi', 'Preview PDF'],
+            'video' => null,
+            'guide' => [
+                'Buka detail tagihan lalu cek bagian Surat Pengantar.',
+                'Gunakan Preview Draft untuk memastikan kop, nomor surat, dan nota tagihan sudah benar.',
+                'Jika nomor/tanggal/perihal perlu diganti, edit data surat pengantar sebelum verifikasi final.',
+                'Draft yang dipreview akan tersimpan ke arsip draft.',
+            ],
+            'tips' => 'QR pada draft hanya untuk validasi dokumen, bukan QR tanda tangan final.',
+            'short' => [
+                ['icon' => 'bi-file-earmark-pdf', 'title' => 'Preview draft', 'body' => 'Buka detail tagihan dan cek tampilan surat pengantar.'],
+                ['icon' => 'bi-pencil-square', 'title' => 'Edit data surat', 'body' => 'Sesuaikan nomor surat, tanggal, atau perihal sebelum final.'],
+                ['icon' => 'bi-qr-code', 'title' => 'QR validasi', 'body' => 'Draft memakai QR keaslian dokumen, belum QR tanda tangan.'],
+            ],
         ],
         [
             'no' => '04',
@@ -35,6 +73,19 @@
             'desc' => 'Tagihan masuk verifikasi. Jika revisi, Admin Jasa edit ulang.',
             'tone' => 'amber',
             'ui' => ['Koordinator', 'Kasubag', 'Kaban'],
+            'video' => null,
+            'guide' => [
+                'Setelah tagihan dibuat, workflow berjalan ke verifikator sesuai urutan.',
+                'Pantau status pada detail tagihan atau log tagihan bulanan.',
+                'Jika ada revisi, baca catatan verifikator lalu edit ulang data tagihan.',
+                'Kirim ulang agar tagihan kembali masuk proses verifikasi.',
+            ],
+            'tips' => 'Catatan revisi sebaiknya diselesaikan dulu sebelum membuat draft surat ulang.',
+            'short' => [
+                ['icon' => 'bi-send-check', 'title' => 'Masuk verifikasi', 'body' => 'Tagihan berjalan ke Koordinator, Kasubag, lalu pejabat final.'],
+                ['icon' => 'bi-chat-left-text', 'title' => 'Baca catatan', 'body' => 'Jika revisi, lihat catatan verifikator di detail tagihan.'],
+                ['icon' => 'bi-arrow-repeat', 'title' => 'Kirim ulang', 'body' => 'Perbaiki data lalu kirim ulang agar workflow lanjut kembali.'],
+            ],
         ],
         [
             'no' => '05',
@@ -43,6 +94,19 @@
             'desc' => 'Setelah disetujui final, generate surat final bertanda tangan elektronik.',
             'tone' => 'green',
             'ui' => ['Generate Final', 'TTD KPA/PLH', 'Hash Cocok'],
+            'video' => null,
+            'guide' => [
+                'Tunggu sampai semua verifikator menyetujui tagihan.',
+                'Sistem membuat Surat Final TTD setelah verifikasi terakhir selesai.',
+                'Buka Lihat Surat Pengantar TTD untuk memastikan QR tanda tangan muncul.',
+                'Scan QR untuk mengecek halaman TTE dan hash dokumen.',
+            ],
+            'tips' => 'Surat final TTD tidak perlu digenerate manual berulang jika sudah tersedia.',
+            'short' => [
+                ['icon' => 'bi-check2-all', 'title' => 'Tunggu final', 'body' => 'Pastikan semua verifikator sudah menyetujui tagihan.'],
+                ['icon' => 'bi-patch-check', 'title' => 'Final TTD otomatis', 'body' => 'Surat final bertanda tangan muncul setelah verifikasi terakhir.'],
+                ['icon' => 'bi-fingerprint', 'title' => 'Scan QR TTE', 'body' => 'QR menampilkan identitas penandatangan dan hash dokumen.'],
+            ],
         ],
         [
             'no' => '06',
@@ -51,6 +115,19 @@
             'desc' => 'Sistem membuat VA dan mengirim notifikasi WhatsApp ke mitra.',
             'tone' => 'teal',
             'ui' => ['Publish', 'Virtual Account', 'WhatsApp'],
+            'video' => null,
+            'guide' => [
+                'Pastikan status workflow sudah final dan Surat Final TTD tersedia.',
+                'Klik Publish pada detail tagihan.',
+                'Sistem membuat Virtual Account dan link tagihan untuk mitra.',
+                'Cek nomor VA dan pesan notifikasi sebelum dikirimkan ke mitra.',
+            ],
+            'tips' => 'Publish dikunci jika surat final TTD belum tersedia.',
+            'short' => [
+                ['icon' => 'bi-lock', 'title' => 'Cek syarat publish', 'body' => 'Workflow harus final dan Surat Pengantar TTD harus tersedia.'],
+                ['icon' => 'bi-credit-card-2-front', 'title' => 'VA dibuat', 'body' => 'Saat publish, sistem membuat Virtual Account pembayaran.'],
+                ['icon' => 'bi-whatsapp', 'title' => 'Kirim ke mitra', 'body' => 'Link tagihan dan informasi VA siap dikirim ke WhatsApp mitra.'],
+            ],
         ],
         [
             'no' => '07',
@@ -59,6 +136,19 @@
             'desc' => 'Pembayaran masuk dari VA atau ditandai lunas manual sesuai kewenangan.',
             'tone' => 'purple',
             'ui' => ['VA Callback', 'Lunas Manual', 'Denda Jatuh Tempo'],
+            'video' => null,
+            'guide' => [
+                'Pantau status pembayaran dari log tagihan bulanan.',
+                'Pembayaran VA akan mengubah status setelah callback diterima.',
+                'Jika pembayaran dicatat manual, pastikan bukti setor sudah sesuai.',
+                'Cek jatuh tempo dan denda jika tagihan belum lunas.',
+            ],
+            'tips' => 'Status bayar dan status workflow adalah dua hal berbeda.',
+            'short' => [
+                ['icon' => 'bi-hourglass-split', 'title' => 'Pantau pembayaran', 'body' => 'Lihat status bayar di log tagihan bulanan.'],
+                ['icon' => 'bi-broadcast', 'title' => 'Callback VA', 'body' => 'Pembayaran VA mengubah status setelah callback diterima.'],
+                ['icon' => 'bi-exclamation-triangle', 'title' => 'Cek jatuh tempo', 'body' => 'Tagihan lewat tempo dapat dikenakan denda sesuai aturan.'],
+            ],
         ],
         [
             'no' => '08',
@@ -67,6 +157,19 @@
             'desc' => 'Draft, final TTD, status, dan pembayaran tersimpan untuk audit.',
             'tone' => 'slate',
             'ui' => ['Arsip Aktif', 'Riwayat Versi', 'Rekap Bulanan'],
+            'video' => null,
+            'guide' => [
+                'Buka detail tagihan untuk melihat arsip surat pengantar.',
+                'Gunakan Log Tagihan Bulanan untuk monitoring rekap tagihan.',
+                'Export PDF/Excel jika diperlukan untuk laporan bulanan.',
+                'Pastikan arsip final TTD aktif adalah versi terbaru.',
+            ],
+            'tips' => 'Riwayat versi tetap disimpan untuk kebutuhan audit.',
+            'short' => [
+                ['icon' => 'bi-folder2-open', 'title' => 'Buka arsip', 'body' => 'Draft dan final TTD tersedia di detail tagihan.'],
+                ['icon' => 'bi-clock-history', 'title' => 'Riwayat versi', 'body' => 'Versi aktif terbaru tampil, versi lama tetap jadi riwayat.'],
+                ['icon' => 'bi-file-earmark-spreadsheet', 'title' => 'Rekap bulanan', 'body' => 'Export PDF atau Excel untuk laporan dan audit.'],
+            ],
         ],
     ];
 
@@ -229,12 +332,15 @@
         position: relative;
         overflow: hidden;
         min-height: 228px;
+        width: 100%;
+        text-align: left;
         border: 1px solid #e2e8f0;
         border-radius: 16px;
         padding: 16px;
         background:
             linear-gradient(180deg, rgba(255, 255, 255, .94) 0%, rgba(248, 250, 252, .96) 100%);
         box-shadow: 0 14px 28px rgba(15, 23, 42, .06);
+        cursor: pointer;
         translate: 0 0;
         transform: translateY(0);
         animation: cardFloat 4.8s ease-in-out infinite;
@@ -262,6 +368,10 @@
         animation: cardShine 6s ease-in-out infinite;
         animation-delay: calc(var(--delay) + 400ms);
         pointer-events: none;
+    }
+    .flow-card:focus-visible {
+        outline: 4px solid rgba(59, 130, 246, .25);
+        outline-offset: 3px;
     }
     .flow-card:hover {
         transform: translateY(-8px) scale(1.015);
@@ -328,6 +438,15 @@
         padding: 4px 8px;
         white-space: nowrap;
     }
+    .flow-open {
+        position: absolute;
+        top: 14px;
+        right: 14px;
+        color: #2563eb;
+        font-size: .78rem;
+        font-weight: 900;
+        opacity: .78;
+    }
     .flow-progress {
         position: absolute;
         left: 16px;
@@ -353,6 +472,210 @@
         color: #1e3a8a;
         border-radius: 14px;
         padding: 12px 14px;
+    }
+    .tutorial-video {
+        border: 1px solid #dbeafe;
+        border-radius: 16px;
+        background:
+            radial-gradient(circle at 18% 12%, rgba(59, 130, 246, .22), transparent 30%),
+            radial-gradient(circle at 84% 78%, rgba(20, 184, 166, .18), transparent 28%),
+            linear-gradient(135deg, #eff6ff, #ffffff);
+        min-height: 430px;
+        display: grid;
+        place-items: center;
+        overflow: hidden;
+        padding: 16px;
+    }
+    .tutorial-video iframe,
+    .tutorial-video video {
+        width: 100%;
+        min-height: 260px;
+        border: 0;
+        display: block;
+    }
+    .tutorial-placeholder {
+        max-width: 420px;
+        padding: 24px;
+        text-align: center;
+        color: #475569;
+    }
+    .tutorial-placeholder i {
+        color: #2563eb;
+        font-size: 42px;
+    }
+    .short-player {
+        position: relative;
+        width: min(300px, 100%);
+        aspect-ratio: 9 / 16;
+        border-radius: 30px;
+        overflow: hidden;
+        color: #fff;
+        background:
+            radial-gradient(circle at 18% 12%, rgba(125, 211, 252, .38), transparent 28%),
+            radial-gradient(circle at 86% 86%, rgba(34, 197, 94, .34), transparent 28%),
+            linear-gradient(155deg, #0f172a 0%, #164e63 52%, #14532d 100%);
+        box-shadow: 0 24px 52px rgba(15, 23, 42, .28);
+    }
+    .short-player::before {
+        content: "";
+        position: absolute;
+        inset: 12px;
+        border: 1px solid rgba(255, 255, 255, .18);
+        border-radius: 24px;
+        pointer-events: none;
+    }
+    .short-topbar {
+        position: absolute;
+        z-index: 3;
+        top: 18px;
+        left: 18px;
+        right: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        font-size: .72rem;
+        font-weight: 900;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+    }
+    .short-live {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        border: 1px solid rgba(255,255,255,.28);
+        border-radius: 999px;
+        background: rgba(255,255,255,.14);
+        padding: 5px 9px;
+        backdrop-filter: blur(10px);
+    }
+    .short-live span {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: #22c55e;
+        box-shadow: 0 0 0 0 rgba(34, 197, 94, .9);
+        animation: shortPulse 1.6s ease-out infinite;
+    }
+    .short-brand {
+        opacity: .8;
+    }
+    .short-scene {
+        position: absolute;
+        inset: 74px 20px 86px;
+        display: grid;
+        align-content: center;
+        gap: 14px;
+        opacity: 0;
+        transform: translateY(18px) scale(.98);
+        animation: shortScene 12s ease-in-out infinite;
+        animation-delay: var(--scene-delay);
+    }
+    .short-scene-icon {
+        width: 68px;
+        height: 68px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 22px;
+        color: #fff;
+        background: rgba(255,255,255,.16);
+        border: 1px solid rgba(255,255,255,.22);
+        font-size: 32px;
+        box-shadow: 0 16px 34px rgba(15,23,42,.22);
+        backdrop-filter: blur(12px);
+    }
+    .short-scene h4 {
+        color: #fff;
+        font-size: 1.34rem;
+        line-height: 1.08;
+        font-weight: 950;
+        margin: 0;
+    }
+    .short-scene p {
+        color: rgba(255,255,255,.82);
+        font-size: .92rem;
+        line-height: 1.42;
+        font-weight: 700;
+        margin: 0;
+    }
+    .short-caption {
+        position: absolute;
+        left: 20px;
+        right: 20px;
+        bottom: 48px;
+        z-index: 3;
+        display: grid;
+        gap: 8px;
+    }
+    .short-progress {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 6px;
+    }
+    .short-progress span {
+        height: 4px;
+        border-radius: 999px;
+        background: rgba(255,255,255,.24);
+        overflow: hidden;
+    }
+    .short-progress span::after {
+        content: "";
+        display: block;
+        height: 100%;
+        width: 0;
+        border-radius: inherit;
+        background: #fff;
+        animation: shortBar 12s linear infinite;
+        animation-delay: var(--bar-delay);
+    }
+    .short-caption small {
+        color: rgba(255,255,255,.7);
+        font-size: .72rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: .08em;
+    }
+    .tutorial-list {
+        counter-reset: guide-counter;
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: grid;
+        gap: 10px;
+    }
+    .tutorial-list li {
+        counter-increment: guide-counter;
+        display: grid;
+        grid-template-columns: 32px 1fr;
+        gap: 10px;
+        align-items: start;
+        padding: 12px;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        background: #fff;
+    }
+    .tutorial-list li::before {
+        content: counter(guide-counter);
+        width: 28px;
+        height: 28px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 999px;
+        background: #2563eb;
+        color: #fff;
+        font-size: .78rem;
+        font-weight: 900;
+    }
+    .tutorial-tip {
+        border: 1px solid #bfdbfe;
+        border-radius: 14px;
+        background: #eff6ff;
+        color: #1e3a8a;
+        padding: 12px 14px;
+        font-size: .88rem;
+        font-weight: 700;
     }
     @keyframes heroGlow {
         from { transform: translate3d(0, 0, 0) scale(.92); opacity: .65; }
@@ -388,6 +711,20 @@
         0%, 100% { transform: translateX(-62%); }
         50% { transform: translateX(78%); }
     }
+    @keyframes shortPulse {
+        70% { box-shadow: 0 0 0 11px rgba(34, 197, 94, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+    }
+    @keyframes shortScene {
+        0%, 7% { opacity: 0; transform: translateY(20px) scale(.98); }
+        10%, 29% { opacity: 1; transform: translateY(0) scale(1); }
+        34%, 100% { opacity: 0; transform: translateY(-18px) scale(.98); }
+    }
+    @keyframes shortBar {
+        0%, 7% { width: 0; }
+        10%, 29% { width: 100%; }
+        34%, 100% { width: 100%; }
+    }
     @media (max-width: 1199px) {
         .flow-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .flow-card:nth-child(even)::after { display: none; }
@@ -407,6 +744,15 @@
         .flow-icon,
         .flow-progress span {
             animation: none !important;
+        }
+        .short-live span,
+        .short-scene,
+        .short-progress span::after {
+            animation: none !important;
+        }
+        .short-scene.is-first {
+            opacity: 1;
+            transform: none;
         }
         .flow-card:hover {
             transform: none;
@@ -442,7 +788,8 @@
     </div>
     <div class="flow-grid">
         @foreach($flowSteps as $flow)
-            <div class="flow-card" style="--delay: {{ $loop->index * 110 }}ms">
+            <button type="button" class="flow-card" style="--delay: {{ $loop->index * 110 }}ms" data-bs-toggle="modal" data-bs-target="#flowGuideModal{{ $flow['no'] }}" aria-label="Buka panduan {{ $flow['title'] }}">
+                <span class="flow-open"><i class="bi bi-play-circle me-1"></i>Panduan</span>
                 <div class="flow-icon tone-{{ $flow['tone'] }}">
                     <i class="bi {{ $flow['icon'] }}"></i>
                 </div>
@@ -455,10 +802,84 @@
                     @endforeach
                 </div>
                 <div class="flow-progress"><span></span></div>
-            </div>
+            </button>
         @endforeach
     </div>
 </div>
+
+@foreach($flowSteps as $flow)
+    <div class="modal fade" id="flowGuideModal{{ $flow['no'] }}" tabindex="-1" aria-labelledby="flowGuideModalLabel{{ $flow['no'] }}" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content border-0 rounded-4 shadow-lg">
+                <div class="modal-header border-0 bg-primary text-white">
+                    <div class="d-flex align-items-center gap-3">
+                        <span class="flow-icon tone-{{ $flow['tone'] }} mb-0">
+                            <i class="bi {{ $flow['icon'] }}"></i>
+                        </span>
+                        <div>
+                            <div class="small fw-bold text-white-50 text-uppercase">Step {{ $flow['no'] }}</div>
+                            <h5 class="modal-title fw-bold" id="flowGuideModalLabel{{ $flow['no'] }}">{{ $flow['title'] }}</h5>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Tutup"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="row g-4">
+                        <div class="col-lg-6">
+                            <div class="tutorial-video">
+                                @if(!empty($flow['video']))
+                                    @if(str_contains($flow['video'], 'youtube.com') || str_contains($flow['video'], 'youtu.be'))
+                                        <iframe src="{{ $flow['video'] }}" title="Video panduan {{ $flow['title'] }}" allowfullscreen></iframe>
+                                    @else
+                                        <video controls preload="metadata">
+                                            <source src="{{ $flow['video'] }}">
+                                        </video>
+                                    @endif
+                                @else
+                                    <div class="short-player" aria-label="Short tutorial {{ $flow['title'] }}">
+                                        <div class="short-topbar">
+                                            <span class="short-live"><span></span>Short</span>
+                                            <span class="short-brand">Admin Jasa</span>
+                                        </div>
+                                        @foreach($flow['short'] as $scene)
+                                            <div class="short-scene {{ $loop->first ? 'is-first' : '' }}" style="--scene-delay: {{ $loop->index * 4 }}s">
+                                                <span class="short-scene-icon"><i class="bi {{ $scene['icon'] }}"></i></span>
+                                                <h4>{{ $scene['title'] }}</h4>
+                                                <p>{{ $scene['body'] }}</p>
+                                            </div>
+                                        @endforeach
+                                        <div class="short-caption">
+                                            <div class="short-progress">
+                                                @foreach($flow['short'] as $scene)
+                                                    <span style="--bar-delay: {{ $loop->index * 4 }}s"></span>
+                                                @endforeach
+                                            </div>
+                                            <small>Durasi pendek - loop otomatis</small>
+                                        </div>
+                                    </div>
+                                @endif
+                            </div>
+                        </div>
+                        <div class="col-lg-6">
+                            <div class="small text-uppercase fw-bold text-primary mb-2">Tata Cara Penggunaan</div>
+                            <ol class="tutorial-list">
+                                @foreach($flow['guide'] as $item)
+                                    <li>{{ $item }}</li>
+                                @endforeach
+                            </ol>
+                            <div class="tutorial-tip mt-3">
+                                <i class="bi bi-lightbulb me-1"></i>{{ $flow['tips'] }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 bg-light">
+                    <button type="button" class="btn btn-light border fw-bold" data-bs-dismiss="modal">Tutup</button>
+                </div>
+            </div>
+        </div>
+    </div>
+@endforeach
 
 <div class="row g-4">
     <div class="col-lg-8">

@@ -3,6 +3,8 @@
 
 @section('content')
 @php
+    $canCreateTagihanJasa = auth()->user()?->hasRole('Super Admin') === true
+        || (auth()->user()?->hasAnyRole(['Admin Jasa', 'Admin Konsesi']) === true && ! auth()->user()?->hasRole('Super Admin Jasa'));
     $rupiah = fn ($value) => $value !== null ? 'Rp ' . number_format((float) $value, 0, ',', '.') : '-';
     $angka = fn ($value) => $value !== null ? number_format((float) $value, 2, ',', '.') : '-';
     $tanggal = fn ($value) => $value ? \Carbon\Carbon::parse($value)->format('d/m/Y') : '-';
@@ -171,9 +173,11 @@
                     <i class="bi bi-lightning me-1"></i>Aksi
                 </div>
                 <div class="card-body d-grid gap-2">
-                    <a href="{{ route('tagihan-jasa.create', ['utilitas_id' => $laporan->id]) }}" class="btn btn-primary fw-bold jasa-icon-btn" title="Buat tagihan" aria-label="Buat tagihan">
-                        <i class="bi bi-receipt"></i>
-                    </a>
+                    @if($canCreateTagihanJasa)
+                        <a href="{{ route('tagihan-jasa.create', ['utilitas_id' => $laporan->id]) }}" class="btn btn-primary fw-bold jasa-icon-btn" title="Buat tagihan" aria-label="Buat tagihan">
+                            <i class="bi bi-receipt"></i>
+                        </a>
+                    @endif
                     <button type="button" class="btn btn-outline-danger fw-bold jasa-icon-btn" data-bs-toggle="modal" data-bs-target="#modalTolak" title="Tolak laporan" aria-label="Tolak laporan">
                         <i class="bi bi-x-circle"></i>
                     </button>

@@ -108,6 +108,8 @@
     </div>
 </div>
 
+@include('sp2ds.partials.bku-status', ['tagihan' => $tagihan, 'sp2d' => $sp2d])
+
 {{-- 2. PANEL STATUS & PROGRESS --}}
 <div class="card border-0 shadow-sm mb-4">
     <div class="card-body p-4">

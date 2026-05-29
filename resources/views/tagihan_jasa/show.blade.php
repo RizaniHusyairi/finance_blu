@@ -38,6 +38,13 @@
             'kasubag' => 'KASUBBAG',
         ]);
     };
+
+    $piutangJasa = $tagihan->transaksiPenerimaan;
+    $bkuPenerimaan = $piutangJasa?->bukuKasUmums
+        ?->where('arus_kas', 'DEBIT_MASUK')
+        ->sortByDesc('tanggal_transaksi')
+        ->sortByDesc('id')
+        ->first();
 @endphp
 <style>
     /* ===================== Tagihan Jasa Detail â€“ Themed UI ===================== */
@@ -649,6 +656,45 @@
                         @endif
                     </div>
                 @endif
+
+                @if(in_array($tagihan->status, ['PUBLISHED', 'LUNAS'], true))
+                    <div class="alert alert-light border mt-4 mb-0">
+                        <div class="d-flex flex-wrap align-items-start justify-content-between gap-3">
+                            <div>
+                                <div class="small text-muted fw-bold text-uppercase">Status Piutang</div>
+                                @if($piutangJasa)
+                                    <div class="fw-semibold">
+                                        {{ $piutangJasa->nomor_invoice }}
+                                        <span class="badge {{ $piutangJasa->status_pembayaran === 'PAID' ? 'bg-success' : ($piutangJasa->status_pembayaran === 'PARTIAL' ? 'bg-warning text-dark' : 'bg-secondary') }}">
+                                            {{ $piutangJasa->status_pembayaran }}
+                                        </span>
+                                    </div>
+                                    <div class="small text-muted">
+                                        Dibayar Rp {{ number_format($piutangJasa->total_dibayar, 0, ',', '.') }} dari Rp {{ number_format($piutangJasa->nominal_tagihan, 0, ',', '.') }}
+                                    </div>
+                                @else
+                                    <div class="fw-semibold text-warning">Belum tercatat di piutang</div>
+                                    <div class="small text-muted">Piutang akan dibuat otomatis saat publish ulang/sinkronisasi pembayaran.</div>
+                                @endif
+                            </div>
+                            <div>
+                                <div class="small text-muted fw-bold text-uppercase">Status BKU Masuk</div>
+                                @if($bkuPenerimaan)
+                                    <div class="fw-semibold text-success">{{ $bkuPenerimaan->nomor_bukti }}</div>
+                                    <div class="small text-muted">
+                                        {{ optional($bkuPenerimaan->tanggal_transaksi)->format('d M Y') }} | Rp {{ number_format($bkuPenerimaan->nominal, 0, ',', '.') }}
+                                    </div>
+                                    <a href="{{ route('pembukuan.bku.show', $bkuPenerimaan->id) }}" class="btn btn-sm btn-outline-success mt-2">
+                                        <i class="bi bi-eye me-1"></i>Lihat BKU
+                                    </a>
+                                @else
+                                    <div class="fw-semibold text-muted">Belum masuk BKU</div>
+                                    <div class="small text-muted">BKU masuk dibuat otomatis setelah tagihan lunas.</div>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                @endif
             </div>
         </div>
     </div>
@@ -751,18 +797,9 @@
                         <i class="bi bi-eye me-1"></i> Preview Draft Surat Pengantar
                     </a>
                     @if($tagihan->file_surat_pengantar_final)
-                        <a href="{{ Storage::url($tagihan->file_surat_pengantar_final) }}" target="_blank" class="btn btn-success fw-bold">
+                        <a href="{{ route('tagihan-jasa.surat-pengantar-final.view', $tagihan->id) }}" target="_blank" class="btn btn-success fw-bold">
                             <i class="bi bi-file-earmark-check me-1"></i> Lihat Surat Pengantar TTD
                         </a>
-                    @endif
-                    @if($workflowApproved && $canManageTagihanJasa)
-                        <form action="{{ route('tagihan-jasa.surat-pengantar-final.generate', $tagihan->id) }}" method="POST">
-                            @csrf
-                            <button type="submit" class="btn btn-warning w-100 fw-bold" onclick="return confirm('Generate surat pengantar final bertanda tangan elektronik?')">
-                                <i class="bi bi-qr-code me-1"></i>
-                                {{ $tagihan->file_surat_pengantar_final ? 'Generate Ulang Surat Final TTD' : 'Generate Surat Final TTD' }}
-                            </button>
-                        </form>
                     @endif
                 </div>
 
@@ -779,7 +816,7 @@
                         </div>
                         <div class="list-group small">
                             @foreach($arsipSuratPengantar->take(5) as $arsip)
-                                <a href="{{ Storage::disk($arsip->disk ?: 'public')->url($arsip->path_file) }}" target="_blank" class="list-group-item list-group-item-action d-flex justify-content-between gap-2 align-items-start">
+                                <a href="{{ route('tagihan-jasa.surat-pengantar-arsip.view', [$tagihan->id, $arsip->id]) }}" target="_blank" class="list-group-item list-group-item-action d-flex justify-content-between gap-2 align-items-start">
                                     <span>
                                         <span class="fw-bold d-block">
                                             {{ $arsip->jenis_dokumen === 'SURAT_PENGANTAR_FINAL_TTD' ? 'Final TTD' : 'Draft' }}
