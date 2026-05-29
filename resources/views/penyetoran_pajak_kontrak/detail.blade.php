@@ -176,7 +176,7 @@
                                 <div class="fw-semibold small">{{ $arsip->jenis_dokumen }}</div>
                                 <div class="text-muted small">{{ $arsip->nama_file_asli }} &bull; {{ $arsip->uploader?->name ?? '-' }} &bull; {{ $arsip->uploaded_at?->format('d/m/Y H:i') ?? '-' }}</div>
                             </div>
-                            <a href="{{ Storage::url($arsip->path_file) }}" target="_blank" class="btn btn-sm btn-outline-primary"><i class="bi bi-download"></i></a>
+                            <a href="{{ route('arsip-sensitif.download', $arsip->id) }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-download"></i></a>
                         </div>
                     @empty
                         <div class="text-muted small text-center py-3"><i class="bi bi-folder2-open d-block fs-3 mb-2 opacity-25"></i>Belum ada lampiran.</div>
@@ -240,7 +240,7 @@
                                 @if($arsipBilling)
                                     <div class="mt-1 small text-success">
                                         <i class="bi bi-paperclip"></i>
-                                        <a href="{{ Storage::url($arsipBilling->path_file) }}" target="_blank" class="text-success fw-semibold">
+                                        <a href="{{ route('arsip-sensitif.download', $arsipBilling->id) }}" class="text-success fw-semibold">
                                             {{ $arsipBilling->nama_file_asli }}
                                         </a>
                                         <span class="text-muted">— upload baru untuk mengganti.</span>
@@ -294,10 +294,10 @@
                         <div class="small">NTPN: <span class="font-monospace fw-bold">{{ $potongan->ntpn }}</span></div>
                         <div class="small">Billing: <span class="font-monospace fw-bold">{{ $potongan->kode_billing }}</span></div>
                         @if($arsipBpn)
-                            <div class="small mt-1"><a href="{{ Storage::url($arsipBpn->path_file) }}" target="_blank" class="text-success"><i class="bi bi-file-earmark-pdf"></i> Lihat BPN</a></div>
+                            <div class="small mt-1"><a href="{{ route('arsip-sensitif.download', $arsipBpn->id) }}" class="text-success"><i class="bi bi-file-earmark-pdf"></i> Lihat BPN</a></div>
                         @endif
                         @if($arsipBppu)
-                            <div class="small"><a href="{{ Storage::url($arsipBppu->path_file) }}" target="_blank" class="text-success"><i class="bi bi-file-earmark-pdf"></i> Lihat BPPU</a></div>
+                            <div class="small"><a href="{{ route('arsip-sensitif.download', $arsipBppu->id) }}" class="text-success"><i class="bi bi-file-earmark-pdf"></i> Lihat BPPU</a></div>
                         @endif
                     </div>
                 </div>

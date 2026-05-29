@@ -233,7 +233,7 @@
                                         <div class="t">Tagihan SELESAI &amp; bukti transfer terunggah</div>
                                         <div class="s">SP2D telah dicairkan dan tercatat ke BKU.</div>
                                         @if($buktiTransferSp2d)
-                                            <a href="{{ \Illuminate\Support\Facades\Storage::url($buktiTransferSp2d->path_file) }}" target="_blank" class="small fw-semibold text-primary d-inline-flex align-items-center gap-1 mt-1"><i class="material-icons-outlined" style="font-size:15px;">visibility</i> Lihat bukti transfer</a>
+                                            <a href="{{ route('arsip-sensitif.download', $buktiTransferSp2d->id) }}" class="small fw-semibold text-primary d-inline-flex align-items-center gap-1 mt-1"><i class="material-icons-outlined" style="font-size:15px;">visibility</i> Lihat bukti transfer</a>
                                         @endif
                                     </div>
                                 </div>

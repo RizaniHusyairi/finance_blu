@@ -8,7 +8,9 @@ use App\Models\LogStatusDokumen;
 use App\Models\RekeningBank;
 use App\Models\Tagihan;
 use App\Models\User;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
 class BkuPostingService
@@ -27,55 +29,76 @@ class BkuPostingService
 
         $nomorBukti = $sp2d->nomor_sp2d ?: $tagihan->nomor_tagihan;
 
-        $existing = BukuKasUmum::query()
-            ->where('referensi_pengeluaran_id', $tagihan->id)
+        return DB::transaction(function () use ($tagihan, $sp2d, $catatan, $nominal, $nomorBukti) {
+            // Serialize posting per-tagihan untuk mencegah race condition (TOCTOU) double-click.
+            Tagihan::whereKey($tagihan->id)->lockForUpdate()->first();
+
+            $existing = $this->findExistingBku($tagihan->id, $nomorBukti);
+
+            if ($existing) {
+                return $existing;
+            }
+
+            $rekening = $this->resolveSumberRekening($tagihan, $sp2d);
+
+            if (! $rekening) {
+                throw new RuntimeException('Rekening sumber BKU tidak ditemukan. Lengkapi rekening sumber pada Standing Instruction atau rekening default Bendahara Pengeluaran.');
+            }
+
+            $nominalTransaksi = $nominal ?? $this->resolveNominal($tagihan, $sp2d);
+
+            if ($nominalTransaksi <= 0) {
+                throw new RuntimeException('Nominal BKU tidak valid.');
+            }
+
+            $tanggalTransaksi = $sp2d->tanggal_sp2d ?? now();
+            $saldoAkhir = $this->nextSaldoAkhir($rekening, $nominalTransaksi);
+
+            try {
+                $bku = BukuKasUmum::create([
+                    'tanggal_transaksi' => $tanggalTransaksi,
+                    'nomor_bukti' => $nomorBukti,
+                    'uraian' => $catatan ?: $this->defaultUraian($tagihan, $sp2d),
+                    'arus_kas' => 'KREDIT_KELUAR',
+                    'nominal' => $nominalTransaksi,
+                    'saldo_akhir' => $saldoAkhir,
+                    'sumber_rekening_id' => $rekening->id,
+                    'referensi_pengeluaran_id' => $tagihan->id,
+                    'referensi_penerimaan_id' => null,
+                ]);
+            } catch (QueryException $e) {
+                // Pelanggaran unique akibat race: baris BKU sudah dibuat request lain.
+                $existing = $this->findExistingBku($tagihan->id, $nomorBukti);
+
+                if ($existing) {
+                    return $existing;
+                }
+
+                throw $e;
+            }
+
+            LogStatusDokumen::create([
+                'dokumen_type' => Tagihan::class,
+                'dokumen_id' => $tagihan->id,
+                'user_id' => Auth::id(),
+                'role_saat_itu' => Auth::user()?->getRoleNames()->first() ?? 'SYSTEM',
+                'status_sebelumnya' => $tagihan->status,
+                'status_baru' => $tagihan->status,
+                'aksi' => 'POST_BKU',
+                'catatan' => "Tagihan masuk BKU dengan nomor bukti {$nomorBukti}.",
+                'ip_address' => request()?->ip(),
+            ]);
+
+            return $bku;
+        });
+    }
+
+    private function findExistingBku(int $tagihanId, string $nomorBukti): ?BukuKasUmum
+    {
+        return BukuKasUmum::query()
+            ->where('referensi_pengeluaran_id', $tagihanId)
             ->where('nomor_bukti', $nomorBukti)
             ->first();
-
-        if ($existing) {
-            return $existing;
-        }
-
-        $rekening = $this->resolveSumberRekening($tagihan, $sp2d);
-
-        if (! $rekening) {
-            throw new RuntimeException('Rekening sumber BKU tidak ditemukan. Lengkapi rekening sumber pada Standing Instruction atau rekening default Bendahara Pengeluaran.');
-        }
-
-        $nominalTransaksi = $nominal ?? $this->resolveNominal($tagihan, $sp2d);
-
-        if ($nominalTransaksi <= 0) {
-            throw new RuntimeException('Nominal BKU tidak valid.');
-        }
-
-        $tanggalTransaksi = $sp2d->tanggal_sp2d ?? now();
-        $saldoAkhir = $this->nextSaldoAkhir($rekening, $nominalTransaksi);
-
-        $bku = BukuKasUmum::create([
-            'tanggal_transaksi' => $tanggalTransaksi,
-            'nomor_bukti' => $nomorBukti,
-            'uraian' => $catatan ?: $this->defaultUraian($tagihan, $sp2d),
-            'arus_kas' => 'KREDIT_KELUAR',
-            'nominal' => $nominalTransaksi,
-            'saldo_akhir' => $saldoAkhir,
-            'sumber_rekening_id' => $rekening->id,
-            'referensi_pengeluaran_id' => $tagihan->id,
-            'referensi_penerimaan_id' => null,
-        ]);
-
-        LogStatusDokumen::create([
-            'dokumen_type' => Tagihan::class,
-            'dokumen_id' => $tagihan->id,
-            'user_id' => Auth::id(),
-            'role_saat_itu' => Auth::user()?->getRoleNames()->first() ?? 'SYSTEM',
-            'status_sebelumnya' => $tagihan->status,
-            'status_baru' => $tagihan->status,
-            'aksi' => 'POST_BKU',
-            'catatan' => "Tagihan masuk BKU dengan nomor bukti {$nomorBukti}.",
-            'ip_address' => request()?->ip(),
-        ]);
-
-        return $bku;
     }
 
     private function resolveSp2d(Tagihan $tagihan): ?DokumenSp2d

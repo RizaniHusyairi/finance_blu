@@ -137,14 +137,18 @@
         animation: lg-rise .7s ease both .1s;
     }
     .lg-logo {
-        width: 78px; height: 78px; border-radius: 20px;
-        display: grid; place-items: center; margin: 0 auto 16px;
-        background: linear-gradient(135deg, #eff6ff, #e0f2fe);
-        border: 1px solid var(--lg-line);
-        box-shadow: 0 14px 30px -18px rgba(37,99,235,.6);
-        animation: lg-pop .7s cubic-bezier(.2,.9,.3,1.2) both .15s;
+            width: 105px;
+            height: 105px;
+            border-radius: 50px;
+            display: grid;
+            place-items: center;
+            margin: 0 auto 16px;
+            background: linear-gradient(135deg, #eff6ff, #e0f2fe);
+            border: 1px solid #f1f1f1;
+            box-shadow: 0 14px 23px -18px rgb(145 106 46);
+            animation: lg-pop .7s cubic-bezier(.2, .9, .3, 1.2) both .15s;
     }
-    .lg-logo img { width: 52px; height: auto; }
+    .lg-logo img { width: 100px; height: auto; }
     .lg-card h4 { text-align: center; font-weight: 800; color: var(--lg-ink); font-size: 19px; line-height: 1.3; margin-bottom: 4px; }
     .lg-card .lg-tagline { text-align: center; color: var(--lg-muted); font-size: 12.5px; line-height: 1.5; margin-bottom: 24px; }
 
@@ -250,9 +254,9 @@
             <h2 class="lg-stage__title">Sistem Informasi Keuangan &amp; Penagihan Terpadu</h2>
             <p class="lg-stage__sub">BLU Kantor UPBU Kelas 1 Aji Pangeran Tumenggung Pranoto &mdash; Samarinda</p>
             <div class="lg-badges">
-                <span class="lg-badge"><i class="bi bi-shield-lock-fill"></i> Akses Aman</span>
-                <span class="lg-badge"><i class="bi bi-lightning-charge-fill"></i> Proses Cepat</span>
-                <span class="lg-badge"><i class="bi bi-patch-check-fill"></i> Terintegrasi</span>
+                <span class="lg-badge"><i class="bi bi-clipboard-check-fill"></i> Akuntabel</span>
+                <span class="lg-badge"><i class="bi bi-eye-fill"></i> Transparan</span>
+                <span class="lg-badge"><i class="bi bi-diagram-3-fill"></i> Terintegrasi</span>
             </div>
         </div>
     </div>

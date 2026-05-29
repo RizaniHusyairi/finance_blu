@@ -3,10 +3,16 @@
 namespace App\Http\Controllers;
 
 use App\Models\ArsipDokumen;
+use App\Models\DetailKontrak;
 use App\Models\DokumenNpi;
 use App\Models\DokumenSp2d;
-use App\Models\DokumenSpp;
 use App\Models\DokumenSpm;
+use App\Models\DokumenSpp;
+use App\Models\JaminanKontrak;
+use App\Models\KontrakAddendum;
+use App\Models\KontrakPengadaan;
+use App\Models\PotonganTagihan;
+use App\Models\Tagihan;
 use App\Models\User;
 use App\Services\DocumentArchiveService;
 use App\Support\PaymentPdfReference;
@@ -18,8 +24,7 @@ class DocumentController extends Controller
 {
     public function __construct(
         private readonly DocumentArchiveService $documentArchiveService
-    ) {
-    }
+    ) {}
 
     public function upload(Request $request)
     {
@@ -36,7 +41,7 @@ class DocumentController extends Controller
             $request->string('jenis_dokumen')->toString(),
             $request->file('file'),
             [
-                'directory' => 'arsip-dokumen/' . class_basename($documentable),
+                'directory' => 'arsip-dokumen/'.class_basename($documentable),
                 'uploaded_by' => auth()->id(),
                 'keterangan' => $request->input('keterangan'),
             ]
@@ -57,7 +62,7 @@ class DocumentController extends Controller
             $arsip->jenis_dokumen,
             $request->file('file'),
             [
-                'directory' => 'arsip-dokumen/' . class_basename($arsip->documentable),
+                'directory' => 'arsip-dokumen/'.class_basename($arsip->documentable),
                 'uploaded_by' => auth()->id(),
                 'keterangan' => $request->input('keterangan', $arsip->keterangan),
             ]
@@ -68,6 +73,29 @@ class DocumentController extends Controller
 
     public function download(ArsipDokumen $arsip)
     {
+        return $this->documentArchiveService->download($arsip);
+    }
+
+    /**
+     * Unduh arsip keuangan sensitif (bukti setor pajak & bukti transfer SP2D)
+     * dari disk privat. Bendahara Pengeluaran / Super Admin boleh mengunduh
+     * seluruh arsip sensitif; verifier SP2D Kontrak (PPK, PPSPM, Kepala
+     * Subbagian Keuangan dan Tata Usaha, Koordinator Keuangan) hanya boleh
+     * mengunduh BUKTI_TRANSFER_SP2D agar tautan di halaman verifikasi resolve.
+     */
+    public function downloadArsipSensitif(ArsipDokumen $arsip)
+    {
+        $user = auth()->user();
+
+        $jenisSensitif = ['KODE_BILLING', 'BUKTI_SETOR_PAJAK', 'BPPU', 'BUKTI_TRANSFER_SP2D'];
+        abort_unless($user && in_array($arsip->jenis_dokumen, $jenisSensitif, true), 404, 'Dokumen tidak ditemukan.');
+
+        $canDownloadAll = $user->hasRole(['Bendahara Pengeluaran', 'Super Admin']);
+        $canDownloadBuktiTransfer = $arsip->jenis_dokumen === 'BUKTI_TRANSFER_SP2D'
+            && $user->hasRole(['PPK', 'PPSPM', 'Kepala Subbagian Keuangan dan Tata Usaha', 'Koordinator Keuangan']);
+
+        abort_unless($canDownloadAll || $canDownloadBuktiTransfer, 403, 'Anda tidak berwenang mengunduh dokumen ini.');
+
         return $this->documentArchiveService->download($arsip);
     }
 
@@ -94,7 +122,7 @@ class DocumentController extends Controller
         ]);
         $pdf->setPaper('a4', 'portrait');
 
-        return $pdf->stream('SPP_' . str_replace('/', '-', $spp->nomor_spp) . '.pdf');
+        return $pdf->stream('SPP_'.str_replace('/', '-', $spp->nomor_spp).'.pdf');
     }
 
     public function printSpm(DokumenSpm $spm)
@@ -132,7 +160,7 @@ class DocumentController extends Controller
         ]);
         $pdf->setPaper('a4', 'portrait');
 
-        return $pdf->stream('SPM_' . str_replace('/', '-', $spm->nomor_spm) . '.pdf');
+        return $pdf->stream('SPM_'.str_replace('/', '-', $spm->nomor_spm).'.pdf');
     }
 
     public function printNpi(DokumenNpi $npi)
@@ -141,8 +169,8 @@ class DocumentController extends Controller
         $spm = $npi->spm;
         $spp = $spm?->spp;
 
-        $bendaharaPengeluaran = \App\Models\User::role('Bendahara Pengeluaran')->first();
-        $ppk = \App\Models\User::role('PPK')->first();
+        $bendaharaPengeluaran = User::role('Bendahara Pengeluaran')->first();
+        $ppk = User::role('PPK')->first();
 
         $pdf = Pdf::loadView('npis.pdf', [
             'npi' => $npi,
@@ -158,7 +186,7 @@ class DocumentController extends Controller
         ]);
         $pdf->setPaper('a4', 'portrait');
 
-        return $pdf->stream('NPI_' . str_replace('/', '-', $npi->nomor_npi) . '.pdf');
+        return $pdf->stream('NPI_'.str_replace('/', '-', $npi->nomor_npi).'.pdf');
     }
 
     public function printSp2d(DokumenSp2d $sp2d)
@@ -171,7 +199,7 @@ class DocumentController extends Controller
             'npi.spm.spp.dipaRevisionItem.coa',
             'bendaharaPengeluaran.profilable',
             'workflowInstance.approvals',
-            'workflowInstances.approvals.actedByUser'
+            'workflowInstances.approvals.actedByUser',
         ]);
 
         $npi = $sp2d->npi;
@@ -233,22 +261,22 @@ class DocumentController extends Controller
 
         $pdf->setPaper('a4', 'portrait');
 
-        return $pdf->stream('SP2D-BLU-' . str_replace('/', '-', $sp2d->nomor_sp2d) . '.pdf');
+        return $pdf->stream('SP2D-BLU-'.str_replace('/', '-', $sp2d->nomor_sp2d).'.pdf');
     }
 
     private function resolveDocumentable(string $type, int $id): Model
     {
         $map = [
-            'kontrak' => \App\Models\KontrakPengadaan::class,
-            'addendum' => \App\Models\KontrakAddendum::class,
-            'tagihan' => \App\Models\Tagihan::class,
-            'potongan' => \App\Models\PotonganTagihan::class,
+            'kontrak' => KontrakPengadaan::class,
+            'addendum' => KontrakAddendum::class,
+            'tagihan' => Tagihan::class,
+            'potongan' => PotonganTagihan::class,
             'spp' => DokumenSpp::class,
             'spm' => DokumenSpm::class,
             'npi' => DokumenNpi::class,
             'sp2d' => DokumenSp2d::class,
-            'jaminan' => \App\Models\JaminanKontrak::class,
-            'detail_kontrak' => \App\Models\DetailKontrak::class,
+            'jaminan' => JaminanKontrak::class,
+            'detail_kontrak' => DetailKontrak::class,
         ];
 
         $class = $map[$type] ?? null;

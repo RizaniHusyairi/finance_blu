@@ -2,14 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use App\Models\PotonganTagihan;
-use App\Models\DokumenSp2d;
 use App\Models\ArsipDokumen;
+use App\Models\DokumenSp2d;
 use App\Models\LogStatusDokumen;
+use App\Models\PotonganTagihan;
 use App\Services\BkuPostingService;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 
 class PenyetoranPajakKontrakController extends Controller
 {
@@ -19,7 +18,7 @@ class PenyetoranPajakKontrakController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
-        if (!$user->hasRole('Bendahara Pengeluaran') && !$user->hasRole('Super Admin')) {
+        if (! $user->hasRole('Bendahara Pengeluaran') && ! $user->hasRole('Super Admin')) {
             abort(403, 'Akses ditolak.');
         }
 
@@ -30,29 +29,29 @@ class PenyetoranPajakKontrakController extends Controller
             'pajak',
             'akunPotongan',
         ])
-        ->where('jenis_potongan', 'PAJAK')
-        ->whereHas('tagihan', fn($q) => $q->where('tipe_tagihan', 'KONTRAK'))
-        ->whereHas('tagihan.spps.spm.npi.sp2d', function($q) {
-            $q->where('status', DokumenSp2d::STATUS_EXECUTED);
-        })
-        ->whereHas('tagihan', function ($q) {
-            $q->where('status', 'SELESAI');
-        });
+            ->where('jenis_potongan', 'PAJAK')
+            ->whereHas('tagihan', fn ($q) => $q->where('tipe_tagihan', 'KONTRAK'))
+            ->whereHas('tagihan.spps.spm.npi.sp2d', function ($q) {
+                $q->where('status', DokumenSp2d::STATUS_EXECUTED);
+            })
+            ->whereHas('tagihan', function ($q) {
+                $q->where('status', 'SELESAI');
+            });
 
         // Search
         if ($search = $request->input('search')) {
-            $query->where(function($q) use ($search) {
+            $query->where(function ($q) use ($search) {
                 $q->where('kode_billing', 'like', "%{$search}%")
-                  ->orWhere('ntpn', 'like', "%{$search}%")
-                  ->orWhere('jenis_potongan', 'like', "%{$search}%")
-                  ->orWhere('nama_pajak_snapshot', 'like', "%{$search}%")
-                  ->orWhereHas('tagihan', function($sq) use ($search) {
-                      $sq->where('nomor_tagihan', 'like', "%{$search}%")
-                         ->orWhere('deskripsi', 'like', "%{$search}%");
-                  })
-                  ->orWhereHas('tagihan.pihak', function($sq) use ($search) {
-                      $sq->where('nama', 'like', "%{$search}%");
-                  });
+                    ->orWhere('ntpn', 'like', "%{$search}%")
+                    ->orWhere('jenis_potongan', 'like', "%{$search}%")
+                    ->orWhere('nama_pajak_snapshot', 'like', "%{$search}%")
+                    ->orWhereHas('tagihan', function ($sq) use ($search) {
+                        $sq->where('nomor_tagihan', 'like', "%{$search}%")
+                            ->orWhere('deskripsi', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('tagihan.pihak', function ($sq) use ($search) {
+                        $sq->where('nama', 'like', "%{$search}%");
+                    });
             });
         }
 
@@ -69,16 +68,16 @@ class PenyetoranPajakKontrakController extends Controller
         $potonganList = $query->latest()->get();
 
         // Summary dari total data (tanpa filter status)
-        $allForSummary = PotonganTagihan::whereHas('tagihan', fn($q) => $q->where('tipe_tagihan', 'KONTRAK'))
+        $allForSummary = PotonganTagihan::whereHas('tagihan', fn ($q) => $q->where('tipe_tagihan', 'KONTRAK'))
             ->where('jenis_potongan', 'PAJAK')
-            ->whereHas('tagihan', fn($q) => $q->where('status', 'SELESAI'))
-            ->whereHas('tagihan.spps.spm.npi.sp2d', fn($q) => $q->where('status', DokumenSp2d::STATUS_EXECUTED))
+            ->whereHas('tagihan', fn ($q) => $q->where('status', 'SELESAI'))
+            ->whereHas('tagihan.spps.spm.npi.sp2d', fn ($q) => $q->where('status', DokumenSp2d::STATUS_EXECUTED))
             ->get(['id', 'kode_billing', 'ntpn']);
 
         $summary = [
-            'belum_billing' => $allForSummary->filter(fn($p) => !$p->kode_billing)->count(),
-            'sudah_billing' => $allForSummary->filter(fn($p) => $p->kode_billing && !$p->ntpn)->count(),
-            'sudah_setor'   => $allForSummary->filter(fn($p) => $p->kode_billing && $p->ntpn)->count(),
+            'belum_billing' => $allForSummary->filter(fn ($p) => ! $p->kode_billing)->count(),
+            'sudah_billing' => $allForSummary->filter(fn ($p) => $p->kode_billing && ! $p->ntpn)->count(),
+            'sudah_setor' => $allForSummary->filter(fn ($p) => $p->kode_billing && $p->ntpn)->count(),
         ];
 
         return view('penyetoran_pajak_kontrak.index', compact('potonganList', 'summary', 'statusFilter', 'search'));
@@ -115,10 +114,10 @@ class PenyetoranPajakKontrakController extends Controller
         $judulKontrak = $kontrak?->nama_pekerjaan ?? $kontrak?->judul_kontrak ?? '-';
         $vendorName = $vendor?->nama_pihak ?? $vendor?->nama ?? $vendor?->nama_perusahaan ?? '-';
         $terminText = $kontrakTermin?->nama_termin ?? $kontrakTermin?->keterangan_termin;
-        if (!$terminText && ($kontrakTermin?->termin_ke || $kontrakTermin?->jenis_termin)) {
+        if (! $terminText && ($kontrakTermin?->termin_ke || $kontrakTermin?->jenis_termin)) {
             $terminText = trim(implode(' ', array_filter([
-                $kontrakTermin?->termin_ke ? 'Termin ' . $kontrakTermin->termin_ke : null,
-                $kontrakTermin?->jenis_termin ? '(' . str_replace('_', ' ', $kontrakTermin->jenis_termin) . ')' : null,
+                $kontrakTermin?->termin_ke ? 'Termin '.$kontrakTermin->termin_ke : null,
+                $kontrakTermin?->jenis_termin ? '('.str_replace('_', ' ', $kontrakTermin->jenis_termin).')' : null,
             ])));
         }
         $terminText = $terminText ?: '-';
@@ -141,7 +140,7 @@ class PenyetoranPajakKontrakController extends Controller
             $statusSetor = 'Sudah Billing';
         }
 
-        $canInputBilling = $isReadyForPenyetoran && !$potongan->ntpn;
+        $canInputBilling = $isReadyForPenyetoran && ! $potongan->ntpn;
         $canInputNtpn = $isReadyForPenyetoran && filled($potongan->kode_billing);
 
         $arsipBilling = $potongan->arsipDokumen->where('jenis_dokumen', 'KODE_BILLING')->first();
@@ -179,13 +178,13 @@ class PenyetoranPajakKontrakController extends Controller
             ->exists();
 
         $request->validate([
-            'kode_billing'  => 'required|string|max:50',
-            'file_billing'  => ($existingBilling ? 'nullable' : 'required') . '|file|mimes:pdf,jpg,jpeg,png|max:5120',
+            'kode_billing' => 'required|string|max:50',
+            'file_billing' => ($existingBilling ? 'nullable' : 'required').'|file|mimes:pdf,jpg,jpeg,png|max:5120',
         ], [
             'file_billing.required' => 'File E-Billing (cetakan DJP) wajib diunggah.',
         ]);
 
-        DB::transaction(function() use ($request, $potongan) {
+        DB::transaction(function () use ($request, $potongan) {
             $potongan->update(['kode_billing' => $request->kode_billing]);
 
             if ($request->hasFile('file_billing')) {
@@ -195,31 +194,32 @@ class PenyetoranPajakKontrakController extends Controller
                     ->delete();
 
                 $file = $request->file('file_billing');
-                $path = $file->store('arsip/pajak-kontrak', 'public');
+                $path = $file->store('arsip/pajak-kontrak', 'local');
 
                 ArsipDokumen::create([
                     'documentable_type' => PotonganTagihan::class,
-                    'documentable_id'   => $potongan->id,
-                    'jenis_dokumen'     => 'KODE_BILLING',
-                    'nama_file_asli'    => $file->getClientOriginalName(),
-                    'path_file'         => $path,
-                    'mime_type'         => $file->getClientMimeType(),
-                    'ukuran_file'       => $file->getSize(),
-                    'uploaded_by'       => auth()->id(),
-                    'uploaded_at'       => now(),
-                    'keterangan'        => 'E-Billing (cetakan DJP) Kode Billing',
+                    'documentable_id' => $potongan->id,
+                    'jenis_dokumen' => 'KODE_BILLING',
+                    'nama_file_asli' => $file->getClientOriginalName(),
+                    'path_file' => $path,
+                    'disk' => 'local',
+                    'mime_type' => $file->getClientMimeType(),
+                    'ukuran_file' => $file->getSize(),
+                    'uploaded_by' => auth()->id(),
+                    'uploaded_at' => now(),
+                    'keterangan' => 'E-Billing (cetakan DJP) Kode Billing',
                 ]);
             }
 
             LogStatusDokumen::create([
                 'dokumen_type' => PotonganTagihan::class,
-                'dokumen_id'   => $potongan->id,
-                'user_id'      => auth()->id(),
-                'role_saat_itu'=> 'Bendahara Pengeluaran',
-                'status_baru'  => 'SUDAH_BILLING',
-                'aksi'         => 'INPUT_KODE_BILLING',
-                'catatan'      => 'Input Kode Billing: ' . $request->kode_billing,
-                'ip_address'   => request()->ip(),
+                'dokumen_id' => $potongan->id,
+                'user_id' => auth()->id(),
+                'role_saat_itu' => 'Bendahara Pengeluaran',
+                'status_baru' => 'SUDAH_BILLING',
+                'aksi' => 'INPUT_KODE_BILLING',
+                'catatan' => 'Input Kode Billing: '.$request->kode_billing,
+                'ip_address' => request()->ip(),
             ]);
         });
 
@@ -232,14 +232,14 @@ class PenyetoranPajakKontrakController extends Controller
     public function storeNtpn(Request $request, $id)
     {
         $request->validate([
-            'ntpn'             => 'required|string|max:50',
+            'ntpn' => 'required|string|max:50',
             'file_bukti_setor' => 'required|file|mimes:pdf,jpg,jpeg,png|max:5120',
-            'file_bppu'        => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
+            'file_bppu' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
         ]);
 
         $potongan = $this->findKontrakPajakPotongan($id);
 
-        if (!$potongan->kode_billing) {
+        if (! $potongan->kode_billing) {
             return back()->withErrors('Tidak dapat menginput NTPN sebelum Kode Billing diisi.');
         }
 
@@ -253,52 +253,54 @@ class PenyetoranPajakKontrakController extends Controller
 
         $postedToBku = false;
 
-        DB::transaction(function() use ($request, $potongan, &$postedToBku) {
+        DB::transaction(function () use ($request, $potongan, &$postedToBku) {
             $potongan->update(['ntpn' => $request->ntpn]);
 
             // Bukti Setor (BPN) — wajib
             $file = $request->file('file_bukti_setor');
-            $path = $file->store('arsip/pajak-kontrak', 'public');
+            $path = $file->store('arsip/pajak-kontrak', 'local');
             ArsipDokumen::create([
                 'documentable_type' => PotonganTagihan::class,
-                'documentable_id'   => $potongan->id,
-                'jenis_dokumen'     => 'BUKTI_SETOR_PAJAK',
-                'nama_file_asli'    => $file->getClientOriginalName(),
-                'path_file'         => $path,
-                'mime_type'         => $file->getClientMimeType(),
-                'ukuran_file'       => $file->getSize(),
-                'uploaded_by'       => auth()->id(),
-                'uploaded_at'       => now(),
-                'keterangan'        => 'Bukti Penerimaan Negara (BPN)',
+                'documentable_id' => $potongan->id,
+                'jenis_dokumen' => 'BUKTI_SETOR_PAJAK',
+                'nama_file_asli' => $file->getClientOriginalName(),
+                'path_file' => $path,
+                'disk' => 'local',
+                'mime_type' => $file->getClientMimeType(),
+                'ukuran_file' => $file->getSize(),
+                'uploaded_by' => auth()->id(),
+                'uploaded_at' => now(),
+                'keterangan' => 'Bukti Penerimaan Negara (BPN)',
             ]);
 
             // BPPU — opsional
             if ($request->hasFile('file_bppu')) {
                 $bppu = $request->file('file_bppu');
-                $bppuPath = $bppu->store('arsip/pajak-kontrak', 'public');
+                $bppuPath = $bppu->store('arsip/pajak-kontrak', 'local');
                 ArsipDokumen::create([
                     'documentable_type' => PotonganTagihan::class,
-                    'documentable_id'   => $potongan->id,
-                    'jenis_dokumen'     => 'BPPU',
-                    'nama_file_asli'    => $bppu->getClientOriginalName(),
-                    'path_file'         => $bppuPath,
-                    'mime_type'         => $bppu->getClientMimeType(),
-                    'ukuran_file'       => $bppu->getSize(),
-                    'uploaded_by'       => auth()->id(),
-                    'uploaded_at'       => now(),
-                    'keterangan'        => 'Bukti Pemotongan/Pemungutan Pajak (BPPU)',
+                    'documentable_id' => $potongan->id,
+                    'jenis_dokumen' => 'BPPU',
+                    'nama_file_asli' => $bppu->getClientOriginalName(),
+                    'path_file' => $bppuPath,
+                    'disk' => 'local',
+                    'mime_type' => $bppu->getClientMimeType(),
+                    'ukuran_file' => $bppu->getSize(),
+                    'uploaded_by' => auth()->id(),
+                    'uploaded_at' => now(),
+                    'keterangan' => 'Bukti Pemotongan/Pemungutan Pajak (BPPU)',
                 ]);
             }
 
             LogStatusDokumen::create([
                 'dokumen_type' => PotonganTagihan::class,
-                'dokumen_id'   => $potongan->id,
-                'user_id'      => auth()->id(),
-                'role_saat_itu'=> 'Bendahara Pengeluaran',
-                'status_baru'  => 'SUDAH_SETOR',
-                'aksi'         => 'INPUT_NTPN',
-                'catatan'      => 'Input NTPN: ' . $request->ntpn,
-                'ip_address'   => request()->ip(),
+                'dokumen_id' => $potongan->id,
+                'user_id' => auth()->id(),
+                'role_saat_itu' => 'Bendahara Pengeluaran',
+                'status_baru' => 'SUDAH_SETOR',
+                'aksi' => 'INPUT_NTPN',
+                'catatan' => 'Input NTPN: '.$request->ntpn,
+                'ip_address' => request()->ip(),
             ]);
 
             $postedToBku = $this->postBkuIfAllPajakSettled($potongan);
@@ -315,6 +317,7 @@ class PenyetoranPajakKontrakController extends Controller
     public function cetak($id)
     {
         $potongan = PotonganTagihan::with(['tagihan.detailKontrak.kontrakTermin.kontrak'])->findOrFail($id);
+
         return view('penyetoran_pajak_kontrak.cetak', compact('potongan'));
     }
 

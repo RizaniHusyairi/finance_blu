@@ -2,15 +2,14 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\ArsipDokumen;
 use App\Models\DokumenNpi;
 use App\Models\DokumenSp2d;
 use App\Models\LogStatusDokumen;
 use App\Models\Perjaldin;
-use App\Models\RealisasiAnggaran;
 use App\Models\User;
 use App\Notifications\WorkflowNotification;
 use App\Services\BkuPostingService;
+use App\Services\BudgetRealizationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -223,13 +222,13 @@ class Sp2dController extends Controller
             ->update(['is_active' => false]);
 
         $file = $request->file('bukti_transfer');
-        $path = $file->store('sp2d/bukti-transfer', 'public');
+        $path = $file->store('sp2d/bukti-transfer', 'local');
 
         $sp2d->arsipDokumen()->create([
             'jenis_dokumen' => 'BUKTI_TRANSFER_SP2D',
             'nama_file_asli' => $file->getClientOriginalName(),
             'path_file' => $path,
-            'disk' => 'public',
+            'disk' => 'local',
             'mime_type' => $file->getMimeType(),
             'ukuran_file' => $file->getSize(),
             'uploaded_by' => Auth::id(),
@@ -242,10 +241,10 @@ class Sp2dController extends Controller
     private function syncRealisasiAnggaran(DokumenSp2d $sp2d, ?string $catatanBku = null): void
     {
         try {
-            $budgetRealizationService = app(\App\Services\BudgetRealizationService::class);
+            $budgetRealizationService = app(BudgetRealizationService::class);
             $budgetRealizationService->recordFromSp2d($sp2d);
         } catch (\Exception $e) {
-            \Log::error('Gagal mencatat realisasi anggaran dari SP2D: ' . $e->getMessage());
+            \Log::error('Gagal mencatat realisasi anggaran dari SP2D: '.$e->getMessage());
             // Optionally, we can rethrow or just log. Since it's critical, maybe rethrow?
             throw $e;
         }

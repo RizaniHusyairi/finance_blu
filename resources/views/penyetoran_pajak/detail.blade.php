@@ -264,7 +264,7 @@
                         <div class="small">NTPN: <span class="font-monospace fw-bold">{{ $potongan->ntpn }}</span></div>
                         <div class="small">Billing: <span class="font-monospace fw-bold">{{ $potongan->kode_billing }}</span></div>
                         @if($existingBuktiSetor)
-                            <div class="small mt-1"><a href="{{ Storage::url($existingBuktiSetor->path_file) }}" target="_blank" class="text-success"><i class="bi bi-file-earmark-pdf"></i> Lihat Bukti Setor</a></div>
+                            <div class="small mt-1"><a href="{{ route('arsip-sensitif.download', $existingBuktiSetor->id) }}" class="text-success"><i class="bi bi-file-earmark-pdf"></i> Lihat Bukti Setor</a></div>
                         @endif
                     </div>
                 </div>

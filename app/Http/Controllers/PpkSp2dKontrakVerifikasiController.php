@@ -7,6 +7,7 @@ use App\Models\LogStatusDokumen;
 use App\Models\User;
 use App\Notifications\WorkflowNotification;
 use App\Services\WorkflowService;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
@@ -53,7 +54,7 @@ class PpkSp2dKontrakVerifikasiController extends Controller
     {
         return $approval
             && in_array($approval->role_code, $roleCodes, true)
-            && (!$approval->assigned_user_id || (int) $approval->assigned_user_id === (int) $user->id);
+            && (! $approval->assigned_user_id || (int) $approval->assigned_user_id === (int) $user->id);
     }
 
     private function authorizedApprovals($approvals, array $roleCodes, User $user)
@@ -101,10 +102,10 @@ class PpkSp2dKontrakVerifikasiController extends Controller
             'workflowInstances.approvals.assignedUser',
             'workflowInstances.approvals.actedByUser',
         ])
-        ->whereHas('npi.spm.spp.tagihan', fn ($q) => $q->where('tipe_tagihan', 'KONTRAK'))
-        ->whereHas('workflowInstances', fn ($q) => $q->whereIn('status', ['IN_PROGRESS', 'APPROVED', 'REVISION']))
-        ->latest()
-        ->get();
+            ->whereHas('npi.spm.spp.tagihan', fn ($q) => $q->where('tipe_tagihan', 'KONTRAK'))
+            ->whereHas('workflowInstances', fn ($q) => $q->whereIn('status', ['IN_PROGRESS', 'APPROVED', 'REVISION']))
+            ->latest()
+            ->get();
 
         $sp2dList = $sp2dQuery->map(function ($sp2d) use ($roleCodes, $user) {
             $latestInstance = $sp2d->workflowInstances->sortByDesc('created_at')->first();
@@ -130,14 +131,14 @@ class PpkSp2dKontrakVerifikasiController extends Controller
                 if ($pending->count() === $approvals->count()) {
                     $sp2d->_statusFinal = 'Menunggu Verifikasi';
                 } else {
-                    $pendingRoles = $pending->pluck('role_code')->map(fn ($role) => match($role) {
+                    $pendingRoles = $pending->pluck('role_code')->map(fn ($role) => match ($role) {
                         'PPSPM' => 'PPSPM',
                         'PPK' => 'PPK',
                         'Kepala Subbagian Keuangan dan Tata Usaha' => 'Kasubbag',
                         'Koordinator Keuangan' => 'Koordinator',
                         default => $role,
                     });
-                    $sp2d->_statusFinal = 'Menunggu ' . $pendingRoles->join(' & ');
+                    $sp2d->_statusFinal = 'Menunggu '.$pendingRoles->join(' & ');
                 }
             }
 
@@ -258,7 +259,7 @@ class PpkSp2dKontrakVerifikasiController extends Controller
                 'role' => $a->role_code,
                 'catatan' => $a->catatan,
                 'user' => $a->actedByUser?->name ?? '-',
-                'time' => $a->acted_at ? \Carbon\Carbon::parse($a->acted_at)->format('d M Y H:i') : '-',
+                'time' => $a->acted_at ? Carbon::parse($a->acted_at)->format('d M Y H:i') : '-',
             ])->values();
 
         // Dokumen pendukung
@@ -275,10 +276,11 @@ class PpkSp2dKontrakVerifikasiController extends Controller
             ['key' => 'bast', 'label' => 'BAST', 'path' => $detailKontrak?->file_bast, 'required' => $isPelunasan],
             ['key' => 'bap', 'label' => 'BAP', 'path' => $detailKontrak?->file_bap, 'required' => true],
             ['key' => 'faktur_pajak', 'label' => 'Faktur Pajak', 'path' => $detailKontrak?->file_faktur_pajak, 'required' => $requiresTaxDocuments],
-            ['key' => 'bukti_transfer', 'label' => 'Bukti Transfer SP2D', 'path' => $buktiTransferSp2d?->path_file, 'required' => false],
+            ['key' => 'bukti_transfer', 'label' => 'Bukti Transfer SP2D', 'path' => $buktiTransferSp2d?->path_file, 'arsip_id' => $buktiTransferSp2d?->id, 'required' => false],
         ])->map(function ($item) {
-            $isAvailable = !empty($item['path']);
-            $status = !$item['required'] ? 'not_required' : ($isAvailable ? 'ready' : 'missing');
+            $isAvailable = ! empty($item['path']);
+            $status = ! $item['required'] ? 'not_required' : ($isAvailable ? 'ready' : 'missing');
+
             return array_merge($item, ['status' => $status, 'is_available' => $isAvailable]);
         })->values();
 
@@ -332,7 +334,7 @@ class PpkSp2dKontrakVerifikasiController extends Controller
         ])->findOrFail($sp2d_id);
         $instance = $sp2d->workflowInstances->first();
         $myApproval = $this->resolveApprovalForAction($instance, $roleCodes, $user, $request->input('approval_id'));
-        if (!$myApproval) {
+        if (! $myApproval) {
             return back()->with('error', 'Anda tidak memiliki approval aktif untuk tindakan ini.');
         }
 
@@ -350,7 +352,7 @@ class PpkSp2dKontrakVerifikasiController extends Controller
                 'role_saat_itu' => $currentRole,
                 'status_sebelumnya' => $sp2d->status,
                 'status_baru' => $instance->status === 'APPROVED' ? DokumenSp2d::STATUS_DISETUJUI_FINAL : $sp2d->status,
-                'aksi' => 'APPROVE_' . str($currentRole)->upper()->replace(' ', '_') . '_SP2D',
+                'aksi' => 'APPROVE_'.str($currentRole)->upper()->replace(' ', '_').'_SP2D',
                 'catatan' => $request->input('catatan', "SP2D disetujui {$currentRole}."),
                 'ip_address' => request()->ip(),
             ]);
@@ -361,7 +363,7 @@ class PpkSp2dKontrakVerifikasiController extends Controller
             }
         });
 
-        return redirect()->route($routePrefix . '.show', $sp2d_id)
+        return redirect()->route($routePrefix.'.show', $sp2d_id)
             ->with('success', 'SP2D berhasil disetujui.');
     }
 
@@ -385,7 +387,7 @@ class PpkSp2dKontrakVerifikasiController extends Controller
         ])->findOrFail($sp2d_id);
         $instance = $sp2d->workflowInstances->first();
         $myApproval = $this->resolveApprovalForAction($instance, $roleCodes, $user, $request->input('approval_id'));
-        if (!$myApproval) {
+        if (! $myApproval) {
             return back()->with('error', 'Anda tidak memiliki approval aktif untuk tindakan ini.');
         }
 
@@ -405,7 +407,7 @@ class PpkSp2dKontrakVerifikasiController extends Controller
                 'role_saat_itu' => $currentRole,
                 'status_sebelumnya' => $sp2d->status,
                 'status_baru' => DokumenSp2d::STATUS_REVISI,
-                'aksi' => 'REVISI_' . str($currentRole)->upper()->replace(' ', '_') . '_SP2D',
+                'aksi' => 'REVISI_'.str($currentRole)->upper()->replace(' ', '_').'_SP2D',
                 'catatan' => $request->catatan_revisi,
                 'ip_address' => request()->ip(),
             ]);
@@ -422,7 +424,7 @@ class PpkSp2dKontrakVerifikasiController extends Controller
             }
         });
 
-        return redirect()->route($routePrefix . '.show', $sp2d_id)
+        return redirect()->route($routePrefix.'.show', $sp2d_id)
             ->with('success', 'SP2D dikembalikan untuk revisi.');
     }
 }

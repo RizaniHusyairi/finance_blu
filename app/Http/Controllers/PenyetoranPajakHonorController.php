@@ -8,6 +8,7 @@ use App\Models\DokumenSp2d;
 use App\Models\LogStatusDokumen;
 use App\Models\MasterTarifPajak;
 use App\Models\PotonganTagihan;
+use App\Models\User;
 use App\Services\BkuPostingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -37,19 +38,19 @@ class PenyetoranPajakHonorController extends Controller
             'pajak',
             'akunPotongan',
         ])
-        ->where('jenis_potongan', 'PAJAK')
-        ->whereHas('tagihan', fn ($q) => $q->where('tipe_tagihan', 'HONORARIUM'))
-        ->whereHas('tagihan', fn ($q) => $q->where('status', 'SELESAI'))
-        ->whereHas('tagihan.spps.spm.npi.sp2d', fn ($q) => $q->where('status', DokumenSp2d::STATUS_EXECUTED));
+            ->where('jenis_potongan', 'PAJAK')
+            ->whereHas('tagihan', fn ($q) => $q->where('tipe_tagihan', 'HONORARIUM'))
+            ->whereHas('tagihan', fn ($q) => $q->where('status', 'SELESAI'))
+            ->whereHas('tagihan.spps.spm.npi.sp2d', fn ($q) => $q->where('status', DokumenSp2d::STATUS_EXECUTED));
 
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('kode_billing', 'like', "%{$search}%")
-                  ->orWhere('ntpn', 'like', "%{$search}%")
-                  ->orWhere('nama_pajak_snapshot', 'like', "%{$search}%")
-                  ->orWhereHas('tagihan', fn ($sq) => $sq->where('nomor_tagihan', 'like', "%{$search}%")
-                                                         ->orWhere('deskripsi', 'like', "%{$search}%"))
-                  ->orWhereHas('tagihan.detailHonorarium', fn ($sq) => $sq->where('nama_personel', 'like', "%{$search}%"));
+                    ->orWhere('ntpn', 'like', "%{$search}%")
+                    ->orWhere('nama_pajak_snapshot', 'like', "%{$search}%")
+                    ->orWhereHas('tagihan', fn ($sq) => $sq->where('nomor_tagihan', 'like', "%{$search}%")
+                        ->orWhere('deskripsi', 'like', "%{$search}%"))
+                    ->orWhereHas('tagihan.detailHonorarium', fn ($sq) => $sq->where('nama_personel', 'like', "%{$search}%"));
             });
         }
 
@@ -73,7 +74,7 @@ class PenyetoranPajakHonorController extends Controller
         $summary = [
             'belum_billing' => $allForSummary->filter(fn ($p) => ! $p->kode_billing)->count(),
             'sudah_billing' => $allForSummary->filter(fn ($p) => $p->kode_billing && ! $p->ntpn)->count(),
-            'sudah_setor'   => $allForSummary->filter(fn ($p) => $p->kode_billing && $p->ntpn)->count(),
+            'sudah_setor' => $allForSummary->filter(fn ($p) => $p->kode_billing && $p->ntpn)->count(),
         ];
 
         return view('penyetoran_pajak_honor.index', compact('potonganList', 'summary', 'statusFilter', 'search'));
@@ -157,7 +158,7 @@ class PenyetoranPajakHonorController extends Controller
 
         $request->validate([
             'kode_billing' => 'required|string|max:50',
-            'file_billing' => ($existingBilling ? 'nullable' : 'required') . '|file|mimes:pdf,jpg,jpeg,png|max:5120',
+            'file_billing' => ($existingBilling ? 'nullable' : 'required').'|file|mimes:pdf,jpg,jpeg,png|max:5120',
         ], [
             'file_billing.required' => 'File E-Billing (cetakan DJP) wajib diunggah.',
         ]);
@@ -167,19 +168,20 @@ class PenyetoranPajakHonorController extends Controller
 
             if ($request->hasFile('file_billing')) {
                 $file = $request->file('file_billing');
-                $path = $file->store('arsip/pajak-honor', 'public');
+                $path = $file->store('arsip/pajak-honor', 'local');
 
                 ArsipDokumen::create([
                     'documentable_type' => PotonganTagihan::class,
-                    'documentable_id'   => $potongan->id,
-                    'jenis_dokumen'     => 'KODE_BILLING',
-                    'nama_file_asli'    => $file->getClientOriginalName(),
-                    'path_file'         => $path,
-                    'mime_type'         => $file->getClientMimeType(),
-                    'ukuran_file'       => $file->getSize(),
-                    'uploaded_by'       => auth()->id(),
-                    'uploaded_at'       => now(),
-                    'keterangan'        => 'E-Billing (cetakan DJP) Kode Billing',
+                    'documentable_id' => $potongan->id,
+                    'jenis_dokumen' => 'KODE_BILLING',
+                    'nama_file_asli' => $file->getClientOriginalName(),
+                    'path_file' => $path,
+                    'disk' => 'local',
+                    'mime_type' => $file->getClientMimeType(),
+                    'ukuran_file' => $file->getSize(),
+                    'uploaded_by' => auth()->id(),
+                    'uploaded_at' => now(),
+                    'keterangan' => 'E-Billing (cetakan DJP) Kode Billing',
                 ]);
 
                 // Hapus arsip e-billing lama (selain yang baru) agar menyimpan versi terbaru saja.
@@ -191,13 +193,13 @@ class PenyetoranPajakHonorController extends Controller
 
             LogStatusDokumen::create([
                 'dokumen_type' => PotonganTagihan::class,
-                'dokumen_id'   => $potongan->id,
-                'user_id'      => auth()->id(),
-                'role_saat_itu'=> 'Bendahara Pengeluaran',
-                'status_baru'  => 'SUDAH_BILLING',
-                'aksi'         => 'INPUT_KODE_BILLING',
-                'catatan'      => 'Input Kode Billing: ' . $request->kode_billing,
-                'ip_address'   => request()->ip(),
+                'dokumen_id' => $potongan->id,
+                'user_id' => auth()->id(),
+                'role_saat_itu' => 'Bendahara Pengeluaran',
+                'status_baru' => 'SUDAH_BILLING',
+                'aksi' => 'INPUT_KODE_BILLING',
+                'catatan' => 'Input Kode Billing: '.$request->kode_billing,
+                'ip_address' => request()->ip(),
             ]);
         });
 
@@ -211,9 +213,9 @@ class PenyetoranPajakHonorController extends Controller
     public function storeNtpn(Request $request, $id)
     {
         $request->validate([
-            'ntpn'             => 'required|string|max:50',
+            'ntpn' => 'required|string|max:50',
             'file_bukti_setor' => 'required|file|mimes:pdf,jpg,jpeg,png|max:5120',
-            'file_bppu'        => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
+            'file_bppu' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
         ]);
 
         $potongan = $this->findHonorPajakPotongan($id);
@@ -236,46 +238,48 @@ class PenyetoranPajakHonorController extends Controller
             $potongan->update(['ntpn' => $request->ntpn]);
 
             $file = $request->file('file_bukti_setor');
-            $path = $file->store('arsip/pajak-honor', 'public');
+            $path = $file->store('arsip/pajak-honor', 'local');
             ArsipDokumen::create([
                 'documentable_type' => PotonganTagihan::class,
-                'documentable_id'   => $potongan->id,
-                'jenis_dokumen'     => 'BUKTI_SETOR_PAJAK',
-                'nama_file_asli'    => $file->getClientOriginalName(),
-                'path_file'         => $path,
-                'mime_type'         => $file->getClientMimeType(),
-                'ukuran_file'       => $file->getSize(),
-                'uploaded_by'       => auth()->id(),
-                'uploaded_at'       => now(),
-                'keterangan'        => 'Bukti Penerimaan Negara (BPN)',
+                'documentable_id' => $potongan->id,
+                'jenis_dokumen' => 'BUKTI_SETOR_PAJAK',
+                'nama_file_asli' => $file->getClientOriginalName(),
+                'path_file' => $path,
+                'disk' => 'local',
+                'mime_type' => $file->getClientMimeType(),
+                'ukuran_file' => $file->getSize(),
+                'uploaded_by' => auth()->id(),
+                'uploaded_at' => now(),
+                'keterangan' => 'Bukti Penerimaan Negara (BPN)',
             ]);
 
             if ($request->hasFile('file_bppu')) {
                 $bppu = $request->file('file_bppu');
-                $bppuPath = $bppu->store('arsip/pajak-honor', 'public');
+                $bppuPath = $bppu->store('arsip/pajak-honor', 'local');
                 ArsipDokumen::create([
                     'documentable_type' => PotonganTagihan::class,
-                    'documentable_id'   => $potongan->id,
-                    'jenis_dokumen'     => 'BPPU',
-                    'nama_file_asli'    => $bppu->getClientOriginalName(),
-                    'path_file'         => $bppuPath,
-                    'mime_type'         => $bppu->getClientMimeType(),
-                    'ukuran_file'       => $bppu->getSize(),
-                    'uploaded_by'       => auth()->id(),
-                    'uploaded_at'       => now(),
-                    'keterangan'        => 'Bukti Pemotongan/Pemungutan Pajak (BPPU)',
+                    'documentable_id' => $potongan->id,
+                    'jenis_dokumen' => 'BPPU',
+                    'nama_file_asli' => $bppu->getClientOriginalName(),
+                    'path_file' => $bppuPath,
+                    'disk' => 'local',
+                    'mime_type' => $bppu->getClientMimeType(),
+                    'ukuran_file' => $bppu->getSize(),
+                    'uploaded_by' => auth()->id(),
+                    'uploaded_at' => now(),
+                    'keterangan' => 'Bukti Pemotongan/Pemungutan Pajak (BPPU)',
                 ]);
             }
 
             LogStatusDokumen::create([
                 'dokumen_type' => PotonganTagihan::class,
-                'dokumen_id'   => $potongan->id,
-                'user_id'      => auth()->id(),
-                'role_saat_itu'=> 'Bendahara Pengeluaran',
-                'status_baru'  => 'SUDAH_SETOR',
-                'aksi'         => 'INPUT_NTPN',
-                'catatan'      => 'Input NTPN: ' . $request->ntpn,
-                'ip_address'   => request()->ip(),
+                'dokumen_id' => $potongan->id,
+                'user_id' => auth()->id(),
+                'role_saat_itu' => 'Bendahara Pengeluaran',
+                'status_baru' => 'SUDAH_SETOR',
+                'aksi' => 'INPUT_NTPN',
+                'catatan' => 'Input NTPN: '.$request->ntpn,
+                'ip_address' => request()->ip(),
             ]);
 
             $postedToBku = $this->postBkuIfAllPajakSettled($potongan);
@@ -340,7 +344,7 @@ class PenyetoranPajakHonorController extends Controller
             ->unique()
             ->values();
 
-        $pemotong = \App\Models\User::role('Bendahara Pengeluaran')->with('profilable')->first();
+        $pemotong = User::role('Bendahara Pengeluaran')->with('profilable')->first();
 
         $isFinal = $detail->bupot_status === 'FINAL';
 
@@ -443,20 +447,20 @@ class PenyetoranPajakHonorController extends Controller
         foreach ($details as $detail) {
             $detail->update([
                 'bupot_status' => 'FINAL',
-                'nomor_bupot'  => $this->generateNomorBupot($tahun),
+                'nomor_bupot' => $this->generateNomorBupot($tahun),
             ]);
         }
 
         if ($details->isNotEmpty()) {
             LogStatusDokumen::create([
                 'dokumen_type' => DetailHonorarium::class,
-                'dokumen_id'   => $tagihan->id,
-                'user_id'      => auth()->id(),
-                'role_saat_itu'=> 'Bendahara Pengeluaran',
-                'status_baru'  => 'BUPOT_FINAL',
-                'aksi'         => 'FINALIZE_BUPOT_HONOR',
-                'catatan'      => 'Finalisasi e-Bupot 21 untuk ' . $details->count() . ' penerima honorarium.',
-                'ip_address'   => request()->ip(),
+                'dokumen_id' => $tagihan->id,
+                'user_id' => auth()->id(),
+                'role_saat_itu' => 'Bendahara Pengeluaran',
+                'status_baru' => 'BUPOT_FINAL',
+                'aksi' => 'FINALIZE_BUPOT_HONOR',
+                'catatan' => 'Finalisasi e-Bupot 21 untuk '.$details->count().' penerima honorarium.',
+                'ip_address' => request()->ip(),
             ]);
         }
     }
@@ -465,12 +469,12 @@ class PenyetoranPajakHonorController extends Controller
     {
         $prefix = "BP21/{$tahun}/";
 
-        $last = DetailHonorarium::where('nomor_bupot', 'like', $prefix . '%')
+        $last = DetailHonorarium::where('nomor_bupot', 'like', $prefix.'%')
             ->orderByDesc('nomor_bupot')
             ->value('nomor_bupot');
 
         $next = $last ? ((int) substr($last, strlen($prefix))) + 1 : 1;
 
-        return $prefix . str_pad((string) $next, 4, '0', STR_PAD_LEFT);
+        return $prefix.str_pad((string) $next, 4, '0', STR_PAD_LEFT);
     }
 }

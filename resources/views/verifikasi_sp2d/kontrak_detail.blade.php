@@ -256,7 +256,9 @@
                                 <div class="d-flex align-items-center gap-2">
                                     @if($doc['status'] === 'ready')
                                         <span class="badge bg-success">Tersedia</span>
-                                        @if(is_string($doc['path']))
+                                        @if(!empty($doc['arsip_id']))
+                                            <a href="{{ route('arsip-sensitif.download', $doc['arsip_id']) }}" target="_blank" class="btn btn-sm btn-outline-primary py-0 px-2" style="font-size: 11px;">Buka</a>
+                                        @elseif(is_string($doc['path']))
                                             <a href="{{ Storage::url($doc['path']) }}" target="_blank" class="btn btn-sm btn-outline-primary py-0 px-2" style="font-size: 11px;">Buka</a>
                                         @endif
                                     @elseif($doc['status'] === 'missing')
