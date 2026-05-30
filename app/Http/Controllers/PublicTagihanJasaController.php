@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\TagihanJasa;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * Halaman publik untuk Tagihan Jasa yang dikirim ke mitra via WhatsApp.
@@ -37,20 +38,27 @@ class PublicTagihanJasaController extends Controller
     {
         $tagihan = TagihanJasa::with([
             'mitra',
+            'mitraLegacy',
             'kontrakMitraJasa',
+            'creator.profilable',
             'details.layananJasa.parent.parent.parent.parent.parent',
         ])
             ->whereIn('status', ['PUBLISHED', 'LUNAS'])
             ->findOrFail($id);
 
-        $terbilang = function_exists('terbilang_rupiah')
-            ? terbilang_rupiah((float) $tagihan->total_tagihan)
-            : trim(terbilang((float) $tagihan->total_tagihan)) . ' Rupiah';
+        $fileName = 'surat-pengantar-dan-nota-tagihan-' . str_replace(['/', '\\'], '-', $tagihan->nomor_tagihan) . '.pdf';
 
-        $pdf = Pdf::loadView('tagihan_jasa.pdf', compact('tagihan', 'terbilang'))
+        if ($tagihan->file_surat_pengantar_final && Storage::disk('public')->exists($tagihan->file_surat_pengantar_final)) {
+            return $request->boolean('download')
+                ? Storage::disk('public')->download($tagihan->file_surat_pengantar_final, $fileName)
+                : Storage::disk('public')->response($tagihan->file_surat_pengantar_final, $fileName);
+        }
+
+        $pdf = Pdf::loadView('tagihan_jasa.surat_pengantar_pdf', [
+            'tagihan' => $tagihan,
+            'signed' => true,
+        ])
             ->setPaper('a4', 'portrait');
-
-        $fileName = 'nota-tagihan-' . str_replace(['/', '\\'], '-', $tagihan->nomor_tagihan) . '.pdf';
 
         return $request->boolean('download')
             ? $pdf->download($fileName)

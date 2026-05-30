@@ -1025,7 +1025,7 @@
                     if ($tagihan->tanggal_jatuh_tempo) {
                         $persistentPesan .= "Jatuh Tempo : *" . \Carbon\Carbon::parse($tagihan->tanggal_jatuh_tempo)->translatedFormat('d F Y') . "*\n";
                     }
-                    $persistentPesan .= "Link Invoice : " . App\Models\ShortLink::forTarget('tagihan_jasa', $tagihan->id)->publicUrl() . "\n\n";
+                    $persistentPesan .= "Link Surat Pengantar dan Nota Tagihan : " . App\Models\ShortLink::forTarget('tagihan_jasa', $tagihan->id)->publicUrl() . "\n\n";
                     $persistentPesan .= "----------------------------------------\n";
                     $persistentPesan .= "*AKUN PORTAL MITRA*\n";
                     $persistentPesan .= "Silakan login menggunakan akun Mitra Anda yang sudah terdaftar.\n";

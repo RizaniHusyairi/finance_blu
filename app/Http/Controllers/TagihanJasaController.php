@@ -1600,7 +1600,7 @@ class TagihanJasaController extends Controller
             $message .= "Jatuh Tempo: *" . $tagihan->tanggal_jatuh_tempo->format('d/m/Y') . "*\n";
         }
         $shortLink = \App\Models\ShortLink::forTarget('tagihan_jasa', $tagihan->id, auth()->id());
-        $message .= "Link Invoice: " . $shortLink->publicUrl() . "\n\n";
+        $message .= "Link Surat Pengantar dan Nota Tagihan: " . $shortLink->publicUrl() . "\n\n";
         $message .= "----------------------------------------\n";
         $message .= "*AKUN PORTAL MITRA*\n";
         $message .= "Email Login: " . ($accountInfo['email'] ?? '-') . "\n";

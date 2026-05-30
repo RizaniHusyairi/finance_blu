@@ -149,6 +149,8 @@
             padding: .65rem 1.2rem;
             border-radius: .65rem;
             border: 0;
+            line-height: 1.25;
+            text-align: center;
             box-shadow: 0 8px 20px rgba(244, 63, 94, .30);
             transition: all .2s ease;
         }
@@ -164,6 +166,8 @@
             font-weight: 700;
             padding: .65rem 1.2rem;
             border-radius: .65rem;
+            line-height: 1.25;
+            text-align: center;
             transition: all .2s ease;
         }
         .btn-secondary-action:hover {
@@ -369,10 +373,10 @@
             </div>
             <div class="d-flex gap-2 flex-wrap">
                 <a href="{{ url()->signedRoute('public.tagihan-jasa.pdf', ['id' => $tagihan->id]) }}" target="_blank" class="btn-pdf">
-                    <i class="bi bi-file-pdf me-1"></i> Lihat PDF
+                    <i class="bi bi-file-pdf me-1"></i> Lihat Surat Pengantar dan Nota Tagihan
                 </a>
                 <a href="{{ url()->signedRoute('public.tagihan-jasa.pdf', ['id' => $tagihan->id, 'download' => 1]) }}" class="btn-secondary-action">
-                    <i class="bi bi-download me-1"></i> Unduh
+                    <i class="bi bi-download me-1"></i> Unduh Surat Pengantar dan Nota Tagihan
                 </a>
             </div>
         </div>
@@ -472,12 +476,12 @@
                     <div class="row g-2">
                         <div class="col-sm-6">
                             <a href="{{ url()->signedRoute('public.tagihan-jasa.pdf', ['id' => $tagihan->id]) }}" target="_blank" class="btn-pdf w-100 d-inline-flex align-items-center justify-content-center">
-                                <i class="bi bi-file-pdf me-1"></i> Lihat Nota Tagihan
+                                <i class="bi bi-file-pdf me-1"></i> Lihat Surat Pengantar dan Nota Tagihan
                             </a>
                         </div>
                         <div class="col-sm-6">
                             <a href="{{ url()->signedRoute('public.tagihan-jasa.pdf', ['id' => $tagihan->id, 'download' => 1]) }}" class="btn-secondary-action w-100 d-inline-flex align-items-center justify-content-center">
-                                <i class="bi bi-download me-1"></i> Unduh Nota Tagihan
+                                <i class="bi bi-download me-1"></i> Unduh Surat Pengantar dan Nota Tagihan
                             </a>
                         </div>
                     </div>

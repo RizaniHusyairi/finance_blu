@@ -216,6 +216,8 @@ Route::middleware(['auth', 'account.active'])->group(function () use ($internalR
 
     // Universal Profile
     Route::get('/profile', [ProfileController::class, 'index'])->name('profile.index');
+    Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password.update');
 
     // Unduh arsip keuangan sensitif (bukti setor pajak & bukti transfer SP2D) dari disk privat.
     // Otorisasi role (Bendahara Pengeluaran / Super Admin) dilakukan di dalam controller.
@@ -292,9 +294,7 @@ Route::middleware(['auth', 'account.active'])->group(function () use ($internalR
         });
 
     // Workflow Engine General Routes
-    Route::post('/workflow/approval/{approvalId}/approve', [PerjaldinWorkflowController::class, 'approve'])->name('perjaldin.workflow.approve');
-    Route::post('/workflow/approval/{approvalId}/revision', [PerjaldinWorkflowController::class, 'revision'])->name('perjaldin.workflow.revision');
-    Route::post('/workflow/approval/{approvalId}/reject', [PerjaldinWorkflowController::class, 'reject'])->name('perjaldin.workflow.reject');
+
 
     // Notification Endpoints (AJAX Polling)
     Route::get('/notifications/fetch', [NotificationController::class, 'fetch'])->name('notifications.fetch');
@@ -978,7 +978,6 @@ Route::middleware(['auth', 'account.active'])->group(function () use ($internalR
         Route::post('/sp2ds/kontrak/npi/{npi_id}/submit', [Sp2dKontrakController::class, 'submitVerification'])->name('sp2ds.kontrak.submit');
         Route::post('/sp2ds/kontrak/{sp2d_id}/upload-signed-sp2d', [Sp2dKontrakController::class, 'uploadSignedSp2d'])->name('sp2ds.kontrak.upload-signed-sp2d');
         Route::get('/sp2ds', [Sp2dController::class, 'index'])->name('sp2ds.index');
-        Route::get('/sp2ds/perjaldin/{perjaldin_id}/detail', [Sp2dController::class, 'detail'])->name('sp2ds.perjaldin.detail');
         Route::post('/sp2ds/npi/{npi_id}/store', [Sp2dController::class, 'store'])->name('sp2ds.store');
         Route::post('/sp2ds/{sp2d_id}/approve', [Sp2dController::class, 'approve'])->name('sp2ds.approve');
         Route::post('/sp2ds/{sp2d_id}/execute', [Sp2dController::class, 'catatBku'])->name('sp2ds.catat-bku');
