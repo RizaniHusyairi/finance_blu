@@ -219,7 +219,7 @@
                                 @endif
                                 @if($row->can_create_tagihan_count > 0 && $row->createable_report)
                                     <a href="{{ route('jasa.mitra.pjp2u.rekap.show', [$row->mitra_jasa_id, $row->layanan_jasa_id, $row->tahun, $row->bulan]) }}" class="btn btn-sm btn-primary fw-semibold" title="Buka daftar tagihan harian">
-                                        <i class="bi bi-receipt me-1"></i>{{ $row->can_create_tagihan_count }}
+                                        <i class="bi bi-receipt me-1"></i>Tagihan {{ $row->can_create_tagihan_count }}
                                     </a>
                                 @endif
                             </div>

@@ -185,7 +185,9 @@
                             <td>{{ $tanggal($tagihan?->tanggal_jatuh_tempo) }}</td>
                                 <td>
                                     @if($tagihan)
-                                        <a href="{{ route('mitra.tagihan-jasa.show', $tagihan) }}" class="btn btn-sm btn-primary mp-action" title="Detail Tagihan"><i class="bi bi-receipt"></i></a>
+                                        <a href="{{ route('mitra.tagihan-jasa.show', $tagihan) }}" class="btn btn-sm btn-primary mp-action" title="Detail Tagihan">
+                                            <i class="bi bi-receipt me-1"></i>Tagihan
+                                        </a>
                                     @else
                                         <span class="text-muted">-</span>
                                     @endif
