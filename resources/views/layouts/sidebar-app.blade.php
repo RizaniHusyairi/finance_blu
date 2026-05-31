@@ -715,18 +715,7 @@
             <li><a href="{{ route('spms.kontrak.index') }}"><i class="material-icons-outlined">arrow_right</i>SPM Kontrak</a></li>
           </ul>
         </li>
-        <li>
-          <a href="javascript:;" class="has-arrow">
-            <div class="parent-icon"><i class="material-icons-outlined">article</i></div>
-            <div class="menu-title">Monitoring Pencairan</div>
-          </a>
-          <ul>
-            {{-- TODO: Buat route monitoring jika controller sudah siap --}}
-            <li><a href="#"><i class="material-icons-outlined">arrow_right</i>Kontrak</a></li>
-            <li><a href="#"><i class="material-icons-outlined">arrow_right</i>Perjaldin</a></li>
-            <li><a href="#"><i class="material-icons-outlined">arrow_right</i>Honor</a></li>
-          </ul>
-        </li>
+        
         @endhasanyrole
         @hasrole('Bendahara Pengeluaran')
 
