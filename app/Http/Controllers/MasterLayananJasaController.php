@@ -64,6 +64,7 @@ class MasterLayananJasaController extends Controller
             'kode_mak' => 'nullable|string|max:255',
             'kode_jenis_pembayaran' => ['nullable', 'string', 'regex:/^\d{3}$/'],
             'kode_akun' => 'nullable|string|max:255',
+            'kode_satker' => 'nullable|string|max:20',
             'satuan' => 'nullable|string|max:255',
             'tarif_dasar' => 'nullable|numeric|min:0',
             'tipe_layanan' => 'required|in:PNBP,KONSESI',
@@ -89,6 +90,7 @@ class MasterLayananJasaController extends Controller
             $validated['kode_mak'] = null;
             $validated['kode_jenis_pembayaran'] = null;
             $validated['kode_akun'] = null;
+            $validated['kode_satker'] = null;
             $validated['persentase_konsesi'] = null;
         }
         if ($validated['is_leaf'] && $validated['tipe_layanan'] === 'KONSESI') {
@@ -146,6 +148,7 @@ class MasterLayananJasaController extends Controller
             'kode_mak' => 'nullable|string|max:255',
             'kode_jenis_pembayaran' => ['nullable', 'string', 'regex:/^\d{3}$/'],
             'kode_akun' => 'nullable|string|max:255',
+            'kode_satker' => 'nullable|string|max:20',
             'satuan' => 'nullable|string|max:255',
             'tarif_dasar' => 'nullable|numeric|min:0',
             'tipe_layanan' => 'required|in:PNBP,KONSESI',
@@ -177,6 +180,7 @@ class MasterLayananJasaController extends Controller
             $validated['kode_mak'] = null;
             $validated['kode_jenis_pembayaran'] = null;
             $validated['kode_akun'] = null;
+            $validated['kode_satker'] = null;
             $validated['persentase_konsesi'] = null;
         }
         if ($validated['is_leaf'] && $validated['tipe_layanan'] === 'KONSESI') {

@@ -112,6 +112,7 @@ class SppPerjaldinWorkflowService
 
         return DB::transaction(function () use ($approval, $actor, $catatan, $ipAddress, $instance, $spp) {
             $oldStatus = $spp->status;
+            $stepNaikKe = null;
 
             $approval->update([
                 'status' => 'APPROVED',
@@ -138,6 +139,9 @@ class SppPerjaldinWorkflowService
                     $instance->update([
                         'step_saat_ini' => $nextApproval->urutan_step
                     ]);
+
+                    // Notifikasi WA ke verifikator step baru (best-effort).
+                    $stepNaikKe = $nextApproval->urutan_step;
                 } else {
                     $instance->update([
                         'status' => 'APPROVED'
@@ -148,7 +152,15 @@ class SppPerjaldinWorkflowService
             $this->syncSppStatus($spp);
             $this->writeWorkflowAuditLog($spp, $oldStatus, $spp->status, 'APPROVE_SPP', $catatan ?? 'Telah disetujui.', $actor, $ipAddress);
 
-            return $instance->fresh(['approvals']);
+            $fresh = $instance->fresh(['approvals']);
+
+            if (! empty($stepNaikKe) && $fresh) {
+                DB::afterCommit(function () use ($fresh) {
+                    app(\App\Services\WorkflowWaNotifier::class)->notifyPendingApprovals($fresh);
+                });
+            }
+
+            return $fresh;
         });
     }
 

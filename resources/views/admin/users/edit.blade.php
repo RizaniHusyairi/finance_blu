@@ -33,14 +33,10 @@
                     <input type="email" name="email" value="{{ old('email', $user->email) }}" class="form-control" required>
                 </div>
                 <div class="col-md-6 d-flex align-items-end">
-                    <form method="POST" action="{{ route('admin.users.reset-password', $user) }}"
-                          onsubmit="return confirm('Reset password user ini? Password baru akan ditampilkan sekali.');"
-                          class="w-100 d-grid">
-                        @csrf
-                        <button type="submit" class="btn btn-light text-primary border">
-                            <i class="bi bi-shield-lock me-1"></i> Reset Password
-                        </button>
-                    </form>
+                    <button type="submit" form="resetPasswordForm" class="btn btn-light text-primary border w-100"
+                            onclick="return confirm('Reset password user ini? Password baru akan ditampilkan sekali.');">
+                        <i class="bi bi-shield-lock me-1"></i> Reset Password
+                    </button>
                 </div>
             </div>
         </div>
@@ -94,6 +90,11 @@
                 <i class="bi bi-save me-1"></i> Simpan Perubahan
             </button>
         </div>
+    </form>
+
+    {{-- Form reset password terpisah (di luar form update agar tidak ter-nested). --}}
+    <form method="POST" action="{{ route('admin.users.reset-password', $user) }}" id="resetPasswordForm" class="d-none">
+        @csrf
     </form>
 @endsection
 

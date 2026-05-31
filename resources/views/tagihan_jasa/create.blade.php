@@ -603,7 +603,26 @@
                             </div>
                             <div class="col-lg-8">
                                 <label class="form-label fw-bold">Tanggal Tagihan <span class="text-danger">*</span></label>
-                                <input type="date" name="tanggal_tagihan" class="form-control" value="{{ old('tanggal_tagihan', isset($tagihan) && $tagihan->tanggal_tagihan ? $tagihan->tanggal_tagihan->format('Y-m-d') : date('Y-m-d')) }}" required>
+                                <input type="date" name="tanggal_tagihan" id="inputTanggalTagihan" class="form-control" value="{{ old('tanggal_tagihan', isset($tagihan) && $tagihan->tanggal_tagihan ? $tagihan->tanggal_tagihan->format('Y-m-d') : date('Y-m-d')) }}" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- Preview Nomor Tagihan: muncul setelah layanan dipilih --}}
+                    <div class="invoice-date-card mb-4" id="nomorTagihanPreviewCard"
+                         style="background: linear-gradient(135deg,#ecfeff 0%,#eff6ff 100%); border:1px solid #a5f3fc; display:none;">
+                        <div class="row align-items-center g-3">
+                            <div class="col-lg-4">
+                                <span class="invoice-section-kicker" style="color:#0e7490;"><i class="bi bi-hash"></i> Nomor Tagihan</span>
+                                <div class="mt-1 text-xs font-semibold text-slate-600">Format: satkermakbulantahunurut — ditentukan otomatis saat draft disimpan.</div>
+                            </div>
+                            <div class="col-lg-8">
+                                <label class="form-label fw-bold">Preview Nomor Tagihan</label>
+                                <div class="d-flex align-items-center gap-2">
+                                    <input type="text" id="nomorTagihanPreview" class="form-control fw-bold font-monospace bg-white" style="color:#0e7490;" value="" readonly placeholder="Pilih layanan untuk melihat preview">
+                                    <span id="nomorTagihanPreviewSpinner" class="spinner-border spinner-border-sm text-info" role="status" style="display:none;"></span>
+                                </div>
+                                <div class="mt-1 text-xs text-slate-500">Nomor urut bersifat estimasi; nomor final dikunci saat draft tersimpan.</div>
                             </div>
                         </div>
                     </div>
@@ -1691,6 +1710,7 @@
                 calculateTotals();
             }
             refreshKontrakOptions();
+            updateNomorTagihanPreview();
         }
 
         function addServiceRow() {
@@ -1708,6 +1728,70 @@
 
         function servicePaymentCode(service) {
             return service?.kode_pembayaran_lengkap || service?.kode_akun || service?.kode_mak || '';
+        }
+
+        // ── Preview Nomor Tagihan ──
+        let nomorPreviewTimer = null;
+        const nomorPreviewUrl = "{{ route('tagihan-jasa.preview-nomor') }}";
+
+        function firstSelectedLayananId() {
+            let id = null;
+            $('.service-row').each(function () {
+                const val = $(this).find('.layanan-id-input').val();
+                if (val) { id = val; return false; } // ambil baris pertama yang terisi
+            });
+            return id;
+        }
+
+        function updateNomorTagihanPreview() {
+            const card = document.getElementById('nomorTagihanPreviewCard');
+            const input = document.getElementById('nomorTagihanPreview');
+            const spinner = document.getElementById('nomorTagihanPreviewSpinner');
+            if (!card || !input) return;
+
+            const layananId = firstSelectedLayananId();
+            const service = layananId ? layanansById[layananId] : null;
+
+            if (!service) {
+                card.style.display = 'none';
+                input.value = '';
+                return;
+            }
+
+            card.style.display = '';
+
+            // Tampilkan instan dari data klien bila kode tersedia (urut diestimasi server).
+            const tanggal = (document.getElementById('inputTanggalTagihan')?.value) || '';
+
+            clearTimeout(nomorPreviewTimer);
+            if (spinner) spinner.style.display = '';
+
+            nomorPreviewTimer = setTimeout(function () {
+                const params = new URLSearchParams({
+                    layanan_id: layananId,
+                    kode_satker: service.kode_satker || '',
+                    kode_mak: service.kode_mak || '',
+                    tanggal: tanggal,
+                });
+
+                fetch(`${nomorPreviewUrl}?${params.toString()}`, {
+                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                })
+                    .then(r => r.ok ? r.json() : Promise.reject(r))
+                    .then(data => {
+                        input.value = data.preview || '';
+                    })
+                    .catch(() => {
+                        // Fallback estimasi sisi klien (urut 0001) bila request gagal.
+                        const satker = (service.kode_satker || '000000').replace(/[\s.]+/g, '');
+                        const mak = (service.kode_mak || '000000').replace(/[\s.]+/g, '');
+                        const d = tanggal ? new Date(tanggal) : new Date();
+                        const mm = String(d.getMonth() + 1).padStart(2, '0');
+                        const yyyy = d.getFullYear();
+                        input.value = `${satker}${mak}${mm}${yyyy}0001`;
+                    })
+                    .finally(() => { if (spinner) spinner.style.display = 'none'; });
+            }, 300);
         }
 
         function matchesSearch(item, searchTerm) {
@@ -2053,6 +2137,7 @@
                 row.remove();
                 calculateTotals();
                 refreshKontrakOptions();
+                updateNomorTagihanPreview();
             } else {
                 alert('Minimal harus ada 1 layanan.');
             }
@@ -2082,6 +2167,11 @@
 
         $(document).on('input change', '.qty-input, .price-input, .calc-factor-input, .garbarata-input', function() {
             calculateTotals();
+        });
+
+        // Perbarui preview nomor tagihan saat tanggal tagihan diubah.
+        $(document).on('change', '#inputTanggalTagihan', function() {
+            updateNomorTagihanPreview();
         });
         
         $('form').submit(function(e) {

@@ -339,6 +339,18 @@ class TagihanJasaController extends Controller
                 $nomorTagihanVariant = $penjualan?->is_pjp2u_report ? 'PJP2U' : null;
                 $kpaPenandatangan = $this->getKpaPenandatanganData();
 
+                // Nomor tagihan: {satker}{mak}{bulan}{tahun}{urut} — satker & mak
+                // diambil dari layanan pertama pada tagihan. Tanggal pembuatan
+                // mengacu ke tanggal tagihan dibuat.
+                $firstRow = collect($validated['layanan'])->first();
+                $firstLayanan = $firstRow ? $layananById->get($firstRow['id']) : null;
+                $tanggalDibuat = \Carbon\Carbon::parse($validated['tanggal_tagihan']);
+                $nomorTagihan = $this->generateNomorTagihan(
+                    $firstLayanan?->kode_satker,
+                    $firstLayanan?->kode_mak,
+                    $tanggalDibuat
+                );
+
                 $tagihan = TagihanJasa::create([
                     'tipe_pnbp' => $tipe,
                     'mitra_jasa_id' => $validated['mitra_jasa_id'],
@@ -347,7 +359,7 @@ class TagihanJasaController extends Controller
                     'nomor_kontrak' => $kontrak?->nomor_kontrak,
                     'tanggal_mulai_kontrak' => optional($kontrak?->tanggal_mulai)->format('Y-m-d'),
                     'tanggal_selesai_kontrak' => optional($kontrak?->tanggal_selesai)->format('Y-m-d'),
-                    'nomor_tagihan' => $this->generateNomorTagihan($tipe, $nomorTagihanVariant),
+                    'nomor_tagihan' => $nomorTagihan,
                     'tanggal_surat_pengantar' => $validated['tanggal_tagihan'],
                     'perihal_surat_pengantar' => 'Penyampaian Tagihan PNBP Jasa',
                     'pejabat_penandatangan_nama' => $kpaPenandatangan['nama'],
@@ -1310,7 +1322,102 @@ class TagihanJasaController extends Controller
             ->update(['is_active' => false]);
     }
 
-    private function generateNomorTagihan(string $tipe = 'FUNGSI', ?string $variant = null): string
+    /**
+     * Preview nomor tagihan (AJAX) berdasarkan kode_satker & kode_mak layanan
+     * terpilih + tanggal tagihan. Tidak menyimpan/menjatah nomor — hanya estimasi
+     * nomor urut berikutnya untuk ditampilkan di form.
+     */
+    public function previewNomorTagihan(Request $request)
+    {
+        $validated = $request->validate([
+            'layanan_id' => ['nullable', 'integer', 'exists:layanan_jasas,id'],
+            'kode_satker' => ['nullable', 'string', 'max:30'],
+            'kode_mak' => ['nullable', 'string', 'max:30'],
+            'tanggal' => ['nullable', 'date'],
+        ]);
+
+        $kodeSatker = $validated['kode_satker'] ?? null;
+        $kodeMak = $validated['kode_mak'] ?? null;
+
+        if (! empty($validated['layanan_id'])) {
+            $layanan = LayananJasa::find($validated['layanan_id']);
+            $kodeSatker = $kodeSatker ?: $layanan?->kode_satker;
+            $kodeMak = $kodeMak ?: $layanan?->kode_mak;
+        }
+
+        $tanggal = ! empty($validated['tanggal'])
+            ? \Carbon\Carbon::parse($validated['tanggal'])
+            : now();
+
+        $satker = $this->sanitizeKode($kodeSatker) ?: '000000';
+        $mak = $this->sanitizeKode($kodeMak) ?: '000000';
+        $prefix = $satker . $mak . $tanggal->format('m') . $tanggal->format('Y');
+
+        $startAwal = max(1, (int) \App\Models\IntegrationSetting::getValue('tagihan_jasa.nomor_urut_awal', 1));
+        $existing = TagihanJasa::withTrashed()
+            ->where('nomor_tagihan', 'like', $prefix . '%')
+            ->count();
+        $count = max($existing + 1, $startAwal);
+
+        return response()->json([
+            'preview' => $prefix . str_pad((string) $count, 4, '0', STR_PAD_LEFT),
+            'kode_satker' => $satker,
+            'kode_mak' => $mak,
+        ]);
+    }
+
+    /**
+     * Bangun nomor tagihan jasa dengan format (tanpa pemisah titik):
+     *   {nomor satker}{nomor mak}{bulan}{tahun}{nomor urut 4 digit}
+     *
+     * Contoh: kode_satker 288745, kode_mak 424115, dibuat Juni 2026, urut 1
+     *   => 288745424115062026 0001  -> 2887454241150620260001
+     *
+     * Nomor urut dihitung per kombinasi satker+mak+bulan+tahun.
+     */
+    private function generateNomorTagihan(?string $kodeSatker, ?string $kodeMak, ?\Carbon\Carbon $tanggal = null): string
+    {
+        $tanggal ??= now();
+        $satker = $this->sanitizeKode($kodeSatker) ?: '000000';
+        $mak = $this->sanitizeKode($kodeMak) ?: '000000';
+        $bulan = $tanggal->format('m');
+        $tahun = $tanggal->format('Y');
+
+        $prefix = "{$satker}{$mak}{$bulan}{$tahun}";
+
+        // Nomor urut awal yang dapat ditentukan Super Admin Jasa (default 1).
+        $startAwal = (int) \App\Models\IntegrationSetting::getValue('tagihan_jasa.nomor_urut_awal', 1);
+        $startAwal = max(1, $startAwal);
+
+        $existing = TagihanJasa::withTrashed()
+            ->where('nomor_tagihan', 'like', $prefix . '%')
+            ->count();
+
+        $count = max($existing + 1, $startAwal);
+
+        do {
+            $nomor = $prefix . str_pad((string) $count, 4, '0', STR_PAD_LEFT);
+            $count++;
+        } while (TagihanJasa::withTrashed()->where('nomor_tagihan', $nomor)->exists());
+
+        return $nomor;
+    }
+
+    /**
+     * Bersihkan kode (satker/mak): buang spasi dan titik agar nomor menyatu.
+     */
+    private function sanitizeKode(?string $kode): string
+    {
+        $kode = trim((string) $kode);
+        if ($kode === '') {
+            return '';
+        }
+
+        // Buang spasi dan titik (mis. kode_mak "424115.901" -> "424115901").
+        return preg_replace('/[\s.]+/', '', $kode);
+    }
+
+    private function generateNomorTagihanLegacy(string $tipe = 'FUNGSI', ?string $variant = null): string
     {
         $label = match ($variant) {
             'PJP2U' => 'TAG-PJP2U',
@@ -1380,30 +1487,17 @@ class TagihanJasaController extends Controller
 
     private function generateNomorSuratPengantar(TagihanJasa $tagihan): string
     {
-        $year = \Carbon\Carbon::parse(
+        $year = (int) \Carbon\Carbon::parse(
             $tagihan->tanggal_surat_pengantar
                 ?: $tagihan->tanggal_tagihan
                 ?: now()
         )->format('Y');
-        $prefix = 'KU.102/';
-        $suffix = '/APTP/' . $year;
 
-        $lastSequence = TagihanJasa::query()
-            ->where('nomor_surat_pengantar', 'like', $prefix . '%' . $suffix)
-            ->pluck('nomor_surat_pengantar')
-            ->map(function ($nomor) use ($year) {
-                return preg_match('#^KU\.102/(\d+)/APTP/' . preg_quote($year, '#') . '$#', (string) $nomor, $matches)
-                    ? (int) $matches[1]
-                    : 0;
-            })
-            ->max() ?: 0;
-
-        do {
-            $lastSequence++;
-            $nomor = $prefix . $lastSequence . $suffix;
-        } while (TagihanJasa::where('nomor_surat_pengantar', $nomor)->exists());
-
-        return $nomor;
+        // Nomor surat pengantar (KU.102) kini diambil dari register terpusat
+        // sehingga nomor urut 4 digit-nya tidak bentrok dengan KU.201 (Honorarium
+        // & Perjaldin) pada tahun yang sama.
+        return app(\App\Services\DocumentNumberService::class)
+            ->generateByKey('KU_SURAT_PENGANTAR_JASA', $year);
     }
 
     private function resolveDueDateData(TagihanJasa $tagihan): array

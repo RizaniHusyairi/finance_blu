@@ -136,6 +136,10 @@
 
                                                     <h6 class="text-info fw-bold mb-3 border-bottom pb-2">Kontak & Alamat</h6>
                                                     <div class="row mb-3">
+                                                        <div class="col-md-4 ">Email</div>
+                                                        <div class="col-md-8">{{ $supplier->email ?: '-' }}</div>
+                                                    </div>
+                                                    <div class="row mb-3">
                                                         <div class="col-md-4 ">No. Telepon</div>
                                                         <div class="col-md-8">{{ $supplier->no_telepon ?: '-' }}</div>
                                                     </div>

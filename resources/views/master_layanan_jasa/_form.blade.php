@@ -494,6 +494,15 @@
                         @enderror
                     </div>
 
+                    <div class="col-lg-3">
+                        <label class="form-label">Kode Satker</label>
+                        <input type="text" name="kode_satker" class="form-control @error('kode_satker') is-invalid @enderror" value="{{ old('kode_satker', $isEdit ? $layanan->kode_satker : '') }}" placeholder="Contoh: 288745" maxlength="20">
+                        <div class="form-text">Kode satuan kerja untuk layanan ini.</div>
+                        @error('kode_satker')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
+
                     <div class="col-12"><hr class="my-1"></div>
                     <div class="col-12"><div class="tariff-group-title mb-0">Nilai tarif</div></div>
 
@@ -686,6 +695,7 @@
             document.querySelector('input[name="mendukung_konsesi"]'),
             document.querySelector('input[name="persentase_konsesi"]'),
             document.querySelector('input[name="kode_akun"]'),
+            document.querySelector('input[name="kode_satker"]'),
             kodeMakInput,
             kodeJenisPembayaranInput,
             tarifInput,

@@ -296,6 +296,15 @@
           </a>
         </li>
         @endhasanyrole
+        @hasanyrole('Super Admin|Koordinator Keuangan')
+        <li>
+          <a href="{{ route('surat-numbers.index') }}">
+            <div class="parent-icon"><i class="material-icons-outlined">tag</i>
+            </div>
+            <div class="menu-title">Nomor Surat</div>
+          </a>
+        </li>
+        @endhasanyrole
         @hasrole('PPK')
         <li>
           <a href="{{ route('contracts.verifikasi') }}">
@@ -516,6 +525,11 @@
             <li>
               <a href="{{ route('admin-jasa.tagihan.jatuh-tempo') }}">
                 <i class="material-icons-outlined">arrow_right</i>Jatuh Tempo
+              </a>
+            </li>
+            <li>
+              <a href="{{ route('nomor-tagihan-jasa.index') }}">
+                <i class="material-icons-outlined">arrow_right</i>Nomor Tagihan
               </a>
             </li>
           </ul>

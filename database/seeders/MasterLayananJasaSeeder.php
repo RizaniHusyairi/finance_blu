@@ -42,6 +42,9 @@ class MasterLayananJasaSeeder extends Seeder
             return;
         }
 
+        // Guard: kolom kode_satker mungkin belum ada bila migrasi belum dijalankan.
+        $hasKodeSatker = \Illuminate\Support\Facades\Schema::hasColumn('layanan_jasas', 'kode_satker');
+
         // Sort: prefix abjad (A. B. C. ... L.), lalu level, lalu kode natural.
         usort($rows, function ($a, $b) {
             $pa = $this->extractRootLetter($a['nama']);
@@ -89,6 +92,10 @@ class MasterLayananJasaSeeder extends Seeder
                 'wajib_tagihan_terpisah' => (bool) ($row['wajib_terpisah'] ?? false),
                 'updated_at' => $now,
             ];
+
+            if ($hasKodeSatker) {
+                $payload['kode_satker'] = $row['kode_satker'] ?? null;
+            }
 
             $payload['created_at'] = $now;
             $kodeToId[$kode] = (int) DB::table('layanan_jasas')->insertGetId($payload);

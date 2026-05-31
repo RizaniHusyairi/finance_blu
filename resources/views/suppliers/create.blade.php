@@ -32,20 +32,11 @@
                     <div class="card-body p-4">
                         <div class="row g-4">
                             <div class="col-md-6">
-                                <label class="form-label fw-bold">Kategori Mitra <span class="text-danger">*</span></label>
-                                <select class="form-select" name="kategori" required>
-                                    <option value="">-- Pilih Kategori --</option>
-                                    <option value="VENDOR_PENGELUARAN" {{ old('kategori') == 'VENDOR_PENGELUARAN' ? 'selected' : '' }}>Vendor Pengeluaran (Penyedia Barang/Jasa)</option>
-                                    <option value="MITRA_PENERIMAAN" {{ old('kategori') == 'MITRA_PENERIMAAN' ? 'selected' : '' }}>Mitra Penerimaan (Penyewa Tenant)</option>
-                                    <option value="KEDUANYA" {{ old('kategori') == 'KEDUANYA' ? 'selected' : '' }}>Keduanya</option>
-                                </select>
-                            </div>
-                            <div class="col-md-6">
                                 <label class="form-label fw-bold">Tipe Supplier <span class="text-danger">*</span></label>
                                 <select class="form-select" name="tipe_supplier" required>
                                     <option value="">-- Pilih Tipe --</option>
                                     <option value="01 - Satker" {{ old('tipe_supplier') == '01 - Satker' ? 'selected' : '' }}>01 - Satker</option>
-                                    <option value="02 - Penyedia/Badan Usaha" {{ old('tipe_supplier') == '02 - Penyedia/Badan Usaha' ? 'selected' : '' }}>02 - Penyedia/Badan Usaha</option>
+                                    <option value="02 - Penyedia/Badan Usaha" {{ old('tipe_supplier', '02 - Penyedia/Badan Usaha') == '02 - Penyedia/Badan Usaha' ? 'selected' : '' }}>02 - Penyedia/Badan Usaha</option>
                                     <option value="03 - Pegawai" {{ old('tipe_supplier') == '03 - Pegawai' ? 'selected' : '' }}>03 - Pegawai</option>
                                     <option value="06 - Penerusan Pinjaman" {{ old('tipe_supplier') == '06 - Penerusan Pinjaman' ? 'selected' : '' }}>06 - Penerusan Pinjaman</option>
                                 </select>
@@ -81,7 +72,11 @@
                     </div>
                     <div class="card-body p-4">
                         <div class="row g-4">
-                            <div class="col-md-12">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Email</label>
+                                <input type="email" class="form-control" name="email" value="{{ old('email') }}" placeholder="Contoh: vendor@perusahaan.co.id">
+                            </div>
+                            <div class="col-md-6">
                                 <label class="form-label fw-bold">Nomor Telepon / HP</label>
                                 <input type="text" class="form-control" name="no_telepon" value="{{ old('no_telepon') }}" placeholder="Contoh: 081234567890" pattern="^0[0-9]{8,15}$" title="Nomor telepon harus diawali nol dan berisi angka saja.">
                             </div>

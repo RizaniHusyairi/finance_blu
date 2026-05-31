@@ -141,12 +141,19 @@ class PerjaldinController extends Controller
         $masterPegawai = MasterPegawai::where('status_aktif', true)->orderBy('nama_lengkap')->get();
 
         $year = now()->format('Y');
-        $count = Tagihan::withTrashed()->whereYear('created_at', $year)
-            ->where('tipe_tagihan', 'PERJALDIN')
-            ->count();
-        $nextNumber = str_pad($count + 1, 4, '0', STR_PAD_LEFT);
+        $nextNumber = app(\App\Services\DocumentNumberService::class)->previewByKey('KU_PERJALDIN');
 
         return view('perjaldins.create', compact('masterProvinsi', 'ppkUsers', 'ppspmUsers', 'bendaharaPenerimaanUsers', 'bendaharaUsers', 'kasubbagUser', 'koorKeuanganUsers', 'masterPegawai', 'nextNumber'));
+    }
+
+    /**
+     * Nomor urut KU.201 berikutnya yang belum dipakai pada tahun berjalan.
+     *
+     * Dipertahankan untuk kompatibilitas; penomoran kini via DocumentNumberService (KU_PERJALDIN).
+     */
+    private function nextAvailableKu201Sequence(): string
+    {
+        return app(\App\Services\DocumentNumberService::class)->previewByKey('KU_PERJALDIN');
     }
 
     /**
@@ -163,7 +170,6 @@ class PerjaldinController extends Controller
 
         $request->validate([
             'deskripsi' => 'required|string|max:255',
-            'nomor_urut' => 'required|numeric|min:1',
             'periode_bulan' => 'required|integer|min:1|max:12',
             'periode_tahun' => 'required|integer|min:2000|max:2100',
             'kota_ttd' => 'required|string|max:100',
@@ -227,8 +233,9 @@ class PerjaldinController extends Controller
             $totalBruto = $this->calculatePerjaldinGrandTotal($request->peserta);
 
             $tahun = date('Y');
-            $nomorUrut = str_pad($request->nomor_urut, 4, '0', STR_PAD_LEFT);
-            $nomorTagihan = 'KU.201/' . $nomorUrut . '/APTP/' . $tahun;
+            // Nomor surat KU otomatis & bebas-bentrok lintas tipe via register terpusat.
+            $nomorTagihan = app(\App\Services\DocumentNumberService::class)
+                ->generateByKey('KU_PERJALDIN', (int) $tahun);
 
             $tagihan = Tagihan::create([
                 'nomor_tagihan' => $nomorTagihan,

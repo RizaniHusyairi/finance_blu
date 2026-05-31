@@ -24,6 +24,10 @@ class MasterPihak extends Model
         'email',
         'no_telepon',
         'status_aktif',
+        // Alias virtual (punya mutator) agar bisa di-mass-assign dari form vendor.
+        // setNamaPerusahaanAttribute -> nama_pihak, setNamaDirekturAttribute -> nama_penanggung_jawab.
+        'nama_perusahaan',
+        'nama_direktur',
     ];
 
     protected $casts = [

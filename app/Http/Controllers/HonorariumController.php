@@ -33,7 +33,8 @@ class HonorariumController extends Controller
     public function create()
     {
         $budgetGroups = DipaBudgetOptionService::groupedOptions();
-        $nextNumber = $this->generateNextNumber();
+        $nextNumber = app(\App\Services\DocumentNumberService::class)
+            ->previewByKey('KU_HONOR');
         $tarifPajaks = \App\Models\MasterTarifPajak::where('status_aktif', true)
             ->where('kode_pajak', 'like', 'PPH%')
             ->orderBy('kode_pajak')->get();
@@ -110,7 +111,6 @@ class HonorariumController extends Controller
         }
 
         $request->validate([
-            'nomor_urut' => 'required|numeric|min:1',
             'deskripsi' => 'required|string|max:255',
             'nama_supplier' => 'required|string|max:150',
             'dipa_revision_item_id' => 'required|exists:dipa_revision_items,id',
@@ -151,8 +151,10 @@ class HonorariumController extends Controller
             $totalNetto = $totalBruto - $totalPph;
 
             $tahun = date('Y');
-            $nomorUrut = str_pad($request->nomor_urut, 4, '0', STR_PAD_LEFT);
-            $nomorTagihan = 'KU.201/' . $nomorUrut . '/APTP/' . $tahun;
+            // Nomor surat KU otomatis & bebas-bentrok lintas tipe (Honorarium,
+            // Perjaldin, Surat Pengantar Jasa) via register terpusat.
+            $nomorTagihan = app(\App\Services\DocumentNumberService::class)
+                ->generateByKey('KU_HONOR', (int) $tahun);
 
             $status = 'DRAFT';
 
@@ -635,11 +637,8 @@ class HonorariumController extends Controller
 
     private function generateNextNumber(): string
     {
-        $year = now()->format('Y');
-        $count = Tagihan::withTrashed()->whereYear('created_at', $year)
-            ->where('tipe_tagihan', 'HONORARIUM')
-            ->count();
-        return str_pad($count + 1, 4, '0', STR_PAD_LEFT);
+        // Dipertahankan untuk kompatibilitas; penomoran kini via DocumentNumberService (KU_HONOR).
+        return app(\App\Services\DocumentNumberService::class)->previewByKey('KU_HONOR');
     }
 
     private function notifyRoles(array $roles, string $judul, string $pesan, ?string $linkUrl = null): void

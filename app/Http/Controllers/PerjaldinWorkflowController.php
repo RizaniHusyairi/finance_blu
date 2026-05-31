@@ -21,7 +21,10 @@ class PerjaldinWorkflowController extends Controller
         $tagihan = Tagihan::findOrFail($tagihanId);
 
         try {
-            $this->workflowService->submit($tagihan, $request->user(), $request->ip());
+            $instance = $this->workflowService->submit($tagihan, $request->user(), $request->ip());
+
+            // Kirim notifikasi WA ke para verifikator pada step aktif (best-effort).
+            $this->workflowService->notifyVerifikatorViaWhatsApp($instance, $tagihan);
 
             return redirect()->back()->with('success', 'Dokumen Perjaldin berhasil diajukan ke PPK, PPSPM, Koordinator Keuangan, Bendahara Penerimaan, dan Bendahara Pengeluaran.');
         } catch (\Exception $e) {

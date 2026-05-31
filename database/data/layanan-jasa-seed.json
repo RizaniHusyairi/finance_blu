@@ -14,7 +14,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": null
     },
     {
         "kode": "APT-01-01-JASA-PENDARATAN-PESAWAT-UDARA",
@@ -31,7 +32,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": null
     },
     {
         "kode": "APT-01-01-01-BOBOT-PESAWAT-S-D-40-000KG",
@@ -48,7 +50,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-01-01-02-BOBOT-PESAWAT-DIATAS-40-000KG-S-D-100-000KG",
@@ -65,7 +68,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-01-01-03-BOBOT-PESAWAT-DIATAS-100-000KG",
@@ -82,7 +86,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-01-02-JASA-PENEMPATAN-PESAWAT-UDARA",
@@ -99,7 +104,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-01-03-JASA-PENYIMPANAN-PESAWAT-UDARA",
@@ -116,7 +122,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-01-04-PELAYANAN-JASA-PENUMPANG-PESAWAT-UDARA",
@@ -133,7 +140,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 7,
-        "wajib_terpisah": true
+        "wajib_terpisah": true,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-01-05-JASA-KARGO-DAN-POS-PESAWAT-UDARA-JKP2U",
@@ -150,7 +158,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": null
     },
     {
         "kode": "APT-01-05-01-JASA-PENYIMPANAN-BARANG-ANTAR-BANDARA-DALAM-NEGE",
@@ -167,7 +176,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-01-05-02-JASA-LAYANAN-KARGO-DAN-POS-PESAWAT-UDARA",
@@ -184,7 +194,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-01-06-JASA-PEMAKAIAN-TEMPAT-PELAPORAN-KEBERANGKATAN-CH",
@@ -201,7 +212,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-01-07-JASA-PEMAKAIAN-GARBARATA-AVIOBRIDGE",
@@ -218,7 +230,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-01-08-JASA-PENGGUNAAN-BANDAR-UDARA-UNTUK-PESAWAT-UDARA",
@@ -235,7 +248,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-01-09-JASA-PENGGUNAAN-BANDAR-UDARA-ALTERNATIF-STAND-BY",
@@ -252,7 +266,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-02-TARIF-JASA-TERKAIT-BANDAR-UDARA-LAYANAN-DOMESTIK",
@@ -269,7 +284,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": null
     },
     {
         "kode": "APT-02-01-PEMASANGAN-TIANG-PANCANG-REKLAME",
@@ -286,7 +302,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-02-02-KONSESI",
@@ -303,7 +320,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": null
     },
     {
         "kode": "APT-02-02-01-KONSESI-PENGISIAN-BAHAN-BAKAR-PESAWAT-UDARA-FUEL",
@@ -320,7 +338,8 @@
         "mendukung_konsesi": true,
         "persentase_konsesi": 17,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-02-02-02-KONSESI-ATAS-PENGUSAHAAN-TANAH-DAN-RUANGAN",
@@ -337,7 +356,8 @@
         "mendukung_konsesi": true,
         "persentase_konsesi": 5,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-02-02-03-KONSESI-PENYIMPANAN-KENDARAAN-BERMOTOR",
@@ -354,7 +374,8 @@
         "mendukung_konsesi": true,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": null
     },
     {
         "kode": "APT-02-02-03-01-PARKIR-UTAMA-KENDARAAN",
@@ -371,7 +392,8 @@
         "mendukung_konsesi": true,
         "persentase_konsesi": 25,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-02-02-03-02-PARKIR-VIP",
@@ -388,7 +410,8 @@
         "mendukung_konsesi": true,
         "persentase_konsesi": 15,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-02-02-03-03-PARKIR-INAP",
@@ -405,7 +428,8 @@
         "mendukung_konsesi": true,
         "persentase_konsesi": 15,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-02-02-04-KONSESI-PENYEWAAN-SPACE-IKLAN-YANG-DISEWAKAN-KEM",
@@ -422,7 +446,8 @@
         "mendukung_konsesi": true,
         "persentase_konsesi": 5,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-02-02-05-KONSESI-ATAS-JASA-PENGEMASAN-BARANG-BAWAAN-ATAU-",
@@ -439,7 +464,8 @@
         "mendukung_konsesi": true,
         "persentase_konsesi": 15,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-02-02-06-KONSESI-ATAS-KEGIATAN-GROUND-HANDLING",
@@ -456,7 +482,8 @@
         "mendukung_konsesi": true,
         "persentase_konsesi": 15,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-02-03-PENGGUNAAN-TANAH-PADA-BANDAR-UDARA-UNIT-PENYELEN",
@@ -473,7 +500,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-02-04-PENGGUNAAN-RUANGAN-UNTUK-PROMOSI-BERUPA-PERAGAAN",
@@ -490,7 +518,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-02-05-PENGGUNAAN-RUANGAN",
@@ -507,7 +536,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": null
     },
     {
         "kode": "APT-02-05-01-DI-DALAM-TERMINAL",
@@ -524,7 +554,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": null
     },
     {
         "kode": "APT-02-05-01-01-TERBUKA-TANPA-AC",
@@ -541,7 +572,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-02-05-01-02-TERTUTUP-TANPA-AC",
@@ -558,7 +590,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-02-05-01-03-TERBUKA-DENGAN-AC",
@@ -575,7 +608,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-02-05-01-04-TERTUTUP-DENGAN-AC",
@@ -592,7 +626,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-02-05-02-DI-LUAR-TERMINAL",
@@ -609,7 +644,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": null
     },
     {
         "kode": "APT-02-05-02-01-TERBUKA-TANPA-AC",
@@ -626,7 +662,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-02-05-02-02-TERTUTUP-TANPA-AC",
@@ -643,7 +680,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-02-05-02-03-TERBUKA-DENGAN-AC",
@@ -660,7 +698,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-02-05-02-04-TERTUTUP-DENGAN-AC",
@@ -677,7 +716,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-02-06-PENEMPATAN-MESIN-ANJUNGAN-TUNAI-MANDIRI-ATM-DI-B",
@@ -694,7 +734,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-02-07-SHOOTING-FILM-PEMOTRETAN-DAN-PROMOSI",
@@ -711,7 +752,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": null
     },
     {
         "kode": "APT-02-07-01-SHOOTING-FILM",
@@ -728,7 +770,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-02-07-02-PEMOTRETAN-BANDAR-UDARA",
@@ -745,7 +788,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-02-07-03-PROMOSI",
@@ -762,7 +806,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-02-08-PEMAKAIAN-RUANG-TUNGGU-KHUSUS-COMMERCIAL-IMPORTA",
@@ -779,7 +824,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-02-09-PENGGUNAAN-HANGGAR-UNTUK-PERBAIKAN-PESAWAT-UDARA",
@@ -796,7 +842,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-02-10-PENGGUNAAN-TRAKTOR-PENDORONG-PESAWAT-PUSH-BACK-T",
@@ -813,7 +860,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-02-11-PENGGUNAAN-BIS-APRON",
@@ -830,7 +878,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-02-12-PEMASANGAN-REKLAME",
@@ -847,7 +896,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": null
     },
     {
         "kode": "APT-02-12-01-KOTAK-NEON-NEON-BOX-SATU-SISI-PANDANG",
@@ -864,7 +914,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": null
     },
     {
         "kode": "APT-02-12-01-01-DALAM-TERMINAL",
@@ -881,7 +932,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-02-12-01-02-LUAR-TERMINAL",
@@ -898,7 +950,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-02-12-02-PAPAN-REKLAME-BILLBOARD",
@@ -915,7 +968,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-02-12-03-KERETA-DORONG-TROLLY",
@@ -932,7 +986,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-02-12-04-KURSI",
@@ -949,7 +1004,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-02-12-05-ASBAK-TEMPAT-SAMPAH",
@@ -966,7 +1022,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-02-12-06-SPANDUK-BANNER",
@@ -983,7 +1040,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-02-12-07-UMBUL-UMBUL",
@@ -1000,7 +1058,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-02-12-08-BALEHO",
@@ -1017,7 +1076,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-02-12-09-STICKER",
@@ -1034,7 +1094,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-02-12-10-GARBARATA-BIS-LAYANAN-PENUMPANG-DI-APRON",
@@ -1051,7 +1112,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-02-12-11-PENEMPATAN-BOOKLET",
@@ -1068,7 +1130,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-02-12-12-PENEMPATAN-BROSUR-LEAFLET",
@@ -1085,7 +1148,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-02-13-PENYEDIAAN-FASILITAS-TELEPON",
@@ -1102,7 +1166,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": null
     },
     {
         "kode": "APT-02-13-01-PENGGANTIAN-PEMAKAIAN-INTERCOM",
@@ -1119,7 +1184,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-02-13-02-PENGGANTIAN-PEMAKAIAN-TELEPON-DALAM-KOTA-PERBULA",
@@ -1136,7 +1202,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-02-13-03-PENGGANTIAN-PEMAKAIAN-TELEPON-DALAM-KOTA-PERBULA",
@@ -1153,7 +1220,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-02-14-PENGGUNAAN-AIR-BANDAR-UDARA",
@@ -1170,7 +1238,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-02-15-PENGGUNAAN-LISTRIK-BANDAR-UDARA",
@@ -1187,7 +1256,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-02-16-STUDI-LAPANGAN",
@@ -1204,7 +1274,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": null
     },
     {
         "kode": "APT-02-16-01-STUDI-LAPANGAN-REGULER-DENGAN-NASI-KOTAK",
@@ -1221,7 +1292,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-02-16-02-STUDI-LAPANGAN-REGULER-DENGAN-SNACK",
@@ -1238,7 +1310,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-02-16-03-STUDI-LAPANGAN-DALAM-RANGKA-PENELITIAN-DAN-OBSER",
@@ -1255,7 +1328,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-02-16-04-STUDI-LAPANGAN-DALAM-RANGKA-PENELITIAN-DAN-OBSER",
@@ -1272,7 +1346,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-02-17-PEMERIKSAAN-ORANG-DAN-BARANG-SERTA-PEMERIKSAAN-K",
@@ -1289,7 +1364,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": null
     },
     {
         "kode": "APT-02-17-01-PEMERIKSAAN-ORANG-DAN-BARANG",
@@ -1306,7 +1382,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-02-17-02-PEMERIKSAAN-KARGO-DAN-POS",
@@ -1323,7 +1400,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-02-18-PENGGUNAAN-FASILITAS-DAN-PERSONIL-DI-LUAR-JAM-OP",
@@ -1340,7 +1418,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-02-19-FLIGHT-INFORMATION-DISPLAY-SYSTEM-FIDS",
@@ -1357,7 +1436,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-02-20-SEWA-PERALATAN-WORKSHOP",
@@ -1374,7 +1454,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": null
     },
     {
         "kode": "APT-02-20-01-AIR-COMPRESSOR",
@@ -1391,7 +1472,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-02-20-02-BATTERY-CHARGER",
@@ -1408,7 +1490,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-02-20-03-HAND-DRILL",
@@ -1425,7 +1508,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-02-20-04-GENSET",
@@ -1442,7 +1526,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-02-20-05-ANGLE-GRINDER",
@@ -1459,7 +1544,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-02-20-06-BENCH-GRINDER",
@@ -1476,7 +1562,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-02-20-07-HEAT-GUN",
@@ -1493,7 +1580,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-02-20-08-ELECTRIC-WELDING",
@@ -1510,7 +1598,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-02-20-09-TROLLY-HYDRAULIC-JACK",
@@ -1527,7 +1616,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-02-20-10-TOLLKIT-SET",
@@ -1544,7 +1634,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-02-20-11-JACK-STAND",
@@ -1561,7 +1652,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-02-20-12-JACK-HAMMER",
@@ -1578,7 +1670,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-02-20-13-SCISSOR-LIFT",
@@ -1595,7 +1688,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-02-20-14-HAND-PALLET",
@@ -1612,7 +1706,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-02-20-15-CAR-LIFT",
@@ -1629,7 +1724,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-02-21-PENGGUNAAN-KENDARAAN",
@@ -1646,7 +1742,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": null
     },
     {
         "kode": "APT-02-21-01-KENDARAAN-BERMOTOR-RODA-EMPAT-LEBIH-BUS",
@@ -1663,7 +1760,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-02-21-02-KENDARAAN-MOBIL-PEMADAM",
@@ -1680,7 +1778,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-02-21-03-DUMPT-TRUCK",
@@ -1697,7 +1796,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-02-21-04-CRAWLER-EXCAVATOR-ATTACHMENT",
@@ -1714,7 +1814,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-02-22-PENGGUNAAN-RUANG-RAPAT",
@@ -1731,7 +1832,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": null
     },
     {
         "kode": "APT-02-22-01-RUANG-RAPAT-DIRGANTARA",
@@ -1748,7 +1850,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-02-22-02-RUANG-RAPAT-BOEING",
@@ -1765,7 +1868,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-02-22-03-RUANG-RAPAT-N-25",
@@ -1782,7 +1886,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-02-22-04-RUANG-RAPAT-CASSA",
@@ -1799,7 +1904,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-03-TARIF-LAYANAN-PENERBITAN-IZIN-DAERAH-KEAMANAN-TE",
@@ -1816,7 +1922,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": null
     },
     {
         "kode": "APT-03-01-IZIN-MASUK-DAERAH-KEAMANAN-TERBATAS",
@@ -1833,7 +1940,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": null
     },
     {
         "kode": "APT-03-01-01-E-PAS-BANDARA",
@@ -1850,7 +1958,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": null
     },
     {
         "kode": "APT-03-01-01-01-PENYELENGGARA-BANDAR-UDARA-NAVIGASI-DAN-PENERBAN",
@@ -1867,7 +1976,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": null
     },
     {
         "kode": "APT-03-01-01-01-01-MINGGUAN",
@@ -1884,7 +1994,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-03-01-01-01-02-BULANAN",
@@ -1901,7 +2012,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-03-01-01-01-03-TAHUNAN",
@@ -1918,7 +2030,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-03-01-01-02-PERUSAHAAN-TERKAIT-DAN-PENUNJANG-PENERBANGAN",
@@ -1935,7 +2048,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": null
     },
     {
         "kode": "APT-03-01-01-02-01-MINGGUAN",
@@ -1952,7 +2066,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-03-01-01-02-02-BULANAN",
@@ -1969,7 +2084,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-03-01-01-02-03-TAHUNAN",
@@ -1986,7 +2102,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-03-01-01-03-INSTANSI-PENYELENGGARA-PEMERINTAHAN-DI-BANDAR-UD",
@@ -2003,7 +2120,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": null
     },
     {
         "kode": "APT-03-01-01-03-01-MINGGUAN",
@@ -2020,7 +2138,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-03-01-01-03-02-BULANAN",
@@ -2037,7 +2156,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-03-01-01-03-03-TAHUNAN",
@@ -2054,7 +2174,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-03-01-01-04-UMUM",
@@ -2071,7 +2192,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": null
     },
     {
         "kode": "APT-03-01-01-04-01-MINGGUAN",
@@ -2088,7 +2210,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-03-01-01-04-02-BULANAN",
@@ -2105,7 +2228,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-03-01-01-04-03-TAHUNAN",
@@ -2122,7 +2246,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-03-01-02-PAS-BANDARA-MANUAL",
@@ -2139,7 +2264,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": null
     },
     {
         "kode": "APT-03-01-02-01-ORANG",
@@ -2156,7 +2282,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": null
     },
     {
         "kode": "APT-03-01-02-01-01-PENYELENGGARA-BANDAR-UDARA-NAVIGASI-DAN-PENERBAN",
@@ -2173,7 +2300,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-03-01-02-01-01-01-1-MINGGUAN",
@@ -2190,7 +2318,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-03-01-02-01-01-02-2-BULANAN",
@@ -2207,7 +2336,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-03-01-02-01-01-03-3-TAHUNAN",
@@ -2224,7 +2354,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-03-01-02-01-02-PERUSAHAAN-TERKAIT-DAN-PENUNJANG-PENERBANGAN",
@@ -2241,7 +2372,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": null
     },
     {
         "kode": "APT-03-01-02-01-02-01-1-MINGGUAN",
@@ -2258,7 +2390,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-03-01-02-01-02-02-2-BULANAN",
@@ -2275,7 +2408,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-03-01-02-01-02-03-3-TAHUNAN",
@@ -2292,7 +2426,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-03-01-02-01-03-INSTANSI-PENYELENGGARA-PEMERINTAHAN-DI-BANDAR-UD",
@@ -2309,7 +2444,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": null
     },
     {
         "kode": "APT-03-01-02-01-03-01-1-BULANAN",
@@ -2326,7 +2462,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-03-01-02-01-03-02-2-TAHUNAN",
@@ -2343,7 +2480,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-03-01-02-01-04-UMUM",
@@ -2360,7 +2498,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": null
     },
     {
         "kode": "APT-03-01-02-01-04-01-1-MINGGUAN",
@@ -2377,7 +2516,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-03-01-02-01-04-02-2-BULANAN",
@@ -2394,7 +2534,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-03-01-02-01-04-03-3-TAHUNAN",
@@ -2411,7 +2552,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-03-01-02-02-KENDARAAN",
@@ -2428,7 +2570,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": null
     },
     {
         "kode": "APT-03-01-02-02-01-PENYELENGGARA-BANDAR-UDARA-NAVIGASI-DAN-PENERBAN",
@@ -2445,7 +2588,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-03-01-02-02-02-PERUSAHAAN-TERKAIT-DAN-PENUNJANG-PENERBANGAN",
@@ -2462,7 +2606,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": null
     },
     {
         "kode": "APT-03-01-02-02-02-01-1-MINGGUAN",
@@ -2479,7 +2624,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-03-01-02-02-02-02-2-BULANAN",
@@ -2496,7 +2642,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-03-01-02-02-02-03-3-TAHUNAN",
@@ -2513,7 +2660,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-03-01-02-02-03-INSTANSI-PENYELENGGARA-PEMERINTAH-DI-BANDAR-UDAR",
@@ -2530,7 +2678,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": null
     },
     {
         "kode": "APT-03-01-02-02-03-01-1-BULANAN",
@@ -2547,7 +2696,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-03-01-02-02-03-02-2-TAHUNAN",
@@ -2564,7 +2714,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-03-02-IZIN-MENGEMUDI",
@@ -2581,7 +2732,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": null
     },
     {
         "kode": "APT-03-02-01-PADA-BADAN-USAHA-BANDAR-UDARA",
@@ -2598,7 +2750,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-03-02-02-PADA-UNIT-PENYELENGGARA-BANDAR-UDARA",
@@ -2615,7 +2768,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-04-TARIF-JASA-KEBANDARUDARAAN-LAYANAN-INTERNASIONAL",
@@ -2632,7 +2786,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": null
     },
     {
         "kode": "APT-04-01-JASA-PENDARATAN-PESAWAT-UDARA",
@@ -2649,7 +2804,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": null
     },
     {
         "kode": "APT-04-01-01-BOBOT-PESAWAT-S-D-40-000KG",
@@ -2666,7 +2822,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-04-01-02-BOBOT-PESAWAT-DIATAS-40-000KG-S-D-100-000KG",
@@ -2683,7 +2840,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-04-01-03-BOBOT-PESAWAT-DIATAS-100-000KG",
@@ -2700,7 +2858,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-04-02-JASA-PENEMPATAN-PESAWAT-UDARA",
@@ -2717,7 +2876,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-04-03-JASA-PENYIMPANAN-PESAWAT-UDARA",
@@ -2734,7 +2894,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-04-04-PELAYANAN-JASA-PENUMPANG-PESAWAT-UDARA",
@@ -2751,7 +2912,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 7,
-        "wajib_terpisah": true
+        "wajib_terpisah": true,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-04-05-JASA-KARGO-DAN-POS-PESAWAT-UDARA-JKP2U",
@@ -2768,7 +2930,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": null
     },
     {
         "kode": "APT-04-05-01-JASA-PENYIMPANAN",
@@ -2785,7 +2948,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-04-05-02-JASA-LAYANAN-KARGO-DAN-POS-PESAWAT-UDARA",
@@ -2802,7 +2966,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-04-06-JASA-PEMAKAIAN-TEMPAT-PELAPORAN-KEBERANGKATAN-CH",
@@ -2819,7 +2984,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-04-07-JASA-PEMAKAIAN-GARBARATA-AVIOBRIDGE",
@@ -2836,7 +3002,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-04-08-JASA-PENGGUNAAN-BANDAR-UDARA-UNTUK-PESAWAT-UDARA",
@@ -2853,7 +3020,8 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     },
     {
         "kode": "APT-04-09-JASA-PENGGUNAAN-BANDAR-UDARA-ALTERNATIF-STAND-BY",
@@ -2870,6 +3038,7 @@
         "mendukung_konsesi": false,
         "persentase_konsesi": null,
         "jth_tempo": 30,
-        "wajib_terpisah": false
+        "wajib_terpisah": false,
+        "kode_satker": "288745"
     }
 ]

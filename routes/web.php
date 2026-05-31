@@ -47,6 +47,7 @@ use App\Http\Controllers\MitraJasaPenjualanController;
 use App\Http\Controllers\MitraJasaPjp2uController;
 use App\Http\Controllers\MitraLayananController;
 use App\Http\Controllers\MitraPortalController;
+use App\Http\Controllers\NomorTagihanJasaController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\NpiController;
 use App\Http\Controllers\NpiHonorController;
@@ -92,6 +93,7 @@ use App\Http\Controllers\SppPerjaldinVerifikasiController;
 use App\Http\Controllers\SppVerifikasiController;
 use App\Http\Controllers\SppWorkflowController;
 use App\Http\Controllers\StandingInstructionKpaController;
+use App\Http\Controllers\SuratNumberController;
 use App\Http\Controllers\SuperAdminJasaDashboardController;
 use App\Http\Controllers\SuperAdminJasaLaporanController;
 use App\Http\Controllers\SupplierController;
@@ -355,6 +357,14 @@ Route::middleware(['auth', 'account.active'])->group(function () use ($internalR
         Route::post('/document-numbers/{documentNumber}/mark-used', [DocumentNumberController::class, 'markUsed'])->name('document-numbers.mark-used');
         Route::post('/document-numbers/{documentNumber}/cancel', [DocumentNumberController::class, 'cancel'])->name('document-numbers.cancel');
         Route::get('/document-numbers/check', [DocumentNumberController::class, 'check'])->name('document-numbers.check');
+    }); 
+
+    // Manajemen Nomor Surat KU — role Koordinator Keuangan (Honorarium, Perjaldin, Surat Pengantar Jasa)
+    Route::middleware('role:Super Admin|Koordinator Keuangan')->group(function () {
+        Route::get('/surat-numbers', [SuratNumberController::class, 'index'])->name('surat-numbers.index');
+        Route::get('/surat-numbers/check', [SuratNumberController::class, 'check'])->name('surat-numbers.check');
+        Route::post('/surat-numbers', [SuratNumberController::class, 'store'])->name('surat-numbers.store');
+        Route::post('/surat-numbers/{suratNumber}/cancel', [SuratNumberController::class, 'cancel'])->name('surat-numbers.cancel');
     });
 
     // Master Data — Rekening Bank (kelola rekening + saldo awal). Diakses oleh
@@ -487,10 +497,17 @@ Route::middleware(['auth', 'account.active'])->group(function () use ($internalR
     // verifikator jasa hanya boleh melihat/approve.
     Route::middleware('role:Super Admin|Admin Jasa|Admin Konsesi')->group(function () {
         Route::get('/tagihan-jasa/create', [TagihanJasaController::class, 'create'])->name('tagihan-jasa.create');
+        Route::get('/tagihan-jasa/preview-nomor', [TagihanJasaController::class, 'previewNomorTagihan'])->name('tagihan-jasa.preview-nomor');
         Route::post('/tagihan-jasa', [TagihanJasaController::class, 'store'])->name('tagihan-jasa.store');
         Route::get('/tagihan-jasa/{id}/edit', [TagihanJasaController::class, 'edit'])->name('tagihan-jasa.edit');
         Route::put('/tagihan-jasa/{id}', [TagihanJasaController::class, 'update'])->name('tagihan-jasa.update');
         Route::post('/tagihan-jasa/{id}/resubmit', [TagihanJasaController::class, 'resubmit'])->name('tagihan-jasa.resubmit');
+    });
+
+    // Menu Nomor Tagihan Jasa — Super Admin Jasa (set nomor urut awal + monitoring)
+    Route::middleware('role:Super Admin|Super Admin Jasa')->group(function () {
+        Route::get('/nomor-tagihan-jasa', [NomorTagihanJasaController::class, 'index'])->name('nomor-tagihan-jasa.index');
+        Route::post('/nomor-tagihan-jasa/nomor-awal', [NomorTagihanJasaController::class, 'updateNomorAwal'])->name('nomor-tagihan-jasa.nomor-awal');
     });
 
     Route::middleware('role:Super Admin|Super Admin Jasa|Admin Jasa|Admin Konsesi|Koordinator Jasa|Kepala Seksi Pelayanan dan Kerjasama|Kepala Subbagian Keuangan dan Tata Usaha|KPA|PLT/PLH')->group(function () {

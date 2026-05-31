@@ -10,9 +10,20 @@ use InvalidArgumentException;
 
 class DocumentNumberController extends Controller
 {
+    /** Document key milik menu Nomor Dokumen (Pengadaan) — hanya grup kontrak PL. */
+    private const KONTRAK_GROUP = 'KONTRAK_PPK_BB_APTP';
+
+    private function kontrakDocumentKeys(): array
+    {
+        return collect(config('document_numbers.documents', []))
+            ->filter(fn ($cfg) => ($cfg['sequence_group'] ?? null) === self::KONTRAK_GROUP)
+            ->keys()
+            ->all();
+    }
+
     public function index(Request $request)
     {
-        $documentKeys = array_keys(config('document_numbers.documents', []));
+        $documentKeys = $this->kontrakDocumentKeys();
         $statusOptions = [
             DocumentNumber::STATUS_AVAILABLE,
             DocumentNumber::STATUS_RESERVED,
@@ -21,6 +32,7 @@ class DocumentNumberController extends Controller
         ];
 
         $query = DocumentNumber::query()
+            ->where('sequence_group', self::KONTRAK_GROUP)
             ->with(['reservedBy', 'usedBy'])
             ->when($request->filled('document_key'), fn ($builder) => $builder->where('document_key', $request->document_key))
             ->when($request->filled('status'), fn ($builder) => $builder->where('status', $request->status))
@@ -37,7 +49,7 @@ class DocumentNumberController extends Controller
                 });
             });
 
-        $summaryBase = DocumentNumber::query();
+        $summaryBase = DocumentNumber::query()->where('sequence_group', self::KONTRAK_GROUP);
         $summary = [
             'total' => (clone $summaryBase)->count(),
             'available' => (clone $summaryBase)->where('status', DocumentNumber::STATUS_AVAILABLE)->count(),
@@ -57,7 +69,7 @@ class DocumentNumberController extends Controller
 
     public function store(Request $request, DocumentNumberService $service)
     {
-        $documentKeys = array_keys(config('document_numbers.documents', []));
+        $documentKeys = $this->kontrakDocumentKeys();
 
         $validated = $request->validate([
             'document_key' => ['required', Rule::in($documentKeys)],
@@ -121,7 +133,7 @@ class DocumentNumberController extends Controller
 
     public function reserve(Request $request, DocumentNumberService $service)
     {
-        $documentKeys = array_keys(config('document_numbers.documents', []));
+        $documentKeys = $this->kontrakDocumentKeys();
 
         $validated = $request->validate([
             'document_key' => ['required', Rule::in($documentKeys)],

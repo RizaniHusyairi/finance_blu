@@ -4,11 +4,11 @@
 @section('label', 'Sesi Kedaluwarsa')
 @section('accent', '#fbbf24')
 
-@section('heading', 'Sesi penerbangan Anda kedaluwarsa ⏱️')
+@section('heading', 'Sesi anda sudah closed boarding ⏱️')
 
 @section('message')
     <strong>419 &mdash; Halaman Kedaluwarsa.</strong><br>
-    Sesi Anda telah berakhir demi keamanan. Silakan muat ulang halaman dan coba kirim kembali.
+    Sesi Anda telah berakhir demi keamanan. Silahkan refresh halaman (F5) 
 @endsection
 
 @section('actions')

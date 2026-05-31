@@ -38,15 +38,6 @@
                     <div class="card-body p-4">
                         <div class="row g-4">
                             <div class="col-md-6">
-                                <label class="form-label fw-bold">Kategori Mitra <span class="text-danger">*</span></label>
-                                <select class="form-select" name="kategori" required>
-                                    <option value="">-- Pilih Kategori --</option>
-                                    <option value="VENDOR_PENGELUARAN" {{ old('kategori', $supplier->kategori) == 'VENDOR_PENGELUARAN' ? 'selected' : '' }}>Vendor Pengeluaran (Penyedia Barang/Jasa)</option>
-                                    <option value="MITRA_PENERIMAAN" {{ old('kategori', $supplier->kategori) == 'MITRA_PENERIMAAN' ? 'selected' : '' }}>Mitra Penerimaan (Penyewa Tenant)</option>
-                                    <option value="KEDUANYA" {{ old('kategori', $supplier->kategori) == 'KEDUANYA' ? 'selected' : '' }}>Keduanya</option>
-                                </select>
-                            </div>
-                            <div class="col-md-6">
                                 <label class="form-label fw-bold">Tipe Supplier <span class="text-danger">*</span></label>
                                 <select class="form-select" name="tipe_supplier" required>
                                     <option value="">-- Pilih Tipe --</option>
@@ -87,7 +78,11 @@
                     </div>
                     <div class="card-body p-4">
                         <div class="row g-4">
-                            <div class="col-md-12">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Email</label>
+                                <input type="email" class="form-control" name="email" value="{{ old('email', $supplier->email) }}" placeholder="Contoh: vendor@perusahaan.co.id">
+                            </div>
+                            <div class="col-md-6">
                                 <label class="form-label fw-bold">Nomor Telepon / HP</label>
                                 <input type="text" class="form-control" name="no_telepon" value="{{ old('no_telepon', $supplier->no_telepon) }}" placeholder="Contoh: 081234567890" pattern="^0[0-9]{8,15}$" title="Nomor telepon harus diawali nol dan berisi angka saja.">
                             </div>

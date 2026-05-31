@@ -894,15 +894,11 @@
                     <div class="section-body">
                         <div class="row g-3">
                             <div class="col-md-5">
-                                <label class="form-label modern">Nomor Surat / Tagihan <span class="text-danger">*</span></label>
-                                <div class="input-group">
-                                    <span class="input-group-text text-secondary fw-bold" style="background:#f8fafc; border: 1px solid #e2e8f0; border-right: none; font-size: 0.9rem;">KU.201/</span>
-                                    <input type="number" name="nomor_urut" class="form-control modern text-center text-primary fw-bold font-monospace px-0" 
-                                           style="border-left: none; border-right: none; box-shadow: none;" 
-                                           value="{{ old('nomor_urut', $nextNumber) }}" required placeholder="0001">
-                                    <span class="input-group-text text-secondary fw-bold" style="background:#f8fafc; border: 1px solid #e2e8f0; border-left: none; font-size: 0.9rem;">/APTP/{{ date('Y') }}</span>
-                                </div>
-                                <div class="form-text small"><i class="bi bi-info-circle me-1"></i>Isi nomor urut. Default adalah urutan selanjutnya.</div>
+                                <label class="form-label modern">Nomor Surat / Tagihan</label>
+                                <input type="text" class="form-control modern text-primary fw-bold font-monospace bg-light"
+                                       value="{{ old('nomor_urut') ? 'KU.201/' . str_pad(old('nomor_urut'),4,'0',STR_PAD_LEFT) . '/APTP/' . date('Y') : $nextNumber }}"
+                                       readonly>
+                                <div class="form-text small"><i class="bi bi-info-circle me-1"></i>Nomor ditentukan otomatis oleh sistem saat disimpan (bebas-bentrok lintas surat KU).</div>
                             </div>
                             <div class="col-md-7">
                                 <label class="form-label modern">Uraian / Deskripsi Kegiatan <span class="text-danger">*</span></label>

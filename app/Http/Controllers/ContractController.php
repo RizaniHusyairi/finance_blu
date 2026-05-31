@@ -14,6 +14,7 @@ use App\Models\User;
 use App\Notifications\WorkflowNotification;
 use App\Services\DocumentNumberService;
 use App\Services\EmailNotificationService;
+use App\Services\WhatsappService;
 use Illuminate\Support\Facades\Notification;
 use App\Support\DipaBudgetOptionService;
 use App\Support\ContractDocumentTte;
@@ -641,9 +642,54 @@ class ContractController extends Controller
                 'icon' => 'task_alt',
                 'color' => 'primary',
             ]));
+
+            // Notifikasi WhatsApp ke PPK bahwa Pengadaan mengajukan persetujuan kontrak.
+            $this->kirimWaPengajuanKontrakKePpk($kontrak);
         }
 
         return back()->with('success', 'Kontrak berhasil diajukan ke PPK.');
+    }
+
+    /**
+     * Kirim notifikasi WhatsApp ke PPK saat Pejabat Pengadaan mengajukan
+     * persetujuan kontrak. Gagal kirim tidak menggagalkan proses submit.
+     */
+    private function kirimWaPengajuanKontrakKePpk(\App\Models\KontrakPengadaan $kontrak): void
+    {
+        try {
+            $kontrak->loadMissing(['ppkUser.profilable', 'vendor']);
+            $ppk = $kontrak->ppkUser;
+
+            $noHp = $ppk?->profilable->nomor_hp ?? null;
+            if (! $ppk || ! $noHp) {
+                \Illuminate\Support\Facades\Log::warning(
+                    'WA pengajuan kontrak: PPK atau nomor HP tidak tersedia untuk kontrak ' . $kontrak->nomor_spk
+                );
+                return;
+            }
+
+            $url = route('contracts.verifikasi.show', $kontrak->id);
+
+            $vendorNama = $kontrak->vendor?->nama_pihak ?? '-';
+            $nilai = 'Rp ' . number_format((float) $kontrak->nilai_total_kontrak, 0, ',', '.');
+            $pengaju = Auth::user()?->name ?? 'Pejabat Pengadaan';
+
+            $message = "*PENGAJUAN PERSETUJUAN KONTRAK (PPK)*\n\n";
+            $message .= "Yth. {$ppk->name},\n";
+            $message .= "Terdapat kontrak/SPK yang diajukan oleh Pejabat Pengadaan dan menunggu persetujuan Anda.\n\n";
+            $message .= "*Nomor SPK:* {$kontrak->nomor_spk}\n";
+            $message .= "*Pekerjaan:* " . ($kontrak->nama_pekerjaan ?: '-') . "\n";
+            $message .= "*Vendor:* {$vendorNama}\n";
+            $message .= "*Nilai Kontrak:* {$nilai}\n";
+            $message .= "*Diajukan oleh:* {$pengaju}\n\n";
+            $message .= "Silakan buka tautan berikut untuk meninjau dan menyetujui:\n";
+            $message .= $url . "\n\n";
+            $message .= "_Login terlebih dahulu untuk mengakses halaman verifikasi._";
+
+            app(WhatsappService::class)->sendMessage($noHp, $message);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Gagal kirim WA pengajuan kontrak ke PPK: ' . $e->getMessage());
+        }
     }
 
     public function approve($id)

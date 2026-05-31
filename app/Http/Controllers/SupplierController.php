@@ -31,12 +31,12 @@ class SupplierController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'kategori' => 'required|in:VENDOR_PENGELUARAN,MITRA_PENERIMAAN,KEDUANYA',
             'tipe_supplier' => 'required|string|max:50',
             'nama_perusahaan' => 'required|string|max:150',
             'nama_direktur' => 'nullable|string|max:150',
             'jabatan_penandatangan' => 'nullable|string|max:150',
             'npwp' => 'nullable|string|max:30',
+            'email' => 'nullable|email|max:150',
             'no_telepon' => 'nullable|string|max:30',
             'alamat' => 'nullable|string',
             'nama_bank' => 'required|string|max:100',
@@ -48,13 +48,14 @@ class SupplierController extends Controller
             DB::beginTransaction();
 
             $mitra = MasterMitraVendor::create([
-                'kategori' => $this->mapKategori($validated['kategori']),
+                'kategori' => 'PENGELUARAN',
                 'jenis_entitas' => 'BADAN_USAHA',
                 'tipe_supplier' => $validated['tipe_supplier'],
                 'nama_perusahaan' => $validated['nama_perusahaan'],
                 'nama_direktur' => $validated['nama_direktur'] ?? null,
                 'jabatan_penandatangan' => $validated['jabatan_penandatangan'] ?? null,
                 'npwp' => $validated['npwp'] ?? null,
+                'email' => $validated['email'] ?? null,
                 'no_telepon' => $validated['no_telepon'] ?? null,
                 'alamat' => $validated['alamat'] ?? null,
                 'status_aktif' => true,
@@ -92,12 +93,12 @@ class SupplierController extends Controller
     public function update(Request $request, $id)
     {
         $validated = $request->validate([
-            'kategori' => 'required|in:VENDOR_PENGELUARAN,MITRA_PENERIMAAN,KEDUANYA',
             'tipe_supplier' => 'required|string|max:50',
             'nama_perusahaan' => 'required|string|max:150',
             'nama_direktur' => 'nullable|string|max:150',
             'jabatan_penandatangan' => 'nullable|string|max:150',
             'npwp' => 'nullable|string|max:30',
+            'email' => 'nullable|email|max:150',
             'no_telepon' => 'nullable|string|max:30',
             'alamat' => 'nullable|string',
             'nama_bank' => 'required|string|max:100',
@@ -110,12 +111,12 @@ class SupplierController extends Controller
 
             $mitra = MasterMitraVendor::with('rekening')->findOrFail($id);
             $mitra->update([
-                'kategori' => $this->mapKategori($validated['kategori']),
                 'tipe_supplier' => $validated['tipe_supplier'],
                 'nama_perusahaan' => $validated['nama_perusahaan'],
                 'nama_direktur' => $validated['nama_direktur'] ?? null,
                 'jabatan_penandatangan' => $validated['jabatan_penandatangan'] ?? null,
                 'npwp' => $validated['npwp'] ?? null,
+                'email' => $validated['email'] ?? null,
                 'no_telepon' => $validated['no_telepon'] ?? null,
                 'alamat' => $validated['alamat'] ?? null,
             ]);
@@ -152,14 +153,5 @@ class SupplierController extends Controller
         $supplier->delete();
 
         return redirect()->route('suppliers.index')->with('success', 'Supplier deleted successfully.');
-    }
-
-    private function mapKategori(string $kategori): string
-    {
-        return match ($kategori) {
-            'MITRA_PENERIMAAN' => 'PENERIMAAN',
-            'KEDUANYA' => 'KEDUANYA',
-            default => 'PENGELUARAN',
-        };
     }
 }

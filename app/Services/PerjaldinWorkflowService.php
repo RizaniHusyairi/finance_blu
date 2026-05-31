@@ -9,6 +9,7 @@ use App\Models\WorkflowDefinition;
 use App\Models\WorkflowDefinitionStep;
 use App\Models\User;
 use App\Models\LogStatusDokumen;
+use App\Services\WhatsappService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
@@ -84,6 +85,35 @@ class PerjaldinWorkflowService
     }
 
     /**
+     * Kirim notifikasi WhatsApp ke seluruh verifikator pada step aktif
+     * (PENDING) dari sebuah workflow instance Perjaldin.
+     *
+     * Aman dipanggil setelah submit(). Kegagalan kirim WA per verifikator
+     * di-log dan tidak melempar exception (best-effort).
+     */
+    public function notifyVerifikatorViaWhatsApp(WorkflowInstance $instance, Tagihan $tagihan): void
+    {
+        // Delegasikan ke notifier terpusat agar pesan & link konsisten lintas
+        // jenis dokumen/tagihan (Perjaldin, Kontrak, Honorarium).
+        app(\App\Services\WorkflowWaNotifier::class)->notifyPendingApprovals($instance);
+    }
+
+    /**
+     * Ambil user tunggal berdasarkan nama role (fallback bila approval tidak
+     * punya assigned_user_id eksplisit).
+     */
+    protected function resolveSingleUserByRoleName(string $roleName): ?User
+    {
+        try {
+            $users = User::role($roleName)->with('profilable')->get();
+        } catch (\Throwable $e) {
+            return null;
+        }
+
+        return $users->count() === 1 ? $users->first() : null;
+    }
+
+    /**
      * Approve sebuah step workflow.
      */
     public function approve(WorkflowApproval $approval, User $actor, ?string $catatan = null, ?string $ipAddress = null): WorkflowInstance
@@ -110,6 +140,7 @@ class PerjaldinWorkflowService
 
         return DB::transaction(function () use ($approval, $actor, $catatan, $ipAddress, $instance, $tagihan) {
             $oldStatus = $tagihan->status;
+            $stepSebelumnya = $instance->step_saat_ini;
 
             $approval->update([
                 'status' => 'APPROVED',
@@ -124,6 +155,8 @@ class PerjaldinWorkflowService
                 ->where('status', 'PENDING')
                 ->exists();
 
+            $stepNaikKe = null;
+
             if (!$remainingInCurrentStep) {
                 $nextStep = $instance->approvals()
                     ->where('urutan_step', '>', $approval->urutan_step)
@@ -136,6 +169,7 @@ class PerjaldinWorkflowService
                         ->where('urutan_step', $nextStep)
                         ->where('status', 'WAITING')
                         ->update(['status' => 'PENDING']);
+                    $stepNaikKe = $nextStep;
                 } else {
                     $instance->update(['status' => 'APPROVED']);
                 }
@@ -144,7 +178,17 @@ class PerjaldinWorkflowService
             $this->syncTagihanStatus($tagihan);
             $this->writeWorkflowAuditLog($tagihan, $oldStatus, $tagihan->status, 'APPROVE', $catatan ?? 'Telah disetujui.', $actor, $ipAddress);
 
-            return $instance->fresh(['approvals']);
+            $fresh = $instance->fresh(['approvals']);
+
+            // Bila step naik ke tahap berikutnya, kirim WA ke verifikator tahap baru
+            // (mis. Kasubbag di step 2) setelah transaksi commit — best effort.
+            if ($stepNaikKe !== null && $fresh) {
+                DB::afterCommit(function () use ($fresh, $tagihan) {
+                    $this->notifyVerifikatorViaWhatsApp($fresh, $tagihan);
+                });
+            }
+
+            return $fresh;
         });
     }
 

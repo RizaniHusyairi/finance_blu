@@ -83,14 +83,10 @@
         <div class="sec-body">
             <div class="row g-3">
                 <div class="col-md-5 col-lg-4">
-                    <label class="form-label-modern">Nomor Perjalanan Dinas <span class="text-danger">*</span></label>
-                    <div class="input-group">
-                        <span class="input-group-text text-secondary fw-bold" style="background:#f8fafc; border: 1px solid #e2e8f0; border-right: none; font-size: 0.9rem;">KU.201/</span>
-                        <input type="number" name="nomor_urut" id="inp_nomor" class="form-control modern text-center text-primary fw-bold font-monospace px-0"
-                               style="border-left: none; border-right: none; box-shadow: none;"
-                               value="{{ old('nomor_urut', $nextNumber) }}" required placeholder="0001">
-                        <span class="input-group-text text-secondary fw-bold" style="background:#f8fafc; border: 1px solid #e2e8f0; border-left: none; font-size: 0.9rem;">/APTP/{{ date('Y') }}</span>
-                    </div>
+                    <label class="form-label-modern">Nomor Perjalanan Dinas</label>
+                    <input type="text" id="inp_nomor" class="form-control modern text-primary fw-bold font-monospace bg-light"
+                           value="{{ $nextNumber }}" readonly>
+                    <small class="text-muted"><i class="bi bi-info-circle me-1"></i>Nomor ditentukan otomatis oleh sistem saat disimpan.</small>
                 </div>
                 <div class="col-md-7 col-lg-6">
                     <label class="form-label-modern">Uraian / Judul Perjalanan <span class="text-danger">*</span></label>

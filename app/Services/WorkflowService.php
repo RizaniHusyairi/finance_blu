@@ -131,6 +131,14 @@ class WorkflowService
                 $instance->approvals()
                     ->where('urutan_step', $nextApproval->urutan_step)
                     ->update(['status' => 'PENDING']);
+
+                // Notifikasi WA ke verifikator step baru (best-effort, setelah commit).
+                $freshForNotify = $instance->fresh();
+                \Illuminate\Support\Facades\DB::afterCommit(function () use ($freshForNotify) {
+                    if ($freshForNotify) {
+                        app(\App\Services\WorkflowWaNotifier::class)->notifyPendingApprovals($freshForNotify);
+                    }
+                });
             } else {
                 $instance->update(['status' => 'APPROVED']);
             }
