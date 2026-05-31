@@ -21,6 +21,7 @@ use App\Http\Controllers\BukuPembantuBungaController;
 use App\Http\Controllers\BukuPembantuPajakController;
 use App\Http\Controllers\BukuPengesahanBelanjaController;
 use App\Http\Controllers\CoaController;
+use App\Http\Controllers\RekeningBankController;
 use App\Http\Controllers\ContractAddendumController;
 use App\Http\Controllers\ContractController;
 use App\Http\Controllers\ContractTermController;
@@ -351,6 +352,19 @@ Route::middleware(['auth', 'account.active'])->group(function () use ($internalR
         Route::post('/document-numbers/{documentNumber}/mark-used', [DocumentNumberController::class, 'markUsed'])->name('document-numbers.mark-used');
         Route::post('/document-numbers/{documentNumber}/cancel', [DocumentNumberController::class, 'cancel'])->name('document-numbers.cancel');
         Route::get('/document-numbers/check', [DocumentNumberController::class, 'check'])->name('document-numbers.check');
+    });
+
+    // Master Data — Rekening Bank (kelola rekening + saldo awal). Diakses oleh
+    // admin master data dan bendahara (yang menetapkan saldo awal rekeningnya).
+    Route::middleware('role:Super Admin|Operator BLU|Kepala Subbagian Keuangan dan Tata Usaha|Bendahara Penerimaan|Bendahara Pengeluaran')->group(function () {
+        Route::get('/rekening-bank/create', [RekeningBankController::class, 'create'])->name('rekening-bank.create');
+        Route::post('/rekening-bank', [RekeningBankController::class, 'store'])->name('rekening-bank.store');
+        Route::get('/rekening-bank', [RekeningBankController::class, 'index'])->name('rekening-bank.index');
+        Route::get('/rekening-bank/{rekening}', [RekeningBankController::class, 'show'])->whereNumber('rekening')->name('rekening-bank.show');
+        Route::get('/rekening-bank/{rekening}/edit', [RekeningBankController::class, 'edit'])->whereNumber('rekening')->name('rekening-bank.edit');
+        Route::put('/rekening-bank/{rekening}', [RekeningBankController::class, 'update'])->whereNumber('rekening')->name('rekening-bank.update');
+        Route::post('/rekening-bank/{rekening}/toggle', [RekeningBankController::class, 'toggle'])->whereNumber('rekening')->name('rekening-bank.toggle');
+        Route::delete('/rekening-bank/{rekening}', [RekeningBankController::class, 'destroy'])->whereNumber('rekening')->name('rekening-bank.destroy');
     });
 
     // Master Data — DIPA

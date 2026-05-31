@@ -77,6 +77,12 @@ class BkuPostingService
                 throw $e;
             }
 
+            // Saldo awal di atas hanya estimasi "best-effort" dari baris terakhir.
+            // Recompute kronologis (tanggal_transaksi ASC, id ASC) agar saldo berjalan
+            // tetap benar walau transaksi ini back-dated. Recompute jadi source of truth.
+            BukuKasUmum::recalculateRunningBalance($rekening->id);
+            $bku->refresh();
+
             LogStatusDokumen::create([
                 'dokumen_type' => Tagihan::class,
                 'dokumen_id' => $tagihan->id,
@@ -147,6 +153,18 @@ class BkuPostingService
             if ($rekening) {
                 return $rekening;
             }
+        }
+
+        // Fallback: rekening yang ditandai eksplisit jenis_rekening = PENGELUARAN.
+        $rekening = RekeningBank::query()
+            ->where('status_aktif', true)
+            ->where('jenis_rekening', \App\Enums\JenisRekening::PENGELUARAN->value)
+            ->orderByDesc('is_default')
+            ->orderBy('id')
+            ->first();
+
+        if ($rekening) {
+            return $rekening;
         }
 
         return RekeningBank::query()
