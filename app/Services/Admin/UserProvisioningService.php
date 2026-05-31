@@ -25,6 +25,11 @@ class UserProvisioningService
     private const TEMPORARY_ROLE = 'PLT/PLH';
 
     /**
+     * Password default saat Super Admin melakukan reset password user.
+     */
+    public const DEFAULT_RESET_PASSWORD = 'aptpairport123';
+
+    /**
      * Buat user baru yang menempel ke MasterPegawai.
      */
     public function createForPegawai(
@@ -218,10 +223,14 @@ class UserProvisioningService
 
     /**
      * Reset password user dan kembalikan password plaintext baru.
+     *
+     * Bila $password tidak diberikan, dipakai password default
+     * (self::DEFAULT_RESET_PASSWORD) agar konsisten dengan kebijakan reset
+     * oleh Super Admin.
      */
     public function resetPassword(User $user, ?string $password = null): string
     {
-        $plain = $password ?? $this->randomPassword();
+        $plain = $password ?? self::DEFAULT_RESET_PASSWORD;
         $user->forceFill(['password' => Hash::make($plain)])->save();
 
         return $plain;

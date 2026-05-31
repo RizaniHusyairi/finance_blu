@@ -260,6 +260,28 @@ class User extends Authenticatable
         return $profile instanceof MasterPihak || $profile instanceof MitraJasa ? $profile : null;
     }
 
+    /**
+     * Nomor WhatsApp/HP user yang diambil dari profil tertaut.
+     *  - MasterPegawai  => kolom nomor_hp
+     *  - MitraJasa      => kolom no_telepon
+     * Mengembalikan null jika tidak ada profil atau nomornya kosong
+     * (mis. akun sistem), sehingga pemanggil bisa memutuskan untuk skip notifikasi.
+     */
+    public function whatsappNumber(): ?string
+    {
+        $profile = $this->relationLoaded('profilable') ? $this->getRelation('profilable') : $this->profilable;
+
+        $number = match (true) {
+            $profile instanceof MasterPegawai => $profile->nomor_hp,
+            $profile instanceof MitraJasa => $profile->no_telepon,
+            default => null,
+        };
+
+        $number = trim((string) $number);
+
+        return $number !== '' ? $number : null;
+    }
+
     protected static function booted(): void
     {
         // Guard hanya saat CREATE — setelah user terbentuk, integritas dijaga oleh

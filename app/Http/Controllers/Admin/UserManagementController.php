@@ -9,6 +9,7 @@ use App\Models\MasterPegawai;
 use App\Models\MitraJasa;
 use App\Models\User;
 use App\Services\Admin\UserProvisioningService;
+use App\Services\WhatsappService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Spatie\Permission\Models\Role;
@@ -161,11 +162,54 @@ class UserManagementController extends Controller
         }
     }
 
-    public function resetPassword(User $user)
+    public function resetPassword(User $user, WhatsappService $whatsapp)
     {
+        $user->loadMissing('profilable');
+
+        // Reset ke password default (UserProvisioningService::DEFAULT_RESET_PASSWORD).
         $plain = $this->provisioner->resetPassword($user);
 
-        return back()->with('success', "Password {$user->email} berhasil direset menjadi: {$plain}");
+        $number = $user->whatsappNumber();
+
+        // Tidak ada nomor WA (mis. akun sistem) — beri tahu admin agar sampaikan manual.
+        if (! $number) {
+            return back()->with('success',
+                "Password {$user->email} berhasil direset menjadi: {$plain}. "
+                . 'Nomor WhatsApp user tidak tersedia, mohon sampaikan secara manual.');
+        }
+
+        $terkirim = $whatsapp->sendMessage($number, $this->buildResetPasswordMessage($user, $plain));
+
+        if ($terkirim) {
+            return back()->with('success',
+                "Password {$user->email} berhasil direset dan notifikasi WhatsApp dikirim ke {$number}.");
+        }
+
+        return back()->with('error',
+            "Password {$user->email} berhasil direset menjadi: {$plain}, "
+            . "namun pengiriman WhatsApp ke {$number} gagal. Mohon sampaikan secara manual.");
+    }
+
+    /**
+     * Susun isi pesan WhatsApp pemberitahuan reset password.
+     */
+    private function buildResetPasswordMessage(User $user, string $password): string
+    {
+        $nama = $user->name ?: $user->email;
+        $aplikasi = config('app.name', 'SIKEREN-BLU');
+
+        return implode("\n", [
+            "*{$aplikasi} - Reset Password*",
+            '',
+            "Halo {$nama},",
+            'Password akun Anda telah direset oleh administrator. Berikut kredensial login terbaru Anda:',
+            '',
+            "Email    : {$user->email}",
+            "Password : {$password}",
+            '',
+            'Demi keamanan, segera ganti password Anda setelah berhasil masuk.',
+            'Mohon jangan bagikan informasi ini kepada siapa pun.',
+        ]);
     }
 
     public function syncRoles(Request $request, User $user)

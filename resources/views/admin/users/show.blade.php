@@ -151,11 +151,21 @@
                 <h6 class="fw-bold text-uppercase text-muted mb-3" style="letter-spacing: .08em; font-size: .75rem;">
                     Aksi Cepat
                 </h6>
+                @php $waNumber = $user->whatsappNumber(); @endphp
                 <form method="POST" action="{{ route('admin.users.reset-password', $user) }}" class="mb-2"
-                      onsubmit="return confirm('Reset password akun ini?');">
+                      onsubmit="return confirm('Reset password akun {{ $user->email }} ke password default?{{ $waNumber ? ' Email & password baru akan dikirim via WhatsApp ke ' . $waNumber . '.' : ' Nomor WhatsApp tidak tersedia, sampaikan password secara manual.' }}');">
                     @csrf
                     <button class="btn btn-light text-primary border w-100">
                         <i class="bi bi-shield-lock me-1"></i> Reset Password
+                        @if ($waNumber)
+                            <span class="d-block small text-muted mt-1">
+                                <i class="bi bi-whatsapp me-1"></i> Notifikasi ke {{ $waNumber }}
+                            </span>
+                        @else
+                            <span class="d-block small text-muted mt-1">
+                                <i class="bi bi-exclamation-circle me-1"></i> Tanpa nomor WhatsApp
+                            </span>
+                        @endif
                     </button>
                 </form>
                 <form method="POST" action="{{ route('admin.users.destroy', $user) }}"
