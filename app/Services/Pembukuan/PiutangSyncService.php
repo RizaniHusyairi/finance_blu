@@ -13,6 +13,7 @@ use App\Models\User;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Sync TagihanJasa <-> Piutang (TransaksiPenerimaan) <-> BKU.
@@ -130,7 +131,7 @@ class PiutangSyncService
                 if (! $paidAt instanceof Carbon) {
                     $paidAt = $paidAt ? Carbon::parse($paidAt) : now();
                 }
-                $reference = (string) ($payment['reference'] ?? ('LUNAS/' . $tagihan->nomor_tagihan));
+                $reference = (string) ($payment['reference'] ?? ('BKU-MASUK/' . $tagihan->nomor_tagihan));
 
                 $piutang->total_dibayar = $amount;
                 $piutang->status_pembayaran = 'PAID';
@@ -263,7 +264,8 @@ class PiutangSyncService
      * rekening aktif pertama (yang bisa saja milik Bendahara Pengeluaran).
      *
      * Prioritas:
-     *  1) Rekening aktif yang ditandai eksplisit jenis_rekening = PENERIMAAN
+     *  1) Rekening aktif yang ditandai eksplisit jenis_rekening = PENERIMAAN,
+     *     jika kolom jenis_rekening tersedia di database.
      *     (utamakan is_default = true). Penanda eksplisit > tebakan.
      *  2) Rekening aktif milik User ber-role 'Bendahara Penerimaan'
      *     (utamakan is_default = true, lalu id terkecil).
@@ -274,15 +276,17 @@ class PiutangSyncService
     private function resolvePenerimaanRekeningId(): ?int
     {
         // 1) Penanda eksplisit jenis_rekening = PENERIMAAN.
-        $rekeningId = RekeningBank::query()
-            ->where('status_aktif', true)
-            ->where('jenis_rekening', \App\Enums\JenisRekening::PENERIMAAN->value)
-            ->orderByDesc('is_default')
-            ->orderBy('id')
-            ->value('id');
+        if (Schema::hasColumn('rekening_bank', 'jenis_rekening')) {
+            $rekeningId = RekeningBank::query()
+                ->where('status_aktif', true)
+                ->where('jenis_rekening', \App\Enums\JenisRekening::PENERIMAAN->value)
+                ->orderByDesc('is_default')
+                ->orderBy('id')
+                ->value('id');
 
-        if ($rekeningId) {
-            return (int) $rekeningId;
+            if ($rekeningId) {
+                return (int) $rekeningId;
+            }
         }
 
         // 2) Rekening milik Bendahara Penerimaan (lihat role via HasRoles di User).

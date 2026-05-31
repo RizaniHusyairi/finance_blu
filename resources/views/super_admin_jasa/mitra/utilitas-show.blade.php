@@ -174,8 +174,8 @@
                 </div>
                 <div class="card-body d-grid gap-2">
                     @if($canCreateTagihanJasa)
-                        <a href="{{ route('tagihan-jasa.create', ['utilitas_id' => $laporan->id]) }}" class="btn btn-primary fw-bold jasa-icon-btn" title="Buat tagihan" aria-label="Buat tagihan">
-                            <i class="bi bi-receipt"></i>
+                        <a href="{{ route('tagihan-jasa.create', ['utilitas_id' => $laporan->id]) }}" class="btn btn-primary fw-bold" title="Buat tagihan" aria-label="Buat tagihan">
+                            <i class="bi bi-receipt me-1"></i>Buat Tagihan
                         </a>
                     @endif
                     <button type="button" class="btn btn-outline-danger fw-bold jasa-icon-btn" data-bs-toggle="modal" data-bs-target="#modalTolak" title="Tolak laporan" aria-label="Tolak laporan">

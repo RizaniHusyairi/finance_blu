@@ -234,7 +234,9 @@
                                 @endif
                                 @if($penjualan->status === 'diverifikasi' && ! $penjualan->tagihan_jasa_id && $penjualan->layanan_jasa_id)
                                     @if($canCreateTagihanJasa && $penjualan->can_create_tagihan)
-                                        <a href="{{ route('tagihan-jasa.create', ['penjualan_id' => $penjualan->id]) }}" class="btn btn-sm btn-primary jasa-icon-btn" title="Buat tagihan" aria-label="Buat tagihan"><i class="bi bi-receipt"></i></a>
+                                        <a href="{{ route('tagihan-jasa.create', ['penjualan_id' => $penjualan->id]) }}" class="btn btn-sm btn-primary fw-semibold" title="Buat tagihan" aria-label="Buat tagihan">
+                                            <i class="bi bi-receipt me-1"></i>Tagihan
+                                        </a>
                                     @elseif($canCreateTagihanJasa)
                                         <span class="badge bg-info text-dark" title="Tagihan tersedia mulai {{ $penjualan->tagihan_available_date }}">
                                             <i class="bi bi-calendar-check"></i> {{ $penjualan->tagihan_available_date }}

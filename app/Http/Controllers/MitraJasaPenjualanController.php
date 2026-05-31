@@ -442,6 +442,8 @@ class MitraJasaPenjualanController extends Controller
         $penjualan->update([
             'status' => 'ditolak',
             'catatan_verifikator' => $validated['catatan_verifikator'],
+            'verified_at' => now(),
+            'verified_by' => auth()->id(),
             'updated_by' => auth()->id(),
         ]);
 

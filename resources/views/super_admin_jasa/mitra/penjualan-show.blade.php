@@ -386,8 +386,8 @@
                 {{-- Status: Diverifikasi --}}
                 @if($penjualan->status === 'diverifikasi' && ! $penjualan->tagihan_jasa_id && $penjualan->layanan_jasa_id)
                     @if($canCreateTagihanJasa && $penjualan->can_create_tagihan)
-                        <a href="{{ route('tagihan-jasa.create', ['penjualan_id' => $penjualan->id]) }}" class="btn btn-primary fw-bold jasa-icon-btn" title="Buat tagihan" aria-label="Buat tagihan">
-                            <i class="bi bi-receipt"></i>
+                        <a href="{{ route('tagihan-jasa.create', ['penjualan_id' => $penjualan->id]) }}" class="btn btn-primary fw-bold w-100" title="Buat tagihan" aria-label="Buat tagihan">
+                            <i class="bi bi-receipt me-1"></i>Buat Tagihan
                         </a>
                     @elseif($canCreateTagihanJasa)
                         <div class="alert alert-info mb-0">
@@ -400,8 +400,8 @@
 
                 {{-- Status: Ditagihkan --}}
                 @if($penjualan->status === 'ditagihkan' && $penjualan->tagihanJasa)
-                    <a href="{{ route('tagihan-jasa.show', $penjualan->tagihanJasa) }}" class="btn btn-outline-primary fw-bold jasa-icon-btn" title="Lihat tagihan" aria-label="Lihat tagihan">
-                        <i class="bi bi-eye"></i>
+                    <a href="{{ route('tagihan-jasa.show', $penjualan->tagihanJasa) }}" class="btn btn-outline-primary fw-bold w-100" title="Lihat tagihan" aria-label="Lihat tagihan">
+                        <i class="bi bi-eye me-1"></i>Lihat Tagihan
                     </a>
                 @endif
 

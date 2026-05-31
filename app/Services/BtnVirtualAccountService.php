@@ -235,7 +235,7 @@ class BtnVirtualAccountService
     }
 
     /**
-     * Kirim notifikasi WA lunas berdasarkan template di IntegrationSetting.
+     * Kirim notifikasi lunas berdasarkan template di IntegrationSetting.
      * Bisa dipanggil dari mana saja (callback BTN, manual mark-lunas, dll)
      * dengan payload pembayaran ringkas.
      *
@@ -243,18 +243,6 @@ class BtnVirtualAccountService
      */
     public function sendLunasNotification(TagihanJasa $tagihan, array $payment): void
     {
-        $target = $tagihan->mitra?->no_telepon;
-
-        if (! filled($target)) {
-            return;
-        }
-
-        // Cek toggle aktif notifikasi lunas (manajemen Super Admin).
-        $enabled = (bool) \App\Models\IntegrationSetting::getValue('whatsapp.lunas.enabled', true);
-        if (! $enabled) {
-            return;
-        }
-
         $template = (string) \App\Models\IntegrationSetting::getValue('whatsapp.lunas.template', '');
         $linkInvoice = \App\Models\ShortLink::forTarget('tagihan_jasa', $tagihan->id)->publicUrl();
 
@@ -263,22 +251,24 @@ class BtnVirtualAccountService
         if (! $paidAt instanceof \Carbon\Carbon && $paidAt) {
             $paidAt = \Carbon\Carbon::parse($paidAt);
         }
-        $reference = (string) ($payment['reference'] ?? ('MANUAL/' . $tagihan->nomor_tagihan));
+        $reference = (string) ($payment['reference'] ?? ('BKU-MASUK/' . $tagihan->nomor_tagihan));
+
+        $placeholders = [
+            '{mitra_nama}'    => $tagihan->mitra->nama_mitra ?? $tagihan->mitraLegacy?->nama_pihak ?? '-',
+            '{nomor_tagihan}' => $tagihan->nomor_tagihan,
+            '{nomor_va}'      => $tagihan->nomor_va ?? '-',
+            '{total}'         => 'Rp ' . number_format($amount, 0, ',', '.'),
+            '{waktu_bayar}'   => $paidAt ? $paidAt->format('d/m/Y H:i') : '-',
+            '{referensi}'     => $reference,
+            '{link_invoice}'  => $linkInvoice,
+        ];
 
         if (filled($template)) {
-            $message = strtr($template, [
-                '{mitra_nama}'    => $tagihan->mitra->nama_mitra ?? '-',
-                '{nomor_tagihan}' => $tagihan->nomor_tagihan,
-                '{nomor_va}'      => $tagihan->nomor_va ?? '-',
-                '{total}'         => 'Rp ' . number_format($amount, 0, ',', '.'),
-                '{waktu_bayar}'   => $paidAt ? $paidAt->format('d/m/Y H:i') : '-',
-                '{referensi}'     => $reference,
-                '{link_invoice}'  => $linkInvoice,
-            ]);
+            $message = strtr($template, $placeholders);
         } else {
             // Fallback default kalau template kosong.
             $message = "*STRUK PEMBAYARAN PNBP JASA*\n\n";
-            $message .= "Yth. " . ($tagihan->mitra->nama_mitra ?? '-') . ",\n\n";
+            $message .= "Yth. " . $placeholders['{mitra_nama}'] . ",\n\n";
             $message .= "Pembayaran tagihan Anda telah diterima.\n";
             $message .= "No Tagihan: *{$tagihan->nomor_tagihan}*\n";
             $message .= "No VA: *" . ($tagihan->nomor_va ?? '-') . "*\n";
@@ -290,6 +280,39 @@ class BtnVirtualAccountService
             $message .= "_Sistem Informasi Keuangan (SIKEREN)_";
         }
 
-        app(WhatsappService::class)->sendMessage($target, $message, $tagihan);
+        $waEnabled = (bool) \App\Models\IntegrationSetting::getValue('whatsapp.lunas.enabled', true);
+        $waTarget = $tagihan->mitra?->no_telepon;
+
+        if ($waEnabled && filled($waTarget)) {
+            app(WhatsappService::class)->sendMessage($waTarget, $message, $tagihan);
+        }
+
+        $emailEnabled = (bool) \App\Models\IntegrationSetting::getValue('email.lunas.enabled', true);
+        $emailTarget = $tagihan->mitra?->email ?? $tagihan->mitraLegacy?->email ?? null;
+
+        if ($emailEnabled) {
+            $emailBody = "Yth. {$placeholders['{mitra_nama}']},\n\n"
+                . "Dengan hormat,\n\n"
+                . "Kami informasikan bahwa pembayaran tagihan PNBP Jasa telah diterima dan status tagihan telah diperbarui menjadi LUNAS.\n\n"
+                . "Nomor Tagihan : {$placeholders['{nomor_tagihan}']}\n"
+                . "Virtual Account BTN : {$placeholders['{nomor_va}']}\n"
+                . "Nominal Pembayaran : {$placeholders['{total}']}\n"
+                . "Waktu Pembayaran : {$placeholders['{waktu_bayar}']}\n"
+                . "Referensi Pembayaran : {$placeholders['{referensi}']}\n"
+                . "Status : LUNAS\n\n"
+                . "Detail tagihan dan bukti status pembayaran dapat dilihat melalui tautan berikut:\n"
+                . "{$placeholders['{link_invoice}']}\n\n"
+                . "Demikian konfirmasi pembayaran ini disampaikan. Terima kasih atas perhatian dan kerja samanya.\n\n"
+                . "Hormat kami,\n"
+                . "SIKEREN-BLU";
+
+            app(EmailNotificationService::class)->sendNotification(
+                (string) ($emailTarget ?? ''),
+                'Konfirmasi Pembayaran Lunas Tagihan PNBP Jasa ' . $tagihan->nomor_tagihan,
+                $emailBody,
+                $tagihan,
+                'send_paid_invoice_email'
+            );
+        }
     }
 }
