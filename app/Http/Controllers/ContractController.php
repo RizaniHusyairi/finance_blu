@@ -13,6 +13,7 @@ use App\Models\ArsipDokumen;
 use App\Models\User;
 use App\Notifications\WorkflowNotification;
 use App\Services\DocumentNumberService;
+use App\Services\EmailNotificationService;
 use Illuminate\Support\Facades\Notification;
 use App\Support\DipaBudgetOptionService;
 use App\Support\ContractDocumentTte;
@@ -910,14 +911,39 @@ class ContractController extends Controller
             . "Link Portal Upload:\n" . $portalUrl . "\n\n"
             . "Terima kasih.";
 
+        $emailPesan = "Yth. " . ($vendor->nama_pihak ?? 'Vendor') . ",\n\n"
+            . "Dengan hormat,\n\n"
+            . "Sehubungan dengan penyelesaian dokumen kontrak, kami mohon Bapak/Ibu melakukan unggah dokumen kontrak final bertandatangan melalui portal SIKEREN-BLU.\n\n"
+            . "Nama Pekerjaan : " . ($kontrak->nama_pekerjaan ?? '-') . "\n"
+            . "Nomor SPK : " . ($kontrak->nomor_spk ?? '-') . "\n\n"
+            . "Dokumen yang perlu diunggah:\n"
+            . "1. SPK Final\n"
+            . "2. SPMK Final\n"
+            . "3. Ringkasan Kontrak Final\n\n"
+            . "Tautan portal upload:\n"
+            . $portalUrl . "\n\n"
+            . "Mohon tautan ini digunakan secara bertanggung jawab dan tidak diteruskan kepada pihak yang tidak berkepentingan.\n\n"
+            . "Hormat kami,\n"
+            . "SIKEREN-BLU";
+
         $waService = app(\App\Services\WhatsappService::class);
         $ok = $waService->sendMessage($noHp, $pesan);
+
+        if ((bool) \App\Models\IntegrationSetting::getValue('email.contract_upload.enabled', true)) {
+            app(EmailNotificationService::class)->sendNotification(
+                (string) ($vendor?->email ?? ''),
+                'Permintaan Upload Dokumen Kontrak ' . ($kontrak->nomor_spk ?? $kontrak->id),
+                $emailPesan,
+                $kontrak,
+                'send_contract_upload_email'
+            );
+        }
 
         if (! $ok) {
             return back()->with('error', 'Gagal mengirim pesan WhatsApp ke vendor. Silakan cek log integrasi.');
         }
 
-        return back()->with('success', 'Link portal upload berhasil dikirim ke WhatsApp vendor (' . $noHp . ').');
+        return back()->with('success', 'Link portal upload berhasil dikirim ke WhatsApp vendor (' . $noHp . ') dan email diproses bila alamat vendor tersedia.');
     }
 
     public function exportSpmkPdf($id)

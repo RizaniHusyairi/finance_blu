@@ -16,6 +16,7 @@ use App\Models\User;
 use App\Notifications\WorkflowNotification;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
+use App\Services\EmailNotificationService;
 use App\Services\WorkflowService;
 
 class TagihanController extends Controller
@@ -455,8 +456,10 @@ class TagihanController extends Controller
 
             // Notifikasi paralel ke semua 5 verifikator step 1
             $waService = app(\App\Services\WhatsappService::class);
+            $emailService = app(EmailNotificationService::class);
             $baseUrl = config('app.url');
             $waEnabled = (bool) \App\Models\IntegrationSetting::getValue('whatsapp.pengajuan_tagihan.enabled', true);
+            $emailEnabled = (bool) \App\Models\IntegrationSetting::getValue('email.pengajuan_tagihan.enabled', true);
 
             foreach ([
                 $tagihan->ppk_user_id,
@@ -487,6 +490,27 @@ class TagihanController extends Controller
                         $waMsg = "*Notifikasi SIKEREN*\n\n" . $message . "\n\nSilakan cek di aplikasi melalui link berikut:\n" . $url;
                         $waService->sendMessage($waPhone, $waMsg);
                     }
+                }
+
+                if ($emailEnabled && filter_var($u->email, FILTER_VALIDATE_EMAIL)) {
+                    $emailBody = "Yth. {$u->name},\n\n"
+                        . "Dengan hormat,\n\n"
+                        . "Terdapat tagihan kontrak yang memerlukan verifikasi Anda melalui aplikasi SIKEREN-BLU.\n\n"
+                        . "Nomor Tagihan : {$tagihan->nomor_tagihan}\n"
+                        . "Status Proses : Menunggu verifikasi\n\n"
+                        . "Silakan meninjau detail tagihan dan memberikan tindak lanjut melalui tautan berikut:\n"
+                        . "{$url}\n\n"
+                        . "Mohon email ini ditindaklanjuti sesuai kewenangan dan alur verifikasi yang berlaku.\n\n"
+                        . "Hormat kami,\n"
+                        . "SIKEREN-BLU";
+
+                    $emailService->sendNotification(
+                        $u->email,
+                        'Permohonan Verifikasi Tagihan Kontrak ' . $tagihan->nomor_tagihan,
+                        $emailBody,
+                        $tagihan,
+                        'send_contract_verification_email'
+                    );
                 }
             }
 

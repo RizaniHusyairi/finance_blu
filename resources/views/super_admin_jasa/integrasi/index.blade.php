@@ -102,8 +102,8 @@
     <div class="d-flex flex-column flex-lg-row align-items-start align-items-lg-center justify-content-between gap-3">
         <div>
             <div class="small text-white-50 fw-bold text-uppercase mb-1">Integrasi Pembayaran & Notifikasi</div>
-            <h4 class="mb-1 fw-bold text-white">Pengaturan API Bank BTN & WhatsApp</h4>
-            <p class="mb-0 small text-white-50">Kelola Virtual Account BTN, template invoice, struk pembayaran, dan log integrasi.</p>
+            <h4 class="mb-1 fw-bold text-white">Pengaturan API Bank BTN, WhatsApp & Email</h4>
+            <p class="mb-0 small text-white-50">Kelola Virtual Account BTN, template invoice, struk pembayaran, email, dan log integrasi.</p>
         </div>
         <span class="badge bg-light text-primary px-3 py-2 rounded-pill">Mode {{ strtoupper($settings['btn_mode']) }}</span>
     </div>
@@ -234,6 +234,78 @@
             </div>
         </div>
     </div>
+
+    <div class="integration-card-header">
+        <div class="integration-title">
+            <span class="integration-icon"><i class="bi bi-envelope-paper"></i></span>
+            <div>
+                <h6 class="mb-0 fw-black text-primary">Notifikasi Email Tagihan</h6>
+                <small class="text-muted fw-semibold">Email dikirim otomatis ke mitra saat tagihan dipublish.</small>
+            </div>
+        </div>
+        <div class="form-check form-switch mb-0">
+            <input class="form-check-input" type="checkbox" name="email_enabled" value="1" id="emailEnabled" {{ $settings['email_enabled'] ? 'checked' : '' }}>
+            <label class="form-check-label fw-bold" for="emailEnabled">Aktif</label>
+        </div>
+    </div>
+    <div class="card-body p-4">
+        <div class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">Mailer</label>
+                <select name="email_mailer" class="form-select" id="emailMailer">
+                    @foreach(['log' => 'Log/Simulasi', 'smtp' => 'SMTP', 'sendmail' => 'Sendmail'] as $value => $label)
+                        <option value="{{ $value }}" @selected($settings['email_mailer'] === $value)>{{ $label }}</option>
+                    @endforeach
+                </select>
+                <small class="text-muted">Gunakan Log untuk testing tanpa kirim email real.</small>
+            </div>
+            <div class="col-md-5">
+                <label class="form-label">Email Pengirim</label>
+                <input type="email" name="email_from_address" class="form-control" value="{{ old('email_from_address', $settings['email_from_address']) }}" placeholder="billing@sikeren.id">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Nama Pengirim</label>
+                <input type="text" name="email_from_name" class="form-control" value="{{ old('email_from_name', $settings['email_from_name']) }}" placeholder="SIKEREN-BLU">
+            </div>
+
+            <div class="col-md-4 email-smtp-only d-none">
+                <label class="form-label">SMTP Host</label>
+                <input type="text" name="email_smtp_host" class="form-control" value="{{ old('email_smtp_host', $settings['email_smtp_host']) }}" placeholder="smtp.example.com">
+            </div>
+            <div class="col-md-2 email-smtp-only d-none">
+                <label class="form-label">Port</label>
+                <input type="number" name="email_smtp_port" class="form-control" value="{{ old('email_smtp_port', $settings['email_smtp_port']) }}" min="1" max="65535">
+            </div>
+            <div class="col-md-2 email-smtp-only d-none">
+                <label class="form-label">Encryption</label>
+                <select name="email_smtp_encryption" class="form-select">
+                    @foreach(['tls' => 'TLS', 'ssl' => 'SSL', 'none' => 'None'] as $value => $label)
+                        <option value="{{ $value }}" @selected(($settings['email_smtp_encryption'] ?: 'none') === $value)>{{ $label }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="col-md-2 email-smtp-only d-none">
+                <label class="form-label">Username</label>
+                <input type="text" name="email_smtp_username" class="form-control" value="{{ old('email_smtp_username', $settings['email_smtp_username']) }}">
+            </div>
+            <div class="col-md-2 email-smtp-only d-none">
+                <label class="form-label">Password</label>
+                <input type="password" name="email_smtp_password" class="form-control" placeholder="{{ $settings['email_smtp_password_masked'] ?: 'Password SMTP' }}">
+            </div>
+
+            <div class="col-md-12">
+                <label class="form-label">Subjek Email Tagihan</label>
+                <input type="text" name="email_invoice_subject" class="form-control" value="{{ old('email_invoice_subject', $settings['email_invoice_subject']) }}">
+            </div>
+            <div class="col-md-12">
+                <label class="form-label">Template Email Tagihan</label>
+                <textarea name="email_invoice_template" rows="7" class="form-control" placeholder="Opsional, kosongkan untuk template default">{{ old('email_invoice_template', $settings['email_invoice_template']) }}</textarea>
+                <small class="text-muted">
+                    Placeholder: <code>{mitra_nama}</code>, <code>{nomor_tagihan}</code>, <code>{nomor_va}</code>, <code>{total}</code>, <code>{tanggal_publish}</code>, <code>{jatuh_tempo}</code>, <code>{link_invoice}</code>, <code>{email_login}</code>, <code>{password_login}</code>.
+                </small>
+            </div>
+        </div>
+    </div>
     <div class="card-footer bg-light d-flex justify-content-end gap-2 p-3">
         <button class="btn btn-primary fw-bold px-4"><i class="bi bi-save me-1"></i>Simpan Pengaturan</button>
     </div>
@@ -260,6 +332,25 @@
                 <button class="btn btn-outline-primary fw-bold"><i class="bi bi-send me-1"></i>Kirim Test</button>
             </form>
         </div>
+        <div class="integration-card mt-4">
+            <div class="integration-card-header">
+                <div class="integration-title">
+                    <span class="integration-icon"><i class="bi bi-envelope-check"></i></span>
+                    <div>
+                        <h6 class="mb-0 fw-black text-primary">Test Email</h6>
+                        <small class="text-muted fw-semibold">Kirim email percobaan.</small>
+                    </div>
+                </div>
+            </div>
+            <form method="POST" action="{{ route('jasa.integrasi.email.test') }}" class="card-body p-4">
+                @csrf
+                <label class="form-label">Email Tujuan</label>
+                <input type="email" name="target" class="form-control mb-3" placeholder="mitra@example.com">
+                <label class="form-label">Pesan</label>
+                <textarea name="message" rows="4" class="form-control mb-3">Test notifikasi email SIKEREN-BLU.</textarea>
+                <button class="btn btn-outline-primary fw-bold"><i class="bi bi-envelope-paper me-1"></i>Kirim Test</button>
+            </form>
+        </div>
     </div>
     <div class="col-lg-7">
         <div class="integration-card h-100">
@@ -268,7 +359,7 @@
                     <span class="integration-icon"><i class="bi bi-clock-history"></i></span>
                     <div>
                         <h6 class="mb-0 fw-black text-primary">Log Integrasi Terbaru</h6>
-                        <small class="text-muted fw-semibold">Aktivitas VA BTN dan WhatsApp.</small>
+                        <small class="text-muted fw-semibold">Aktivitas VA BTN, WhatsApp, dan email.</small>
                     </div>
                 </div>
             </div>
@@ -316,6 +407,19 @@
             const v = sel.value;
             fonnteFields.forEach(el => el.classList.toggle('d-none', v !== 'fonnte'));
             gatewayFields.forEach(el => el.classList.toggle('d-none', v !== 'wa_gateway'));
+        };
+
+        sel.addEventListener('change', toggle);
+        toggle();
+    })();
+    (function () {
+        const sel = document.getElementById('emailMailer');
+        if (! sel) return;
+
+        const smtpFields = document.querySelectorAll('.email-smtp-only');
+
+        const toggle = () => {
+            smtpFields.forEach(el => el.classList.toggle('d-none', sel.value !== 'smtp'));
         };
 
         sel.addEventListener('change', toggle);

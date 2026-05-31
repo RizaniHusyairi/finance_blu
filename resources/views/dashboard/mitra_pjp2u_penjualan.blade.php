@@ -175,6 +175,7 @@
                 <tbody>
                     @foreach($tagihanPjp2u as $item)
                         @php($tagihan = $item->tagihanJasa)
+                        @php($tagihanBisaDibuka = $tagihan && in_array($tagihan->status, ['PUBLISHED', 'LUNAS'], true))
                         <tr>
                             <td>{{ $loop->iteration }}</td>
                             <td>{{ $tagihan->nomor_tagihan ?? '-' }}</td>
@@ -184,10 +185,12 @@
                             <td><span class="badge bg-primary">{{ $tagihan->status ?? $item->status }}</span></td>
                             <td>{{ $tanggal($tagihan?->tanggal_jatuh_tempo) }}</td>
                                 <td>
-                                    @if($tagihan)
+                                    @if($tagihanBisaDibuka)
                                         <a href="{{ route('mitra.tagihan-jasa.show', $tagihan) }}" class="btn btn-sm btn-primary mp-action" title="Detail Tagihan">
                                             <i class="bi bi-receipt me-1"></i>Tagihan
                                         </a>
+                                    @elseif($tagihan)
+                                        <span class="badge bg-warning text-dark">Diproses</span>
                                     @else
                                         <span class="text-muted">-</span>
                                     @endif

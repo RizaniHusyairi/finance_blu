@@ -45,6 +45,9 @@
         ->sortByDesc('tanggal_transaksi')
         ->sortByDesc('id')
         ->first();
+    $nomorBuktiBku = $bkuPenerimaan
+        ? preg_replace('/^MANUAL\//', 'BKU-MASUK/', (string) $bkuPenerimaan->nomor_bukti)
+        : null;
 @endphp
 <style>
     /* ===================== Tagihan Jasa Detail â€“ Themed UI ===================== */
@@ -428,6 +431,13 @@
     </div>
 @endif
 
+@if(session('email_message_preview'))
+    <div class="alert alert-primary border-0 shadow-sm mb-4">
+        <h5 class="fw-bold mb-3"><i class="bi bi-envelope-paper me-2"></i>Preview Pesan Email Tagihan</h5>
+        <div class="bg-white p-3 rounded border" style="white-space: pre-wrap; font-family: monospace; font-size: 0.9rem;">{{ session('email_message_preview') }}</div>
+    </div>
+@endif
+
 @if(session('error'))
     <div class="alert alert-danger border-0 bg-danger text-white alert-dismissible fade show shadow-sm mb-4">
         <i class="bi bi-x-circle me-2"></i> {{ session('error') }}
@@ -680,7 +690,7 @@
                             <div>
                                 <div class="small text-muted fw-bold text-uppercase">Status BKU Masuk</div>
                                 @if($bkuPenerimaan)
-                                    <div class="fw-semibold text-success">{{ $bkuPenerimaan->nomor_bukti }}</div>
+                                    <div class="fw-semibold text-success">{{ $nomorBuktiBku }}</div>
                                     <div class="small text-muted">
                                         {{ optional($bkuPenerimaan->tanggal_transaksi)->format('d M Y') }} | Rp {{ number_format($bkuPenerimaan->nominal, 0, ',', '.') }}
                                     </div>
@@ -901,7 +911,7 @@
             <div class="card tj-card border-0 mb-4 border-start border-4 border-success">
                 <div class="card-body p-4">
                     <h5 class="fw-bold mb-3"><i class="bi bi-send text-success me-2"></i>Terbitkan Tagihan</h5>
-                    <p class="small text-muted mb-4">Tagihan telah disetujui sepenuhnya oleh Kabandara. Anda dapat mem-publish tagihan ini untuk men-generate VA dan mengirim notifikasi otomatis ke Mitra.</p>
+                    <p class="small text-muted mb-4">Tagihan telah disetujui sepenuhnya oleh Kabandara. Anda dapat mem-publish tagihan ini untuk men-generate VA dan mengirim notifikasi otomatis ke Mitra melalui WhatsApp dan email.</p>
 
                     @if(! $suratFinalReady)
                         <div class="alert alert-warning small">
@@ -912,7 +922,7 @@
                         </button>
                     @else
                         <button type="button" class="btn btn-success w-100 fw-bold mb-2" data-bs-toggle="modal" data-bs-target="#modalPublish">
-                            <i class="bi bi-rocket-takeoff me-1"></i> Publish & Kirim Notifikasi WA
+                            <i class="bi bi-rocket-takeoff me-1"></i> Publish & Kirim Notifikasi WA + Email
                         </button>
                     @endif
                     <a href="{{ route('tagihan-jasa.pdf', $tagihan->id) }}" target="_blank" class="btn btn-outline-primary w-100 fw-bold">
@@ -926,12 +936,12 @@
             <div class="card tj-card border-0 mb-4 border-start border-4 border-primary">
                 <div class="card-body p-4 text-center">
                     <h5 class="fw-bold mb-3"><i class="bi bi-cash-coin text-primary me-2"></i>Status Pembayaran</h5>
-                    <p class="small text-muted mb-4">Tagihan ini sedang menunggu pembayaran dari Mitra via Virtual Account. Untuk keperluan simulasi, Anda dapat menandai tagihan ini menjadi LUNAS secara manual.</p>
+                    <p class="small text-muted mb-4">Tagihan ini sedang menunggu pembayaran dari Mitra via Virtual Account. Untuk keperluan simulasi, Anda dapat menandai tagihan ini menjadi LUNAS secara manual dan sistem akan memproses notifikasi WA serta email ke mitra.</p>
                     
                     <form action="{{ route('tagihan-jasa.mark-lunas', $tagihan->id) }}" method="POST">
                         @csrf
-                        <button type="submit" class="btn btn-primary w-100 fw-bold" onclick="return confirm('Tandai tagihan ini sebagai LUNAS? Ini mensimulasikan callback sukses dari Bank BTN.')">
-                            <i class="bi bi-check-circle me-1"></i> Simulasi: Konfirmasi Lunas
+                        <button type="submit" class="btn btn-primary w-100 fw-bold" onclick="return confirm('Tandai tagihan ini sebagai LUNAS? Sistem akan memproses konfirmasi pembayaran melalui WhatsApp dan email ke mitra.')">
+                            <i class="bi bi-check-circle me-1"></i> Simulasi: Konfirmasi Lunas + Notifikasi
                         </button>
                     </form>
                 </div>
@@ -1103,18 +1113,19 @@
             <form action="{{ route('tagihan-jasa.publish', $tagihan->id) }}" method="POST">
                 @csrf
                 <div class="modal-header bg-success text-white border-0">
-                    <h5 class="modal-title fw-bold"><i class="bi bi-send me-1"></i> Publish Tagihan & Kirim WA</h5>
+                    <h5 class="modal-title fw-bold"><i class="bi bi-send me-1"></i> Publish Tagihan & Kirim WA + Email</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-4">
                     @php
                         $mitraTagihanModal = $tagihan->mitra ?? $tagihan->mitraLegacy;
                         $defaultWa = $mitraTagihanModal->no_telepon ?? '';
+                        $defaultEmail = $mitraTagihanModal->email ?? '';
                         $namaMitraModal = $mitraTagihanModal->nama_pihak ?? $mitraTagihanModal->nama_mitra ?? '';
                     @endphp
 
                     <div class="alert alert-light border mb-4 small">
-                        Tagihan akan diterbitkan (VA di-generate) dan notifikasi pesan instan otomatis dikirimkan via WhatsApp ke nomor mitra di bawah.
+                        Tagihan akan diterbitkan (VA di-generate), lalu notifikasi otomatis dikirim via WhatsApp ke nomor mitra di bawah dan via email ke alamat email mitra.
                     </div>
 
                     <div class="mb-2 d-flex justify-content-between align-items-end flex-wrap gap-2">
@@ -1166,14 +1177,64 @@
                             </div>
                         @endif
                     </div>
+
+                    <div class="mt-3">
+                        <div class="mb-2 d-flex justify-content-between align-items-end flex-wrap gap-2">
+                            <label class="form-label fw-bold m-0" for="emailTujuanInput">
+                                <i class="bi bi-envelope-paper text-primary me-1"></i>
+                                Email Tujuan
+                            </label>
+                            @if($defaultEmail)
+                                <button type="button" class="btn btn-sm btn-link text-primary p-0 fw-bold text-decoration-none" id="resetEmailToMitra">
+                                    <i class="bi bi-arrow-counterclockwise me-1"></i> Pakai email mitra
+                                </button>
+                            @endif
+                        </div>
+
+                        <div class="input-group">
+                            <span class="input-group-text bg-primary-subtle border-primary-subtle text-primary">
+                                <i class="bi bi-envelope-fill"></i>
+                            </span>
+                            <input type="email"
+                                id="emailTujuanInput"
+                                name="email_tujuan"
+                                class="form-control fw-semibold"
+                                value="{{ $defaultEmail }}"
+                                placeholder="nama@email.com"
+                                data-default="{{ $defaultEmail }}"
+                                readonly>
+                            <button type="button"
+                                id="emailTujuanLockBtn"
+                                class="btn btn-primary d-inline-flex align-items-center gap-1"
+                                title="Klik untuk membuka kunci dan mengedit email"
+                                aria-pressed="true">
+                                <i class="bi bi-lock-fill" id="emailTujuanLockIcon"></i>
+                                <span id="emailTujuanLockText">Terkunci</span>
+                            </button>
+                        </div>
+
+                        @if($defaultEmail)
+                            <div class="small text-muted mt-2">
+                                <i class="bi bi-envelope-check-fill text-primary me-1"></i>
+                                Email default diambil dari data mitra
+                                <strong class="text-dark">{{ $namaMitraModal }}</strong>.
+                                Klik tombol <strong>Terkunci</strong> di samping input untuk mengganti email.
+                            </div>
+                        @else
+                            <div class="alert alert-warning small d-flex align-items-start gap-2 mt-2 mb-0">
+                                <i class="bi bi-exclamation-triangle-fill"></i>
+                                <span>Mitra <strong>{{ $namaMitraModal ?: '-' }}</strong> belum memiliki email. Klik tombol kunci di samping input untuk mengisi manual.</span>
+                            </div>
+                        @endif
+                    </div>
                 </div>
                 <div class="modal-footer border-0 bg-light">
                     <button type="button" class="btn btn-secondary fw-bold" data-bs-dismiss="modal">Batal</button>
                     <button type="submit" class="btn btn-success fw-bold"
-                        data-sky-confirm="Apakah Anda yakin ingin mem-publish dan mengirim WA?"
+                        data-sky-confirm="Apakah Anda yakin ingin mem-publish dan mengirim notifikasi WA serta email?"
                         data-sky-confirm-title="Publish Tagihan"
                         data-sky-confirm-text="Ya, Publish & Kirim">
-                        <i class="bi bi-send me-1"></i> Publish & Kirim WA
+                        <i class="bi bi-send me-1"></i> Publish & Kirim WA + Email
                     </button>
                 </div>
             </form>
@@ -1227,6 +1288,47 @@
         // Init: default terkunci.
         setLocked(true);
     })();
+
+    (function () {
+        const input = document.getElementById('emailTujuanInput');
+        const reset = document.getElementById('resetEmailToMitra');
+        const lockBtn = document.getElementById('emailTujuanLockBtn');
+        const lockIcon = document.getElementById('emailTujuanLockIcon');
+        const lockText = document.getElementById('emailTujuanLockText');
+        if (! input || ! lockBtn) return;
+
+        if (reset) {
+            reset.addEventListener('click', () => {
+                input.value = input.dataset.default || '';
+                input.focus();
+            });
+        }
+
+        const setLocked = (locked) => {
+            input.readOnly = locked;
+            lockBtn.setAttribute('aria-pressed', locked ? 'true' : 'false');
+
+            if (locked) {
+                input.classList.remove('is-unlocked');
+                lockIcon.className = 'bi bi-lock-fill';
+                lockText.textContent = 'Terkunci';
+                lockBtn.classList.remove('btn-warning');
+                lockBtn.classList.add('btn-primary');
+                lockBtn.title = 'Klik untuk membuka kunci dan mengedit email';
+            } else {
+                input.classList.add('is-unlocked');
+                lockIcon.className = 'bi bi-unlock-fill';
+                lockText.textContent = 'Bisa diedit';
+                lockBtn.classList.remove('btn-primary');
+                lockBtn.classList.add('btn-warning');
+                lockBtn.title = 'Klik untuk mengunci kembali';
+                setTimeout(() => input.focus(), 80);
+            }
+        };
+
+        lockBtn.addEventListener('click', () => setLocked(! input.readOnly));
+        setLocked(true);
+    })();
 </script>
 <style>
     /* Visual feedback saat input terbuka */
@@ -1236,6 +1338,16 @@
         box-shadow: 0 0 0 3px rgba(245,158,11,.18);
     }
     #waTujuanInput[readonly] {
+        background: #f8fafc;
+        cursor: not-allowed;
+        color: #475569;
+    }
+    #emailTujuanInput.is-unlocked {
+        background: #fff;
+        border-color: #f59e0b;
+        box-shadow: 0 0 0 3px rgba(245,158,11,.18);
+    }
+    #emailTujuanInput[readonly] {
         background: #f8fafc;
         cursor: not-allowed;
         color: #475569;

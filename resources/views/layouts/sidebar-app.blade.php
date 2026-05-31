@@ -478,6 +478,13 @@
                 <i class="material-icons-outlined">arrow_right</i>PAX PJP2U
               </a>
             </li>
+            @hasrole('Super Admin Jasa')
+            <li>
+              <a href="{{ route('jasa.utilitas.index') }}">
+                <i class="material-icons-outlined">arrow_right</i>Utilitas
+              </a>
+            </li>
+            @endhasrole
           </ul>
         </li>
         @hasanyrole('Super Admin|Super Admin Jasa')

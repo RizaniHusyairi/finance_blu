@@ -444,6 +444,7 @@ Route::middleware(['auth', 'account.active'])->group(function () use ($internalR
         Route::get('/jasa/integrasi', [JasaIntegrationSettingController::class, 'index'])->name('jasa.integrasi.index');
         Route::put('/jasa/integrasi', [JasaIntegrationSettingController::class, 'update'])->name('jasa.integrasi.update');
         Route::post('/jasa/integrasi/whatsapp/test', [JasaIntegrationSettingController::class, 'testWhatsapp'])->name('jasa.integrasi.whatsapp.test');
+        Route::post('/jasa/integrasi/email/test', [JasaIntegrationSettingController::class, 'testEmail'])->name('jasa.integrasi.email.test');
     });
 
     // Index Laporan Mitra (Konsesi & PJP2U) — read-only, dibuka untuk verifikator (KPA, PLT/PLH, Kasi PK, Kasubag TU)

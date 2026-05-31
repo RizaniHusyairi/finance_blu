@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Spp;
 use App\Models\User;
+use App\Services\EmailNotificationService;
 use App\Services\WhatsappService;
 use Illuminate\Support\Collection;
 use Illuminate\Http\Request;
@@ -17,7 +18,7 @@ class KpaApprovalController extends Controller
     /**
      * PPK mengirim WA ke KPA untuk meminta persetujuan
      */
-    public function sendWa(Request $request, $sppId, WhatsappService $whatsappService)
+    public function sendWa(Request $request, $sppId, WhatsappService $whatsappService, EmailNotificationService $emailNotificationService)
     {
         $spp = Spp::with('tagihan')->findOrFail($sppId);
         
@@ -54,16 +55,38 @@ class KpaApprovalController extends Controller
         $message .= $url . "\n\n";
         $message .= "_Tautan ini valid selama 24 jam dan akan otomatis mengarahkan Anda ke sistem tanpa perlu login ulang._";
 
+        $emailMessage = "Yth. KPA,\n\n"
+            . "Dengan hormat,\n\n"
+            . "Terdapat pengajuan persetujuan tagihan yang memerlukan tindak lanjut Bapak/Ibu sebelum diproses lebih lanjut.\n\n"
+            . "Nomor SPP : {$spp->nomor_spp}\n"
+            . "Vendor/Rekanan : {$vendorName}\n"
+            . "Nominal : {$nominal}\n\n"
+            . "Silakan meninjau detail dan memberikan persetujuan melalui tautan berikut:\n"
+            . $url . "\n\n"
+            . "Tautan ini berlaku selama 24 jam dan akan mengarahkan Bapak/Ibu ke sistem untuk proses persetujuan.\n\n"
+            . "Hormat kami,\n"
+            . "SIKEREN-BLU";
+
         try {
             $sent = $whatsappService->sendMessage($noHp, $message);
             if ($sent) {
+                if ((bool) \App\Models\IntegrationSetting::getValue('email.kpa_approval.enabled', true)) {
+                    $emailNotificationService->sendNotification(
+                        (string) $kpaUser->email,
+                        'Permohonan Persetujuan Tagihan KPA - SPP ' . $spp->nomor_spp,
+                        $emailMessage,
+                        $spp,
+                        'send_kpa_approval_email'
+                    );
+                }
+
                 $spp->update([
                     'kpa_approval_status' => 'PENDING_KPA',
                     'kpa_approved_at' => null,
                     'kpa_approved_by' => null,
                     'kpa_approval_notes' => null,
                 ]);
-                return back()->with('success', 'Pesan WA pengajuan persetujuan berhasil dikirim ke KPA.');
+                return back()->with('success', 'Pesan WA pengajuan persetujuan berhasil dikirim ke KPA dan email diproses.');
             }
             return back()->with('error', 'Gagal mengirim pesan WA ke KPA. Silakan cek pengaturan integrasi WA.');
         } catch (\Exception $e) {

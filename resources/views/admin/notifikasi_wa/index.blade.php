@@ -303,10 +303,14 @@
                 <h6 class="nwa-title">Konfirmasi Pembayaran Lunas</h6>
                 <div class="nwa-sub">Otomatis dikirim ke mitra saat callback BTN VA mengkonfirmasi pembayaran.</div>
             </div>
-            <div class="nwa-toggle">
+            <div class="nwa-toggle d-flex gap-3 flex-wrap justify-content-end">
                 <div class="form-check form-switch m-0">
                     <input class="form-check-input" type="checkbox" name="lunas_enabled" id="lunasEnabled" value="1" {{ $settings['lunas_enabled'] ? 'checked' : '' }}>
-                    <label class="form-check-label" for="lunasEnabled">{{ $settings['lunas_enabled'] ? 'Aktif' : 'Nonaktif' }}</label>
+                    <label class="form-check-label" for="lunasEnabled">WA</label>
+                </div>
+                <div class="form-check form-switch m-0">
+                    <input class="form-check-input" type="checkbox" name="email_lunas_enabled" id="emailLunasEnabled" value="1" {{ $settings['email_lunas_enabled'] ? 'checked' : '' }}>
+                    <label class="form-check-label" for="emailLunasEnabled">Email</label>
                 </div>
             </div>
         </div>
@@ -332,16 +336,43 @@
                 <h6 class="nwa-title">Notifikasi Pengajuan Tagihan (Verifikator)</h6>
                 <div class="nwa-sub">Otomatis dikirim ke 5 pejabat verifikator saat tagihan kontrak diajukan.</div>
             </div>
-            <div class="nwa-toggle">
+            <div class="nwa-toggle d-flex gap-3 flex-wrap justify-content-end">
                 <div class="form-check form-switch m-0">
                     <input class="form-check-input" type="checkbox" name="pengajuan_tagihan_enabled" id="pengajuanTagihanEnabled" value="1" {{ $settings['pengajuan_tagihan_enabled'] ? 'checked' : '' }}>
-                    <label class="form-check-label" for="pengajuanTagihanEnabled">{{ $settings['pengajuan_tagihan_enabled'] ? 'Aktif' : 'Nonaktif' }}</label>
+                    <label class="form-check-label" for="pengajuanTagihanEnabled">WA</label>
+                </div>
+                <div class="form-check form-switch m-0">
+                    <input class="form-check-input" type="checkbox" name="email_pengajuan_tagihan_enabled" id="emailPengajuanTagihanEnabled" value="1" {{ $settings['email_pengajuan_tagihan_enabled'] ? 'checked' : '' }}>
+                    <label class="form-check-label" for="emailPengajuanTagihanEnabled">Email</label>
                 </div>
             </div>
         </div>
         <div class="nwa-body">
-            <div class="alert alert-info mb-0 small">
-                <i class="bi bi-info-circle me-1"></i> Jika diaktifkan, sistem akan otomatis mengirimkan notifikasi via WhatsApp ke nomor HP Pejabat Verifikator (PPK, PPSPM, Koor Keu, Bend. Keluar, Bend. Terima) yang terdaftar di Master Pegawai ketika ada tagihan kontrak yang baru diajukan (status DRAFT -> PENDING_VERIFIKASI_KONTRAK).
+            <div class="alert alert-info mb-3 small">
+                <i class="bi bi-info-circle me-1"></i> Jika diaktifkan, sistem akan otomatis mengirimkan notifikasi via WhatsApp ke nomor HP dan via email akun Pejabat Verifikator (PPK, PPSPM, Koor Keu, Bend. Keluar, Bend. Terima) ketika ada tagihan kontrak yang baru diajukan.
+            </div>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" name="email_tte_enabled" id="emailTteEnabled" value="1" {{ $settings['email_tte_enabled'] ? 'checked' : '' }}>
+                        <label class="form-check-label fw-bold" for="emailTteEnabled">Email Akses TTE</label>
+                    </div>
+                    <div class="small text-muted">Vendor dan tim pemeriksa saat tautan TTE tagihan dikirim.</div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" name="email_contract_upload_enabled" id="emailContractUploadEnabled" value="1" {{ $settings['email_contract_upload_enabled'] ? 'checked' : '' }}>
+                        <label class="form-check-label fw-bold" for="emailContractUploadEnabled">Email Portal Upload</label>
+                    </div>
+                    <div class="small text-muted">Vendor saat link upload dokumen kontrak final dikirim.</div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" name="email_kpa_approval_enabled" id="emailKpaApprovalEnabled" value="1" {{ $settings['email_kpa_approval_enabled'] ? 'checked' : '' }}>
+                        <label class="form-check-label fw-bold" for="emailKpaApprovalEnabled">Email Persetujuan KPA</label>
+                    </div>
+                    <div class="small text-muted">KPA saat pengajuan persetujuan tagihan dikirim.</div>
+                </div>
             </div>
         </div>
     </div>

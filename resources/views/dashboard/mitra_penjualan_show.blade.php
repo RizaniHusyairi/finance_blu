@@ -582,6 +582,7 @@
 
                     {{-- Ditagihkan --}}
                     @if($penjualan->tagihan_jasa_id && $penjualan->tagihanJasa)
+                        @php($tagihanBisaDibuka = in_array($penjualan->tagihanJasa->status, ['PUBLISHED', 'LUNAS'], true))
                         <div class="mp-timeline-item">
                             <div class="mp-timeline-dot primary">
                                 <i class="bi bi-receipt"></i>
@@ -590,9 +591,13 @@
                                 <div class="mp-timeline-title">Tagihan Dibuat</div>
                                 <div class="mp-timeline-time"><i class="bi bi-calendar2-check text-primary"></i>{{ $tanggalWaktu($penjualan->tagihanJasa->created_at) }}</div>
                                 <div class="mp-timeline-note">Tagihan telah diterbitkan berdasarkan laporan ini.</div>
-                                <a href="{{ route('mitra.tagihan-jasa.show', $penjualan->tagihanJasa) }}" class="btn btn-sm btn-outline-primary mp-timeline-link">
-                                    <i class="bi bi-box-arrow-up-right"></i>{{ $penjualan->tagihanJasa->nomor_tagihan ?? 'Lihat Tagihan' }}
-                                </a>
+                                @if($tagihanBisaDibuka)
+                                    <a href="{{ route('mitra.tagihan-jasa.show', $penjualan->tagihanJasa) }}" class="btn btn-sm btn-outline-primary mp-timeline-link">
+                                        <i class="bi bi-box-arrow-up-right"></i>{{ $penjualan->tagihanJasa->nomor_tagihan ?? 'Lihat Tagihan' }}
+                                    </a>
+                                @else
+                                    <span class="badge bg-warning text-dark mt-2">Tagihan masih diproses internal</span>
+                                @endif
                             </div>
                         </div>
                     @endif
