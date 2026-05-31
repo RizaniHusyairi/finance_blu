@@ -105,17 +105,9 @@ class RekeningBankController extends Controller
     {
         $validated = $this->validatePayload($request, $rekening);
 
-        $saldoBerubah = (float) $rekening->saldo_awal !== (float) ($validated['saldo_awal'] ?? 0)
-            || (string) $rekening->saldo_awal_per_tanggal?->toDateString() !== (string) ($validated['saldo_awal_per_tanggal'] ?? null);
-
         $rekening->update($this->buildAttributes($validated));
 
         $this->syncDefaultPerJenis($rekening);
-
-        // Saldo awal jadi titik mulai saldo berjalan — bila berubah, hitung ulang BKU.
-        if ($saldoBerubah) {
-            BukuKasUmum::recalculateRunningBalance($rekening->id);
-        }
 
         return redirect()
             ->route('rekening-bank.show', $rekening)
@@ -187,8 +179,10 @@ class RekeningBankController extends Controller
             'nama_rekening' => trim($validated['nama_rekening']),
             'kode_bank' => $validated['kode_bank'] ?? null,
             'jenis_rekening' => $validated['jenis_rekening'],
-            'saldo_awal' => $validated['saldo_awal'] ?? 0,
-            'saldo_awal_per_tanggal' => $validated['saldo_awal_per_tanggal'] ?? null,
+            // saldo_awal & saldo_awal_per_tanggal sengaja TIDAK di-set dari form ini.
+            // Saldo awal dicatat sebagai baris BKU lewat menu Buku Kas Umum agar tidak
+            // dobel dihitung dengan kolom rekening_bank.saldo_awal. Pada update, kolom
+            // tersebut dibiarkan apa adanya; pada store, pakai default DB (0 / null).
             'is_default' => (bool) ($validated['is_default'] ?? false),
             'status_aktif' => (bool) ($validated['status_aktif'] ?? false),
         ];
@@ -203,8 +197,9 @@ class RekeningBankController extends Controller
     {
         return User::query()
             ->whereHas('roles', fn (Builder $q) => $q->whereIn('name', ['Bendahara Penerimaan', 'Bendahara Pengeluaran']))
-            ->orderBy('name')
-            ->get(['id', 'name']);
+            ->with('profilable')
+            ->orderByDisplayName()
+            ->get();
     }
 
     private function validatePayload(Request $request, ?RekeningBank $rekening = null): array
@@ -221,8 +216,6 @@ class RekeningBankController extends Controller
             'nama_rekening' => 'required|string|max:150',
             'kode_bank' => 'nullable|string|max:20',
             'jenis_rekening' => ['required', 'string', Rule::in(JenisRekening::values())],
-            'saldo_awal' => 'nullable|numeric|min:0',
-            'saldo_awal_per_tanggal' => 'nullable|date',
             'is_default' => 'nullable|boolean',
             'status_aktif' => 'nullable|boolean',
         ]);

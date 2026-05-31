@@ -97,6 +97,12 @@ class DashboardController extends Controller
         if (Auth::user()->hasRole('Operator Perjaldin')) {
             return $this->operatorPerjaldin();
         }
+        if (Auth::user()->hasRole('PPSPM')) {
+            return $this->ppspm();
+        }
+        if (Auth::user()->hasRole('Koordinator Keuangan')) {
+            return $this->koordinatorKeuangan();
+        }
         if (Auth::user()->hasRole('Bendahara Penerimaan')) {
             return redirect()->route('dashboard.bendahara-penerimaan');
         }
@@ -1038,5 +1044,283 @@ class DashboardController extends Controller
         });
 
         return view('dashboard.operator_perjaldin', $data);
+    }
+
+    /**
+     * Hitung approval yang masih PENDING untuk user pada satu jenis dokumen
+     * (berbasis workflow_instances + workflow_approvals).
+     *
+     * @param  class-string  $modelClass  Model dokumen (DokumenSpm::class, dll)
+     * @param  array  $roleCodes  Role yang dimiliki user
+     * @return int
+     */
+    private function countPendingApprovals(string $modelClass, array $roleCodes, ?int $userId = null): int
+    {
+        if (empty($roleCodes)) {
+            return 0;
+        }
+
+        return $modelClass::whereHas('workflowInstances', function ($q) use ($roleCodes, $userId) {
+            $q->where('status', '!=', 'DRAFT')
+                ->whereHas('approvals', function ($a) use ($roleCodes, $userId) {
+                    $a->whereIn('role_code', $roleCodes)
+                        ->where('status', 'PENDING')
+                        ->when($userId, function ($qq) use ($userId) {
+                            $qq->where(function ($w) use ($userId) {
+                                $w->whereNull('assigned_user_id')
+                                    ->orWhere('assigned_user_id', $userId);
+                            });
+                        });
+                });
+        })->count();
+    }
+
+    /**
+     * Ambil daftar approval PENDING terbaru milik user lintas dokumen,
+     * dikemas jadi array task seragam untuk ditampilkan di dashboard.
+     *
+     * @return \Illuminate\Support\Collection
+     */
+    private function pendingApprovalTasks(array $roleCodes, int $userId, int $limit = 12): \Illuminate\Support\Collection
+    {
+        if (empty($roleCodes)) {
+            return collect();
+        }
+
+        $approvals = \App\Models\WorkflowApproval::with(['instance.workflowable'])
+            ->whereIn('role_code', $roleCodes)
+            ->where('status', 'PENDING')
+            ->where(function ($w) use ($userId) {
+                $w->whereNull('assigned_user_id')->orWhere('assigned_user_id', $userId);
+            })
+            ->whereHas('instance', fn ($q) => $q->where('status', '!=', 'DRAFT'))
+            ->latest('id')
+            ->take(60)
+            ->get();
+
+        $meta = [
+            \App\Models\DokumenSpp::class  => ['label' => 'SPP',  'no' => 'nomor_spp',  'icon' => 'bi-file-earmark-text',     'tone' => 'indigo'],
+            \App\Models\DokumenSpm::class  => ['label' => 'SPM',  'no' => 'nomor_spm',  'icon' => 'bi-file-earmark-check',    'tone' => 'violet'],
+            \App\Models\DokumenNpi::class  => ['label' => 'NPI',  'no' => 'nomor_npi',  'icon' => 'bi-file-earmark-ruled',    'tone' => 'amber'],
+            \App\Models\DokumenSp2d::class => ['label' => 'SP2D', 'no' => 'nomor_sp2d', 'icon' => 'bi-cash-coin',             'tone' => 'emerald'],
+            \App\Models\Tagihan::class     => ['label' => 'Tagihan', 'no' => 'nomor_tagihan', 'icon' => 'bi-receipt',        'tone' => 'rose'],
+        ];
+
+        return $approvals
+            ->map(function ($app) use ($meta) {
+                $doc = $app->instance?->workflowable;
+                if (! $doc) {
+                    return null;
+                }
+                $type = get_class($doc);
+                $m = $meta[$type] ?? ['label' => 'Dokumen', 'no' => 'id', 'icon' => 'bi-file-earmark', 'tone' => 'indigo'];
+
+                return (object) [
+                    'jenis'   => $m['label'],
+                    'icon'    => $m['icon'],
+                    'tone'    => $m['tone'],
+                    'nomor'   => $doc->{$m['no']} ?? ('#' . $doc->id),
+                    'tanggal' => $app->created_at,
+                    'doc_id'  => $doc->id,
+                ];
+            })
+            ->filter()
+            ->unique(fn ($t) => $t->jenis . $t->nomor)
+            ->take($limit)
+            ->values();
+    }
+
+    /**
+     * Endpoint publik dashboard PPSPM (dipakai menu sidebar khusus).
+     */
+    public function ppspmDashboard()
+    {
+        return $this->ppspm();
+    }
+
+    /**
+     * Endpoint publik dashboard Koordinator Keuangan (dipakai menu sidebar khusus).
+     */
+    public function koordinatorKeuanganDashboard()
+    {
+        return $this->koordinatorKeuangan();
+    }
+
+    /**
+     * Dashboard khusus Role PPSPM (Pejabat Penanda tangan Surat Perintah Membayar).
+     * Fokus: menguji & menandatangani SPM, serta menerbitkan/menguji SP2D.
+     */
+    private function ppspm()
+    {
+        $user = Auth::user();
+        $userId = $user->id;
+        $roleCodes = ['PPSPM'];
+
+        $data = \Illuminate\Support\Facades\Cache::remember('dash_ppspm_' . $userId, 60, function () use ($roleCodes, $userId) {
+            $now = now();
+
+            // ===== KPI: tugas verifikasi PPSPM per jenis dokumen =====
+            $spmPending  = $this->countPendingApprovals(\App\Models\DokumenSpm::class, $roleCodes, $userId);
+            $sp2dPending = $this->countPendingApprovals(\App\Models\DokumenSp2d::class, $roleCodes, $userId);
+            $tagihanPending = $this->countPendingApprovals(\App\Models\Tagihan::class, $roleCodes, $userId);
+            $totalTugas = $spmPending + $sp2dPending + $tagihanPending;
+
+            // ===== Riwayat tindakan PPSPM =====
+            $sudahDisetujui = \App\Models\WorkflowApproval::whereIn('role_code', $roleCodes)
+                ->where('status', 'APPROVED')
+                ->where('acted_by_user_id', $userId)
+                ->count();
+            $diRevisi = \App\Models\WorkflowApproval::whereIn('role_code', $roleCodes)
+                ->whereIn('status', ['REVISION', 'REJECTED'])
+                ->where('acted_by_user_id', $userId)
+                ->count();
+
+            // SPM & SP2D terbit (output utama PPSPM)
+            $spmTerbit = \App\Models\DokumenSpm::whereIn('status', [
+                \App\Models\DokumenSpm::STATUS_DISETUJUI_FINAL ?? 'DISETUJUI_FINAL',
+                'SPM_TERBIT',
+            ])->count();
+            $sp2dTerbit = \App\Models\DokumenSp2d::whereIn('status', ['DISETUJUI_FINAL', 'SP2D_TERBIT', 'EXECUTED'])->count();
+
+            // ===== Nominal SPM yang sedang menunggu PPSPM =====
+            $nominalSpmPending = \App\Models\DokumenSpm::whereHas('workflowInstances', function ($q) use ($roleCodes, $userId) {
+                $q->where('status', '!=', 'DRAFT')->whereHas('approvals', function ($a) use ($roleCodes, $userId) {
+                    $a->whereIn('role_code', $roleCodes)->where('status', 'PENDING')
+                        ->where(fn ($w) => $w->whereNull('assigned_user_id')->orWhere('assigned_user_id', $userId));
+                });
+            })->sum('nominal_spm');
+
+            // ===== CHART: tren approval PPSPM 6 bulan =====
+            $trenLabels = [];
+            $trenApprove = [];
+            for ($i = 5; $i >= 0; $i--) {
+                $m = $now->copy()->subMonths($i);
+                $trenLabels[] = $m->isoFormat('MMM YY');
+                $trenApprove[] = \App\Models\WorkflowApproval::whereIn('role_code', $roleCodes)
+                    ->where('status', 'APPROVED')
+                    ->where('acted_by_user_id', $userId)
+                    ->whereYear('acted_at', $m->year)
+                    ->whereMonth('acted_at', $m->month)
+                    ->count();
+            }
+
+            // ===== Donut: komposisi tugas =====
+            $chartTugas = [
+                'SPM'     => $spmPending,
+                'SP2D'    => $sp2dPending,
+                'Tagihan' => $tagihanPending,
+            ];
+
+            // ===== Daftar tugas (antrian) =====
+            $tasks = $this->pendingApprovalTasks($roleCodes, $userId, 12);
+
+            return [
+                'kpi' => [
+                    'total_tugas'     => $totalTugas,
+                    'spm_pending'     => $spmPending,
+                    'sp2d_pending'    => $sp2dPending,
+                    'tagihan_pending' => $tagihanPending,
+                    'sudah_disetujui' => $sudahDisetujui,
+                    'di_revisi'       => $diRevisi,
+                    'spm_terbit'      => $spmTerbit,
+                    'sp2d_terbit'     => $sp2dTerbit,
+                    'nominal_spm_pending' => (float) $nominalSpmPending,
+                ],
+                'tren_labels'   => $trenLabels,
+                'tren_approve'  => $trenApprove,
+                'chart_tugas_labels' => array_keys($chartTugas),
+                'chart_tugas_data'   => array_values($chartTugas),
+                'tasks' => $tasks,
+                'tahun' => $now->year,
+            ];
+        });
+
+        return view('dashboard.ppspm', $data);
+    }
+
+    /**
+     * Dashboard khusus Role Koordinator Keuangan.
+     * Fokus: mengoordinasikan & memverifikasi seluruh alur dokumen keuangan
+     * (SPP → SPM → NPI → SP2D) untuk kontrak, perjaldin, dan honorarium.
+     */
+    private function koordinatorKeuangan()
+    {
+        $user = Auth::user();
+        $userId = $user->id;
+        $roleCodes = ['Koordinator Keuangan'];
+
+        $data = \Illuminate\Support\Facades\Cache::remember('dash_koorkeu_' . $userId, 60, function () use ($roleCodes, $userId) {
+            $now = now();
+
+            // ===== KPI: tugas verifikasi per tahap dokumen =====
+            $sppPending  = $this->countPendingApprovals(\App\Models\DokumenSpp::class, $roleCodes, $userId);
+            $spmPending  = $this->countPendingApprovals(\App\Models\DokumenSpm::class, $roleCodes, $userId);
+            $npiPending  = $this->countPendingApprovals(\App\Models\DokumenNpi::class, $roleCodes, $userId);
+            $sp2dPending = $this->countPendingApprovals(\App\Models\DokumenSp2d::class, $roleCodes, $userId);
+            $tagihanPending = $this->countPendingApprovals(\App\Models\Tagihan::class, $roleCodes, $userId);
+            $totalTugas = $sppPending + $spmPending + $npiPending + $sp2dPending + $tagihanPending;
+
+            // ===== Riwayat tindakan =====
+            $sudahDisetujui = \App\Models\WorkflowApproval::whereIn('role_code', $roleCodes)
+                ->where('status', 'APPROVED')
+                ->where('acted_by_user_id', $userId)
+                ->count();
+            $diRevisi = \App\Models\WorkflowApproval::whereIn('role_code', $roleCodes)
+                ->whereIn('status', ['REVISION', 'REJECTED'])
+                ->where('acted_by_user_id', $userId)
+                ->count();
+
+            // ===== Pipeline pencairan (gambaran umum koordinasi) =====
+            $totalPagu = RiwayatRevisiDipa::where('is_active', true)->sum('total_pagu');
+            $totalRealisasi = DB::table('realisasi_anggaran')->sum('nominal_cair');
+            $sisaPagu = max(0, $totalPagu - $totalRealisasi);
+            $persenRealisasi = $totalPagu > 0 ? round(($totalRealisasi / $totalPagu) * 100, 1) : 0;
+
+            // ===== CHART: corong dokumen (jumlah pending tiap tahap) =====
+            $chartFunnelLabels = ['SPP', 'SPM', 'NPI', 'SP2D'];
+            $chartFunnelData = [$sppPending, $spmPending, $npiPending, $sp2dPending];
+
+            // ===== CHART: tren approval 6 bulan =====
+            $trenLabels = [];
+            $trenApprove = [];
+            for ($i = 5; $i >= 0; $i--) {
+                $m = $now->copy()->subMonths($i);
+                $trenLabels[] = $m->isoFormat('MMM YY');
+                $trenApprove[] = \App\Models\WorkflowApproval::whereIn('role_code', $roleCodes)
+                    ->where('status', 'APPROVED')
+                    ->where('acted_by_user_id', $userId)
+                    ->whereYear('acted_at', $m->year)
+                    ->whereMonth('acted_at', $m->month)
+                    ->count();
+            }
+
+            // ===== Daftar tugas (antrian lintas dokumen) =====
+            $tasks = $this->pendingApprovalTasks($roleCodes, $userId, 14);
+
+            return [
+                'kpi' => [
+                    'total_tugas'     => $totalTugas,
+                    'spp_pending'     => $sppPending,
+                    'spm_pending'     => $spmPending,
+                    'npi_pending'     => $npiPending,
+                    'sp2d_pending'    => $sp2dPending,
+                    'tagihan_pending' => $tagihanPending,
+                    'sudah_disetujui' => $sudahDisetujui,
+                    'di_revisi'       => $diRevisi,
+                    'total_pagu'      => (float) $totalPagu,
+                    'total_realisasi' => (float) $totalRealisasi,
+                    'sisa_pagu'       => (float) $sisaPagu,
+                    'persen_realisasi'=> $persenRealisasi,
+                ],
+                'chart_funnel_labels' => $chartFunnelLabels,
+                'chart_funnel_data'   => $chartFunnelData,
+                'tren_labels'  => $trenLabels,
+                'tren_approve' => $trenApprove,
+                'tasks' => $tasks,
+                'tahun' => $now->year,
+            ];
+        });
+
+        return view('dashboard.koordinator_keuangan', $data);
     }
 }

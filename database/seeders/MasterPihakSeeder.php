@@ -10,9 +10,10 @@ class MasterPihakSeeder extends Seeder
 {
     public function run(): void
     {
+        // Catatan: kolom `kategori` pada master_pihak memiliki default 'PENGELUARAN'
+        // di level DB, sehingga tidak perlu lagi diisi per-data vendor di sini.
         $pihaks = [
             [
-                'kategori' => 'PENGELUARAN',
                 'jenis_entitas' => 'BADAN_USAHA',
                 'kode_pihak' => 'VND-001',
                 'npwp' => '01.234.567.8-901.000',
@@ -31,7 +32,6 @@ class MasterPihakSeeder extends Seeder
                 ],
             ],
             [
-                'kategori' => 'PENGELUARAN',
                 'jenis_entitas' => 'BADAN_USAHA',
                 'kode_pihak' => 'VND-002',
                 'npwp' => '02.345.678.9-012.000',
@@ -50,7 +50,6 @@ class MasterPihakSeeder extends Seeder
                 ],
             ],
             [
-                'kategori' => 'PENERIMAAN',
                 'jenis_entitas' => 'INSTANSI',
                 'kode_pihak' => 'MTR-001',
                 'npwp' => null,
@@ -69,7 +68,6 @@ class MasterPihakSeeder extends Seeder
                 ],
             ],
             [
-                'kategori' => 'PENGELUARAN',
                 'jenis_entitas' => 'BADAN_USAHA',
                 'kode_pihak' => 'VND-003',
                 'npwp' => '03.456.789.0-123.000',
@@ -88,7 +86,6 @@ class MasterPihakSeeder extends Seeder
                 ],
             ],
             [
-                'kategori' => 'PENGELUARAN',
                 'jenis_entitas' => 'BADAN_USAHA',
                 'kode_pihak' => 'VND-004',
                 'npwp' => '04.567.890.1-234.000',
@@ -107,7 +104,6 @@ class MasterPihakSeeder extends Seeder
                 ],
             ],
             [
-                'kategori' => 'PENGELUARAN',
                 'jenis_entitas' => 'BADAN_USAHA',
                 'kode_pihak' => 'VND-005',
                 'npwp' => '05.678.901.2-345.000',
@@ -126,7 +122,6 @@ class MasterPihakSeeder extends Seeder
                 ],
             ],
             [
-                'kategori' => 'PENGELUARAN',
                 'jenis_entitas' => 'BADAN_USAHA',
                 'kode_pihak' => 'VND-006',
                 'npwp' => '06.789.012.3-456.000',
@@ -145,7 +140,6 @@ class MasterPihakSeeder extends Seeder
                 ],
             ],
             [
-                'kategori' => 'PENGELUARAN',
                 'jenis_entitas' => 'BADAN_USAHA',
                 'kode_pihak' => 'VND-007',
                 'npwp' => '07.890.123.4-567.000',
@@ -164,7 +158,6 @@ class MasterPihakSeeder extends Seeder
                 ],
             ],
             [
-                'kategori' => 'PENGELUARAN',
                 'jenis_entitas' => 'BADAN_USAHA',
                 'kode_pihak' => 'VND-008',
                 'npwp' => '08.901.234.5-678.000',
@@ -183,7 +176,6 @@ class MasterPihakSeeder extends Seeder
                 ],
             ],
             [
-                'kategori' => 'PENGELUARAN',
                 'jenis_entitas' => 'BADAN_USAHA',
                 'kode_pihak' => 'VND-009',
                 'npwp' => '09.012.345.6-789.000',
@@ -202,7 +194,6 @@ class MasterPihakSeeder extends Seeder
                 ],
             ],
             [
-                'kategori' => 'PENGELUARAN',
                 'jenis_entitas' => 'BADAN_USAHA',
                 'kode_pihak' => 'VND-010',
                 'npwp' => '10.123.456.7-890.000',
@@ -221,7 +212,6 @@ class MasterPihakSeeder extends Seeder
                 ],
             ],
             [
-                'kategori' => 'PENGELUARAN',
                 'jenis_entitas' => 'BADAN_USAHA',
                 'kode_pihak' => 'VND-011',
                 'npwp' => '11.234.567.8-901.000',
@@ -240,7 +230,6 @@ class MasterPihakSeeder extends Seeder
                 ],
             ],
             [
-                'kategori' => 'PENGELUARAN',
                 'jenis_entitas' => 'BADAN_USAHA',
                 'kode_pihak' => 'VND-012',
                 'npwp' => '12.345.678.9-012.000',
@@ -259,7 +248,6 @@ class MasterPihakSeeder extends Seeder
                 ],
             ],
             [
-                'kategori' => 'KEDUANYA',
                 'jenis_entitas' => 'PERORANGAN',
                 'kode_pihak' => 'PRG-001',
                 'npwp' => '12.345.678.9-111.000',

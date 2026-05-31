@@ -38,7 +38,6 @@ class RoleAndPermissionSeeder extends Seeder
             'Mitra',
             'Mitra Jasa',
             'Admin Jasa',
-            'Admin Konsesi',
             'Koordinator Jasa',
             'Admin Listrik',
             'Admin Air',

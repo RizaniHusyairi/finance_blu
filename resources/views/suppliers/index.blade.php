@@ -61,7 +61,6 @@
                         <tr>
                             <th class="text-center" width="5%">No</th>
                             <th width="30%">Nama Perusahaan / Mitra</th>
-                            <th width="15%">Kategori</th>
                             <th width="20%">NPWP</th>
                             <th width="20%">Informasi Bank</th>
                             <th class="text-center" width="10%">Aksi</th>
@@ -74,15 +73,6 @@
                                 <td>
                                     <span class="fw-bold">{{ $supplier->nama_perusahaan }}</span><br>
                                     <small class=""><i class="bi bi-person me-1"></i>Dir: {{ $supplier->nama_direktur ?: '-' }}</small>
-                                </td>
-                                <td>
-                                    @if($supplier->kategori == 'VENDOR_PENGELUARAN')
-                                        <span class="badge bg-danger">Vendor Pengeluaran</span>
-                                    @elseif($supplier->kategori == 'MITRA_PENERIMAAN')
-                                        <span class="badge bg-success">Mitra Penerimaan</span>
-                                    @else
-                                        <span class="badge bg-primary">Keduanya</span>
-                                    @endif
                                 </td>
                                 <td>
                                     <span class="font-monospace">{{ $supplier->npwp ?: 'Belum Ada' }}</span>
@@ -134,10 +124,6 @@
                                                     <div class="row mb-3">
                                                         <div class="col-md-4 ">Direktur / PIC</div>
                                                         <div class="col-md-8">{{ $supplier->nama_direktur ?: '-' }}</div>
-                                                    </div>
-                                                    <div class="row mb-3">
-                                                        <div class="col-md-4 ">Kategori</div>
-                                                        <div class="col-md-8">{{ str_replace('_', ' ', $supplier->kategori) }}</div>
                                                     </div>
                                                     <div class="row mb-3">
                                                         <div class="col-md-4 ">Tipe Supplier</div>

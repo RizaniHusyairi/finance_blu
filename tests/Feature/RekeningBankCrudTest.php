@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Models\BukuKasUmum;
 use App\Models\RekeningBank;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -82,21 +81,17 @@ class RekeningBankCrudTest extends TestCase
         ]);
     }
 
-    public function test_update_saldo_awal_recomputes_bku(): void
+    public function test_update_form_cannot_change_saldo_awal(): void
     {
         $user = $this->bendaharaPenerimaan();
-        $rekening = $this->makeRekening($user, ['nomor_rekening' => '5550001111']);
-
-        $bku = BukuKasUmum::create([
-            'tanggal_transaksi' => '2026-03-01',
-            'nomor_bukti' => 'X/1',
-            'uraian' => 'uji',
-            'arus_kas' => 'DEBIT_MASUK',
-            'nominal' => 100,
-            'saldo_akhir' => 100,
-            'sumber_rekening_id' => $rekening->id,
+        $rekening = $this->makeRekening($user, [
+            'nomor_rekening' => '5550001111',
+            'saldo_awal' => 500000,
         ]);
 
+        // Form Rekening Bank tidak lagi menerima saldo_awal — saldo awal kini dicatat
+        // lewat menu Buku Kas Umum. Nilai saldo_awal di payload harus DIABAIKAN dan
+        // nilai lama dipertahankan (mencegah dobel-hitung dengan baris saldo awal BKU).
         $this->actingAs($user)->put(route('rekening-bank.update', $rekening), [
             'pemilik_id' => $user->id,
             'nama_bank' => 'BTN',
@@ -107,9 +102,8 @@ class RekeningBankCrudTest extends TestCase
             'status_aktif' => 1,
         ])->assertRedirect();
 
-        $bku->refresh();
-        // Saldo awal 1.000.000 + DEBIT_MASUK 100 = 1.000.100.
-        $this->assertSame(1000100.0, (float) $bku->saldo_akhir);
+        $rekening->refresh();
+        $this->assertSame(500000.0, (float) $rekening->saldo_awal, 'Saldo awal tidak boleh berubah lewat form Rekening Bank.');
     }
 
     public function test_only_one_default_per_jenis(): void

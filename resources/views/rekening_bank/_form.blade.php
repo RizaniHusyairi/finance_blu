@@ -2,7 +2,6 @@
     $r = $rekening ?? null;
     $val = fn (string $field, $default = null) => old($field, $r?->{$field} ?? $default);
     $jenisVal = old('jenis_rekening', $r?->jenis_rekening?->value ?? 'LAINNYA');
-    $tglVal = old('saldo_awal_per_tanggal', optional($r?->saldo_awal_per_tanggal)->toDateString());
     $statusVal = old('status_aktif', $r ? ($r->status_aktif ? '1' : '0') : '1');
     $defaultVal = old('is_default', $r ? ($r->is_default ? '1' : '0') : '0');
 @endphp
@@ -56,8 +55,8 @@
 
 <div class="card shadow-sm border-0 rounded-4 mb-4">
     <div class="card-header bg-white border-bottom-0 pt-4 px-4">
-        <h5 class="mb-1 fw-bold">Jenis & Saldo Awal</h5>
-        <p class="text-muted small mb-0">Jenis menentukan peran rekening pada pembukuan. Saldo awal jadi titik mulai saldo berjalan Buku Kas Umum.</p>
+        <h5 class="mb-1 fw-bold">Jenis Rekening</h5>
+        <p class="text-muted small mb-0">Jenis menentukan peran rekening pada pembukuan. Saldo awal dicatat lewat menu Buku Kas Umum, bukan di sini.</p>
     </div>
     <div class="card-body px-4 pb-4">
         <div class="row g-3">
@@ -68,15 +67,6 @@
                         <option value="{{ $v }}" @selected($jenisVal === $v)>{{ $label }}</option>
                     @endforeach
                 </select>
-            </div>
-            <div class="col-md-4">
-                <label class="form-label fw-semibold">Saldo Awal (Rp)</label>
-                <input type="number" step="0.01" min="0" name="saldo_awal" class="form-control" value="{{ $val('saldo_awal', '0') }}">
-            </div>
-            <div class="col-md-4">
-                <label class="form-label fw-semibold">Saldo Awal Per Tanggal</label>
-                <input type="date" name="saldo_awal_per_tanggal" class="form-control" value="{{ $tglVal }}">
-                <div class="small text-muted mt-1">Transaksi sebelum tanggal ini diabaikan dari saldo berjalan.</div>
             </div>
             <div class="col-md-6">
                 <label class="form-label fw-semibold d-block">Default per Jenis</label>

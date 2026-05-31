@@ -28,6 +28,14 @@
                 Internal</a>
             </li>
             @endunlessrole
+            @hasrole('PPSPM')
+            <li><a href="{{ route('dashboard.ppspm') }}"><i class="material-icons-outlined">arrow_right</i>Dashboard PPSPM</a>
+            </li>
+            @endhasrole
+            @hasrole('Koordinator Keuangan')
+            <li><a href="{{ route('dashboard.koordinator-keuangan') }}"><i class="material-icons-outlined">arrow_right</i>Dashboard Koordinator Keuangan</a>
+            </li>
+            @endhasrole
             @hasanyrole('Super Admin|Super Admin Jasa')
             <li><a href="{{ route('super-admin-jasa.dashboard') }}"><i class="material-icons-outlined">arrow_right</i>Dashboard Jasa</a>
             </li>
@@ -101,6 +109,16 @@
           </ul>
         </li>
 
+        {{-- ===== Standing Instruction (KPA) ===== --}}
+        @hasanyrole('Super Admin|KPA|PLT/PLH')
+        <li>
+          <a href="{{ route('standing-instruction.index') }}">
+            <div class="parent-icon"><i class="material-icons-outlined">fact_check</i></div>
+            <div class="menu-title">Standing Instruction</div>
+          </a>
+        </li>
+        @endhasanyrole
+
         {{-- ===== Modul Administrasi (Super Admin) ===== --}}
         @hasrole('Super Admin')
         <li>
@@ -139,10 +157,6 @@
             @endhasanyrole
             @hasanyrole('Super Admin|KPA|PLT/PLH|Operator BLU|Kepala Subbagian Keuangan dan Tata Usaha')
             <li><a href="{{ route('master-pajak.index') }}"><i class="material-icons-outlined">arrow_right</i>Pajak</a>
-            </li>
-            @endhasanyrole
-            @hasanyrole('Super Admin|Operator BLU|Kepala Subbagian Keuangan dan Tata Usaha')
-            <li><a href="{{ route('rekening-bank.index') }}"><i class="material-icons-outlined">arrow_right</i>Rekening Bank</a>
             </li>
             @endhasanyrole
 
@@ -487,13 +501,6 @@
             <div class="menu-title">Tagihan</div>
           </a>
           <ul>
-            @hasrole('Super Admin')
-              <li>
-                <a href="{{ route('tagihan-jasa.create') }}">
-                  <i class="material-icons-outlined">arrow_right</i>Buat Tagihan
-                </a>
-              </li>
-            @endhasrole
             <li>
               <a href="{{ route('admin-jasa.tagihan.log-bulanan') }}">
                 <i class="material-icons-outlined">arrow_right</i>Log Tagihan Bulanan
@@ -506,46 +513,6 @@
             </li>
           </ul>
         </li>
-        @hasanyrole('Super Admin|Super Admin Jasa|Bendahara Penerimaan|Koordinator Jasa|Kepala Seksi Pelayanan dan Kerjasama|')
-        <li>
-          <a href="javascript:;" class="has-arrow">
-            <div class="parent-icon"><i class="material-icons-outlined">assessment</i></div>
-            <div class="menu-title">Laporan</div>
-          </a>
-          <ul>
-            <li>
-              <a href="{{ route('super-admin-jasa.laporan.rekap-tagihan') }}">
-                <i class="material-icons-outlined">arrow_right</i>Rekap Tagihan
-              </a>
-            </li>
-            <li>
-              <a href="{{ route('super-admin-jasa.laporan.rekap-layanan') }}">
-                <i class="material-icons-outlined">arrow_right</i>Rekap per Layanan
-              </a>
-            </li>
-            <li>
-              <a href="{{ route('super-admin-jasa.laporan.rekap-terima-setor') }}">
-                <i class="material-icons-outlined">arrow_right</i>Rekap Terima Setor
-              </a>
-            </li>
-            <li>
-              <a href="{{ route('super-admin-jasa.laporan.rekap-pembayaran') }}">
-                <i class="material-icons-outlined">arrow_right</i>Rekap Pembayaran
-              </a>
-            </li>
-            <li>
-              <a href="{{ route('super-admin-jasa.laporan.rekap-piutang') }}">
-                <i class="material-icons-outlined">arrow_right</i>Rekap Piutang
-              </a>
-            </li>
-            <li>
-              <a href="{{ route('super-admin-jasa.laporan.performa-mitra') }}">
-                <i class="material-icons-outlined">arrow_right</i>Performa Pembayaran Mitra
-              </a>
-            </li>
-          </ul>
-        </li>
-        @endhasanyrole
         <li>
           <a href="javascript:;" class="has-arrow">
             <div class="parent-icon"><i class="material-icons-outlined">settings</i></div>
@@ -769,14 +736,13 @@
             <li><a href="{{ route('verifikasi-npi.honor.index') }}"><i class="material-icons-outlined">arrow_right</i>Honor</a></li>
           </ul>
         </li> -->
-        @hasanyrole('Bendahara Pengeluaran|Bendahara Penerimaan')
+        @hasanyrole('Bendahara Pengeluaran|Bendahara Penerimaan|Super Admin')
         <li>
           <a href="javascript:;" class="has-arrow">
             <div class="parent-icon"><i class="material-icons-outlined">summarize</i></div>
             <div class="menu-title">Pembukuan</div>
           </a>
           <ul>
-            <li><a href="{{ route('rekening-bank.index') }}"><i class="material-icons-outlined">arrow_right</i>Rekening Bank</a></li>
             <li><a href="{{ route('pembukuan.bku.index') }}"><i class="material-icons-outlined">arrow_right</i>Buku Kas Umum</a></li>
             <li><a href="{{ route('pembukuan.bank.index') }}"><i class="material-icons-outlined">arrow_right</i>Buku Pembantu Bank</a></li>
             <li><a href="{{ route('pembukuan.bendahara.index') }}"><i class="material-icons-outlined">arrow_right</i>Buku Pembantu Bendahara</a></li>
@@ -788,6 +754,48 @@
             @hasrole('Bendahara Penerimaan')
             <li><a href="{{ route('pembukuan.piutang.index') }}"><i class="material-icons-outlined">arrow_right</i>Pengecekan Pembayaran (Piutang)</a></li>
             @endhasrole
+          </ul>
+        </li>
+        @endhasanyrole
+
+        {{-- Laporan Jasa — diletakkan paling bawah; tampil untuk Super Admin, Super Admin Jasa, dan Bendahara Penerimaan (selaras guard route) --}}
+        @hasanyrole('Super Admin|Super Admin Jasa|Bendahara Penerimaan')
+        <li>
+          <a href="javascript:;" class="has-arrow">
+            <div class="parent-icon"><i class="material-icons-outlined">assessment</i></div>
+            <div class="menu-title">Laporan</div>
+          </a>
+          <ul>
+            <li>
+              <a href="{{ route('super-admin-jasa.laporan.rekap-tagihan') }}">
+                <i class="material-icons-outlined">arrow_right</i>Rekap Tagihan
+              </a>
+            </li>
+            <li>
+              <a href="{{ route('super-admin-jasa.laporan.rekap-layanan') }}">
+                <i class="material-icons-outlined">arrow_right</i>Rekap per Layanan
+              </a>
+            </li>
+            <li>
+              <a href="{{ route('super-admin-jasa.laporan.rekap-terima-setor') }}">
+                <i class="material-icons-outlined">arrow_right</i>Rekap Terima Setor
+              </a>
+            </li>
+            <li>
+              <a href="{{ route('super-admin-jasa.laporan.rekap-pembayaran') }}">
+                <i class="material-icons-outlined">arrow_right</i>Rekap Pembayaran
+              </a>
+            </li>
+            <li>
+              <a href="{{ route('super-admin-jasa.laporan.rekap-piutang') }}">
+                <i class="material-icons-outlined">arrow_right</i>Rekap Piutang
+              </a>
+            </li>
+            <li>
+              <a href="{{ route('super-admin-jasa.laporan.performa-mitra') }}">
+                <i class="material-icons-outlined">arrow_right</i>Performa Pembayaran Mitra
+              </a>
+            </li>
           </ul>
         </li>
         @endhasanyrole

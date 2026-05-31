@@ -19,6 +19,7 @@ class DokumenSpp extends Model
     protected $casts = [
         'tanggal_spp' => 'date',
         'nominal_spp' => 'decimal:2',
+        'kpa_approved_at' => 'datetime',
     ];
 
     public function tagihan()
@@ -54,6 +55,11 @@ class DokumenSpp extends Model
     public function dibuatOleh()
     {
         return $this->belongsTo(User::class, 'dibuat_oleh_id');
+    }
+
+    public function kpaApprover()
+    {
+        return $this->belongsTo(User::class, 'kpa_approved_by');
     }
 
     public function workflowInstances()

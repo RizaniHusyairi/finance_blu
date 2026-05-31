@@ -91,6 +91,7 @@ use App\Http\Controllers\SppController;
 use App\Http\Controllers\SppPerjaldinVerifikasiController;
 use App\Http\Controllers\SppVerifikasiController;
 use App\Http\Controllers\SppWorkflowController;
+use App\Http\Controllers\StandingInstructionKpaController;
 use App\Http\Controllers\SuperAdminJasaDashboardController;
 use App\Http\Controllers\SuperAdminJasaLaporanController;
 use App\Http\Controllers\SupplierController;
@@ -230,6 +231,8 @@ Route::middleware(['auth', 'account.active'])->group(function () use ($internalR
         Route::get('/dashboard', [DashboardController::class, 'internal'])->name('dashboard');
         Route::get('/dashboard/bendahara-penerimaan', [BendaharaPenerimaanDashboardController::class, 'index'])->name('dashboard.bendahara-penerimaan');
         Route::get('/dashboard/bendahara-pengeluaran', [BendaharaPengeluaranDashboardController::class, 'index'])->name('dashboard.bendahara-pengeluaran');
+        Route::get('/dashboard/ppspm', [DashboardController::class, 'ppspmDashboard'])->name('dashboard.ppspm');
+        Route::get('/dashboard/koordinator-keuangan', [DashboardController::class, 'koordinatorKeuanganDashboard'])->name('dashboard.koordinator-keuangan');
         Route::get('/super-admin-jasa/dashboard', [SuperAdminJasaDashboardController::class, 'index'])
             ->middleware('role:Super Admin|Super Admin Jasa')
             ->name('super-admin-jasa.dashboard');
@@ -748,6 +751,10 @@ Route::middleware(['auth', 'account.active'])->group(function () use ($internalR
     });
 
     // ==== STANDING INSTRUCTION ====
+    // Daftar SPP (Standing Instruction) yang diajukan PPK ke KPA — monitoring KPA.
+    Route::middleware('role:Super Admin|KPA|PLT/PLH')->group(function () {
+        Route::get('/standing-instruction', [StandingInstructionKpaController::class, 'index'])->name('standing-instruction.index');
+    });
 
     // ==== VERIFIKASI SPP KONTRAK, PERJALDIN, HONORARIUM — Terpadu 3 Role (PPK, Koordinator Keuangan, Kasubbag) ====
     Route::middleware('role:Super Admin|PPK|Kepala Subbagian Keuangan dan Tata Usaha|Koordinator Keuangan')->group(function () {
@@ -1001,7 +1008,9 @@ Route::middleware(['auth', 'account.active'])->group(function () use ($internalR
     // ==== MODUL PENYETORAN PAJAK — Bendahara Pengeluaran ====
     Route::middleware('role:Super Admin|Bendahara Pengeluaran|Bendahara Penerimaan')->group(function () {
         Route::get('/pembukuan/bku/pdf', [BukuKasUmumController::class, 'pdf'])->name('pembukuan.bku.pdf');
+        Route::get('/pembukuan/bku/excel', [BukuKasUmumController::class, 'excel'])->name('pembukuan.bku.excel');
         Route::get('/pembukuan/bku', [BukuKasUmumController::class, 'index'])->name('pembukuan.bku.index');
+        Route::post('/pembukuan/bku/saldo-awal', [BukuKasUmumController::class, 'storeSaldoAwal'])->name('pembukuan.bku.saldo-awal.store');
         Route::get('/pembukuan/bku/{id}', [BukuKasUmumController::class, 'show'])
             ->whereNumber('id')
             ->name('pembukuan.bku.show');

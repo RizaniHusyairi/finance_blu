@@ -82,14 +82,98 @@ class PembukuanService
         ];
     }
 
+    /**
+     * Catat baris "Saldo Awal" manual di BKU untuk satu rekening.
+     *
+     * Aturan kunci: hanya boleh bila TIDAK ada baris BKU pada bulan tepat
+     * sebelum tanggal saldo awal (per rekening). Saldo awal dianggap pembukaan
+     * periode; bila bulan sebelumnya sudah ada transaksi, saldo seharusnya
+     * terbawa otomatis (carry-over) lewat saldo berjalan, bukan diinput ulang.
+     *
+     * Catatan: pendekatan ini menulis BARIS BKU (bukan kolom rekening_bank.saldo_awal),
+     * jadi pastikan kolom saldo_awal rekening tetap 0 agar tidak dobel saat recompute.
+     *
+     * @throws \DomainException bila aturan dilanggar atau saldo awal sudah ada.
+     */
+    public function createSaldoAwal(int $rekeningId, string $tanggal, float $nominal, ?string $uraian = null): BukuKasUmum
+    {
+        $rekening = RekeningBank::find($rekeningId);
+
+        if (! $rekening) {
+            throw new \DomainException('Rekening bank tidak ditemukan.');
+        }
+
+        $tanggalAwal = Carbon::parse($tanggal)->startOfDay();
+
+        // Bulan tepat sebelum tanggal saldo awal (startOfMonth dulu agar tidak overflow).
+        $prevMonth = $tanggalAwal->copy()->startOfMonth()->subMonth();
+        $prevStart = $prevMonth->copy()->startOfMonth()->toDateString();
+        $prevEnd = $prevMonth->copy()->endOfMonth()->toDateString();
+
+        $adaDataBulanLalu = BukuKasUmum::query()
+            ->where('sumber_rekening_id', $rekeningId)
+            ->whereBetween('tanggal_transaksi', [$prevStart, $prevEnd])
+            ->exists();
+
+        if ($adaDataBulanLalu) {
+            throw new \DomainException(
+                'Saldo awal tidak bisa diinput karena masih ada transaksi BKU pada '
+                . $prevMonth->translatedFormat('F Y') . ' untuk rekening ini. '
+                . 'Saldo seharusnya terbawa otomatis dari bulan sebelumnya.'
+            );
+        }
+
+        // Cegah saldo awal ganda untuk rekening yang sama pada bulan yang sama.
+        $sudahAdaSaldoAwal = BukuKasUmum::query()
+            ->where('sumber_rekening_id', $rekeningId)
+            ->where('nomor_bukti', 'like', 'SALDO-AWAL/%')
+            ->whereBetween('tanggal_transaksi', [
+                $tanggalAwal->copy()->startOfMonth()->toDateString(),
+                $tanggalAwal->copy()->endOfMonth()->toDateString(),
+            ])
+            ->exists();
+
+        if ($sudahAdaSaldoAwal) {
+            throw new \DomainException(
+                'Saldo awal untuk rekening ini pada ' . $tanggalAwal->translatedFormat('F Y') . ' sudah pernah diinput.'
+            );
+        }
+
+        return DB::transaction(function () use ($rekeningId, $tanggalAwal, $nominal, $uraian) {
+            $bku = BukuKasUmum::create([
+                'tanggal_transaksi' => $tanggalAwal->toDateString(),
+                'nomor_bukti' => 'SALDO-AWAL/' . $rekeningId . '/' . $tanggalAwal->format('Ymd'),
+                'uraian' => $uraian ?: 'Saldo Awal',
+                'arus_kas' => 'DEBIT_MASUK',
+                'nominal' => $nominal,
+                'saldo_akhir' => 0, // sementara; jadi benar setelah recompute kronologis
+                'sumber_rekening_id' => $rekeningId,
+                'referensi_pengeluaran_id' => null,
+                'referensi_penerimaan_id' => null,
+            ]);
+
+            // Recompute saldo berjalan kronologis (source of truth).
+            BukuKasUmum::recalculateRunningBalance($rekeningId);
+            $bku->refresh();
+
+            return $bku;
+        });
+    }
+
     public function buildBkuDetail(BukuKasUmum $bku): array
     {
         $bku->loadMissing([
             'sumberRekening.pemilik',
             'referensiPengeluaran.pihak',
             'referensiPengeluaran.creator',
+            'referensiPengeluaran.dipa',
             'referensiPengeluaran.logs.user',
             'referensiPengeluaran.potonganTagihan.pajak',
+            'referensiPengeluaran.detailKontrak.kontrakTermin',
+            'referensiPengeluaran.detailPerjaldin.pegawai',
+            'referensiPengeluaran.detailPerjaldin.provinsi',
+            'referensiPengeluaran.komponenPerjaldin',
+            'referensiPengeluaran.detailHonorarium',
             'referensiPengeluaran.spps.spm.npi.sp2d',
             'referensiPenerimaan.mitra',
             'referensiPenerimaan.coa',
@@ -99,17 +183,32 @@ class PembukuanService
         $penerimaan = $bku->referensiPenerimaan;
         $docChain = $this->documentChain($tagihan);
 
+        // Penagihan jasa (TagihanJasa) terkait penerimaan ini — dipakai untuk
+        // menampilkan log & keterkaitan pada halaman detail DEBIT_MASUK.
+        // Tautan: transaksi_penerimaan.nomor_invoice = tagihan_jasas.nomor_tagihan.
+        $tagihanJasa = null;
+        if ($penerimaan) {
+            $tagihanJasa = \App\Models\TagihanJasa::with(['logs.user', 'mitra'])
+                ->where('nomor_tagihan', $penerimaan->nomor_invoice)
+                ->first();
+        }
+
         $relatedLogs = collect();
         if ($tagihan) {
+            // Pengeluaran: log tagihan + log SP2D.
             $relatedLogs = $relatedLogs
                 ->merge($tagihan->logs ?? collect())
                 ->merge($docChain['sp2d']?->logs ?? collect());
+        } elseif ($tagihanJasa) {
+            // Penerimaan (debit masuk): log dari penagihan jasa.
+            $relatedLogs = $relatedLogs->merge($tagihanJasa->logs ?? collect());
         }
 
         return [
             'entry' => $bku,
             'tagihan' => $tagihan,
             'penerimaan' => $penerimaan,
+            'tagihanJasa' => $tagihanJasa,
             'docChain' => $docChain,
             'relatedLogs' => $relatedLogs
                 ->filter()
@@ -611,6 +710,112 @@ class PembukuanService
 
         return $pdf->stream($filename);
     }
+
+    /**
+     * Bangun file Excel (.xlsx) Buku Kas Umum sesuai filter dan stream sebagai download.
+     */
+    public function streamBkuExcel(array $filters, string $filename): \Symfony\Component\HttpFoundation\StreamedResponse
+    {
+        $data = $this->buildBkuIndexData($filters);
+        $entries = $data['entries'];
+        $summary = $data['summary'];
+        $f = $data['filters'];
+
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Buku Kas Umum');
+
+        // ===== Judul =====
+        $sheet->setCellValue('A1', 'BUKU KAS UMUM');
+        $sheet->mergeCells('A1:I1');
+        $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
+        $sheet->getStyle('A1')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+        // Periode / info filter
+        $periode = 'Periode: ' . ($f['start_date'] ? Carbon::parse($f['start_date'])->format('d/m/Y') : 'Awal')
+            . ' s/d ' . ($f['end_date'] ? Carbon::parse($f['end_date'])->format('d/m/Y') : 'Akhir');
+        $sheet->setCellValue('A2', $periode);
+        $sheet->mergeCells('A2:I2');
+        $sheet->getStyle('A2')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        $sheet->setCellValue('A3', 'Dicetak: ' . now()->translatedFormat('d F Y H:i'));
+        $sheet->mergeCells('A3:I3');
+        $sheet->getStyle('A3')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+        // ===== Header tabel =====
+        $headerRow = 5;
+        $headers = ['No', 'Tanggal', 'Nomor Bukti', 'Uraian', 'Rekening Sumber', 'Arus Kas', 'Debit (Rp)', 'Kredit (Rp)', 'Saldo Akhir (Rp)'];
+        $col = 'A';
+        foreach ($headers as $h) {
+            $sheet->setCellValue($col . $headerRow, $h);
+            $col++;
+        }
+        $sheet->getStyle("A{$headerRow}:I{$headerRow}")->getFont()->getColor()->setARGB('FFFFFFFF');
+        $sheet->getStyle("A{$headerRow}:I{$headerRow}")->getFont()->setBold(true);
+        $sheet->getStyle("A{$headerRow}:I{$headerRow}")->getFill()
+            ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+            ->getStartColor()->setARGB('FF4F46E5');
+        $sheet->getStyle("A{$headerRow}:I{$headerRow}")->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
+        // ===== Baris data =====
+        $row = $headerRow + 1;
+        $no = 1;
+        foreach ($entries as $entry) {
+            $isDebit = $entry->arus_kas === 'DEBIT_MASUK';
+            $debit = $isDebit ? (float) $entry->nominal : 0;
+            $kredit = $isDebit ? 0 : (float) $entry->nominal;
+
+            $referensi = $entry->referensiPengeluaran?->nomor_tagihan
+                ?? $entry->referensiPenerimaan?->nomor_invoice
+                ?? '';
+            $rekening = trim(($entry->sumberRekening?->nama_bank ?? '') . ' ' . ($entry->sumberRekening?->nomor_rekening ?? ''));
+
+            $sheet->setCellValue('A' . $row, $no++);
+            $sheet->setCellValue('B' . $row, optional($entry->tanggal_transaksi)->format('d/m/Y'));
+            $sheet->setCellValue('C' . $row, $entry->nomor_bukti);
+            $sheet->setCellValue('D' . $row, trim(($entry->uraian ?? '') . ($referensi ? " [Ref: {$referensi}]" : '')));
+            $sheet->setCellValue('E' . $row, $rekening ?: '-');
+            $sheet->setCellValue('F' . $row, $isDebit ? 'Debit Masuk' : 'Kredit Keluar');
+            $sheet->setCellValue('G' . $row, $debit);
+            $sheet->setCellValue('H' . $row, $kredit);
+            $sheet->setCellValue('I' . $row, (float) $entry->saldo_akhir);
+            $row++;
+        }
+
+        // ===== Baris total =====
+        $sheet->setCellValue('F' . $row, 'TOTAL');
+        $sheet->setCellValue('G' . $row, (float) ($summary['total_debit'] ?? 0));
+        $sheet->setCellValue('H' . $row, (float) ($summary['total_kredit'] ?? 0));
+        $sheet->setCellValue('I' . $row, (float) ($summary['saldo_akhir'] ?? 0));
+        $sheet->getStyle("A{$row}:I{$row}")->getFont()->setBold(true);
+        $sheet->getStyle("A{$row}:I{$row}")->getFill()
+            ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+            ->getStartColor()->setARGB('FFEEF2FF');
+
+        // ===== Format angka & border =====
+        $lastDataRow = $row;
+        $sheet->getStyle("G{$headerRow}:I{$lastDataRow}")
+            ->getNumberFormat()->setFormatCode('#,##0');
+
+        $sheet->getStyle("A{$headerRow}:I{$lastDataRow}")
+            ->getBorders()->getAllBorders()
+            ->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
+
+        // Lebar kolom
+        foreach (['A' => 5, 'B' => 12, 'C' => 24, 'D' => 45, 'E' => 26, 'F' => 14, 'G' => 16, 'H' => 16, 'I' => 18] as $c => $w) {
+            $sheet->getColumnDimension($c)->setWidth($w);
+        }
+        $sheet->getStyle("A{$headerRow}:I{$lastDataRow}")->getAlignment()->setWrapText(true);
+
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+
+        return response()->streamDownload(function () use ($writer) {
+            $writer->save('php://output');
+        }, $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Cache-Control' => 'max-age=0',
+        ]);
+    }
+
 
     private function normalizeFilters(array $filters): array
     {
