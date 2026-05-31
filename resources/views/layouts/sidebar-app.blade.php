@@ -141,6 +141,10 @@
             <li><a href="{{ route('master-pajak.index') }}"><i class="material-icons-outlined">arrow_right</i>Pajak</a>
             </li>
             @endhasanyrole
+            @hasanyrole('Super Admin|Operator BLU|Kepala Subbagian Keuangan dan Tata Usaha')
+            <li><a href="{{ route('rekening-bank.index') }}"><i class="material-icons-outlined">arrow_right</i>Rekening Bank</a>
+            </li>
+            @endhasanyrole
 
 
           </ul>
@@ -822,6 +826,7 @@
             <div class="menu-title">Pembukuan</div>
           </a>
           <ul>
+            <li><a href="{{ route('rekening-bank.index') }}"><i class="material-icons-outlined">arrow_right</i>Rekening Bank</a></li>
             <li><a href="{{ route('pembukuan.bku.index') }}"><i class="material-icons-outlined">arrow_right</i>Buku Kas Umum</a></li>
             <li><a href="{{ route('pembukuan.bank.index') }}"><i class="material-icons-outlined">arrow_right</i>Buku Pembantu Bank</a></li>
             <li><a href="{{ route('pembukuan.bendahara.index') }}"><i class="material-icons-outlined">arrow_right</i>Buku Pembantu Bendahara</a></li>

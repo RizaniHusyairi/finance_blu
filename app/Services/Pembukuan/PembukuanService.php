@@ -298,9 +298,21 @@ class PembukuanService
             $openingQuery->whereDate('tanggal_transaksi', '<', $filters['start_date']);
         }
 
-        $saldoAwal = $filters['start_date']
-            ? (optional($openingQuery->orderByDesc('tanggal_transaksi')->orderByDesc('id')->first())->saldo_akhir ?? 0)
-            : 0;
+        // Saldo awal hanya bermakna bila difilter satu rekening. Default dari
+        // `rekening_bank.saldo_awal`; bila ada baris BKU sebelum start_date, pakai
+        // saldo_akhir terakhirnya (sudah merangkum saldo awal lewat recompute).
+        $saldoAwal = 0.0;
+        if ($filters['rekening_bank_id']) {
+            $rekening = RekeningBank::find($filters['rekening_bank_id']);
+            $saldoAwal = (float) ($rekening?->saldo_awal ?? 0);
+
+            if ($filters['start_date']) {
+                $lastSaldo = optional($openingQuery->orderByDesc('tanggal_transaksi')->orderByDesc('id')->first())->saldo_akhir;
+                if ($lastSaldo !== null) {
+                    $saldoAwal = (float) $lastSaldo;
+                }
+            }
+        }
 
         return [
             'filters' => $filters,

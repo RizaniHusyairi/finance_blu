@@ -9,6 +9,7 @@ use App\Models\MitraJasa;
 use App\Models\RekeningBank;
 use App\Models\TagihanJasa;
 use App\Models\TransaksiPenerimaan;
+use App\Models\User;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -135,7 +136,7 @@ class PiutangSyncService
                 $piutang->status_pembayaran = 'PAID';
                 $piutang->save();
 
-                $rekeningId = $this->resolveDefaultRekeningId();
+                $rekeningId = $this->resolvePenerimaanRekeningId();
                 if (! $rekeningId) {
                     Log::warning('PiutangSync: belum ada rekening_bank default. BKU tidak dicatat untuk ' . $tagihan->nomor_tagihan);
                     return null;
@@ -149,12 +150,12 @@ class PiutangSyncService
                     return $existingBku;
                 }
 
-                // Hitung saldo akhir berdasarkan saldo BKU terakhir untuk rekening tsb.
+                // Estimasi awal saldo akhir dari saldo BKU terakhir untuk rekening tsb.
                 $saldoTerakhir = (float) BukuKasUmum::where('sumber_rekening_id', $rekeningId)
                     ->latest('id')
                     ->value('saldo_akhir') ?? 0.0;
 
-                return BukuKasUmum::create([
+                $bku = BukuKasUmum::create([
                     'tanggal_transaksi' => $paidAt->toDateString(),
                     'nomor_bukti' => $reference,
                     'uraian' => 'Penerimaan PNBP Jasa: ' . $tagihan->nomor_tagihan
@@ -165,6 +166,14 @@ class PiutangSyncService
                     'sumber_rekening_id' => $rekeningId,
                     'referensi_penerimaan_id' => $piutang->id,
                 ]);
+
+                // Saldo di atas hanya estimasi. Recompute KRONOLOGIS (tanggal_transaksi
+                // ASC, id ASC) supaya saldo berjalan tetap benar walau penerimaan ini
+                // bertanggal lebih awal dari baris pengeluaran yang sudah ada lebih dulu.
+                BukuKasUmum::recalculateRunningBalance($rekeningId);
+                $bku->refresh();
+
+                return $bku;
             });
         } catch (\Throwable $e) {
             Log::error('PiutangSync syncFromLunas error: ' . $e->getMessage());
@@ -247,11 +256,69 @@ class PiutangSyncService
         return $any?->id ?? MasterCoa::query()->value('id');
     }
 
-    private function resolveDefaultRekeningId(): ?int
+    /**
+     * Tentukan rekening tujuan penerimaan PNBP/Jasa (sumber_rekening_id) untuk BKU.
+     *
+     * Penerimaan jasa harus masuk ke rekening Bendahara Penerimaan, BUKAN sekadar
+     * rekening aktif pertama (yang bisa saja milik Bendahara Pengeluaran).
+     *
+     * Prioritas:
+     *  1) Rekening aktif yang ditandai eksplisit jenis_rekening = PENERIMAAN
+     *     (utamakan is_default = true). Penanda eksplisit > tebakan.
+     *  2) Rekening aktif milik User ber-role 'Bendahara Penerimaan'
+     *     (utamakan is_default = true, lalu id terkecil).
+     *  3) Rekening aktif yang ditandai is_default = true.
+     *  4) Rekening aktif pertama berdasarkan id (perilaku lama).
+     *  5) Last resort: rekening apa pun berdasarkan id.
+     */
+    private function resolvePenerimaanRekeningId(): ?int
     {
-        return RekeningBank::query()
+        // 1) Penanda eksplisit jenis_rekening = PENERIMAAN.
+        $rekeningId = RekeningBank::query()
+            ->where('status_aktif', true)
+            ->where('jenis_rekening', \App\Enums\JenisRekening::PENERIMAAN->value)
+            ->orderByDesc('is_default')
+            ->orderBy('id')
+            ->value('id');
+
+        if ($rekeningId) {
+            return (int) $rekeningId;
+        }
+
+        // 2) Rekening milik Bendahara Penerimaan (lihat role via HasRoles di User).
+        $bendaharaIds = User::role('Bendahara Penerimaan')->pluck('id');
+
+        if ($bendaharaIds->isNotEmpty()) {
+            $rekeningId = RekeningBank::query()
+                ->where('status_aktif', true)
+                ->where('pemilik_type', User::class)
+                ->whereIn('pemilik_id', $bendaharaIds)
+                ->orderByDesc('is_default')
+                ->orderBy('id')
+                ->value('id');
+
+            if ($rekeningId) {
+                return (int) $rekeningId;
+            }
+        }
+
+        // 2) Rekening aktif default.
+        $rekeningId = RekeningBank::query()
+            ->where('status_aktif', true)
+            ->where('is_default', true)
+            ->orderBy('id')
+            ->value('id');
+
+        if ($rekeningId) {
+            return (int) $rekeningId;
+        }
+
+        // 3) Rekening aktif pertama, lalu 4) rekening apa pun.
+        $rekeningId = RekeningBank::query()
             ->where('status_aktif', true)
             ->orderBy('id')
             ->value('id') ?? RekeningBank::query()->orderBy('id')->value('id');
+
+        return $rekeningId !== null ? (int) $rekeningId : null;
     }
 }
