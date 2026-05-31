@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\IntegrationLog;
 use App\Models\IntegrationSetting;
 use App\Models\WhatsappNotificationLog;
+use App\Services\EmailNotificationService;
 use App\Services\WhatsappService;
 use Illuminate\Http\Request;
 
@@ -40,6 +41,17 @@ class JasaIntegrationSettingController extends Controller
             'whatsapp_default_country_code' => ['nullable', 'string', 'max:5'],
             'whatsapp_invoice_template' => ['nullable', 'string', 'max:4000'],
             'whatsapp_receipt_template' => ['nullable', 'string', 'max:4000'],
+            'email_enabled' => ['nullable', 'boolean'],
+            'email_mailer' => ['required', 'in:log,smtp,sendmail'],
+            'email_from_address' => ['nullable', 'email', 'max:255'],
+            'email_from_name' => ['nullable', 'string', 'max:255'],
+            'email_smtp_host' => ['nullable', 'string', 'max:255'],
+            'email_smtp_port' => ['nullable', 'integer', 'min:1', 'max:65535'],
+            'email_smtp_encryption' => ['nullable', 'in:tls,ssl,none'],
+            'email_smtp_username' => ['nullable', 'string', 'max:255'],
+            'email_smtp_password' => ['nullable', 'string', 'max:500'],
+            'email_invoice_subject' => ['nullable', 'string', 'max:255'],
+            'email_invoice_template' => ['nullable', 'string', 'max:4000'],
         ]);
 
         IntegrationSetting::setValue('btn.enabled', $request->boolean('btn_enabled'), 'btn', 'Status integrasi BTN', 'boolean');
@@ -62,6 +74,18 @@ class JasaIntegrationSettingController extends Controller
         IntegrationSetting::setValue('whatsapp.invoice_template', $validated['whatsapp_invoice_template'] ?? null, 'whatsapp', 'Template Invoice WhatsApp', 'textarea');
         IntegrationSetting::setValue('whatsapp.receipt_template', $validated['whatsapp_receipt_template'] ?? null, 'whatsapp', 'Template Struk WhatsApp', 'textarea');
 
+        IntegrationSetting::setValue('email.enabled', $request->boolean('email_enabled'), 'email', 'Status Email', 'boolean');
+        IntegrationSetting::setValue('email.mailer', $validated['email_mailer'], 'email', 'Mailer Email');
+        IntegrationSetting::setValue('email.from_address', $validated['email_from_address'] ?? null, 'email', 'Email Pengirim');
+        IntegrationSetting::setValue('email.from_name', $validated['email_from_name'] ?? null, 'email', 'Nama Pengirim');
+        IntegrationSetting::setValue('email.smtp_host', $validated['email_smtp_host'] ?? null, 'email', 'SMTP Host');
+        IntegrationSetting::setValue('email.smtp_port', $validated['email_smtp_port'] ?? null, 'email', 'SMTP Port', 'integer');
+        IntegrationSetting::setValue('email.smtp_encryption', ($validated['email_smtp_encryption'] ?? null) === 'none' ? null : ($validated['email_smtp_encryption'] ?? null), 'email', 'SMTP Encryption');
+        IntegrationSetting::setValue('email.smtp_username', $validated['email_smtp_username'] ?? null, 'email', 'SMTP Username');
+        $this->setSecretIfFilled('email.smtp_password', $validated['email_smtp_password'] ?? null, 'email', 'SMTP Password');
+        IntegrationSetting::setValue('email.invoice_subject', $validated['email_invoice_subject'] ?: 'Pemberitahuan Tagihan PNBP Jasa {nomor_tagihan}', 'email', 'Subjek Email Tagihan');
+        IntegrationSetting::setValue('email.invoice_template', $validated['email_invoice_template'] ?? null, 'email', 'Template Email Tagihan', 'textarea');
+
         return back()->with('success', 'Pengaturan integrasi berhasil disimpan.');
     }
 
@@ -77,6 +101,20 @@ class JasaIntegrationSettingController extends Controller
         return back()->with($sent ? 'success' : 'error', $sent
             ? 'Pesan test WhatsApp berhasil diproses.'
             : 'Pesan test WhatsApp gagal diproses. Cek log integrasi.');
+    }
+
+    public function testEmail(Request $request, EmailNotificationService $emailNotificationService)
+    {
+        $validated = $request->validate([
+            'target' => ['required', 'email', 'max:255'],
+            'message' => ['required', 'string', 'max:1000'],
+        ]);
+
+        $sent = $emailNotificationService->sendTest($validated['target'], $validated['message']);
+
+        return back()->with($sent ? 'success' : 'error', $sent
+            ? 'Email test berhasil diproses.'
+            : 'Email test gagal diproses. Cek log integrasi.');
     }
 
     private function settings(): array
@@ -100,6 +138,17 @@ class JasaIntegrationSettingController extends Controller
             'whatsapp_default_country_code' => IntegrationSetting::getValue('whatsapp.default_country_code', '62'),
             'whatsapp_invoice_template' => IntegrationSetting::getValue('whatsapp.invoice_template', ''),
             'whatsapp_receipt_template' => IntegrationSetting::getValue('whatsapp.receipt_template', ''),
+            'email_enabled' => (bool) IntegrationSetting::getValue('email.enabled', true),
+            'email_mailer' => IntegrationSetting::getValue('email.mailer', config('mail.default', 'log')),
+            'email_from_address' => IntegrationSetting::getValue('email.from_address', config('mail.from.address')),
+            'email_from_name' => IntegrationSetting::getValue('email.from_name', config('mail.from.name')),
+            'email_smtp_host' => IntegrationSetting::getValue('email.smtp_host', config('mail.mailers.smtp.host')),
+            'email_smtp_port' => IntegrationSetting::getValue('email.smtp_port', config('mail.mailers.smtp.port')),
+            'email_smtp_encryption' => IntegrationSetting::getValue('email.smtp_encryption', config('mail.mailers.smtp.encryption')),
+            'email_smtp_username' => IntegrationSetting::getValue('email.smtp_username', config('mail.mailers.smtp.username')),
+            'email_smtp_password_masked' => IntegrationSetting::maskSecret(IntegrationSetting::getValue('email.smtp_password', config('mail.mailers.smtp.password', ''))),
+            'email_invoice_subject' => IntegrationSetting::getValue('email.invoice_subject', 'Pemberitahuan Tagihan PNBP Jasa {nomor_tagihan}'),
+            'email_invoice_template' => IntegrationSetting::getValue('email.invoice_template', ''),
         ];
     }
 

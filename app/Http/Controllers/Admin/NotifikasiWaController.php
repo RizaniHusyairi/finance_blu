@@ -38,8 +38,13 @@ class NotifikasiWaController extends Controller
             'reminder_send_time' => ['required', 'date_format:H:i'],
             'reminder_template' => ['required', 'string', 'max:4000'],
             'lunas_enabled' => ['nullable', 'boolean'],
+            'email_lunas_enabled' => ['nullable', 'boolean'],
             'lunas_template' => ['required', 'string', 'max:4000'],
             'pengajuan_tagihan_enabled' => ['nullable', 'boolean'],
+            'email_pengajuan_tagihan_enabled' => ['nullable', 'boolean'],
+            'email_tte_enabled' => ['nullable', 'boolean'],
+            'email_contract_upload_enabled' => ['nullable', 'boolean'],
+            'email_kpa_approval_enabled' => ['nullable', 'boolean'],
         ], [
             'reminder_days_before.regex' => 'Rentang hari harus berupa angka dipisah koma, contoh: 7,3,1,0',
         ]);
@@ -57,10 +62,15 @@ class NotifikasiWaController extends Controller
         IntegrationSetting::setValue('whatsapp.reminder.send_time', $validated['reminder_send_time'], 'whatsapp', 'Jam pengiriman reminder');
         IntegrationSetting::setValue('whatsapp.reminder.template', $validated['reminder_template'], 'whatsapp', 'Template reminder', 'textarea');
         IntegrationSetting::setValue('whatsapp.lunas.enabled', $request->boolean('lunas_enabled'), 'whatsapp', 'Aktifkan notifikasi lunas', 'boolean');
+        IntegrationSetting::setValue('email.lunas.enabled', $request->boolean('email_lunas_enabled'), 'email', 'Aktifkan email konfirmasi lunas', 'boolean');
         IntegrationSetting::setValue('whatsapp.lunas.template', $validated['lunas_template'], 'whatsapp', 'Template lunas', 'textarea');
         IntegrationSetting::setValue('whatsapp.pengajuan_tagihan.enabled', $request->boolean('pengajuan_tagihan_enabled'), 'whatsapp', 'Aktifkan notifikasi pengajuan tagihan kontrak', 'boolean');
+        IntegrationSetting::setValue('email.pengajuan_tagihan.enabled', $request->boolean('email_pengajuan_tagihan_enabled'), 'email', 'Aktifkan email pengajuan tagihan kontrak', 'boolean');
+        IntegrationSetting::setValue('email.tte.enabled', $request->boolean('email_tte_enabled'), 'email', 'Aktifkan email akses TTE kontrak', 'boolean');
+        IntegrationSetting::setValue('email.contract_upload.enabled', $request->boolean('email_contract_upload_enabled'), 'email', 'Aktifkan email portal upload kontrak', 'boolean');
+        IntegrationSetting::setValue('email.kpa_approval.enabled', $request->boolean('email_kpa_approval_enabled'), 'email', 'Aktifkan email persetujuan KPA', 'boolean');
 
-        return back()->with('success', 'Pengaturan notifikasi WhatsApp berhasil disimpan.');
+        return back()->with('success', 'Pengaturan notifikasi berhasil disimpan.');
     }
 
     public function test(Request $request, WhatsappService $whatsappService)
@@ -93,8 +103,13 @@ class NotifikasiWaController extends Controller
             'reminder_send_time' => (string) IntegrationSetting::getValue('whatsapp.reminder.send_time', '08:00'),
             'reminder_template' => (string) IntegrationSetting::getValue('whatsapp.reminder.template', ''),
             'lunas_enabled' => (bool) IntegrationSetting::getValue('whatsapp.lunas.enabled', true),
+            'email_lunas_enabled' => (bool) IntegrationSetting::getValue('email.lunas.enabled', true),
             'lunas_template' => (string) IntegrationSetting::getValue('whatsapp.lunas.template', ''),
             'pengajuan_tagihan_enabled' => (bool) IntegrationSetting::getValue('whatsapp.pengajuan_tagihan.enabled', true),
+            'email_pengajuan_tagihan_enabled' => (bool) IntegrationSetting::getValue('email.pengajuan_tagihan.enabled', true),
+            'email_tte_enabled' => (bool) IntegrationSetting::getValue('email.tte.enabled', true),
+            'email_contract_upload_enabled' => (bool) IntegrationSetting::getValue('email.contract_upload.enabled', true),
+            'email_kpa_approval_enabled' => (bool) IntegrationSetting::getValue('email.kpa_approval.enabled', true),
         ];
     }
 }

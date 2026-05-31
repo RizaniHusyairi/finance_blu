@@ -11,6 +11,7 @@ use App\Models\TagihanJasa;
 use App\Models\User;
 use App\Services\WhatsappService;
 use App\Services\BtnVirtualAccountService;
+use App\Services\EmailNotificationService;
 use App\Services\WorkflowService;
 use App\Services\JasaAccessService;
 use App\Services\TagihanJasaCalculationService;
@@ -947,12 +948,13 @@ class TagihanJasaController extends Controller
         return $this->streamSuratPengantarArchive($arsip);
     }
 
-    public function publish(Request $request, $id, WhatsappService $whatsappService, BtnVirtualAccountService $btnVirtualAccountService)
+    public function publish(Request $request, $id, WhatsappService $whatsappService, BtnVirtualAccountService $btnVirtualAccountService, EmailNotificationService $emailNotificationService)
     {
         abort_unless($this->canManageTagihanJasa(), 403);
 
         $validated = $request->validate([
             'wa_tujuan' => ['required', 'string', 'max:30'],
+            'email_tujuan' => ['nullable', 'email', 'max:255'],
         ]);
 
         $tagihan = TagihanJasa::with(['mitra', 'mitraLegacy', 'workflowInstance', 'details.layananJasa'])->findOrFail($id);
@@ -998,6 +1000,10 @@ class TagihanJasaController extends Controller
 
         $publishedTagihan = $tagihan->fresh(['mitra', 'mitraLegacy', 'details']);
 
+        if (! empty($validated['email_tujuan'])) {
+            $accountInfo['notification_email'] = $validated['email_tujuan'];
+        }
+
         // Sync ke piutang (TransaksiPenerimaan) — muncul di menu Piutang Bendahara Penerimaan.
         try {
             app(\App\Services\Pembukuan\PiutangSyncService::class)->syncFromPublished($publishedTagihan);
@@ -1007,10 +1013,13 @@ class TagihanJasaController extends Controller
 
         $message = $this->buildWhatsappMessage($publishedTagihan, $accountInfo);
         $whatsappService->sendMessage($validated['wa_tujuan'], $message, $publishedTagihan);
+        $emailMessage = $emailNotificationService->buildPublishedTagihanMessage($publishedTagihan, $accountInfo);
+        $emailNotificationService->sendPublishedTagihan($publishedTagihan, $accountInfo);
 
         return back()
-            ->with('success', 'Tagihan berhasil dipublish dan notifikasi WA diproses.')
+            ->with('success', 'Tagihan berhasil dipublish dan notifikasi WA serta email diproses.')
             ->with('wa_message_preview', $message)
+            ->with('email_message_preview', $emailMessage)
             ->with('is_new_mitra', $accountInfo['is_new'])
             ->with('mitra_email', $accountInfo['email'])
             ->with('mitra_password', $accountInfo['password']);
@@ -1038,6 +1047,7 @@ class TagihanJasaController extends Controller
         ]);
 
         $freshTagihan = $tagihan->fresh(['mitra', 'mitraLegacy', 'details']);
+        $paymentReference = 'BKU-MASUK/' . $freshTagihan->nomor_tagihan;
 
         // Sync ke piutang (PAID) + catat BKU DEBIT_MASUK.
         try {
@@ -1046,14 +1056,14 @@ class TagihanJasaController extends Controller
                 [
                     'amount' => $totalTagihanBerjalan,
                     'paid_at' => now(),
-                    'reference' => 'MANUAL/' . $freshTagihan->nomor_tagihan,
+                    'reference' => $paymentReference,
                 ]
             );
         } catch (\Throwable $e) {
             \Log::error('Gagal sync piutang/BKU saat mark-lunas: ' . $e->getMessage());
         }
 
-        // Kirim notifikasi WA "lunas" — sama dengan callback BTN VA, hanya saja
+        // Kirim notifikasi lunas (WA + email) sama dengan callback BTN VA, hanya saja
         // ini path manual (simulasi). Pakai service yang sudah membaca template
         // di IntegrationSetting Super Admin.
         try {
@@ -1062,14 +1072,14 @@ class TagihanJasaController extends Controller
                 [
                     'amount' => $totalTagihanBerjalan,
                     'paid_at' => now(),
-                    'reference' => 'MANUAL/' . $freshTagihan->nomor_tagihan,
+                    'reference' => $paymentReference,
                 ]
             );
         } catch (\Throwable $e) {
-            \Log::error('Gagal kirim notifikasi WA lunas: ' . $e->getMessage());
+            \Log::error('Gagal kirim notifikasi lunas: ' . $e->getMessage());
         }
 
-        return back()->with('success', 'Tagihan berhasil ditandai LUNAS, piutang & BKU diperbarui, notifikasi WA dikirim.');
+        return back()->with('success', 'Tagihan berhasil ditandai LUNAS, piutang & BKU diperbarui, notifikasi WA dan email diproses.');
     }
 
     public function autoApproveAll($id)

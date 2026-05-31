@@ -7,6 +7,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use App\Models\Tagihan;
 use App\Models\DocumentSignature;
+use App\Models\MasterPegawai;
+use App\Services\EmailNotificationService;
 use App\Services\WhatsappService;
 use Illuminate\Support\Facades\DB;
 
@@ -84,16 +86,57 @@ class TagihanTteController extends Controller
 
             // Kirim WA
             $waService = app(WhatsappService::class);
+            $emailService = app(EmailNotificationService::class);
+            $emailEnabled = (bool) \App\Models\IntegrationSetting::getValue('email.tte.enabled', true);
 
             $vendorUrl = url('/public/tte/sign/' . $vendorGroupToken);
             $vendorDocList = implode(', ', $vendorDocs);
-            $waService->sendMessage($vendorWa, "Yth. $vendorName,\n\nMohon persetujuan (Tanda Tangan Elektronik) untuk dokumen *{$vendorDocList}* pada tagihan *{$tagihan->nomor_tagihan}*.\n\nSilakan klik tautan berikut untuk meninjau dan menyetujui seluruh dokumen:\n$vendorUrl\n\nTerima kasih.");
+            $vendorMessage = "Yth. $vendorName,\n\n"
+                . "Dengan hormat,\n\n"
+                . "Kami mengajukan permohonan persetujuan tanda tangan elektronik untuk dokumen {$vendorDocList} pada tagihan kontrak {$tagihan->nomor_tagihan}.\n\n"
+                . "Silakan meninjau dan menyetujui dokumen melalui tautan berikut:\n"
+                . "$vendorUrl\n\n"
+                . "Mohon tautan ini digunakan secara bertanggung jawab dan tidak diteruskan kepada pihak yang tidak berkepentingan.\n\n"
+                . "Hormat kami,\n"
+                . "SIKEREN-BLU";
+            $waService->sendMessage($vendorWa, str_replace("{$vendorDocList}", "*{$vendorDocList}*", str_replace($tagihan->nomor_tagihan, "*{$tagihan->nomor_tagihan}*", $vendorMessage)));
+
+            if ($emailEnabled) {
+                $emailService->sendNotification(
+                    (string) ($kontrak->vendor?->email ?? ''),
+                    'Permohonan TTE Dokumen Tagihan Kontrak ' . $tagihan->nomor_tagihan,
+                    $vendorMessage,
+                    $tagihan,
+                    'send_contract_tte_email'
+                );
+            }
 
             $pemeriksaUrl = url('/public/tte/sign/' . $pemeriksaGroupToken);
-            $waService->sendMessage($pemeriksaWa, "Yth. $pemeriksaName,\n\nMohon persetujuan (Tanda Tangan Elektronik) untuk dokumen *BAPP* pada tagihan *{$tagihan->nomor_tagihan}*.\n\nSilakan klik tautan berikut untuk meninjau dan menyetujui dokumen:\n$pemeriksaUrl\n\nTerima kasih.");
+            $pemeriksaMessage = "Yth. $pemeriksaName,\n\n"
+                . "Dengan hormat,\n\n"
+                . "Terdapat dokumen BAPP pada tagihan kontrak {$tagihan->nomor_tagihan} yang memerlukan persetujuan tanda tangan elektronik dari Tim Pemeriksa.\n\n"
+                . "Silakan meninjau dan menyetujui dokumen melalui tautan berikut:\n"
+                . "$pemeriksaUrl\n\n"
+                . "Mohon tautan ini digunakan secara bertanggung jawab dan tidak diteruskan kepada pihak yang tidak berkepentingan.\n\n"
+                . "Hormat kami,\n"
+                . "SIKEREN-BLU";
+            $waService->sendMessage($pemeriksaWa, str_replace('BAPP', '*BAPP*', str_replace($tagihan->nomor_tagihan, "*{$tagihan->nomor_tagihan}*", $pemeriksaMessage)));
+
+            if ($emailEnabled) {
+                $pemeriksaEmail = filled($detail->nip_pemeriksa)
+                    ? MasterPegawai::where('nip', $detail->nip_pemeriksa)->first()?->user?->email
+                    : null;
+                $emailService->sendNotification(
+                    (string) ($pemeriksaEmail ?? ''),
+                    'Permohonan TTE Dokumen BAPP Tagihan Kontrak ' . $tagihan->nomor_tagihan,
+                    $pemeriksaMessage,
+                    $tagihan,
+                    'send_contract_tte_email'
+                );
+            }
 
             DB::commit();
-            return back()->with('success', 'Akses TTE telah dikirim: 1 tautan ke Vendor (' . $vendorDocList . ') dan 1 tautan ke Pemeriksa (BAPP) via WhatsApp.');
+            return back()->with('success', 'Akses TTE telah dikirim: 1 tautan ke Vendor (' . $vendorDocList . ') dan 1 tautan ke Pemeriksa (BAPP) via WhatsApp, serta email diproses bila alamat tersedia.');
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->with('error', 'Gagal mengirim akses TTE: ' . $e->getMessage());
