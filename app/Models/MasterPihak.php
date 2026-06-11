@@ -34,6 +34,16 @@ class MasterPihak extends Model
         'status_aktif' => 'boolean',
     ];
 
+    /**
+     * Subclass (MasterMitraVendor, MasterPersonelEksternal) berbagi tabel master_pihak,
+     * jadi semua relasi polymorphic harus menyimpan satu morph type yang sama agar
+     * data yang ditulis lewat subclass tetap terbaca saat diakses lewat MasterPihak.
+     */
+    public function getMorphClass()
+    {
+        return MasterPihak::class;
+    }
+
     public function rekening()
     {
         return $this->morphMany(RekeningBank::class, 'pemilik');

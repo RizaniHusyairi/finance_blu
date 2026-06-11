@@ -1,0 +1,636 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <title>Brosur SIKEREN-BLU Finance APTP</title>
+  <style>
+    @page { size: A4 landscape; margin: 0; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; color: #0f172a; background: #ffffff; }
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .page {
+      width: 297mm;
+      height: 210mm;
+      position: relative;
+      overflow: hidden;
+      page-break-after: always;
+      background: #f8fafc;
+    }
+    .page:last-child { page-break-after: auto; }
+    .cover {
+      display: grid;
+      grid-template-columns: 1.03fr .97fr;
+      gap: 28px;
+      padding: 23mm 20mm 18mm;
+      color: #fff;
+      background:
+        linear-gradient(130deg, rgba(15, 23, 42, .96), rgba(14, 116, 144, .9) 56%, rgba(21, 94, 117, .96)),
+        linear-gradient(45deg, #0f172a, #0e7490);
+    }
+    .cover::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,.075) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.075) 1px, transparent 1px);
+      background-size: 17mm 17mm;
+      opacity: .55;
+    }
+    .cover-main, .cover-side, .overview-inner, .closing-inner { position: relative; z-index: 1; }
+    .brand-lockup { display: flex; align-items: center; gap: 15px; margin-bottom: 24px; }
+    .brand-lockup img { width: 58px; height: 58px; object-fit: contain; border-radius: 16px; background: #fff; padding: 7px; }
+    .brand-title { font-weight: 900; letter-spacing: .12em; font-size: 13px; text-transform: uppercase; color: #bae6fd; }
+    .brand-sub { margin-top: 4px; color: rgba(255,255,255,.78); font-size: 12px; }
+    h1 { margin: 0; font-size: 55px; line-height: .96; letter-spacing: 0; font-weight: 900; }
+    .cover-lead { margin: 22px 0 0; max-width: 580px; color: rgba(255,255,255,.84); font-size: 18px; line-height: 1.52; }
+    .cover-meta { display: flex; gap: 10px; margin-top: 26px; flex-wrap: wrap; }
+    .pill { padding: 9px 12px; border: 1px solid rgba(255,255,255,.22); border-radius: 999px; background: rgba(255,255,255,.1); color: #ecfeff; font-weight: 800; font-size: 12px; }
+    .cover-side { align-self: end; display: grid; gap: 12px; }
+    .hero-shot { border: 1px solid rgba(255,255,255,.2); border-radius: 18px; overflow: hidden; box-shadow: 0 22px 70px rgba(2, 8, 23, .44); background: #fff; transform: rotate(-1.2deg); }
+    .hero-shot img { width: 100%; display: block; }
+    .cover-note { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .stat { min-height: 88px; padding: 15px; border-radius: 16px; background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.16); backdrop-filter: blur(8px); }
+    .stat-value { font-size: 21px; font-weight: 900; color: #fef3c7; white-space: nowrap; }
+    .stat-label { margin-top: 6px; font-size: 11px; line-height: 1.32; color: rgba(255,255,255,.78); }
+
+    .overview {
+      padding: 17mm 17mm 14mm;
+      background:
+        linear-gradient(90deg, #f8fafc, #ecfeff 46%, #f8fafc),
+        #f8fafc;
+    }
+    .section-label { color: #0891b2; font-size: 12px; font-weight: 900; letter-spacing: .14em; text-transform: uppercase; }
+    .overview h2, .closing h2 { margin: 8px 0 10px; font-size: 35px; line-height: 1.08; letter-spacing: 0; }
+    .overview-copy { width: 74%; color: #475569; font-size: 15px; line-height: 1.55; margin-bottom: 17px; }
+    .overview-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 11px; }
+    .overview-card { position: relative; min-height: 106px; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; box-shadow: 0 10px 26px rgba(15, 23, 42, .06); overflow: hidden; }
+    .overview-card::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--accent); }
+    .overview-no { color: var(--accent); font-weight: 900; font-size: 11px; letter-spacing: .1em; }
+    .overview-card h3 { margin: 8px 0 6px; font-size: 16px; line-height: 1.18; }
+    .overview-card p { margin: 0; font-size: 11px; line-height: 1.42; color: #64748b; }
+
+    .feature-page {
+      display: grid;
+      grid-template-columns: 34% 66%;
+      gap: 0;
+      background: #f8fafc;
+    }
+    .feature-page::before {
+      content: "";
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: 36%;
+      background:
+        linear-gradient(145deg, rgba(255,255,255,.94), rgba(241,245,249,.98)),
+        #fff;
+      border-right: 1px solid #e2e8f0;
+    }
+    .feature-copy { position: relative; z-index: 1; padding: 18mm 12mm 14mm 17mm; display: flex; flex-direction: column; min-height: 100%; }
+    .kicker { color: var(--accent); font-size: 12px; font-weight: 900; letter-spacing: .14em; text-transform: uppercase; }
+    .feature-no { margin-top: 16px; color: rgba(15,23,42,.08); font-size: 74px; line-height: .9; font-weight: 900; }
+    .feature-copy h2 { margin: 8px 0 12px; color: #0f172a; font-size: 34px; line-height: 1.04; letter-spacing: 0; }
+    .summary { margin: 0; color: #475569; font-size: 15px; line-height: 1.58; }
+    .feature-copy ul { margin: 18px 0 0; padding: 0; list-style: none; display: grid; gap: 9px; }
+    .feature-copy li { position: relative; padding-left: 22px; color: #1e293b; font-weight: 700; font-size: 13px; line-height: 1.35; }
+    .feature-copy li::before { content: ""; position: absolute; left: 0; top: 5px; width: 10px; height: 10px; border-radius: 999px; background: var(--accent); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent), transparent 82%); }
+    .route-chip { margin-top: auto; align-self: flex-start; border-radius: 999px; padding: 9px 12px; background: #0f172a; color: #e0f2fe; font-size: 11px; font-weight: 800; }
+    .screen-wrap { position: relative; z-index: 1; margin: 13mm 13mm 13mm 0; border-radius: 14px; overflow: hidden; background: #0f172a; box-shadow: 0 22px 58px rgba(15,23,42,.18); border: 1px solid #cbd5e1; align-self: center; }
+    .browser-bar { height: 30px; display: flex; align-items: center; gap: 7px; padding: 0 12px; background: #111827; color: #94a3b8; font-size: 10px; }
+    .browser-bar span { display: block; width: 9px; height: 9px; border-radius: 50%; background: #ef4444; }
+    .browser-bar span:nth-child(2) { background: #f59e0b; }
+    .browser-bar span:nth-child(3) { background: #22c55e; }
+    .browser-bar strong { margin-left: 7px; font-weight: 700; color: #cbd5e1; }
+    .screen-wrap img { width: 100%; height: auto; display: block; object-fit: contain; object-position: top center; background: #fff; }
+
+    .closing {
+      padding: 20mm;
+      color: #f8fafc;
+      background:
+        linear-gradient(135deg, rgba(15,23,42,.98), rgba(12,74,110,.94)),
+        #0f172a;
+    }
+    .closing-copy { max-width: 760px; margin: 0; color: rgba(255,255,255,.76); font-size: 15px; line-height: 1.52; }
+    .closing-grid { margin-top: 22px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .workflow-card { background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.16); border-radius: 8px; padding: 18px; }
+    .closing h3 { margin: 0 0 7px; font-size: 18px; color: #fef3c7; }
+    .workflow-card p { margin: 0 0 14px; color: rgba(255,255,255,.68); font-size: 12px; line-height: 1.42; }
+    .workflow-steps { display: grid; gap: 8px; }
+    .workflow-step { display: grid; grid-template-columns: 34px 1fr; align-items: center; gap: 10px; border-radius: 8px; background: rgba(255,255,255,.1); padding: 9px 10px; border: 1px solid rgba(255,255,255,.12); color: rgba(255,255,255,.9); font-weight: 800; font-size: 12px; line-height: 1.25; }
+    .workflow-step strong { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 999px; background: rgba(103,232,249,.18); color: #67e8f9; font-size: 11px; }
+    .workflow-step.final { background: rgba(34,197,94,.14); border-color: rgba(74,222,128,.36); }
+    .workflow-step.final strong { background: rgba(34,197,94,.22); color: #bbf7d0; }
+    .closing-footer { position: absolute; left: 20mm; right: 20mm; bottom: 15mm; display: flex; justify-content: space-between; align-items: end; color: rgba(255,255,255,.68); font-size: 12px; }
+    .closing-footer img { width: 58px; height: 58px; object-fit: contain; border-radius: 14px; background: #fff; padding: 7px; }
+  </style>
+</head>
+<body>
+  <section class="page cover">
+    <div class="cover-main">
+      <div class="brand-lockup">
+        <img src="file:///C:/laragon/www/template_maxton/finance_aptp/public/logo/minilogo-sikeren.png" alt="SIKEREN-BLU">
+        <div>
+          <div class="brand-title">SIKEREN-BLU</div>
+          <div class="brand-sub">Finance APT Pranoto</div>
+        </div>
+      </div>
+      <h1>Sistem Informasi Keuangan &amp; Penagihan Terpadu</h1>
+      <p class="cover-lead">Brosur fitur sistem informasi pengelolaan keuangan berbasis web: dari dashboard, kontrak, tagihan, dokumen pembayaran, sampai pembukuan dan laporan manajemen.</p>
+      <div class="cover-meta">
+        <span class="pill">A4 Landscape PDF</span>
+        <span class="pill">Live Web Screenshots</span>
+        <span class="pill">2026</span>
+      </div>
+    </div>
+    <div class="cover-side">
+      <div class="hero-shot"><img src="file:///C:/laragon/www/template_maxton/finance_aptp/brochure_gen/output/screenshots/01_dashboard_keuangan_blu.jpg" alt="Dashboard"></div>
+      <div class="cover-note">
+        
+    <div class="stat">
+      <div class="stat-value">16</div>
+      <div class="stat-label">Area fitur utama ditampilkan</div>
+    </div>
+  
+        
+    <div class="stat">
+      <div class="stat-value">End-to-end</div>
+      <div class="stat-label">Alur pembayaran dan penagihan</div>
+    </div>
+  
+        
+    <div class="stat">
+      <div class="stat-value">Web</div>
+      <div class="stat-label">Screenshot halaman aplikasi asli</div>
+    </div>
+  
+      </div>
+    </div>
+  </section>
+
+  <section class="page overview">
+    <div class="overview-inner">
+      <div class="section-label">Feature Map</div>
+      <h2>Modul yang ditampilkan dalam brosur</h2>
+      <p class="overview-copy">Setiap halaman berikut memakai tangkapan layar dari aplikasi lokal yang sedang berjalan, sehingga materi brosur memperlihatkan UI aktual project dan bukan mockup terpisah.</p>
+      <div class="overview-grid">
+        
+    <article class="overview-card" style="--accent:#0f766e">
+      <div class="overview-no">01</div>
+      <h3>Dashboard Keuangan BLU</h3>
+      <p>Ringkasan pagu, realisasi, sisa anggaran, kontrak aktif, tagihan, dan grafik serapan dalam satu tampilan pimpinan.</p>
+    </article>
+  
+    <article class="overview-card" style="--accent:#2563eb">
+      <div class="overview-no">02</div>
+      <h3>Dashboard Jasa</h3>
+      <p>Monitoring layanan jasa BLU, tagihan, piutang, performa pembayaran, dan kalender jatuh tempo untuk area komersial.</p>
+    </article>
+  
+    <article class="overview-card" style="--accent:#7c3aed">
+      <div class="overview-no">03</div>
+      <h3>Kelola Mitra &amp; Layanan</h3>
+      <p>Pengelolaan mitra jasa, kontrak layanan, akun portal mitra, serta layanan aktif yang menjadi dasar penagihan.</p>
+    </article>
+  
+    <article class="overview-card" style="--accent:#0369a1">
+      <div class="overview-no">04</div>
+      <h3>Dashboard Mitra Jasa</h3>
+      <p>Portal mitra untuk memantau kontrak jasa, layanan aktif, status tagihan, nilai tertagih, dan riwayat pembayaran dari sisi mitra.</p>
+    </article>
+  
+    <article class="overview-card" style="--accent:#f97316">
+      <div class="overview-no">05</div>
+      <h3>Buat Tagihan Jasa</h3>
+      <p>Form pembuatan tagihan jasa untuk memilih mitra, kontrak, periode tagihan, layanan, nilai bruto, pajak, dan dokumen pengantar.</p>
+    </article>
+  
+    <article class="overview-card" style="--accent:#ea580c">
+      <div class="overview-no">06</div>
+      <h3>Log Tagihan Bulanan</h3>
+      <p>Log penerbitan tagihan bulanan untuk konsesi, PJP2U, utilitas, dan layanan jasa lain dengan status yang mudah dipantau.</p>
+    </article>
+  
+    <article class="overview-card" style="--accent:#1d4ed8">
+      <div class="overview-no">07</div>
+      <h3>Manajemen Kontrak</h3>
+      <p>Pengelolaan kontrak, termin pembayaran, dokumen SPK/SPMK, addendum, verifikasi, dan arsip final secara digital.</p>
+    </article>
+  
+    <article class="overview-card" style="--accent:#4338ca">
+      <div class="overview-no">08</div>
+      <h3>Form Input Kontrak</h3>
+      <p>Tampilan form pembuatan kontrak untuk mengisi data pekerjaan, vendor, nilai kontrak, tanggal, termin, dan dokumen pendukung.</p>
+    </article>
+  
+    <article class="overview-card" style="--accent:#0891b2">
+      <div class="overview-no">09</div>
+      <h3>Perjalanan Dinas</h3>
+      <p>Alur perjalanan dinas dari input peserta, komponen biaya, dokumen nominatif, sampai verifikasi berjenjang.</p>
+    </article>
+  
+    <article class="overview-card" style="--accent:#0e7490">
+      <div class="overview-no">10</div>
+      <h3>Form Input Perjaldin</h3>
+      <p>Tampilan form perjalanan dinas untuk merekam kegiatan, peserta, tujuan, tanggal, komponen biaya, dan dasar penugasan.</p>
+    </article>
+  
+    <article class="overview-card" style="--accent:#be123c">
+      <div class="overview-no">11</div>
+      <h3>Honorarium</h3>
+      <p>Pengelolaan data honorarium, daftar penerima, dokumen pendukung, pajak, dan pengajuan menuju proses pembayaran.</p>
+    </article>
+  
+    <article class="overview-card" style="--accent:#be185d">
+      <div class="overview-no">12</div>
+      <h3>Form Input Honorarium</h3>
+      <p>Tampilan form honorarium untuk membuat pengajuan, memilih kegiatan, mengisi penerima, nominal, pajak, dan dokumen pendukung.</p>
+    </article>
+  
+    <article class="overview-card" style="--accent:#4f46e5">
+      <div class="overview-no">13</div>
+      <h3>Pembuatan SPP</h3>
+      <p>Pembuatan Surat Permintaan Pembayaran untuk kontrak, perjalanan dinas, dan honorarium dengan status dokumen yang transparan.</p>
+    </article>
+  
+    <article class="overview-card" style="--accent:#047857">
+      <div class="overview-no">14</div>
+      <h3>SPM, NPI &amp; SP2D</h3>
+      <p>Rantai dokumen pembayaran dari SPM, Nota Pencairan Internal, hingga pencatatan SP2D dan bukti transfer.</p>
+    </article>
+  
+    <article class="overview-card" style="--accent:#334155">
+      <div class="overview-no">15</div>
+      <h3>Pembukuan &amp; Rekonsiliasi</h3>
+      <p>Buku Kas Umum, buku pembantu, bank, pajak, bunga rekening, pengesahan belanja, serta pengecekan piutang.</p>
+    </article>
+  
+    <article class="overview-card" style="--accent:#ca8a04">
+      <div class="overview-no">16</div>
+      <h3>Laporan &amp; Analitik</h3>
+      <p>Rekap tagihan, layanan, pembayaran, piutang, terima-setor, dan performa mitra untuk kebutuhan monitoring manajemen.</p>
+    </article>
+  
+      </div>
+    </div>
+  </section>
+
+  
+    <section class="page feature-page" style="--accent:#0f766e">
+      <div class="feature-copy">
+        <div class="kicker">Executive Monitoring</div>
+        <div class="feature-no">01</div>
+        <h2>Dashboard Keuangan BLU</h2>
+        <p class="summary">Ringkasan pagu, realisasi, sisa anggaran, kontrak aktif, tagihan, dan grafik serapan dalam satu tampilan pimpinan.</p>
+        <ul>
+          <li>KPI keuangan real-time</li><li>Grafik serapan per COA</li><li>Status pekerjaan dan tagihan</li>
+        </ul>
+        <div class="route-chip">/dashboard</div>
+      </div>
+      <div class="screen-wrap">
+        <div class="browser-bar">
+          <span></span><span></span><span></span>
+          <strong>http://127.0.0.1:8000/dashboard</strong>
+        </div>
+        <img src="file:///C:/laragon/www/template_maxton/finance_aptp/brochure_gen/output/screenshots/01_dashboard_keuangan_blu.jpg" alt="Dashboard Keuangan BLU">
+      </div>
+    </section>
+  
+    <section class="page feature-page" style="--accent:#2563eb">
+      <div class="feature-copy">
+        <div class="kicker">Revenue &amp; Service Control</div>
+        <div class="feature-no">02</div>
+        <h2>Dashboard Jasa</h2>
+        <p class="summary">Monitoring layanan jasa BLU, tagihan, piutang, performa pembayaran, dan kalender jatuh tempo untuk area komersial.</p>
+        <ul>
+          <li>Pantau tagihan jasa</li><li>Analitik piutang dan pembayaran</li><li>Kalender operasional</li>
+        </ul>
+        <div class="route-chip">/super-admin-jasa/dashboard</div>
+      </div>
+      <div class="screen-wrap">
+        <div class="browser-bar">
+          <span></span><span></span><span></span>
+          <strong>http://127.0.0.1:8000/super-admin-jasa/dashboard</strong>
+        </div>
+        <img src="file:///C:/laragon/www/template_maxton/finance_aptp/brochure_gen/output/screenshots/02_dashboard_jasa.jpg" alt="Dashboard Jasa">
+      </div>
+    </section>
+  
+    <section class="page feature-page" style="--accent:#7c3aed">
+      <div class="feature-copy">
+        <div class="kicker">Partner Administration</div>
+        <div class="feature-no">03</div>
+        <h2>Kelola Mitra &amp; Layanan</h2>
+        <p class="summary">Pengelolaan mitra jasa, kontrak layanan, akun portal mitra, serta layanan aktif yang menjadi dasar penagihan.</p>
+        <ul>
+          <li>Data mitra terpusat</li><li>Akun portal mitra</li><li>Layanan dan kontrak jasa</li>
+        </ul>
+        <div class="route-chip">/jasa/mitra</div>
+      </div>
+      <div class="screen-wrap">
+        <div class="browser-bar">
+          <span></span><span></span><span></span>
+          <strong>http://127.0.0.1:8000/jasa/mitra</strong>
+        </div>
+        <img src="file:///C:/laragon/www/template_maxton/finance_aptp/brochure_gen/output/screenshots/03_kelola_mitra_layanan.jpg" alt="Kelola Mitra &amp; Layanan">
+      </div>
+    </section>
+  
+    <section class="page feature-page" style="--accent:#0369a1">
+      <div class="feature-copy">
+        <div class="kicker">Partner Portal</div>
+        <div class="feature-no">04</div>
+        <h2>Dashboard Mitra Jasa</h2>
+        <p class="summary">Portal mitra untuk memantau kontrak jasa, layanan aktif, status tagihan, nilai tertagih, dan riwayat pembayaran dari sisi mitra.</p>
+        <ul>
+          <li>Ringkasan kontrak dan tagihan</li><li>Layanan aktif mitra</li><li>Akses detail invoice</li>
+        </ul>
+        <div class="route-chip">/mitra</div>
+      </div>
+      <div class="screen-wrap">
+        <div class="browser-bar">
+          <span></span><span></span><span></span>
+          <strong>http://127.0.0.1:8000/mitra</strong>
+        </div>
+        <img src="file:///C:/laragon/www/template_maxton/finance_aptp/brochure_gen/output/screenshots/04_dashboard_mitra_jasa.jpg" alt="Dashboard Mitra Jasa">
+      </div>
+    </section>
+  
+    <section class="page feature-page" style="--accent:#f97316">
+      <div class="feature-copy">
+        <div class="kicker">Invoice Creation</div>
+        <div class="feature-no">05</div>
+        <h2>Buat Tagihan Jasa</h2>
+        <p class="summary">Form pembuatan tagihan jasa untuk memilih mitra, kontrak, periode tagihan, layanan, nilai bruto, pajak, dan dokumen pengantar.</p>
+        <ul>
+          <li>Pilih mitra dan kontrak</li><li>Input rincian layanan</li><li>Hitung nilai tagihan</li>
+        </ul>
+        <div class="route-chip">/tagihan-jasa/create</div>
+      </div>
+      <div class="screen-wrap">
+        <div class="browser-bar">
+          <span></span><span></span><span></span>
+          <strong>http://127.0.0.1:8000/tagihan-jasa/create</strong>
+        </div>
+        <img src="file:///C:/laragon/www/template_maxton/finance_aptp/brochure_gen/output/screenshots/05_buat_tagihan_jasa.jpg" alt="Buat Tagihan Jasa">
+      </div>
+    </section>
+  
+    <section class="page feature-page" style="--accent:#ea580c">
+      <div class="feature-copy">
+        <div class="kicker">Billing Operation</div>
+        <div class="feature-no">06</div>
+        <h2>Log Tagihan Bulanan</h2>
+        <p class="summary">Log penerbitan tagihan bulanan untuk konsesi, PJP2U, utilitas, dan layanan jasa lain dengan status yang mudah dipantau.</p>
+        <ul>
+          <li>Riwayat tagihan bulanan</li><li>Monitoring jatuh tempo</li><li>Nomor dan status tagihan</li>
+        </ul>
+        <div class="route-chip">/admin-jasa/tagihan/log-bulanan</div>
+      </div>
+      <div class="screen-wrap">
+        <div class="browser-bar">
+          <span></span><span></span><span></span>
+          <strong>http://127.0.0.1:8000/admin-jasa/tagihan/log-bulanan</strong>
+        </div>
+        <img src="file:///C:/laragon/www/template_maxton/finance_aptp/brochure_gen/output/screenshots/06_log_tagihan_bulanan.jpg" alt="Log Tagihan Bulanan">
+      </div>
+    </section>
+  
+    <section class="page feature-page" style="--accent:#1d4ed8">
+      <div class="feature-copy">
+        <div class="kicker">Procurement Contract</div>
+        <div class="feature-no">07</div>
+        <h2>Manajemen Kontrak</h2>
+        <p class="summary">Pengelolaan kontrak, termin pembayaran, dokumen SPK/SPMK, addendum, verifikasi, dan arsip final secara digital.</p>
+        <ul>
+          <li>Kontrak dan termin</li><li>Approval dan revisi</li><li>Arsip dokumen final</li>
+        </ul>
+        <div class="route-chip">/contracts</div>
+      </div>
+      <div class="screen-wrap">
+        <div class="browser-bar">
+          <span></span><span></span><span></span>
+          <strong>http://127.0.0.1:8000/contracts</strong>
+        </div>
+        <img src="file:///C:/laragon/www/template_maxton/finance_aptp/brochure_gen/output/screenshots/07_manajemen_kontrak.jpg" alt="Manajemen Kontrak">
+      </div>
+    </section>
+  
+    <section class="page feature-page" style="--accent:#4338ca">
+      <div class="feature-copy">
+        <div class="kicker">Contract Entry Form</div>
+        <div class="feature-no">08</div>
+        <h2>Form Input Kontrak</h2>
+        <p class="summary">Tampilan form pembuatan kontrak untuk mengisi data pekerjaan, vendor, nilai kontrak, tanggal, termin, dan dokumen pendukung.</p>
+        <ul>
+          <li>Input informasi kontrak</li><li>Vendor dan nilai pekerjaan</li><li>Termin serta dokumen awal</li>
+        </ul>
+        <div class="route-chip">/contracts/create</div>
+      </div>
+      <div class="screen-wrap">
+        <div class="browser-bar">
+          <span></span><span></span><span></span>
+          <strong>http://127.0.0.1:8000/contracts/create</strong>
+        </div>
+        <img src="file:///C:/laragon/www/template_maxton/finance_aptp/brochure_gen/output/screenshots/08_form_input_kontrak.jpg" alt="Form Input Kontrak">
+      </div>
+    </section>
+  
+    <section class="page feature-page" style="--accent:#0891b2">
+      <div class="feature-copy">
+        <div class="kicker">Perjaldin Workflow</div>
+        <div class="feature-no">09</div>
+        <h2>Perjalanan Dinas</h2>
+        <p class="summary">Alur perjalanan dinas dari input peserta, komponen biaya, dokumen nominatif, sampai verifikasi berjenjang.</p>
+        <ul>
+          <li>Komponen biaya terstruktur</li><li>Nominatif dan lampiran</li><li>Workflow verifikasi</li>
+        </ul>
+        <div class="route-chip">/perjaldins</div>
+      </div>
+      <div class="screen-wrap">
+        <div class="browser-bar">
+          <span></span><span></span><span></span>
+          <strong>http://127.0.0.1:8000/perjaldins</strong>
+        </div>
+        <img src="file:///C:/laragon/www/template_maxton/finance_aptp/brochure_gen/output/screenshots/09_perjalanan_dinas.jpg" alt="Perjalanan Dinas">
+      </div>
+    </section>
+  
+    <section class="page feature-page" style="--accent:#0e7490">
+      <div class="feature-copy">
+        <div class="kicker">Travel Assignment Form</div>
+        <div class="feature-no">10</div>
+        <h2>Form Input Perjaldin</h2>
+        <p class="summary">Tampilan form perjalanan dinas untuk merekam kegiatan, peserta, tujuan, tanggal, komponen biaya, dan dasar penugasan.</p>
+        <ul>
+          <li>Data kegiatan dan tujuan</li><li>Peserta perjalanan dinas</li><li>Komponen biaya perjalanan</li>
+        </ul>
+        <div class="route-chip">/perjaldins/create</div>
+      </div>
+      <div class="screen-wrap">
+        <div class="browser-bar">
+          <span></span><span></span><span></span>
+          <strong>http://127.0.0.1:8000/perjaldins/create</strong>
+        </div>
+        <img src="file:///C:/laragon/www/template_maxton/finance_aptp/brochure_gen/output/screenshots/10_form_input_perjaldin.jpg" alt="Form Input Perjaldin">
+      </div>
+    </section>
+  
+    <section class="page feature-page" style="--accent:#be123c">
+      <div class="feature-copy">
+        <div class="kicker">Honor Payment</div>
+        <div class="feature-no">11</div>
+        <h2>Honorarium</h2>
+        <p class="summary">Pengelolaan data honorarium, daftar penerima, dokumen pendukung, pajak, dan pengajuan menuju proses pembayaran.</p>
+        <ul>
+          <li>Daftar penerima honor</li><li>Dokumen dan nominatif</li><li>Pajak dan pengajuan</li>
+        </ul>
+        <div class="route-chip">/honorarium</div>
+      </div>
+      <div class="screen-wrap">
+        <div class="browser-bar">
+          <span></span><span></span><span></span>
+          <strong>http://127.0.0.1:8000/honorarium</strong>
+        </div>
+        <img src="file:///C:/laragon/www/template_maxton/finance_aptp/brochure_gen/output/screenshots/11_honorarium.jpg" alt="Honorarium">
+      </div>
+    </section>
+  
+    <section class="page feature-page" style="--accent:#be185d">
+      <div class="feature-copy">
+        <div class="kicker">Honorarium Entry Form</div>
+        <div class="feature-no">12</div>
+        <h2>Form Input Honorarium</h2>
+        <p class="summary">Tampilan form honorarium untuk membuat pengajuan, memilih kegiatan, mengisi penerima, nominal, pajak, dan dokumen pendukung.</p>
+        <ul>
+          <li>Input kegiatan honorarium</li><li>Penerima dan nominal</li><li>Dokumen dan pajak</li>
+        </ul>
+        <div class="route-chip">/honorarium/create</div>
+      </div>
+      <div class="screen-wrap">
+        <div class="browser-bar">
+          <span></span><span></span><span></span>
+          <strong>http://127.0.0.1:8000/honorarium/create</strong>
+        </div>
+        <img src="file:///C:/laragon/www/template_maxton/finance_aptp/brochure_gen/output/screenshots/12_form_input_honorarium.jpg" alt="Form Input Honorarium">
+      </div>
+    </section>
+  
+    <section class="page feature-page" style="--accent:#4f46e5">
+      <div class="feature-copy">
+        <div class="kicker">Payment Request</div>
+        <div class="feature-no">13</div>
+        <h2>Pembuatan SPP</h2>
+        <p class="summary">Pembuatan Surat Permintaan Pembayaran untuk kontrak, perjalanan dinas, dan honorarium dengan status dokumen yang transparan.</p>
+        <ul>
+          <li>SPP lintas jenis tagihan</li><li>Cetak PDF</li><li>Upload dokumen bertanda tangan</li>
+        </ul>
+        <div class="route-chip">/spps/perjaldin</div>
+      </div>
+      <div class="screen-wrap">
+        <div class="browser-bar">
+          <span></span><span></span><span></span>
+          <strong>http://127.0.0.1:8000/spps/perjaldin</strong>
+        </div>
+        <img src="file:///C:/laragon/www/template_maxton/finance_aptp/brochure_gen/output/screenshots/13_pembuatan_spp.jpg" alt="Pembuatan SPP">
+      </div>
+    </section>
+  
+    <section class="page feature-page" style="--accent:#047857">
+      <div class="feature-copy">
+        <div class="kicker">Treasury Pipeline</div>
+        <div class="feature-no">14</div>
+        <h2>SPM, NPI &amp; SP2D</h2>
+        <p class="summary">Rantai dokumen pembayaran dari SPM, Nota Pencairan Internal, hingga pencatatan SP2D dan bukti transfer.</p>
+        <ul>
+          <li>SPM final ke NPI</li><li>Pencatatan SP2D</li><li>Audit status pembayaran</li>
+        </ul>
+        <div class="route-chip">/npis/kontrak</div>
+      </div>
+      <div class="screen-wrap">
+        <div class="browser-bar">
+          <span></span><span></span><span></span>
+          <strong>http://127.0.0.1:8000/npis/kontrak</strong>
+        </div>
+        <img src="file:///C:/laragon/www/template_maxton/finance_aptp/brochure_gen/output/screenshots/14_spm_npi_sp2d.jpg" alt="SPM, NPI &amp; SP2D">
+      </div>
+    </section>
+  
+    <section class="page feature-page" style="--accent:#334155">
+      <div class="feature-copy">
+        <div class="kicker">Accounting Books</div>
+        <div class="feature-no">15</div>
+        <h2>Pembukuan &amp; Rekonsiliasi</h2>
+        <p class="summary">Buku Kas Umum, buku pembantu, bank, pajak, bunga rekening, pengesahan belanja, serta pengecekan piutang.</p>
+        <ul>
+          <li>BKU dan buku pembantu</li><li>Rekonsiliasi bank</li><li>Export PDF/Excel</li>
+        </ul>
+        <div class="route-chip">/pembukuan/bku</div>
+      </div>
+      <div class="screen-wrap">
+        <div class="browser-bar">
+          <span></span><span></span><span></span>
+          <strong>http://127.0.0.1:8000/pembukuan/bku</strong>
+        </div>
+        <img src="file:///C:/laragon/www/template_maxton/finance_aptp/brochure_gen/output/screenshots/15_pembukuan_rekonsiliasi.jpg" alt="Pembukuan &amp; Rekonsiliasi">
+      </div>
+    </section>
+  
+    <section class="page feature-page" style="--accent:#ca8a04">
+      <div class="feature-copy">
+        <div class="kicker">Management Reporting</div>
+        <div class="feature-no">16</div>
+        <h2>Laporan &amp; Analitik</h2>
+        <p class="summary">Rekap tagihan, layanan, pembayaran, piutang, terima-setor, dan performa mitra untuk kebutuhan monitoring manajemen.</p>
+        <ul>
+          <li>Rekap multi-dimensi</li><li>Filter periode</li><li>Export laporan</li>
+        </ul>
+        <div class="route-chip">/super-admin-jasa/laporan/rekap-tagihan</div>
+      </div>
+      <div class="screen-wrap">
+        <div class="browser-bar">
+          <span></span><span></span><span></span>
+          <strong>http://127.0.0.1:8000/super-admin-jasa/laporan/rekap-tagihan</strong>
+        </div>
+        <img src="file:///C:/laragon/www/template_maxton/finance_aptp/brochure_gen/output/screenshots/16_laporan_analitik.jpg" alt="Laporan &amp; Analitik">
+      </div>
+    </section>
+  
+
+  <section class="page closing">
+    <div class="closing-inner">
+      <div class="section-label">Operational Value</div>
+      <h2>Alur kerja ringkas dari pengajuan sampai persetujuan.</h2>
+      <p class="closing-copy">Brosur ini menampilkan dua jalur operasional utama: proses pembayaran internal untuk kontrak, perjalanan dinas, dan honorarium, serta proses penagihan jasa kepada mitra dengan verifikasi berjenjang.</p>
+      <div class="closing-grid">
+        <div class="workflow-card">
+          <h3>Pembayaran Internal</h3>
+          <p>Untuk Kontrak, Perjaldin, dan Honorarium.</p>
+          <div class="workflow-steps">
+            <div class="workflow-step"><strong>01</strong><span>Kontrak, Perjaldin, atau Honorarium diajukan</span></div>
+            <div class="workflow-step"><strong>02</strong><span>Dibuat SPP sebagai permintaan pembayaran</span></div>
+            <div class="workflow-step"><strong>03</strong><span>Diproses menjadi SPM</span></div>
+            <div class="workflow-step"><strong>04</strong><span>Dilanjutkan ke NPI</span></div>
+            <div class="workflow-step final"><strong>05</strong><span>Terbit SP2D dan siap dicatat pembayarannya</span></div>
+          </div>
+        </div>
+        <div class="workflow-card">
+          <h3>Penagihan Jasa Mitra</h3>
+          <p>Untuk tagihan jasa yang dikirim dan disetujui berjenjang.</p>
+          <div class="workflow-steps">
+            <div class="workflow-step"><strong>01</strong><span>Tagihan jasa ke mitra dibuat</span></div>
+            <div class="workflow-step"><strong>02</strong><span>Tagihan diajukan</span></div>
+            <div class="workflow-step"><strong>03</strong><span>Diverifikasi oleh Koordinator Jasa</span></div>
+            <div class="workflow-step"><strong>04</strong><span>Disetujui oleh Kasi Jasa</span></div>
+            <div class="workflow-step"><strong>05</strong><span>Disetujui oleh Kasubbag</span></div>
+            <div class="workflow-step final"><strong>06</strong><span>Persetujuan final oleh KPA</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="closing-footer">
+      <div>SIKEREN-BLU Finance APTP • Brosur Project</div>
+      <img src="file:///C:/laragon/www/template_maxton/finance_aptp/public/logo/minilogo-sikeren.png" alt="SIKEREN-BLU">
+    </div>
+  </section>
+</body>
+</html>

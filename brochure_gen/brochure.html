@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Brosur Finance BLU / APTP</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
+        
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+            color: #1e293b;
+        }
+
+        .page {
+            width: 210mm;
+            height: 297mm;
+            background: white;
+            position: relative;
+            box-sizing: border-box;
+            page-break-after: always;
+            overflow: hidden;
+        }
+
+        .cover {
+            background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .cover h1 {
+            font-size: 48px;
+            font-weight: 800;
+            margin-bottom: 20px;
+            letter-spacing: -1px;
+        }
+
+        .cover p {
+            font-size: 24px;
+            font-weight: 300;
+            opacity: 0.9;
+        }
+
+        .cover-shapes {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            overflow: hidden;
+            z-index: 0;
+        }
+
+        .shape {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+        }
+
+        .shape-1 { width: 400px; height: 400px; top: -100px; left: -100px; }
+        .shape-2 { width: 600px; height: 600px; bottom: -200px; right: -200px; }
+
+        .content-container {
+            z-index: 1;
+            position: relative;
+        }
+
+        .header {
+            background: #2563eb;
+            color: white;
+            padding: 30px 40px;
+            display: flex;
+            align-items: center;
+        }
+
+        .header h2 {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 600;
+        }
+
+        .section {
+            padding: 40px;
+        }
+
+        .feature {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 40px;
+            gap: 30px;
+        }
+
+        .feature:nth-child(even) {
+            flex-direction: row-reverse;
+        }
+
+        .feature-text {
+            flex: 1;
+        }
+
+        .feature-text h3 {
+            font-size: 24px;
+            color: #2563eb;
+            margin-top: 0;
+            margin-bottom: 15px;
+        }
+
+        .feature-text p {
+            font-size: 14px;
+            line-height: 1.6;
+            color: #475569;
+        }
+
+        .feature-image {
+            flex: 1;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            border: 1px solid #e2e8f0;
+        }
+
+        .feature-image img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .footer {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            background: #0f172a;
+            color: white;
+            text-align: center;
+            padding: 20px;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- PAGE 1: COVER -->
+    <div class="page cover">
+        <div class="cover-shapes">
+            <div class="shape shape-1"></div>
+            <div class="shape shape-2"></div>
+        </div>
+        <div class="content-container">
+            <h1>Finance BLU / APTP</h1>
+            <p>Sistem Informasi Pengelolaan Keuangan Berbasis Web Modern & Terintegrasi</p>
+        </div>
+    </div>
+
+    <!-- PAGE 2: FITUR UTAMA 1 -->
+    <div class="page">
+        <div class="header">
+            <h2>Fitur & Keunggulan (Bagian 1)</h2>
+        </div>
+        <div class="section">
+            <div class="feature">
+                <div class="feature-text">
+                    <h3>1. Executive Dashboard</h3>
+                    <p>Memantau kondisi keuangan secara real-time melalui dashboard eksekutif yang modern. Dilengkapi dengan grafik, indikator kinerja utama (KPI), dan ringkasan saldo yang membantu pimpinan dalam pengambilan keputusan yang cepat dan akurat.</p>
+                </div>
+                <div class="feature-image">
+                    <img src="C:/Users/user/.gemini/antigravity/brain/6ec10fd4-6ba3-422d-a180-0679cceed601/screenshot_dashboard_1780482946354.png" alt="Dashboard Screenshot">
+                </div>
+            </div>
+
+            <div class="feature">
+                <div class="feature-text">
+                    <h3>2. Manajemen Kontrak & SPK</h3>
+                    <p>Kemudahan dalam melacak, menyetujui, dan memantau kontrak kerja sama (SPK) dengan mitra. Status kontrak ditampilkan dengan visualisasi warna yang jelas, dilengkapi fitur persetujuan dan riwayat dokumen yang komprehensif.</p>
+                </div>
+                <div class="feature-image">
+                    <img src="C:/Users/user/.gemini/antigravity/brain/6ec10fd4-6ba3-422d-a180-0679cceed601/screenshot_contracts_1780482965839.png" alt="Contracts Screenshot">
+                </div>
+            </div>
+        </div>
+        <div class="footer">
+            &copy; 2026 Finance BLU / APTP | Solusi Manajemen Keuangan
+        </div>
+    </div>
+
+    <!-- PAGE 3: FITUR UTAMA 2 -->
+    <div class="page">
+        <div class="header">
+            <h2>Fitur & Keunggulan (Bagian 2)</h2>
+        </div>
+        <div class="section">
+            <div class="feature">
+                <div class="feature-text">
+                    <h3>3. Proses Pencairan & Pembayaran (SPP/SPM/SP2D)</h3>
+                    <p>Digitalisasi alur pencairan anggaran dari tingkat pengajuan hingga persetujuan berlapis. Dilengkapi notifikasi persetujuan (approval workflow) yang canggih untuk menjamin transparansi, keamanan, dan tertib administrasi pada setiap tahapan pencairan.</p>
+                </div>
+                <div class="feature-image">
+                    <img src="C:/Users/user/.gemini/antigravity/brain/6ec10fd4-6ba3-422d-a180-0679cceed601/screenshot_payments_1780482988981.png" alt="Payments Screenshot">
+                </div>
+            </div>
+
+            <div class="feature">
+                <div class="feature-text">
+                    <h3>4. Pembukuan & Buku Kas Umum</h3>
+                    <p>Pencatatan transaksi yang sistematis layaknya buku kas umum. Desain tabel yang bersih dan rapi memudahkan proses penelusuran (tracing) antara debit dan kredit, rekonsiliasi perbankan, dan pembuatan laporan akhir periode.</p>
+                </div>
+                <div class="feature-image">
+                    <img src="C:/Users/user/.gemini/antigravity/brain/6ec10fd4-6ba3-422d-a180-0679cceed601/screenshot_pembukuan_1780483008340.png" alt="Pembukuan Screenshot">
+                </div>
+            </div>
+        </div>
+        <div class="footer">
+            &copy; 2026 Finance BLU / APTP | Solusi Manajemen Keuangan
+        </div>
+    </div>
+
+</body>
+</html>

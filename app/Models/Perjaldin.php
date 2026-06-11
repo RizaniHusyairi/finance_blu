@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Builder;
 
 class Perjaldin extends Tagihan
 {
-    protected static function booted()
+    protected static function booted(): void
     {
         parent::booted();
         static::addGlobalScope('tipe_tagihan', function (Builder $builder) {
