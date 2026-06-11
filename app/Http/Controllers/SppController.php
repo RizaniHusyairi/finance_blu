@@ -1377,7 +1377,7 @@ class SppController extends Controller
         $spp = DokumenSpp::findOrFail($spp_id);
 
         // Hanya boleh upload jika SPP sudah disetujui
-        $approvedStatuses = ['APPROVED', 'DISETUJUI_SPP', 'Disetujui PPK', 'SPP_TERBIT'];
+        $approvedStatuses = ['APPROVED', 'DISETUJUI_FINAL', 'DISETUJUI_SPP', 'Disetujui PPK', 'SPP_TERBIT'];
         if (!in_array($spp->status, $approvedStatuses)) {
             return back()->withErrors(['error' => 'SPP belum disetujui oleh semua verifikator.']);
         }

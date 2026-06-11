@@ -437,9 +437,6 @@
                     @endforeach
                 @endif
                 
-                <!-- Standing Instruction -->
-                @include('spps.partials.standing_instruction_card', ['spp' => $sppModel])
-
                 <div class="card spp-section-card spp-anim spp-delay-1 mb-4 bg-light border-0 shadow-sm">
                     <div class="card-body p-4">
                         <h6 class="fw-bold mb-3"><i class="bi bi-journal-check me-2"></i> Checklist Pemeriksaan Dokumen</h6>

@@ -1,11 +1,12 @@
+{{-- Card pengajuan persetujuan KPA (Standing Instruction) — diajukan PPK dari halaman verifikasi tagihan. --}}
 @php
-    $kpaStatus = $spp->kpa_approval_status;
-    
+    $kpaStatus = $tagihan->kpa_approval_status;
+
     // Status Badge Logic
     $badgeClass = 'bg-secondary text-white';
     $statusText = 'Belum Diajukan';
     $iconClass = 'bi-dash-circle';
-    
+
     if ($kpaStatus === 'PENDING_KPA') {
         $badgeClass = 'bg-warning text-dark';
         $statusText = 'Menunggu Persetujuan';
@@ -41,7 +42,7 @@
             </div>
         </div>
     </div>
-    
+
     <div class="card-body p-4 pt-3">
         @if(!$kpaStatus || $kpaStatus === 'REJECTED')
             @if($kpaStatus === 'REJECTED')
@@ -51,7 +52,7 @@
                         <div>
                             <h6 class="fw-bold text-danger mb-1">Tagihan Ditolak oleh KPA</h6>
                             <p class="mb-0 text-dark fs-7">
-                                <strong>Catatan:</strong> {{ $spp->kpa_approval_notes ?? 'Tidak ada catatan.' }}
+                                <strong>Catatan:</strong> {{ $tagihan->kpa_approval_notes ?? 'Tidak ada catatan.' }}
                             </p>
                         </div>
                     </div>
@@ -62,13 +63,13 @@
                         <i class="bi bi-info-circle-fill text-secondary fs-5"></i>
                     </div>
                     <p class="mb-0 text-secondary fw-medium fs-7">
-                        Anda belum mengajukan permohonan persetujuan tagihan ini ke KPA.
+                        Tagihan ini belum diajukan untuk persetujuan KPA. Draft dokumen pencairan (SPP/SPM/NPI) baru dibuat setelah KPA menyetujui.
                     </p>
                 </div>
             @endif
 
             @if(Auth::user()->hasRole('PPK'))
-                <form action="{{ route('kpa.approval.send-wa', $spp->id) }}" method="POST" class="mt-2">
+                <form action="{{ route('kpa.approval.send-wa', $tagihan->id) }}" method="POST" class="mt-2">
                     @csrf
                     <button type="submit" class="btn btn-primary w-100 rounded-pill py-2 fw-bold shadow-sm" style="background: linear-gradient(135deg, #0d6efd, #0b5ed7); border: none; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(13,110,253,0.3)';" onmouseout="this.style.transform='none'; this.style.boxShadow='0 2px 4px rgba(0,0,0,0.075)';">
                         <i class="bi bi-whatsapp me-2"></i> Ajukan Persetujuan ke KPA via WA
@@ -82,22 +83,22 @@
                 $magicLink = null;
                 if ($kpaUser) {
                     $magicLink = \Illuminate\Support\Facades\URL::temporarySignedRoute(
-                        'kpa.approval.show', 
-                        now()->addHours(24), 
-                        ['sppId' => $spp->id, 'user_id' => $kpaUser->id]
+                        'kpa.approval.show',
+                        now()->addHours(24),
+                        ['tagihanId' => $tagihan->id, 'user_id' => $kpaUser->id]
                     );
                 }
             @endphp
-            
+
             <div class="alert border-0 rounded-4 p-3 mb-3" style="background: linear-gradient(to right, rgba(255, 193, 7, 0.1), rgba(255, 193, 7, 0.02)); border-left: 4px solid #ffc107 !important;">
                 <div class="d-flex align-items-start gap-3">
                     <i class="bi bi-hourglass-split fs-4 text-warning mt-1"></i>
                     <div class="w-100">
                         <h6 class="fw-bold text-dark mb-1">Menunggu Tindakan KPA</h6>
                         <p class="mb-2 text-secondary fs-7">
-                            Tautan persetujuan telah dikirimkan ke WhatsApp KPA. Menunggu konfirmasi KPA sebelum SPP ini dapat diverifikasi.
+                            Tautan persetujuan telah dikirimkan ke WhatsApp KPA. Menunggu konfirmasi KPA sebelum draft dokumen pencairan dapat dibuat.
                         </p>
-                        
+
                         @if($magicLink)
                             <div class="mt-3 p-3 bg-white rounded-3 shadow-sm border border-warning border-opacity-25">
                                 <label class="form-label fs-8 fw-bold text-muted text-uppercase letter-spacing-1 mb-2">Tautan Alternatif (Magic Link)</label>
@@ -131,7 +132,7 @@
             </div>
 
             @if(Auth::user()->hasRole('PPK'))
-                <form action="{{ route('kpa.approval.send-wa', $spp->id) }}" method="POST" class="mt-2">
+                <form action="{{ route('kpa.approval.send-wa', $tagihan->id) }}" method="POST" class="mt-2">
                     @csrf
                     <button type="submit" class="btn btn-outline-primary w-100 rounded-pill py-2 fw-bold" style="transition: all 0.2s;" onmouseover="this.classList.add('shadow-sm');" onmouseout="this.classList.remove('shadow-sm');">
                         <i class="bi bi-arrow-clockwise me-2"></i> Kirim Ulang Pesan ke WA
@@ -144,30 +145,30 @@
                 <div class="position-absolute end-0 top-0 text-success" style="transform: translate(20%, -20%); opacity: 0.1;">
                     <i class="bi bi-check-circle-fill" style="font-size: 6rem;"></i>
                 </div>
-                
+
                 <div class="position-relative z-1">
                     <div class="d-flex justify-content-between align-items-center mb-2">
                         <span class="text-muted fs-8 text-uppercase fw-bold">Disetujui Oleh</span>
-                        <span class="text-dark fw-bold fs-7">{{ \App\Models\User::find($spp->kpa_approved_by)?->profilable?->nama_lengkap ?? 'KPA' }}</span>
+                        <span class="text-dark fw-bold fs-7">{{ $tagihan->kpaApprover?->profilable?->nama_lengkap ?? $tagihan->kpaApprover?->name ?? 'KPA' }}</span>
                     </div>
                     <div class="d-flex justify-content-between align-items-center mb-2">
                         <span class="text-muted fs-8 text-uppercase fw-bold">Waktu Persetujuan</span>
-                        <span class="text-dark fw-medium fs-7">{{ \Carbon\Carbon::parse($spp->kpa_approved_at)->translatedFormat('d F Y H:i') }}</span>
+                        <span class="text-dark fw-medium fs-7">{{ \Carbon\Carbon::parse($tagihan->kpa_approved_at)->translatedFormat('d F Y H:i') }}</span>
                     </div>
                     <hr class="border-secondary opacity-10 my-2">
                     <div class="d-flex flex-column mb-1">
                         <span class="text-muted fs-8 text-uppercase fw-bold mb-1">Catatan KPA</span>
                         <div class="bg-white p-2 rounded text-dark fs-7 fst-italic shadow-sm">
-                            {{ $spp->kpa_approval_notes ?? 'Tidak ada catatan khusus.' }}
+                            {{ $tagihan->kpa_approval_notes ?? 'Tidak ada catatan khusus.' }}
                         </div>
                     </div>
                 </div>
             </div>
-            
+
             <div class="alert alert-success d-flex align-items-center gap-3 border-0 shadow-sm rounded-pill py-2 px-3 m-0" style="background-color: rgba(25, 135, 84, 0.1);">
                 <i class="bi bi-check-circle-fill text-success"></i>
                 <p class="mb-0 text-success fw-bold fs-7">
-                    Anda dapat melanjutkan verifikasi SPP.
+                    KPA telah menyetujui — draft dokumen pencairan dapat dibuat.
                 </p>
             </div>
         @endif

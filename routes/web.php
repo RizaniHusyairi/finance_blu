@@ -102,6 +102,7 @@ use App\Http\Controllers\TagihanHonorariumVerifikasiController;
 use App\Http\Controllers\TagihanJasaController;
 use App\Http\Controllers\TagihanJasaVerifikasiController;
 use App\Http\Controllers\TagihanKontrakVerifikasiController;
+use App\Http\Controllers\TagihanProsesController;
 use App\Http\Controllers\TagihanTteController;
 use App\Http\Controllers\TarifLayananController;
 use App\Http\Controllers\UtilitasController;
@@ -192,10 +193,10 @@ Route::get('/p/tagihan/{id}/document-tte/{type}', [PublicMagicLinkSignatureContr
     ->name('public.tagihan-document-tte.show');
 
 // KPA Tagihan Approval via WhatsApp (Magic Link)
-Route::get('/p/kpa-approval/spp/{sppId}', [KpaApprovalController::class, 'showApproval'])
+Route::get('/p/kpa-approval/tagihan/{tagihanId}', [KpaApprovalController::class, 'showApproval'])
     ->middleware(['signed', 'web'])
     ->name('kpa.approval.show');
-Route::post('/p/kpa-approval/spp/{sppId}', [KpaApprovalController::class, 'processApproval'])
+Route::post('/p/kpa-approval/tagihan/{tagihanId}', [KpaApprovalController::class, 'processApproval'])
     ->middleware(['web', 'auth'])
     ->name('kpa.approval.process');
 
@@ -305,6 +306,23 @@ Route::middleware(['auth', 'account.active'])->group(function () use ($internalR
     // Notification Endpoints (AJAX Polling)
     Route::get('/notifications/fetch', [NotificationController::class, 'fetch'])->name('notifications.fetch');
     Route::post('/notifications/mark-read', [NotificationController::class, 'markAsRead'])->name('notifications.mark-read');
+
+    Route::middleware('role:Super Admin|Operator BLU|PPK|PPSPM|Bendahara Pengeluaran|Bendahara Penerimaan|Koordinator Keuangan|Kepala Subbagian Keuangan dan Tata Usaha')
+        ->prefix('proses-tagihan')
+        ->name('proses-tagihan.')
+        ->group(function () {
+            Route::get('/', [TagihanProsesController::class, 'index'])->name('index');
+            Route::get('/{tagihan}', [TagihanProsesController::class, 'show'])->name('show');
+            Route::post('/{tagihan}/coa', [TagihanProsesController::class, 'simpanCoa'])->name('coa');
+            Route::post('/{tagihan}/spp/ajukan', [TagihanProsesController::class, 'ajukanSpp'])->name('spp.ajukan');
+            Route::post('/{tagihan}/spm/ajukan', [TagihanProsesController::class, 'ajukanSpm'])->name('spm.ajukan');
+            Route::post('/{tagihan}/npi/ajukan', [TagihanProsesController::class, 'ajukanNpi'])->name('npi.ajukan');
+            Route::post('/{tagihan}/dokumen/{jenis}/aksi', [TagihanProsesController::class, 'aksiDokumen'])
+                ->whereIn('jenis', ['spp', 'spm', 'npi', 'sp2d'])
+                ->name('dokumen.aksi');
+            Route::post('/{tagihan}/bukti-transfer', [TagihanProsesController::class, 'uploadBuktiTransfer'])->name('bukti-transfer');
+            Route::post('/{tagihan}/batalkan-rantai', [TagihanProsesController::class, 'batalkanRantai'])->name('batalkan-rantai');
+        });
 
     // Verifikasi Perjaldin - hanya PPK
     Route::middleware('role:Super Admin|PPK')->group(function () {
@@ -788,8 +806,8 @@ Route::middleware(['auth', 'account.active'])->group(function () use ($internalR
         Route::post('/verifikasi-spp/kontrak/{id}/approve', [SppVerifikasiController::class, 'approve'])->name('verifikasi-spp.kontrak.approve');
         Route::post('/verifikasi-spp/kontrak/{id}/revisi', [SppVerifikasiController::class, 'revisi'])->name('verifikasi-spp.kontrak.revisi');
 
-        // KPA Approval Request dari PPK
-        Route::post('/verifikasi-spp/kontrak/{id}/kpa-approval/send-wa', [KpaApprovalController::class, 'sendWa'])->name('kpa.approval.send-wa');
+        // KPA Approval Request dari PPK — diajukan dari halaman verifikasi tagihan
+        Route::post('/verifikasi-tagihan/{tagihanId}/kpa-approval/send-wa', [KpaApprovalController::class, 'sendWa'])->name('kpa.approval.send-wa');
 
         // Perjaldin
         Route::get('/verifikasi-spp/perjaldin', [SppPerjaldinVerifikasiController::class, 'index'])->name('verifikasi-spp.perjaldin.index');

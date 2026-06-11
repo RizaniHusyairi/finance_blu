@@ -224,12 +224,6 @@ class SppPerjaldinVerifikasiController extends Controller
             $approval = $instance->approvals->where('role_code', $roleCode)->first();
         }
 
-        if ($approval && $approval->role_code === 'PPK') {
-            if ($spp->kpa_approval_status !== 'APPROVED') {
-                return back()->with('error', 'Persetujuan Tagihan dari KPA belum disetujui. Silakan ajukan persetujuan via WA terlebih dahulu.');
-            }
-        }
-
         abort_unless($approval && $approval->status === 'PENDING', 403, 'Anda tidak memiliki aksi yang tersedia.');
 
         try {

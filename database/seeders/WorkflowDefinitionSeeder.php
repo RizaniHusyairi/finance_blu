@@ -314,6 +314,8 @@ class WorkflowDefinitionSeeder extends Seeder
                     ],
                 ],
             ],
+            // SP2D diverifikasi PPK saja — verifikasi penuh sudah terjadi di tahap
+            // tagihan (6 verifikator) dan pada SPP/SPM/NPI (alur terpadu proses tagihan).
             [
                 'kode' => 'SP2D_PERJALDIN',
                 'nama' => 'Verifikasi SP2D Perjaldin',
@@ -321,32 +323,8 @@ class WorkflowDefinitionSeeder extends Seeder
                 'steps' => [
                     [
                         'urutan_step' => 1,
-                        'nama_step' => 'Verifikasi PPSPM',
-                        'role_code' => 'PPSPM',
-                        'is_required' => true,
-                        'can_reject' => true,
-                        'can_request_revision' => true,
-                    ],
-                    [
-                        'urutan_step' => 1,
                         'nama_step' => 'Verifikasi PPK',
                         'role_code' => 'PPK',
-                        'is_required' => true,
-                        'can_reject' => true,
-                        'can_request_revision' => true,
-                    ],
-                    [
-                        'urutan_step' => 1,
-                        'nama_step' => 'Verifikasi Kasubbag',
-                        'role_code' => 'Kepala Subbagian Keuangan dan Tata Usaha',
-                        'is_required' => true,
-                        'can_reject' => true,
-                        'can_request_revision' => true,
-                    ],
-                    [
-                        'urutan_step' => 1,
-                        'nama_step' => 'Verifikasi Koordinator Keuangan',
-                        'role_code' => 'Koordinator Keuangan',
                         'is_required' => true,
                         'can_reject' => true,
                         'can_request_revision' => true,
@@ -360,32 +338,8 @@ class WorkflowDefinitionSeeder extends Seeder
                 'steps' => [
                     [
                         'urutan_step' => 1,
-                        'nama_step' => 'Verifikasi PPSPM',
-                        'role_code' => 'PPSPM',
-                        'is_required' => true,
-                        'can_reject' => true,
-                        'can_request_revision' => true,
-                    ],
-                    [
-                        'urutan_step' => 1,
                         'nama_step' => 'Verifikasi PPK',
                         'role_code' => 'PPK',
-                        'is_required' => true,
-                        'can_reject' => true,
-                        'can_request_revision' => true,
-                    ],
-                    [
-                        'urutan_step' => 1,
-                        'nama_step' => 'Verifikasi Kasubbag',
-                        'role_code' => 'Kepala Subbagian Keuangan dan Tata Usaha',
-                        'is_required' => true,
-                        'can_reject' => true,
-                        'can_request_revision' => true,
-                    ],
-                    [
-                        'urutan_step' => 1,
-                        'nama_step' => 'Verifikasi Koordinator Keuangan',
-                        'role_code' => 'Koordinator Keuangan',
                         'is_required' => true,
                         'can_reject' => true,
                         'can_request_revision' => true,
@@ -399,32 +353,8 @@ class WorkflowDefinitionSeeder extends Seeder
                 'steps' => [
                     [
                         'urutan_step' => 1,
-                        'nama_step' => 'Verifikasi PPSPM',
-                        'role_code' => 'PPSPM',
-                        'is_required' => true,
-                        'can_reject' => true,
-                        'can_request_revision' => true,
-                    ],
-                    [
-                        'urutan_step' => 1,
                         'nama_step' => 'Verifikasi PPK',
                         'role_code' => 'PPK',
-                        'is_required' => true,
-                        'can_reject' => true,
-                        'can_request_revision' => true,
-                    ],
-                    [
-                        'urutan_step' => 1,
-                        'nama_step' => 'Verifikasi Kasubbag',
-                        'role_code' => 'Kepala Subbagian Keuangan dan Tata Usaha',
-                        'is_required' => true,
-                        'can_reject' => true,
-                        'can_request_revision' => true,
-                    ],
-                    [
-                        'urutan_step' => 1,
-                        'nama_step' => 'Verifikasi Koordinator Keuangan',
-                        'role_code' => 'Koordinator Keuangan',
                         'is_required' => true,
                         'can_reject' => true,
                         'can_request_revision' => true,

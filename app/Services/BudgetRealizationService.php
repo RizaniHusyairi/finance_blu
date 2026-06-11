@@ -70,10 +70,34 @@ class BudgetRealizationService
                     nominal: $spp->nominal_spp ?? $komponen->total_nominal, // Sebaiknya ikuti nominal akhir di SPP
                     tanggal: $lockedSp2d->tanggal_sp2d ?? now()
                 );
+            } elseif ($spp->tagihan_id && $spp->tagihan && $spp->tagihan->tipe_tagihan === 'PERJALDIN') {
+                // Perjaldin konsolidasi (alur terpadu): satu SPP untuk seluruh
+                // komponen — realisasi dicatat per komponen sesuai COA masing-masing.
+                $komponens = $spp->tagihan->komponenPerjaldin()
+                    ->where('total_nominal', '>', 0)
+                    ->get();
+
+                if ($komponens->isEmpty()) {
+                    throw new Exception("Tagihan perjaldin tidak memiliki komponen biaya untuk dicatat realisasinya.");
+                }
+
+                foreach ($komponens as $komponen) {
+                    if (!$komponen->dipa_revision_item_id) {
+                        throw new Exception("DIPA Revision Item ID tidak ditemukan pada komponen {$komponen->nama_komponen}.");
+                    }
+
+                    $this->createRealization(
+                        sp2d: $lockedSp2d,
+                        dipaItemId: $komponen->dipa_revision_item_id,
+                        source: $komponen,
+                        nominal: (float) $komponen->total_nominal,
+                        tanggal: $lockedSp2d->tanggal_sp2d ?? now()
+                    );
+                }
             } elseif ($spp->tagihan_id && $spp->tagihan) {
                 // Pencatatan untuk Tagihan Kontrak / Honorarium
                 $tagihan = $spp->tagihan;
-                
+
                 $dipaItemId = $dipaItemId ?? $tagihan->dipa_revision_item_id;
 
                 if (!$dipaItemId) {

@@ -290,12 +290,6 @@ class VerifikasiSppHonorController extends Controller
             return back()->with('error', 'Status verifikasi telah diproses atau tidak valid.');
         }
 
-        if ($myApproval->role_code === 'PPK') {
-            if ($sppModel->kpa_approval_status !== 'APPROVED') {
-                return back()->with('error', 'Persetujuan Tagihan dari KPA belum disetujui. Silakan ajukan persetujuan via WA terlebih dahulu.');
-            }
-        }
-
         $roleCode = $myApproval->role_code;
         $catatan = $request->input('catatan') ?: 'Disetujui oleh ' . $roleCode;
 
@@ -382,12 +376,6 @@ class VerifikasiSppHonorController extends Controller
         $myApproval = $this->resolveApprovalForAction($instance, $roleCodes, $user, $request->input('approval_id'));
         if (!$myApproval || $myApproval->status !== 'PENDING') {
             return back()->with('error', 'Status verifikasi telah diproses atau tidak valid.');
-        }
-
-        if ($myApproval->role_code === 'PPK') {
-            if ($sppModel->kpa_approval_status !== 'APPROVED') {
-                return back()->with('error', 'Persetujuan Tagihan dari KPA belum disetujui. Silakan ajukan persetujuan via WA terlebih dahulu.');
-            }
         }
 
         $roleCode = $myApproval->role_code;

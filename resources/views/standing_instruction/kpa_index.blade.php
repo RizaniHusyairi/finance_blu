@@ -91,7 +91,7 @@
             <div class="si-ic"><i class="bi bi-clipboard2-check-fill"></i></div>
             <div>
                 <h4 class="mb-1">Standing Instruction (KPA)</h4>
-                <p>Seluruh tagihan/SPP yang diajukan PPK kepada KPA untuk dimintakan persetujuan terdata di sini, lengkap dengan status dan riwayatnya.</p>
+                <p>Seluruh tagihan (kontrak, perjaldin, honorarium) yang diajukan PPK kepada KPA dari halaman verifikasi tagihan terdata di sini, lengkap dengan status dan riwayatnya.</p>
             </div>
         </div>
     </div>
@@ -142,7 +142,7 @@
         </div>
         <form method="GET" action="{{ route('standing-instruction.index') }}" class="d-flex gap-2" style="max-width:340px;">
             @if($statusFilter)<input type="hidden" name="status" value="{{ $statusFilter }}">@endif
-            <input type="text" name="search" value="{{ $search }}" class="form-control" placeholder="Cari nomor SPP / tagihan / vendor...">
+            <input type="text" name="search" value="{{ $search }}" class="form-control" placeholder="Cari nomor tagihan / uraian / vendor...">
             <button class="btn btn-warning text-white"><i class="bi bi-search"></i></button>
         </form>
     </div>
@@ -153,12 +153,12 @@
             <span class="hic"><i class="bi bi-list-ul"></i></span>
             <div>
                 <h6 class="mb-0 fw-bold">Daftar Pengajuan ke KPA</h6>
-                <small class="text-muted">Sumber: SPP dengan permintaan persetujuan KPA dari PPK</small>
+                <small class="text-muted">Sumber: tagihan dengan permintaan persetujuan KPA dari PPK</small>
             </div>
-            <span class="badge bg-warning text-dark rounded-pill ms-auto">{{ $spps->total() }} pengajuan</span>
+            <span class="badge bg-warning text-dark rounded-pill ms-auto">{{ $tagihans->total() }} pengajuan</span>
         </div>
         <div class="card-body p-0">
-            @if($spps->isEmpty())
+            @if($tagihans->isEmpty())
                 <div class="si-empty">
                     <i class="bi bi-inbox"></i>
                     <div class="fw-semibold">Belum ada pengajuan ke KPA</div>
@@ -169,32 +169,32 @@
                     <table class="table align-middle mb-0 si-table">
                         <thead>
                             <tr>
-                                <th>Nomor SPP</th>
-                                <th>Tagihan / Uraian</th>
+                                <th>Nomor Tagihan</th>
+                                <th>Tipe / Uraian</th>
                                 <th>Vendor / Penerima</th>
-                                <th class="text-end">Nominal</th>
+                                <th class="text-end">Nominal (Netto)</th>
                                 <th>Diajukan Oleh (PPK)</th>
                                 <th>Status KPA</th>
                                 <th>Waktu</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach($spps as $spp)
+                            @foreach($tagihans as $tagihan)
                                 @php
-                                    $meta = $statusMeta[$spp->kpa_approval_status] ?? ['label' => $spp->kpa_approval_status, 'class' => 'si-badge-warning', 'icon' => 'bi-question-circle'];
-                                    $vendor = $spp->tagihan?->detailKontrak?->kontrakTermin?->kontrak?->vendor?->nama_pihak
-                                        ?? $spp->tagihan?->pihak?->nama_pihak
+                                    $meta = $statusMeta[$tagihan->kpa_approval_status] ?? ['label' => $tagihan->kpa_approval_status, 'class' => 'si-badge-warning', 'icon' => 'bi-question-circle'];
+                                    $vendor = $tagihan->detailKontrak?->kontrakTermin?->kontrak?->vendor?->nama_pihak
+                                        ?? $tagihan->pihak?->nama_pihak
                                         ?? '-';
-                                    $ppkNama = $spp->ppkVerifikator?->name ?? $spp->dibuatOleh?->name ?? '-';
+                                    $ppkNama = $tagihan->ppkUser?->name ?? $tagihan->creator?->name ?? '-';
                                 @endphp
                                 <tr>
-                                    <td><span class="si-mono">{{ $spp->nomor_spp }}</span></td>
+                                    <td><span class="si-mono">{{ $tagihan->nomor_tagihan }}</span></td>
                                     <td>
-                                        <div class="fw-semibold text-dark">{{ $spp->tagihan?->nomor_tagihan ?? '-' }}</div>
-                                        <div class="small text-muted text-truncate" style="max-width:280px;">{{ Str::limit($spp->tagihan?->deskripsi ?? $spp->uraian ?? '-', 60) }}</div>
+                                        <div class="fw-semibold text-dark">{{ ucfirst(strtolower($tagihan->tipe_tagihan ?? '-')) }}</div>
+                                        <div class="small text-muted text-truncate" style="max-width:280px;">{{ Str::limit($tagihan->deskripsi ?? '-', 60) }}</div>
                                     </td>
                                     <td>{{ $vendor }}</td>
-                                    <td class="text-end fw-bold">{{ $fmtRp($spp->nominal_spp) }}</td>
+                                    <td class="text-end fw-bold">{{ $fmtRp($tagihan->total_netto) }}</td>
                                     <td>
                                         <span class="d-inline-flex align-items-center gap-1">
                                             <i class="bi bi-person-badge text-muted"></i> {{ $ppkNama }}
@@ -202,20 +202,20 @@
                                     </td>
                                     <td>
                                         <span class="si-badge {{ $meta['class'] }}"><i class="bi {{ $meta['icon'] }}"></i> {{ $meta['label'] }}</span>
-                                        @if($spp->kpa_approval_status !== 'PENDING_KPA' && $spp->kpaApprover)
-                                            <div class="small text-muted mt-1"><i class="bi bi-person-check me-1"></i>{{ $spp->kpaApprover->name }}</div>
+                                        @if($tagihan->kpa_approval_status !== 'PENDING_KPA' && $tagihan->kpaApprover)
+                                            <div class="small text-muted mt-1"><i class="bi bi-person-check me-1"></i>{{ $tagihan->kpaApprover->name }}</div>
                                         @endif
                                     </td>
                                     <td>
                                         <div class="small">
-                                            @if($spp->kpa_approved_at)
-                                                <i class="bi bi-clock-history text-muted me-1"></i>{{ \Illuminate\Support\Carbon::parse($spp->kpa_approved_at)->translatedFormat('d M Y, H:i') }}
+                                            @if($tagihan->kpa_approved_at)
+                                                <i class="bi bi-clock-history text-muted me-1"></i>{{ \Illuminate\Support\Carbon::parse($tagihan->kpa_approved_at)->translatedFormat('d M Y, H:i') }}
                                             @else
-                                                <span class="text-muted">Diajukan {{ optional($spp->updated_at)->diffForHumans() }}</span>
+                                                <span class="text-muted">Diajukan {{ optional($tagihan->updated_at)->diffForHumans() }}</span>
                                             @endif
                                         </div>
-                                        @if($spp->kpa_approval_notes)
-                                            <div class="small text-muted fst-italic mt-1" style="max-width:220px;">"{{ Str::limit($spp->kpa_approval_notes, 50) }}"</div>
+                                        @if($tagihan->kpa_approval_notes)
+                                            <div class="small text-muted fst-italic mt-1" style="max-width:220px;">"{{ Str::limit($tagihan->kpa_approval_notes, 50) }}"</div>
                                         @endif
                                     </td>
                                 </tr>
@@ -225,9 +225,9 @@
                 </div>
             @endif
         </div>
-        @if($spps->hasPages())
+        @if($tagihans->hasPages())
             <div class="card-footer bg-white border-0 py-3">
-                {{ $spps->links() }}
+                {{ $tagihans->links() }}
             </div>
         @endif
     </div>

@@ -57,5 +57,10 @@ return [
             'suffix_code' => 'APTP',
             'sequence_group' => 'KU_APTP',
         ],
+        'SPP_BLU' => [
+            'series_prefix' => 'SPP-BLU',
+            'suffix_code' => 'APTP',
+            'sequence_group' => 'SPP_BLU_APTP',
+        ],
     ],
 ];

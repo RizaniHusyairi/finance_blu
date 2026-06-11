@@ -899,6 +899,19 @@
         <div class="col-lg-4">
             <div class="sticky-top topbar-safe-sticky z-1">
 
+                {{-- Card Persetujuan KPA (Standing Instruction) — diajukan PPK --}}
+                @include('tagihan.partials.kpa_approval_card', ['tagihan' => $tagihan])
+
+                @if(in_array($tagihan->status, ['READY_FOR_SPP', 'PROSES_SPP', 'SELESAI'], true))
+                <div class="card border-0 shadow-sm rounded-4 mb-3">
+                    <div class="card-body p-3">
+                        <a href="{{ route('proses-tagihan.show', $tagihan->id) }}" class="btn btn-primary w-100 rounded-pill fw-semibold">
+                            <i class="bi bi-arrow-right-circle me-1"></i>Lanjut ke Proses Tagihan
+                        </a>
+                    </div>
+                </div>
+                @endif
+
                 {{-- Card Aksi / Status Anda --}}
                 <div class="card glass-action-panel mb-3 shadow-sm">
                     <div class="card-body p-4">

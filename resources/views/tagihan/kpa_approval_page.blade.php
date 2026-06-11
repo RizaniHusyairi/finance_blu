@@ -12,7 +12,7 @@
                         </div>
                         <div>
                             <h4 class="mb-1 fw-bold text-white">Persetujuan Tagihan KPA</h4>
-                            <p class="mb-0 text-white text-opacity-75 fs-6">Detail dokumen SPP dan tagihan yang memerlukan persetujuan Anda.</p>
+                            <p class="mb-0 text-white text-opacity-75 fs-6">Detail tagihan yang memerlukan persetujuan Anda.</p>
                         </div>
                     </div>
                 </div>
@@ -31,36 +31,35 @@
                         </div>
                     @endif
 
-                    <!-- Detail SPP Section -->
+                    <!-- Detail Tagihan Section -->
                     <h5 class="fw-bold mb-3 text-primary"><i class="bi bi-file-earmark-text me-2"></i>Informasi Tagihan</h5>
                     <div class="row g-4 mb-4">
                         <div class="col-md-6">
                             <div class="p-3 bg-light rounded-3 h-100 border">
-                                <span class="text-secondary d-block fs-7 mb-1">Nomor SPP</span>
-                                <span class="fw-bold fs-6 text-dark">{{ $spp->nomor_spp }}</span>
+                                <span class="text-secondary d-block fs-7 mb-1">Nomor Tagihan</span>
+                                <span class="fw-bold fs-6 text-dark">{{ $tagihan->nomor_tagihan }}</span>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="p-3 bg-light rounded-3 h-100 border">
-                                <span class="text-secondary d-block fs-7 mb-1">Tanggal SPP</span>
-                                <span class="fw-bold fs-6 text-dark">{{ \Carbon\Carbon::parse($spp->tanggal_spp)->translatedFormat('d F Y') }}</span>
+                                <span class="text-secondary d-block fs-7 mb-1">Tanggal Pengajuan</span>
+                                <span class="fw-bold fs-6 text-dark">{{ \Carbon\Carbon::parse($tagihan->created_at)->translatedFormat('d F Y') }}</span>
                             </div>
                         </div>
                         @php
-                            $tipe = $spp->tagihan?->tipe_tagihan;
-                            $isPerjaldin = !empty($spp->tagihan_perjaldin_komponen_id);
+                            $tipe = $tagihan->tipe_tagihan;
                         @endphp
-                        
-                        @if($isPerjaldin)
+
+                        @if($tipe === 'PERJALDIN')
                             @php
-                                $detailPerjaldin = $spp->tagihan?->detailPerjaldin?->first();
-                                $totalPegawai = $spp->tagihan?->detailPerjaldin?->count() ?? 1;
+                                $detailPerjaldin = $tagihan->detailPerjaldin?->first();
+                                $totalPegawai = $tagihan->detailPerjaldin?->count() ?? 1;
                             @endphp
                             <div class="col-12">
                                 <div class="p-3 bg-light rounded-3 border">
                                     <span class="text-secondary d-block fs-7 mb-1">Pegawai yang Ditugaskan</span>
                                     <span class="fw-bold fs-6 text-dark">
-                                        {{ $detailPerjaldin?->nama_pegawai ?? '-' }} 
+                                        {{ $detailPerjaldin?->nama_pegawai ?? '-' }}
                                         @if($totalPegawai > 1)
                                             <span class="badge bg-secondary ms-2">+{{ $totalPegawai - 1 }} Pegawai Lainnya</span>
                                         @endif
@@ -77,42 +76,48 @@
                                 <div class="p-3 bg-light rounded-3 h-100 border">
                                     <span class="text-secondary d-block fs-7 mb-1">Tanggal & Lama Perjalanan</span>
                                     <span class="fw-medium text-dark">
-                                        {{ $detailPerjaldin && $detailPerjaldin->tgl_berangkat ? \Carbon\Carbon::parse($detailPerjaldin->tgl_berangkat)->translatedFormat('d M Y') : '-' }} 
+                                        {{ $detailPerjaldin && $detailPerjaldin->tgl_berangkat ? \Carbon\Carbon::parse($detailPerjaldin->tgl_berangkat)->translatedFormat('d M Y') : '-' }}
                                         ({{ $detailPerjaldin?->lama_hari ?? 0 }} Hari)
                                     </span>
                                 </div>
                             </div>
-                            
+
                         @elseif($tipe === 'HONORARIUM')
                             <div class="col-md-6">
                                 <div class="p-3 bg-light rounded-3 h-100 border">
                                     <span class="text-secondary d-block fs-7 mb-1">Jumlah Personel</span>
                                     <span class="fw-bold fs-6 text-dark">
-                                        <i class="bi bi-people-fill me-1 text-primary"></i> 
-                                        {{ $spp->tagihan?->detailHonorarium?->count() ?? 0 }} Orang
+                                        <i class="bi bi-people-fill me-1 text-primary"></i>
+                                        {{ $tagihan->detailHonorarium?->count() ?? 0 }} Orang
                                     </span>
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="p-3 bg-light rounded-3 h-100 border">
                                     <span class="text-secondary d-block fs-7 mb-1">Bulan/Periode Honor</span>
-                                    <span class="fw-bold fs-6 text-dark">{{ \Carbon\Carbon::parse($spp->tanggal_spp)->translatedFormat('F Y') }}</span>
+                                    <span class="fw-bold fs-6 text-dark">
+                                        @if($tagihan->periode_bulan && $tagihan->periode_tahun)
+                                            {{ \Carbon\Carbon::createFromDate($tagihan->periode_tahun, $tagihan->periode_bulan, 1)->translatedFormat('F Y') }}
+                                        @else
+                                            {{ \Carbon\Carbon::parse($tagihan->created_at)->translatedFormat('F Y') }}
+                                        @endif
+                                    </span>
                                 </div>
                             </div>
                             <div class="col-12">
                                 <div class="p-3 bg-light rounded-3 border">
                                     <span class="text-secondary d-block fs-7 mb-1">Uraian Kegiatan</span>
-                                    <span class="fw-medium text-dark">{{ $spp->tagihan?->deskripsi ?? '-' }}</span>
+                                    <span class="fw-medium text-dark">{{ $tagihan->deskripsi ?? '-' }}</span>
                                 </div>
                             </div>
-                            
+
                         @else
                             <div class="col-12">
                                 <div class="p-3 bg-light rounded-3 border">
                                     <span class="text-secondary d-block fs-7 mb-1">Vendor / Rekanan</span>
                                     <span class="fw-bold fs-6 text-dark">
-                                        {{ $spp->tagihan?->detailKontrak?->kontrakTermin?->kontrak?->vendor?->nama_pihak 
-                                            ?? $spp->tagihan?->pihak?->nama_pihak 
+                                        {{ $tagihan->detailKontrak?->kontrakTermin?->kontrak?->vendor?->nama_pihak
+                                            ?? $tagihan->pihak?->nama_pihak
                                             ?? '-' }}
                                     </span>
                                 </div>
@@ -120,7 +125,7 @@
                             <div class="col-12">
                                 <div class="p-3 bg-light rounded-3 border">
                                     <span class="text-secondary d-block fs-7 mb-1">Uraian Penggunaan</span>
-                                    <span class="fw-medium text-dark">{{ $spp->tagihan?->deskripsi ?? '-' }}</span>
+                                    <span class="fw-medium text-dark">{{ $tagihan->deskripsi ?? '-' }}</span>
                                 </div>
                             </div>
                         @endif
@@ -131,13 +136,13 @@
                     <div class="p-4 rounded-4 border mb-5 shadow-sm bg-white">
                         <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom border-light-subtle">
                             <span class="text-secondary fs-6 fw-medium">Nilai Tagihan Kotor</span>
-                            <span class="fw-bold fs-5 text-dark">Rp {{ number_format($spp->tagihan?->total_bruto ?? 0, 0, ',', '.') }}</span>
+                            <span class="fw-bold fs-5 text-dark">Rp {{ number_format($tagihan->total_bruto ?? 0, 0, ',', '.') }}</span>
                         </div>
-                        
+
                         <div class="mb-3 pb-3 border-bottom border-light-subtle">
                             <span class="text-secondary fs-6 fw-medium d-block mb-2">Potongan / Pajak</span>
-                            @if($spp->tagihan?->potonganTagihan && $spp->tagihan->potonganTagihan->count() > 0)
-                                @foreach($spp->tagihan->potonganTagihan as $potongan)
+                            @if($tagihan->potonganTagihan && $tagihan->potonganTagihan->count() > 0)
+                                @foreach($tagihan->potonganTagihan as $potongan)
                                     <div class="d-flex justify-content-between align-items-center mb-1">
                                         <span class="text-muted fs-7"><i class="bi bi-dash text-danger me-1"></i>{{ $potongan->nama_pajak_snapshot ?? $potongan->jenis_potongan }}</span>
                                         <span class="text-danger fw-medium fs-7">- Rp {{ number_format($potongan->nominal_potongan, 0, ',', '.') }}</span>
@@ -150,7 +155,7 @@
 
                         <div class="d-flex justify-content-between align-items-center pt-2">
                             <span class="fw-bold fs-5 text-primary">Total Bersih (Netto)</span>
-                            <span class="fw-bold fs-3 text-success">Rp {{ number_format($spp->nominal_spp, 0, ',', '.') }}</span>
+                            <span class="fw-bold fs-3 text-success">Rp {{ number_format($tagihan->total_netto ?? 0, 0, ',', '.') }}</span>
                         </div>
                     </div>
 
@@ -183,10 +188,10 @@
                     </div>
 
                     <!-- Approval Form -->
-                    @if(!$spp->kpa_approval_status || $spp->kpa_approval_status === 'PENDING_KPA')
+                    @if(!$tagihan->kpa_approval_status || $tagihan->kpa_approval_status === 'PENDING_KPA')
                         <h5 class="fw-bold mb-3 text-primary"><i class="bi bi-pencil-square me-2"></i>Tindakan Persetujuan</h5>
                         <div class="bg-light p-4 rounded-4 border">
-                            <form action="{{ route('kpa.approval.process', $spp->id) }}" method="POST">
+                            <form action="{{ route('kpa.approval.process', $tagihan->id) }}" method="POST">
                                 @csrf
                                 <div class="mb-4">
                                     <label for="notes" class="form-label fw-bold text-dark">Catatan (Opsional)</label>
@@ -208,15 +213,15 @@
                             <div>
                                 <h6 class="fw-bold mb-1">Tagihan Sudah Diproses</h6>
                                 <p class="mb-0 text-secondary">
-                                    Tagihan ini telah <strong>{{ $spp->kpa_approval_status === 'APPROVED' ? 'Disetujui' : 'Ditolak' }}</strong> 
-                                    pada {{ \Carbon\Carbon::parse($spp->kpa_approved_at)->translatedFormat('d F Y H:i') }}.
+                                    Tagihan ini telah <strong>{{ $tagihan->kpa_approval_status === 'APPROVED' ? 'Disetujui' : 'Ditolak' }}</strong>
+                                    pada {{ \Carbon\Carbon::parse($tagihan->kpa_approved_at)->translatedFormat('d F Y H:i') }}.
                                 </p>
                             </div>
                         </div>
                     @endif
                 </div>
             </div>
-            
+
             <div class="text-center text-muted fs-7 mb-5">
                 Masuk sebagai <strong>{{ $user->name }}</strong> (KPA) &bull; Sistem Informasi Keuangan BLU
             </div>

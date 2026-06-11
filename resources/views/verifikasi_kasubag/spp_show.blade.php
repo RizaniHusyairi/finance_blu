@@ -269,9 +269,6 @@
         </div>        <!-- Kolom Kanan: Dokumen & Aksi -->
         <div class="col-xl-4">
             
-            <!-- Card Standing Instruction -->
-            @include('spps.partials.standing_instruction_card')
-
             <!-- Dokumen Pendukung -->
             <div class="verif-card anim-fade-up delay-4 mb-4">
                 <div class="verif-card-header d-flex align-items-center gap-2"><i class="bi bi-folder2-open text-primary"></i> Dokumen Pendukung</div>

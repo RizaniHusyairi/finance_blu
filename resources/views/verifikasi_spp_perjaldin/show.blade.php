@@ -327,9 +327,6 @@
 
         {{-- Kolom Kanan: Verifikator & Aksi --}}
         <div class="col-xl-4">
-            <!-- Standing Instruction -->
-            @include('spps.partials.standing_instruction_card')
-
             {{-- Info Verifikator --}}
             <div class="card border-0 shadow-sm mb-4">
                 <div class="card-header bg-white py-3">

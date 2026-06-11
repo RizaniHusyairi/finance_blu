@@ -2,8 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Spp;
+use App\Models\Tagihan;
 use App\Models\User;
+use App\Services\DokumenChainService;
 use App\Services\EmailNotificationService;
 use App\Services\WhatsappService;
 use Illuminate\Support\Collection;
@@ -11,17 +12,17 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\URL;
-use Carbon\Carbon;
 
 class KpaApprovalController extends Controller
 {
     /**
-     * PPK mengirim WA ke KPA untuk meminta persetujuan
+     * PPK mengirim WA ke KPA untuk meminta persetujuan tagihan
+     * (diajukan dari halaman verifikasi tagihan kontrak/perjaldin/honorarium).
      */
-    public function sendWa(Request $request, $sppId, WhatsappService $whatsappService, EmailNotificationService $emailNotificationService)
+    public function sendWa(Request $request, $tagihanId, WhatsappService $whatsappService, EmailNotificationService $emailNotificationService)
     {
-        $spp = Spp::with('tagihan')->findOrFail($sppId);
-        
+        $tagihan = Tagihan::with(['detailKontrak.kontrakTermin.kontrak.vendor', 'pihak'])->findOrFail($tagihanId);
+
         // Cari user KPA
         $kpaUser = User::role('KPA')->first();
         if (!$kpaUser) {
@@ -35,20 +36,20 @@ class KpaApprovalController extends Controller
 
         // Generate Signed URL valid for 24 hours
         $url = URL::temporarySignedRoute(
-            'kpa.approval.show', 
-            now()->addHours(24), 
-            ['sppId' => $spp->id, 'user_id' => $kpaUser->id]
+            'kpa.approval.show',
+            now()->addHours(24),
+            ['tagihanId' => $tagihan->id, 'user_id' => $kpaUser->id]
         );
 
-        $vendorName = $spp->tagihan?->detailKontrak?->kontrakTermin?->kontrak?->vendor?->nama_pihak 
-            ?? $spp->tagihan?->pihak?->nama_pihak 
+        $vendorName = $tagihan->detailKontrak?->kontrakTermin?->kontrak?->vendor?->nama_pihak
+            ?? $tagihan->pihak?->nama_pihak
             ?? '-';
-        $nominal = 'Rp ' . number_format($spp->nominal_spp, 0, ',', '.');
+        $nominal = 'Rp ' . number_format($tagihan->total_netto, 0, ',', '.');
 
         $message = "*PENGAJUAN PERSETUJUAN TAGIHAN (KPA)*\n\n";
         $message .= "Yth. KPA,\n";
         $message .= "Terdapat tagihan baru yang memerlukan persetujuan Anda sebelum diproses lebih lanjut oleh PPK.\n\n";
-        $message .= "*Nomor SPP:* {$spp->nomor_spp}\n";
+        $message .= "*Nomor Tagihan:* {$tagihan->nomor_tagihan}\n";
         $message .= "*Vendor/Rekanan:* {$vendorName}\n";
         $message .= "*Nominal:* {$nominal}\n\n";
         $message .= "Silakan klik tautan di bawah ini untuk melihat detail dan memberikan persetujuan:\n";
@@ -58,7 +59,7 @@ class KpaApprovalController extends Controller
         $emailMessage = "Yth. KPA,\n\n"
             . "Dengan hormat,\n\n"
             . "Terdapat pengajuan persetujuan tagihan yang memerlukan tindak lanjut Bapak/Ibu sebelum diproses lebih lanjut.\n\n"
-            . "Nomor SPP : {$spp->nomor_spp}\n"
+            . "Nomor Tagihan : {$tagihan->nomor_tagihan}\n"
             . "Vendor/Rekanan : {$vendorName}\n"
             . "Nominal : {$nominal}\n\n"
             . "Silakan meninjau detail dan memberikan persetujuan melalui tautan berikut:\n"
@@ -73,14 +74,14 @@ class KpaApprovalController extends Controller
                 if ((bool) \App\Models\IntegrationSetting::getValue('email.kpa_approval.enabled', true)) {
                     $emailNotificationService->sendNotification(
                         (string) $kpaUser->email,
-                        'Permohonan Persetujuan Tagihan KPA - SPP ' . $spp->nomor_spp,
+                        'Permohonan Persetujuan Tagihan KPA - ' . $tagihan->nomor_tagihan,
                         $emailMessage,
-                        $spp,
+                        $tagihan,
                         'send_kpa_approval_email'
                     );
                 }
 
-                $spp->update([
+                $tagihan->update([
                     'kpa_approval_status' => 'PENDING_KPA',
                     'kpa_approved_at' => null,
                     'kpa_approved_by' => null,
@@ -98,7 +99,7 @@ class KpaApprovalController extends Controller
     /**
      * KPA membuka halaman dari Signed URL
      */
-    public function showApproval(Request $request, $sppId)
+    public function showApproval(Request $request, $tagihanId)
     {
         if (!$request->hasValidSignature()) {
             abort(403, 'Tautan tidak valid atau sudah kedaluwarsa.');
@@ -110,48 +111,57 @@ class KpaApprovalController extends Controller
         // Auto login KPA
         Auth::loginUsingId($user->id);
 
-        $spp = Spp::with([
-            'tagihan.detailKontrak.kontrakTermin.kontrak.vendor', 
-            'tagihan.detailKontrak.arsipDokumen',
-            'tagihan.detailPerjaldin', 
-            'tagihan.detailHonorarium',
-            'tagihan.arsipDokumen.uploader',
-            'dipaRevisionItem', 
-            'tagihan.potonganTagihan.arsipDokumen',
+        $tagihan = Tagihan::with([
+            'detailKontrak.kontrakTermin.kontrak.vendor',
+            'detailKontrak.arsipDokumen',
+            'detailPerjaldin',
+            'detailHonorarium',
             'arsipDokumen.uploader',
-        ])->findOrFail($sppId);
+            'dipaRevisionItem',
+            'potonganTagihan.arsipDokumen',
+            'pihak',
+        ])->findOrFail($tagihanId);
 
-        if ($spp->kpa_approval_status === 'APPROVED') {
+        if ($tagihan->kpa_approval_status === 'APPROVED') {
             return redirect()->route('dashboard')->with('success', 'Tagihan ini sudah Anda setujui sebelumnya.');
         }
 
-        $dokumenItems = $this->buildDokumenPendukung($spp);
+        $dokumenItems = $this->buildDokumenPendukung($tagihan);
 
-        return view('spps.kpa_approval_page', compact('spp', 'user', 'dokumenItems'));
+        return view('tagihan.kpa_approval_page', compact('tagihan', 'user', 'dokumenItems'));
     }
 
     /**
      * KPA memproses (Setuju / Tolak)
      */
-    public function processApproval(Request $request, $sppId)
+    public function processApproval(Request $request, $tagihanId, DokumenChainService $chainService)
     {
         $request->validate([
             'action' => 'required|in:approve,reject',
             'notes' => 'nullable|string'
         ]);
 
-        $spp = Spp::findOrFail($sppId);
+        $tagihan = Tagihan::findOrFail($tagihanId);
 
         if ($request->action === 'approve') {
-            $spp->update([
+            $tagihan->update([
                 'kpa_approval_status' => 'APPROVED',
                 'kpa_approved_at' => now(),
                 'kpa_approved_by' => Auth::id(),
                 'kpa_approval_notes' => $request->notes,
             ]);
             $msg = 'Anda telah menyetujui tagihan ini.';
+            try {
+                $chainService->maybeGenerateDraftChain($tagihan->fresh(), Auth::user());
+            } catch (\RuntimeException $e) {
+                Log::warning('Draft chain generation after KPA approval failed.', [
+                    'tagihan_id' => $tagihan->id,
+                    'error' => $e->getMessage(),
+                ]);
+                $msg .= ' Draft dokumen belum dibuat: '.$e->getMessage();
+            }
         } else {
-            $spp->update([
+            $tagihan->update([
                 'kpa_approval_status' => 'REJECTED',
                 'kpa_approved_at' => now(),
                 'kpa_approved_by' => Auth::id(),
@@ -163,10 +173,9 @@ class KpaApprovalController extends Controller
         return redirect()->route('dashboard')->with('success', $msg);
     }
 
-    private function buildDokumenPendukung(Spp $spp): Collection
+    private function buildDokumenPendukung(Tagihan $tagihan): Collection
     {
         $items = collect();
-        $tagihan = $spp->tagihan;
 
         $addFile = function (?string $title, ?string $path, ?string $source = null) use ($items) {
             $path = trim((string) $path);
@@ -201,16 +210,11 @@ class KpaApprovalController extends Controller
             $addFile($title, $path, $source);
         };
 
-        $addArsip($spp->signedStandingInstructionArsip ?? null, 'SPP');
-        foreach ($spp->arsipDokumen ?? collect() as $arsip) {
-            $addArsip($arsip, 'SPP');
-        }
-
-        foreach ($tagihan?->arsipDokumen ?? collect() as $arsip) {
+        foreach ($tagihan->arsipDokumen ?? collect() as $arsip) {
             $addArsip($arsip, 'Tagihan');
         }
 
-        if ($tagihan?->detailKontrak) {
+        if ($tagihan->detailKontrak) {
             $detail = $tagihan->detailKontrak;
             $kontrakFiles = [
                 'Berita Acara Pemeriksaan Pekerjaan (BAPP)' => $detail->file_bapp,
@@ -231,7 +235,7 @@ class KpaApprovalController extends Controller
             }
         }
 
-        foreach ($tagihan?->detailPerjaldin ?? collect() as $detail) {
+        foreach ($tagihan->detailPerjaldin ?? collect() as $detail) {
             $nama = $detail->nama_pegawai ?? $detail->pegawai?->nama_lengkap ?? 'Peserta';
             $addFile('Surat Tugas / SPT - ' . $nama, $detail->spt_file_path ?? null, 'Perjaldin');
             $addFile('Tiket Perjalanan - ' . $nama, $detail->tiket_file_path ?? null, 'Perjaldin');
@@ -240,13 +244,13 @@ class KpaApprovalController extends Controller
             $addFile('Bukti Uang Harian - ' . $nama, $detail->uang_harian_file_path ?? null, 'Perjaldin');
         }
 
-        foreach ($tagihan?->potonganTagihan ?? collect() as $potongan) {
+        foreach ($tagihan->potonganTagihan ?? collect() as $potongan) {
             foreach ($potongan->arsipDokumen ?? collect() as $arsip) {
                 $addArsip($arsip, 'Pajak/Potongan');
             }
         }
 
-        if ($tagihan?->tipe_tagihan === 'HONORARIUM') {
+        if ($tagihan->tipe_tagihan === 'HONORARIUM') {
             $addUrl('Daftar Nominatif Honorarium', route('honorarium.pdf-nominatif', $tagihan->id), 'Dokumen Sistem');
             $addUrl('Dokumen Honorarium', route('honorarium.pdf', $tagihan->id), 'Dokumen Sistem');
         }

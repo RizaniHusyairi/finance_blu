@@ -68,6 +68,16 @@ class TagihanPerjaldinKomponen extends Model
     {
         $spp = $this->dokumenSpp()->with('spm.npi.sp2d')->first();
 
+        // Alur terpadu: komponen tidak punya SPP sendiri — ikuti SPP konsolidasi
+        // milik tagihan (tagihan_perjaldin_komponen_id NULL).
+        if (!$spp && $this->tagihan_id) {
+            $spp = DokumenSpp::with('spm.npi.sp2d')
+                ->where('tagihan_id', $this->tagihan_id)
+                ->whereNull('tagihan_perjaldin_komponen_id')
+                ->latest('id')
+                ->first();
+        }
+
         if (!$spp) {
             $status = $this->dipa_revision_item_id
                 ? self::STATUS_SIAP_BUAT_SPP
@@ -85,6 +95,8 @@ class TagihanPerjaldinKomponen extends Model
                 // mengembalikan status DRAFT, PENDING_PPK, dll
                 $statusMap = [
                     'DRAFT' => self::STATUS_SPP_DRAFT,
+                    'Menunggu Verifikasi' => self::STATUS_PENDING_PPK,
+                    'DISETUJUI_FINAL' => self::STATUS_DISETUJUI_SPP,
                     'PENDING_PPK' => self::STATUS_PENDING_PPK,
                     'PENDING_KASUBBAG' => self::STATUS_PENDING_KASUBBAG,
                     'REVISI_PPK' => self::STATUS_REVISI_PPK,

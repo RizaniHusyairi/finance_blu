@@ -49,6 +49,11 @@ class Tagihan extends Model
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    public function kpaApprover()
+    {
+        return $this->belongsTo(User::class, 'kpa_approved_by');
+    }
+
     // === Relasi Verifikator (untuk display & lookup; snapshot tetap di kolom *_nama_snapshot) ===
     public function ppkUser() { return $this->belongsTo(User::class, 'ppk_user_id'); }
     public function ppspmUser() { return $this->belongsTo(User::class, 'ppspm_user_id'); }

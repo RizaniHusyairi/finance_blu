@@ -81,7 +81,7 @@ class WorkflowWaNotifier
     /**
      * Resolusi metadata dokumen untuk isi pesan & link.
      *
-     * @return array{label:string, nomor:string, uraian:string, nilai:?float, tipe:?string, docKey:string}
+     * @return array{label:string, nomor:string, uraian:string, nilai:?float, tipe:?string, docKey:string, tagihanId:?int}
      */
     private function resolveDocMeta($doc): array
     {
@@ -98,26 +98,27 @@ class WorkflowWaNotifier
                 'nilai' => (float) ($doc->total_bruto ?? $doc->total_netto ?? 0),
                 'tipe' => $doc->tipe_tagihan,
                 'docKey' => 'TAGIHAN',
+                'tagihanId' => $doc->id,
             ],
             $doc instanceof DokumenSpp => [
                 'label' => 'SPP', 'nomor' => $doc->nomor_spp ?? ('#' . $doc->id),
-                'uraian' => $uraian, 'nilai' => $nilai, 'tipe' => $tipe, 'docKey' => 'SPP',
+                'uraian' => $uraian, 'nilai' => $nilai, 'tipe' => $tipe, 'docKey' => 'SPP', 'tagihanId' => $tagihan?->id,
             ],
             $doc instanceof DokumenSpm => [
                 'label' => 'SPM', 'nomor' => $doc->nomor_spm ?? ('#' . $doc->id),
-                'uraian' => $uraian, 'nilai' => $nilai, 'tipe' => $tipe, 'docKey' => 'SPM',
+                'uraian' => $uraian, 'nilai' => $nilai, 'tipe' => $tipe, 'docKey' => 'SPM', 'tagihanId' => $tagihan?->id,
             ],
             $doc instanceof DokumenNpi => [
                 'label' => 'NPI', 'nomor' => $doc->nomor_npi ?? ('#' . $doc->id),
-                'uraian' => $uraian, 'nilai' => $nilai, 'tipe' => $tipe, 'docKey' => 'NPI',
+                'uraian' => $uraian, 'nilai' => $nilai, 'tipe' => $tipe, 'docKey' => 'NPI', 'tagihanId' => $tagihan?->id,
             ],
             $doc instanceof DokumenSp2d => [
                 'label' => 'SP2D', 'nomor' => $doc->nomor_sp2d ?? ('#' . $doc->id),
-                'uraian' => $uraian, 'nilai' => $nilai, 'tipe' => $tipe, 'docKey' => 'SP2D',
+                'uraian' => $uraian, 'nilai' => $nilai, 'tipe' => $tipe, 'docKey' => 'SP2D', 'tagihanId' => $tagihan?->id,
             ],
             default => [
                 'label' => 'Dokumen', 'nomor' => '#' . ($doc->id ?? '-'),
-                'uraian' => $uraian, 'nilai' => $nilai, 'tipe' => $tipe, 'docKey' => 'LAINNYA',
+                'uraian' => $uraian, 'nilai' => $nilai, 'tipe' => $tipe, 'docKey' => 'LAINNYA', 'tagihanId' => $tagihan?->id,
             ],
         };
     }
@@ -153,7 +154,7 @@ class WorkflowWaNotifier
     private function buildMessage(array $meta, User $user, WorkflowApproval $approval): string
     {
         $peran = $approval->nama_step ?: $this->roleName($approval->role_code);
-        $url = $this->resolveActionUrl($meta['docKey'], $meta['tipe'], $approval->role_code);
+        $url = $this->resolveActionUrl($meta['docKey'], $meta['tipe'], $approval->role_code, $meta['tagihanId'] ?? null);
         $nilaiBaris = $meta['nilai'] !== null
             ? "\n*Nilai:* Rp " . number_format((float) $meta['nilai'], 0, ',', '.')
             : '';
@@ -176,8 +177,16 @@ class WorkflowWaNotifier
      * dan role verifikator. Dibungkus try/catch agar nama route yang tidak cocok
      * tidak menggagalkan notifikasi.
      */
-    private function resolveActionUrl(string $docKey, ?string $tipe, string $roleCode): ?string
+    private function resolveActionUrl(string $docKey, ?string $tipe, string $roleCode, ?int $tagihanId = null): ?string
     {
+        if ($tagihanId && in_array($docKey, ['SPP', 'SPM', 'NPI', 'SP2D'], true)) {
+            try {
+                return route('proses-tagihan.show', $tagihanId);
+            } catch (\Throwable $e) {
+                return null;
+            }
+        }
+
         $tipe = Str::upper((string) $tipe);
         $role = $this->normalizeRole($roleCode);
 

@@ -209,13 +209,6 @@ class SppVerifikasiController extends Controller
         $approvalId = $request->input('approval_id');
         abort_unless($approvalId, 400, 'Approval ID diperlukan.');
 
-        $approval = \App\Models\WorkflowApproval::find($approvalId);
-        if ($approval && $approval->role_code === 'PPK') {
-            if ($spp->kpa_approval_status !== 'APPROVED') {
-                return back()->with('error', 'Persetujuan Tagihan dari KPA belum disetujui. Silakan ajukan persetujuan via WA terlebih dahulu.');
-            }
-        }
-
         $workflowFullyApproved = false;
         try {
             app(WorkflowService::class)->approveCurrentStep($spp, Auth::id(), 'Dokumen SPP disetujui.', $approvalId);

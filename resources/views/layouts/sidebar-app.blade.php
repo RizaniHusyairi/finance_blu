@@ -573,6 +573,16 @@
 
         @endhasrole
 
+        @hasanyrole('Super Admin|Operator BLU|PPK|PPSPM|Bendahara Pengeluaran|Bendahara Penerimaan|Koordinator Keuangan|Kepala Subbagian Keuangan dan Tata Usaha')
+        <li>
+          <a href="{{ route('proses-tagihan.index') }}">
+            <div class="parent-icon"><i class="material-icons-outlined">account_tree</i></div>
+            <div class="menu-title">Proses Tagihan</div>
+          </a>
+        </li>
+        @endhasanyrole
+
+        @if(false)
         @hasanyrole('PPK|Kepala Subbagian Keuangan dan Tata Usaha|Koordinator Keuangan')
         {{-- Verifikasi SPP (Terpadu 3 Role) --}}
         <li>
@@ -745,6 +755,7 @@
         </li>
         {{-- Penyetoran Pajak END --}}
         @endhasrole
+        @endif
 
         <!-- <li>
           <a href="javascript:;" class="has-arrow">
