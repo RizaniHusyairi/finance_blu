@@ -115,13 +115,25 @@
             <td class="num">1.</td>
             <td class="label">Nomor dan Tanggal DIPA</td>
             <td class="colon">:</td>
-            <td>SP DIPA- {{ $dipa->nomor_dipa ?? '-' }} tanggal {{ $dipa && $dipa->tanggal_disahkan ? \Carbon\Carbon::parse($dipa->tanggal_disahkan)->translatedFormat('d F Y') : '-' }}</td>
+            <td>
+                @if($dipa)
+                    SP DIPA- {{ $dipa->nomor_dipa }} tanggal {{ $dipa->tanggal_disahkan ? \Carbon\Carbon::parse($dipa->tanggal_disahkan)->translatedFormat('d F Y') : '-' }}
+                @else
+                    <i style="color:#666;">(Akan ditentukan oleh PPK pada saat proses tagihan)</i>
+                @endif
+            </td>
         </tr>
         <tr>
             <td class="num">2.</td>
             <td class="label">Nama dan Kode Program Kegiatan</td>
             <td class="colon">:</td>
-            <td>{{ $coa->kode_mak_lengkap ?? '-' }}</td>
+            <td>
+                @if($coa)
+                    {{ $coa->kode_mak_lengkap }}
+                @else
+                    <i style="color:#666;">(Akan ditentukan oleh PPK pada saat proses tagihan)</i>
+                @endif
+            </td>
         </tr>
         <tr>
             <td class="num">3.</td>

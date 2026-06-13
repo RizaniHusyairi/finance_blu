@@ -7,11 +7,12 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Tagihan;
 use App\Models\DetailHonorarium;
+use App\Models\PotonganTagihan;
+use App\Models\MasterTarifPajak;
 use App\Models\MasterPersonelEksternal;
 use App\Models\LogStatusDokumen;
 use App\Models\User;
 use Illuminate\Support\Facades\Notification;
-use App\Support\DipaBudgetOptionService;
 use App\Notifications\WorkflowNotification;
 use App\Services\DocumentArchiveService;
 use App\Services\WorkflowService;
@@ -32,17 +33,19 @@ class HonorariumController extends Controller
 
     public function create()
     {
-        $budgetGroups = DipaBudgetOptionService::groupedOptions();
         $nextNumber = app(\App\Services\DocumentNumberService::class)
             ->previewByKey('KU_HONOR');
+        // Nomor urut diisi manual oleh user; prefill dengan nomor bebas berikutnya.
+        $nextUrut = app(\App\Services\DocumentNumberService::class)
+            ->nextRunningNumberByKey('KU_HONOR');
         $tarifPajaks = \App\Models\MasterTarifPajak::where('status_aktif', true)
-            ->where('kode_pajak', 'like', 'PPH%')
+            ->where('kode_pajak', 'like', 'PPH21%')
             ->orderBy('kode_pajak')->get();
 
         $verifikatorOptions = $this->buildVerifikatorOptions();
 
         return view('honorarium.create', compact(
-            'budgetGroups', 'nextNumber', 'tarifPajaks', 'verifikatorOptions'
+            'nextNumber', 'nextUrut', 'tarifPajaks', 'verifikatorOptions'
         ));
     }
 
@@ -112,8 +115,19 @@ class HonorariumController extends Controller
 
         $request->validate([
             'deskripsi' => 'required|string|max:255',
+            // Nomor urut 4 digit dipilih manual; unik lintas surat KU segrup
+            // (Honorarium/Perjaldin/Surat Pengantar Jasa) pada tahun berjalan.
+            'nomor_urut' => ['required', 'regex:/^[0-9]{1,4}$/', function ($attribute, $value, $fail) {
+                $num = (int) $value;
+                if ($num < 1) {
+                    $fail('Nomor urut minimal 0001.');
+                    return;
+                }
+                if (app(\App\Services\DocumentNumberService::class)->checkNumberExists('KU_HONOR', (int) date('Y'), $num)) {
+                    $fail('Nomor urut ' . str_pad((string) $num, 4, '0', STR_PAD_LEFT) . ' sudah pernah digunakan pada tahun ' . date('Y') . '. Pilih nomor lain.');
+                }
+            }],
             'nama_supplier' => 'required|string|max:150',
-            'dipa_revision_item_id' => 'required|exists:dipa_revision_items,id',
             'items' => 'required|array|min:1',
             'items.*.nama_personel' => 'required|string|max:255',
             'items.*.nrp_nip' => 'nullable|string|max:100',
@@ -144,17 +158,16 @@ class HonorariumController extends Controller
 
         try {
             DB::beginTransaction();
-            $selectedItem = DipaBudgetOptionService::resolveActiveItem($request->dipa_revision_item_id);
 
             $totalBruto = collect($request->items)->sum(fn($i) => (float)($i['nilai_honor'] ?? 0));
             $totalPph = collect($request->items)->sum(fn($i) => (float)($i['pph'] ?? 0));
             $totalNetto = $totalBruto - $totalPph;
 
             $tahun = date('Y');
-            // Nomor surat KU otomatis & bebas-bentrok lintas tipe (Honorarium,
-            // Perjaldin, Surat Pengantar Jasa) via register terpusat.
+            // Nomor urut manual dari user; register terpusat menjaga keunikan
+            // lintas tipe surat KU dan menolak nomor yang sudah terpakai.
             $nomorTagihan = app(\App\Services\DocumentNumberService::class)
-                ->generateByKey('KU_HONOR', (int) $tahun);
+                ->generateByKeyWithNumber('KU_HONOR', (int) $request->nomor_urut, (int) $tahun);
 
             $status = 'DRAFT';
 
@@ -171,8 +184,9 @@ class HonorariumController extends Controller
             $tagihan = Tagihan::create(array_merge([
                 'nomor_tagihan' => $nomorTagihan,
                 'tipe_tagihan' => 'HONORARIUM',
-                'master_dipa_id' => $selectedItem->dipaRevision->master_dipa_id,
-                'dipa_revision_item_id' => $selectedItem->id,
+                // COA dipilih PPK di halaman Proses Tagihan setelah verifikasi selesai.
+                'master_dipa_id' => null,
+                'dipa_revision_item_id' => null,
                 'deskripsi' => $request->deskripsi,
                 'nama_supplier' => $request->nama_supplier,
                 'total_bruto' => $totalBruto,
@@ -202,6 +216,10 @@ class HonorariumController extends Controller
                 ]);
             }
 
+            // Bentuk baris potongan pajak PPh 21 (agregat) agar honor ber-PPh
+            // muncul & dapat disetor di seksi Penyetoran Pajak (Proses Tagihan).
+            $this->syncPotonganPph($tagihan, $totalBruto, $totalPph);
+
             LogStatusDokumen::create([
                 'dokumen_type' => Tagihan::class,
                 'dokumen_id' => $tagihan->id,
@@ -230,9 +248,61 @@ class HonorariumController extends Controller
 
             DB::commit();
             return redirect()->route('honorarium.index')->with('success', 'Data honorarium berhasil disimpan.');
+        } catch (\InvalidArgumentException $e) {
+            // Nomor urut keburu dipakai proses lain (race) — tampilkan di field.
+            DB::rollBack();
+            return back()->withInput()->withErrors(['nomor_urut' => $e->getMessage()]);
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->withInput()->withErrors(['error' => 'Gagal menyimpan: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Bentuk/sinkronkan satu baris potongan_tagihan PAJAK (PPh 21 agregat) untuk
+     * tagihan honorarium. Tanpa baris ini honor ber-PPh tidak muncul di seksi
+     * Penyetoran Pajak (kartu digerakkan oleh potongan_tagihan jenis 'PAJAK').
+     *
+     * - Bila total PPh > 0: buat baris jika belum ada, atau perbarui nominal/DPP
+     *   bila sudah ada (kode billing & NTPN yang sudah diisi tetap dipertahankan).
+     * - Bila total PPh = 0: hapus baris yang BELUM disetor (tanpa NTPN) agar
+     *   tidak menyisakan kewajiban semu; baris yang sudah ber-NTPN dibiarkan.
+     */
+    private function syncPotonganPph(Tagihan $tagihan, float $totalBruto, float $totalPph): void
+    {
+        $existing = $tagihan->potonganTagihan()->where('jenis_potongan', 'PAJAK')->first();
+
+        if ($totalPph <= 0) {
+            if ($existing && blank($existing->ntpn)) {
+                $existing->delete();
+            }
+            return;
+        }
+
+        // Tarif PPh 21 untuk snapshot pajak_id/persentase (pola migration backfill).
+        $pajak = MasterTarifPajak::where('status_aktif', true)
+            ->where('kode_pajak', 'PPH21-TER')
+            ->first()
+            ?? MasterTarifPajak::where('status_aktif', true)
+                ->where('jenis_pajak', 'like', '%21%')
+                ->orderByDesc('berlaku_mulai')
+                ->first();
+
+        $payload = [
+            'pajak_id' => $pajak?->id,
+            'jenis_potongan' => 'PAJAK',
+            'deskripsi' => 'PPh 21 honorarium',
+            'dpp' => max(0, $totalBruto),
+            'persentase_tarif_snapshot' => $pajak?->persentase,
+            'nama_pajak_snapshot' => $pajak?->jenis_pajak,
+            'nominal_potongan' => $totalPph,
+        ];
+
+        if ($existing) {
+            // Pertahankan kode_billing/ntpn/bupot yang mungkin sudah terisi.
+            $existing->update($payload);
+        } else {
+            $tagihan->potonganTagihan()->create($payload);
         }
     }
 
@@ -276,15 +346,14 @@ class HonorariumController extends Controller
                 ->with('error', 'Data dengan status ' . $tagihan->status . ' tidak bisa diedit.');
         }
 
-        $budgetGroups = DipaBudgetOptionService::groupedOptions();
         $tarifPajaks = \App\Models\MasterTarifPajak::where('status_aktif', true)
-            ->where('kode_pajak', 'like', 'PPH%')
+            ->where('kode_pajak', 'like', 'PPH21%')
             ->orderBy('kode_pajak')->get();
 
         $verifikatorOptions = $this->buildVerifikatorOptions();
 
         return view('honorarium.edit', compact(
-            'tagihan', 'budgetGroups', 'tarifPajaks', 'verifikatorOptions'
+            'tagihan', 'tarifPajaks', 'verifikatorOptions'
         ));
     }
 
@@ -314,7 +383,6 @@ class HonorariumController extends Controller
         $request->validate([
             'deskripsi' => 'required|string|max:255',
             'nama_supplier' => 'required|string|max:150',
-            'dipa_revision_item_id' => 'required|exists:dipa_revision_items,id',
             'items' => 'required|array|min:1',
             'items.*.nama_personel' => 'required|string|max:255',
             'items.*.nrp_nip' => 'nullable|string|max:100',
@@ -345,7 +413,6 @@ class HonorariumController extends Controller
 
         try {
             DB::beginTransaction();
-            $selectedItem = DipaBudgetOptionService::resolveActiveItem($request->dipa_revision_item_id);
 
             $totalBruto = collect($request->items)->sum(fn($i) => (float)($i['nilai_honor'] ?? 0));
             $totalPph = collect($request->items)->sum(fn($i) => (float)($i['pph'] ?? 0));
@@ -364,8 +431,6 @@ class HonorariumController extends Controller
             ]);
 
             $tagihan->update(array_merge([
-                'master_dipa_id' => $selectedItem->dipaRevision->master_dipa_id,
-                'dipa_revision_item_id' => $selectedItem->id,
                 'deskripsi' => $request->deskripsi,
                 'nama_supplier' => $request->nama_supplier,
                 'total_bruto' => $totalBruto,
@@ -397,6 +462,10 @@ class HonorariumController extends Controller
                     'no_hp' => $itemData['no_hp'] ?? '',
                 ]);
             }
+
+            // Sinkronkan ulang baris potongan pajak PPh 21 agregat dengan total
+            // PPh yang baru (mempertahankan setoran bila sudah ada billing/NTPN).
+            $this->syncPotonganPph($tagihan, $totalBruto, $totalPph);
 
             LogStatusDokumen::create([
                 'dokumen_type' => Tagihan::class,

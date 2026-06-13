@@ -385,8 +385,7 @@
     <div class="mt-3 mt-lg-0 d-flex flex-wrap gap-2">
         <a href="{{ route('verifikasi-bendahara.perjaldin.index') }}" class="btn btn-sm quick-btn"><i class="bi bi-airplane me-1"></i> Perjaldin</a>
         <a href="{{ route('verifikasi-bendahara.honorarium.index') }}" class="btn btn-sm quick-btn"><i class="bi bi-people me-1"></i> Honor</a>
-        <a href="{{ route('npis.perjaldin.index') }}" class="btn btn-sm quick-btn"><i class="bi bi-file-earmark-text me-1"></i> NPI</a>
-        <a href="{{ route('sp2ds.perjaldin.index') }}" class="btn btn-sm quick-btn"><i class="bi bi-journal-text me-1"></i> SP2D</a>
+        <a href="{{ route('proses-tagihan.index') }}" class="btn btn-sm quick-btn"><i class="bi bi-file-earmark-text me-1"></i> Proses Tagihan</a>
         <a href="{{ route('pembukuan.bku.index') }}" class="btn btn-sm quick-btn btn-primary-light"><i class="bi bi-book me-1"></i> Buka BKU</a>
     </div>
 </div>
@@ -617,7 +616,7 @@
                                     <div class="row-title">NPI Perjaldin</div>
                                     <div class="row-sub">{{ $spmPerjaldinSiapNpi->count() }} SPM Perjaldin Final menunggu NPI</div>
                                 </div>
-                                <a href="{{ route('npis.perjaldin.index') }}" class="btn btn-sm btn-grad-info">Buat</a>
+                                <a href="{{ route('proses-tagihan.index') }}" class="btn btn-sm btn-grad-info">Buat</a>
                             </li>
                         @endif
                         @if($spmHonorSiapNpi->count() > 0)
@@ -665,7 +664,7 @@
                                     <div class="row-title">SP2D Perjaldin</div>
                                     <div class="row-sub">{{ $npiPerjaldinSiapSp2d->count() }} NPI Perjaldin Final menunggu SP2D</div>
                                 </div>
-                                <a href="{{ route('sp2ds.perjaldin.index') }}" class="btn btn-sm btn-grad-primary">Catat</a>
+                                <a href="{{ route('proses-tagihan.index') }}" class="btn btn-sm btn-grad-primary">Catat</a>
                             </li>
                         @endif
                         @if($npiHonorSiapSp2d->count() > 0)

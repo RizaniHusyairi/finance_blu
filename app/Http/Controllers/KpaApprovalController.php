@@ -23,6 +23,26 @@ class KpaApprovalController extends Controller
     {
         $tagihan = Tagihan::with(['detailKontrak.kontrakTermin.kontrak.vendor', 'pihak'])->findOrFail($tagihanId);
 
+        // SI hanya boleh diajukan untuk tagihan yang sudah disetujui penuh.
+        // Tagihan yang dikembalikan untuk revisi (REVISI_*) masih punya COA
+        // terisi, jadi tanpa cek ini tombol ajukan/kirim ulang tetap lolos.
+        if (! app(DokumenChainService::class)->isTagihanFullyApproved($tagihan)) {
+            return back()->with('error', 'Standing Instruction baru dapat diajukan setelah tagihan disetujui seluruh verifikator. Selesaikan proses revisi/verifikasi tagihan terlebih dahulu.');
+        }
+
+        // Urutan proses: COA harus dipilih PPK lebih dulu sebelum SI diajukan ke KPA.
+        if (! app(DokumenChainService::class)->isCoaComplete($tagihan)) {
+            return back()->with('error', 'Pilih COA terlebih dahulu sebelum mengajukan persetujuan ke KPA.');
+        }
+
+        // SI memuat nominal netto & sumber dana — tahan pengajuan selama
+        // verifikator masih meminta perbaikan pajak/COA pada tagihan ini.
+        if ($tagihan->chain_correction_target) {
+            $bagian = $tagihan->chain_correction_target === 'PAJAK' ? 'pajak & faktur pajak' : 'pembebanan COA';
+
+            return back()->with('error', "Selesaikan perbaikan {$bagian} yang diminta verifikator terlebih dahulu sebelum mengajukan persetujuan ke KPA.");
+        }
+
         // Cari user KPA
         $kpaUser = User::role('KPA')->first();
         if (!$kpaUser) {
@@ -101,30 +121,36 @@ class KpaApprovalController extends Controller
      */
     public function showApproval(Request $request, $tagihanId)
     {
-        if (!$request->hasValidSignature()) {
-            abort(403, 'Tautan tidak valid atau sudah kedaluwarsa.');
+        if (!Auth::check() || !Auth::user()->hasAnyRole(['KPA', 'PLT/PLH', 'Super Admin'])) {
+            if (!$request->hasValidSignature()) {
+                abort(403, 'Tautan tidak valid atau sudah kedaluwarsa.');
+            }
+
+            $userId = $request->query('user_id');
+            $user = User::findOrFail($userId);
+
+            // Auto login KPA
+            Auth::loginUsingId($user->id);
+        } else {
+            $user = Auth::user();
         }
-
-        $userId = $request->query('user_id');
-        $user = User::findOrFail($userId);
-
-        // Auto login KPA
-        Auth::loginUsingId($user->id);
 
         $tagihan = Tagihan::with([
             'detailKontrak.kontrakTermin.kontrak.vendor',
             'detailKontrak.arsipDokumen',
-            'detailPerjaldin',
+            'detailPerjaldin.provinsi',
+            'detailPerjaldin.pegawai',
             'detailHonorarium',
             'arsipDokumen.uploader',
-            'dipaRevisionItem',
+            'dipaRevisionItem.coa',
+            'komponenPerjaldin.dipaRevisionItem.coa',
             'potonganTagihan.arsipDokumen',
             'pihak',
+            'workflowInstance.approvals.actedByUser',
+            'logs.user',
         ])->findOrFail($tagihanId);
 
-        if ($tagihan->kpa_approval_status === 'APPROVED') {
-            return redirect()->route('dashboard')->with('success', 'Tagihan ini sudah Anda setujui sebelumnya.');
-        }
+        // Check status redirect removed so KPA can view details even if approved.
 
         $dokumenItems = $this->buildDokumenPendukung($tagihan);
 
@@ -142,6 +168,16 @@ class KpaApprovalController extends Controller
         ]);
 
         $tagihan = Tagihan::findOrFail($tagihanId);
+
+        // Magic link berlaku 24 jam — tagihan bisa saja sudah dikembalikan
+        // untuk revisi (atau sudah diproses) setelah tautan dikirim. Tolak
+        // aksi bila tagihan tidak lagi menunggu persetujuan KPA.
+        if ($tagihan->kpa_approval_status !== 'PENDING_KPA'
+            || ! $chainService->isTagihanFullyApproved($tagihan)
+        ) {
+            return redirect()->route('dashboard')->with('error',
+                'Tagihan ini tidak sedang menunggu persetujuan KPA — kemungkinan sedang direvisi atau permintaan persetujuan sudah tidak berlaku.');
+        }
 
         if ($request->action === 'approve') {
             $tagihan->update([
@@ -175,88 +211,8 @@ class KpaApprovalController extends Controller
 
     private function buildDokumenPendukung(Tagihan $tagihan): Collection
     {
-        $items = collect();
-
-        $addFile = function (?string $title, ?string $path, ?string $source = null) use ($items) {
-            $path = trim((string) $path);
-            if ($path === '') {
-                return;
-            }
-
-            $items->push([
-                'title' => $title ?: basename($path),
-                'path' => $path,
-                'url' => \Illuminate\Support\Facades\Storage::url($path),
-                'source' => $source,
-                'is_generated' => false,
-            ]);
-        };
-
-        $addUrl = function (string $title, string $url, ?string $source = null) use ($items) {
-            $items->push([
-                'title' => $title,
-                'path' => null,
-                'url' => $url,
-                'source' => $source,
-                'is_generated' => true,
-            ]);
-        };
-
-        $addArsip = function ($arsip, ?string $source = null) use ($addFile) {
-            $path = $arsip?->path_file ?? $arsip?->file_path ?? null;
-            $title = $arsip?->nama_file_asli
-                ?: ($arsip?->jenis_dokumen ? ucwords(str_replace('_', ' ', $arsip->jenis_dokumen)) : null);
-
-            $addFile($title, $path, $source);
-        };
-
-        foreach ($tagihan->arsipDokumen ?? collect() as $arsip) {
-            $addArsip($arsip, 'Tagihan');
-        }
-
-        if ($tagihan->detailKontrak) {
-            $detail = $tagihan->detailKontrak;
-            $kontrakFiles = [
-                'Berita Acara Pemeriksaan Pekerjaan (BAPP)' => $detail->file_bapp,
-                'Berita Acara Serah Terima (BAST)' => $detail->file_bast,
-                'Berita Acara Pembayaran (BAP)' => $detail->file_bap,
-                'Invoice Tagihan' => $detail->file_invoice,
-                'Kwitansi Pembayaran' => $detail->file_kwitansi,
-                'Faktur Pajak' => $detail->file_faktur_pajak,
-                'Lampiran Lainnya' => $detail->file_lampiran_lainnya,
-            ];
-
-            foreach ($kontrakFiles as $title => $path) {
-                $addFile($title, $path, 'Detail Kontrak');
-            }
-
-            foreach ($detail->arsipDokumen ?? collect() as $arsip) {
-                $addArsip($arsip, 'Detail Kontrak');
-            }
-        }
-
-        foreach ($tagihan->detailPerjaldin ?? collect() as $detail) {
-            $nama = $detail->nama_pegawai ?? $detail->pegawai?->nama_lengkap ?? 'Peserta';
-            $addFile('Surat Tugas / SPT - ' . $nama, $detail->spt_file_path ?? null, 'Perjaldin');
-            $addFile('Tiket Perjalanan - ' . $nama, $detail->tiket_file_path ?? null, 'Perjaldin');
-            $addFile('Bukti Transport - ' . $nama, $detail->transport_file_path ?? null, 'Perjaldin');
-            $addFile('Bukti Penginapan - ' . $nama, $detail->penginapan_file_path ?? null, 'Perjaldin');
-            $addFile('Bukti Uang Harian - ' . $nama, $detail->uang_harian_file_path ?? null, 'Perjaldin');
-        }
-
-        foreach ($tagihan->potonganTagihan ?? collect() as $potongan) {
-            foreach ($potongan->arsipDokumen ?? collect() as $arsip) {
-                $addArsip($arsip, 'Pajak/Potongan');
-            }
-        }
-
-        if ($tagihan->tipe_tagihan === 'HONORARIUM') {
-            $addUrl('Daftar Nominatif Honorarium', route('honorarium.pdf-nominatif', $tagihan->id), 'Dokumen Sistem');
-            $addUrl('Dokumen Honorarium', route('honorarium.pdf', $tagihan->id), 'Dokumen Sistem');
-        }
-
-        return $items
-            ->unique(fn ($item) => $item['url'] . '|' . $item['title'])
-            ->values();
+        // Logika dipindah ke support class agar bisa dipakai halaman lain
+        // (mis. detail Proses Tagihan).
+        return \App\Support\TagihanDokumenPendukung::collect($tagihan);
     }
 }

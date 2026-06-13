@@ -30,7 +30,7 @@ $(document).ready(function() {
                     response.notifications.forEach(function(notif) {
                         listHtml += `
                             <div>
-                              <a class="dropdown-item border-bottom py-2" href="${notif.url}">
+                              <a class="dropdown-item border-bottom py-2" href="${notif.url || '#'}" data-notif-id="${notif.id}">
                                 <div class="d-flex align-items-center gap-3">
                                   <div class="user-wrapper bg-${notif.color} text-${notif.color} bg-opacity-10">
                                     <i class="material-icons-outlined">${notif.icon}</i>
@@ -69,6 +69,32 @@ $(document).ready(function() {
         });
     }
 
+    // Klik satu notifikasi: tandai dibaca → hilang dari daftar, lalu buka URL-nya.
+    $(document).on('click', '#notificationDropdownList a[data-notif-id]', function (e) {
+        e.preventDefault();
+
+        var $item = $(this);
+        var url = $item.attr('href');
+        var markUrl = "{{ url('/notifications') }}/" + encodeURIComponent($item.data('notif-id')) + "/mark-read";
+
+        // Hapus dari daftar & turunkan badge seketika (optimistic).
+        $item.closest('div').remove();
+        unreadCount = Math.max(0, unreadCount - 1);
+        if (unreadCount > 0) {
+            $('#notificationCounter').text(unreadCount).show();
+        } else {
+            $('#notificationCounter').hide();
+            $('#notificationDropdownList').html('<div class="text-center py-4 text-muted"><small>Tidak ada notifikasi baru.</small></div>');
+        }
+
+        var goToUrl = function () {
+            if (url && url !== '#') window.location.href = url;
+        };
+
+        // Tandai dibaca di server; tetap navigasi walau request gagal.
+        $.post(markUrl, { _token: "{{ csrf_token() }}" }).always(goToUrl);
+    });
+
     // Polling every 10 seconds (10000ms)
     setInterval(fetchNotifications, 10000);
     // Initial fetch on load
@@ -88,8 +114,73 @@ function markNotificationsAsRead() {
 </script>
 
 {{-- ====== Enhancer global: COA dropdown searchable + desain konsisten ====== --}}
+<style>
+    /* Kartu opsi COA dalam dropdown select2 (info MAK + uraian + DIPA) */
+    .coa-s2-drop .coa-opt-kode { font-family: SFMono-Regular, Menlo, Consolas, monospace; font-weight: 700; font-size: .8rem; color: #4f46e5; letter-spacing: -.01em; }
+    .coa-s2-drop .coa-opt-sisa { color: #059669; font-weight: 700; font-size: .72rem; white-space: nowrap; }
+    .coa-s2-drop .coa-opt-uraian { font-size: .74rem; color: #475569; margin-top: 2px; line-height: 1.35; }
+    .coa-s2-drop .coa-opt-dipa { display: inline-flex; align-items: center; gap: 4px; font-size: .66rem; font-weight: 600; color: #4f46e5; background: #eef2ff; border: 1px solid #e0e7ff; border-radius: 999px; padding: 1px 9px; margin-top: 5px; }
+    .coa-s2-drop .select2-results__option { border-bottom: 1px solid #f1f5f9; }
+    /* Saat opsi disorot: latar indigo muda, teks tetap gelap & kontras */
+    .coa-s2-drop .select2-results__option--highlighted,
+    .coa-s2-drop .select2-results__option--highlighted[aria-selected] {
+        background: #eef2ff !important;
+        color: #0f172a !important;
+    }
+    .coa-s2-drop .select2-results__option--highlighted .coa-opt-kode { color: #4338ca; }
+    .coa-s2-drop .select2-results__option--highlighted .coa-opt-sisa { color: #047857; }
+    .coa-s2-drop .select2-results__option--highlighted .coa-opt-uraian { color: #334155; }
+    .coa-s2-drop .select2-results__option--highlighted .coa-opt-dipa { background: #fff; border-color: #c7d2fe; color: #4338ca; }
+    /* Opsi yang sedang terpilih (centang) — samakan kontrasnya */
+    .coa-s2-drop .select2-results__option--selected .coa-opt-kode { color: #4338ca; }
+    .coa-s2-drop .select2-results__option--selected .coa-opt-sisa { color: #047857; }
+    .coa-s2-drop .select2-results__option--selected .coa-opt-uraian { color: #334155; }
+    .coa-s2-drop .select2-results__option--selected .coa-opt-dipa { background: #fff; border-color: #c7d2fe; color: #4338ca; }
+    /* Tampilan pilihan terpasang pada kotak select */
+    .coa-s2 .coa-sel-kode { font-family: SFMono-Regular, Menlo, Consolas, monospace; font-weight: 700; }
+    .coa-s2 .coa-sel-sisa { color: #059669; font-weight: 600; font-size: .78rem; }
+</style>
 <script>
 (function () {
+    // Render kaya untuk opsi COA: kode MAK + sisa pagu + uraian + badge DIPA.
+    // Fallback ke teks biasa bila option tidak membawa data-kode.
+    function formatCoaResult(opt) {
+        if (!opt.element || !opt.element.dataset || !opt.element.dataset.kode) return opt.text;
+        var $ = window.jQuery;
+        var d = opt.element.dataset;
+
+        var $top = $('<div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;"></div>')
+            .append($('<span class="coa-opt-kode"></span>').text(d.kode))
+            .append($('<span class="coa-opt-sisa"></span>').text('Sisa Rp ' + (d.sisa || '0')));
+
+        var $wrap = $('<div class="coa-opt"></div>').append($top);
+
+        if (d.uraian) {
+            $wrap.append($('<div class="coa-opt-uraian"></div>').text(d.uraian));
+        }
+
+        if (d.dipa) {
+            var dipaText = 'DIPA ' + d.dipa
+                + (d.dipaTahun ? ' · TA ' + d.dipaTahun : '')
+                + (d.dipaRevisi !== undefined && d.dipaRevisi !== '' ? ' · Revisi ke-' + d.dipaRevisi : '');
+            $wrap.append($('<span class="coa-opt-dipa"></span>')
+                .append('<i class="bi bi-journal-bookmark-fill"></i>')
+                .append($('<span></span>').text(dipaText)));
+        }
+
+        return $wrap;
+    }
+
+    function formatCoaSelection(opt) {
+        if (!opt.element || !opt.element.dataset || !opt.element.dataset.kode) return opt.text;
+        var $ = window.jQuery;
+        var d = opt.element.dataset;
+
+        return $('<span></span>')
+            .append($('<span class="coa-sel-kode"></span>').text(d.kode))
+            .append($('<span class="coa-sel-sisa"></span>').text(' · Sisa Rp ' + (d.sisa || '0')));
+    }
+
     function enhanceCoaSelects(root) {
         if (!(window.jQuery && typeof window.jQuery.fn.select2 === 'function')) return;
         var $ = window.jQuery;
@@ -124,6 +215,8 @@ function markNotificationsAsRead() {
                 containerCssClass: 'coa-s2',
                 dropdownCssClass: 'coa-s2-drop',
                 dropdownParent: $modal.length ? $modal : $(document.body),
+                templateResult: formatCoaResult,
+                templateSelection: formatCoaSelection,
                 language: {
                     noResults: function () { return 'COA tidak ditemukan'; },
                     searching: function () { return 'Mencari...'; },

@@ -7,6 +7,8 @@ use App\Models\DokumenNpi;
 use App\Models\DokumenSp2d;
 use App\Models\DokumenSpm;
 use App\Models\DokumenSpp;
+use App\Models\MasterTarifPajak;
+use App\Models\PotonganTagihan;
 use App\Models\Tagihan;
 use App\Models\WorkflowApproval;
 use App\Services\DokumenChainService;
@@ -14,6 +16,7 @@ use App\Services\PerjaldinKomponenService;
 use App\Services\WorkflowService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Halaman Proses Tagihan terpadu: seluruh rantai SPP/SPM/NPI/SP2D
@@ -57,6 +60,14 @@ class TagihanProsesController extends Controller
             });
         }
 
+        // Ringkasan agregat (mengikuti filter pencarian/tipe) untuk kartu statistik.
+        $summary = [
+            'total' => (clone $query)->count(),
+            'selesai' => (clone $query)->where('status', 'SELESAI')->count(),
+            'nominal' => (float) (clone $query)->sum('total_netto'),
+        ];
+        $summary['proses'] = $summary['total'] - $summary['selesai'];
+
         $tagihans = $query->latest('updated_at')->paginate(15)->withQueryString();
 
         // Tandai tagihan yang menunggu tindakan user saat ini (approval PENDING
@@ -66,6 +77,11 @@ class TagihanProsesController extends Controller
 
             return $tagihan;
         });
+
+        // Jumlah tagihan pada halaman ini yang menunggu tindakan user (badge tab).
+        $perluAksiCount = $tagihans->getCollection()
+            ->filter(fn (Tagihan $tagihan) => (bool) data_get($tagihan, 'proses_state.perluSaya'))
+            ->count();
 
         if ($request->input('tab') === 'perlu-saya') {
             $tagihans->setCollection($tagihans->getCollection()
@@ -78,6 +94,8 @@ class TagihanProsesController extends Controller
             'tipeFilter' => $request->input('tipe'),
             'search' => $request->input('search'),
             'tab' => $request->input('tab', 'semua'),
+            'summary' => $summary,
+            'perluAksiCount' => $perluAksiCount,
         ]);
     }
 
@@ -85,8 +103,13 @@ class TagihanProsesController extends Controller
     {
         $tagihan = Tagihan::with([
             'pihak',
+            'arsipDokumen',
             'detailKontrak.kontrakTermin.kontrak.vendor',
-            'detailPerjaldin',
+            'detailKontrak.arsipDokumen',
+            'potonganTagihan.pajak',
+            'potonganTagihan.arsipDokumen',
+            'detailPerjaldin.pegawai',
+            'detailPerjaldin.provinsi',
             'detailHonorarium',
             'komponenPerjaldin.dipaRevisionItem.coa',
             'potonganTagihan',
@@ -98,7 +121,7 @@ class TagihanProsesController extends Controller
 
         $state = $this->buildPipelineState($tagihan, Auth::user());
 
-        $coaOptions = DetailDipa::with('coa')
+        $coaOptions = DetailDipa::with(['coa', 'dipaRevision.masterDipa'])
             ->where('status_aktif', true)
             ->whereHas('coa')
             ->whereHas('dipaRevision', fn ($q) => $q->where('is_active', true))
@@ -106,16 +129,27 @@ class TagihanProsesController extends Controller
             ->sortBy(fn ($item) => $item->coa?->kode_mak_lengkap)
             ->values();
 
-        return view('proses_tagihan.show', compact('tagihan', 'state', 'coaOptions'));
+        // PPh 21 (honor per golongan) tidak relevan untuk potongan kontrak.
+        $pajakOptions = $tagihan->tipe_tagihan === 'KONTRAK'
+            ? MasterTarifPajak::where('status_aktif', true)
+                ->where('kode_pajak', 'not like', 'PPH21%')
+                ->orderBy('jenis_pajak')
+                ->get()
+            : collect();
+
+        // Daftar dokumen yang diunggah/di-generate saat pembuatan tagihan.
+        $dokumenPendukung = \App\Support\TagihanDokumenPendukung::collect($tagihan);
+
+        return view('proses_tagihan.show', compact('tagihan', 'state', 'coaOptions', 'pajakOptions', 'dokumenPendukung'));
     }
 
     // ─────────────────────────────────────────────────────────────────
-    // Seksi COA (Operator BLU)
+    // Seksi COA (PPK)
     // ─────────────────────────────────────────────────────────────────
 
     public function simpanCoa(Request $request, $id, PerjaldinKomponenService $komponenService)
     {
-        $this->ensureRole(['Operator BLU', 'Super Admin']);
+        $this->ensureRole(['PPK', 'Super Admin']);
 
         $tagihan = Tagihan::findOrFail($id);
 
@@ -150,15 +184,196 @@ class TagihanProsesController extends Controller
                     ));
                 }
 
-                $tagihan->update(['dipa_revision_item_id' => $item->id]);
+                $tagihan->update([
+                    'dipa_revision_item_id' => $item->id,
+                    // DIPA induk ikut diisi di sini karena pembuatan tagihan/kontrak
+                    // tidak lagi memilih COA di awal.
+                    'master_dipa_id' => $item->dipaRevision?->master_dipa_id ?? $tagihan->master_dipa_id,
+                ]);
             }
 
+            $this->chain->clearChainCorrection($tagihan->fresh(), 'coa');
             $this->chain->maybeGenerateDraftChain($tagihan->fresh(), Auth::user());
         } catch (\RuntimeException $e) {
             return back()->with('error', $e->getMessage());
         }
 
         return back()->with('success', 'COA berhasil disimpan.');
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // Seksi Pajak & Faktur Pajak — khusus KONTRAK (Operator BLU)
+    // ─────────────────────────────────────────────────────────────────
+
+    /**
+     * Operator BLU memilih tipe pajak (potongan PAJAK) dan mengunggah faktur
+     * pajak. Wajib selesai sebelum draft SPP/SPM/NPI dibuat (prasyarat rantai).
+     */
+    public function simpanPajak(Request $request, $id)
+    {
+        $this->ensureRole(['Operator BLU', 'Super Admin']);
+
+        $tagihan = Tagihan::with(['potonganTagihan', 'detailKontrak.arsipDokumen'])->findOrFail($id);
+        abort_unless($tagihan->tipe_tagihan === 'KONTRAK', 404);
+
+        if (! $this->chain->isTagihanFullyApproved($tagihan)) {
+            return back()->with('error', 'Pajak baru dapat diatur setelah tagihan disetujui seluruh verifikator.');
+        }
+
+        // Rantai yang masih draft/revisi boleh disesuaikan (nominal ikut diperbarui).
+        // Setelah ada dokumen yang diajukan/diverifikasi, pajak terkunci.
+        $sppChain = $this->chain->chainSpp($tagihan);
+        if ($sppChain && ! $this->chain->isChainStillDraft($tagihan)) {
+            return back()->with('error', 'Pajak tidak dapat diubah karena dokumen pencairan sudah diajukan/diverifikasi. Batalkan rantai dokumen terlebih dahulu bila pajak perlu diubah.');
+        }
+
+        $sudahDisetor = $tagihan->potonganTagihan
+            ->where('jenis_potongan', 'PAJAK')
+            ->first(fn ($p) => filled($p->kode_billing) || filled($p->ntpn));
+        if ($sudahDisetor) {
+            return back()->with('error', 'Pajak tidak dapat diubah karena sudah memasuki tahap billing/penyetoran.');
+        }
+
+        if (! $tagihan->detailKontrak) {
+            return back()->with('error', 'Detail kontrak tidak ditemukan pada tagihan ini.');
+        }
+
+        $fakturLama = $tagihan->detailKontrak->file_faktur_pajak;
+
+        $request->validate([
+            'pajak' => 'required|array|min:1',
+            'pajak.*' => 'required|integer|distinct|exists:master_tarif_pajak,id',
+            'dpp' => 'array',
+            'dpp.*' => 'nullable|numeric|min:0',
+            'nominal' => 'array',
+            'nominal.*' => 'nullable|numeric|min:0',
+            'faktur_pajak' => ($fakturLama ? 'nullable' : 'required') . '|file|mimes:pdf,jpg,jpeg,png|max:5120',
+        ], [
+            'pajak.required' => 'Pilih minimal satu tipe pajak untuk tagihan kontrak ini.',
+            'faktur_pajak.required' => 'Faktur pajak wajib diunggah untuk tagihan kontrak.',
+        ]);
+
+        try {
+            DB::transaction(function () use ($request, $tagihan, $sppChain) {
+                // Ganti seluruh baris pajak lama (aman: belum ada billing/NTPN).
+                $tagihan->potonganTagihan()->where('jenis_potongan', 'PAJAK')->get()->each->delete();
+
+                $totalBruto = (float) $tagihan->total_bruto;
+
+                $selectedTarifs = MasterTarifPajak::where('status_aktif', true)
+                    ->whereIn('id', $request->input('pajak', []))
+                    ->get()
+                    ->keyBy('id');
+
+                // Sesuai kalkulator pajak: DPP default = bruto × 100/(100+PPN),
+                // memakai tarif PPN yang dipilih (default 11% bila PPN tidak dipilih).
+                $ppnRate = (float) ($selectedTarifs
+                    ->first(fn ($t) => str_starts_with(strtoupper((string) $t->kode_pajak), 'PPN'))
+                    ?->persentase ?? 11);
+                $dppDefault = round($totalBruto * 100 / (100 + $ppnRate), 2);
+
+                foreach ($request->input('pajak', []) as $tarifId) {
+                    $tarif = $selectedTarifs->get((int) $tarifId);
+                    if (! $tarif) {
+                        throw new \RuntimeException('Tarif pajak yang dipilih tidak valid atau sudah tidak aktif.');
+                    }
+
+                    $dpp = (float) ($request->input("dpp.{$tarifId}") ?: $dppDefault);
+                    // Pembulatan ke atas ke ratusan terdekat (ROUNDUP(x, -2)) sesuai kalkulator pajak.
+                    $nominal = (float) ($request->input("nominal.{$tarifId}")
+                        ?: ceil(($dpp * $tarif->persentase / 100) / 100) * 100);
+
+                    if ($nominal <= 0) {
+                        throw new \RuntimeException("Nominal potongan {$tarif->jenis_pajak} harus lebih dari nol.");
+                    }
+
+                    PotonganTagihan::create([
+                        'tagihan_id' => $tagihan->id,
+                        'pajak_id' => $tarif->id,
+                        'jenis_potongan' => 'PAJAK',
+                        'deskripsi' => "{$tarif->jenis_pajak} ({$tarif->kode_pajak})",
+                        'dpp' => $dpp,
+                        'persentase_tarif_snapshot' => $tarif->persentase,
+                        'nama_pajak_snapshot' => $tarif->jenis_pajak,
+                        'nominal_potongan' => $nominal,
+                    ]);
+                }
+
+                $totalPotongan = (float) $tagihan->potonganTagihan()->sum('nominal_potongan');
+                if ($totalPotongan >= $totalBruto) {
+                    throw new \RuntimeException('Total potongan melebihi atau menyamai nilai bruto tagihan. Periksa kembali DPP/nominal pajak.');
+                }
+
+                $totalNetto = $totalBruto - $totalPotongan;
+
+                $tagihan->update([
+                    'total_potongan' => $totalPotongan,
+                    'total_netto' => $totalNetto,
+                ]);
+
+                // Sinkronkan nominal draft SPP/SPM yang sudah terlanjur dibuat.
+                if ($sppChain) {
+                    $sppChain->update(['nominal_spp' => $totalNetto]);
+                    $sppChain->spm?->update(['nominal_spm' => $totalNetto]);
+                }
+
+                if ($request->hasFile('faktur_pajak')) {
+                    $detail = $tagihan->detailKontrak;
+                    $detail->arsipDokumen()
+                        ->where('jenis_dokumen', 'FAKTUR_PAJAK')
+                        ->where('is_active', true)
+                        ->update(['is_active' => false]);
+
+                    $file = $request->file('faktur_pajak');
+                    $detail->arsipDokumen()->create([
+                        'jenis_dokumen' => 'FAKTUR_PAJAK',
+                        'nama_file_asli' => $file->getClientOriginalName(),
+                        'path_file' => $file->store('tagihan/faktur_pajak', 'public'),
+                        'disk' => 'public',
+                        'mime_type' => $file->getMimeType(),
+                        'ukuran_file' => $file->getSize(),
+                        'uploaded_by' => Auth::id(),
+                        'uploaded_at' => now(),
+                        'keterangan' => 'Faktur pajak tagihan kontrak (diunggah Operator BLU sebelum draft dokumen pencairan).',
+                        'is_active' => true,
+                    ]);
+                }
+
+                \App\Models\LogStatusDokumen::create([
+                    'dokumen_type' => Tagihan::class,
+                    'dokumen_id' => $tagihan->id,
+                    'user_id' => Auth::id(),
+                    'role_saat_itu' => Auth::user()?->getRoleNames()->first() ?? 'Operator BLU',
+                    'status_sebelumnya' => $tagihan->status,
+                    'status_baru' => $tagihan->status,
+                    'aksi' => 'SET_PAJAK_KONTRAK',
+                    'catatan' => 'Tipe pajak dipilih' . ($request->hasFile('faktur_pajak') ? ' dan faktur pajak diunggah' : '') . ' oleh Operator BLU.',
+                    'ip_address' => $request->ip(),
+                ]);
+            });
+
+            // Peringatan lunak ambang PMK 59/2022: PPN & PPh 22 hanya dipungut
+            // bila pembayaran > Rp 2 juta (tidak memblokir — keputusan tetap di operator).
+            if ((float) $tagihan->total_bruto <= 2_000_000) {
+                $adaPpnAtauPph22 = MasterTarifPajak::whereIn('id', $request->input('pajak', []))
+                    ->where(function ($q) {
+                        $q->where('kode_pajak', 'like', 'PPN%')
+                            ->orWhere('kode_pajak', 'like', 'PPH22%');
+                    })
+                    ->exists();
+
+                if ($adaPpnAtauPph22) {
+                    session()->flash('warning', 'Perhatian: nilai tagihan ≤ Rp 2 juta. Sesuai PMK 59/2022, PPN dan PPh 22 hanya dipungut bila pembayaran di atas Rp 2 juta — pastikan pemungutan ini memang diperlukan.');
+                }
+            }
+
+            $this->chain->clearChainCorrection($tagihan->fresh(), 'pajak');
+            $this->chain->maybeGenerateDraftChain($tagihan->fresh(), Auth::user());
+        } catch (\RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return back()->with('success', 'Pajak dan faktur pajak berhasil disimpan.');
     }
 
     // ─────────────────────────────────────────────────────────────────
@@ -205,10 +420,28 @@ class TagihanProsesController extends Controller
 
     public function aksiDokumen(Request $request, $id, string $jenis)
     {
+        // Verifikator hanya dapat menyetujui atau meminta revisi — opsi tolak
+        // permanen dihilangkan agar rantai dokumen selalu bisa diperbaiki.
+        // Karena dokumen di-generate dari data tagihan, revisi diarahkan ke
+        // akar masalahnya: 'tagihan' (kembali ke pembuat tagihan, verifikasi
+        // ulang penuh), 'pajak' (Operator BLU), 'coa' (PPK), atau 'bukti'
+        // (khusus SP2D: Bendahara Pengeluaran mengganti bukti transfer).
+        $isRevisi = $request->input('aksi') === 'revisi';
+        $target = $request->input('target');
+
         $request->validate([
-            'aksi' => 'required|in:approve,revisi,reject',
+            'aksi' => 'required|in:approve,revisi',
             'approval_id' => 'required|integer',
-            'catatan' => $request->input('aksi') === 'approve' ? 'nullable|string|max:1000' : 'required|string|max:1000',
+            'target' => $isRevisi ? 'required|in:tagihan,pajak,coa,bukti' : 'nullable',
+            'catatan' => $isRevisi && $target !== 'tagihan' ? 'required|string|max:1000' : 'nullable|string|max:1000',
+            'revisi_doc' => $isRevisi && $target === 'tagihan' ? 'required|array|min:1' : 'nullable|array',
+            'revisi_doc.*' => 'in:' . implode(',', array_keys(DokumenChainService::RETURNABLE_PARTS)),
+            'revisi_catatan' => 'nullable|array',
+            'revisi_catatan.*' => 'nullable|string|max:1000',
+        ], [
+            'target.required' => 'Pilih akar masalah revisi terlebih dahulu.',
+            'catatan.required' => 'Catatan revisi wajib diisi.',
+            'revisi_doc.required' => 'Pilih minimal satu bagian yang perlu direvisi.',
         ]);
 
         $tagihan = Tagihan::findOrFail($id);
@@ -216,6 +449,14 @@ class TagihanProsesController extends Controller
 
         if (! $document) {
             return back()->with('error', 'Dokumen tidak ditemukan pada rantai tagihan ini.');
+        }
+
+        if ($isRevisi && $target === 'pajak' && $tagihan->tipe_tagihan !== 'KONTRAK') {
+            return back()->with('error', 'Perbaikan pajak hanya berlaku untuk tagihan kontrak.');
+        }
+
+        if ($isRevisi && $target === 'bukti' && strtolower($jenis) !== 'sp2d') {
+            return back()->with('error', 'Perbaikan bukti transfer hanya berlaku pada SP2D.');
         }
 
         // Pastikan approval yang ditarget memang milik user (atau role-nya).
@@ -237,22 +478,49 @@ class TagihanProsesController extends Controller
                 if ($instance->status === 'APPROVED') {
                     $this->tandaiDokumenDisetujui($document, strtolower($jenis));
                 }
-            } elseif ($aksi === 'revisi') {
+
+                $pesan = strtoupper($jenis) . ' berhasil disetujui.';
+            } elseif ($target === 'tagihan') {
+                // Catatan wajib per bagian yang dicentang verifikator.
+                $items = [];
+                foreach ($request->input('revisi_doc', []) as $key) {
+                    $catatanBagian = trim((string) $request->input("revisi_catatan.{$key}", ''));
+                    if ($catatanBagian === '') {
+                        return back()->with('error', 'Catatan revisi wajib diisi untuk setiap bagian yang dipilih.');
+                    }
+                    $items[$key] = $catatanBagian;
+                }
+
+                $this->workflow->requestRevision(
+                    $document,
+                    Auth::id(),
+                    $items[strtolower($jenis)] ?? 'Tagihan dikembalikan ke pembuatnya untuk revisi.',
+                    $approval->id
+                );
+                $this->chain->returnChainToCreator($tagihan, Auth::user(), $items, $request->input('catatan'));
+
+                $pesan = 'Rantai dokumen dibatalkan dan tagihan dikembalikan ke pembuatnya untuk revisi.';
+            } elseif ($target === 'bukti') {
+                // SP2D kembali ke Bendahara Pengeluaran untuk mengganti bukti
+                // transfer — satu-satunya substansi SP2D yang diperbaiki manual.
                 $this->workflow->requestRevision($document, Auth::id(), $catatan, $approval->id);
-                $document->update(['status' => $this->statusRevisiFor(strtolower($jenis))]);
+                $document->update(['status' => DokumenSp2d::STATUS_REVISI]);
+                $this->chain->notifyDocumentRevisionRequested($tagihan, $jenis, $catatan, Auth::user());
+
+                $pesan = 'SP2D dikembalikan ke Bendahara Pengeluaran untuk perbaikan bukti transfer.';
             } else {
-                $this->workflow->rejectCurrentStep($document, Auth::id(), $catatan, $approval->id);
-                $document->update(['status' => 'DITOLAK']);
+                // pajak | coa — rantai di-rewind ke penanggung jawab bagian
+                // tersebut tanpa mengulang verifikasi tagihan.
+                $this->workflow->requestRevision($document, Auth::id(), $catatan, $approval->id);
+                $this->chain->rewindChainForCorrection($tagihan, Auth::user(), $target, $catatan);
+
+                $pesan = $target === 'pajak'
+                    ? 'Rantai dokumen dibatalkan; dikembalikan ke Operator BLU untuk perbaikan pajak & faktur pajak.'
+                    : 'Rantai dokumen dibatalkan; dikembalikan ke PPK untuk perbaikan pembebanan COA.';
             }
         } catch (\Throwable $e) {
             return back()->with('error', $e->getMessage());
         }
-
-        $pesan = match ($aksi) {
-            'approve' => strtoupper($jenis) . ' berhasil disetujui.',
-            'revisi' => 'Permintaan revisi ' . strtoupper($jenis) . ' terkirim.',
-            default => strtoupper($jenis) . ' ditolak.',
-        };
 
         return back()->with('success', $pesan);
     }
@@ -329,6 +597,11 @@ class TagihanProsesController extends Controller
             'tagihanApproved' => $this->chain->isTagihanFullyApproved($tagihan),
             'coaDone' => $this->chain->isCoaComplete($tagihan),
             'kpaDone' => $this->chain->isKpaApproved($tagihan),
+            'pajakKontrak' => $tagihan->tipe_tagihan === 'KONTRAK',
+            'pajakTipeDone' => $this->chain->isPajakTipeDipilih($tagihan),
+            'fakturPajak' => $tagihan->tipe_tagihan === 'KONTRAK' ? $tagihan->detailKontrak?->file_faktur_pajak : null,
+            'pajakKontrakDone' => $this->chain->isPajakKontrakComplete($tagihan),
+            'chainStillDraft' => $this->chain->isChainStillDraft($tagihan),
             'missingPrereqs' => $this->chain->missingDraftPrerequisites($tagihan),
             'spp' => $spp,
             'spm' => $spm,
@@ -381,23 +654,35 @@ class TagihanProsesController extends Controller
 
         if (! $perluSaya && $user?->hasAnyRole(['Operator BLU', 'Super Admin'])) {
             $perluSaya = $this->chain->isTagihanFullyApproved($tagihan)
-                && (! $this->chain->isCoaComplete($tagihan)
-                    || in_array($spp?->status, ['DRAFT', 'Revisi', 'REVISI'], true)
-                    || in_array($spp?->spm?->status, [DokumenSpm::STATUS_DRAFT, DokumenSpm::STATUS_REVISI, 'Revisi'], true));
+                && (in_array($spp?->status, ['DRAFT', 'Revisi', 'REVISI'], true)
+                    || in_array($spp?->spm?->status, [DokumenSpm::STATUS_DRAFT, DokumenSpm::STATUS_REVISI, 'Revisi'], true)
+                    // Verifikator meminta perbaikan pajak — tugas Operator BLU.
+                    || $tagihan->chain_correction_target === 'PAJAK'
+                    // Kontrak: tipe pajak & faktur pajak wajib diisi Operator BLU sebelum draft dibuat
+                    // (atau selagi rantai masih draft untuk tagihan lama).
+                    || ((! $spp || $this->chain->isChainStillDraft($tagihan))
+                        && ! $this->chain->isPajakKontrakComplete($tagihan)));
         }
 
         if (! $perluSaya && $user?->hasAnyRole(['PPK', 'Super Admin'])) {
             $perluSaya = $this->chain->isTagihanFullyApproved($tagihan)
-                && ! $this->chain->isKpaApproved($tagihan);
+                && (! $this->chain->isCoaComplete($tagihan)
+                    || ! $this->chain->isKpaApproved($tagihan));
         }
 
         if (! $perluSaya && $user?->hasAnyRole(['Bendahara Pengeluaran', 'Super Admin'])) {
-            $perluSaya = in_array($spp?->spm?->npi?->status, [DokumenNpi::STATUS_DRAFT, DokumenNpi::STATUS_REVISI], true)
-                || ($spp && $spp?->spm && $spp?->spm?->npi
-                    && $this->chain->isDocumentApproved($spp)
-                    && $this->chain->isDocumentApproved($spp->spm)
+            // Pengajuan NPI baru menjadi tugas BP setelah SPP & SPM disetujui.
+            $sppSpmApproved = $spp && $spp->spm
+                && $this->chain->isDocumentApproved($spp)
+                && $this->chain->isDocumentApproved($spp->spm);
+
+            $perluSaya = ($sppSpmApproved
+                    && in_array($spp?->spm?->npi?->status, [DokumenNpi::STATUS_DRAFT, DokumenNpi::STATUS_REVISI], true))
+                || ($sppSpmApproved && $spp?->spm?->npi
                     && $this->chain->isDocumentApproved($spp->spm->npi)
-                    && ! $sp2d?->bukti_transfer);
+                    && (! $sp2d?->bukti_transfer
+                        // PPK meminta perbaikan bukti transfer pada SP2D.
+                        || $sp2d?->status === DokumenSp2d::STATUS_REVISI));
         }
 
         return ['tahap' => $tahap, 'perluSaya' => $perluSaya];
@@ -478,14 +763,6 @@ class TagihanProsesController extends Controller
                 $tagihan->komponenPerjaldin->each->syncStatusFromDocuments();
             }
         }
-    }
-
-    private function statusRevisiFor(string $jenis): string
-    {
-        return match ($jenis) {
-            'spp', 'spm' => 'Revisi',
-            default => 'REVISI',
-        };
     }
 
     private function pendingApprovalsUntukUser($document, $user)

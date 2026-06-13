@@ -515,7 +515,7 @@
                         $pemeriksaSigned = $pemeriksaSigs->count() > 0 && $pemeriksaSigs->every(fn($s) => $s->status === 'signed');
                     @endphp
 
-                    @if($tagihan->status === 'DRAFT')
+                    @if(in_array($tagihan->status, ['APPROVED', 'DISETUJUI_KONTRAK', 'READY_FOR_SPP']))
                         <div class="card border-0 shadow-sm mt-4" style="background:#f8f9fb;">
                             <div class="card-body">
                                 <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
@@ -602,22 +602,8 @@
                         <p class="text-muted small mb-3">Pastikan seluruh checklist di bawah terpenuhi sebelum mengajukan tagihan ke PPK.</p>
 
                         {{-- Checklist Berita Acara --}}
-                        <div class="text-uppercase text-muted small fw-bold mb-2" style="letter-spacing: .5px;">Berita Acara</div>
+                        <div class="text-uppercase text-muted small fw-bold mb-2" style="letter-spacing: .5px;">Kelengkapan Awal</div>
                         <ul class="list-group mb-3">
-                            <li class="list-group-item d-flex justify-content-between align-items-center border-0 px-0 py-1">
-                                <span><i class="bi bi-{{ $hasBappFinal ? 'check-circle-fill text-success' : 'circle text-secondary' }} me-2"></i>BAPP Final bertandatangan</span>
-                                @if($hasBappFinal)<span class="badge bg-success-subtle text-success">OK</span>@endif
-                            </li>
-                            <li class="list-group-item d-flex justify-content-between align-items-center border-0 px-0 py-1">
-                                <span><i class="bi bi-{{ $hasBapFinal ? 'check-circle-fill text-success' : 'circle text-secondary' }} me-2"></i>BAP Final bertandatangan</span>
-                                @if($hasBapFinal)<span class="badge bg-success-subtle text-success">OK</span>@endif
-                            </li>
-                            @if($wajibBast)
-                            <li class="list-group-item d-flex justify-content-between align-items-center border-0 px-0 py-1">
-                                <span><i class="bi bi-{{ $hasBastFinal ? 'check-circle-fill text-success' : 'circle text-secondary' }} me-2"></i>BAST Final bertandatangan</span>
-                                @if($hasBastFinal)<span class="badge bg-success-subtle text-success">OK</span>@endif
-                            </li>
-                            @endif
                             <li class="list-group-item d-flex justify-content-between align-items-center border-0 px-0 py-1">
                                 <span><i class="bi bi-{{ $hasGambarRabBapp ? 'check-circle-fill text-success' : 'circle text-secondary' }} me-2"></i>Gambar RAB BAPP</span>
                                 @if($hasGambarRabBapp)<span class="badge bg-success-subtle text-success">OK</span>@endif
@@ -658,7 +644,7 @@
                                 @if(!$verifikatorLengkap)
                                     Verifikator belum lengkap. Hubungi Pejabat Pengadaan untuk melengkapi.
                                 @else
-                                    Lengkapi finalisasi dokumen Berita Acara yang masih kurang.
+                                    Unggah dokumen Gambar RAB BAPP untuk melanjutkan.
                                 @endif
                             </div>
                             <button type="button" class="btn btn-secondary w-100 fw-bold py-2" disabled>

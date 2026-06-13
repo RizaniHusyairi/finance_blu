@@ -31,7 +31,6 @@ class SupplierController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'tipe_supplier' => 'required|string|max:50',
             'nama_perusahaan' => 'required|string|max:150',
             'nama_direktur' => 'nullable|string|max:150',
             'jabatan_penandatangan' => 'nullable|string|max:150',
@@ -50,7 +49,6 @@ class SupplierController extends Controller
             $mitra = MasterMitraVendor::create([
                 'kategori' => 'PENGELUARAN',
                 'jenis_entitas' => 'BADAN_USAHA',
-                'tipe_supplier' => $validated['tipe_supplier'],
                 'nama_perusahaan' => $validated['nama_perusahaan'],
                 'nama_direktur' => $validated['nama_direktur'] ?? null,
                 'jabatan_penandatangan' => $validated['jabatan_penandatangan'] ?? null,
@@ -93,7 +91,6 @@ class SupplierController extends Controller
     public function update(Request $request, $id)
     {
         $validated = $request->validate([
-            'tipe_supplier' => 'required|string|max:50',
             'nama_perusahaan' => 'required|string|max:150',
             'nama_direktur' => 'nullable|string|max:150',
             'jabatan_penandatangan' => 'nullable|string|max:150',
@@ -111,7 +108,6 @@ class SupplierController extends Controller
 
             $mitra = MasterMitraVendor::with('rekening')->findOrFail($id);
             $mitra->update([
-                'tipe_supplier' => $validated['tipe_supplier'],
                 'nama_perusahaan' => $validated['nama_perusahaan'],
                 'nama_direktur' => $validated['nama_direktur'] ?? null,
                 'jabatan_penandatangan' => $validated['jabatan_penandatangan'] ?? null,

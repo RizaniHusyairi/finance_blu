@@ -54,6 +54,12 @@ class Tagihan extends Model
         return $this->belongsTo(User::class, 'kpa_approved_by');
     }
 
+    /** Verifikator yang meminta perbaikan pajak/COA pada rantai dokumen. */
+    public function chainCorrectionRequester()
+    {
+        return $this->belongsTo(User::class, 'chain_correction_requested_by');
+    }
+
     // === Relasi Verifikator (untuk display & lookup; snapshot tetap di kolom *_nama_snapshot) ===
     public function ppkUser() { return $this->belongsTo(User::class, 'ppk_user_id'); }
     public function ppspmUser() { return $this->belongsTo(User::class, 'ppspm_user_id'); }

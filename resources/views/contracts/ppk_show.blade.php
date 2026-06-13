@@ -438,40 +438,51 @@
                     <div class="section-icon" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);"><i class="bi bi-safe"></i></div>
                     Kesiapan Pagu DIPA
                 </div>
-                
-                @php
-                    $totalPagu = $kontrak->dipa->total_pagu ?? 0;
-                    $pctTerpakai = $totalPagu > 0 ? ($terpakai / $totalPagu) * 100 : 0;
-                    $pctKontrakIni = $totalPagu > 0 ? ($kontrak->nilai_total_kontrak / $totalPagu) * 100 : 0;
-                    $pctSisa = 100 - $pctTerpakai - $pctKontrakIni;
-                @endphp
 
-                <div class="mb-3 d-flex justify-content-between align-items-center">
-                    <span class="text-muted fw-bold">Pagu Tersedia</span>
-                    <span class="fs-4 fw-bolder text-dark">Rp {{ number_format($sisaPagu, 0, ',', '.') }}</span>
-                </div>
+                @if($sisaPagu !== null)
+                    @php
+                        $totalPagu = $kontrak->dipa->total_pagu ?? 0;
+                        $pctTerpakai = $totalPagu > 0 ? ($terpakai / $totalPagu) * 100 : 0;
+                        $pctKontrakIni = $totalPagu > 0 ? ($kontrak->nilai_total_kontrak / $totalPagu) * 100 : 0;
+                        $pctSisa = 100 - $pctTerpakai - $pctKontrakIni;
+                    @endphp
 
-                <div class="budget-progress">
-                    <div class="budget-used" style="width: {{ $pctTerpakai }}%" title="Sudah Terpakai: Rp {{ number_format($terpakai,0,',','.') }}"></div>
-                    <div class="budget-current" style="width: {{ $pctKontrakIni }}%" title="Kontrak Ini: Rp {{ number_format($kontrak->nilai_total_kontrak,0,',','.') }}"></div>
-                    <div class="budget-remaining" style="width: {{ $pctSisa }}%" title="Sisa Nanti: Rp {{ number_format($sisaPaguNanti,0,',','.') }}"></div>
-                </div>
-
-                <div class="budget-legends">
-                    <div><span class="legend-dot budget-used"></span>Terpakai</div>
-                    <div><span class="legend-dot budget-current"></span>Kontrak Ini</div>
-                    <div><span class="legend-dot budget-remaining"></span>Sisa Nanti</div>
-                </div>
-
-                <hr class="my-4 border-light">
-                
-                <div class="info-box mb-3">
-                    <div class="info-label">COA (Mata Anggaran)</div>
-                    <div class="info-value text-break">
-                        {{ $kontrak->dipaRevisionItem->coa->kode_mak_lengkap ?? 'N/A' }} - 
-                        {{ $kontrak->dipaRevisionItem->coa->nama_akun ?? 'N/A' }}
+                    <div class="mb-3 d-flex justify-content-between align-items-center">
+                        <span class="text-muted fw-bold">Pagu Tersedia</span>
+                        <span class="fs-4 fw-bolder text-dark">Rp {{ number_format($sisaPagu, 0, ',', '.') }}</span>
                     </div>
-                </div>
+
+                    <div class="budget-progress">
+                        <div class="budget-used" style="width: {{ $pctTerpakai }}%" title="Sudah Terpakai: Rp {{ number_format($terpakai,0,',','.') }}"></div>
+                        <div class="budget-current" style="width: {{ $pctKontrakIni }}%" title="Kontrak Ini: Rp {{ number_format($kontrak->nilai_total_kontrak,0,',','.') }}"></div>
+                        <div class="budget-remaining" style="width: {{ $pctSisa }}%" title="Sisa Nanti: Rp {{ number_format($sisaPaguNanti,0,',','.') }}"></div>
+                    </div>
+
+                    <div class="budget-legends">
+                        <div><span class="legend-dot budget-used"></span>Terpakai</div>
+                        <div><span class="legend-dot budget-current"></span>Kontrak Ini</div>
+                        <div><span class="legend-dot budget-remaining"></span>Sisa Nanti</div>
+                    </div>
+
+                    <hr class="my-4 border-light">
+
+                    <div class="info-box mb-3">
+                        <div class="info-label">COA (Mata Anggaran)</div>
+                        <div class="info-value text-break">
+                            {{ $kontrak->dipaRevisionItem->coa->kode_mak_lengkap ?? 'N/A' }} -
+                            {{ $kontrak->dipaRevisionItem->coa->nama_akun ?? 'N/A' }}
+                        </div>
+                    </div>
+                @else
+                    <div class="alert alert-light border d-flex align-items-start gap-2 mb-0">
+                        <i class="bi bi-info-circle text-primary mt-1"></i>
+                        <div class="small text-muted">
+                            Pembebanan COA/mata anggaran untuk kontrak ini akan dipilih oleh <strong>PPK</strong>
+                            di halaman <strong>Proses Tagihan</strong> setelah tagihan disetujui verifikator.
+                            Validasi sisa pagu dilakukan pada tahap tersebut.
+                        </div>
+                    </div>
+                @endif
             </div>
 
             <!-- Vendor -->

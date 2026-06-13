@@ -107,7 +107,7 @@
 
     <div class="box-terbilang">
         <p>Terbilang:</p>
-        <h4>== {{ ucwords($terbilangHelper) }} Rupiah ==</h4>
+        <h4>== {{ ucwords(strtolower($terbilangHelper)) }} ==</h4>
     </div>
 
     <table class="ttd-box">

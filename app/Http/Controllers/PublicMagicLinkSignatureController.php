@@ -63,6 +63,32 @@ class PublicMagicLinkSignatureController extends Controller
         }
 
         DB::transaction(function () use ($signatures, $request) {
+            $tagihan = $signatures->first()->documentable;
+
+            // Handle simultaneous file uploads (khusus vendor)
+            if ($request->hasFile('files') && is_array($request->file('files'))) {
+                foreach ($request->file('files') as $jenisDok => $file) {
+                    if ($file->isValid()) {
+                        // Nonaktifkan file lama
+                        $tagihan->detailKontrak->arsipDokumen()
+                            ->where('jenis_dokumen', $jenisDok)
+                            ->update(['is_active' => false]);
+
+                        // Simpan file baru
+                        $tagihan->detailKontrak->arsipDokumen()->create([
+                            'jenis_dokumen' => $jenisDok,
+                            'nama_file_asli' => $file->getClientOriginalName(),
+                            'path_file' => $file->store('tagihan/final_docs', 'public'),
+                            'disk' => 'public',
+                            'mime_type' => $file->getMimeType(),
+                            'ukuran_file' => $file->getSize(),
+                            'uploaded_by' => null, // diunggah via public link
+                            'is_active' => true,
+                        ]);
+                    }
+                }
+            }
+
             foreach ($signatures as $signature) {
                 if ($signature->status === 'signed') {
                     continue;
@@ -134,7 +160,62 @@ class PublicMagicLinkSignatureController extends Controller
         $type = $signature->document_label;
 
         $html = app(\App\Http\Controllers\TagihanController::class)->exportPdfKontrakHtml($tagihan->id, $type, false);
+
+        // BAPP mengembalikan null bila Gambar RAB belum diunggah pada tagihan.
+        if ($html === null) {
+            abort(422, $type === 'BAPP'
+                ? 'Pratinjau BAPP belum dapat dibuat karena Gambar RAB BAPP belum diunggah pada tagihan. Hubungi pembuat tagihan untuk mengunggahnya terlebih dahulu.'
+                : 'Pratinjau dokumen ' . $type . ' belum dapat dibuat.');
+        }
+
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML($html)->setPaper('a4', 'portrait');
         return $pdf->stream('preview_dokumen_' . $type . '.pdf');
+    }
+
+    public function uploadArsip(Request $request, $token)
+    {
+        $signatures = $this->resolveGroup($token);
+        abort_if($signatures->isEmpty(), 404);
+
+        $signature = $signatures->first();
+        if ($signature->role !== 'vendor') {
+            return back()->with('error', 'Hanya pihak vendor yang dapat mengunggah dokumen.');
+        }
+
+        $tagihan = $signature->documentable;
+        $detailKontrak = $tagihan->detailKontrak;
+
+        $jenis = $request->input('jenis_dokumen');
+        
+        $request->validate([
+            'jenis_dokumen' => 'required|in:BAPP_FINAL_TTD,BAST_FINAL_TTD,BAP_FINAL_TTD',
+            'file' => 'required|file|mimes:pdf|max:10240',
+        ]);
+
+        if ($jenis === 'BAPP_FINAL_TTD') {
+            $pemeriksaSigs = $tagihan->documentSignatures->where('role', 'tim_pemeriksa');
+            $pemeriksaSigned = $pemeriksaSigs->count() > 0 && $pemeriksaSigs->every(fn($s) => $s->status === 'signed');
+            if (!$pemeriksaSigned) {
+                return back()->with('error', 'Dokumen BAPP Final belum dapat diunggah karena Pemeriksa belum memberikan persetujuan (TTE).');
+            }
+        }
+
+        // Nonaktifkan dokumen lama jika ada
+        $detailKontrak->arsipDokumen()->where('jenis_dokumen', $jenis)->update(['is_active' => false]);
+        $path = $request->file('file')->store('tagihan/final_docs', 'public');
+
+        $detailKontrak->arsipDokumen()->create([
+            'jenis_dokumen' => $jenis,
+            'nama_file_asli' => $request->file('file')->getClientOriginalName(),
+            'path_file' => $path,
+            'disk' => 'public',
+            'mime_type' => $request->file('file')->getMimeType(),
+            'ukuran_file' => $request->file('file')->getSize(),
+            'uploaded_by' => null,
+            'uploaded_at' => now(),
+            'is_active' => true,
+        ]);
+
+        return back()->with('success', 'Dokumen ' . str_replace('_FINAL_TTD', '', $jenis) . ' Final berhasil diunggah.');
     }
 }

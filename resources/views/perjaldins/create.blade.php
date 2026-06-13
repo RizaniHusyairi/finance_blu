@@ -83,10 +83,22 @@
         <div class="sec-body">
             <div class="row g-3">
                 <div class="col-md-5 col-lg-4">
-                    <label class="form-label-modern">Nomor Perjalanan Dinas</label>
-                    <input type="text" id="inp_nomor" class="form-control modern text-primary fw-bold font-monospace bg-light"
-                           value="{{ $nextNumber }}" readonly>
-                    <small class="text-muted"><i class="bi bi-info-circle me-1"></i>Nomor ditentukan otomatis oleh sistem saat disimpan.</small>
+                    <label class="form-label-modern">Nomor Perjalanan Dinas <span class="text-danger">*</span></label>
+                    <div class="input-group">
+                        <span class="input-group-text font-monospace fw-bold">KU.201/</span>
+                        <input type="text" name="nomor_urut" id="inp_nomor_urut"
+                               class="form-control modern text-primary fw-bold font-monospace text-center @error('nomor_urut') is-invalid @enderror"
+                               inputmode="numeric" pattern="[0-9]{1,4}" maxlength="4" required
+                               value="{{ old('nomor_urut', str_pad($nextUrut, 4, '0', STR_PAD_LEFT)) }}"
+                               data-ku-check="{{ route('ku-numbers.check') }}"
+                               data-ku-key="KU_PERJALDIN"
+                               data-ku-tahun="{{ date('Y') }}">
+                        <span class="input-group-text font-monospace fw-bold">/APTP/{{ date('Y') }}</span>
+                    </div>
+                    @error('nomor_urut')
+                        <div class="text-danger small mt-1 fw-semibold">{{ $message }}</div>
+                    @enderror
+                    <small class="text-muted d-block mt-1" id="nomorUrutStatus"><i class="bi bi-pencil-square me-1"></i>Isi nomor urut 4 digit — nomor yang sudah pernah digunakan akan ditolak.</small>
                 </div>
                 <div class="col-md-7 col-lg-6">
                     <label class="form-label-modern">Uraian / Judul Perjalanan <span class="text-danger">*</span></label>
@@ -357,4 +369,50 @@
 
 @push('script')
 @include('perjaldins.partials._form-scripts')
+<script>
+// Cek ketersediaan nomor urut KU saat diketik (validasi final tetap di server).
+(function () {
+    'use strict';
+    var inp = document.getElementById('inp_nomor_urut');
+    var status = document.getElementById('nomorUrutStatus');
+    if (!inp || !status) return;
+
+    var timer;
+    function setStatus(cls, icon, text) {
+        status.className = cls + ' small d-block mt-1';
+        status.innerHTML = '<i class="bi ' + icon + ' me-1"></i>' + text;
+    }
+
+    function check() {
+        var v = (inp.value || '').replace(/\D/g, '');
+        inp.value = v;
+        if (!v || parseInt(v, 10) < 1) {
+            setStatus('text-danger fw-semibold', 'bi-exclamation-circle', 'Nomor urut wajib diisi (0001–9999).');
+            return;
+        }
+        var url = inp.dataset.kuCheck
+            + '?document_key=' + encodeURIComponent(inp.dataset.kuKey)
+            + '&tahun=' + encodeURIComponent(inp.dataset.kuTahun)
+            + '&start_number=' + encodeURIComponent(v);
+        fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' } })
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+                var padded = v.padStart(4, '0');
+                if (d.exists) {
+                    inp.classList.add('is-invalid');
+                    setStatus('text-danger fw-semibold', 'bi-x-circle-fill', 'Nomor ' + padded + ' sudah pernah digunakan — pilih nomor lain.');
+                } else {
+                    inp.classList.remove('is-invalid');
+                    setStatus('text-success fw-semibold', 'bi-check-circle-fill', 'Nomor ' + padded + ' tersedia.');
+                }
+            })
+            .catch(function () {
+                setStatus('text-muted', 'bi-info-circle', 'Tidak dapat mengecek nomor — validasi tetap dilakukan saat disimpan.');
+            });
+    }
+
+    inp.addEventListener('input', function () { clearTimeout(timer); timer = setTimeout(check, 400); });
+    check();
+})();
+</script>
 @endpush

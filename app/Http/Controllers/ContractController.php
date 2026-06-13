@@ -16,7 +16,6 @@ use App\Services\DocumentNumberService;
 use App\Services\EmailNotificationService;
 use App\Services\WhatsappService;
 use Illuminate\Support\Facades\Notification;
-use App\Support\DipaBudgetOptionService;
 use App\Support\ContractDocumentTte;
 use Barryvdh\DomPDF\Facade\Pdf;
 
@@ -106,16 +105,23 @@ class ContractController extends Controller
     {
         $kontrak = \App\Models\KontrakPengadaan::with(['vendor.rekening', 'ppkUser.profilable', 'dipa.activeRevision', 'dipaRevisionItem.coa', 'termin', 'arsipDokumen'])->findOrFail($id);
         $this->ensureAssignedPpk($kontrak);
-        
-        // Cek Pagu DIPA
-        $terpakai = \App\Models\KontrakPengadaan::where('master_dipa_id', $kontrak->master_dipa_id)
-            ->whereNotIn('status_kontrak', ['DIBATALKAN', 'DRAFT', 'DRAFT']) // Hitung yang Aktif, Selesai, dan Pending PPK lain
-            ->where('id', '!=', $kontrak->id)
-            ->sum('nilai_total_kontrak');
-            
-        $sisaPagu = ($kontrak->dipa->total_pagu ?? 0) - $terpakai;
-        $sisaPaguNanti = $sisaPagu - $kontrak->nilai_total_kontrak;
-        
+
+        // Cek Pagu DIPA — hanya relevan untuk kontrak lama yang masih menyimpan
+        // DIPA/COA. Kontrak baru tidak memilih COA (dipilih PPK di Proses Tagihan).
+        $terpakai = null;
+        $sisaPagu = null;
+        $sisaPaguNanti = null;
+
+        if ($kontrak->master_dipa_id) {
+            $terpakai = \App\Models\KontrakPengadaan::where('master_dipa_id', $kontrak->master_dipa_id)
+                ->whereNotIn('status_kontrak', ['DIBATALKAN', 'DRAFT']) // Hitung yang Aktif, Selesai, dan Pending PPK lain
+                ->where('id', '!=', $kontrak->id)
+                ->sum('nilai_total_kontrak');
+
+            $sisaPagu = ($kontrak->dipa->total_pagu ?? 0) - $terpakai;
+            $sisaPaguNanti = $sisaPagu - $kontrak->nilai_total_kontrak;
+        }
+
         return view('contracts.ppk_show', compact('kontrak', 'terpakai', 'sisaPagu', 'sisaPaguNanti'));
     }
 
@@ -132,13 +138,12 @@ class ContractController extends Controller
             ->whereIn('kategori', ['PENGELUARAN', 'KEDUANYA'])
             ->orderBy('nama_pihak')
             ->get();
-        $budgetGroups = DipaBudgetOptionService::groupedOptions();
         $ppkUsers = User::role('PPK')->with('profilable')->orderByDisplayName()->get();
         $documentNumberService = app(DocumentNumberService::class);
         $nomorSpkPreview = $documentNumberService->previewByKey('SPK');
         $nomorSpmkPreview = $documentNumberService->previewByKey('SPMK', null, 1);
 
-        return view('contracts.create', compact('vendors', 'budgetGroups', 'ppkUsers', 'nomorSpkPreview', 'nomorSpmkPreview'));
+        return view('contracts.create', compact('vendors', 'ppkUsers', 'nomorSpkPreview', 'nomorSpmkPreview'));
     }
 
     /**
@@ -158,7 +163,6 @@ class ContractController extends Controller
 
         $validated = $request->validate([
             'vendor_id' => 'required|exists:master_pihak,id',
-            'dipa_revision_item_id' => 'required|exists:dipa_revision_items,id',
             'nama_pekerjaan' => 'required|string',
             'ppk_user_id' => 'required|exists:users,id',
             'nomor_surat_undangan_pengadaan' => 'required|string|max:150',
@@ -181,7 +185,7 @@ class ContractController extends Controller
             // Uploads
             'file_jaminan_um' => 'nullable|file|mimes:pdf|max:5120',
             'gambar_rab' => 'nullable|image|mimes:jpg,jpeg,png|max:5120',
-            
+
             // Termin progress + retensi
             'progress_keterangan' => 'nullable|array',
             'progress_keterangan.*' => 'nullable|string|max:255',
@@ -205,22 +209,12 @@ class ContractController extends Controller
         try {
             DB::beginTransaction();
 
-            $selectedItem = DipaBudgetOptionService::resolveActiveItem($validated['dipa_revision_item_id']);
-            $dipa = $selectedItem->dipaRevision->masterDipa;
+            // COA/DIPA tidak lagi dipilih di sini — pembebanan anggaran dilakukan
+            // PPK di halaman Proses Tagihan setelah tagihan disetujui verifikator.
             $selectedPpk = $this->resolvePpkUser((int) $validated['ppk_user_id']);
             $documentNumberService = app(DocumentNumberService::class);
             $nomorSpk = $documentNumberService->generateByKey('SPK');
             $nomorSpmk = $documentNumberService->generateByKey('SPMK');
-            
-            // Cek sisa pagu COA
-            $sisaPagu = $selectedItem->sisa_pagu;
-
-            if ($validated['nilai_total_kontrak'] > $sisaPagu) {
-                return back()->withInput()->withErrors([
-                    'error' => "Gagal disimpan: Nilai Kontrak (Rp " . number_format($validated['nilai_total_kontrak'],0,',','.') . 
-                               ") melebihi sisa pagu COA yang tersedia (Rp " . number_format($sisaPagu,0,',','.') . ")."
-                ]);
-            }
 
             // Clean format Rupiah to numeric (already done by validate if input is right? No, standard HTML <input> gives the string, wait, frontend JS `oninput` copies the clean value to hidden inputs `nilai_total_kontrak_value` and `nilai_uang_muka_value` so laravel receives clean numerics).
 
@@ -235,8 +229,8 @@ class ContractController extends Controller
             $kontrak = \App\Models\KontrakPengadaan::create([
                 'vendor_id' => $validated['vendor_id'],
                 'ppk_user_id' => $selectedPpk->id,
-                'master_dipa_id' => $dipa->id,
-                'dipa_revision_item_id' => $selectedItem->id,
+                'master_dipa_id' => null,
+                'dipa_revision_item_id' => null,
                 'nomor_spk' => $nomorSpk,
                 'tanggal_spk' => $validated['tanggal_spk'],
                 'nomor_spmk' => $nomorSpmk,
@@ -380,11 +374,13 @@ class ContractController extends Controller
      */
     public function edit($id)
     {
+        abort_unless(Auth::user()?->hasAnyRole(['Super Admin', 'Pejabat Pengadaan']), 403);
+
         $kontrak = \App\Models\KontrakPengadaan::with(['termin', 'arsipDokumen'])->findOrFail($id);
-        
-        // Prevent editing if not DRAFT or DRAFT
-        if (!in_array($kontrak->status_kontrak, ['DRAFT', 'DRAFT'])) {
-            return redirect()->route('contracts.index')->with('error', 'Kontrak tidak dapat diubah karena sudah diajukan atau aktif.');
+
+        // REVISI ikut diizinkan agar kontrak yang dikembalikan PPK dapat diperbaiki.
+        if (! in_array($kontrak->status_kontrak, ['DRAFT', 'REVISI'], true)) {
+            return redirect()->route('contracts.index')->with('error', 'Kontrak hanya dapat diubah saat status DRAFT atau REVISI.');
         }
 
         $vendors = \App\Models\MasterPihak::query()
@@ -392,11 +388,10 @@ class ContractController extends Controller
             ->whereIn('kategori', ['PENGELUARAN', 'KEDUANYA'])
             ->orderBy('nama_pihak')
             ->get();
-        $budgetGroups = DipaBudgetOptionService::groupedOptions();
         $ppkUsers = User::role('PPK')->with('profilable')->orderByDisplayName()->get();
         $selectedPpkUserId = $kontrak->ppk_user_id;
 
-        return view('contracts.edit', compact('kontrak', 'vendors', 'budgetGroups', 'ppkUsers', 'selectedPpkUserId'));
+        return view('contracts.edit', compact('kontrak', 'vendors', 'ppkUsers', 'selectedPpkUserId'));
     }
 
     /**
@@ -404,10 +399,12 @@ class ContractController extends Controller
      */
     public function update(Request $request, $id)
     {
+        abort_unless(Auth::user()?->hasAnyRole(['Super Admin', 'Pejabat Pengadaan']), 403);
+
         $kontrak = \App\Models\KontrakPengadaan::findOrFail($id);
-        
-        if (!in_array($kontrak->status_kontrak, ['DRAFT', 'DRAFT'])) {
-            return redirect()->route('contracts.index')->with('error', 'Kontrak tidak dapat diubah karena statusnya saat ini.');
+
+        if (! in_array($kontrak->status_kontrak, ['DRAFT', 'REVISI'], true)) {
+            return redirect()->route('contracts.index')->with('error', 'Kontrak hanya dapat diubah saat status DRAFT atau REVISI.');
         }
 
         if ($request->metode_pembayaran === 'LUMPSUM') {
@@ -422,7 +419,6 @@ class ContractController extends Controller
 
         $validated = $request->validate([
             'vendor_id' => 'required|exists:master_pihak,id',
-            'dipa_revision_item_id' => 'required|exists:dipa_revision_items,id',
             'nama_pekerjaan' => 'required|string',
             'ppk_user_id' => 'required|exists:users,id',
             'nomor_surat_undangan_pengadaan' => 'required|string|max:150',
@@ -469,22 +465,9 @@ class ContractController extends Controller
         try {
             DB::beginTransaction();
 
-            $selectedItem = DipaBudgetOptionService::resolveActiveItem($validated['dipa_revision_item_id']);
-            $dipa = $selectedItem->dipaRevision->masterDipa;
+            // COA/DIPA tidak diubah dari form ini — pembebanan anggaran dilakukan
+            // PPK di halaman Proses Tagihan setelah tagihan disetujui verifikator.
             $selectedPpk = $this->resolvePpkUser((int) $validated['ppk_user_id']);
-            
-            // Cek sisa pagu COA
-            $sisaPagu = $selectedItem->sisa_pagu;
-            if ($kontrak->dipa_revision_item_id == $selectedItem->id) {
-                $sisaPagu += $kontrak->nilai_total_kontrak;
-            }
-
-            if ($validated['nilai_total_kontrak'] > $sisaPagu) {
-                return back()->withInput()->withErrors([
-                    'error' => "Gagal disimpan: Nilai Kontrak (Rp " . number_format($validated['nilai_total_kontrak'],0,',','.') . 
-                               ") melebihi sisa pagu COA yang tersedia (Rp " . number_format($sisaPagu,0,',','.') . ")."
-                ]);
-            }
 
             // Upload files (delete old ones if new uploaded)
             if ($request->hasFile('file_jaminan_um')) {
@@ -507,8 +490,6 @@ class ContractController extends Controller
             $kontrak->update([
                 'vendor_id' => $validated['vendor_id'],
                 'ppk_user_id' => $selectedPpk->id,
-                'master_dipa_id' => $dipa->id,
-                'dipa_revision_item_id' => $selectedItem->id,
                 'tanggal_spk' => $validated['tanggal_spk'],
                 'tanggal_spmk' => $validated['tanggal_spmk'],
                 'nama_pekerjaan' => $validated['nama_pekerjaan'],
@@ -590,7 +571,7 @@ class ContractController extends Controller
     {
         $contract = \App\Models\KontrakPengadaan::findOrFail($id);
         
-        if (!in_array($contract->status_kontrak, ['DRAFT', 'DRAFT'])) {
+        if ($contract->status_kontrak !== 'DRAFT') {
             return redirect()->route('contracts.index')->with('error', 'Kontrak aktif tidak dapat dihapus.');
         }
         
@@ -758,7 +739,19 @@ class ContractController extends Controller
             'ip_address' => request()->ip(),
         ]);
 
-        return redirect()->route('contracts.verifikasi')->with('success', 'Kontrak dikembalikan untuk revisi.');
+        // Beritahu Pejabat Pengadaan agar kontrak segera diperbaiki & diajukan ulang.
+        Notification::send(
+            User::role('Pejabat Pengadaan')->get(),
+            new WorkflowNotification([
+                'title' => 'Kontrak Dikembalikan untuk Revisi',
+                'message' => 'Kontrak ' . $kontrak->nomor_spk . ' dikembalikan PPK: ' . \Illuminate\Support\Str::limit($validated['notes'], 120),
+                'url' => route('contracts.show', $kontrak->id),
+                'icon' => 'undo',
+                'color' => 'warning',
+            ])
+        );
+
+        return redirect()->route('contracts.verifikasi')->with('success', 'Kontrak dikembalikan untuk revisi. Pejabat Pengadaan akan menerima notifikasi.');
     }
 
     public function uploadSpkFinal(Request $request, $id)

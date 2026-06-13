@@ -729,9 +729,7 @@
                         </button>
                     </form>
                     
-                    <button type="button" class="btn btn-outline-danger w-100 fw-bold" data-bs-toggle="modal" data-bs-target="#modalTolak">
-                        <i class="bi bi-x-lg me-1"></i> Tolak Dokumen
-                    </button>
+
                     <button type="button" class="btn btn-outline-warning w-100 fw-bold mt-2" data-bs-toggle="modal" data-bs-target="#modalRevisi">
                         <i class="bi bi-arrow-counterclockwise me-1"></i> Minta Revisi
                     </button>

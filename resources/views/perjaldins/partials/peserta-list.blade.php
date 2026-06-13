@@ -134,7 +134,14 @@
                                              + (float)($detail->uang_rapat ?? 0);
                                 @endphp
                                 <div class="biaya-card">
-                                    <div class="biaya-title"><i class="bi bi-cash-coin"></i> Rincian Biaya</div>
+                                    <div class="biaya-title d-flex align-items-center flex-wrap gap-2">
+                                        <span><i class="bi bi-cash-coin"></i> Rincian Biaya</span>
+                                        <a href="{{ route('perjaldins.pdf-perincian', [$tagihan->id, $detail->id]) }}" target="_blank"
+                                           class="btn btn-sm btn-outline-primary rounded-pill py-0 px-3 ms-auto d-inline-flex align-items-center gap-1"
+                                           style="font-size: 0.72rem;">
+                                            <i class="bi bi-file-earmark-pdf"></i> PDF Perincian Biaya
+                                        </a>
+                                    </div>
                                     <div class="biaya-layout">
                                         <div class="biaya-cell">
                                             <span class="b-label">Tiket</span>

@@ -25,7 +25,6 @@
         .tbl-data th { background-color: #e6dbf2; font-weight: bold; }
         .tbl-data td.text-left { text-align: left; }
         .tbl-data td.text-right { text-align: right; }
-        .td-ttd { border-bottom: 1px solid #ccc; height: 20px; width: 45px; }
 
         .ttd-box { width: 100%; table-layout: fixed; margin-top: 25px; }
         .ttd-box td { text-align: left; vertical-align: bottom; height: 110px; }
@@ -80,7 +79,6 @@
             <th colspan="5">BIAYA PERJALANAN DINAS</th>
             <th rowspan="2">JUMLAH</th>
             <th rowspan="2">REKENING</th>
-            <th rowspan="2">TTD</th>
         </tr>
         <tr>
             <th>TIKET</th>
@@ -134,9 +132,6 @@
                     {{ $dt->rekening ?: '-' }}<br>
                     @if($dt->nama_bank)({{ $dt->nama_bank }})@endif
                 </td>
-                <td style="padding: 0;">
-                    <div class="td-ttd" style="text-align:left; font-size:8px; padding:2px;">{{ $idx + 1 }}.</div>
-                </td>
             </tr>
         @endforeach
 
@@ -148,7 +143,7 @@
             <td class="text-right">{{ number_format($gtHarian, 0, ',', '.') }}</td>
             <td class="text-right">{{ number_format($gtRepresentasi, 0, ',', '.') }}</td>
             <td class="text-right">{{ number_format($gtJumlah, 0, ',', '.') }}</td>
-            <td colspan="2"></td>
+            <td></td>
         </tr>
     </tbody>
 </table>
@@ -160,7 +155,6 @@
             <p>Pejabat Pembuat Komitmen</p>
             @if(!empty($tteQrFilePath))
                 <img src="{{ $tteQrFilePath }}" alt="QR TTE Daftar Nominatif Pembayaran" class="qr-tte">
-                <div class="qr-label">Ditandatangani Secara Elektronik</div>
             @else
                 <br><br><br><br>
             @endif
@@ -171,7 +165,6 @@
             <p>Bendahara Pengeluaran</p>
             @if(!empty($tteQrFilePathBendahara))
                 <img src="{{ $tteQrFilePathBendahara }}" alt="QR TTE Bendahara Pengeluaran" class="qr-tte">
-                <div class="qr-label">Ditandatangani Secara Elektronik</div>
             @else
                 <br><br><br><br>
             @endif

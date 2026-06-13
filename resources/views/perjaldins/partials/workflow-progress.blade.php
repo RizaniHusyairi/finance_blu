@@ -26,6 +26,18 @@
         'Kepala Subbagian Keuangan dan Tata Usaha' => 'bi-patch-check-fill',
     ];
 
+    // Nama verifikator yang ditugaskan pada tagihan (snapshot saat pengajuan),
+    // dipakai bila approval belum punya assigned_user_id / belum ditindak.
+    $verifikatorNames = [
+        'PPSPM' => $tagihan->ppspm_nama_snapshot,
+        'BENDAHARA_PENERIMAAN' => $tagihan->bendahara_penerimaan_nama_snapshot,
+        'BENDAHARA_PENGELUARAN' => $tagihan->bendahara_pengeluaran_nama_snapshot,
+        'PPK' => $tagihan->ppk_nama_snapshot,
+        'KOORDINATOR_KEUANGAN' => $tagihan->koordinator_keuangan_nama_snapshot,
+        'KASUBBAG' => $tagihan->kasubbag_nama_snapshot,
+        'Kepala Subbagian Keuangan dan Tata Usaha' => $tagihan->kasubbag_nama_snapshot,
+    ];
+
     $stateFromApproval = function ($approval) use ($workflow) {
         return match ($approval->status) {
             'APPROVED' => 'done',
@@ -57,7 +69,7 @@
         $parallelSteps = $parallelApprovals->map(fn($a) => [
             'role'  => $roleLabels[$a->role_code] ?? $a->role_code,
             'icon'  => $roleIcons[$a->role_code] ?? 'bi-clipboard2-check',
-            'name'  => $a->actedByUser?->name ?? $a->assignedUser?->name ?? 'Belum ditugaskan',
+            'name'  => $a->actedByUser?->name ?? $a->assignedUser?->name ?? $verifikatorNames[$a->role_code] ?? 'Belum ditugaskan',
             'state' => $stateFromApproval($a),
             'log_at'=> $a->acted_at ? \Carbon\Carbon::parse($a->acted_at) : null,
         ]);
@@ -66,7 +78,7 @@
         $parallelSteps = collect($placeholderRoles)->map(fn($r) => [
             'role'  => $roleLabels[$r],
             'icon'  => $roleIcons[$r],
-            'name'  => 'Belum ditugaskan',
+            'name'  => $verifikatorNames[$r] ?? 'Belum ditugaskan',
             'state' => str_starts_with($status, 'PENDING_') ? 'active' : 'pending',
             'log_at'=> null,
         ]);
@@ -74,11 +86,11 @@
 
     if ($kasubbagApproval) {
         $kasubbagState = $stateFromApproval($kasubbagApproval);
-        $kasubbagName  = $kasubbagApproval->actedByUser?->name ?? $kasubbagApproval->assignedUser?->name ?? 'Belum ditugaskan';
+        $kasubbagName  = $kasubbagApproval->actedByUser?->name ?? $kasubbagApproval->assignedUser?->name ?? $verifikatorNames['KASUBBAG'] ?? 'Belum ditugaskan';
         $kasubbagLogAt = $kasubbagApproval->acted_at ? \Carbon\Carbon::parse($kasubbagApproval->acted_at) : null;
     } else {
         $kasubbagState = $status === 'PENDING_KASUBBAG' ? 'active' : ($status === 'DISETUJUI_PERJALDIN' ? 'done' : 'pending');
-        $kasubbagName  = 'Belum ditugaskan';
+        $kasubbagName  = $verifikatorNames['KASUBBAG'] ?? 'Belum ditugaskan';
         $kasubbagLogAt = null;
     }
 

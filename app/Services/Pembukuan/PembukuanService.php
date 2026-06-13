@@ -703,6 +703,166 @@ class PembukuanService
         ];
     }
 
+    public function buildPengesahanPendapatanIndexData(array $filters = []): array
+    {
+        $filters = $this->normalizeFilters($filters);
+
+        $query = LaporanPengesahanBlu::query()
+            ->with('approver')
+            ->when($filters['bulan'], fn (Builder $q) => $q->where('periode_bulan', $filters['bulan']))
+            ->when($filters['tahun'], fn (Builder $q) => $q->where('tahun', $filters['tahun']))
+            ->when($filters['status_pengesahan'], fn (Builder $q) => $q->where('status_pengesahan', $filters['status_pengesahan']));
+
+        $reports = $query
+            ->orderByDesc('tahun')
+            ->orderByDesc('periode_bulan')
+            ->get();
+
+        return [
+            'filters' => $filters,
+            'reports' => $reports,
+            'months' => $this->monthOptions(),
+            'summary' => [
+                'total_laporan' => $reports->count(),
+                'draft' => $reports->where('status_pengesahan', 'DRAFT')->count(),
+                'verifikasi_kppn' => $reports->where('status_pengesahan', 'VERIFIKASI_KPPN')->count(),
+                'disahkan' => $reports->where('status_pengesahan', 'DISAHKAN')->count(),
+                'total_pendapatan_disahkan' => $reports
+                    ->where('status_pengesahan', 'DISAHKAN')
+                    ->sum(fn (LaporanPengesahanBlu $r) => (float) $r->total_penerimaan),
+            ],
+        ];
+    }
+
+    public function buildPengesahanPendapatanDetail(LaporanPengesahanBlu $laporan): array
+    {
+        $laporan->loadMissing([
+            'approver.profilable',
+            'arsipDokumen.uploader',
+        ]);
+
+        $start = Carbon::create($laporan->tahun, $laporan->periode_bulan, 1)->startOfMonth();
+        $end = (clone $start)->endOfMonth();
+
+        // Ringkasan sumber data sisi PENERIMAAN — pembanding kontrol untuk
+        // angka total_penerimaan laporan (rekonsiliasi kasar per periode).
+        $sourceSummary = [
+            'bku_masuk' => [
+                'count' => BukuKasUmum::query()
+                    ->where('arus_kas', 'DEBIT_MASUK')
+                    ->whereBetween('tanggal_transaksi', [$start->toDateString(), $end->toDateString()])
+                    ->count(),
+                'total' => BukuKasUmum::query()
+                    ->where('arus_kas', 'DEBIT_MASUK')
+                    ->whereBetween('tanggal_transaksi', [$start->toDateString(), $end->toDateString()])
+                    ->sum('nominal'),
+            ],
+            'transaksi_penerimaan' => [
+                'count' => TransaksiPenerimaan::query()
+                    ->whereBetween('tanggal_invoice', [$start->toDateString(), $end->toDateString()])
+                    ->count(),
+                'total' => TransaksiPenerimaan::query()
+                    ->whereBetween('tanggal_invoice', [$start->toDateString(), $end->toDateString()])
+                    ->sum('total_dibayar'),
+            ],
+            'mutasi_bank_masuk' => [
+                'count' => DetailMutasiBank::query()
+                    ->where('arah_mutasi', 'MASUK')
+                    ->whereBetween('tanggal_transaksi', [$start->toDateString(), $end->toDateString()])
+                    ->count(),
+                'total' => DetailMutasiBank::query()
+                    ->where('arah_mutasi', 'MASUK')
+                    ->whereBetween('tanggal_transaksi', [$start->toDateString(), $end->toDateString()])
+                    ->sum('kredit'),
+            ],
+        ];
+
+        $timeline = collect([
+            [
+                'label' => 'Laporan dibuat',
+                'description' => 'Dokumen pengesahan BLU dibuat di sistem.',
+                'time' => $laporan->created_at,
+                'actor' => 'Sistem',
+            ],
+            [
+                'label' => 'Pembaruan terakhir',
+                'description' => 'Metadata laporan diperbarui terakhir kali.',
+                'time' => $laporan->updated_at,
+                'actor' => 'Sistem',
+            ],
+            $laporan->approver ? [
+                'label' => 'Approver tercatat',
+                'description' => 'Laporan memiliki approver / KPA terkait.',
+                'time' => $laporan->updated_at,
+                'actor' => $laporan->approver->name,
+            ] : null,
+        ])
+            ->filter()
+            ->sortBy('time')
+            ->values();
+
+        return [
+            'report' => $laporan,
+            'months' => $this->monthOptions(),
+            'periodStart' => $start,
+            'periodEnd' => $end,
+            'sourceSummary' => $sourceSummary,
+            'timeline' => $timeline,
+        ];
+    }
+
+    /**
+     * Buat record laporan_pengesahan_blu untuk satu periode dari data BKU.
+     *
+     * Satu record per periode dipakai bersama oleh Buku Pengesahan Belanja
+     * dan Buku Pengesahan Pendapatan. Angka dihitung dari BKU:
+     * total_penerimaan = sum DEBIT_MASUK, total_pengeluaran = sum KREDIT_KELUAR,
+     * saldo_akhir_blu = saldo_akhir baris BKU terakhir s.d. akhir bulan.
+     *
+     * @throws \DomainException bila periode sudah punya laporan atau tidak ada data BKU.
+     */
+    public function generateLaporanPengesahan(int $bulan, int $tahun): LaporanPengesahanBlu
+    {
+        $start = Carbon::create($tahun, $bulan, 1)->startOfMonth();
+        $end = (clone $start)->endOfMonth();
+        $periodeLabel = ($this->monthOptions()[$bulan] ?? $bulan) . ' ' . $tahun;
+
+        return DB::transaction(function () use ($bulan, $tahun, $start, $end, $periodeLabel) {
+            $sudahAda = LaporanPengesahanBlu::query()
+                ->where('periode_bulan', $bulan)
+                ->where('tahun', $tahun)
+                ->lockForUpdate()
+                ->exists();
+
+            if ($sudahAda) {
+                throw new \DomainException("Laporan pengesahan periode {$periodeLabel} sudah ada.");
+            }
+
+            $bkuPeriode = BukuKasUmum::query()
+                ->whereBetween('tanggal_transaksi', [$start->toDateString(), $end->toDateString()]);
+
+            if (! (clone $bkuPeriode)->exists()) {
+                throw new \DomainException("Tidak ada transaksi BKU pada periode {$periodeLabel}, laporan tidak bisa dibuat.");
+            }
+
+            $saldoAkhir = BukuKasUmum::query()
+                ->where('tanggal_transaksi', '<=', $end->toDateString())
+                ->orderByDesc('tanggal_transaksi')
+                ->orderByDesc('id')
+                ->value('saldo_akhir') ?? 0;
+
+            return LaporanPengesahanBlu::create([
+                'nomor_laporan' => sprintf('LAP-PENGESAHAN-BLU/%02d/%d', $bulan, $tahun),
+                'periode_bulan' => $bulan,
+                'tahun' => $tahun,
+                'total_penerimaan' => (clone $bkuPeriode)->where('arus_kas', 'DEBIT_MASUK')->sum('nominal'),
+                'total_pengeluaran' => (clone $bkuPeriode)->where('arus_kas', 'KREDIT_KELUAR')->sum('nominal'),
+                'saldo_akhir_blu' => $saldoAkhir,
+                'status_pengesahan' => 'DRAFT',
+            ]);
+        });
+    }
+
     public function streamPdf(string $view, array $data, string $filename, string $paper = 'a4', string $orientation = 'landscape')
     {
         $pdf = Pdf::loadView($view, $data);

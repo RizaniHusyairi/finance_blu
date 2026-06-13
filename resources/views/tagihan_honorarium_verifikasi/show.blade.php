@@ -341,9 +341,7 @@
         <div class="col-lg-4">
             <div class="sticky-top topbar-safe-sticky z-1">
 
-                {{-- Card Persetujuan KPA (Standing Instruction) — diajukan PPK --}}
-                @include('tagihan.partials.kpa_approval_card', ['tagihan' => $tagihan])
-
+                {{-- Persetujuan KPA dikelola PPK di halaman Proses Tagihan (bukan di sini). --}}
                 @if(in_array($tagihan->status, ['DISETUJUI', 'PROSES_SPP', 'SELESAI'], true))
                 <div class="card border-0 shadow-sm rounded-4 mb-3">
                     <div class="card-body p-3">
@@ -398,10 +396,6 @@
                                                 data-bs-toggle="modal" data-bs-target="#modalRevisi{{ $approvalIdx }}">
                                             <i class="bi bi-arrow-counterclockwise me-1"></i>Revisi
                                         </button>
-                                        <button type="button" class="btn btn-outline-danger btn-sm flex-fill fw-bold"
-                                                data-bs-toggle="modal" data-bs-target="#modalReject{{ $approvalIdx }}">
-                                            <i class="bi bi-x-lg me-1"></i>Tolak
-                                        </button>
                                     </div>
                                 </div>
                             @endforeach
@@ -426,9 +420,6 @@
 
                             <button type="button" class="btn btn-outline-warning w-100 fw-bold mb-2" data-bs-toggle="modal" data-bs-target="#modalRevisi">
                                 <i class="bi bi-arrow-counterclockwise me-1"></i>Minta Revisi
-                            </button>
-                            <button type="button" class="btn btn-outline-danger w-100 fw-bold" data-bs-toggle="modal" data-bs-target="#modalReject">
-                                <i class="bi bi-x-lg me-1"></i>Tolak
                             </button>
                         @elseif($kasubbagWaiting)
                             <h5 class="fw-bold mb-2"><i class="bi bi-clock-history me-2 text-info"></i>Antrean Kasubbag</h5>

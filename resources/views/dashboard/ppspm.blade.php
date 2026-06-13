@@ -169,32 +169,22 @@
 
     {{-- ===== Quick access ===== --}}
     <div class="row g-3 mt-1">
-        <div class="col-md-4">
-            <a href="{{ route('verifikasi-ppspm.spm.kontrak.index') }}" class="v-quick v-anim v-d4">
-                <span class="q-ic bg-violet"><i class="bi bi-file-earmark-check"></i></span>
+        <div class="col-md-6">
+            <a href="{{ route('verifikasi-ppspm.perjaldin.index') }}" class="v-quick v-anim v-d4">
+                <span class="q-ic bg-violet"><i class="bi bi-airplane"></i></span>
                 <div>
-                    <div class="q-title">Verifikasi SPM Kontrak</div>
-                    <div class="q-sub">Uji & tanda tangani SPM kontrak</div>
+                    <div class="q-title">Verifikasi Tagihan</div>
+                    <div class="q-sub">Perjaldin</div>
                 </div>
                 <i class="bi bi-arrow-right q-arrow"></i>
             </a>
         </div>
-        <div class="col-md-4">
-            <a href="{{ route('verifikasi-spm.honor.index') }}" class="v-quick v-anim v-d5">
-                <span class="q-ic bg-amber"><i class="bi bi-people-fill"></i></span>
-                <div>
-                    <div class="q-title">Verifikasi SPM Honorarium</div>
-                    <div class="q-sub">Periksa SPM honorarium</div>
-                </div>
-                <i class="bi bi-arrow-right q-arrow"></i>
-            </a>
-        </div>
-        <div class="col-md-4">
-            <a href="{{ route('verifikasi-sp2d.honor.index') }}" class="v-quick v-anim v-d6">
+        <div class="col-md-6">
+            <a href="{{ route('proses-tagihan.index') }}" class="v-quick v-anim v-d5">
                 <span class="q-ic bg-emerald"><i class="bi bi-cash-coin"></i></span>
                 <div>
-                    <div class="q-title">Verifikasi SP2D</div>
-                    <div class="q-sub">Honor & perjalanan dinas</div>
+                    <div class="q-title">Proses Tagihan</div>
+                    <div class="q-sub">Verifikasi SPM/SP2D dalam satu halaman</div>
                 </div>
                 <i class="bi bi-arrow-right q-arrow"></i>
             </a>

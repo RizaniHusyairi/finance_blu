@@ -14,11 +14,8 @@
     </div>
     <div class="mt-3 mt-md-0 d-flex gap-2 flex-wrap">
         <a href="{{ route('verifikasi-bendahara-penerimaan.perjaldin.index') }}" class="btn btn-sm btn-outline-primary fw-semibold"><i class="bi bi-airplane me-1"></i> Tagihan Perjaldin</a>
-        <a href="{{ route('verifikasi-bendahara-penerimaan.npi.kontrak.index') }}" class="btn btn-sm btn-outline-primary fw-semibold"><i class="bi bi-file-earmark-text me-1"></i> NPI Kontrak</a>
-        <!-- Ensure these routes exist or adjust accordingly -->
-        <a href="#" class="btn btn-sm btn-outline-primary fw-semibold"><i class="bi bi-airplane-engines me-1"></i> NPI Perjaldin</a>
-        <a href="{{ route('verifikasi-bendahara-penerimaan.npi.index') }}" class="btn btn-sm btn-outline-primary fw-semibold"><i class="bi bi-people me-1"></i> NPI Honor</a>
-        <a href="#" class="btn btn-sm btn-primary fw-semibold"><i class="bi bi-book me-1"></i> BKU</a>
+        <a href="{{ route('proses-tagihan.index') }}" class="btn btn-sm btn-outline-primary fw-semibold"><i class="bi bi-file-earmark-text me-1"></i> Proses Tagihan</a>
+        <a href="{{ route('pembukuan.bku.index') }}" class="btn btn-sm btn-primary fw-semibold"><i class="bi bi-book me-1"></i> BKU</a>
     </div>
 </div>
 
@@ -57,7 +54,7 @@
                 <div class="mt-2 small text-muted">
                     <span class="badge bg-danger rounded-pill">{{ $npiKontrak->where('status', \App\Models\DokumenNpi::STATUS_REVISI)->count() }} Revisi</span>
                 </div>
-                <a href="{{ route('verifikasi-bendahara-penerimaan.npi.kontrak.index') }}" class="stretched-link"></a>
+                <a href="{{ route('proses-tagihan.index') }}" class="stretched-link"></a>
             </div>
         </div>
     </div>
@@ -94,7 +91,7 @@
                 <div class="mt-2 small text-muted">
                     <span class="badge bg-danger rounded-pill">{{ $npiHonor->where('status', \App\Models\DokumenNpi::STATUS_REVISI)->count() }} Revisi</span>
                 </div>
-                <a href="{{ route('verifikasi-bendahara-penerimaan.npi.index') }}" class="stretched-link"></a>
+                <a href="{{ route('proses-tagihan.index') }}" class="stretched-link"></a>
             </div>
         </div>
     </div>

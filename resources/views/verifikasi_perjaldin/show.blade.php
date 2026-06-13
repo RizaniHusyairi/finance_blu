@@ -591,9 +591,7 @@
     {{-- Kolom Kanan: Panel Aksi (Sticky) --}}
     <div class="col-lg-4">
         <div class="sticky-panel">
-            {{-- Card Persetujuan KPA (Standing Instruction) — diajukan PPK --}}
-            @include('tagihan.partials.kpa_approval_card', ['tagihan' => $tagihan])
-
+            {{-- Persetujuan KPA dikelola PPK di halaman Proses Tagihan (bukan di sini). --}}
             @if(in_array($tagihan->status, ['DISETUJUI_PERJALDIN', 'PROSES_SPP', 'SELESAI'], true))
             <div class="card info-doc-card shadow-sm mb-3">
                 <div class="card-body p-3">

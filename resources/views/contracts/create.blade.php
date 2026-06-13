@@ -688,16 +688,7 @@
                                     @endforeach
                                 </select>
                             </div>
-                            <div class="col-md-6">
-                                @include('partials.dipa-item-grouped-select', [
-                                    'budgetGroups' => $budgetGroups,
-                                    'fieldName' => 'dipa_revision_item_id',
-                                    'fieldId' => 'dipa_revision_item_id',
-                                    'fieldClass' => 'form-select select2',
-                                    'fieldLabel' => 'Pilih Item Anggaran (COA)',
-                                    'placeholder' => '-- Cari Item Anggaran DIPA Aktif --',
-                                ])
-                            </div>
+
                             <div class="col-12">
                                 <label class="form-label modern"><i class="bi bi-journal-text"></i> Nama Pekerjaan <span class="text-danger">*</span></label>
                                 <textarea class="form-control modern" rows="3" name="nama_pekerjaan" placeholder="Contoh: Pengadaan Jasa Kebersihan (Cleaning Service) Area Terminal Bandara" required>{{ old('nama_pekerjaan') }}</textarea>
@@ -838,7 +829,6 @@
                                 <label class="form-label modern"><i class="bi bi-currency-dollar"></i> Nilai Total Kontrak (Rp) <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control modern rupiah-input" id="nilai_total_kontrak_display" placeholder="Misal: 100.000.000" value="{{ old('nilai_total_kontrak') }}" required>
                                 <input type="hidden" name="nilai_total_kontrak" id="nilai_total_kontrak_value" value="{{ old('nilai_total_kontrak') }}">
-                                <small class="text-danger mt-1 fw-bold d-none" id="pagu_error"></small>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label modern d-block"><i class="bi bi-credit-card-2-front"></i> Metode Pembayaran <span class="text-danger">*</span></label>
@@ -1102,17 +1092,12 @@
                 this.value = formatRupiah(cleanValue);
                 if (this.id === 'nilai_total_kontrak_display') {
                     validasiUangMuka();
-                    validasiSisaPagu();
                     kalkulasiTotalTermin();
                 } else if (this.id === 'nilai_uang_muka_display') {
                     validasiUangMuka();
                     kalkulasiTotalTermin();
                 }
             });
-        });
-
-        $('#dipa_revision_item_id').on('change', function() {
-            validasiSisaPagu();
         });
     });
 
@@ -1178,31 +1163,6 @@
             errEl.classList.remove('d-none');
         } else {
             errEl.classList.add('d-none');
-        }
-    }
-
-    function validasiSisaPagu() {
-        let selectCoa = document.getElementById('dipa_revision_item_id');
-        let selectedOption = selectCoa.options[selectCoa.selectedIndex];
-        let total = parseFloat(document.getElementById('nilai_total_kontrak_value').value) || 0;
-        let sisaPagu = selectedOption ? parseFloat(selectedOption.getAttribute('data-sisa-pagu')) || 0 : 0;
-        let btnSubmit = document.querySelector('button[type="submit"]');
-        let errPaguEl = document.getElementById('pagu_error');
-
-        if (total > 0 && selectedOption && selectedOption.value !== "") {
-            if (total > sisaPagu) {
-                if (errPaguEl) {
-                    errPaguEl.classList.remove('d-none');
-                    errPaguEl.innerText = "Peringatan: Nilai Kontrak (Rp " + formatRupiah(total.toString(), '') + ") melebihi sisa pagu COA yang tersedia (Rp " + formatRupiah(sisaPagu.toString(), '') + ").";
-                }
-                btnSubmit.disabled = true;
-            } else {
-                if (errPaguEl) errPaguEl.classList.add('d-none');
-                btnSubmit.disabled = false;
-            }
-        } else {
-            if (errPaguEl) errPaguEl.classList.add('d-none');
-            btnSubmit.disabled = false;
         }
     }
 

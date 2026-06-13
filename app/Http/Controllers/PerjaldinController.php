@@ -142,8 +142,10 @@ class PerjaldinController extends Controller
 
         $year = now()->format('Y');
         $nextNumber = app(\App\Services\DocumentNumberService::class)->previewByKey('KU_PERJALDIN');
+        // Nomor urut diisi manual oleh user; prefill dengan nomor bebas berikutnya.
+        $nextUrut = app(\App\Services\DocumentNumberService::class)->nextRunningNumberByKey('KU_PERJALDIN');
 
-        return view('perjaldins.create', compact('masterProvinsi', 'ppkUsers', 'ppspmUsers', 'bendaharaPenerimaanUsers', 'bendaharaUsers', 'kasubbagUser', 'koorKeuanganUsers', 'masterPegawai', 'nextNumber'));
+        return view('perjaldins.create', compact('masterProvinsi', 'ppkUsers', 'ppspmUsers', 'bendaharaPenerimaanUsers', 'bendaharaUsers', 'kasubbagUser', 'koorKeuanganUsers', 'masterPegawai', 'nextNumber', 'nextUrut'));
     }
 
     /**
@@ -170,6 +172,18 @@ class PerjaldinController extends Controller
 
         $request->validate([
             'deskripsi' => 'required|string|max:255',
+            // Nomor urut 4 digit dipilih manual; unik lintas surat KU segrup
+            // (Honorarium/Perjaldin/Surat Pengantar Jasa) pada tahun berjalan.
+            'nomor_urut' => ['required', 'regex:/^[0-9]{1,4}$/', function ($attribute, $value, $fail) {
+                $num = (int) $value;
+                if ($num < 1) {
+                    $fail('Nomor urut minimal 0001.');
+                    return;
+                }
+                if (app(\App\Services\DocumentNumberService::class)->checkNumberExists('KU_PERJALDIN', (int) date('Y'), $num)) {
+                    $fail('Nomor urut ' . str_pad((string) $num, 4, '0', STR_PAD_LEFT) . ' sudah pernah digunakan pada tahun ' . date('Y') . '. Pilih nomor lain.');
+                }
+            }],
             'periode_bulan' => 'required|integer|min:1|max:12',
             'periode_tahun' => 'required|integer|min:2000|max:2100',
             'kota_ttd' => 'required|string|max:100',
@@ -233,9 +247,10 @@ class PerjaldinController extends Controller
             $totalBruto = $this->calculatePerjaldinGrandTotal($request->peserta);
 
             $tahun = date('Y');
-            // Nomor surat KU otomatis & bebas-bentrok lintas tipe via register terpusat.
+            // Nomor urut manual dari user; register terpusat menjaga keunikan
+            // lintas tipe surat KU dan menolak nomor yang sudah terpakai.
             $nomorTagihan = app(\App\Services\DocumentNumberService::class)
-                ->generateByKey('KU_PERJALDIN', (int) $tahun);
+                ->generateByKeyWithNumber('KU_PERJALDIN', (int) $request->nomor_urut, (int) $tahun);
 
             $tagihan = Tagihan::create([
                 'nomor_tagihan' => $nomorTagihan,
@@ -318,6 +333,10 @@ class PerjaldinController extends Controller
 
             DB::commit();
             return redirect()->route('perjaldins.index')->with('success', 'Data Perjaldin berhasil ditambahkan.');
+        } catch (\InvalidArgumentException $e) {
+            // Nomor urut keburu dipakai proses lain (race) — tampilkan di field.
+            DB::rollBack();
+            return back()->withInput()->withErrors(['nomor_urut' => $e->getMessage()]);
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->withInput()->withErrors(['error' => 'Gagal menyimpan: ' . $e->getMessage()]);
@@ -724,6 +743,30 @@ class PerjaldinController extends Controller
         $pdf->setPaper('a4', 'landscape');
 
         return $pdf->stream('Daftar_Nominatif_Pembayaran_Perjaldin_' . \Illuminate\Support\Str::slug($tagihan->nomor_tagihan, '_') . '.pdf');
+    }
+
+    /**
+     * Perincian Biaya Perjalanan Dinas per pegawai (lampiran SPD) — dicetak
+     * untuk ditandatangani basah oleh Bendahara Pengeluaran, penerima, dan PPK.
+     */
+    public function exportPdfPerincian($id, $detailId)
+    {
+        $tagihan = Tagihan::where('tipe_tagihan', 'PERJALDIN')
+            ->with(['detailPerjaldin.pegawai', 'detailPerjaldin.provinsi'])
+            ->findOrFail($id);
+
+        $detail = $tagihan->detailPerjaldin->firstWhere('id', (int) $detailId);
+        abort_unless($detail, 404, 'Peserta tidak ditemukan pada tagihan perjaldin ini.');
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('perjaldins.pdf_perincian', [
+            'tagihan' => $tagihan,
+            'detail' => $detail,
+        ]);
+        $pdf->setPaper('a4', 'portrait');
+
+        return $pdf->stream('Perincian_Biaya_Perjaldin_'
+            . \Illuminate\Support\Str::slug($detail->nama_pegawai ?? $detail->pegawai?->nama_lengkap ?? 'peserta', '_')
+            . '_' . \Illuminate\Support\Str::slug($tagihan->nomor_tagihan, '_') . '.pdf');
     }
 
     /**

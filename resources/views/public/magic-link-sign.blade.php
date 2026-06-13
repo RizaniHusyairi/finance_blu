@@ -238,6 +238,155 @@
         .stagger-1 { animation: fadeUp .6s cubic-bezier(.16,1,.3,1) .15s both; }
         .stagger-2 { animation: fadeUp .6s cubic-bezier(.16,1,.3,1) .28s both; }
         .stagger-3 { animation: fadeUp .6s cubic-bezier(.16,1,.3,1) .4s both; }
+        .stagger-4 { animation: fadeUp .6s cubic-bezier(.16,1,.3,1) .5s both; }
+
+        /* ===== Modern Upload Form ===== */
+        .upload-doc-card {
+            background: #fff;
+            border: 1px solid var(--border-soft);
+            border-radius: 1.25rem;
+            padding: 1.25rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative;
+            overflow: hidden;
+            margin-bottom: 0.75rem;
+        }
+
+        .upload-doc-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 24px -10px rgba(30, 34, 53, 0.15);
+            border-color: rgba(79, 70, 229, 0.3);
+        }
+
+        .upload-doc-card.status-uploaded {
+            border-left: 4px solid var(--success);
+            background: linear-gradient(90deg, rgba(16,185,129,0.05) 0%, #fff 50%);
+        }
+
+        .upload-doc-card.status-locked {
+            background: #f9fafb;
+            opacity: 0.9;
+        }
+
+        .udc-info {
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+        }
+
+        .udc-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            flex-shrink: 0;
+            transition: all 0.3s ease;
+        }
+
+        .status-uploaded .udc-icon { background: rgba(16, 185, 129, 0.15); color: var(--success-dark); }
+        .status-pending .udc-icon { background: rgba(79, 70, 229, 0.1); color: var(--primary); }
+        .status-locked .udc-icon { background: rgba(245, 158, 11, 0.15); color: #b45309; }
+
+        .udc-title {
+            font-weight: 700;
+            margin: 0 0 0.35rem 0;
+            color: var(--text-main);
+            font-size: 1.05rem;
+        }
+
+        .udc-meta .badge {
+            font-weight: 600;
+            padding: 0.4em 0.8em;
+        }
+
+        .udc-action {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .modern-upload-form {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin: 0;
+        }
+
+        .modern-file-input { display: none; }
+
+        .modern-file-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.6rem 1.25rem;
+            background: #f1f5f9;
+            color: #475569;
+            border-radius: 999px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            border: 1px dashed #cbd5e1;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+            max-width: 250px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .modern-file-label:hover {
+            background: #e2e8f0;
+            border-color: #94a3b8;
+            color: #334155;
+        }
+
+        .modern-file-label.file-selected {
+            background: rgba(79, 70, 229, 0.1);
+            border: 1px solid rgba(79, 70, 229, 0.3);
+            color: var(--primary-dark);
+        }
+
+        .btn-upload-submit {
+            padding: 0.6rem 1.25rem;
+            font-weight: 600;
+            font-size: 0.9rem;
+            animation: fadeInSlide 0.3s ease;
+        }
+
+        @keyframes fadeInSlide {
+            from { opacity: 0; transform: translateX(-10px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        @media (max-width: 768px) {
+            .upload-doc-card {
+                flex-direction: column;
+                align-items: flex-start;
+                padding: 1.25rem;
+            }
+            .udc-action {
+                width: 100%;
+                margin-top: 0.5rem;
+            }
+            .modern-upload-form {
+                width: 100%;
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .modern-file-label {
+                max-width: 100%;
+                justify-content: center;
+            }
+            .btn-upload-submit {
+                width: 100%;
+            }
+        }
     </style>
 </head>
 <body>
@@ -278,8 +427,28 @@
                                 <div>{{ session('error') }}</div>
                             </div>
                         @endif
+                        @if(session('success'))
+                            <div class="alert alert-success border-0 shadow-sm d-flex align-items-center gap-2 stagger-1">
+                                <i class="bi bi-check-circle-fill fs-5"></i>
+                                <div>{{ session('success') }}</div>
+                            </div>
+                        @endif
 
                         <!-- Meta Chips -->
+                        @php
+                            $isVendor = ($signature->role === 'vendor');
+                            $allVendorDocsUploaded = true;
+                            if ($isVendor) {
+                                foreach($signatures as $docSig) {
+                                    $jenis = $docSig->document_label . '_FINAL_TTD';
+                                    $arsip = $tagihan->detailKontrak->arsipDokumen->where('jenis_dokumen', $jenis)->where('is_active', true)->first();
+                                    if (!$arsip) {
+                                        $allVendorDocsUploaded = false;
+                                        break;
+                                    }
+                                }
+                            }
+                        @endphp
                         <div class="chip-grid mb-4 stagger-2">
                             <div class="meta-chip">
                                 <div class="meta-label">Referensi Tagihan</div>
@@ -348,7 +517,91 @@
                                     <strong>Tanda Tangan Elektronik</strong> secara sah dan sadar tanpa paksaan.
                                 </label>
                             </div>
+                            @if($isVendor && !$allVendorDocsUploaded)
+                                <div class="alert alert-warning border-0 small py-2 mt-3 mb-0 d-flex align-items-start">
+                                    <i class="bi bi-exclamation-triangle-fill me-2 fs-5 text-warning"></i>
+                                    <div>
+                                        <strong>Menunggu Dokumen Diunggah:</strong> Anda baru bisa menyetujui &amp; menyelesaikan proses ini setelah semua dokumen final ber-TTD &amp; stempel berhasil diunggah.
+                                    </div>
+                                </div>
+                            @endif
                         </div>
+
+                        <!-- Upload Area for Vendor -->
+                        @if($signature->role === 'vendor')
+                        <div class="mt-4 pt-4 border-top stagger-4">
+                            <h5 class="fw-bold mb-3 d-flex align-items-center">
+                                <span class="bg-primary-subtle text-primary rounded-circle p-2 me-2 d-inline-flex">
+                                    <i class="bi bi-cloud-arrow-up-fill"></i>
+                                </span>
+                                Unggah Dokumen Final Ber-TTD & Stempel
+                            </h5>
+                            <p class="text-muted small mb-4">Silakan unggah hasil scan dokumen final yang telah Anda tandatangani secara fisik dan dibubuhi stempel perusahaan. Gunakan format PDF maksimal 10MB.</p>
+                            
+                            @foreach($signatures as $docSig)
+                                @php
+                                    $jenis = $docSig->document_label . '_FINAL_TTD';
+                                    $arsip = $tagihan->detailKontrak->arsipDokumen->where('jenis_dokumen', $jenis)->where('is_active', true)->first();
+                                    $isBapp = $docSig->document_label === 'BAPP';
+                                    $pemeriksaSigned = false;
+                                    if($isBapp) {
+                                        $pemeriksaSigs = $tagihan->documentSignatures->where('role', 'tim_pemeriksa');
+                                        $pemeriksaSigned = $pemeriksaSigs->count() > 0 && $pemeriksaSigs->every(fn($s) => $s->status === 'signed');
+                                    }
+                                    $canUpload = !$isBapp || $pemeriksaSigned;
+                                    
+                                    $statusClass = $arsip ? 'status-uploaded' : ($canUpload ? 'status-pending' : 'status-locked');
+                                @endphp
+                                
+                                <div class="upload-doc-card {{ $statusClass }}">
+                                    <div class="udc-info">
+                                        <div class="udc-icon">
+                                            @if($arsip)
+                                                <i class="bi bi-file-earmark-check-fill"></i>
+                                            @elseif(!$canUpload)
+                                                <i class="bi bi-file-earmark-lock-fill"></i>
+                                            @else
+                                                <i class="bi bi-file-earmark-pdf-fill"></i>
+                                            @endif
+                                        </div>
+                                        <div class="udc-details">
+                                            <h6 class="udc-title">Berita Acara {{ $docSig->document_label }}</h6>
+                                            <div class="udc-meta">
+                                                @if($arsip)
+                                                    <span class="badge bg-success-subtle text-success border border-success-subtle"><i class="bi bi-check-circle-fill me-1"></i>Sudah Diunggah</span>
+                                                @else
+                                                    @if(!$canUpload)
+                                                        <span class="badge bg-warning-subtle text-dark border border-warning-subtle"><i class="bi bi-clock-fill me-1"></i>Menunggu Pemeriksa (TTE)</span>
+                                                    @else
+                                                        <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle"><i class="bi bi-x-circle-fill me-1"></i>Belum Diunggah</span>
+                                                    @endif
+                                                @endif
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="udc-action">
+                                        @if($arsip)
+                                            <a href="{{ Storage::disk($arsip->disk)->url($arsip->path_file) }}" target="_blank" class="btn btn-outline-success rounded-pill px-4 fw-bold">
+                                                <i class="bi bi-eye-fill me-1"></i> Lihat Berkas
+                                            </a>
+                                        @elseif($canUpload)
+                                            <div class="modern-upload-form">
+                                                <label class="modern-file-label" for="file-{{ $docSig->document_label }}">
+                                                    <input type="file" name="files[{{ $jenis }}]" id="file-{{ $docSig->document_label }}" accept=".pdf" class="modern-file-input required-doc" required form="signForm" onchange="updateFileName(this)">
+                                                    <span class="mfl-text"><i class="bi bi-folder-symlink-fill me-2"></i>Pilih File PDF</span>
+                                                </label>
+                                            </div>
+                                        @else
+                                            <button disabled class="btn btn-light rounded-pill text-muted px-4 fw-bold" type="button">
+                                                <i class="bi bi-lock-fill me-1"></i>Terkunci
+                                            </button>
+                                        @endif
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                        @endif
 
                     </div>
                 </div>
@@ -373,11 +626,11 @@
                 <i class="bi bi-collection me-1"></i>
                 {{ $documents->count() }} dokumen siap ditandatangani sekaligus
             </div>
-            <form action="{{ route('public.magic-link.sign', $token) }}" method="POST" id="signForm" class="m-0">
+            <form action="{{ route('public.magic-link.sign', $token) }}" method="POST" id="signForm" class="m-0" enctype="multipart/form-data">
                 @csrf
-                <button type="submit" class="btn-sign" id="signBtn" disabled>
-                    <i class="bi bi-pen-fill fs-5 icon-pulse"></i>
-                    <span>Setujui &amp; Tanda Tangani Semua</span>
+                <button type="submit" class="btn-sign" id="signBtn" disabled data-is-vendor="{{ $isVendor ? '1' : '0' }}" data-all-uploaded="{{ $allVendorDocsUploaded ? '1' : '0' }}">
+                    <i class="bi {{ $isVendor ? 'bi-cloud-arrow-up-fill' : 'bi-pen-fill' }} fs-5 icon-pulse"></i>
+                    <span>{{ $isVendor ? 'Upload Dokumen' : 'Setujui & Bubuhkan Tanda Tangan Elektronik (TTE)' }}</span>
                 </button>
             </form>
         </div>
@@ -396,18 +649,84 @@
             });
         });
 
-        // Enable sign button only after agreement
-        var agree = document.getElementById('agreeCheck');
+        // Consent Checkbox and File Inputs logic
+        var agreeCheck = document.getElementById('agreeCheck');
         var signBtn = document.getElementById('signBtn');
-        agree.addEventListener('change', function () {
-            signBtn.disabled = !this.checked;
+        var isVendor = signBtn ? (signBtn.getAttribute('data-is-vendor') === '1') : false;
+        var requiredDocs = document.querySelectorAll('.required-doc');
+
+        function checkAllSelected() {
+            var allSelected = true;
+            requiredDocs.forEach(function(input) {
+                if (!input.files || input.files.length === 0) {
+                    allSelected = false;
+                }
+            });
+            // If some files are already uploaded in previous sessions, they don't have a .required-doc input.
+            // If the role is vendor, the button should be active only if all needed files are selected.
+            // If some are locked (canUpload=false) they also don't have .required-doc but wait! 
+            // If they are locked, the user CANNOT submit. The PHP allVendorDocsUploaded check is strict.
+            // Let's rely on both JS and PHP state.
+            var allPreviouslyUploaded = signBtn.getAttribute('data-all-uploaded') === '1';
+            
+            // For vendor, they can submit IF everything is either previously uploaded or currently selected in the form.
+            // But wait, if something is locked, it's not previously uploaded and not in requiredDocs. 
+            // So they just can't submit at all.
+            var hasLockedDocs = document.querySelectorAll('.bi-file-earmark-lock-fill').length > 0;
+            if (hasLockedDocs) return false;
+            
+            return allPreviouslyUploaded || (requiredDocs.length > 0 ? allSelected : true);
+        }
+
+        function updateBtnState() {
+            if (agreeCheck && agreeCheck.checked) {
+                if (isVendor && !checkAllSelected()) {
+                    signBtn.disabled = true;
+                    signBtn.classList.remove('pulse-animation');
+                } else {
+                    signBtn.disabled = false;
+                    signBtn.classList.add('pulse-animation');
+                }
+            } else if (signBtn) {
+                signBtn.disabled = true;
+                signBtn.classList.remove('pulse-animation');
+            }
+        }
+
+        if (agreeCheck) {
+            agreeCheck.addEventListener('change', updateBtnState);
+        }
+        
+        requiredDocs.forEach(function(input) {
+            input.addEventListener('change', updateBtnState);
         });
 
-        // Prevent double submit
-        document.getElementById('signForm').addEventListener('submit', function () {
-            signBtn.disabled = true;
-            signBtn.querySelector('span').textContent = 'Memproses...';
-        });
+        // Initialize state on load
+        updateBtnState();
+
+        // Disable button on submit to prevent double submission
+        var signForm = document.getElementById('signForm');
+        if(signForm) {
+            signForm.addEventListener('submit', function () {
+                signBtn.disabled = true;
+                signBtn.querySelector('span').textContent = 'Memproses...';
+            });
+        }
+
+        // File upload interaction
+        function updateFileName(input) {
+            const label = input.closest('.modern-file-label');
+            const textSpan = label.querySelector('.mfl-text');
+            
+            if (input.files && input.files.length > 0) {
+                const fileName = input.files[0].name;
+                textSpan.innerHTML = `<i class="bi bi-file-earmark-pdf-fill text-danger me-2"></i>${fileName}`;
+                label.classList.add('file-selected');
+            } else {
+                textSpan.innerHTML = `<i class="bi bi-folder-symlink-fill me-2"></i>Pilih File PDF`;
+                label.classList.remove('file-selected');
+            }
+        }
     </script>
 </body>
 </html>

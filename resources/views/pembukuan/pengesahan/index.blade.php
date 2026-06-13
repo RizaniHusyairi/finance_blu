@@ -12,7 +12,10 @@
                 <h4 class="mb-1 fw-bold text-dark">Buku Pengesahan Belanja</h4>
                 <div class="text-muted">Laporan pengesahan belanja BLU per periode berdasarkan `laporan_pengesahan_blu` dan ringkasan data sumber existing.</div>
             </div>
-            <div>
+            <div class="d-flex flex-wrap gap-2">
+                <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalGeneratePengesahan">
+                    <i class="bi bi-journal-plus me-1"></i> Buat Laporan Periode
+                </button>
                 <a href="{{ route('pembukuan.pengesahan.pdf', request()->query()) }}" target="_blank" class="btn btn-outline-danger">
                     <i class="bi bi-file-earmark-pdf me-1"></i> Export PDF
                 </a>
@@ -97,4 +100,6 @@
             @endif
         </div>
     </div>
+
+    @include('pembukuan.partials.modal-generate-pengesahan', ['months' => $months])
 @endsection

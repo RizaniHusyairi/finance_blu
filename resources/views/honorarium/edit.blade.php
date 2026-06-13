@@ -87,15 +87,11 @@
                         </div>
                         <div class="row g-3 mt-1">
                             <div class="col-md-12">
-                                @include('partials.dipa-item-grouped-select', [
-                                    'budgetGroups' => $budgetGroups,
-                                    'fieldName' => 'dipa_revision_item_id',
-                                    'fieldId' => 'dipa_revision_item_id',
-                                    'fieldClass' => 'form-select select2',
-                                    'fieldLabel' => 'Sumber Anggaran (Item DIPA / COA)',
-                                    'placeholder' => '-- Pilih Item Anggaran DIPA Aktif --',
-                                    'selectedValue' => old('dipa_revision_item_id', $tagihan->dipa_revision_item_id),
-                                ])
+                                <label class="form-label fw-bold">Sumber Anggaran (Item DIPA / COA)</label>
+                                <div class="alert alert-light border d-flex align-items-center gap-2 mb-0 py-2 px-3">
+                                    <i class="bi bi-info-circle text-primary"></i>
+                                    <small class="text-muted">Pembebanan COA/mata anggaran dipilih oleh <strong>PPK</strong> di halaman Proses Tagihan setelah tagihan disetujui verifikator.</small>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -269,10 +265,6 @@
                                 <i class="bi bi-x-circle-fill checklist-fail"></i>
                                 <span>Nama supplier diisi</span>
                             </div>
-                            <div class="checklist-item" id="chk_dipa">
-                                <i class="bi bi-x-circle-fill checklist-fail"></i>
-                                <span>Sumber anggaran dipilih</span>
-                            </div>
                             <div class="checklist-item" id="chk_ppk">
                                 <i class="bi bi-x-circle-fill checklist-fail"></i>
                                 <span>Verifikator PPK dipilih</span>
@@ -397,11 +389,11 @@
                     <div class="col-md-4 col-lg-4 mt-4">
                         <label class="form-label small fw-semibold text-muted mb-1">Potongan PPh</label>
                         <div class="d-flex gap-2">
-                            <select class="form-select form-select-sm border-start-0 border-top-0 border-end-0 rounded-0 px-0 pph_percentage focus-ring-none" style="max-width: 130px;">
+                            <select class="form-select form-select-sm border-start-0 border-top-0 border-end-0 rounded-0 px-0 pph_percentage focus-ring-none" style="max-width: 220px;">
                                 <option value="0" data-pct="0">0% (Tanpa PPh)</option>
                                 @foreach($tarifPajaks as $tp)
                                     <option value="{{ $tp->persentase }}" data-pct="{{ $tp->persentase }}" ${inferredPct == parseFloat({{ $tp->persentase }}) ? 'selected' : ''}>
-                                        {{ $tp->kode_pajak }} ({{ (float)$tp->persentase }}%)
+                                        {{ $tp->jenis_pajak }}
                                     </option>
                                 @endforeach
                             </select>
@@ -449,7 +441,6 @@
         const checks = {
             chk_deskripsi: document.getElementById('inp_deskripsi')?.value.trim().length > 0,
             chk_supplier: document.getElementById('inp_nama_supplier')?.value.trim().length > 0,
-            chk_dipa: document.getElementById('dipa_revision_item_id')?.value.length > 0,
             chk_ppk: document.getElementById('inp_ppk')?.value.length > 0,
             chk_bendahara: document.getElementById('inp_bendahara')?.value.length > 0,
             chk_penerima: document.querySelectorAll('#penerimaContainer .penerima-row').length > 0,
@@ -502,7 +493,7 @@
             recalcGrandTotal();
             updateChecklist();
         }
-        if (e.target.id === 'dipa_revision_item_id' || e.target.id === 'inp_ppk' || e.target.id === 'inp_bendahara') {
+        if (e.target.id === 'inp_ppk' || e.target.id === 'inp_bendahara') {
             updateChecklist();
         }
     });

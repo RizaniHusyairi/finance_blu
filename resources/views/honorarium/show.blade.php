@@ -1411,8 +1411,8 @@
         @else
             <div class="empty-state-d">
                 <i class="bi bi-wallet"></i>
-                <h6 class="text-secondary fw-bold mb-1">Sumber anggaran belum terhubung</h6>
-                <small>Edit tagihan ini untuk memilih item DIPA / COA.</small>
+                <h6 class="text-secondary fw-bold mb-1">Sumber anggaran belum dipilih</h6>
+                <small>COA/item DIPA dipilih oleh <strong>PPK</strong> di halaman Proses Tagihan setelah tagihan disetujui seluruh verifikator.</small>
             </div>
         @endif
     </div>

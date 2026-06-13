@@ -107,7 +107,7 @@
 <!-- BOX TERBILANG -->
 <div class="box-terbilang">
     <p>Terbilang:</p>
-    <h4>== {{ ucwords($terbilangText) }} Rupiah ==</h4>
+    <h4>== {{ ucwords(strtolower($terbilangText)) }} ==</h4>
 </div>
 
 <!-- TANDA TANGAN -->

@@ -24,14 +24,14 @@
         display: flex;
         flex-direction: column;
         gap: .75rem;
-        max-width: min(420px, calc(100vw - 2rem));
+        max-width: min(460px, calc(100vw - 2rem));
         pointer-events: none;
     }
 
     .sky-alert {
         --sa-grad: linear-gradient(135deg, #38bdf8 0%, #6366f1 50%, #8b5cf6 100%);
         --sa-accent: #4f46e5;
-        --sa-icon: '\F1AC'; /* bi-info-circle-fill */
+        --sa-soft: #eef2ff;
         position: relative;
         background: #ffffff;
         border-radius: 1rem;
@@ -57,109 +57,21 @@
         to { transform: translateX(120%) scale(.95); opacity: 0; }
     }
 
-    /* Sky background bar */
-    .sky-alert .sa-sky {
-        position: relative;
-        height: 56px;
-        background: var(--sa-grad);
-        overflow: hidden;
-        display: flex;
-        align-items: center;
-        padding: 0 1rem 0 1.1rem;
-    }
-
-    /* Cloud streaks */
-    .sky-alert .sa-sky::before,
-    .sky-alert .sa-sky::after {
+    /* Strip aksen warna di sisi kiri kartu */
+    .sky-alert::before {
         content: '';
         position: absolute;
-        background: rgba(255, 255, 255, .25);
-        border-radius: 999px;
-        pointer-events: none;
+        top: 0; left: 0; bottom: 0;
+        width: 4px;
+        background: var(--sa-grad);
     }
-    .sky-alert .sa-sky::before {
-        width: 70px; height: 8px;
-        top: 14px; left: -80px;
-        filter: blur(1px);
-        animation: saCloud 7s linear infinite;
-    }
-    .sky-alert .sa-sky::after {
-        width: 100px; height: 6px;
-        top: 32px; left: -120px;
-        filter: blur(1.5px);
-        animation: saCloud 9s linear infinite 1.2s;
-        opacity: .55;
-    }
-    @keyframes saCloud {
-        from { transform: translateX(0); }
-        to   { transform: translateX(440px); }
-    }
-
-    /* Plane icon flying across */
-    .sky-alert .sa-plane {
-        position: absolute;
-        top: 50%;
-        left: -30px;
-        transform: translateY(-50%) rotate(-8deg);
-        color: #fff;
-        font-size: 1.35rem;
-        animation: saPlane 3.2s cubic-bezier(.22, 1, .36, 1) forwards;
-        filter: drop-shadow(0 2px 4px rgba(0, 0, 0, .15));
-    }
-    @keyframes saPlane {
-        0%   { left: -30px; opacity: 0; transform: translateY(-50%) rotate(-12deg) scale(.85); }
-        15%  { opacity: 1; }
-        70%  { left: calc(100% - 60px); opacity: 1; transform: translateY(-50%) rotate(-6deg) scale(1.1); }
-        100% { left: calc(100% + 30px); opacity: 0; transform: translateY(-65%) rotate(-12deg) scale(.9); }
-    }
-
-    /* Vapor trail */
-    .sky-alert .sa-vapor {
-        position: absolute;
-        top: 50%;
-        left: 0;
-        width: 0;
-        height: 3px;
-        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .85) 60%, rgba(255, 255, 255, 0));
-        transform: translateY(-50%);
-        animation: saVapor 3.2s cubic-bezier(.22, 1, .36, 1) forwards;
-        pointer-events: none;
-        border-radius: 999px;
-    }
-    @keyframes saVapor {
-        0%   { width: 0; opacity: 0; }
-        20%  { width: 50px; opacity: .6; }
-        70%  { width: calc(100% - 50px); opacity: .9; }
-        100% { width: calc(100% + 60px); opacity: 0; }
-    }
-
-    /* Type tag (top-right of sky) */
-    .sky-alert .sa-tag {
-        margin-left: auto;
-        position: relative;
-        z-index: 2;
-        background: rgba(255, 255, 255, .2);
-        border: 1px solid rgba(255, 255, 255, .35);
-        backdrop-filter: blur(8px);
-        color: #fff;
-        font-size: .68rem;
-        font-weight: 800;
-        text-transform: uppercase;
-        letter-spacing: .08em;
-        padding: .25rem .65rem;
-        border-radius: 999px;
-        display: inline-flex;
-        align-items: center;
-        gap: .35rem;
-    }
-    .sky-alert .sa-tag i { font-size: .82rem; }
 
     /* Body */
     .sky-alert .sa-body {
         display: flex;
         align-items: flex-start;
         gap: .85rem;
-        padding: .9rem 1rem 1rem;
+        padding: .95rem 1rem .95rem 1.15rem;
     }
     .sky-alert .sa-icon {
         width: 38px; height: 38px;
@@ -167,17 +79,10 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        background: var(--sa-grad);
-        color: #fff;
-        font-size: 1.1rem;
+        background: var(--sa-soft, #eef2ff);
+        color: var(--sa-accent);
+        font-size: 1.15rem;
         flex-shrink: 0;
-        margin-top: -22px;
-        border: 3px solid #fff;
-        box-shadow: 0 6px 14px rgba(0, 0, 0, .15);
-    }
-    .sky-alert .sa-icon::before {
-        font-family: 'bootstrap-icons';
-        content: var(--sa-icon);
     }
     .sky-alert .sa-content { flex: 1 1 auto; min-width: 0; }
     .sky-alert .sa-title {
@@ -189,9 +94,9 @@
         letter-spacing: -.01em;
     }
     .sky-alert .sa-message {
-        color: #475569;
-        font-size: .85rem;
-        line-height: 1.5;
+        color: #334155;
+        font-size: .875rem;
+        line-height: 1.6;
         margin: 0;
         word-wrap: break-word;
         white-space: pre-line;
@@ -226,7 +131,7 @@
     .sky-alert .sa-progress {
         position: absolute;
         bottom: 0;
-        left: 0;
+        left: 4px; /* tidak menutup strip aksen */
         right: 0;
         height: 3px;
         background: rgba(15, 23, 42, .06);
@@ -282,33 +187,28 @@
     .sky-alert.sa-success {
         --sa-grad: linear-gradient(135deg, #34d399 0%, #10b981 50%, #059669 100%);
         --sa-accent: #047857;
-        --sa-icon: '\F26B'; /* bi-check-circle-fill (lookup) */
+        --sa-soft: #d1fae5;
     }
-    .sky-alert.sa-success .sa-icon::before { content: '\F26B'; }
-
     .sky-alert.sa-danger {
         --sa-grad: linear-gradient(135deg, #fb7185 0%, #f43f5e 50%, #e11d48 100%);
         --sa-accent: #be123c;
+        --sa-soft: #ffe4e6;
     }
-    .sky-alert.sa-danger .sa-icon::before { content: '\F623'; } /* bi-exclamation-octagon-fill */
-
     .sky-alert.sa-warning {
         --sa-grad: linear-gradient(135deg, #fbbf24 0%, #f59e0b 50%, #d97706 100%);
         --sa-accent: #b45309;
+        --sa-soft: #fef3c7;
     }
-    .sky-alert.sa-warning .sa-icon::before { content: '\F33B'; } /* bi-exclamation-triangle-fill */
-
     .sky-alert.sa-info {
         --sa-grad: linear-gradient(135deg, #38bdf8 0%, #0ea5e9 50%, #0284c7 100%);
         --sa-accent: #0369a1;
+        --sa-soft: #e0f2fe;
     }
-    .sky-alert.sa-info .sa-icon::before { content: '\F431'; } /* bi-info-circle-fill */
-
     .sky-alert.sa-confirm {
         --sa-grad: linear-gradient(135deg, #818cf8 0%, #6366f1 50%, #4f46e5 100%);
         --sa-accent: #4338ca;
+        --sa-soft: #e0e7ff;
     }
-    .sky-alert.sa-confirm .sa-icon::before { content: '\F505'; } /* bi-question-circle-fill */
 
     /* Confirm/alert overlay (modal style for confirm()) */
     .sky-alert-overlay {
@@ -696,13 +596,8 @@
             card.style.setProperty('--sa-duration', `${duration}ms`);
 
             card.innerHTML = `
-                <div class="sa-sky">
-                    <div class="sa-vapor"></div>
-                    <i class="bi bi-airplane-fill sa-plane"></i>
-                    <span class="sa-tag"><i class="bi ${meta.icon}"></i> ${escapeHtml(meta.tag)}</span>
-                </div>
                 <div class="sa-body">
-                    <span class="sa-icon" aria-hidden="true"></span>
+                    <span class="sa-icon" aria-hidden="true"><i class="bi ${meta.icon}"></i></span>
                     <div class="sa-content">
                         <div class="sa-title">${escapeHtml(title)}</div>
                         <div class="sa-message">${escapeHtml(message)}</div>
@@ -1091,8 +986,20 @@
                 }
                 if (! type) return;
 
-                const text = (el.textContent || '').trim();
+                // Rapikan whitespace markup Blade (indentasi/line-break sumber)
+                // agar teks toast tidak terpotong-potong di tengah kalimat.
+                const text = (el.textContent || '').trim().replace(/\s+/g, ' ');
                 if (! text) return;
+
+                // Alert kontekstual — punya tombol/form/link atau teksnya panjang —
+                // bukan flash message. Biarkan tampil inline apa adanya (lebih mudah
+                // dibaca dan tombol di dalamnya tetap berfungsi). Tetap tandai sebagai
+                // sudah tampil supaya session flash dengan teks sama tidak dobel toast.
+                if (el.querySelector('a, button, form, input, select, textarea, table') || text.length > 220) {
+                    el.dataset.skyHandled = '1';
+                    SkyAlert._markShown({ type, message: text });
+                    return;
+                }
 
                 el.dataset.skyHandled = '1';
                 el.style.display = 'none';

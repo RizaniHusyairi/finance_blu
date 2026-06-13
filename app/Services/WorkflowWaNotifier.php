@@ -219,52 +219,9 @@ class WorkflowWaNotifier
                 },
                 default => null,
             },
-            'SPP' => match ($tipe) {
-                'KONTRAK' => 'verifikasi-spp.kontrak.index',
-                'HONORARIUM' => 'verifikasi-spp.honor.index',
-                'PERJALDIN' => 'verifikasi-spp.perjaldin.index',
-                default => null,
-            },
-            'SPM' => match ($tipe) {
-                'HONORARIUM' => 'verifikasi-spm.honor.index',
-                'PERJALDIN' => match ($role) {
-                    'PPSPM' => 'verifikasi-ppspm.spm-perjaldin.index',
-                    'KASUBBAG' => 'verifikasi-kasubag.spm-perjaldin.index',
-                    'KOORDINATOR_KEUANGAN' => 'verifikasi-koordinator.spm-perjaldin.index',
-                    default => null,
-                },
-                'KONTRAK' => match ($role) {
-                    'PPSPM' => 'verifikasi-ppspm.spm.kontrak.index',
-                    'KASUBBAG' => 'verifikasi-kasubag.spm.kontrak.index',
-                    'KOORDINATOR_KEUANGAN' => 'verifikasi-koordinator.spm.kontrak.index',
-                    default => null,
-                },
-                default => null,
-            },
-            'NPI' => match ($tipe) {
-                'PERJALDIN' => 'verifikasi-npi.perjaldin.index',
-                'HONORARIUM' => 'verifikasi-npi.honor.index',
-                'KONTRAK' => match ($role) {
-                    'PPK' => 'verifikasi-ppk.npi.kontrak.index',
-                    'KASUBBAG' => 'verifikasi-kasubag.npi.kontrak.index',
-                    'KOORDINATOR_KEUANGAN' => 'verifikasi-koordinator.npi.kontrak.index',
-                    'BENDAHARA_PENERIMAAN' => 'verifikasi-bendahara-penerimaan.npi.kontrak.index',
-                    default => null,
-                },
-                default => null,
-            },
-            'SP2D' => match ($tipe) {
-                'PERJALDIN' => 'verifikasi-sp2d.perjaldin.index',
-                'HONORARIUM' => 'verifikasi-sp2d.honor.index',
-                'KONTRAK' => match ($role) {
-                    'PPK' => 'verifikasi-ppk.sp2d.kontrak.index',
-                    'PPSPM' => 'verifikasi-ppspm.sp2d.kontrak.index',
-                    'KASUBBAG' => 'verifikasi-kasubag.sp2d.kontrak.index',
-                    'KOORDINATOR_KEUANGAN' => 'verifikasi-koordinator.sp2d.kontrak.index',
-                    default => null,
-                },
-                default => null,
-            },
+            // Dokumen rantai pencairan kini diverifikasi dari halaman Proses Tagihan
+            // terpadu (tanpa tagihanId, arahkan ke daftar prosesnya).
+            'SPP', 'SPM', 'NPI', 'SP2D' => 'proses-tagihan.index',
             default => null,
         };
     }

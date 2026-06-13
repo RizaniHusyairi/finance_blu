@@ -176,6 +176,7 @@
                                 <th>Diajukan Oleh (PPK)</th>
                                 <th>Status KPA</th>
                                 <th>Waktu</th>
+                                <th class="text-end">Aksi</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -217,6 +218,11 @@
                                         @if($tagihan->kpa_approval_notes)
                                             <div class="small text-muted fst-italic mt-1" style="max-width:220px;">"{{ Str::limit($tagihan->kpa_approval_notes, 50) }}"</div>
                                         @endif
+                                    </td>
+                                    <td class="text-end">
+                                        <a href="{{ route('kpa.approval.show', $tagihan->id) }}" class="btn btn-sm btn-outline-primary" title="Lihat Detail Persetujuan">
+                                            <i class="bi bi-eye"></i> Detail
+                                        </a>
                                     </td>
                                 </tr>
                             @endforeach

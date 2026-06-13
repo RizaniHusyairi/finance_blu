@@ -97,7 +97,7 @@
 
     <div class="box-terbilang">
         <p>Terbilang:</p>
-        <h4>== {{ ucwords($terbilangHelper) }} Rupiah ==</h4>
+        <h4>== {{ ucwords(strtolower($terbilangHelper)) }} ==</h4>
     </div>
 
     <table class="ttd-box">
@@ -107,7 +107,6 @@
                 <p>Pejabat Pembuat Komitmen</p>
                 @if(!empty($tteQrFilePath))
                     <img src="{{ $tteQrFilePath }}" alt="QR TTE Nominatif Perjaldin" class="qr-tte">
-                    <div class="qr-label">Ditandatangani Secara Elektronik</div>
                 @else
                     <br><br><br><br>
                 @endif
@@ -118,7 +117,6 @@
                 <p>Bendahara Pengeluaran</p>
                 @if(!empty($tteQrFilePathBendahara))
                     <img src="{{ $tteQrFilePathBendahara }}" alt="QR TTE Bendahara Pengeluaran" class="qr-tte">
-                    <div class="qr-label">Ditandatangani Secara Elektronik</div>
                 @else
                     <br><br><br><br>
                 @endif

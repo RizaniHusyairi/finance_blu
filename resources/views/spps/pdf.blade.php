@@ -270,7 +270,8 @@
         <tr>
             <td colspan="2" style="height: 60px;">
                 @foreach(($potonganPajak ?? collect()) as $potongan)
-                    {{ $potongan->pajak?->jenis_pajak ?? $potongan->nama_pajak_snapshot ?? $potongan->jenis_potongan }}<br>
+                    {{-- Cukup KAP saja; fallback ke nama pajak bila baris tidak punya KAP. --}}
+                    {{ $potongan->pajak?->kode_akun_pajak ?? $potongan->pajak?->jenis_pajak ?? $potongan->nama_pajak_snapshot ?? $potongan->jenis_potongan }}<br>
                 @endforeach
             </td>
             <td colspan="2" class="text-right">

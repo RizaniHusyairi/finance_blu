@@ -64,6 +64,22 @@
                         @enderror
                         <div class="form-text text-muted">Masukkan angka persentase tanpa simbol %. Contoh: 11 untuk 11%.</div>
                     </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Kode Akun Pajak (KAP)</label>
+                        <input type="text" name="kode_akun_pajak" class="form-control @error('kode_akun_pajak') is-invalid @enderror" value="{{ old('kode_akun_pajak') }}" maxlength="6" inputmode="numeric" pattern="[0-9]{6}" placeholder="Contoh: 411211, 411122">
+                        @error('kode_akun_pajak')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                        <div class="form-text text-muted">6 digit kode akun untuk kode billing/SSP. Contoh: PPN 411211, PPh 22 411122, PPh 23 411124, PPh 4(2) 411128.</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Kode Jenis Setoran (KJS)</label>
+                        <input type="text" name="kode_jenis_setoran" class="form-control @error('kode_jenis_setoran') is-invalid @enderror" value="{{ old('kode_jenis_setoran') }}" maxlength="3" inputmode="numeric" pattern="[0-9]{3}" placeholder="Contoh: 900, 100">
+                        @error('kode_jenis_setoran')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                        <div class="form-text text-muted">3 digit kode jenis setoran. Contoh: 900 (bendahara pemungut), 100 (masa).</div>
+                    </div>
                 </div>
             </div>
         </div>

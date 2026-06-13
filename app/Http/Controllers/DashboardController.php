@@ -75,6 +75,72 @@ class DashboardController extends Controller
     }
 
     /**
+     * Dashboard Khusus KPA — pusat komando persetujuan Standing Instruction.
+     */
+    private function kpa()
+    {
+        $user = Auth::user();
+        $now = now();
+
+        // Antrean persetujuan — terlama menunggu tampil paling atas.
+        $antrean = Tagihan::where('kpa_approval_status', 'PENDING_KPA')
+            ->with([
+                'pihak',
+                'detailKontrak.kontrakTermin.kontrak.vendor',
+                'ppkUser',
+                'detailPerjaldin',
+                'detailHonorarium',
+            ])
+            ->orderBy('updated_at')
+            ->get();
+
+        $base = Tagihan::query()->whereNotNull('kpa_approval_status');
+
+        $stats = [
+            'pending' => $antrean->count(),
+            'pendingNominal' => (float) $antrean->sum('total_netto'),
+            'approvedBulanIni' => (clone $base)->where('kpa_approval_status', 'APPROVED')
+                ->whereYear('kpa_approved_at', $now->year)->whereMonth('kpa_approved_at', $now->month)->count(),
+            'approvedNominalBulanIni' => (float) (clone $base)->where('kpa_approval_status', 'APPROVED')
+                ->whereYear('kpa_approved_at', $now->year)->whereMonth('kpa_approved_at', $now->month)->sum('total_netto'),
+            'approvedTotal' => (clone $base)->where('kpa_approval_status', 'APPROVED')->count(),
+            'rejectedTotal' => (clone $base)->where('kpa_approval_status', 'REJECTED')->count(),
+        ];
+
+        // Riwayat keputusan terakhir.
+        $riwayat = (clone $base)->whereIn('kpa_approval_status', ['APPROVED', 'REJECTED'])
+            ->with(['pihak', 'detailKontrak.kontrakTermin.kontrak.vendor'])
+            ->orderByDesc('kpa_approved_at')
+            ->take(8)
+            ->get();
+
+        // Komposisi nominal yang disetujui tahun berjalan per tipe tagihan.
+        $perTipe = (clone $base)->where('kpa_approval_status', 'APPROVED')
+            ->whereYear('kpa_approved_at', $now->year)
+            ->selectRaw('tipe_tagihan, COUNT(*) as jumlah, COALESCE(SUM(total_netto), 0) as nominal')
+            ->groupBy('tipe_tagihan')
+            ->get();
+
+        // Pasca persetujuan: progres pencairan tagihan yang sudah di-ACC KPA.
+        $pasca = [
+            'proses' => Tagihan::where('kpa_approval_status', 'APPROVED')->whereNotIn('status', ['SELESAI'])->count(),
+            'selesai' => Tagihan::where('kpa_approval_status', 'APPROVED')->where('status', 'SELESAI')->count(),
+        ];
+
+        // Konteks anggaran (pagu vs realisasi DIPA aktif).
+        $totalPagu = (float) RiwayatRevisiDipa::where('is_active', true)->sum('total_pagu');
+        $totalRealisasi = (float) DB::table('realisasi_anggaran')->where('status', 'TERCATAT')->sum('nominal_cair');
+        $anggaran = [
+            'pagu' => $totalPagu,
+            'realisasi' => $totalRealisasi,
+            'sisa' => max(0, $totalPagu - $totalRealisasi),
+            'persen' => $totalPagu > 0 ? round($totalRealisasi / $totalPagu * 100, 1) : 0,
+        ];
+
+        return view('dashboard.kpa', compact('user', 'antrean', 'stats', 'riwayat', 'perTipe', 'pasca', 'anggaran'));
+    }
+
+    /**
      * Internal Dashboard (KPA, Operator BLU, Bendahara, Kasubag, PPSPM, dll)
      */
     public function internal()
@@ -114,6 +180,9 @@ class DashboardController extends Controller
         }
         if (Auth::user()->hasRole('Admin Konsesi')) {
             return redirect()->route('jasa.mitra.penjualan.index');
+        }
+        if (Auth::user()->hasRole('KPA')) {
+            return $this->kpa();
         }
         if (Auth::user()->hasRole('PLT/PLH')) {
             return $this->pltPlh();
@@ -691,28 +760,28 @@ class DashboardController extends Controller
             $listSpp = DB::table('dokumen_spp')
                 ->join('users', 'dokumen_spp.dibuat_oleh_id', '=', 'users.id')
                 ->tap($pembuatJoin)
-                ->select('dokumen_spp.id', 'dokumen_spp.nomor_spp as nomor', 'dokumen_spp.nominal_spp as nilai', $pembuatExpr)
+                ->select('dokumen_spp.id', 'dokumen_spp.tagihan_id', 'dokumen_spp.nomor_spp as nomor', 'dokumen_spp.nominal_spp as nilai', $pembuatExpr)
                 ->where('dokumen_spp.status', 'DRAFT')
-                ->get()->map(function($i) { $i->jenis = 'SPP'; $i->prioritas = 'Sedang'; $i->url_reject = route('verifikasi-spp.kontrak.revisi', $i->id); $i->url_approve = route('verifikasi-spp.kontrak.approve', $i->id); return $i; });
-                
+                ->get()->map(function($i) { $i->jenis = 'SPP'; $i->prioritas = 'Sedang'; $i->url_proses = $i->tagihan_id ? route('proses-tagihan.show', $i->tagihan_id) : '#'; return $i; });
+
             $listNpi = DB::table('dokumen_npi')
                 ->join('users', 'dokumen_npi.bendahara_penerimaan_id', '=', 'users.id')
                 ->tap($pembuatJoin)
                 ->join('dokumen_spm', 'dokumen_npi.spm_id', '=', 'dokumen_spm.id')
                 ->join('dokumen_spp', 'dokumen_spm.spp_id', '=', 'dokumen_spp.id')
-                ->select('dokumen_npi.id', 'dokumen_npi.nomor_npi as nomor', 'dokumen_spp.nominal_spp as nilai', $pembuatExpr)
+                ->select('dokumen_npi.id', 'dokumen_spp.tagihan_id', 'dokumen_npi.nomor_npi as nomor', 'dokumen_spp.nominal_spp as nilai', $pembuatExpr)
                 ->where('dokumen_npi.status', 'DRAFT')
-                ->get()->map(function($i) { $i->jenis = 'NPI'; $i->prioritas = 'Sedang'; $i->url_reject = route('verifikasi-ppk.npi.revisi', $i->id); $i->url_approve = route('verifikasi-ppk.npi.approve', $i->id);  return $i; });
-                
+                ->get()->map(function($i) { $i->jenis = 'NPI'; $i->prioritas = 'Sedang'; $i->url_proses = $i->tagihan_id ? route('proses-tagihan.show', $i->tagihan_id) : '#'; return $i; });
+
             $listSp2d = DB::table('dokumen_sp2d')
                 ->join('users', 'dokumen_sp2d.bendahara_pengeluaran_id', '=', 'users.id')
                 ->tap($pembuatJoin)
                 ->join('dokumen_npi', 'dokumen_sp2d.npi_id', '=', 'dokumen_npi.id')
                 ->join('dokumen_spm', 'dokumen_npi.spm_id', '=', 'dokumen_spm.id')
                 ->join('dokumen_spp', 'dokumen_spm.spp_id', '=', 'dokumen_spp.id')
-                ->select('dokumen_sp2d.id', 'dokumen_sp2d.nomor_sp2d as nomor', 'dokumen_spp.nominal_spp as nilai', $pembuatExpr)
+                ->select('dokumen_sp2d.id', 'dokumen_spp.tagihan_id', 'dokumen_sp2d.nomor_sp2d as nomor', 'dokumen_spp.nominal_spp as nilai', $pembuatExpr)
                 ->where('dokumen_sp2d.status', 'DRAFT')
-                ->get()->map(function($i) { $i->jenis = 'SP2D'; $i->prioritas = 'Tinggi'; $i->url_reject = '#'; $i->url_approve = '#'; return $i; });
+                ->get()->map(function($i) { $i->jenis = 'SP2D'; $i->prioritas = 'Tinggi'; $i->url_proses = $i->tagihan_id ? route('proses-tagihan.show', $i->tagihan_id) : '#'; return $i; });
 
             $tabPencairan = $listSpp->concat($listNpi)->concat($listSp2d);
 

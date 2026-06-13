@@ -131,6 +131,17 @@
                                 <div class="fw-bold fs-4 text-primary">{{ $persen }}</div>
                             </div>
                         </div>
+                        <div class="col-md-6">
+                            <div class="border rounded-4 p-3 h-100 bg-light">
+                                <div class="small text-muted mb-1">KAP / KJS (Kode Billing)</div>
+                                @if($pajak->kode_akun_pajak || $pajak->kode_jenis_setoran)
+                                    <div class="fw-bold fs-5 font-monospace">{{ $pajak->kode_akun_pajak ?? '—' }} / {{ $pajak->kode_jenis_setoran ?? '—' }}</div>
+                                    <div class="small text-muted mt-1">Kode Akun Pajak / Kode Jenis Setoran</div>
+                                @else
+                                    <div class="text-muted fst-italic">Belum diisi</div>
+                                @endif
+                            </div>
+                        </div>
                         <div class="col-12">
                             <div class="border rounded-4 p-3 bg-light">
                                 <div class="small text-muted mb-1">Rumus Perhitungan</div>

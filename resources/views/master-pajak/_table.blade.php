@@ -3,11 +3,12 @@
         <thead class="table-light">
             <tr>
                 <th class="text-center" width="5%">No</th>
-                <th width="12%">Kode Pajak</th>
-                <th width="18%">Jenis Pajak</th>
-                <th width="10%" class="text-center">Persentase</th>
-                <th width="18%">Rumus</th>
-                <th width="17%">Periode Berlaku</th>
+                <th width="11%">Kode Pajak</th>
+                <th width="17%">Jenis Pajak</th>
+                <th width="8%" class="text-center">Persentase</th>
+                <th width="10%" class="text-center">KAP / KJS</th>
+                <th width="15%">Rumus</th>
+                <th width="14%">Periode Berlaku</th>
                 <th width="10%" class="text-center">Status</th>
                 <th width="10%" class="text-center">Aksi</th>
             </tr>
@@ -44,6 +45,14 @@
                     <td class="fw-semibold">{{ $pajak->jenis_pajak }}</td>
                     <td class="text-center">
                         <span class="fw-bold text-primary">{{ rtrim(rtrim(number_format($pajak->persentase, 4, ',', '.'), '0'), ',') }}%</span>
+                    </td>
+                    <td class="text-center">
+                        @if($pajak->kode_akun_pajak || $pajak->kode_jenis_setoran)
+                            <span class="badge bg-light text-dark border font-monospace">{{ $pajak->kode_akun_pajak ?? '—' }}</span>
+                            <span class="badge bg-light text-dark border font-monospace">{{ $pajak->kode_jenis_setoran ?? '—' }}</span>
+                        @else
+                            <span class="text-muted">-</span>
+                        @endif
                     </td>
                     <td>
                         @if($pajak->rumus)
@@ -85,7 +94,7 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="8" class="text-center py-5 text-muted">Belum ada data tarif pajak yang sesuai dengan filter.</td>
+                    <td colspan="9" class="text-center py-5 text-muted">Belum ada data tarif pajak yang sesuai dengan filter.</td>
                 </tr>
             @endforelse
         </tbody>

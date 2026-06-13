@@ -44,6 +44,55 @@ class DocumentNumberService
         return $this->previewFromConfig($this->documentConfig($documentKey), $year, $offset);
     }
 
+    /** Nomor urut berikutnya yang belum terpakai (untuk prefill input manual). */
+    public function nextRunningNumberByKey(string $documentKey, ?int $year = null): int
+    {
+        $year ??= (int) now()->format('Y');
+        $config = $this->documentConfig($documentKey);
+
+        return $this->nextUnusedRunningNumber($config, $year, $this->currentMaxRunningNumber($config, $year) + 1);
+    }
+
+    /**
+     * Pakai nomor urut pilihan user (input manual) untuk sebuah dokumen.
+     * Transaksional: menolak bila nomor sudah pernah tercatat pada
+     * sequence group yang sama (lintas tipe dokumen segrup).
+     */
+    public function generateByKeyWithNumber(string $documentKey, int $runningNumber, ?int $year = null): string
+    {
+        $year ??= (int) now()->format('Y');
+        $config = $this->documentConfig($documentKey);
+
+        return DB::transaction(function () use ($config, $year, $runningNumber) {
+            $sequence = $this->lockOrCreateSequence($config, $year);
+            $this->syncSequenceLastNumber($sequence, $config, $year);
+
+            if ($runningNumber < 1 || $runningNumber > 9999) {
+                throw new InvalidArgumentException('Nomor urut harus berada di antara 0001 sampai 9999.');
+            }
+
+            if ($this->runningNumberExists($config, $year, $runningNumber)) {
+                throw new InvalidArgumentException(
+                    'Nomor urut ' . $this->padRunningNumber($runningNumber, $config) . ' sudah pernah digunakan pada tahun ' . $year . '. Pilih nomor lain.'
+                );
+            }
+
+            $number = $this->createNumberRecord(
+                $config,
+                $year,
+                $runningNumber,
+                DocumentNumber::SOURCE_INTERNAL,
+                'Nomor urut dipilih manual oleh pengguna saat membuat dokumen.'
+            );
+
+            if ($runningNumber > $sequence->last_number) {
+                $sequence->update(['last_number' => $runningNumber]);
+            }
+
+            return $number->full_number;
+        });
+    }
+
     public function formatNumber(
         string $seriesPrefix,
         int $runningNumber,

@@ -141,20 +141,35 @@
                                     <div class="small fw-bold text-muted mb-3 d-flex align-items-center gap-2">
                                         <i class="bi bi-cash-coin text-primary"></i>
                                         <span>Rincian Biaya</span>
+                                        <a href="{{ route('perjaldins.pdf-perincian', [$tagihan->id, $detail->id]) }}" target="_blank"
+                                           class="btn btn-sm btn-outline-primary rounded-pill py-0 px-3 ms-auto d-inline-flex align-items-center gap-1" style="font-size: 0.72rem;">
+                                            <i class="bi bi-file-earmark-pdf"></i> PDF Perincian Biaya
+                                        </a>
                                     </div>
                                     <div class="row g-2 align-items-end">
                                         @foreach([
-                                            ['Tiket', $detail->biaya_tiket, 'bi-airplane'],
-                                            ['Transport', $detail->biaya_transport, 'bi-bus-front'],
-                                            ['Penginapan', $detail->biaya_penginapan, 'bi-building'],
-                                            ['Uang Harian', $detail->uang_harian, 'bi-wallet2'],
-                                            ['Representasi', $detail->uang_representasi, 'bi-briefcase'],
-                                        ] as [$bl, $bv, $bIcon])
+                                            ['Tiket', $detail->biaya_tiket, 'bi-airplane', $detail->tiket_file_path, $detail->tiket_file_name],
+                                            ['Transport', $detail->biaya_transport, 'bi-bus-front', $detail->transport_file_path, $detail->transport_file_name],
+                                            ['Penginapan', $detail->biaya_penginapan, 'bi-building', $detail->penginapan_file_path, $detail->penginapan_file_name],
+                                            ['Uang Harian', $detail->uang_harian, 'bi-wallet2', $detail->uang_harian_file_path, $detail->uang_harian_file_name],
+                                            ['Representasi', $detail->uang_representasi, 'bi-briefcase', null, null],
+                                        ] as [$bl, $bv, $bIcon, $bFile, $bFileName])
                                             <div class="col-6 col-md">
                                                 <div class="text-muted d-flex align-items-center gap-1" style="font-size:.68rem;">
                                                     <i class="bi {{ $bIcon }}"></i> {{ $bl }}
                                                 </div>
                                                 <div class="fw-semibold font-mono-premium" style="font-size: 0.82rem;">Rp {{ number_format((float)($bv ?? 0), 0, ',', '.') }}</div>
+                                                @if($bFile)
+                                                    <a href="{{ Storage::url($bFile) }}" target="_blank"
+                                                       class="d-inline-flex align-items-center gap-1 text-success text-decoration-none mt-1"
+                                                       style="font-size: 0.68rem;" title="{{ $bFileName ?? 'Lampiran ' . $bl }}">
+                                                        <i class="bi bi-paperclip"></i> Lihat Bukti
+                                                    </a>
+                                                @elseif((float)($bv ?? 0) > 0 && $bl !== 'Representasi')
+                                                    <span class="d-inline-flex align-items-center gap-1 text-muted mt-1" style="font-size: 0.68rem;">
+                                                        <i class="bi bi-dash-circle"></i> Tanpa bukti
+                                                    </span>
+                                                @endif
                                             </div>
                                         @endforeach
                                         <div class="col-6 col-md border-start border-3 border-success ps-3">

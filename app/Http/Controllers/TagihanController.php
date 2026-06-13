@@ -100,7 +100,7 @@ class TagihanController extends Controller
             'jabatan_pemeriksa' => 'required|string|max:150',
             'wa_pemeriksa' => 'required|string|max:30',
             'total_bruto' => 'required|numeric|min:0',
-            'gambar_rab_bapp' => 'nullable|file|mimes:jpg,jpeg,png|max:5120',
+            'gambar_rab_bapp' => 'required|file|mimes:jpg,jpeg,png|max:5120',
             'file_invoice' => 'required|file|mimes:pdf|max:5120',
             'file_lampiran_lainnya' => 'nullable|file|mimes:pdf,zip|max:5120',
             // Verifikator (PPK ditentukan dari kontrak, 5 lainnya dipilih)
@@ -109,6 +109,8 @@ class TagihanController extends Controller
             'bendahara_pengeluaran_user_id' => 'required|exists:users,id',
             'bendahara_penerimaan_user_id'  => 'required|exists:users,id',
             'kasubbag_user_id'              => 'required|exists:users,id',
+        ], [
+            'gambar_rab_bapp.required' => 'Gambar RAB wajib diunggah untuk pembuatan BAPP.'
         ]);
 
         try {
@@ -403,13 +405,14 @@ class TagihanController extends Controller
     {
         $tagihan = Tagihan::with('detailKontrak.termin.kontrak')->findOrFail($id);
 
-        if ($tagihan->status !== 'DRAFT') {
-            return back()->withErrors(['error' => 'Tagihan tidak dalam status DRAFT.']);
+        // Pengajuan ulang setelah revisi (REVISI_*) memakai jalur yang sama —
+        // workflow service akan mereset approvals dan mengulang verifikasi dari awal.
+        if ($tagihan->status !== 'DRAFT' && ! str_starts_with((string) $tagihan->status, 'REVISI_')) {
+            return back()->withErrors(['error' => 'Tagihan tidak dalam status DRAFT/REVISI.']);
         }
 
-        if (!$this->isTagihanReadyToSubmit($tagihan)) {
-            return back()->withErrors(['error' => 'Dokumen BAPP dan BAP (serta BAST untuk Pelunasan) Final bertandatangan wajib diunggah secara lengkap.']);
-        }
+        // Dokumen fisik (BAPP/BAST/BAP ber-TTE) kini tidak diwajibkan di awal.
+        // TTE dan upload dilakukan oleh Vendor SETELAH tagihan disetujui Verifikator.
 
         // Pastikan semua verifikator sudah terisi
         $missingVerif = collect([
@@ -424,6 +427,8 @@ class TagihanController extends Controller
         if ($missingVerif->isNotEmpty()) {
             return back()->withErrors(['error' => 'Verifikator belum lengkap: ' . $missingVerif->implode(', ')]);
         }
+
+        $statusSebelumSubmit = $tagihan->status;
 
         try {
             DB::beginTransaction();
@@ -447,7 +452,7 @@ class TagihanController extends Controller
                 'dokumen_id' => $tagihan->id,
                 'user_id' => Auth::id(),
                 'role_saat_itu' => Auth::user()->getRoleNames()->first() ?? 'Pejabat Pengadaan',
-                'status_sebelumnya' => 'DRAFT',
+                'status_sebelumnya' => $statusSebelumSubmit,
                 'status_baru' => $tagihan->status,
                 'aksi' => 'DIAJUKAN',
                 'catatan' => 'Tagihan diajukan ke 5 verifikator paralel (PPK, PPSPM, Koor.Keu, Bend.Keluar, Bend.Terima) lalu Kasubbag.',
@@ -699,7 +704,7 @@ class TagihanController extends Controller
                 ['Operator BLU'],
                 'Tagihan Kontrak Siap Diproses SPP',
                 "Tagihan {$tagihan->nomor_tagihan} telah disetujui PPK dan siap dibuatkan SPP.",
-                route('spps.kontrak.index')
+                route('proses-tagihan.show', $tagihan->id)
             );
 
             DB::commit();
@@ -840,18 +845,9 @@ class TagihanController extends Controller
 
     private function isTagihanReadyToSubmit(Tagihan $tagihan): bool
     {
-        $signatures = $tagihan->documentSignatures->groupBy('document_label');
-
-        $hasBappSelesai = $this->isTteSelesai($signatures, 'BAPP');
-        $hasBapSelesai = $this->isTteSelesai($signatures, 'BAP');
-
-        if (!$hasBappSelesai || !$hasBapSelesai) {
-            return false;
-        }
-
-        $jenisTermin = optional(optional($tagihan->detailKontrak)->termin)->jenis_termin;
-        if ($jenisTermin === 'PELUNASAN' && !$this->isTteSelesai($signatures, 'BAST')) {
-            return false;
+        if ($tagihan->tipe_tagihan === 'KONTRAK') {
+            $arsip = optional($tagihan->detailKontrak)->arsipDokumen()->where('is_active', true)->get();
+            return $arsip->contains('jenis_dokumen', 'BAPP_GAMBAR_RAB');
         }
 
         return true;

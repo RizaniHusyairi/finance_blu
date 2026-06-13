@@ -766,13 +766,9 @@
                             </td>
                             <td><span class="text-muted small">{{ $p->pembuat }}</span></td>
                             <td class="text-center">
-                                <button class="btn-review btn-do-review"
-                                    data-title="Review Pencairan: {{ $p->nomor }}"
-                                    data-url-approve="{{ $p->url_approve }}"
-                                    data-url-reject="{{ $p->url_reject }}"
-                                    data-nominal="{{ $p->nilai > 0 ? 'Rp '.number_format($p->nilai,0,',','.') : '-' }}">
-                                    <i class="bi bi-eye-fill"></i> Review & TTD
-                                </button>
+                                <a class="btn-review" href="{{ $p->url_proses }}">
+                                    <i class="bi bi-eye-fill"></i> Proses Tagihan
+                                </a>
                             </td>
                         </tr>
                     @empty

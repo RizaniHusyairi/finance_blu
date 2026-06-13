@@ -98,16 +98,38 @@
             else if (tipe === 'dalam_kota_lebih_8_jam') rate = parseFloat(provSelect.data('dalam')) || 0;
             else if (tipe === 'diklat') rate = parseFloat(provSelect.data('diklat')) || 0;
 
-            let totalUangHarian = rate * lamaHari;
-            card.find('.uang-harian-input').val(formatNumber(totalUangHarian));
-            calculateJumlah(card.find('.uang-harian-input')[0]);
+            let total = rate * lamaHari;
+
+            // Dalam kota: tarif otomatis masuk kolom Transport;
+            // tipe lain (luar kota/diklat) masuk kolom Uang Harian.
+            let isDalamKota = tipe === 'dalam_kota_lebih_8_jam';
+            let targetSel = isDalamKota ? '.transport-amount-input' : '.uang-harian-input';
+
+            // Saat tipe berganti, kosongkan isian otomatis di kolom lama —
+            // hanya bila nilainya masih persis hasil auto (isian manual aman).
+            let prev = card.data('autoRate') || null;
+            if (prev && prev.target !== targetSel) {
+                let prevInput = card.find(prev.target);
+                if (String(prevInput.val()) === String(prev.value)) {
+                    prevInput.val('');
+                    if (prev.target === '.transport-amount-input') toggleBuktiFile(prevInput[0], 'transport');
+                    calculateJumlah(prevInput[0]);
+                }
+            }
+
+            let input = card.find(targetSel);
+            input.val(formatNumber(total));
+            card.data('autoRate', { target: targetSel, value: formatNumber(total) });
+            if (isDalamKota) toggleBuktiFile(input[0], 'transport');
+            calculateJumlah(input[0]);
         }
     }
 
     // ===== Progress stepper =====
     function updateProgress() {
         const flags = {
-            dokumen: ['#inp_deskripsi', '#inp_nomor', '#inp_bulan', '#inp_tahun', '#inp_kota', '#inp_tanggal']
+            // Halaman create memakai #inp_nomor_urut (4 digit manual); edit masih #inp_nomor.
+            dokumen: ['#inp_deskripsi', ($('#inp_nomor_urut').length ? '#inp_nomor_urut' : '#inp_nomor'), '#inp_bulan', '#inp_tahun', '#inp_kota', '#inp_tanggal']
                 .every(sel => ($(sel).val() || '').trim() !== ''),
             verifikator: ['#ppkUserId', '#ppspmUserId', '#bendaharaUserId', '#bendaharaPenerimaanUserId', '#koorKeuanganUserId']
                 .every(sel => ($(sel).val() || '').trim() !== '')
@@ -224,7 +246,7 @@
         });
 
         // Update progress when document fields change
-        $('#inp_deskripsi, #inp_nomor, #inp_bulan, #inp_tahun, #inp_kota, #inp_tanggal, #ppkNipSnapshot, #bendaharaNipSnapshot').on('input change', updateProgress);
+        $('#inp_deskripsi, #inp_nomor, #inp_nomor_urut, #inp_bulan, #inp_tahun, #inp_kota, #inp_tanggal, #ppkNipSnapshot, #bendaharaNipSnapshot').on('input change', updateProgress);
 
         // Stepper click → smooth scroll to section
         $('.stepper-item').on('click', function () {

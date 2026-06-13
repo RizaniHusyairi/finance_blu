@@ -191,7 +191,13 @@ class PerjaldinVerifikasiController extends Controller
         $activeRoleCodes = [];
         $activeLabels = [];
         foreach (self::ROLE_CONFIG as $rk => $rc) {
-            if ($user->hasRole($rc['label']) || $user->hasRole($rc['role_code'])) {
+            // Cocokkan seluruh varian nama role Spatie — mis. role_code KASUBBAG
+            // tersimpan sebagai "Kepala Subbagian Keuangan dan Tata Usaha".
+            $namaRoles = array_unique(array_merge(
+                $this->roleCodeVariants($rc['role_code']),
+                [$rc['label'], $rc['role_code']]
+            ));
+            if ($user->hasAnyRole($namaRoles)) {
                 $activeRoleCodes = array_merge($activeRoleCodes, $this->roleCodeVariants($rc['role_code']));
                 $activeLabels[] = $rc['label'];
             }
@@ -282,7 +288,13 @@ class PerjaldinVerifikasiController extends Controller
         $user = auth()->user();
         $allRoleApprovals = [];
         foreach (self::ROLE_CONFIG as $rk => $rc) {
-            if ($user->hasRole($rc['label']) || $user->hasRole($rc['role_code'])) {
+            // Cocokkan seluruh varian nama role Spatie — mis. role_code KASUBBAG
+            // tersimpan sebagai "Kepala Subbagian Keuangan dan Tata Usaha".
+            $namaRoles = array_unique(array_merge(
+                $this->roleCodeVariants($rc['role_code']),
+                [$rc['label'], $rc['role_code']]
+            ));
+            if ($user->hasAnyRole($namaRoles)) {
                 $pa = $this->pendingApproval($tagihan, $rc['role_code']);
                 if ($pa) {
                     $allRoleApprovals[] = [
@@ -471,8 +483,8 @@ class PerjaldinVerifikasiController extends Controller
                 $operators = \App\Models\User::role('Operator BLU')->get();
                 Notification::send($operators, new WorkflowNotification([
                     'title' => 'Perjaldin Siap SPP',
-                    'message' => "Perjaldin '{$tagihan->deskripsi}' sudah disetujui {$actorRole}. Silakan pilih COA dan buat SPP.",
-                    'url' => route('spps.perjaldin.index'),
+                    'message' => "Perjaldin '{$tagihan->deskripsi}' sudah disetujui {$actorRole}. Proses dokumen pencairan di halaman Proses Tagihan.",
+                    'url' => route('proses-tagihan.show', $tagihan->id),
                     'icon' => 'receipt_long',
                     'color' => 'success',
                 ]));

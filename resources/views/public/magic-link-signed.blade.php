@@ -104,6 +104,50 @@
         @keyframes pop { from { transform: translateY(24px) scale(.98); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
         @keyframes drawIn { from { transform: scale(0) rotate(-30deg); opacity: 0; } to { transform: scale(1) rotate(0); opacity: 1; } }
         @keyframes pulseRing { 0% { box-shadow: 0 0 0 0 rgba(255,255,255,.4); } 70% { box-shadow: 0 0 0 18px rgba(255,255,255,0); } 100% { box-shadow: 0 0 0 0 rgba(255,255,255,0); } }
+        
+        /* ===== Unified Document Card ===== */
+        .unified-doc-card {
+            background: #fff;
+            border: 1px solid var(--border-soft);
+            border-radius: 1rem;
+            padding: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 0.75rem;
+            transition: all 0.3s ease;
+        }
+
+        .unified-doc-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px -8px rgba(30, 34, 53, 0.12);
+            border-color: rgba(16, 185, 129, 0.4);
+        }
+
+        .udc-icon-wrap {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            flex-shrink: 0;
+        }
+
+        @media (max-width: 768px) {
+            .unified-doc-card {
+                flex-wrap: wrap;
+                padding: 1rem;
+            }
+            .udc-action {
+                width: 100%;
+                margin-top: 0.5rem;
+                text-align: right;
+            }
+        }
     </style>
 </head>
 <body>
@@ -121,19 +165,43 @@
                         <div class="card-body-pad">
                             <p class="text-center text-muted mb-4">
                                 Terima kasih <strong class="text-dark">{{ $signature->signer_name }}</strong>,
-                                berikut dokumen yang telah Anda setujui:
+                                berikut status penyelesaian dokumen Anda:
                             </p>
 
-                            @php $docList = isset($signatures) ? $signatures : collect([$signature]); @endphp
+                            @php 
+                                $docList = isset($signatures) ? $signatures : collect([$signature]); 
+                                $isVendor = ($signature->role === 'vendor');
+                                $tagihan = $signature->documentable;
+                            @endphp
+                            
                             <div class="mb-4">
                                 @foreach($docList as $doc)
-                                    <div class="doc-list-item">
-                                        <span class="doc-ico"><i class="bi bi-file-earmark-check-fill"></i></span>
-                                        <div class="flex-grow-1">
-                                            <div class="fw-bold">Berita Acara {{ $doc->document_label }}</div>
-                                            <div class="small text-muted">Disetujui sebagai {{ ucwords(str_replace('_',' ',$doc->role)) }}</div>
+                                    @php
+                                        $jenis = $doc->document_label . '_FINAL_TTD';
+                                        $arsip = $isVendor ? $tagihan->detailKontrak->arsipDokumen->where('jenis_dokumen', $jenis)->where('is_active', true)->first() : null;
+                                    @endphp
+                                    <div class="unified-doc-card stagger-1">
+                                        <div class="udc-icon-wrap">
+                                            <i class="bi bi-file-earmark-check-fill"></i>
                                         </div>
-                                        <i class="bi bi-patch-check-fill text-success fs-5"></i>
+                                        <div class="flex-grow-1">
+                                            <div class="fw-bold mb-1 text-dark">Berita Acara {{ $doc->document_label }}</div>
+                                            <div class="d-flex flex-wrap gap-2">
+                                                <span class="badge bg-success-subtle text-success border border-success-subtle"><i class="bi bi-pen-fill me-1"></i>TTE Disetujui</span>
+                                                @if($isVendor && $arsip)
+                                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle"><i class="bi bi-cloud-check-fill me-1"></i>File Final Terunggah</span>
+                                                @endif
+                                            </div>
+                                        </div>
+                                        <div class="udc-action ms-auto">
+                                            @if($isVendor && $arsip)
+                                                <a href="{{ Storage::disk($arsip->disk)->url($arsip->path_file) }}" target="_blank" class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-bold">
+                                                    <i class="bi bi-eye-fill me-1"></i> Lihat Berkas
+                                                </a>
+                                            @else
+                                                <i class="bi bi-patch-check-fill text-success fs-3"></i>
+                                            @endif
+                                        </div>
                                     </div>
                                 @endforeach
                             </div>
@@ -170,6 +238,7 @@
                     </p>
                 </div>
             </div>
+        </div>
         </div>
     </div>
 </body>

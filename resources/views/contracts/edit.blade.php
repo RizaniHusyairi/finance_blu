@@ -32,6 +32,21 @@
         </div>
     @endif
 
+    @if($kontrak->status_kontrak === 'REVISI')
+        <div class="alert alert-warning border-0 shadow-sm d-flex align-items-start gap-3">
+            <i class="bi bi-arrow-counterclockwise fs-3 text-warning"></i>
+            <div>
+                <div class="fw-bold mb-1">Kontrak Dikembalikan PPK untuk Revisi</div>
+                @if($kontrak->ppk_catatan)
+                    <div class="bg-white rounded-3 border border-warning-subtle p-2 px-3 fst-italic mb-2">
+                        "{{ $kontrak->ppk_catatan }}"
+                    </div>
+                @endif
+                <div class="small text-muted">Perbaiki data sesuai catatan di atas, simpan, lalu ajukan ulang ke PPK dari halaman daftar kontrak.</div>
+            </div>
+        </div>
+    @endif
+
     <form action="{{ route('contracts.update', $kontrak->id) }}" method="POST" id="formKontrak" enctype="multipart/form-data">
         @csrf
         @method('PUT')
@@ -56,17 +71,7 @@
                                     @endforeach
                                 </select>
                             </div>
-                            <div class="col-md-6">
-                                @include('partials.dipa-item-grouped-select', [
-                                    'budgetGroups' => $budgetGroups,
-                                    'fieldName' => 'dipa_revision_item_id',
-                                    'fieldId' => 'dipa_revision_item_id',
-                                    'fieldClass' => 'form-select select2',
-                                    'fieldLabel' => 'Pilih Item Anggaran (COA)',
-                                    'placeholder' => '-- Cari Item Anggaran DIPA Aktif --',
-                                    'selectedValue' => old('dipa_revision_item_id', $kontrak->dipa_revision_item_id),
-                                ])
-                            </div>
+
                             <div class="col-12">
                                 <label class="form-label fw-bold">Nama Pekerjaan <span class="text-danger">*</span></label>
                                 <textarea class="form-control" rows="3" name="nama_pekerjaan" placeholder="Contoh: Pengadaan Jasa Kebersihan (Cleaning Service) Area Terminal Bandara" required>{{ old('nama_pekerjaan', $kontrak->nama_pekerjaan) }}</textarea>
@@ -188,7 +193,6 @@
                                 <label class="form-label fw-bold">Nilai Total Kontrak (Rp) <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control rupiah-input" id="nilai_total_kontrak_display" placeholder="Misal: 100.000.000" value="{{ old('nilai_total_kontrak', $kontrak->nilai_total_kontrak) }}" required>
                                 <input type="hidden" name="nilai_total_kontrak" id="nilai_total_kontrak_value" value="{{ old('nilai_total_kontrak', $kontrak->nilai_total_kontrak) }}">
-                                <small class="text-danger mt-1 fw-bold d-none" id="pagu_error"></small>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-bold d-block">Metode Pembayaran <span class="text-danger">*</span></label>
@@ -411,7 +415,6 @@
                 this.value = formatRupiah(cleanValue);
                 if (this.id === 'nilai_total_kontrak_display') {
                     validasiUangMuka();
-                    validasiSisaPagu();
                     kalkulasiTotalTermin();
                 } else if (this.id === 'nilai_uang_muka_display') {
                     validasiUangMuka();
@@ -419,15 +422,10 @@
                 }
             });
         });
-        
-        $('#dipa_revision_item_id').on('change', function() {
-            validasiSisaPagu();
-        });
 
         toggleTerminWrapper();
         updateNomorTermin();
         kalkulasiTotalTermin();
-        validasiSisaPagu();
     });
 
     function formatRupiah(angka, prefix = 'Rp '){
@@ -487,41 +485,6 @@
             errEl.classList.remove('d-none');
         } else {
             errEl.classList.add('d-none');
-        }
-    }
-
-    function validasiSisaPagu() {
-        let selectCoa = document.getElementById('dipa_revision_item_id');
-        let selectedOption = selectCoa.options[selectCoa.selectedIndex];
-        let total = parseFloat(document.getElementById('nilai_total_kontrak_value').value) || 0;
-        let sisaPagu = selectedOption ? parseFloat(selectedOption.getAttribute('data-sisa-pagu')) || 0 : 0;
-        let btnSubmit = document.querySelector('button[type="submit"]');
-        let errPaguEl = document.getElementById('pagu_error');
-
-        // Untuk edit, tambahkan pagu_tersimpan kembali ke sisaPagu karena sisa pagu sekarang sudah terpotong nilai kontrak lama
-        let nilaiKontrakLama = {{ $kontrak->nilai_total_kontrak }};
-        let paguTersedia = sisaPagu;
-        
-        // Cek apakah option yang dipilih sama dengan coa lama
-        let isSameCoa = selectedOption && selectedOption.value == "{{ $kontrak->dipa_revision_item_id }}";
-        if (isSameCoa) {
-            paguTersedia = sisaPagu + nilaiKontrakLama;
-        }
-
-        if (total > 0 && selectedOption && selectedOption.value !== "") {
-            if (total > paguTersedia) {
-                if (errPaguEl) {
-                    errPaguEl.classList.remove('d-none');
-                    errPaguEl.innerText = "Peringatan: Nilai Kontrak (Rp " + formatRupiah(total.toString(), '') + ") melebihi sisa pagu COA yang tersedia (Rp " + formatRupiah(paguTersedia.toString(), '') + ").";
-                }
-                btnSubmit.disabled = true;
-            } else {
-                if (errPaguEl) errPaguEl.classList.add('d-none');
-                btnSubmit.disabled = false;
-            }
-        } else {
-            if (errPaguEl) errPaguEl.classList.add('d-none');
-            btnSubmit.disabled = false;
         }
     }
 

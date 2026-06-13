@@ -377,10 +377,17 @@
 
                         <div class="mb-3">
                             <label class="form-label fw-semibold small">Nominal Saldo Awal (Rp) <span class="text-danger">*</span></label>
-                            <input type="number" name="nominal" min="0" step="0.01" inputmode="numeric"
-                                   class="form-control @error('nominal') is-invalid @enderror"
-                                   value="{{ old('nominal') }}" placeholder="0" required>
-                            @error('nominal')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                            {{-- Tampilan berformat rupiah; nilai mentah dikirim lewat input hidden "nominal". --}}
+                            <div class="input-group @error('nominal') has-validation @enderror">
+                                <span class="input-group-text">Rp</span>
+                                <input type="text" id="saldoAwalNominalDisplay" inputmode="numeric" autocomplete="off"
+                                       class="form-control js-rupiah @error('nominal') is-invalid @enderror"
+                                       data-target="saldoAwalNominal"
+                                       value="{{ old('nominal') !== null && old('nominal') !== '' ? number_format((float) old('nominal'), 0, ',', '.') : '' }}"
+                                       placeholder="0" required>
+                                @error('nominal')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                            </div>
+                            <input type="hidden" name="nominal" id="saldoAwalNominal" value="{{ old('nominal') }}">
                         </div>
 
                         <div class="mb-1">
@@ -415,5 +422,45 @@
         }
     });
     @endif
+
+    // Input nominal berformat rupiah (pemisah ribuan) — nilai mentah disimpan
+    // ke input hidden agar validasi numeric di server tetap bekerja.
+    (function () {
+        'use strict';
+        var fmt = new Intl.NumberFormat('id-ID');
+
+        document.querySelectorAll('.js-rupiah').forEach(function (display) {
+            var hidden = document.getElementById(display.dataset.target);
+            if (!hidden) return;
+
+            function sync() {
+                var digits = display.value.replace(/\D+/g, '').replace(/^0+(?=\d)/, '');
+
+                // Pertahankan posisi kursor berdasarkan jumlah digit di kirinya.
+                var digitsBeforeCaret = display.value
+                    .slice(0, display.selectionStart || 0)
+                    .replace(/\D+/g, '').length;
+
+                display.value = digits === '' ? '' : fmt.format(parseInt(digits, 10));
+                hidden.value = digits;
+
+                var pos = 0, seen = 0;
+                while (pos < display.value.length && seen < digitsBeforeCaret) {
+                    if (/\d/.test(display.value[pos])) seen++;
+                    pos++;
+                }
+                display.setSelectionRange(pos, pos);
+            }
+
+            display.addEventListener('input', sync);
+
+            // Format ulang nilai old() saat halaman dimuat (tanpa menggeser kursor).
+            if (display.value !== '') {
+                var digits = display.value.replace(/\D+/g, '');
+                display.value = digits === '' ? '' : fmt.format(parseInt(digits, 10));
+                hidden.value = digits;
+            }
+        });
+    })();
 </script>
 @endpush

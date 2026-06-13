@@ -31,16 +31,7 @@
                     </div>
                     <div class="card-body p-4">
                         <div class="row g-4">
-                            <div class="col-md-6">
-                                <label class="form-label fw-bold">Tipe Supplier <span class="text-danger">*</span></label>
-                                <select class="form-select" name="tipe_supplier" required>
-                                    <option value="">-- Pilih Tipe --</option>
-                                    <option value="01 - Satker" {{ old('tipe_supplier') == '01 - Satker' ? 'selected' : '' }}>01 - Satker</option>
-                                    <option value="02 - Penyedia/Badan Usaha" {{ old('tipe_supplier', '02 - Penyedia/Badan Usaha') == '02 - Penyedia/Badan Usaha' ? 'selected' : '' }}>02 - Penyedia/Badan Usaha</option>
-                                    <option value="03 - Pegawai" {{ old('tipe_supplier') == '03 - Pegawai' ? 'selected' : '' }}>03 - Pegawai</option>
-                                    <option value="06 - Penerusan Pinjaman" {{ old('tipe_supplier') == '06 - Penerusan Pinjaman' ? 'selected' : '' }}>06 - Penerusan Pinjaman</option>
-                                </select>
-                            </div>
+
                             <div class="col-md-6">
                                 <label class="form-label fw-bold">Nama Perusahaan / Instansi <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control" name="nama_perusahaan" value="{{ old('nama_perusahaan') }}" placeholder="Contoh: CV. ANUGRAH AGUNG JAYA" required>

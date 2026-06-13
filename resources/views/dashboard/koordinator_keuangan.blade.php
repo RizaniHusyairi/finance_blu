@@ -198,42 +198,22 @@
 
     {{-- ===== Quick access ===== --}}
     <div class="row g-3 mt-1">
-        <div class="col-md-3 col-sm-6">
-            <a href="{{ route('verifikasi-koordinator.spp.index') }}" class="v-quick v-anim v-d3">
-                <span class="q-ic bg-indigo"><i class="bi bi-file-earmark-text"></i></span>
+        <div class="col-md-6">
+            <a href="{{ route('verifikasi-koordinator.perjaldin.index') }}" class="v-quick v-anim v-d3">
+                <span class="q-ic bg-indigo"><i class="bi bi-airplane"></i></span>
                 <div>
-                    <div class="q-title">Verifikasi SPP</div>
-                    <div class="q-sub">Kontrak</div>
+                    <div class="q-title">Verifikasi Tagihan</div>
+                    <div class="q-sub">Perjaldin</div>
                 </div>
                 <i class="bi bi-arrow-right q-arrow"></i>
             </a>
         </div>
-        <div class="col-md-3 col-sm-6">
-            <a href="{{ route('verifikasi-koordinator.spm.kontrak.index') }}" class="v-quick v-anim v-d4">
-                <span class="q-ic bg-violet"><i class="bi bi-file-earmark-check"></i></span>
-                <div>
-                    <div class="q-title">Verifikasi SPM</div>
-                    <div class="q-sub">Kontrak</div>
-                </div>
-                <i class="bi bi-arrow-right q-arrow"></i>
-            </a>
-        </div>
-        <div class="col-md-3 col-sm-6">
-            <a href="{{ route('verifikasi-koordinator.npi.kontrak.index') }}" class="v-quick v-anim v-d5">
-                <span class="q-ic bg-amber"><i class="bi bi-file-earmark-ruled"></i></span>
-                <div>
-                    <div class="q-title">Verifikasi NPI</div>
-                    <div class="q-sub">Kontrak</div>
-                </div>
-                <i class="bi bi-arrow-right q-arrow"></i>
-            </a>
-        </div>
-        <div class="col-md-3 col-sm-6">
-            <a href="{{ route('verifikasi-koordinator.sp2d.kontrak.index') }}" class="v-quick v-anim v-d6">
+        <div class="col-md-6">
+            <a href="{{ route('proses-tagihan.index') }}" class="v-quick v-anim v-d4">
                 <span class="q-ic bg-emerald"><i class="bi bi-cash-coin"></i></span>
                 <div>
-                    <div class="q-title">Verifikasi SP2D</div>
-                    <div class="q-sub">Kontrak</div>
+                    <div class="q-title">Proses Tagihan</div>
+                    <div class="q-sub">Verifikasi SPP/SPM/NPI/SP2D dalam satu halaman</div>
                 </div>
                 <i class="bi bi-arrow-right q-arrow"></i>
             </a>

@@ -894,11 +894,22 @@
                     <div class="section-body">
                         <div class="row g-3">
                             <div class="col-md-5">
-                                <label class="form-label modern">Nomor Surat / Tagihan</label>
-                                <input type="text" class="form-control modern text-primary fw-bold font-monospace bg-light"
-                                       value="{{ old('nomor_urut') ? 'KU.201/' . str_pad(old('nomor_urut'),4,'0',STR_PAD_LEFT) . '/APTP/' . date('Y') : $nextNumber }}"
-                                       readonly>
-                                <div class="form-text small"><i class="bi bi-info-circle me-1"></i>Nomor ditentukan otomatis oleh sistem saat disimpan (bebas-bentrok lintas surat KU).</div>
+                                <label class="form-label modern">Nomor Surat / Tagihan <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <span class="input-group-text font-monospace fw-bold">KU.201/</span>
+                                    <input type="text" name="nomor_urut" id="inp_nomor_urut"
+                                           class="form-control modern text-primary fw-bold font-monospace text-center @error('nomor_urut') is-invalid @enderror"
+                                           inputmode="numeric" pattern="[0-9]{1,4}" maxlength="4" required
+                                           value="{{ old('nomor_urut', str_pad($nextUrut, 4, '0', STR_PAD_LEFT)) }}"
+                                           data-ku-check="{{ route('ku-numbers.check') }}"
+                                           data-ku-key="KU_HONOR"
+                                           data-ku-tahun="{{ date('Y') }}">
+                                    <span class="input-group-text font-monospace fw-bold">/APTP/{{ date('Y') }}</span>
+                                </div>
+                                @error('nomor_urut')
+                                    <div class="text-danger small mt-1 fw-semibold">{{ $message }}</div>
+                                @enderror
+                                <div class="form-text small" id="nomorUrutStatus"><i class="bi bi-pencil-square me-1"></i>Isi nomor urut 4 digit — unik lintas surat KU (Honor/Perjaldin/Jasa), nomor terpakai akan ditolak.</div>
                             </div>
                             <div class="col-md-7">
                                 <label class="form-label modern">Uraian / Deskripsi Kegiatan <span class="text-danger">*</span></label>
@@ -912,14 +923,11 @@
                                 <div class="form-text small"><i class="bi bi-info-circle me-1"></i>Tampil di kolom Nama Supplier pada PDF SPP/SPM honorarium.</div>
                             </div>
                             <div class="col-12">
-                                @include('partials.dipa-item-grouped-select', [
-                                    'budgetGroups' => $budgetGroups,
-                                    'fieldName' => 'dipa_revision_item_id',
-                                    'fieldId' => 'dipa_revision_item_id',
-                                    'fieldClass' => 'form-select select2',
-                                    'fieldLabel' => 'Sumber Anggaran (Item DIPA / COA)',
-                                    'placeholder' => '-- Pilih Item Anggaran DIPA Aktif --',
-                                ])
+                                <label class="form-label modern">Sumber Anggaran (Item DIPA / COA)</label>
+                                <div class="alert alert-light border d-flex align-items-center gap-2 mb-0 py-2 px-3">
+                                    <i class="bi bi-info-circle text-primary"></i>
+                                    <small class="text-muted">Pembebanan COA/mata anggaran dipilih oleh <strong>PPK</strong> di halaman Proses Tagihan setelah tagihan disetujui verifikator.</small>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1098,10 +1106,6 @@
                                 <span class="cl-icon"><i class="bi bi-check"></i></span>
                                 <span>Nama supplier diisi</span>
                             </div>
-                            <div class="cl-item" id="chk_dipa">
-                                <span class="cl-icon"><i class="bi bi-check"></i></span>
-                                <span>Sumber anggaran dipilih</span>
-                            </div>
                             <div class="cl-item" id="chk_ppk">
                                 <span class="cl-icon"><i class="bi bi-check"></i></span>
                                 <span>Verifikator PPK dipilih</span>
@@ -1279,11 +1283,11 @@
                     <div class="col-md-4">
                         <label class="form-label modern">Potongan PPh</label>
                         <div class="d-flex gap-2">
-                            <select class="form-select modern pph_percentage" style="max-width: 145px;">
-                                <option value="0" data-pct="0">0% (Tanpa)</option>
+                            <select class="form-select modern pph_percentage" style="max-width: 230px;">
+                                <option value="0" data-pct="0">0% (Tanpa Potongan)</option>
                                 @foreach($tarifPajaks as $tp)
                                     <option value="{{ $tp->persentase }}" data-pct="{{ $tp->persentase }}">
-                                        {{ $tp->kode_pajak }} ({{ (float)$tp->persentase }}%)
+                                        {{ $tp->jenis_pajak }}
                                     </option>
                                 @endforeach
                             </select>
@@ -1333,7 +1337,6 @@
         const checks = {
             chk_deskripsi: document.getElementById('inp_deskripsi')?.value.trim().length > 0,
             chk_supplier: document.getElementById('inp_nama_supplier')?.value.trim().length > 0,
-            chk_dipa: document.getElementById('dipa_revision_item_id')?.value.length > 0,
             chk_ppk: document.getElementById('inp_ppk')?.value.length > 0,
             chk_bendahara: document.getElementById('inp_bendahara')?.value.length > 0,
             chk_penerima: document.querySelectorAll('#penerimaContainer .penerima-row').length > 0,
@@ -1362,7 +1365,7 @@
 
         // Step states
         const sectionFlags = {
-            info: checks.chk_deskripsi && checks.chk_supplier && checks.chk_dipa,
+            info: checks.chk_deskripsi && checks.chk_supplier,
             verifikator: checks.chk_ppk && checks.chk_bendahara,
             penerima: checks.chk_penerima && checks.chk_nominal,
             dokumen: !!document.getElementById('file_sk')?.files?.length,
@@ -1383,7 +1386,7 @@
             card.classList.toggle('is-active', card.dataset.section === document.querySelector('.step-item.active')?.dataset.step);
         });
 
-        const allRequiredOk = checks.chk_deskripsi && checks.chk_supplier && checks.chk_dipa
+        const allRequiredOk = checks.chk_deskripsi && checks.chk_supplier
                             && checks.chk_ppk && checks.chk_bendahara
                             && checks.chk_penerima && checks.chk_nominal;
         const btnSubmit = document.getElementById('btnSubmitPpk');
@@ -1473,7 +1476,7 @@
             recalcGrandTotal();
             updateChecklist();
         }
-        if (e.target.id === 'dipa_revision_item_id' || e.target.id === 'inp_ppk' || e.target.id === 'inp_bendahara') {
+        if (e.target.id === 'inp_ppk' || e.target.id === 'inp_bendahara') {
             updateChecklist();
         }
     });
@@ -1503,5 +1506,51 @@
     // Init
     addRow();
     updateChecklist();
+    </script>
+    <script>
+    // Cek ketersediaan nomor urut KU saat diketik (validasi final tetap di server).
+    (function () {
+        'use strict';
+        var inp = document.getElementById('inp_nomor_urut');
+        var status = document.getElementById('nomorUrutStatus');
+        if (!inp || !status) return;
+
+        var timer;
+        function setStatus(cls, icon, text) {
+            status.className = 'form-text small ' + cls;
+            status.innerHTML = '<i class="bi ' + icon + ' me-1"></i>' + text;
+        }
+
+        function check() {
+            var v = (inp.value || '').replace(/\D/g, '');
+            inp.value = v;
+            if (!v || parseInt(v, 10) < 1) {
+                setStatus('text-danger fw-semibold', 'bi-exclamation-circle', 'Nomor urut wajib diisi (0001–9999).');
+                return;
+            }
+            var url = inp.dataset.kuCheck
+                + '?document_key=' + encodeURIComponent(inp.dataset.kuKey)
+                + '&tahun=' + encodeURIComponent(inp.dataset.kuTahun)
+                + '&start_number=' + encodeURIComponent(v);
+            fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' } })
+                .then(function (r) { return r.json(); })
+                .then(function (d) {
+                    var padded = v.padStart(4, '0');
+                    if (d.exists) {
+                        inp.classList.add('is-invalid');
+                        setStatus('text-danger fw-semibold', 'bi-x-circle-fill', 'Nomor ' + padded + ' sudah pernah digunakan — pilih nomor lain.');
+                    } else {
+                        inp.classList.remove('is-invalid');
+                        setStatus('text-success fw-semibold', 'bi-check-circle-fill', 'Nomor ' + padded + ' tersedia.');
+                    }
+                })
+                .catch(function () {
+                    setStatus('text-muted', 'bi-info-circle', 'Tidak dapat mengecek nomor — validasi tetap dilakukan saat disimpan.');
+                });
+        }
+
+        inp.addEventListener('input', function () { clearTimeout(timer); timer = setTimeout(check, 400); });
+        check();
+    })();
     </script>
 @endsection

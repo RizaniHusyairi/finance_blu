@@ -19,16 +19,29 @@ use Illuminate\Support\Facades\Notification;
 /**
  * Mesin rantai dokumen pencairan untuk halaman Proses Tagihan terpadu.
  *
- * Setelah tagihan disetujui 6 verifikator, COA dipilih Operator BLU, dan
+ * Setelah tagihan disetujui 6 verifikator, COA dipilih PPK, dan
  * Standing Instruction disetujui KPA, service ini men-generate draft
- * SPP+SPM+NPI+SP2D sekaligus. SPP/SPM/NPI diajukan & diverifikasi paralel
- * (tanpa saling menunggu); setelah ketiganya disetujui, Bendahara Pengeluaran
- * mengunggah bukti transfer yang sekaligus mengajukan SP2D ke PPK (1 step).
+ * SPP+SPM+NPI+SP2D sekaligus. SPP & SPM diajukan/diverifikasi paralel;
+ * NPI baru dapat diajukan setelah SPP dan SPM disetujui verifikatornya.
+ * Setelah ketiganya disetujui, Bendahara Pengeluaran mengunggah bukti
+ * transfer yang sekaligus mengajukan SP2D ke PPK (1 step).
  */
 class DokumenChainService
 {
     /** Status tagihan yang menandakan verifikasi 6-verifikator sudah selesai. */
     public const TAGIHAN_READY_STATUSES = ['READY_FOR_SPP', 'DISETUJUI_KONTRAK', 'DISETUJUI_PERJALDIN', 'DISETUJUI', 'PROSES_SPP'];
+
+    /**
+     * Label bagian yang dapat ditandai saat rantai dikembalikan ke pembuat
+     * tagihan. SP2D sengaja tidak termasuk: SP2D hanya penerbitan akhir yang
+     * ikut dibatalkan otomatis — tidak ada substansinya yang direvisi terpisah.
+     */
+    public const RETURNABLE_PARTS = [
+        'tagihan' => 'Data Tagihan & Dokumen Pendukung',
+        'spp' => 'SPP',
+        'spm' => 'SPM',
+        'npi' => 'NPI',
+    ];
 
     private const WORKFLOW_SPP = [
         'KONTRAK' => 'SPP_KONTRAK_PPK',
@@ -110,6 +123,57 @@ class DokumenChainService
         return $tagihan->kpa_approval_status === 'APPROVED';
     }
 
+    /**
+     * Khusus tagihan KONTRAK: Operator BLU wajib memilih tipe pajak
+     * (baris potongan_tagihan jenis PAJAK) sebelum draft rantai dibuat.
+     */
+    public function isPajakTipeDipilih(Tagihan $tagihan): bool
+    {
+        if ($tagihan->tipe_tagihan !== 'KONTRAK') {
+            return true;
+        }
+
+        return $tagihan->potonganTagihan()->where('jenis_potongan', 'PAJAK')->exists();
+    }
+
+    /** Khusus tagihan KONTRAK: faktur pajak wajib diunggah sebelum draft rantai dibuat. */
+    public function hasFakturPajak(Tagihan $tagihan): bool
+    {
+        if ($tagihan->tipe_tagihan !== 'KONTRAK') {
+            return true;
+        }
+
+        return (bool) $tagihan->detailKontrak?->file_faktur_pajak;
+    }
+
+    public function isPajakKontrakComplete(Tagihan $tagihan): bool
+    {
+        return $this->isPajakTipeDipilih($tagihan) && $this->hasFakturPajak($tagihan);
+    }
+
+    /**
+     * Rantai dokumen masih sepenuhnya berupa draft/revisi (belum ada yang
+     * diajukan/diverifikasi), sehingga nominalnya masih aman disesuaikan.
+     */
+    public function isChainStillDraft(Tagihan $tagihan): bool
+    {
+        $spp = $this->chainSpp($tagihan);
+        if (! $spp) {
+            return false;
+        }
+
+        $draftish = ['DRAFT', 'Revisi', 'REVISI'];
+        $docs = array_filter([$spp, $spp->spm, $spp->spm?->npi, $spp->spm?->npi?->sp2d]);
+
+        foreach ($docs as $doc) {
+            if (! in_array($doc->status, $draftish, true)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     /** Daftar prasyarat generate draft yang belum terpenuhi (untuk pesan UI). */
     public function missingDraftPrerequisites(Tagihan $tagihan): array
     {
@@ -125,6 +189,12 @@ class DokumenChainService
         }
         if (! $this->isKpaApproved($tagihan)) {
             $missing[] = 'Standing Instruction belum disetujui KPA.';
+        }
+        if (! $this->isPajakTipeDipilih($tagihan)) {
+            $missing[] = 'Tipe pajak belum dipilih oleh Operator BLU untuk tagihan kontrak ini.';
+        }
+        if (! $this->hasFakturPajak($tagihan)) {
+            $missing[] = 'Faktur pajak belum diunggah oleh Operator BLU untuk tagihan kontrak ini.';
         }
 
         foreach ($this->missingVerifierColumns($tagihan) as $label) {
@@ -143,7 +213,9 @@ class DokumenChainService
             return null;
         }
 
-        return WorkflowInstance::where('workflowable_type', get_class($document))
+        // getMorphClass(): model alias (mis. Spp extends DokumenSpp) tetap
+        // cocok dengan tipe yang disimpan WorkflowService saat pengajuan.
+        return WorkflowInstance::where('workflowable_type', $document->getMorphClass())
             ->where('workflowable_id', $document->getKey())
             ->latest('id')
             ->first();
@@ -155,7 +227,7 @@ class DokumenChainService
             return false;
         }
 
-        return WorkflowInstance::where('workflowable_type', get_class($document))
+        return WorkflowInstance::where('workflowable_type', $document->getMorphClass())
             ->where('workflowable_id', $document->getKey())
             ->where('status', 'APPROVED')
             ->exists();
@@ -258,7 +330,7 @@ class DokumenChainService
     }
 
     // ─────────────────────────────────────────────────────────────────
-    // Pengajuan paralel SPP / SPM / NPI
+    // Pengajuan SPP / SPM (paralel) dan NPI (setelah SPP & SPM disetujui)
     // ─────────────────────────────────────────────────────────────────
 
     public function submitSpp(Tagihan $tagihan, User $actor): void
@@ -297,8 +369,15 @@ class DokumenChainService
 
     public function submitNpi(Tagihan $tagihan, User $actor): void
     {
-        $npi = $this->chainSpp($tagihan)?->spm?->npi;
+        $spp = $this->chainSpp($tagihan);
+        $spm = $spp?->spm;
+        $npi = $spm?->npi;
         $this->assertSubmittable($npi, 'NPI');
+
+        // NPI menunggu SPP & SPM selesai diverifikasi terlebih dahulu.
+        if (! $this->isDocumentApproved($spp) || ! $this->isDocumentApproved($spm)) {
+            throw new \RuntimeException('NPI baru dapat diajukan setelah SPP dan SPM disetujui oleh verifikatornya.');
+        }
 
         DB::transaction(function () use ($tagihan, $npi, $actor) {
             $npi->update(['status' => DokumenNpi::STATUS_MENUNGGU_VERIFIKASI]);
@@ -482,20 +561,7 @@ class DokumenChainService
         }
 
         DB::transaction(function () use ($tagihan, $spp, $actor, $alasan) {
-            $documents = array_filter([
-                $spp->spm?->npi?->sp2d,
-                $spp->spm?->npi,
-                $spp->spm,
-                $spp,
-            ]);
-
-            foreach ($documents as $doc) {
-                WorkflowInstance::where('workflowable_type', get_class($doc))
-                    ->where('workflowable_id', $doc->getKey())
-                    ->whereIn('status', ['IN_PROGRESS', 'DRAFT', 'REVISION'])
-                    ->update(['status' => 'REJECTED']);
-                $doc->delete();
-            }
+            $this->deleteChainDocuments($spp);
 
             $resetStatus = $tagihan->tipe_tagihan === 'PERJALDIN' ? 'DISETUJUI_PERJALDIN' : 'READY_FOR_SPP';
             $tagihan->update(['status' => $resetStatus]);
@@ -510,8 +576,430 @@ class DokumenChainService
     }
 
     // ─────────────────────────────────────────────────────────────────
+    // Pengembalian rantai ke pembuat tagihan (revisi substantif)
+    // ─────────────────────────────────────────────────────────────────
+
+    /**
+     * Verifikator dokumen rantai mengembalikan tagihan ke pembuatnya:
+     * seluruh rantai dibatalkan, persetujuan KPA di-reset, dan tagihan
+     * kembali ke status REVISI_{role} agar pembuat dapat memperbaiki data
+     * lalu mengajukan ulang lewat alur verifikasi tagihan yang sudah ada.
+     *
+     * @param array<string,string> $catatanPerBagian key dari RETURNABLE_PARTS => catatan revisi
+     */
+    public function returnChainToCreator(Tagihan $tagihan, User $actor, array $catatanPerBagian, ?string $catatanUmum = null): void
+    {
+        $spp = $this->chainSpp($tagihan);
+        if (! $spp) {
+            throw new \RuntimeException('Tidak ada rantai dokumen yang dapat dikembalikan.');
+        }
+
+        $sp2d = $spp->spm?->npi?->sp2d;
+        if ($sp2d && $sp2d->status === DokumenSp2d::STATUS_EXECUTED) {
+            throw new \RuntimeException('Tagihan tidak dapat dikembalikan karena SP2D sudah terbit.');
+        }
+
+        $ringkasan = $this->ringkasanCatatanRevisi($catatanPerBagian, $catatanUmum);
+
+        DB::transaction(function () use ($tagihan, $spp, $actor, $catatanPerBagian, $ringkasan) {
+            // Catat permintaan revisi per dokumen sebelum rantai dihapus,
+            // agar jejaknya tetap terbaca di log masing-masing dokumen.
+            $docsByKey = [
+                'spp' => $spp,
+                'spm' => $spp->spm,
+                'npi' => $spp->spm?->npi,
+            ];
+            foreach ($catatanPerBagian as $key => $catatan) {
+                if (isset($docsByKey[$key]) && $docsByKey[$key]) {
+                    $this->logDokumen($docsByKey[$key], $actor, 'REVISI_DIMINTA', $catatan);
+                }
+            }
+
+            $this->deleteChainDocuments($spp);
+
+            // Kembalikan workflow tagihan ke state REVISION supaya alur
+            // perbaikan + pengajuan ulang existing per tipe tagihan terpakai.
+            $rolePrefix = $this->revisiRolePrefixFor($actor);
+            $instance = WorkflowInstance::where('workflowable_type', Tagihan::class)
+                ->where('workflowable_id', $tagihan->id)
+                ->latest('id')
+                ->first();
+
+            if ($instance) {
+                // Utamakan approval ber-role sama dengan prefix status REVISI_{role}
+                // agar atribusi konsisten untuk user multi-role.
+                $approval = $instance->approvals()
+                    ->whereIn('role_code', $this->roleCodeVariantsForPrefix($rolePrefix))
+                    ->orderByDesc('urutan_step')
+                    ->first()
+                    ?? $instance->approvals()
+                        ->whereIn('role_code', $this->roleCodeVariantsFor($actor))
+                        ->orderByDesc('urutan_step')
+                        ->first();
+
+                $approval?->update([
+                        'status' => 'REVISION',
+                        'acted_by_user_id' => $actor->id,
+                        'acted_at' => now(),
+                        'catatan' => $ringkasan,
+                        'ip_address' => request()->ip(),
+                    ]);
+                $instance->update(['status' => 'REVISION']);
+            }
+
+            $statusLama = $tagihan->status;
+            $tagihan->update([
+                'status' => "REVISI_{$rolePrefix}",
+                // Data tagihan akan berubah — Standing Instruction harus
+                // dimintakan ulang ke KPA setelah verifikasi ulang selesai.
+                'kpa_approval_status' => null,
+                'kpa_approved_at' => null,
+                'kpa_approved_by' => null,
+                'kpa_approval_notes' => null,
+            ]);
+
+            if ($tagihan->tipe_tagihan === 'PERJALDIN') {
+                $tagihan->komponenPerjaldin->each->syncStatusFromDocuments();
+            }
+
+            $this->log($tagihan, $actor, 'KEMBALI_KE_PEMBUAT',
+                "Rantai dokumen pencairan dibatalkan dan tagihan dikembalikan ke pembuatnya untuk revisi.\n{$ringkasan}",
+                $statusLama, $tagihan->status);
+
+            $this->notifyCreatorAfterCommit($tagihan, $ringkasan);
+        });
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // Perbaikan terarah: pajak (Operator BLU) / COA (PPK)
+    // ─────────────────────────────────────────────────────────────────
+
+    /** Penanggung jawab perbaikan per target rewind rantai. */
+    public const CORRECTION_TARGETS = [
+        'pajak' => ['label' => 'Pajak & Faktur Pajak', 'role' => 'Operator BLU', 'marker' => 'PAJAK'],
+        'coa' => ['label' => 'Pembebanan COA', 'role' => 'PPK', 'marker' => 'COA'],
+    ];
+
+    /**
+     * Verifikator dokumen rantai mengembalikan rantai untuk perbaikan pajak
+     * (Operator BLU) atau COA (PPK): seluruh rantai dibatalkan dan persetujuan
+     * KPA di-reset (Standing Instruction memuat netto/COA), tetapi hasil
+     * verifikasi tagihan oleh 6 verifikator TIDAK diulang — tagihan kembali
+     * ke status siap-proses dan penanggung jawab memperbaiki bagiannya.
+     */
+    public function rewindChainForCorrection(Tagihan $tagihan, User $actor, string $target, string $catatan): void
+    {
+        $info = self::CORRECTION_TARGETS[$target] ?? null;
+        if (! $info) {
+            throw new \RuntimeException('Target perbaikan tidak dikenali.');
+        }
+
+        $spp = $this->chainSpp($tagihan);
+        if (! $spp) {
+            throw new \RuntimeException('Tidak ada rantai dokumen yang dapat dikembalikan.');
+        }
+
+        $sp2d = $spp->spm?->npi?->sp2d;
+        if ($sp2d && $sp2d->status === DokumenSp2d::STATUS_EXECUTED) {
+            throw new \RuntimeException('Rantai tidak dapat dikembalikan karena SP2D sudah terbit.');
+        }
+
+        DB::transaction(function () use ($tagihan, $spp, $actor, $target, $catatan, $info) {
+            $this->deleteChainDocuments($spp);
+
+            $statusLama = $tagihan->status;
+            $tagihan->update([
+                // Status kembali ke siap-proses (hasil verifikasi tagihan tetap
+                // berlaku) — draft dibuat ulang setelah prasyarat terpenuhi lagi.
+                'status' => $tagihan->tipe_tagihan === 'PERJALDIN' ? 'DISETUJUI_PERJALDIN' : 'READY_FOR_SPP',
+                // SI KPA memuat nominal netto & sumber dana — wajib diminta
+                // ulang setelah pajak/COA diperbaiki.
+                'kpa_approval_status' => null,
+                'kpa_approved_at' => null,
+                'kpa_approved_by' => null,
+                'kpa_approval_notes' => null,
+                'chain_correction_target' => $info['marker'],
+                'chain_correction_note' => $catatan,
+                'chain_correction_requested_by' => $actor->id,
+                'chain_correction_requested_at' => now(),
+            ]);
+
+            if ($tagihan->tipe_tagihan === 'PERJALDIN') {
+                $tagihan->komponenPerjaldin->each->syncStatusFromDocuments();
+            }
+
+            $this->log($tagihan, $actor, 'REVISI_' . $info['marker'],
+                "Rantai dokumen pencairan dibatalkan untuk perbaikan {$info['label']} oleh {$info['role']}.\n{$catatan}",
+                $statusLama, $tagihan->status);
+
+            $this->notifyCorrectionAfterCommit($tagihan, $target, $catatan, $actor);
+        });
+    }
+
+    /** Hapus penanda perbaikan setelah bagian terkait disimpan ulang. */
+    public function clearChainCorrection(Tagihan $tagihan, string $target): void
+    {
+        $marker = self::CORRECTION_TARGETS[$target]['marker'] ?? null;
+        if (! $marker || $tagihan->chain_correction_target !== $marker) {
+            return;
+        }
+
+        $tagihan->update([
+            'chain_correction_target' => null,
+            'chain_correction_note' => null,
+            'chain_correction_requested_by' => null,
+            'chain_correction_requested_at' => null,
+        ]);
+    }
+
+    /** Notifikasi in-app + WA best-effort ke penanggung jawab perbaikan. */
+    private function notifyCorrectionAfterCommit(Tagihan $tagihan, string $target, string $catatan, User $actor): void
+    {
+        $info = self::CORRECTION_TARGETS[$target];
+
+        DB::afterCommit(function () use ($tagihan, $catatan, $actor, $info) {
+            // COA: utamakan PPK yang ditugaskan pada tagihan; fallback ke role.
+            $recipients = collect();
+            if ($info['role'] === 'PPK' && $tagihan->ppk_user_id) {
+                $recipients = User::whereKey($tagihan->ppk_user_id)->get();
+            }
+            if ($recipients->isEmpty()) {
+                try {
+                    $recipients = User::role($info['role'])->get();
+                } catch (\Throwable) {
+                    return;
+                }
+            }
+            if ($recipients->isEmpty()) {
+                return;
+            }
+
+            $url = route('proses-tagihan.show', $tagihan->id);
+
+            Notification::send($recipients, new WorkflowNotification([
+                'title' => "Permintaan Perbaikan {$info['label']}",
+                'message' => "Tagihan {$tagihan->nomor_tagihan}: rantai dokumen dibatalkan oleh {$actor->name} untuk perbaikan {$info['label']}. Catatan: {$catatan}",
+                'url' => $url,
+                'icon' => 'assignment_return',
+                'color' => 'warning',
+            ]));
+
+            foreach ($recipients as $user) {
+                try {
+                    if ($user->profilable instanceof \App\Models\MasterPegawai && $user->profilable->nomor_hp) {
+                        $phone = preg_replace('/\D+/', '', $user->profilable->nomor_hp);
+                        if (strlen($phone) >= 9) {
+                            app(WhatsappService::class)->sendMessage($phone,
+                                "*Notifikasi SIKEREN*\n\nTagihan {$tagihan->nomor_tagihan} memerlukan perbaikan *{$info['label']}*:\n{$catatan}\n\nSilakan perbaiki melalui:\n{$url}");
+                        }
+                    }
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::warning('Gagal kirim WA permintaan perbaikan rantai.', [
+                        'tagihan_id' => $tagihan->id,
+                        'user_id' => $user->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+        });
+    }
+
+    /**
+     * Notifikasi (in-app + WA best-effort) ke pengaju dokumen rantai saat
+     * verifikator meminta revisi satu dokumen saja (kini hanya dipakai SP2D:
+     * perbaikan bukti transfer oleh Bendahara Pengeluaran).
+     */
+    public function notifyDocumentRevisionRequested(Tagihan $tagihan, string $jenis, string $catatan, User $actor): void
+    {
+        $jenis = strtolower($jenis);
+        $role = in_array($jenis, ['spp', 'spm'], true) ? 'Operator BLU' : 'Bendahara Pengeluaran';
+        $label = strtoupper($jenis);
+
+        DB::afterCommit(function () use ($tagihan, $role, $label, $catatan, $actor) {
+            $recipients = User::role($role)->get();
+            if ($recipients->isEmpty()) {
+                return;
+            }
+
+            Notification::send($recipients, new WorkflowNotification([
+                'title' => "Permintaan Revisi {$label}",
+                'message' => "{$label} tagihan {$tagihan->nomor_tagihan} diminta revisi oleh {$actor->name}: {$catatan}",
+                'url' => route('proses-tagihan.show', $tagihan->id),
+                'icon' => 'assignment_return',
+                'color' => 'warning',
+            ]));
+        });
+    }
+
+    // ─────────────────────────────────────────────────────────────────
     // Helpers
     // ─────────────────────────────────────────────────────────────────
+
+    /** Soft-delete seluruh dokumen rantai dan tutup workflow instance-nya. */
+    private function deleteChainDocuments(DokumenSpp $spp): void
+    {
+        $documents = array_filter([
+            $spp->spm?->npi?->sp2d,
+            $spp->spm?->npi,
+            $spp->spm,
+            $spp,
+        ]);
+
+        foreach ($documents as $doc) {
+            WorkflowInstance::where('workflowable_type', $doc->getMorphClass())
+                ->where('workflowable_id', $doc->getKey())
+                ->whereIn('status', ['IN_PROGRESS', 'DRAFT', 'REVISION'])
+                ->update(['status' => 'REJECTED']);
+            $doc->delete();
+        }
+    }
+
+    /**
+     * Prefix role untuk status REVISI_{role} tagihan. Hanya menghasilkan
+     * status yang diterima allowedSubmitStatuses pada workflow service
+     * tagihan (Perjaldin/Kontrak/Honorarium) agar pengajuan ulang tidak buntu.
+     */
+    private function revisiRolePrefixFor(User $actor): string
+    {
+        $map = [
+            'PPK' => 'PPK',
+            'PPSPM' => 'PPSPM',
+            'Bendahara Penerimaan' => 'BENDAHARA_PENERIMAAN',
+            'Bendahara Pengeluaran' => 'BENDAHARA_PENGELUARAN',
+            'Koordinator Keuangan' => 'KOORDINATOR_KEUANGAN',
+            'Kepala Subbagian Keuangan dan Tata Usaha' => 'KASUBBAG',
+        ];
+
+        foreach ($actor->getRoleNames() as $name) {
+            if (isset($map[$name])) {
+                return $map[$name];
+            }
+        }
+
+        return 'PPK';
+    }
+
+    /** Varian role_code untuk satu prefix status REVISI_{role}. */
+    private function roleCodeVariantsForPrefix(string $rolePrefix): array
+    {
+        return match ($rolePrefix) {
+            'PPK' => ['PPK'],
+            'PPSPM' => ['PPSPM'],
+            'BENDAHARA_PENERIMAAN' => ['Bendahara Penerimaan', 'BENDAHARA_PENERIMAAN'],
+            'BENDAHARA_PENGELUARAN' => ['Bendahara Pengeluaran', 'BENDAHARA_PENGELUARAN'],
+            'KOORDINATOR_KEUANGAN' => ['Koordinator Keuangan', 'KOORDINATOR_KEUANGAN'],
+            'KASUBBAG' => ['Kepala Subbagian Keuangan dan Tata Usaha', 'KASUBBAG'],
+            default => [$rolePrefix],
+        };
+    }
+
+    /** Varian role_code milik actor untuk mencocokkan approval workflow tagihan. */
+    private function roleCodeVariantsFor(User $actor): array
+    {
+        $map = [
+            'PPK' => ['PPK'],
+            'PPSPM' => ['PPSPM'],
+            'Koordinator Keuangan' => ['Koordinator Keuangan', 'KOORDINATOR_KEUANGAN'],
+            'Kepala Subbagian Keuangan dan Tata Usaha' => ['Kepala Subbagian Keuangan dan Tata Usaha', 'KASUBBAG'],
+            'Bendahara Penerimaan' => ['Bendahara Penerimaan', 'BENDAHARA_PENERIMAAN'],
+            'Bendahara Pengeluaran' => ['Bendahara Pengeluaran', 'BENDAHARA_PENGELUARAN'],
+        ];
+
+        $codes = [];
+        foreach ($actor->getRoleNames() as $name) {
+            foreach ($map[$name] ?? [$name] as $code) {
+                $codes[] = $code;
+            }
+        }
+
+        return array_values(array_unique($codes));
+    }
+
+    /** Gabungkan catatan umum + catatan per bagian menjadi satu teks log/notifikasi. */
+    private function ringkasanCatatanRevisi(array $catatanPerBagian, ?string $catatanUmum): string
+    {
+        $parts = [];
+        foreach ($catatanPerBagian as $key => $catatan) {
+            $label = self::RETURNABLE_PARTS[$key] ?? strtoupper($key);
+            $parts[] = "[{$label}] {$catatan}";
+        }
+
+        return trim(($catatanUmum ? trim($catatanUmum) . "\n" : '') . implode("\n", $parts));
+    }
+
+    /** Notifikasi in-app + WA best-effort ke pembuat tagihan setelah commit. */
+    private function notifyCreatorAfterCommit(Tagihan $tagihan, string $ringkasan): void
+    {
+        DB::afterCommit(function () use ($tagihan, $ringkasan) {
+            $recipients = $this->creatorRecipients($tagihan);
+            if ($recipients->isEmpty()) {
+                return;
+            }
+
+            $url = $this->tagihanDetailUrl($tagihan);
+
+            Notification::send($recipients, new WorkflowNotification([
+                'title' => 'Tagihan Dikembalikan untuk Revisi',
+                'message' => "Tagihan {$tagihan->nomor_tagihan} dikembalikan dari proses pencairan untuk diperbaiki. " . str_replace("\n", ' • ', $ringkasan),
+                'url' => $url,
+                'icon' => 'assignment_return',
+                'color' => 'warning',
+            ]));
+
+            foreach ($recipients as $user) {
+                try {
+                    if ($user->profilable instanceof \App\Models\MasterPegawai && $user->profilable->nomor_hp) {
+                        $phone = preg_replace('/\D+/', '', $user->profilable->nomor_hp);
+                        if (strlen($phone) >= 9) {
+                            app(WhatsappService::class)->sendMessage($phone,
+                                "*Notifikasi SIKEREN*\n\nTagihan {$tagihan->nomor_tagihan} dikembalikan untuk revisi:\n{$ringkasan}\n\nSilakan perbaiki dan ajukan ulang melalui:\n{$url}");
+                        }
+                    }
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::warning('Gagal kirim WA pengembalian tagihan.', [
+                        'tagihan_id' => $tagihan->id,
+                        'user_id' => $user->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+        });
+    }
+
+    /** Pembuat tagihan (fallback ke role pembuat sesuai tipe tagihan). */
+    private function creatorRecipients(Tagihan $tagihan)
+    {
+        if ($tagihan->creator) {
+            return collect([$tagihan->creator]);
+        }
+
+        $role = match ($tagihan->tipe_tagihan) {
+            'KONTRAK' => 'Pejabat Pengadaan',
+            'PERJALDIN' => 'Operator Perjaldin',
+            default => 'Operator BLU',
+        };
+
+        try {
+            return User::role($role)->get();
+        } catch (\Throwable) {
+            return collect();
+        }
+    }
+
+    /** URL halaman detail tagihan milik pembuat sesuai tipe. */
+    private function tagihanDetailUrl(Tagihan $tagihan): ?string
+    {
+        try {
+            return match ($tagihan->tipe_tagihan) {
+                'KONTRAK' => route('tagihan.kontrak.show', $tagihan->id),
+                'HONORARIUM' => route('honorarium.show', $tagihan->id),
+                'PERJALDIN' => route('perjaldins.show', $tagihan->id),
+                default => null,
+            };
+        } catch (\Throwable) {
+            return null;
+        }
+    }
 
     /** Notifikasi WA best-effort ke verifikator step pertama setelah commit. */
     private function notifyAfterCommit(?WorkflowInstance $instance): void

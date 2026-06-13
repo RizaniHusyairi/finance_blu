@@ -372,6 +372,8 @@
     .btn-act:hover { transform: translateY(-1px); }
     .btn-act-detail  { background: rgba(59,130,246,.10); color: #1d4ed8; border-color: rgba(59,130,246,.18); }
     .btn-act-detail:hover { background: #1d4ed8; color: #fff; }
+    .btn-act-edit    { background: rgba(99,102,241,.10); color: #4f46e5; border-color: rgba(99,102,241,.18); }
+    .btn-act-edit:hover { background: #4f46e5; color: #fff; }
     .btn-act-addm    { background: rgba(245,158,11,.10); color: #b45309; border-color: rgba(245,158,11,.18); }
     .btn-act-addm:hover { background: #d97706; color: #fff; }
     .btn-act-tagih   { background: linear-gradient(135deg, #34d399, #10b981); color: #fff; box-shadow: 0 4px 10px rgba(16,185,129,.30); }
@@ -627,6 +629,7 @@
                                 'DRAFT' => 'status-draft',
                                 'DIBATALKAN' => 'status-dibatalkan',
                                 'PENDING_REVIEW' => 'status-pending',
+                                'REVISI' => 'status-pending',
                                 default => 'status-draft',
                             };
                             $endDate = \Carbon\Carbon::parse($kontrak->tanggal_selesai);
@@ -661,6 +664,11 @@
                                 <span class="status-pill {{ $statusCls }}">
                                     {{ str_replace('_', ' ', $kontrak->status_kontrak) }}
                                 </span>
+                                @if($kontrak->status_kontrak === 'REVISI' && $kontrak->ppk_catatan)
+                                    <div class="timeline-info text-danger mt-1" title="{{ $kontrak->ppk_catatan }}">
+                                        <i class="bi bi-chat-left-text"></i> PPK: {{ Str::limit($kontrak->ppk_catatan, 45) }}
+                                    </div>
+                                @endif
                             </td>
                             <td>
                                 <div class="action-bar-cell">
@@ -671,12 +679,9 @@
                                         <i class="bi bi-journal-text"></i> Addm. <span>{{ $kontrak->addendums->count() }}</span>
                                     </a>
                                     @if(Auth::user()->hasAnyRole(['Super Admin', 'Pejabat Pengadaan']) && in_array($kontrak->status_kontrak, ['DRAFT', 'REVISI'], true))
-                                        <form action="{{ route('contracts.submit', $kontrak->id) }}" method="POST" class="d-inline m-0" onsubmit="return confirm('Ajukan kontrak ini ke PPK?')">
-                                            @csrf
-                                            <button type="submit" class="btn-act btn-act-tagih" title="Ajukan ke PPK">
-                                                <i class="bi bi-send"></i> Ajukan
-                                            </button>
-                                        </form>
+                                        <a href="{{ route('contracts.edit', $kontrak->id) }}" class="btn-act btn-act-edit" title="{{ $kontrak->status_kontrak === 'REVISI' ? 'Perbaiki kontrak sesuai catatan PPK' : 'Edit Kontrak' }}">
+                                            <i class="bi bi-pencil-square"></i> {{ $kontrak->status_kontrak === 'REVISI' ? 'Perbaiki' : 'Edit' }}
+                                        </a>
                                     @endif
                                     @if(Auth::user()->hasRole('Pejabat Pengadaan') && $kontrak->status_kontrak === 'DRAFT')
                                         <form action="{{ route('contracts.destroy', $kontrak->id) }}" method="POST" class="d-inline m-0" onsubmit="return confirm('Yakin hapus draf kontrak ini? Arsip terkait akan ikut terhapus permanen.')">
@@ -688,9 +693,9 @@
                                         </form>
                                     @endif
                                     @if($kontrak->status_kontrak == 'AKTIF')
-                                        <button type="button" class="btn-act btn-act-tagih" title="Buat Tagihan"
+                                        <button type="button" class="btn-act btn-act-tagih" title="{{ !$kontrak->hasVendorUploadedFinalDocs() ? 'SPK, SPMK, dan Ringkasan Kontrak harus disetujui vendor terlebih dahulu' : 'Buat Tagihan' }}"
                                                 data-bs-toggle="modal" data-bs-target="#modalTagihKontrak{{ $kontrak->id }}"
-                                                {{ $readyTerms->isEmpty() ? 'disabled' : '' }}>
+                                                {{ $readyTerms->isEmpty() || !$kontrak->hasVendorUploadedFinalDocs() ? 'disabled' : '' }}>
                                             <i class="bi bi-cash-stack"></i> Tagih
                                         </button>
                                     @endif

@@ -42,4 +42,17 @@ class NotificationController extends Controller
         }
         return response()->json(['status' => 'success']);
     }
+
+    /**
+     * Tandai satu notifikasi sebagai dibaca (saat item diklik) sehingga
+     * hilang dari daftar tanpa menandai notifikasi lainnya.
+     */
+    public function markOneAsRead(string $id)
+    {
+        if (auth()->check()) {
+            auth()->user()->unreadNotifications()->where('id', $id)->first()?->markAsRead();
+        }
+
+        return response()->json(['status' => 'success']);
+    }
 }

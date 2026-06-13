@@ -1064,10 +1064,10 @@
                         <input type="date" class="form-control modern" name="tanggal_bapp" value="{{ old('tanggal_bapp', now()->format('Y-m-d')) }}">
                         <label class="form-label modern mt-3" for="gambar_rab_bapp">
                             <i class="bi bi-file-earmark-image text-success"></i> Gambar RAB
-                            <span class="text-muted fw-normal ms-1">(Opsional)</span>
+                            <span class="text-danger ms-1">*</span>
                         </label>
                         <label class="file-drop" data-accept=".jpg,.jpeg,.png" data-max-mb="5" data-target="gambar_rab_bapp">
-                            <input type="file" id="gambar_rab_bapp" name="gambar_rab_bapp" accept=".jpg,.jpeg,.png">
+                            <input type="file" id="gambar_rab_bapp" name="gambar_rab_bapp" accept=".jpg,.jpeg,.png" required>
                             <div class="fd-default">
                                 <div class="fd-icon"><i class="bi bi-cloud-arrow-up-fill"></i></div>
                                 <div class="fd-title">Tarik &amp; lepaskan, atau <strong>klik untuk memilih</strong></div>

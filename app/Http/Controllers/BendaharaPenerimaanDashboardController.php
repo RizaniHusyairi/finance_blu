@@ -183,7 +183,7 @@ class BendaharaPenerimaanDashboardController extends Controller
                 'usia' => $n->created_at->diffInDays($now),
                 'is_revisi' => $isRevisi,
                 'status' => $n->status,
-                'url' => route('verifikasi-bendahara-penerimaan.npi.kontrak.show', $n->id),
+                'url' => ($tagihanId = $n->spm?->spp?->tagihan_id) ? route('proses-tagihan.show', $tagihanId) : '#',
                 'tab' => 'npi_kontrak'
             ]);
         }
@@ -200,7 +200,7 @@ class BendaharaPenerimaanDashboardController extends Controller
                 'usia' => $n->created_at->diffInDays($now),
                 'is_revisi' => $isRevisi,
                 'status' => $n->status,
-                'url' => '#', // route('verifikasi-bendahara-penerimaan.npi.perjaldin.show', $n->id) // Assuming route exists
+                'url' => ($tagihanId = $n->spm?->spp?->tagihan_id) ? route('proses-tagihan.show', $tagihanId) : '#',
                 'tab' => 'npi_perjaldin'
             ]);
         }
@@ -217,7 +217,7 @@ class BendaharaPenerimaanDashboardController extends Controller
                 'usia' => $n->created_at->diffInDays($now),
                 'is_revisi' => $isRevisi,
                 'status' => $n->status,
-                'url' => '#', // route('verifikasi-bendahara-penerimaan.npi.honor.show', $n->id) // Assuming route exists
+                'url' => ($tagihanId = $n->spm?->spp?->tagihan_id) ? route('proses-tagihan.show', $tagihanId) : '#',
                 'tab' => 'npi_honor'
             ]);
         }

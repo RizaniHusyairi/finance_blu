@@ -125,10 +125,7 @@
                                                         <div class="col-md-4 ">Direktur / PIC</div>
                                                         <div class="col-md-8">{{ $supplier->nama_direktur ?: '-' }}</div>
                                                     </div>
-                                                    <div class="row mb-3">
-                                                        <div class="col-md-4 ">Tipe Supplier</div>
-                                                        <div class="col-md-8">{{ $supplier->tipe_supplier }}</div>
-                                                    </div>
+
                                                     <div class="row mb-4">
                                                         <div class="col-md-4 ">NPWP</div>
                                                         <div class="col-md-8 font-monospace">{{ $supplier->npwp ?: 'Belum Ada' }}</div>

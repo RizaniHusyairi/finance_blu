@@ -37,6 +37,21 @@
     </div>
 @endif
 
+@if($kontrak->status_kontrak === 'REVISI')
+    <div class="status-banner status-banner-warning mb-3" role="alert">
+        <div class="sb-icon"><i class="bi bi-arrow-counterclockwise"></i></div>
+        <div>
+            <strong>Dikembalikan PPK untuk revisi.</strong>
+            @if($kontrak->ppk_catatan)
+                Catatan: <em>"{{ $kontrak->ppk_catatan }}"</em>
+            @endif
+            @if(Auth::user()->hasAnyRole(['Super Admin', 'Pejabat Pengadaan']))
+                <a href="{{ route('contracts.edit', $kontrak->id) }}" class="fw-bold ms-1">Perbaiki kontrak sekarang →</a>
+            @endif
+        </div>
+    </div>
+@endif
+
 @php
     $statusKontrak = $kontrak->status_kontrak;
     $heroCls = match($statusKontrak) {
@@ -76,6 +91,11 @@
             <a href="{{ route('contracts.index') }}" class="btn-hero">
                 <i class="bi bi-arrow-left"></i> Kembali ke Daftar
             </a>
+            @if(Auth::user()->hasAnyRole(['Super Admin', 'Pejabat Pengadaan']) && $kontrak->status_kontrak === 'DRAFT')
+                <a href="{{ route('contracts.edit', $kontrak->id) }}" class="btn-hero btn-hero-primary">
+                    <i class="bi bi-pencil-square"></i> Edit Kontrak
+                </a>
+            @endif
             @if(Auth::user()->hasAnyRole(['Super Admin', 'Pejabat Pengadaan']) && in_array($kontrak->status_kontrak, ['DRAFT', 'REVISI'], true))
                 <form action="{{ route('contracts.submit', $kontrak->id) }}" method="POST" class="m-0">
                     @csrf
@@ -85,7 +105,7 @@
                 </form>
             @endif
             @if($kontrak->status_kontrak === 'AKTIF')
-                <button type="button" class="btn-hero btn-hero-primary" data-bs-toggle="modal" data-bs-target="#modalTagihKontrakDetail" {{ $readyTerms->isEmpty() ? 'disabled' : '' }}>
+                <button type="button" class="btn-hero btn-hero-primary" data-bs-toggle="modal" data-bs-target="#modalTagihKontrakDetail" {{ $readyTerms->isEmpty() || !$kontrak->hasVendorUploadedFinalDocs() ? 'disabled' : '' }} title="{{ !$kontrak->hasVendorUploadedFinalDocs() ? 'SPK, SPMK, dan Ringkasan Kontrak harus disetujui (diunggah) oleh vendor terlebih dahulu' : 'Buat Tagihan' }}">
                     <i class="bi bi-cash-stack"></i> Buat Tagihan
                 </button>
             @endif
@@ -330,7 +350,7 @@
                         <div class="doc-status-card">
                             <div class="dsc-label"><i class="bi bi-shield-check me-1"></i> Masa Pemeliharaan</div>
                             <div class="dsc-value">{{ (int) ($kontrak->masa_pemeliharaan_hari ?? 0) > 0 ? number_format((int) $kontrak->masa_pemeliharaan_hari, 0, ',', '.') . ' hari kalender' : '-' }}</div>
-                            <div class="dsc-meta">{{ $selectedCoa->kode_mak_lengkap ?? 'COA belum terhubung' }}</div>
+                            <div class="dsc-meta">{{ $selectedCoa->kode_mak_lengkap ?? 'COA dipilih PPK saat proses tagihan' }}</div>
                         </div>
                     </div>
                 </div>
@@ -396,14 +416,14 @@
                         <div class="doc-status-card">
                             <div class="dsc-label"><i class="bi bi-bank me-1"></i> DIPA / Revisi Aktif</div>
                             <div class="dsc-value">{{ $kontrak->dipa->nomor_dipa ?? '-' }}</div>
-                            <div class="dsc-meta">TA {{ $kontrak->dipa->tahun_anggaran ?? '-' }} · Revisi {{ optional($kontrak->dipa->activeRevision)->nomor_revisi ?? $kontrak->dipa->revisi_aktif_ke ?? '-' }}</div>
+                            <div class="dsc-meta">TA {{ $kontrak->dipa->tahun_anggaran ?? '-' }} · Revisi {{ optional($kontrak->dipa?->activeRevision)->nomor_revisi ?? $kontrak->dipa->revisi_aktif_ke ?? '-' }}</div>
                         </div>
                     </div>
                     <div class="col-md-6 col-lg-3">
                         <div class="doc-status-card">
                             <div class="dsc-label"><i class="bi bi-tag-fill me-1"></i> Item Anggaran / COA</div>
                             <div class="dsc-value">{{ $selectedCoa->kode_mak_lengkap ?? '-' }}</div>
-                            <div class="dsc-meta">{{ $selectedCoa->nama_akun ?? 'Item anggaran belum terhubung' }}</div>
+                            <div class="dsc-meta">{{ $selectedCoa->nama_akun ?? 'Dipilih PPK saat proses tagihan' }}</div>
                         </div>
                     </div>
                 </div>
