@@ -210,8 +210,13 @@ class TagihanJasaVerifikasiController extends Controller
 
     public function revision(Request $request, $id)
     {
-        $request->validate([
+        $validated = $request->validate([
             'catatan' => 'required|string',
+            'revisi_target' => 'required|array|min:1',
+            'revisi_target.*' => 'in:rincian,mitra_dokumen,surat_pengantar',
+        ], [
+            'revisi_target.required' => 'Pilih minimal satu bagian yang perlu direvisi.',
+            'revisi_target.min' => 'Pilih minimal satu bagian yang perlu direvisi.',
         ]);
 
         $tagihan = TagihanJasa::findOrFail($id);
@@ -225,16 +230,59 @@ class TagihanJasaVerifikasiController extends Controller
             DB::beginTransaction();
 
             $workflowService = app(WorkflowService::class);
-            $workflowService->requestRevision($tagihan, Auth::id(), $request->catatan);
+            $workflowService->requestRevision($tagihan, Auth::id(), $validated['catatan'], null, $validated['revisi_target']);
 
             $tagihan->status = 'REVISI';
             $tagihan->save();
 
             DB::commit();
+
+            $this->notifyCreatorRevisi($tagihan, $validated['catatan'], $validated['revisi_target']);
+
             return back()->with('success', 'Tagihan Jasa dikembalikan untuk revisi.');
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Beri tahu pembuat tagihan (Admin Jasa) bahwa tagihannya diminta revisi.
+     * Best-effort: kegagalan kirim tidak menggagalkan aksi revisi.
+     */
+    private function notifyCreatorRevisi(TagihanJasa $tagihan, string $catatan, array $targets): void
+    {
+        try {
+            $creator = $tagihan->creator;
+            if (! $creator) {
+                return;
+            }
+
+            $bagian = collect($targets)
+                ->map(fn ($t) => WorkflowApproval::REVISI_TARGET_LABELS[$t] ?? $t)
+                ->implode(', ');
+
+            $isi = "*TAGIHAN DIMINTA REVISI*\n\n"
+                . "Tagihan {$tagihan->nomor_tagihan} dikembalikan untuk revisi.\n"
+                . "Bagian: {$bagian}\n"
+                . "Catatan: {$catatan}\n\n"
+                . "Silakan perbaiki lalu kirim ulang ke alur verifikasi.\n\n_SIKEREN-BLU_";
+
+            $phone = $creator->pegawai?->no_telepon ?? null;
+            if (filled($phone)) {
+                app(\App\Services\WhatsappService::class)->sendMessage($phone, $isi);
+            }
+            if (filled($creator->email)) {
+                app(\App\Services\EmailNotificationService::class)->sendNotification(
+                    $creator->email,
+                    "Tagihan {$tagihan->nomor_tagihan} Diminta Revisi",
+                    $isi,
+                    $tagihan,
+                    'send_revisi_notif_email'
+                );
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Gagal kirim notifikasi revisi ke pembuat: ' . $e->getMessage());
         }
     }
 }

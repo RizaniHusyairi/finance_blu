@@ -243,6 +243,11 @@
               </a>
             </li>
             @endhasrole
+            <li>
+              <a href="{{ route('jasa.monitoring-pelaporan.index') }}">
+                <i class="material-icons-outlined">arrow_right</i>Monitoring Pelaporan
+              </a>
+            </li>
           </ul>
         </li>
         @endhasanyrole
@@ -268,6 +273,11 @@
             <li>
               <a href="{{ route('jasa.utilitas.index') }}">
                 <i class="material-icons-outlined">arrow_right</i>Laporan Utilitas
+              </a>
+            </li>
+            <li>
+              <a href="{{ route('jasa.monitoring-pelaporan.index') }}">
+                <i class="material-icons-outlined">arrow_right</i>Monitoring Pelaporan
               </a>
             </li>
           </ul>

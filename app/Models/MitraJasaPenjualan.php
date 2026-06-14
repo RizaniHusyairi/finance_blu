@@ -98,7 +98,7 @@ class MitraJasaPenjualan extends Model
         }
     }
 
-    /* ── Accessor: Verifikasi konsesi setelah berganti bulan, PJP2U harian langsung ── */
+    /* ── Accessor: Verifikasi konsesi setelah bulan pelaporan berakhir, PJP2U harian langsung ── */
 
     public function getCanBeVerifiedAttribute(): bool
     {
@@ -110,13 +110,10 @@ class MitraJasaPenjualan extends Model
             return true;
         }
 
-        $now = now();
-
-        return ($now->year > (int) $this->tahun)
-            || ($now->year === (int) $this->tahun && $now->month > (int) $this->bulan);
+        return $this->reportingMonthEnded();
     }
 
-    /* ── Accessor: Buat tagihan konsesi setelah 1 bulan, PJP2U harian langsung ── */
+    /* ── Accessor: Tagihan konsesi tersedia setelah bulan pelaporan berakhir, PJP2U harian langsung ── */
 
     public function getCanCreateTagihanAttribute(): bool
     {
@@ -128,28 +125,39 @@ class MitraJasaPenjualan extends Model
             return true;
         }
 
-        if (! $this->submitted_at) {
-            return false;
-        }
-
-        return now()->greaterThanOrEqualTo(
-            Carbon::parse($this->submitted_at)->addMonth()
-        );
+        // Patokan: bulan pelaporan sudah berakhir (konsisten dengan can_be_verified),
+        // bukan lagi submitted_at + 1 bulan — agar tidak bergantung kapan mitra submit.
+        return $this->reportingMonthEnded();
     }
 
     /* ── Accessor: Tanggal tagihan tersedia ── */
 
     public function getTagihanAvailableDateAttribute(): ?string
     {
-        if ($this->is_pjp2u_report) {
+        if ($this->is_pjp2u_report || $this->reportingMonthEnded()) {
             return 'Sekarang';
         }
 
-        if (! $this->submitted_at) {
+        if (! $this->tahun || ! $this->bulan) {
             return null;
         }
 
-        return Carbon::parse($this->submitted_at)->addMonth()->format('d/m/Y');
+        // Tersedia mulai awal bulan setelah bulan pelaporan.
+        return Carbon::create((int) $this->tahun, (int) $this->bulan, 1)
+            ->addMonthNoOverflow()
+            ->format('d/m/Y');
+    }
+
+    /**
+     * Apakah bulan pelaporan sudah berakhir (sudah ganti bulan)?
+     * Gerbang waktu bersama untuk verifikasi & pembuatan tagihan konsesi.
+     */
+    private function reportingMonthEnded(): bool
+    {
+        $now = now();
+
+        return ($now->year > (int) $this->tahun)
+            || ($now->year === (int) $this->tahun && $now->month > (int) $this->bulan);
     }
 
     public function getIsPjp2uReportAttribute(): bool

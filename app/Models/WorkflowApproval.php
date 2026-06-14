@@ -11,6 +11,16 @@ class WorkflowApproval extends Model
 
     protected $casts = [
         'acted_at' => 'datetime',
+        'revisi_target' => 'array',
+    ];
+
+    /**
+     * Label tampilan untuk setiap kunci bagian revisi.
+     */
+    public const REVISI_TARGET_LABELS = [
+        'rincian' => 'Rincian / Nominal Tagihan',
+        'mitra_dokumen' => 'Mitra / Dokumen Dasar',
+        'surat_pengantar' => 'Surat Pengantar',
     ];
 
     public function instance()

@@ -29,6 +29,7 @@ class JasaIntegrationSettingController extends Controller
             'btn_client_id' => ['nullable', 'string', 'max:255'],
             'btn_client_secret' => ['nullable', 'string', 'max:255'],
             'btn_merchant_id' => ['nullable', 'string', 'max:255'],
+            'btn_callback_secret' => ['nullable', 'string', 'max:255'],
             'btn_va_prefix' => ['nullable', 'string', 'max:20'],
             'btn_va_expiry_days' => ['required', 'integer', 'min:1', 'max:365'],
             'whatsapp_enabled' => ['nullable', 'boolean'],
@@ -60,6 +61,7 @@ class JasaIntegrationSettingController extends Controller
         IntegrationSetting::setValue('btn.client_id', $validated['btn_client_id'] ?? null, 'btn', 'Client ID BTN');
         $this->setSecretIfFilled('btn.client_secret', $validated['btn_client_secret'] ?? null, 'btn', 'Client Secret BTN');
         IntegrationSetting::setValue('btn.merchant_id', $validated['btn_merchant_id'] ?? null, 'btn', 'Merchant ID BTN');
+        $this->setSecretIfFilled('btn.callback_secret', $validated['btn_callback_secret'] ?? null, 'btn', 'Callback Secret BTN');
         IntegrationSetting::setValue('btn.va_prefix', $validated['btn_va_prefix'] ?: '88', 'btn', 'Prefix VA BTN');
         IntegrationSetting::setValue('btn.va_expiry_days', $validated['btn_va_expiry_days'], 'btn', 'Masa aktif VA', 'integer');
 
@@ -126,6 +128,7 @@ class JasaIntegrationSettingController extends Controller
             'btn_client_id' => IntegrationSetting::getValue('btn.client_id', ''),
             'btn_client_secret_masked' => IntegrationSetting::maskSecret(IntegrationSetting::getValue('btn.client_secret', '')),
             'btn_merchant_id' => IntegrationSetting::getValue('btn.merchant_id', ''),
+            'btn_callback_secret_masked' => IntegrationSetting::maskSecret(IntegrationSetting::getValue('btn.callback_secret', '')),
             'btn_va_prefix' => IntegrationSetting::getValue('btn.va_prefix', '88'),
             'btn_va_expiry_days' => IntegrationSetting::getValue('btn.va_expiry_days', 30),
             'whatsapp_enabled' => (bool) IntegrationSetting::getValue('whatsapp.enabled', filled(env('FONNTE_TOKEN')) || filled(env('WA_API_KEY'))),

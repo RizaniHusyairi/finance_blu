@@ -186,7 +186,7 @@
                 <small>Akun admin, jabatan, layanan yang dikelola, dan status profil.</small>
             </div>
         </div>
-        <span class="badge rounded-pill bg-primary-subtle text-primary px-3 py-2">{{ number_format($admins->count(), 0, ',', '.') }} admin</span>
+        <span class="badge rounded-pill bg-primary-subtle text-primary px-3 py-2">{{ number_format($admins->total(), 0, ',', '.') }} admin</span>
     </div>
     <div class="table-responsive">
             <table class="table sa-table mb-0">
@@ -233,5 +233,10 @@
                 </tbody>
             </table>
     </div>
+    @if($admins->hasPages())
+        <div class="px-3 py-2 border-top">
+            {{ $admins->withQueryString()->links() }}
+        </div>
+    @endif
 </div>
 @endsection

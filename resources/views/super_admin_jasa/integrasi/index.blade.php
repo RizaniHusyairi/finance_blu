@@ -133,6 +133,14 @@
         </div>
     </div>
     <div class="card-body p-4">
+        <div class="alert alert-light border small mb-4 d-flex align-items-start gap-2">
+            <i class="bi bi-info-circle text-primary mt-1"></i>
+            <span>
+                Saklar <strong>Aktif</strong> di kanan atas mengontrol <strong>Nomor Virtual Account</strong>:
+                <br><strong>OFF</strong> (saat ini) — nomor VA <strong>diketik manual</strong> oleh Admin Jasa ketika publish (sementara menunggu API BTN).
+                <br><strong>ON</strong> — nomor VA <strong>dibuat otomatis</strong> oleh sistem saat publish (via API BTN).
+            </span>
+        </div>
         <div class="row g-3">
             <div class="col-md-3">
                 <label class="form-label">Mode</label>
@@ -167,10 +175,15 @@
                 <label class="form-label">Merchant / Company Code</label>
                 <input type="text" name="btn_merchant_id" class="form-control" value="{{ old('btn_merchant_id', $settings['btn_merchant_id']) }}">
             </div>
+            <div class="col-md-4">
+                <label class="form-label">Callback Secret</label>
+                <input type="password" name="btn_callback_secret" class="form-control" placeholder="{{ $settings['btn_callback_secret_masked'] ?: 'Wajib diisi untuk produksi' }}">
+                <div class="form-text">Verifikasi keaslian callback pembayaran BTN (header <code>X-Callback-Secret</code>). Kosongkan jika tidak ingin mengubah.</div>
+            </div>
         </div>
 
         <div class="integration-soft mt-4">
-            <strong>Catatan:</strong> mode real BTN belum menembak endpoint sebelum dokumen API BTN final dimasukkan. Saat ini sistem akan membuat VA mock dengan format prefix + ID tagihan, agar alur publish, invoice, dan pembayaran bisa diuji dulu.
+            <strong>Catatan:</strong> saat saklar <strong>Aktif</strong> dimatikan, nomor VA diisi manual oleh Admin Jasa ketika publish. Saat diaktifkan, VA dibuat otomatis — namun mode real BTN belum menembak endpoint sebelum dokumen API BTN final dimasukkan, sehingga sementara sistem memakai VA mock berformat prefix + ID tagihan agar alur publish, invoice, dan pembayaran tetap bisa diuji.
         </div>
     </div>
 

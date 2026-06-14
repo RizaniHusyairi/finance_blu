@@ -41,7 +41,8 @@ class MitraJasaController extends Controller
                 'penjualan as laporan_menunggu_count' => fn ($query) => $query->where('status', 'diajukan'),
             ])
             ->orderBy('nama_mitra')
-            ->get();
+            ->paginate(15)
+            ->withQueryString();
 
         return view('super_admin_jasa.mitra.index', compact('mitras'));
     }

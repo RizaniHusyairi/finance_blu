@@ -754,6 +754,70 @@ class TagihanJasaController extends Controller
         }
     }
 
+    public function destroy($id)
+    {
+        abort_unless($this->canManageTagihanJasa(), 403, 'Anda tidak memiliki akses menghapus tagihan jasa.');
+
+        $tagihan = TagihanJasa::findOrFail($id);
+        $this->abortIfAdminJasaCannotAccess($tagihan);
+
+        // Tagihan yang sudah diterbitkan ke mitra atau sudah lunas tidak boleh dihapus
+        // karena sudah memiliki nomor VA, piutang, dan catatan BKU.
+        if (in_array($tagihan->status, ['PUBLISHED', 'LUNAS'], true)) {
+            return back()->with('error', 'Tagihan yang sudah dipublish atau lunas tidak dapat dihapus.');
+        }
+
+        $nomor = $tagihan->nomor_tagihan;
+        $tagihan->delete(); // soft delete — dapat dipulihkan bila diperlukan
+
+        return back()->with('success', "Tagihan {$nomor} berhasil dihapus.");
+    }
+
+    public function cancel(Request $request, $id)
+    {
+        abort_unless($this->canManageTagihanJasa(), 403, 'Anda tidak memiliki akses membatalkan tagihan jasa.');
+
+        $validated = $request->validate([
+            'alasan_batal' => ['required', 'string', 'max:1000'],
+        ]);
+
+        $tagihan = TagihanJasa::with('workflowInstance')->findOrFail($id);
+        $this->abortIfAdminJasaCannotAccess($tagihan);
+
+        // Hanya tagihan SEBELUM publish yang dapat dibatalkan (belum ada VA/piutang/BKU).
+        if (in_array($tagihan->status, ['PUBLISHED', 'LUNAS', 'BATAL'], true)) {
+            return back()->with('error', 'Tagihan yang sudah dipublish, lunas, atau sudah dibatalkan tidak dapat dibatalkan.');
+        }
+
+        $statusSebelumnya = $tagihan->status;
+
+        DB::transaction(function () use ($tagihan, $validated, $statusSebelumnya) {
+            // Tutup workflow yang sedang berjalan agar tidak lagi muncul di antrean verifikator.
+            $instance = $tagihan->workflowInstance;
+            if ($instance && in_array($instance->status, ['IN_PROGRESS', 'REVISION'], true)) {
+                $instance->approvals()->whereIn('status', ['PENDING', 'WAITING'])->update(['status' => 'REJECTED']);
+                $instance->update(['status' => 'REJECTED']);
+            }
+
+            $tagihan->update([
+                'status' => 'BATAL',
+                'status_dokumen_pengantar' => 'DRAFT',
+            ]);
+
+            $tagihan->logs()->create([
+                'user_id' => Auth::id(),
+                'role_saat_itu' => Auth::user()?->getRoleNames()->first() ?? 'Sistem',
+                'status_sebelumnya' => $statusSebelumnya,
+                'status_baru' => 'BATAL',
+                'aksi' => 'BATAL',
+                'catatan' => $validated['alasan_batal'],
+                'ip_address' => request()->ip(),
+            ]);
+        });
+
+        return back()->with('success', "Tagihan {$tagihan->nomor_tagihan} berhasil dibatalkan.");
+    }
+
     public function show($id)
     {
         $tagihan = TagihanJasa::with([
@@ -964,13 +1028,31 @@ class TagihanJasaController extends Controller
     {
         abort_unless($this->canManageTagihanJasa(), 403);
 
-        $validated = $request->validate([
+        // Toggle "btn.enabled": ON = VA otomatis (API BTN), OFF = VA diisi manual oleh Admin Jasa.
+        $vaOtomatis = (bool) \App\Models\IntegrationSetting::getValue('btn.enabled', false);
+
+        $rules = [
             'wa_tujuan' => ['required', 'string', 'max:30'],
             'email_tujuan' => ['nullable', 'email', 'max:255'],
+        ];
+
+        // Nomor VA hanya wajib diketik ketika VA otomatis dimatikan.
+        if (! $vaOtomatis) {
+            $rules['nomor_va'] = ['required', 'regex:/^[0-9]{8,30}$/', 'unique:tagihan_jasas,nomor_va,'.$id];
+        }
+
+        $validated = $request->validate($rules, [
+            'nomor_va.required' => 'Nomor Virtual Account wajib diisi sebelum publish.',
+            'nomor_va.regex' => 'Nomor Virtual Account harus berupa 8–30 digit angka.',
+            'nomor_va.unique' => 'Nomor Virtual Account ini sudah dipakai tagihan lain.',
         ]);
 
         $tagihan = TagihanJasa::with(['mitra', 'mitraLegacy', 'workflowInstance', 'details.layananJasa'])->findOrFail($id);
         $this->abortIfAdminJasaCannotAccess($tagihan);
+
+        if (in_array($tagihan->status, ['PUBLISHED', 'LUNAS'], true)) {
+            return back()->with('error', 'Tagihan ini sudah dipublish.');
+        }
 
         if (!$tagihan->workflowInstance || $tagihan->workflowInstance->status !== 'APPROVED') {
             return back()->with('error', 'Tagihan belum selesai diverifikasi.');
@@ -991,15 +1073,29 @@ class TagihanJasaController extends Controller
         $accountInfo = $this->ensureMitraAccount($tagihan->mitra);
 
         $dueData = $this->resolveDueDateData($tagihan);
-        $vaData = $btnVirtualAccountService->createVirtualAccount($tagihan);
+
+        // Sumber nomor VA mengikuti toggle:
+        //  - VA otomatis ON  : dibuat lewat BtnVirtualAccountService (API BTN; saat ini masih mock sampai endpoint diisi).
+        //  - VA otomatis OFF : nomor VA asli dari BTN diketik manual oleh Admin Jasa.
+        $vaData = [];
+        if ($vaOtomatis) {
+            $vaData = $btnVirtualAccountService->createVirtualAccount($tagihan);
+            $nomorVa = $vaData['number'] ?? $tagihan->nomor_va;
+        } else {
+            $nomorVa = $validated['nomor_va'];
+        }
+
+        if (blank($nomorVa)) {
+            return back()->with('error', 'Nomor Virtual Account belum tersedia. Aktifkan VA otomatis atau isi nomor VA manual.');
+        }
 
         $tagihan->update([
             'status' => 'PUBLISHED',
             'status_pembayaran' => 'belum_dibayar',
-            'nomor_va' => $vaData['number'] ?? ($tagihan->nomor_va ?: $this->generateNomorVa($tagihan)),
+            'nomor_va' => $nomorVa,
             'va_provider' => $vaData['provider'] ?? 'btn',
             'va_reference' => $vaData['reference'] ?? null,
-            'va_expired_at' => $vaData['expired_at'] ?? null,
+            'va_expired_at' => $vaData['expired_at'] ?? ($dueData['tanggal_jatuh_tempo'] ?? null),
             'tanggal_publish' => now()->toDateString(),
             'jumlah_hari_jatuh_tempo' => $dueData['jumlah_hari_jatuh_tempo'],
             'masa_toleransi_hari' => $dueData['masa_toleransi_hari'],
@@ -1478,11 +1574,6 @@ class TagihanJasaController extends Controller
             'layanan.*.keterangan' => ['nullable', 'string', 'max:1000'],
             'layanan.*.calculation_payload' => ['nullable', 'json'],
         ]);
-    }
-
-    private function generateNomorVa(TagihanJasa $tagihan): string
-    {
-        return '88' . str_pad((string) $tagihan->id, 10, '0', STR_PAD_LEFT);
     }
 
     private function generateNomorSuratPengantar(TagihanJasa $tagihan): string

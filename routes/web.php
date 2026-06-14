@@ -9,6 +9,7 @@ use App\Http\Controllers\AdminJasaDashboardController;
 use App\Http\Controllers\AdminJasaLayananController;
 use App\Http\Controllers\AdminJasaTagihanController;
 use App\Http\Controllers\AdminJasaUtilitasController;
+use App\Http\Controllers\MonitoringPelaporanController;
 use App\Http\Controllers\BendaharaHonorariumVerifikasiController;
 use App\Http\Controllers\BendaharaPenerimaanDashboardController;
 use App\Http\Controllers\BendaharaPengeluaranDashboardController;
@@ -461,6 +462,10 @@ Route::middleware(['auth', 'account.active'])->group(function () use ($internalR
 
     // Index Laporan Mitra (Konsesi & PJP2U) — read-only, dibuka untuk verifikator (KPA, PLT/PLH, Kasi PK, Kasubag TU)
     Route::middleware('role:Super Admin|Super Admin Jasa|Operator BLU|Koordinator Keuangan|Admin Jasa|Admin Konsesi|Koordinator Jasa|KPA|PLT/PLH|Kepala Seksi Pelayanan dan Kerjasama|Kepala Subbagian Keuangan dan Tata Usaha')->group(function () {
+        Route::get('/jasa/monitoring-pelaporan', [MonitoringPelaporanController::class, 'index'])->name('jasa.monitoring-pelaporan.index');
+        Route::post('/jasa/monitoring-pelaporan/ingatkan', [MonitoringPelaporanController::class, 'remind'])->name('jasa.monitoring-pelaporan.remind');
+        Route::post('/jasa/monitoring-pelaporan/ingatkan-semua', [MonitoringPelaporanController::class, 'remindAll'])->name('jasa.monitoring-pelaporan.remind-all');
+        Route::get('/jasa/monitoring-pelaporan/export/{format}', [MonitoringPelaporanController::class, 'export'])->name('jasa.monitoring-pelaporan.export');
         Route::get('/jasa/laporan-penjualan', [MitraJasaPenjualanController::class, 'index'])->name('jasa.mitra.penjualan.index');
         Route::get('/jasa/laporan-pjp2u', [MitraJasaPenjualanController::class, 'indexPjp2u'])->name('jasa.mitra.pjp2u.index');
         Route::get('/jasa/laporan-pjp2u/rekap/{mitra}/{layanan}/{tahun}/{bulan}', [MitraJasaPenjualanController::class, 'showPjp2uRekap'])
@@ -521,6 +526,8 @@ Route::middleware(['auth', 'account.active'])->group(function () use ($internalR
         Route::post('/tagihan-jasa/{id}/publish', [TagihanJasaController::class, 'publish'])->name('tagihan-jasa.publish');
         Route::post('/tagihan-jasa/{id}/mark-lunas', [TagihanJasaController::class, 'markAsPaid'])->name('tagihan-jasa.mark-lunas');
         Route::post('/tagihan-jasa/{id}/auto-approve', [TagihanJasaController::class, 'autoApproveAll'])->name('tagihan-jasa.auto-approve');
+        Route::delete('/tagihan-jasa/{id}', [TagihanJasaController::class, 'destroy'])->name('tagihan-jasa.destroy');
+        Route::post('/tagihan-jasa/{id}/cancel', [TagihanJasaController::class, 'cancel'])->name('tagihan-jasa.cancel');
 
         // Verifikasi Tagihan Jasa
         Route::post('/tagihan-jasa/{id}/approve', [TagihanJasaVerifikasiController::class, 'approve'])->name('tagihan-jasa.approve');

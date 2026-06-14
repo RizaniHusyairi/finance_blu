@@ -9,6 +9,8 @@
     $canApprove = false;
     $workflowApproved = $wfInstance && $wfInstance->status === 'APPROVED';
     $canManageTagihanJasa = Auth::user()->hasAnyRole(['Super Admin', 'Super Admin Jasa', 'Admin Jasa']);
+    // Toggle VA: ON = nomor VA dibuat otomatis (API BTN), OFF = diisi manual saat publish.
+    $vaOtomatis = (bool) \App\Models\IntegrationSetting::getValue('btn.enabled', false);
     $suratFinalReady = ! empty($tagihan->file_surat_pengantar_final)
         && $tagihan->status_dokumen_pengantar === 'SUDAH_DITANDATANGANI';
     $canReviseTagihanJasa = Auth::user()->hasAnyRole(['Super Admin', 'Super Admin Jasa', 'Admin Jasa', 'Admin Konsesi'])
@@ -395,6 +397,11 @@
         <a href="{{ route('admin-jasa.tagihan.log-bulanan') }}" class="btn btn-light-translucent">
             <i class="bi bi-arrow-left me-1"></i> Kembali
         </a>
+        @if($canManageTagihanJasa && ! in_array($tagihan->status, ['PUBLISHED', 'LUNAS', 'BATAL'], true))
+            <button type="button" class="btn btn-light fw-bold text-danger shadow-sm" data-bs-toggle="modal" data-bs-target="#modalBatal">
+                <i class="bi bi-x-octagon me-1"></i> Batalkan
+            </button>
+        @endif
     </div>
 </div>
 
@@ -442,6 +449,51 @@
     <div class="alert alert-danger border-0 bg-danger text-white alert-dismissible fade show shadow-sm mb-4">
         <i class="bi bi-x-circle me-2"></i> {{ session('error') }}
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+@endif
+
+@if($errors->any())
+    <div class="alert alert-danger border-0 bg-danger text-white alert-dismissible fade show shadow-sm mb-4">
+        <i class="bi bi-exclamation-triangle me-2"></i> {{ $errors->first() }}
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+@endif
+
+@php
+    $revisiApproval = ($wfInstance && $tagihan->status === 'REVISI')
+        ? $wfInstance->approvals->firstWhere('status', 'REVISION')
+        : null;
+@endphp
+@if($revisiApproval)
+    <div class="alert alert-warning border-0 shadow-sm mb-4">
+        <div class="d-flex align-items-start gap-2">
+            <i class="bi bi-arrow-counterclockwise fs-5 mt-1"></i>
+            <div class="flex-grow-1">
+                <h6 class="fw-bold mb-1">Tagihan ini diminta untuk direvisi</h6>
+                <div class="small text-muted mb-2">
+                    Oleh {{ $revisiApproval->actedByUser->name ?? $formatWorkflowLabel($revisiApproval->role_code) }}
+                    @if($revisiApproval->acted_at)
+                        &middot; {{ \Carbon\Carbon::parse($revisiApproval->acted_at)->format('d M Y, H:i') }}
+                    @endif
+                </div>
+                @if(!empty($revisiApproval->revisi_target))
+                    <div class="mb-2">
+                        <span class="small fw-semibold me-1">Bagian yang perlu diperbaiki:</span>
+                        @foreach($revisiApproval->revisi_target as $target)
+                            <span class="badge bg-warning text-dark border me-1">
+                                {{ \App\Models\WorkflowApproval::REVISI_TARGET_LABELS[$target] ?? $target }}
+                            </span>
+                        @endforeach
+                    </div>
+                @endif
+                @if($revisiApproval->catatan)
+                    <div class="bg-white border rounded p-2 small fst-italic">"{{ $revisiApproval->catatan }}"</div>
+                @endif
+                @if($canReviseTagihanJasa)
+                    <div class="small text-muted mt-2"><i class="bi bi-info-circle me-1"></i>Edit tagihan sesuai catatan di atas, lalu kirim ulang ke alur verifikasi.</div>
+                @endif
+            </div>
+        </div>
     </div>
 @endif
 
@@ -909,7 +961,7 @@
             <div class="card tj-card border-0 mb-4 border-start border-4 border-success">
                 <div class="card-body p-4">
                     <h5 class="fw-bold mb-3"><i class="bi bi-send text-success me-2"></i>Terbitkan Tagihan</h5>
-                    <p class="small text-muted mb-4">Tagihan telah disetujui sepenuhnya oleh Kabandara. Anda dapat mem-publish tagihan ini untuk men-generate VA dan mengirim notifikasi otomatis ke Mitra melalui WhatsApp dan email.</p>
+                    <p class="small text-muted mb-4">Tagihan telah disetujui sepenuhnya oleh Kabandara. Anda dapat mem-publish tagihan ini dengan mengisi <strong>Nomor Virtual Account</strong> dari BTN, lalu sistem mengirim notifikasi otomatis ke Mitra melalui WhatsApp dan email.</p>
 
                     @if(! $suratFinalReady)
                         <div class="alert alert-warning small">
@@ -1064,8 +1116,33 @@
                         Tagihan akan masuk status REVISI. Admin Jasa dapat mengedit detail tagihan lalu mengirim ulang ke alur verifikasi.
                     </div>
                     <div class="mb-3">
+                        <label class="form-label fw-bold">Bagian yang perlu direvisi <span class="text-danger">*</span></label>
+                        <div class="small text-muted mb-2">Pilih bagian yang salah agar Admin Jasa tahu persis apa yang harus diperbaiki.</div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="revisi_target[]" value="rincian" id="revTargetRincian">
+                            <label class="form-check-label" for="revTargetRincian">
+                                <span class="fw-semibold">Rincian / Nominal Tagihan</span>
+                                <span class="d-block small text-muted">Layanan, qty, harga satuan, kode akun, jumlah</span>
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="revisi_target[]" value="mitra_dokumen" id="revTargetMitra">
+                            <label class="form-check-label" for="revTargetMitra">
+                                <span class="fw-semibold">Mitra / Dokumen Dasar</span>
+                                <span class="d-block small text-muted">Mitra, nomor dokumen dasar, periode, tanggal tagihan</span>
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="revisi_target[]" value="surat_pengantar" id="revTargetSurat">
+                            <label class="form-check-label" for="revTargetSurat">
+                                <span class="fw-semibold">Surat Pengantar</span>
+                                <span class="d-block small text-muted">Nomor surat, tanggal surat, perihal</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="mb-3">
                         <label class="form-label fw-bold">Catatan Revisi <span class="text-danger">*</span></label>
-                        <textarea name="catatan" class="form-control" rows="3" required placeholder="Tuliskan bagian yang perlu diperbaiki..."></textarea>
+                        <textarea name="catatan" class="form-control" rows="3" required placeholder="Jelaskan apa yang perlu diperbaiki pada bagian di atas..."></textarea>
                     </div>
                 </div>
                 <div class="modal-footer border-0 bg-light">
@@ -1123,8 +1200,40 @@
                     @endphp
 
                     <div class="alert alert-light border mb-4 small">
-                        Tagihan akan diterbitkan (VA di-generate), lalu notifikasi otomatis dikirim via WhatsApp ke nomor mitra di bawah dan via email ke alamat email mitra.
+                        @if($vaOtomatis)
+                            Tagihan akan diterbitkan dan <strong>Nomor Virtual Account dibuat otomatis</strong> oleh sistem (API BTN), lalu notifikasi otomatis dikirim via WhatsApp ke nomor mitra dan via email ke alamat email mitra.
+                        @else
+                            Tagihan akan diterbitkan dengan <strong>Nomor Virtual Account</strong> yang Anda isi di bawah, lalu notifikasi otomatis dikirim via WhatsApp ke nomor mitra dan via email ke alamat email mitra.
+                        @endif
                     </div>
+
+                    @if($vaOtomatis)
+                        <div class="alert alert-info border-0 mb-4 small d-flex align-items-start gap-2">
+                            <i class="bi bi-magic mt-1"></i>
+                            <span><strong>Nomor Virtual Account akan dibuat otomatis</strong> oleh sistem (API BTN) saat tagihan dipublish. Anda tidak perlu mengetik nomor VA.</span>
+                        </div>
+                    @else
+                        <div class="mb-4">
+                            <label class="form-label fw-bold m-0 mb-2" for="nomorVaInput">
+                                <i class="bi bi-credit-card text-primary me-1"></i>
+                                Nomor Virtual Account (BTN) <span class="text-danger">*</span>
+                            </label>
+                            <input type="text"
+                                id="nomorVaInput"
+                                name="nomor_va"
+                                class="form-control fw-semibold"
+                                value="{{ old('nomor_va', $tagihan->nomor_va) }}"
+                                placeholder="Masukkan nomor VA dari BTN (8–30 digit)"
+                                inputmode="numeric"
+                                pattern="[0-9]{8,30}"
+                                maxlength="30"
+                                required>
+                            <div class="small text-muted mt-1">
+                                <i class="bi bi-info-circle me-1"></i>
+                                Isi dengan nomor VA asli dari BTN. Nomor inilah yang dikirim ke mitra dan dipakai sistem untuk mencocokkan pembayaran.
+                            </div>
+                        </div>
+                    @endif
 
                     <div class="mb-2 d-flex justify-content-between align-items-end flex-wrap gap-2">
                         <label class="form-label fw-bold m-0" for="waTujuanInput">
@@ -1240,6 +1349,34 @@
     </div>
 </div>
 
+<!-- Modal Batalkan -->
+<div class="modal fade" id="modalBatal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <form action="{{ route('tagihan-jasa.cancel', $tagihan->id) }}" method="POST">
+                @csrf
+                <div class="modal-header bg-danger text-white border-0">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-x-octagon me-1"></i> Batalkan Tagihan</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="alert alert-light border mb-4 small">
+                        Tagihan akan ditandai <strong>BATAL</strong> dan keluar dari alur verifikasi. Tindakan ini hanya untuk tagihan yang <strong>belum dipublish</strong>.
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Alasan Pembatalan <span class="text-danger">*</span></label>
+                        <textarea name="alasan_batal" class="form-control" rows="3" required placeholder="Jelaskan alasan tagihan dibatalkan..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 bg-light">
+                    <button type="button" class="btn btn-secondary fw-bold" data-bs-dismiss="modal">Tutup</button>
+                    <button type="submit" class="btn btn-danger fw-bold"><i class="bi bi-x-octagon me-1"></i> Batalkan Tagihan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 @push('script')
 <script>
     (function () {
@@ -1326,6 +1463,19 @@
 
         lockBtn.addEventListener('click', () => setLocked(! input.readOnly));
         setLocked(true);
+    })();
+
+    // Modal Revisi: wajib pilih minimal satu bagian yang direvisi
+    (function () {
+        const form = document.querySelector('#modalRevisi form');
+        if (! form) return;
+        form.addEventListener('submit', function (e) {
+            const checked = form.querySelectorAll('input[name="revisi_target[]"]:checked').length;
+            if (checked === 0) {
+                e.preventDefault();
+                alert('Pilih minimal satu bagian yang perlu direvisi.');
+            }
+        });
     })();
 </script>
 <style>

@@ -21,3 +21,10 @@ Schedule::command('users:disable-expired-temporary')
     ->dailyAt('00:05')
     ->withoutOverlapping()
     ->onOneServer();
+
+// Ingatkan mitra yang belum melaporkan konsesi/PAX PJP2U bulan lalu.
+// Command sendiri memeriksa toggle jasa.reminder_pelaporan.enabled.
+Schedule::command('jasa:reminder-pelaporan')
+    ->monthlyOn(3, '08:00')
+    ->withoutOverlapping()
+    ->onOneServer();

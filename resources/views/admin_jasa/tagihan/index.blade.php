@@ -15,6 +15,7 @@
     $tanggal = fn ($value) => $value ? \Carbon\Carbon::parse($value)->format('d/m/Y') : '-';
     $canCreateTagihanJasa = auth()->user()?->hasRole('Super Admin') === true
         || (auth()->user()?->hasAnyRole(['Admin Jasa', 'Admin Konsesi']) === true && ! auth()->user()?->hasRole('Super Admin Jasa'));
+    $canDeleteTagihanJasa = auth()->user()?->hasAnyRole(['Super Admin', 'Super Admin Jasa', 'Admin Jasa']) === true;
     $badge = function ($tagihan) {
         return match ($tagihan->status_jatuh_tempo) {
             'LEWAT_JATUH_TEMPO' => ['Lewat Jatuh Tempo', 'bg-danger'],
@@ -28,6 +29,7 @@
     $statusClass = fn ($status) => match ($status) {
         'LUNAS', 'DITERIMA', 'DISETUJUI', 'PUBLISHED' => 'bg-success',
         'DITOLAK', 'BATAL' => 'bg-danger',
+        'REVISI' => 'bg-warning text-dark',
         'DRAFT' => 'bg-light text-dark border',
         default => 'bg-secondary',
     };
@@ -94,7 +96,18 @@
     .compact-badges { display: flex; flex-wrap: wrap; gap: .35rem; align-items: center; }
     .compact-badges .badge { max-width: 100%; white-space: normal; text-align: left; line-height: 1.15; }
     .action-cell { text-align: right; }
-    .action-cell .btn { border-radius: .75rem; white-space: nowrap; }
+    .action-cell form { margin: 0; }
+    .action-cell .btn {
+        border-radius: .65rem;
+        white-space: nowrap;
+        width: 34px;
+        height: 34px;
+        padding: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .action-cell .btn:hover { transform: translateY(-1px); }
     @media (max-width: 767.98px) {
         .modern-table { min-width: 760px; table-layout: auto; }
     }
@@ -186,7 +199,7 @@
                     <label class="form-label small fw-bold">Status</label>
                     <select name="status" class="form-select form-select-sm">
                         <option value="">Semua</option>
-                        @foreach(['DRAFT','VERIFIKASI_KOORDINATOR','VERIFIKASI_KABANDARA','DITOLAK','PUBLISHED','LUNAS','BATAL'] as $status)
+                        @foreach(['DRAFT','VERIFIKASI_KOORDINATOR','VERIFIKASI_KABANDARA','REVISI','DITOLAK','PUBLISHED','LUNAS','BATAL'] as $status)
                             <option value="{{ $status }}" {{ ($filters['status'] ?? '') === $status ? 'selected' : '' }}>{{ str_replace('_', ' ', $status) }}</option>
                         @endforeach
                     </select>
@@ -254,13 +267,13 @@
         <table class="table modern-table">
             <thead>
                 <tr>
-                    <th style="width: 24%;">No Tagihan</th>
-                    <th style="width: 20%;">Mitra</th>
-                    <th style="width: 14%;">Tanggal</th>
-                    <th style="width: 13%;">Total</th>
-                    <th style="width: 14%;">Status</th>
-                    <th style="width: 10%;">Bayar</th>
-                    <th style="width: 5%;" class="text-end">Aksi</th>
+                    <th style="width: 22%;">No Tagihan</th>
+                    <th style="width: 16%;">Mitra</th>
+                    <th style="width: 13%;">Tanggal</th>
+                    <th style="width: 12%;">Total</th>
+                    <th style="width: 16%;">Status</th>
+                    <th style="width: 11%;">Bayar</th>
+                    <th style="width: 10%;" class="text-end">Aksi</th>
                 </tr>
             </thead>
             <tbody>
@@ -296,9 +309,21 @@
                             <span class="badge {{ $paymentClass($paymentStatus) }}">{{ str_replace('_', ' ', $paymentStatus) }}</span>
                         </td>
                         <td class="action-cell">
-                            <a href="{{ route('tagihan-jasa.show', $tagihan->id) }}" class="btn btn-sm btn-light border fw-bold text-primary" title="Lihat detail tagihan">
-                                <i class="bi bi-eye"></i>
-                            </a>
+                            <div class="d-inline-flex gap-1 justify-content-end">
+                                <a href="{{ route('tagihan-jasa.show', $tagihan->id) }}" class="btn btn-sm btn-light border fw-bold text-primary" title="Lihat detail tagihan">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                @if($page['mode'] === 'log' && $canDeleteTagihanJasa && ! in_array($tagihan->status, ['PUBLISHED', 'LUNAS'], true))
+                                    <form method="POST" action="{{ route('tagihan-jasa.destroy', $tagihan->id) }}" class="d-inline"
+                                          onsubmit="return confirm('Hapus tagihan {{ $tagihan->nomor_tagihan }}? Tagihan akan dipindahkan ke arsip terhapus.')">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn btn-sm btn-light border fw-bold text-danger" title="Hapus tagihan">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                @endif
+                            </div>
                         </td>
                     </tr>
                 @empty

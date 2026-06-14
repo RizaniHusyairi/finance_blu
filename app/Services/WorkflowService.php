@@ -150,7 +150,7 @@ class WorkflowService
     /**
      * Request revision pada step aktif.
      */
-    public function requestRevision(Model $document, int $actedByUserId, ?string $catatan = null, ?int $approvalId = null): WorkflowInstance
+    public function requestRevision(Model $document, int $actedByUserId, ?string $catatan = null, ?int $approvalId = null, ?array $revisiTarget = null): WorkflowInstance
     {
         $instance = $this->getActiveInstance($document);
 
@@ -173,6 +173,7 @@ class WorkflowService
             'acted_by_user_id' => $actedByUserId,
             'acted_at' => now(),
             'catatan' => $catatan,
+            'revisi_target' => !empty($revisiTarget) ? array_values($revisiTarget) : null,
             'ip_address' => request()->ip(),
         ]);
 

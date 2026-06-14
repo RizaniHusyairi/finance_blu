@@ -19,7 +19,8 @@ class AdminJasaController extends Controller
                 'layananJasaDikelola' => fn ($query) => $query->wherePivot('status_aktif', true),
             ])
             ->orderBy('email')
-            ->get();
+            ->paginate(15)
+            ->withQueryString();
 
         return view('super_admin_jasa.admin.index', compact('admins'));
     }

@@ -426,6 +426,8 @@ class MitraJasaPenjualanController extends Controller
             'updated_by' => auth()->id(),
         ]);
 
+        $this->notifyMitraLaporan($penjualan, 'diverifikasi');
+
         return back()->with('success', 'Laporan penjualan berhasil diverifikasi.');
     }
 
@@ -447,7 +449,51 @@ class MitraJasaPenjualanController extends Controller
             'updated_by' => auth()->id(),
         ]);
 
+        $this->notifyMitraLaporan($penjualan, 'ditolak', $validated['catatan_verifikator']);
+
         return back()->with('success', 'Laporan penjualan berhasil ditolak dengan catatan.');
+    }
+
+    /**
+     * Kirim notifikasi WA + email ke mitra saat status laporan berubah (diverifikasi/ditolak).
+     * Best-effort: kegagalan kirim tidak menggagalkan aksi.
+     */
+    private function notifyMitraLaporan(MitraJasaPenjualan $penjualan, string $event, ?string $catatan = null): void
+    {
+        try {
+            $penjualan->loadMissing(['mitraJasa', 'layananJasa']);
+            $mitra = $penjualan->mitraJasa;
+            if (! $mitra) {
+                return;
+            }
+
+            $periode = \Carbon\Carbon::create((int) $penjualan->tahun, (int) $penjualan->bulan, 1)->translatedFormat('F Y');
+            $layanan = $penjualan->layananJasa->nama_layanan ?? 'layanan';
+            $jenis = $penjualan->is_pjp2u_report ? 'PAX PJP2U' : 'konsesi';
+
+            if ($event === 'ditolak') {
+                $judul = 'Laporan Ditolak';
+                $isi = "*LAPORAN DITOLAK*\n\nYth. {$mitra->nama_mitra},\n\nLaporan {$jenis} ({$layanan}) periode *{$periode}* DITOLAK.\nCatatan: {$catatan}\n\nMohon perbaiki dan ajukan ulang melalui portal mitra.\n\n_SIKEREN-BLU_";
+            } else {
+                $judul = 'Laporan Diverifikasi';
+                $isi = "*LAPORAN DIVERIFIKASI*\n\nYth. {$mitra->nama_mitra},\n\nLaporan {$jenis} ({$layanan}) periode *{$periode}* telah DIVERIFIKASI. Tagihan akan diterbitkan menyusul.\n\n_SIKEREN-BLU_";
+            }
+
+            if (filled($mitra->no_telepon)) {
+                app(\App\Services\WhatsappService::class)->sendMessage($mitra->no_telepon, $isi);
+            }
+            if (filled($mitra->email)) {
+                app(\App\Services\EmailNotificationService::class)->sendNotification(
+                    $mitra->email,
+                    "{$judul} — {$jenis} {$periode}",
+                    $isi,
+                    $penjualan,
+                    'send_report_status_email'
+                );
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Gagal kirim notifikasi status laporan mitra: ' . $e->getMessage());
+        }
     }
 
     private function validatePenjualan(Request $request, MitraJasa $mitra): array

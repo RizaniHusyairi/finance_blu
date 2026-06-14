@@ -15,6 +15,12 @@ use App\Models\MasterMitraVendor;
 use App\Models\MasterPihak;
 use App\Models\MitraJasa;
 use App\Models\DokumenSpp;
+use App\Models\DokumenSpm;
+use App\Models\DokumenNpi;
+use App\Models\DokumenSp2d;
+use App\Models\BukuKasUmum;
+use App\Models\PotonganTagihan;
+use App\Models\LogStatusDokumen;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
@@ -150,6 +156,9 @@ class DashboardController extends Controller
         }
         if (Auth::user()->hasRole('Super Admin Jasa')) {
             return redirect()->route('super-admin-jasa.dashboard');
+        }
+        if (Auth::user()->hasRole('Super Admin')) {
+            return $this->superAdmin();
         }
         if (Auth::user()->hasRole('Pejabat Pengadaan')) {
             return $this->pejabatPengadaan();   
@@ -298,6 +307,139 @@ class DashboardController extends Controller
             'chartBarLabels', 'chartBarPagu', 'chartBarRealisasi',
             'statusCounts',
             'activeContracts', 'pendingTagihan', 'jatuhTempo', 'budgetItems'
+        ));
+    }
+
+    /**
+     * Command Center Dashboard — khusus Super Admin.
+     * Pemantauan menyeluruh: anggaran, pipeline pencairan, pajak, kas/BKU,
+     * kontrak, distribusi pengguna, dan feed aktivitas sistem.
+     */
+    private function superAdmin()
+    {
+        $now = now();
+        $user = Auth::user();
+
+        // ===================== ANGGARAN (DIPA) =====================
+        $totalPagu = (float) RiwayatRevisiDipa::where('is_active', true)->sum('total_pagu');
+        $totalRealisasi = (float) DB::table('realisasi_anggaran')->sum('nominal_cair');
+        $sisaAnggaran = max(0, $totalPagu - $totalRealisasi);
+        $persenRealisasi = $totalPagu > 0 ? round(($totalRealisasi / $totalPagu) * 100, 1) : 0;
+
+        // ===================== TAGIHAN =====================
+        $totalTagihan = Tagihan::count();
+        $nilaiTagihan = (float) Tagihan::sum('total_netto');
+        $tagihanSelesai = Tagihan::where('status', 'SELESAI')->count();
+        $tagihanRevisi = Tagihan::where(function ($q) {
+            $q->where('status', 'like', 'REVISI%')->orWhere('status', 'like', 'DITOLAK%');
+        })->count();
+        $tagihanProses = max(0, $totalTagihan - $tagihanSelesai - $tagihanRevisi);
+
+        $tagihanPerTipe = Tagihan::select('tipe_tagihan', DB::raw('count(*) as c'), DB::raw('sum(total_netto) as n'))
+            ->groupBy('tipe_tagihan')->get();
+
+        // ===================== PIPELINE PENCAIRAN =====================
+        $pipeline = [
+            ['label' => 'Tagihan', 'icon' => 'bi-receipt-cutoff',        'count' => $totalTagihan,                                          'tone' => 'indigo'],
+            ['label' => 'SPP',     'icon' => 'bi-file-earmark-arrow-up', 'count' => DokumenSpp::count(),                                    'tone' => 'violet'],
+            ['label' => 'SPM',     'icon' => 'bi-file-earmark-check',    'count' => DokumenSpm::count(),                                    'tone' => 'blue'],
+            ['label' => 'NPI',     'icon' => 'bi-file-earmark-ruled',    'count' => DokumenNpi::count(),                                    'tone' => 'cyan'],
+            ['label' => 'SP2D',    'icon' => 'bi-bank2',                 'count' => DokumenSp2d::count(),                                   'tone' => 'teal'],
+            ['label' => 'Cair',    'icon' => 'bi-patch-check-fill',      'count' => DokumenSp2d::where('status', 'EXECUTED')->count(),      'tone' => 'emerald'],
+        ];
+
+        // ===================== PAJAK (PPh) =====================
+        $pajakTotal = (float) PotonganTagihan::where('jenis_potongan', 'PAJAK')->sum('nominal_potongan');
+        $pajakDisetor = (float) PotonganTagihan::where('jenis_potongan', 'PAJAK')
+            ->whereNotNull('ntpn')->where('ntpn', '!=', '')->sum('nominal_potongan');
+        $pajakBelum = max(0, $pajakTotal - $pajakDisetor);
+        $pajakBelumCount = PotonganTagihan::where('jenis_potongan', 'PAJAK')
+            ->where(function ($q) { $q->whereNull('ntpn')->orWhere('ntpn', ''); })->count();
+        $persenPajak = $pajakTotal > 0 ? round($pajakDisetor / $pajakTotal * 100, 1) : 0;
+
+        // ===================== KAS / BKU =====================
+        $kasMasuk = (float) BukuKasUmum::where('arus_kas', 'DEBIT_MASUK')->sum('nominal');
+        $kasKeluar = (float) BukuKasUmum::where('arus_kas', 'KREDIT_KELUAR')->sum('nominal');
+        $saldoBku = (float) (BukuKasUmum::orderByDesc('tanggal_transaksi')->orderByDesc('id')->value('saldo_akhir') ?? 0);
+
+        // ===================== KONTRAK & MITRA =====================
+        $totalKontrakAktif = KontrakPengadaan::where('status_kontrak', 'AKTIF')->count();
+        $nilaiKontrakAktif = (float) KontrakPengadaan::where('status_kontrak', 'AKTIF')->sum('nilai_total_kontrak');
+        $totalMitra = MasterPihak::count();
+
+        // ===================== SISTEM (pengguna & peran) =====================
+        $totalUsers = (int) DB::table('users')->count();
+        $usersPerRole = DB::table('model_has_roles')
+            ->join('roles', 'model_has_roles.role_id', '=', 'roles.id')
+            ->select('roles.name', DB::raw('count(*) as c'))
+            ->groupBy('roles.name')->orderByDesc('c')->get();
+        $totalRoles = DB::table('roles')->count();
+
+        // ===================== CHART: Serapan per Jenis Belanja =====================
+        $jenisAkun = [
+            ['label' => 'Pegawai (51)', 'pattern' => '51'],
+            ['label' => 'Barang (52)',  'pattern' => '52'],
+            ['label' => 'Modal (53)',   'pattern' => '53'],
+            ['label' => 'BLU (525)',    'pattern' => '525'],
+        ];
+        $chartBarLabels = [];
+        $chartBarPagu = [];
+        $chartBarRealisasi = [];
+        foreach ($jenisAkun as $ja) {
+            $pagu = DB::table('dipa_revision_items')
+                ->join('master_coas', 'dipa_revision_items.coa_id', '=', 'master_coas.id')
+                ->where('master_coas.kd_akun', 'like', $ja['pattern'] . '%')
+                ->sum('dipa_revision_items.nilai_pagu');
+            $realisasi = DB::table('realisasi_anggaran')
+                ->join('dipa_revision_items', 'realisasi_anggaran.dipa_revision_item_id', '=', 'dipa_revision_items.id')
+                ->join('master_coas', 'dipa_revision_items.coa_id', '=', 'master_coas.id')
+                ->where('master_coas.kd_akun', 'like', $ja['pattern'] . '%')
+                ->sum('realisasi_anggaran.nominal_cair');
+            $chartBarLabels[] = $ja['label'];
+            $chartBarPagu[] = (float) $pagu;
+            $chartBarRealisasi[] = (float) $realisasi;
+        }
+
+        // ===================== CHART: Status Tagihan (donut) =====================
+        $statusCounts = Tagihan::select('status', DB::raw('count(*) as total'))
+            ->groupBy('status')->pluck('total', 'status')->toArray();
+
+        // ===================== CHART: Tren 6 Bulan =====================
+        $trenLabels = [];
+        $trenTagihan = [];
+        $trenRealisasi = [];
+        for ($i = 5; $i >= 0; $i--) {
+            $m = $now->copy()->subMonths($i);
+            $trenLabels[] = $m->translatedFormat('M');
+            $trenTagihan[] = Tagihan::whereYear('created_at', $m->year)->whereMonth('created_at', $m->month)->count();
+            $trenRealisasi[] = (float) DB::table('realisasi_anggaran')
+                ->whereYear('tanggal_pencairan', $m->year)->whereMonth('tanggal_pencairan', $m->month)->sum('nominal_cair');
+        }
+
+        // ===================== TABEL / FEED =====================
+        $activeContracts = KontrakPengadaan::where('status_kontrak', 'AKTIF')
+            ->with('vendor')->latest()->take(5)->get();
+
+        $jatuhTempo = KontrakPengadaan::where('status_kontrak', 'AKTIF')
+            ->whereNotNull('tanggal_selesai')
+            ->where('tanggal_selesai', '<=', $now->copy()->addDays(30))
+            ->with('vendor')->orderBy('tanggal_selesai')->take(5)->get();
+
+        $recentTagihan = Tagihan::latest()->take(6)->get();
+        $recentActivity = LogStatusDokumen::with('user')->latest()->take(9)->get();
+
+        return view('dashboard.super_admin', compact(
+            'user', 'now',
+            'totalPagu', 'totalRealisasi', 'sisaAnggaran', 'persenRealisasi',
+            'totalTagihan', 'nilaiTagihan', 'tagihanSelesai', 'tagihanRevisi', 'tagihanProses', 'tagihanPerTipe',
+            'pipeline',
+            'pajakTotal', 'pajakDisetor', 'pajakBelum', 'pajakBelumCount', 'persenPajak',
+            'kasMasuk', 'kasKeluar', 'saldoBku',
+            'totalKontrakAktif', 'nilaiKontrakAktif', 'totalMitra',
+            'totalUsers', 'usersPerRole', 'totalRoles',
+            'chartBarLabels', 'chartBarPagu', 'chartBarRealisasi',
+            'statusCounts', 'trenLabels', 'trenTagihan', 'trenRealisasi',
+            'activeContracts', 'jatuhTempo', 'recentTagihan', 'recentActivity'
         ));
     }
 
