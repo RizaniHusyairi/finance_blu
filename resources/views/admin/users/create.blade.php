@@ -347,16 +347,28 @@
                 @endforeach
             </div>
 
-            @php $temporaryRoleSelected = in_array('PLT/PLH', (array) old('roles', [])); @endphp
+            @php
+                $temporaryRoleSelected = in_array('PLT/PLH', (array) old('roles', []));
+                $batasiMasaAktif = old('batasi_masa_aktif', '1') == '1';
+            @endphp
             <div id="temporary-role-period" class="mt-4 pt-3 border-top {{ $temporaryRoleSelected ? '' : 'd-none' }}">
                 <div class="d-flex align-items-center gap-2 mb-3">
                     <i class="bi bi-calendar-range text-primary"></i>
-                    <div>
+                    <div class="flex-grow-1">
                         <div class="fw-semibold">Masa Aktif PLT/PLH</div>
-                        <small class="text-muted">Akun otomatis nonaktif setelah tanggal selesai.</small>
+                        <small class="text-muted" id="masa-aktif-hint">
+                            {{ $batasiMasaAktif ? 'Akun otomatis nonaktif setelah tanggal selesai.' : 'Akun aktif tanpa batas waktu (tidak otomatis nonaktif).' }}
+                        </small>
+                    </div>
+                    <div class="form-check form-switch m-0">
+                        <input type="hidden" name="batasi_masa_aktif" value="0">
+                        <input class="form-check-input" type="checkbox" role="switch"
+                               id="batasi-masa-aktif" name="batasi_masa_aktif" value="1"
+                               @checked($batasiMasaAktif)>
+                        <label class="form-check-label small fw-semibold" for="batasi-masa-aktif">Aktifkan</label>
                     </div>
                 </div>
-                <div class="row g-3">
+                <div class="row g-3 {{ $batasiMasaAktif ? '' : 'd-none' }}" id="masa-aktif-fields">
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">Tanggal Mulai</label>
                         <input type="date" name="active_from" value="{{ old('active_from', now()->toDateString()) }}"
@@ -418,14 +430,30 @@
         // Role chip toggle highlight
         const roleCheckboxes = document.querySelectorAll('#role-pick input[name="roles[]"]');
         const temporaryRolePeriod = document.getElementById('temporary-role-period');
-        const toggleTemporaryRolePeriod = () => {
+        const batasiToggle = document.getElementById('batasi-masa-aktif');
+        const masaAktifFields = document.getElementById('masa-aktif-fields');
+        const masaAktifHint = document.getElementById('masa-aktif-hint');
+
+        const syncTemporaryRolePeriod = () => {
             if (! temporaryRolePeriod) return;
 
-            const visible = Array.from(roleCheckboxes).some(cb => cb.value === 'PLT/PLH' && cb.checked);
-            temporaryRolePeriod.classList.toggle('d-none', ! visible);
-            temporaryRolePeriod.querySelectorAll('input').forEach(input => {
-                input.required = visible;
-            });
+            const pltSelected = Array.from(roleCheckboxes).some(cb => cb.value === 'PLT/PLH' && cb.checked);
+            temporaryRolePeriod.classList.toggle('d-none', ! pltSelected);
+
+            const limit = batasiToggle ? batasiToggle.checked : false;
+            const showDates = pltSelected && limit;
+
+            if (masaAktifFields) {
+                masaAktifFields.classList.toggle('d-none', ! showDates);
+                masaAktifFields.querySelectorAll('input[type=date]').forEach(input => {
+                    input.required = showDates;
+                });
+            }
+            if (masaAktifHint) {
+                masaAktifHint.textContent = limit
+                    ? 'Akun otomatis nonaktif setelah tanggal selesai.'
+                    : 'Akun aktif tanpa batas waktu (tidak otomatis nonaktif).';
+            }
         };
 
         document.querySelectorAll('#role-pick label').forEach(label => {
@@ -434,15 +462,16 @@
                 // jika label, browser sudah toggle checkbox sebelum event
                 setTimeout(() => {
                     label.classList.toggle('is-active', cb.checked);
-                    toggleTemporaryRolePeriod();
+                    syncTemporaryRolePeriod();
                 }, 0);
             });
         });
-        roleCheckboxes.forEach(cb => cb.addEventListener('change', toggleTemporaryRolePeriod));
+        roleCheckboxes.forEach(cb => cb.addEventListener('change', syncTemporaryRolePeriod));
+        if (batasiToggle) batasiToggle.addEventListener('change', syncTemporaryRolePeriod);
 
         // Init
         setTipe(document.querySelector('input[name=tipe_akun]:checked')?.value || 'pegawai');
-        toggleTemporaryRolePeriod();
+        syncTemporaryRolePeriod();
     })();
 
     // ===== Select2 premium dropdown for Pegawai/Mitra =====

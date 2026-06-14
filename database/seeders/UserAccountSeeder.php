@@ -42,6 +42,7 @@ class UserAccountSeeder extends Seeder
             ['VERNALDY REVIMAPUTRA SAMPE LALAN', 'pengadaan@sikeren.id',            ['Pejabat Pengadaan']],
             ['KARTIKA FALITA',                   'operator@sikeren.id',             ['Operator BLU']],
 
+
             // Modul Jasa & Utilitas
             ['MELLYARTI RAHMAN',                 'super.admin.jasa@sikeren.id',     ['Super Admin Jasa']],
             ['DIAH DESTIANA',                    'admin.jasa@sikeren.id',           ['Admin Jasa']],

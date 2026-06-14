@@ -22,11 +22,30 @@
         && ! in_array($tagihan->status, ['PUBLISHED', 'LUNAS']);
 
     $currentApprovalRole = $currentApproval?->role_code;
-    $userCanActAsCurrentRole = $currentApprovalRole && (
+    $currentApprovalAssignee = $currentApproval?->assigned_user_id;
+
+    // Cocokkan persis dengan WorkflowService::getPendingApprovalForUser:
+    // - Bila step di-assign ke user spesifik (mis. PLT/PLH terpilih), HANYA user itu yang boleh.
+    // - Bila tidak di-assign, pakai pencocokan berbasis role (dengan map KPA <-> PLT/PLH).
+    $userMatchesRole = $currentApprovalRole && (
         Auth::user()->hasRole($currentApprovalRole)
         || ($currentApprovalRole === 'KPA' && Auth::user()->hasRole('PLT/PLH'))
         || ($currentApprovalRole === 'PLT/PLH' && Auth::user()->hasRole('KPA'))
     );
+    $userCanActAsCurrentRole = $currentApprovalAssignee
+        ? ((int) $currentApprovalAssignee === (int) Auth::id())
+        : $userMatchesRole;
+
+    // User punya role yang sesuai TAPI step sudah ditugaskan khusus ke pejabat lain.
+    $assignedToOther = $currentApprovalAssignee
+        && (int) $currentApprovalAssignee !== (int) Auth::id()
+        && $userMatchesRole;
+    $currentApprovalAssigneeName = null;
+    if ($assignedToOther) {
+        $assignee = \App\Models\User::find($currentApprovalAssignee);
+        $currentApprovalAssigneeName = $tagihan->pejabat_penandatangan_nama
+            ?: ($assignee?->name ?? $assignee?->email);
+    }
 
     if ($wfInstance && $wfInstance->status === 'IN_PROGRESS' && $currentApproval && $userCanActAsCurrentRole) {
         $canApprove = true;
@@ -789,6 +808,19 @@
             </div>
         @endif
 
+        @if($assignedToOther && $wfInstance && $wfInstance->status === 'IN_PROGRESS')
+            <div class="card tj-card border-0 mb-4 border-start border-4 border-secondary">
+                <div class="card-body p-4">
+                    <h5 class="fw-bold mb-2"><i class="bi bi-person-lock text-secondary me-2"></i>Verifikasi Ditugaskan Khusus</h5>
+                    <p class="small text-muted mb-0">
+                        Tahap verifikasi final ini ditugaskan khusus kepada
+                        <strong>{{ $currentApprovalAssigneeName ?? 'pejabat yang ditunjuk' }}</strong>@if($tagihan->final_verifier_jenis) ({{ $tagihan->final_verifier_jenis }})@endif.
+                        Hanya pejabat tersebut yang dapat menyetujui atau meminta revisi tagihan ini.
+                    </p>
+                </div>
+            </div>
+        @endif
+
         @if($canReviseTagihanJasa)
             <div class="card tj-card border-0 mb-4 border-start border-4 border-info">
                 <div class="card-body p-4">
@@ -975,9 +1007,13 @@
                             <i class="bi bi-rocket-takeoff me-1"></i> Publish & Kirim Notifikasi WA + Email
                         </button>
                     @endif
-                    <a href="{{ route('tagihan-jasa.pdf', $tagihan->id) }}" target="_blank" class="btn btn-outline-primary w-100 fw-bold">
-                        <i class="bi bi-file-pdf me-1"></i> Cek PDF Sebelum Publish
-                    </a>
+                    <div class="small text-muted fw-bold mb-2"><i class="bi bi-search me-1"></i>Cek dokumen sebelum publish:</div>
+                    <div class="d-flex flex-wrap gap-2">
+                        
+                        <a href="{{ $tagihan->file_surat_pengantar_final ? route('tagihan-jasa.surat-pengantar-final.view', $tagihan->id) : route('tagihan-jasa.surat-pengantar', $tagihan->id) }}" target="_blank" class="btn btn-outline-primary fw-bold flex-fill">
+                            <i class="bi bi-envelope-paper me-1"></i> Cek Surat Pengantar + Nota Tagihan
+                        </a>
+                    </div>
                 </div>
             </div>
         @endif
@@ -1032,11 +1068,37 @@
                                 $color = $isApproved ? 'success' : ($isRejected ? 'danger' : ($isRevision ? 'info' : 'warning'));
                                 $icon = $isApproved ? 'bi-check2' : ($isRejected ? 'bi-x-lg' : ($isRevision ? 'bi-arrow-counterclockwise' : 'bi-hourglass-split'));
                             @endphp
+                            @php
+                                // Sudah diproses → nama pelaku. Belum diproses tapi ditugaskan ke
+                                // pejabat spesifik (mis. PLT/PLH terpilih) → tampilkan nama pejabat itu.
+                                $approvalPersonName = $approval->actedByUser?->name ?? $approval->assignedUser?->name;
+
+                                // Judul step menyesuaikan penanda tangan final: KPA asli → "Kabandara",
+                                // PLT/PLH → ganti "Kabandara" jadi "Plt." / "Plh." (tanpa "Kabandara").
+                                $stepTitle = $formatWorkflowLabel($approval->nama_step);
+                                if ($approval->role_code === 'PLT/PLH' && $tagihan->final_verifier_jenis) {
+                                    $jenisLabel = $tagihan->final_verifier_jenis === 'PLT'
+                                        ? 'Plt.'
+                                        : ($tagihan->final_verifier_jenis === 'PLH' ? 'Plh.' : null);
+                                    if ($jenisLabel) {
+                                        $stepTitle = str_contains($stepTitle, 'Kabandara')
+                                            ? trim(str_replace('Kabandara', $jenisLabel, $stepTitle))
+                                            : trim($stepTitle . ' ' . $jenisLabel);
+                                    }
+                                }
+
+                                $isPendingAssigned = ! $approval->actedByUser && $approval->assignedUser;
+                            @endphp
                             <div class="tj-timeline-item">
                                 <div class="tj-timeline-dot {{ $color }}"><i class="bi {{ $icon }}"></i></div>
                                 <div class="tj-timeline-content">
-                                    <div class="tj-timeline-title">{{ $formatWorkflowLabel($approval->nama_step) }}</div>
-                                    <div class="small fw-semibold text-slate" style="color:#334155;">{{ $approval->actedByUser->name ?? $formatWorkflowLabel($approval->role_code) }}</div>
+                                    <div class="tj-timeline-title">{{ $stepTitle }}</div>
+                                    <div class="small fw-semibold text-slate" style="color:#334155;">
+                                        {{ $approvalPersonName ?? $formatWorkflowLabel($approval->role_code) }}
+                                        @if($isPendingAssigned)
+                                            <span class="badge bg-light text-secondary border ms-1" style="font-weight:600;">menunggu</span>
+                                        @endif
+                                    </div>
                                     @if($approval->catatan)
                                         <div class="tj-timeline-note">"{{ $approval->catatan }}"</div>
                                     @endif

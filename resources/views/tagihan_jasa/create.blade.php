@@ -664,6 +664,49 @@
                                         </label>
                                     </div>
                                 </div>
+
+                                @php
+                                    $finalVerifierJenis = old('final_verifier_jenis', $tagihan->final_verifier_jenis ?? 'PLT');
+                                    $finalVerifierUserId = old('final_verifier_user_id', $tagihan->final_verifier_user_id ?? '');
+                                @endphp
+                                <div id="pltPlhDetail" class="mt-3 p-3 rounded-3 border bg-light {{ $finalVerifierRole === 'PLT/PLH' ? '' : 'd-none' }}">
+                                    <div class="row g-2">
+                                        <div class="col-md-4">
+                                            <label class="form-label small fw-bold">Jenis</label>
+                                            <select name="final_verifier_jenis" class="form-select form-select-sm">
+                                                <option value="PLT" @selected($finalVerifierJenis === 'PLT')>PLT — Pelaksana Tugas</option>
+                                                <option value="PLH" @selected($finalVerifierJenis === 'PLH')>PLH — Pelaksana Harian</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-8">
+                                            <label class="form-label small fw-bold">Pejabat Penandatangan</label>
+                                            <select name="final_verifier_user_id" class="form-select form-select-sm">
+                                                <option value="">-- Pilih Pejabat --</option>
+                                                @foreach(($pltPlhUsers ?? []) as $u)
+                                                    <option value="{{ $u->id }}" @selected((string) $finalVerifierUserId === (string) $u->id)>{{ $u->pegawai->nama_lengkap ?? $u->name }}{{ $u->pegawai?->jabatan ? ' — '.$u->pegawai->jabatan : '' }}</option>
+                                                @endforeach
+                                            </select>
+                                            <div class="small text-muted mt-1">Daftar pejabat ber-role PLT/PLH. Pejabat ini yang memverifikasi & menandatangani final.</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <script>
+                                    (function () {
+                                        const radios = document.querySelectorAll('input[name="final_verifier_role"]');
+                                        const detail = document.getElementById('pltPlhDetail');
+                                        const jenis = document.querySelector('select[name="final_verifier_jenis"]');
+                                        const pejabat = document.querySelector('select[name="final_verifier_user_id"]');
+                                        function sync() {
+                                            const val = document.querySelector('input[name="final_verifier_role"]:checked')?.value;
+                                            const isPlt = val === 'PLT/PLH';
+                                            if (detail) detail.classList.toggle('d-none', !isPlt);
+                                            if (pejabat) pejabat.required = isPlt;
+                                            if (jenis) jenis.required = isPlt;
+                                        }
+                                        radios.forEach(r => r.addEventListener('change', sync));
+                                        sync();
+                                    })();
+                                </script>
                             </div>
                         </div>
                     </div>

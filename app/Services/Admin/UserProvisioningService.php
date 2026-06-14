@@ -39,11 +39,12 @@ class UserProvisioningService
         ?string $password = null,
         ?string $activeFrom = null,
         ?string $activeUntil = null,
+        bool $limitActivePeriod = true,
     ): User {
         $this->guardEmailUnique($email);
         $this->guardPegawaiBelumPunyaUser($pegawai);
 
-        return DB::transaction(function () use ($pegawai, $email, $roles, $password, $activeFrom, $activeUntil) {
+        return DB::transaction(function () use ($pegawai, $email, $roles, $password, $activeFrom, $activeUntil, $limitActivePeriod) {
             $sanitized = $this->sanitizeRoles($roles);
 
             $user = User::create([
@@ -55,7 +56,7 @@ class UserProvisioningService
             ]);
 
             $user->syncRoles($sanitized);
-            $this->syncTemporaryRolePeriod($user, $sanitized, $activeFrom, $activeUntil);
+            $this->syncTemporaryRolePeriod($user, $sanitized, $activeFrom, $activeUntil, $limitActivePeriod);
 
             return $user->fresh(['roles', 'profilable']);
         });
@@ -71,11 +72,12 @@ class UserProvisioningService
         ?string $password = null,
         ?string $activeFrom = null,
         ?string $activeUntil = null,
+        bool $limitActivePeriod = true,
     ): User {
         $this->guardEmailUnique($email);
         $this->guardMitraBelumPunyaUser($mitra);
 
-        return DB::transaction(function () use ($mitra, $email, $roles, $password, $activeFrom, $activeUntil) {
+        return DB::transaction(function () use ($mitra, $email, $roles, $password, $activeFrom, $activeUntil, $limitActivePeriod) {
             $user = User::create([
                 'email' => $email,
                 'password' => Hash::make($password ?? $this->randomPassword()),
@@ -87,7 +89,7 @@ class UserProvisioningService
             // Mitra harus punya role Mitra Jasa minimal; tambahkan jika tidak disertakan.
             $roles = array_unique(array_merge($this->sanitizeRoles($roles), ['Mitra Jasa']));
             $user->syncRoles($roles);
-            $this->syncTemporaryRolePeriod($user, $roles, $activeFrom, $activeUntil);
+            $this->syncTemporaryRolePeriod($user, $roles, $activeFrom, $activeUntil, $limitActivePeriod);
 
             return $user->fresh(['roles', 'profilable']);
         });
@@ -169,12 +171,16 @@ class UserProvisioningService
 
     /**
      * Atur masa aktif untuk role sementara seperti PLT/PLH.
+     *
+     * @param bool $limitActivePeriod Bila false, masa aktif dimatikan: akun aktif
+     *                                tanpa batas waktu (tidak otomatis nonaktif).
      */
     public function syncTemporaryRolePeriod(
         User $user,
         array $roles,
         ?string $activeFrom,
         ?string $activeUntil,
+        bool $limitActivePeriod = true,
     ): User {
         if (! $this->hasActivePeriodColumns()) {
             return $user->fresh();
@@ -182,12 +188,15 @@ class UserProvisioningService
 
         $hasTemporaryRole = in_array(self::TEMPORARY_ROLE, $roles, true);
 
-        if (! $hasTemporaryRole) {
+        // Tidak punya role sementara, ATAU masa aktif sengaja dimatikan
+        // (enable/disable OFF) → bersihkan batas waktu & jadikan permanen aktif.
+        if (! $hasTemporaryRole || ! $limitActivePeriod) {
             $payload = [
                 'active_from' => null,
                 'active_until' => null,
             ];
 
+            // Pulihkan akun yang sebelumnya dinonaktifkan otomatis karena masa aktif berakhir.
             if (! $user->is_active && $user->disabled_at !== null && $user->active_until !== null) {
                 $payload['is_active'] = true;
                 $payload['disabled_at'] = null;

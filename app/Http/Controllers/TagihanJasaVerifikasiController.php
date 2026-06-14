@@ -54,6 +54,7 @@ class TagihanJasaVerifikasiController extends Controller
             'creator',
             'details.layananJasa.parent.parent.parent.parent.parent',
             'workflowInstance.approvals.actedByUser',
+            'workflowInstance.approvals.assignedUser',
         ])->findOrFail($id);
         return view('tagihan_jasa.show', compact('tagihan'));
     }
@@ -117,11 +118,15 @@ class TagihanJasaVerifikasiController extends Controller
         $approver = Auth::user();
         $pegawai = $approver?->pegawai;
 
+        // Untuk verifikator final PLT/PLH yang dipilih spesifik, pertahankan pejabat
+        // & label (Plt./Plh.) yang sudah ditetapkan saat pembuatan tagihan.
+        $keepSigner = $tagihan->final_verifier_role === 'PLT/PLH' && filled($tagihan->pejabat_penandatangan_nama);
+
         $tagihan->forceFill([
-            'pejabat_penandatangan_nama' => $pegawai?->nama_lengkap ?: ($approver?->name ?: $tagihan->pejabat_penandatangan_nama),
-            'pejabat_penandatangan_nip' => $pegawai?->nip ?: $tagihan->pejabat_penandatangan_nip,
-            'pejabat_penandatangan_jabatan' => $pegawai?->jabatan
-                ?: ($approver?->hasRole('PLT/PLH') ? 'PLT/PLH Kepala Badan Layanan Umum' : ($tagihan->pejabat_penandatangan_jabatan ?: 'Kepala Badan Layanan Umum')),
+            'pejabat_penandatangan_nama' => $keepSigner ? $tagihan->pejabat_penandatangan_nama : ($pegawai?->nama_lengkap ?: ($approver?->name ?: $tagihan->pejabat_penandatangan_nama)),
+            'pejabat_penandatangan_nip' => $keepSigner ? $tagihan->pejabat_penandatangan_nip : ($pegawai?->nip ?: $tagihan->pejabat_penandatangan_nip),
+            'pejabat_penandatangan_jabatan' => $keepSigner ? $tagihan->pejabat_penandatangan_jabatan : ($pegawai?->jabatan
+                ?: ($approver?->hasRole('PLT/PLH') ? 'PLT/PLH Kepala Badan Layanan Umum' : ($tagihan->pejabat_penandatangan_jabatan ?: 'Kepala Badan Layanan Umum'))),
             'tanggal_surat_pengantar' => $tagihan->tanggal_surat_pengantar ?: $tagihan->tanggal_tagihan,
             'perihal_surat_pengantar' => $tagihan->perihal_surat_pengantar ?: 'Penyampaian Tagihan PNBP Jasa',
         ])->save();

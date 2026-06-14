@@ -74,9 +74,15 @@ class WorkflowService
         if ($workflowCode === 'TAGIHAN_JASA' && $document instanceof \App\Models\TagihanJasa) {
             $finalRole = $document->final_verifier_role ?? 'KPA';
             if ($finalRole && $finalRole !== 'KPA') {
+                $finalUpdate = ['role_code' => $finalRole];
+                // Bila pejabat PLT/PLH dipilih spesifik, tugaskan langkah final ke user tsb
+                // sehingga hanya dia yang dapat memverifikasi & menandatangani.
+                if ($document->final_verifier_user_id) {
+                    $finalUpdate['assigned_user_id'] = $document->final_verifier_user_id;
+                }
                 WorkflowApproval::where('workflow_instance_id', $instance->id)
                     ->where('role_code', 'KPA')
-                    ->update(['role_code' => $finalRole]);
+                    ->update($finalUpdate);
             }
         }
 

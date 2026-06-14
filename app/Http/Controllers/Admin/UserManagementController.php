@@ -75,6 +75,7 @@ class UserManagementController extends Controller
             $password = $request->input('password') ?: null;
             $activeFrom = $request->input('active_from');
             $activeUntil = $request->input('active_until');
+            $limitActivePeriod = $request->boolean('batasi_masa_aktif');
 
             $user = match ($tipe) {
                 'pegawai' => $this->provisioner->createForPegawai(
@@ -84,6 +85,7 @@ class UserManagementController extends Controller
                     $password,
                     $activeFrom,
                     $activeUntil,
+                    $limitActivePeriod,
                 ),
                 'mitra' => $this->provisioner->createForMitraJasa(
                     MitraJasa::findOrFail($request->input('mitra_id')),
@@ -92,6 +94,7 @@ class UserManagementController extends Controller
                     $password,
                     $activeFrom,
                     $activeUntil,
+                    $limitActivePeriod,
                 ),
                 'sistem' => $this->provisioner->createSystemAccount($email, $roles, $password),
             };
@@ -139,6 +142,7 @@ class UserManagementController extends Controller
                 $roles,
                 $request->input('active_from'),
                 $request->input('active_until'),
+                $request->boolean('batasi_masa_aktif'),
             );
 
             return redirect()

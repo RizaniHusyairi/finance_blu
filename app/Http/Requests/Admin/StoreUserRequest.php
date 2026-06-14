@@ -23,9 +23,10 @@ class StoreUserRequest extends FormRequest
             'password'       => ['nullable', 'confirmed', Password::min(8)->numbers()],
             'roles'          => ['required', 'array', 'min:1'],
             'roles.*'        => ['string', 'exists:roles,name'],
-            'active_from'    => [Rule::requiredIf(fn () => $this->hasTemporaryRole()), 'nullable', 'date'],
+            'batasi_masa_aktif' => ['nullable', 'boolean'],
+            'active_from'    => [Rule::requiredIf(fn () => $this->limitsActivePeriod()), 'nullable', 'date'],
             'active_until'   => [
-                Rule::requiredIf(fn () => $this->hasTemporaryRole()),
+                Rule::requiredIf(fn () => $this->limitsActivePeriod()),
                 'nullable',
                 'date',
                 'after_or_equal:active_from',
@@ -83,5 +84,13 @@ class StoreUserRequest extends FormRequest
     private function hasTemporaryRole(): bool
     {
         return in_array('PLT/PLH', (array) $this->input('roles', []), true);
+    }
+
+    /**
+     * Masa aktif hanya wajib ketika role PLT/PLH dipilih DAN toggle masa aktif aktif.
+     */
+    private function limitsActivePeriod(): bool
+    {
+        return $this->hasTemporaryRole() && $this->boolean('batasi_masa_aktif');
     }
 }

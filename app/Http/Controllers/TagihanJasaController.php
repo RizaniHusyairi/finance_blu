@@ -224,7 +224,9 @@ class TagihanJasaController extends Controller
             ];
         });
 
-        return view('tagihan_jasa.create', compact('mitras', 'layanans', 'tipe', 'mode', 'mitraLayananMap', 'mitraMetaMap', 'prefillTagihan'));
+        $pltPlhUsers = $this->pltPlhUsers();
+
+        return view('tagihan_jasa.create', compact('mitras', 'layanans', 'tipe', 'mode', 'mitraLayananMap', 'mitraMetaMap', 'prefillTagihan', 'pltPlhUsers'));
     }
 
     public function store(Request $request, WorkflowService $workflowService, JasaAccessService $jasaAccessService, TagihanJasaCalculationService $calculationService)
@@ -236,6 +238,8 @@ class TagihanJasaController extends Controller
             'mitra_jasa_id' => ['required', 'exists:mitra_jasa,id'],
             'tanggal_tagihan' => ['required', 'date'],
             'final_verifier_role' => ['required', 'in:KPA,PLT/PLH'],
+            'final_verifier_jenis' => ['nullable', 'in:PLT,PLH', 'required_if:final_verifier_role,PLT/PLH'],
+            'final_verifier_user_id' => ['nullable', 'exists:users,id', 'required_if:final_verifier_role,PLT/PLH'],
             'kontrak_mitra_jasa_id' => ['nullable', 'exists:kontrak_mitra_jasa,id'],
             'penjualan_id' => ['nullable', 'exists:mitra_jasa_penjualan,id'],
             'utilitas_id' => ['nullable', 'exists:laporan_utilitas,id'],
@@ -337,7 +341,7 @@ class TagihanJasaController extends Controller
 
                 $tipe = $validated['tipe_pnbp'];
                 $nomorTagihanVariant = $penjualan?->is_pjp2u_report ? 'PJP2U' : null;
-                $kpaPenandatangan = $this->getKpaPenandatanganData();
+                $kpaPenandatangan = $this->resolveFinalSigner($validated['final_verifier_role'] ?? 'KPA', $validated['final_verifier_user_id'] ?? null, $validated['final_verifier_jenis'] ?? null);
 
                 // Nomor tagihan: {satker}{mak}{bulan}{tahun}{urut} — satker & mak
                 // diambil dari layanan pertama pada tagihan. Tanggal pembuatan
@@ -370,6 +374,8 @@ class TagihanJasaController extends Controller
                     'total_tagihan' => $totalTagihan,
                     'status' => 'VERIFIKASI_KOORDINATOR',
                     'final_verifier_role' => $validated['final_verifier_role'],
+                    'final_verifier_user_id' => $validated['final_verifier_role'] === 'PLT/PLH' ? ($validated['final_verifier_user_id'] ?? null) : null,
+                    'final_verifier_jenis' => $validated['final_verifier_role'] === 'PLT/PLH' ? ($validated['final_verifier_jenis'] ?? null) : null,
                     'created_by' => Auth::id(),
                 ]);
 
@@ -590,7 +596,9 @@ class TagihanJasaController extends Controller
             ];
         });
 
-        return view('tagihan_jasa.create', compact('mitras', 'layanans', 'tipe', 'mode', 'mitraLayananMap', 'mitraMetaMap', 'prefillTagihan', 'detailPrefills', 'tagihan'));
+        $pltPlhUsers = $this->pltPlhUsers();
+
+        return view('tagihan_jasa.create', compact('mitras', 'layanans', 'tipe', 'mode', 'mitraLayananMap', 'mitraMetaMap', 'prefillTagihan', 'detailPrefills', 'tagihan', 'pltPlhUsers'));
     }
 
     public function update(Request $request, $id, JasaAccessService $jasaAccessService, TagihanJasaCalculationService $calculationService)
@@ -668,6 +676,8 @@ class TagihanJasaController extends Controller
                     return $calculationService->calculateSubtotal($row, $requestedLayanans->get($row['id']));
                 });
 
+                $signer = $this->resolveFinalSigner($validated['final_verifier_role'], $validated['final_verifier_user_id'] ?? null, $validated['final_verifier_jenis'] ?? null);
+
                 $tagihan->update([
                     'tipe_pnbp' => $validated['tipe_pnbp'],
                     'mitra_jasa_id' => $validated['mitra_jasa_id'],
@@ -681,6 +691,11 @@ class TagihanJasaController extends Controller
                     'total_tagihan' => $totalTagihan,
                     'status' => 'REVISI',
                     'final_verifier_role' => $validated['final_verifier_role'],
+                    'final_verifier_user_id' => $validated['final_verifier_role'] === 'PLT/PLH' ? ($validated['final_verifier_user_id'] ?? null) : null,
+                    'final_verifier_jenis' => $validated['final_verifier_role'] === 'PLT/PLH' ? ($validated['final_verifier_jenis'] ?? null) : null,
+                    'pejabat_penandatangan_nama' => $signer['nama'],
+                    'pejabat_penandatangan_nip' => $signer['nip'],
+                    'pejabat_penandatangan_jabatan' => $signer['jabatan'],
                     'status_dokumen_pengantar' => 'DRAFT',
                 ]);
 
@@ -829,6 +844,7 @@ class TagihanJasaController extends Controller
             'details.layananJasa.parent.parent.parent.parent.parent',
             'transaksiPenerimaan.bukuKasUmums.sumberRekening',
             'workflowInstance.approvals.actedByUser',
+            'workflowInstance.approvals.assignedUser',
         ])->findOrFail($id);
 
         $this->abortIfAdminJasaCannotAccess($tagihan);
@@ -847,6 +863,7 @@ class TagihanJasaController extends Controller
             'details.layananJasa.parent.parent.parent.parent.parent',
             'transaksiPenerimaan.bukuKasUmums.sumberRekening',
             'workflowInstance.approvals.actedByUser',
+            'workflowInstance.approvals.assignedUser',
         ]);
 
         return view('tagihan_jasa.show', compact('tagihan'));
@@ -1261,11 +1278,15 @@ class TagihanJasaController extends Controller
         $approver = $finalApproval?->actedByUser ?: Auth::user();
         $pegawai = $approver?->pegawai;
 
+        // Untuk verifikator final PLT/PLH yang dipilih spesifik, pertahankan pejabat
+        // & label (Plt./Plh.) yang sudah ditetapkan saat pembuatan tagihan.
+        $keepSigner = $tagihan->final_verifier_role === 'PLT/PLH' && filled($tagihan->pejabat_penandatangan_nama);
+
         $tagihan->forceFill([
-            'pejabat_penandatangan_nama' => $pegawai?->nama_lengkap ?: ($approver?->name ?: $tagihan->pejabat_penandatangan_nama),
-            'pejabat_penandatangan_nip' => $pegawai?->nip ?: $tagihan->pejabat_penandatangan_nip,
-            'pejabat_penandatangan_jabatan' => $pegawai?->jabatan
-                ?: ($approver?->hasRole('PLT/PLH') ? 'PLT/PLH Kepala Badan Layanan Umum' : ($tagihan->pejabat_penandatangan_jabatan ?: 'Kepala Badan Layanan Umum')),
+            'pejabat_penandatangan_nama' => $keepSigner ? $tagihan->pejabat_penandatangan_nama : ($pegawai?->nama_lengkap ?: ($approver?->name ?: $tagihan->pejabat_penandatangan_nama)),
+            'pejabat_penandatangan_nip' => $keepSigner ? $tagihan->pejabat_penandatangan_nip : ($pegawai?->nip ?: $tagihan->pejabat_penandatangan_nip),
+            'pejabat_penandatangan_jabatan' => $keepSigner ? $tagihan->pejabat_penandatangan_jabatan : ($pegawai?->jabatan
+                ?: ($approver?->hasRole('PLT/PLH') ? 'PLT/PLH Kepala Badan Layanan Umum' : ($tagihan->pejabat_penandatangan_jabatan ?: 'Kepala Badan Layanan Umum'))),
             'tanggal_surat_pengantar' => $tagihan->tanggal_surat_pengantar ?: $tagihan->tanggal_tagihan,
             'perihal_surat_pengantar' => $tagihan->perihal_surat_pengantar ?: 'Penyampaian Tagihan PNBP Jasa',
         ])->save();
@@ -1563,6 +1584,8 @@ class TagihanJasaController extends Controller
             'mitra_jasa_id' => ['required', 'exists:mitra_jasa,id'],
             'tanggal_tagihan' => ['required', 'date'],
             'final_verifier_role' => ['required', 'in:KPA,PLT/PLH'],
+            'final_verifier_jenis' => ['nullable', 'in:PLT,PLH', 'required_if:final_verifier_role,PLT/PLH'],
+            'final_verifier_user_id' => ['nullable', 'exists:users,id', 'required_if:final_verifier_role,PLT/PLH'],
             'kontrak_mitra_jasa_id' => ['nullable', 'exists:kontrak_mitra_jasa,id'],
             'layanan' => ['required', 'array', 'min:1'],
             'layanan.*.id' => ['required', 'exists:layanan_jasas,id'],
@@ -1644,6 +1667,35 @@ class TagihanJasaController extends Controller
         if ($changes !== []) {
             $tagihan->update($changes);
         }
+    }
+
+    /**
+     * Daftar user yang dapat dipilih sebagai verifikator final PLT/PLH.
+     */
+    private function pltPlhUsers()
+    {
+        return User::role(['PLT/PLH', 'KPA'])->active()->with('profilable')->orderByDisplayName()->get();
+    }
+
+    /**
+     * Tentukan data penandatangan final berdasarkan pilihan verifikator.
+     * KPA → otomatis (user KPA pertama). PLT/PLH → pejabat yang dipilih + label Plt./Plh.
+     */
+    private function resolveFinalSigner(?string $role, $userId, ?string $jenis): array
+    {
+        if ($role === 'PLT/PLH' && $userId) {
+            $user = User::with('profilable')->find($userId);
+            $pegawai = $user?->pegawai;
+            $prefix = ($jenis === 'PLH') ? 'Plh.' : 'Plt.';
+
+            return [
+                'nama' => $pegawai?->nama_lengkap ?: $user?->name,
+                'nip' => $pegawai?->nip,
+                'jabatan' => $prefix . ' Kepala Badan Layanan Umum',
+            ];
+        }
+
+        return $this->getKpaPenandatanganData();
     }
 
     private function getKpaPenandatanganData(): array
