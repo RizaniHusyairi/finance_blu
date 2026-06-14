@@ -218,14 +218,17 @@
         </li>
         @endhasanyrole
 
-        {{-- Verifikasi Laporan Jasa (Konsesi/PJP2U/Utilitas) --}}
-        @hasanyrole('Super Admin|Super Admin Jasa|Kepala Seksi Pelayanan dan Kerjasama|Kepala Subbagian Keuangan dan Tata Usaha|KPA|PLT/PLH')
+        {{-- Verifikasi Laporan Jasa (Konsesi/PJP2U/Utilitas) + Monitoring.
+             Konsesi/PJP2U/Utilitas: hanya pelaku verifikasi laporan (Super Admin Jasa, Koordinator Jasa).
+             Monitoring: read-only, juga untuk verifikator tagihan (Kasi/Kasubag/KPA) sebagai pengawasan. --}}
+        @hasanyrole('Super Admin|Super Admin Jasa|Koordinator Jasa|Kepala Seksi Pelayanan dan Kerjasama|Kepala Subbagian Keuangan dan Tata Usaha|KPA|PLT/PLH')
         <li>
           <a href="javascript:;" class="has-arrow">
             <div class="parent-icon"><i class="material-icons-outlined">fact_check</i></div>
             <div class="menu-title">Verifikasi Laporan</div>
           </a>
           <ul>
+            @hasanyrole('Super Admin|Super Admin Jasa|Koordinator Jasa')
             <li>
               <a href="{{ route('jasa.mitra.penjualan.index') }}">
                 <i class="material-icons-outlined">arrow_right</i>Konsesi
@@ -236,6 +239,7 @@
                 <i class="material-icons-outlined">arrow_right</i>PAX PJP2U
               </a>
             </li>
+            @endhasanyrole
             @hasrole('Super Admin Jasa')
             <li>
               <a href="{{ route('jasa.utilitas.index') }}">

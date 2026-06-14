@@ -51,6 +51,9 @@
         'ditolak' => ['Ditolak', 'bg-dark'],
         default => [ucfirst((string) $s), 'bg-secondary'],
     };
+    // Hanya pelaku verifikasi laporan yang boleh beraksi (lihat detail & ingatkan).
+    // Verifikator tagihan (Kasi/Kasubag/KPA) memantau read-only.
+    $canAct = auth()->user()?->hasAnyRole(['Super Admin', 'Super Admin Jasa', 'Koordinator Jasa', 'Admin Jasa']) === true;
 @endphp
 
 <div class="tw-scope">
@@ -75,7 +78,7 @@
             <a href="{{ route('jasa.monitoring-pelaporan.export', array_merge(request()->query(), ['format' => 'excel'])) }}" class="inline-flex items-center justify-center rounded-xl bg-white px-3 py-2 text-sm font-bold text-emerald-600 shadow-lg shadow-slate-950/15 transition hover:-translate-y-0.5 hover:bg-emerald-50">
                 <i class="bi bi-file-earmark-spreadsheet me-1"></i>Excel
             </a>
-            @if($summary['belum'] > 0)
+            @if($canAct && $summary['belum'] > 0)
                 <form method="POST" action="{{ route('jasa.monitoring-pelaporan.remind-all') }}"
                       onsubmit="return confirm('Kirim pengingat WhatsApp & email ke SEMUA mitra yang belum lapor pada periode/filter ini ({{ $summary['belum'] }} baris)?')">
                     @csrf
@@ -234,7 +237,9 @@
                         </td>
                         <td><span class="badge {{ $class }}">{{ $label }}</span></td>
                         <td class="text-end">
-                            @if($row['status'] !== 'belum' && $row['report_id'])
+                            @if(! $canAct)
+                                <span class="text-muted small">&mdash;</span>
+                            @elseif($row['status'] !== 'belum' && $row['report_id'])
                                 @if($row['jenis'] === 'konsesi')
                                     <a href="{{ route('jasa.mitra.penjualan.show', [$row['mitra_id'], $row['report_id']]) }}" class="btn btn-sm btn-light border text-primary fw-semibold jasa-icon-btn" title="Lihat laporan" aria-label="Lihat laporan"><i class="bi bi-eye"></i></a>
                                 @else

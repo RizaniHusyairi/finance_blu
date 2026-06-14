@@ -460,12 +460,17 @@ Route::middleware(['auth', 'account.active'])->group(function () use ($internalR
         Route::post('/jasa/integrasi/email/test', [JasaIntegrationSettingController::class, 'testEmail'])->name('jasa.integrasi.email.test');
     });
 
-    // Index Laporan Mitra (Konsesi & PJP2U) — read-only, dibuka untuk verifikator (KPA, PLT/PLH, Kasi PK, Kasubag TU)
+    // Monitoring Pelaporan — read-only, dibuka untuk oversight (KPA, PLT/PLH, Kasi PK, Kasubag TU) + pelaku verifikasi laporan.
     Route::middleware('role:Super Admin|Super Admin Jasa|Operator BLU|Koordinator Keuangan|Admin Jasa|Admin Konsesi|Koordinator Jasa|KPA|PLT/PLH|Kepala Seksi Pelayanan dan Kerjasama|Kepala Subbagian Keuangan dan Tata Usaha')->group(function () {
         Route::get('/jasa/monitoring-pelaporan', [MonitoringPelaporanController::class, 'index'])->name('jasa.monitoring-pelaporan.index');
+        Route::get('/jasa/monitoring-pelaporan/export/{format}', [MonitoringPelaporanController::class, 'export'])->name('jasa.monitoring-pelaporan.export');
+    });
+
+    // Verifikasi Laporan Mitra (Konsesi & PJP2U) + aksi ingatkan — hanya pelaku verifikasi laporan,
+    // BUKAN verifikator tagihan berjenjang (Kasi/Kasubag/KPA hanya boleh memantau via Monitoring di atas).
+    Route::middleware('role:Super Admin|Super Admin Jasa|Operator BLU|Koordinator Keuangan|Admin Jasa|Admin Konsesi|Koordinator Jasa')->group(function () {
         Route::post('/jasa/monitoring-pelaporan/ingatkan', [MonitoringPelaporanController::class, 'remind'])->name('jasa.monitoring-pelaporan.remind');
         Route::post('/jasa/monitoring-pelaporan/ingatkan-semua', [MonitoringPelaporanController::class, 'remindAll'])->name('jasa.monitoring-pelaporan.remind-all');
-        Route::get('/jasa/monitoring-pelaporan/export/{format}', [MonitoringPelaporanController::class, 'export'])->name('jasa.monitoring-pelaporan.export');
         Route::get('/jasa/laporan-penjualan', [MitraJasaPenjualanController::class, 'index'])->name('jasa.mitra.penjualan.index');
         Route::get('/jasa/laporan-pjp2u', [MitraJasaPenjualanController::class, 'indexPjp2u'])->name('jasa.mitra.pjp2u.index');
         Route::get('/jasa/laporan-pjp2u/rekap/{mitra}/{layanan}/{tahun}/{bulan}', [MitraJasaPenjualanController::class, 'showPjp2uRekap'])
