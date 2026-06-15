@@ -7,6 +7,7 @@ use App\Models\MitraJasa;
 use App\Models\LayananJasa;
 use App\Models\LaporanUtilitas;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class UtilitasController extends Controller
 {
@@ -36,7 +37,16 @@ class UtilitasController extends Controller
             ->latest()
             ->paginate(15);
 
-        return view('utilitas.dashboard', compact('jenis', 'layanan', 'mitras', 'laporans'));
+        // Mode edit: muat laporan yang akan diubah (hanya draft/ditolak milik jenis ini).
+        $editLaporan = null;
+        if ($request->filled('edit')) {
+            $editLaporan = LaporanUtilitas::where('id', $request->edit)
+                ->where('jenis', $jenis)
+                ->whereIn('status', ['draft', 'ditolak'])
+                ->first();
+        }
+
+        return view('utilitas.dashboard', compact('jenis', 'layanan', 'mitras', 'laporans', 'editLaporan'));
     }
 
     public function store(Request $request)
@@ -65,16 +75,7 @@ class UtilitasController extends Controller
 
         $request->validate($rules);
 
-        // Cek overlap
-        $exists = LaporanUtilitas::where('mitra_jasa_id', $request->mitra_jasa_id)
-            ->where('layanan_jasa_id', $request->layanan_jasa_id)
-            ->where('bulan', $request->bulan)
-            ->where('tahun', $request->tahun)
-            ->exists();
-
-        if ($exists) {
-            return back()->with('error', 'Laporan untuk bulan & tahun ini sudah ada.')->withInput();
-        }
+        // Catatan: lebih dari satu laporan per mitra+layanan+periode kini diizinkan.
 
         // Hitung pemakaian
         if ($request->tipe_perhitungan === 'kwh') {
@@ -112,6 +113,71 @@ class UtilitasController extends Controller
         ]);
 
         return back()->with('success', 'Laporan pemakaian berhasil disimpan.');
+    }
+
+    public function update(Request $request, $id)
+    {
+        $laporan = LaporanUtilitas::findOrFail($id);
+
+        // Hanya laporan yang belum dikirim/ditagihkan yang boleh diubah.
+        if (!in_array($laporan->status, ['draft', 'ditolak'], true)) {
+            return back()->with('error', 'Hanya laporan draft atau yang ditolak yang dapat diubah.');
+        }
+
+        $rules = [
+            'mitra_jasa_id' => 'required|exists:mitra_jasa,id',
+            'tipe_perhitungan' => 'required|in:kwh,flat',
+            'bulan' => 'required|integer|min:1|max:12',
+            'tahun' => 'required|integer|min:2020',
+        ];
+
+        if ($request->tipe_perhitungan === 'kwh') {
+            // Saat edit, foto bukti opsional — file lama dipertahankan bila tidak diunggah ulang.
+            $rules['stan_awal'] = 'required|integer|min:0';
+            $rules['stan_akhir'] = 'required|integer|gte:stan_awal';
+            $rules['file_bukti_awal'] = 'nullable|image|max:5120';
+            $rules['file_bukti'] = 'nullable|image|max:5120';
+        } else {
+            $rules['pemakaian_manual'] = 'required|numeric|min:0';
+        }
+
+        $request->validate($rules);
+
+        // Catatan: lebih dari satu laporan per mitra+layanan+periode kini diizinkan.
+
+        if ($request->tipe_perhitungan === 'kwh') {
+            $pemakaian = $request->stan_akhir - $request->stan_awal;
+        } else {
+            $pemakaian = $request->pemakaian_manual;
+        }
+
+        $data = [
+            'mitra_jasa_id' => $request->mitra_jasa_id,
+            'tipe_perhitungan' => $request->tipe_perhitungan,
+            'bulan' => $request->bulan,
+            'tahun' => $request->tahun,
+            'stan_awal' => $request->tipe_perhitungan === 'kwh' ? $request->stan_awal : null,
+            'stan_akhir' => $request->tipe_perhitungan === 'kwh' ? $request->stan_akhir : null,
+            'pemakaian' => $pemakaian,
+        ];
+
+        if ($request->hasFile('file_bukti_awal')) {
+            if ($laporan->file_bukti_awal) {
+                Storage::disk('public')->delete($laporan->file_bukti_awal);
+            }
+            $data['file_bukti_awal'] = $request->file('file_bukti_awal')->store('bukti-utilitas', 'public');
+        }
+
+        if ($request->hasFile('file_bukti')) {
+            if ($laporan->file_bukti) {
+                Storage::disk('public')->delete($laporan->file_bukti);
+            }
+            $data['file_bukti'] = $request->file('file_bukti')->store('bukti-utilitas', 'public');
+        }
+
+        $laporan->update($data);
+
+        return redirect()->route('utilitas.dashboard')->with('success', 'Laporan berhasil diperbarui.');
     }
 
     public function submit(Request $request, $id)

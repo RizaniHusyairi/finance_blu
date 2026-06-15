@@ -180,6 +180,8 @@
 @section('content')
 @php
     $unitLabel = $jenis === 'listrik' ? 'kWh' : 'm&sup3;';
+    $editLaporan = $editLaporan ?? null;
+    $editing = (bool) $editLaporan;
     $laporanCollection = method_exists($laporans, 'items') ? collect($laporans->items()) : collect($laporans);
     $statusMeta = fn ($status) => match ($status) {
         'draft' => ['Draft', 'muted', 'bi-pencil-square'],
@@ -266,16 +268,23 @@
         <div class="mp-card">
             <div class="mp-card-header">
                 <div class="mp-card-title">
-                    <span class="mp-card-icon"><i class="bi bi-pencil-square"></i></span>
+                    <span class="mp-card-icon"><i class="bi {{ $editing ? 'bi-pencil' : 'bi-pencil-square' }}"></i></span>
                     <div>
-                        <h6>Input Laporan Baru</h6>
-                        <small>Catat periode dan bukti meter</small>
+                        <h6>{{ $editing ? 'Ubah Laporan' : 'Input Laporan Baru' }}</h6>
+                        <small>{{ $editing ? 'Perbarui data periode '.str_pad($editLaporan->bulan, 2, '0', STR_PAD_LEFT).'/'.$editLaporan->tahun : 'Catat periode dan bukti meter' }}</small>
                     </div>
                 </div>
             </div>
             <div class="card-body">
-                <form action="{{ route('utilitas.store') }}" method="POST" enctype="multipart/form-data" class="mp-form" id="utilitasForm">
+                @if($editing)
+                    <div class="alert alert-info d-flex align-items-center justify-content-between rounded-3 py-2 px-3 mb-3">
+                        <span class="small fw-semibold"><i class="bi bi-info-circle me-1"></i>Anda sedang mengubah laporan.</span>
+                        <a href="{{ route('utilitas.dashboard') }}" class="btn btn-sm btn-light border">Batal</a>
+                    </div>
+                @endif
+                <form action="{{ $editing ? route('utilitas.update', $editLaporan->id) : route('utilitas.store') }}" method="POST" enctype="multipart/form-data" class="mp-form" id="utilitasForm">
                     @csrf
+                    @if($editing) @method('PUT') @endif
                     <input type="hidden" name="jenis" value="{{ $jenis }}">
                     <input type="hidden" name="layanan_jasa_id" value="{{ $layanan->id }}">
 
@@ -285,7 +294,7 @@
                         <select name="mitra_jasa_id" class="form-select select2" required>
                             <option value="">Pilih Mitra...</option>
                             @foreach($mitras as $mitra)
-                                <option value="{{ $mitra->id }}" {{ old('mitra_jasa_id') == $mitra->id ? 'selected' : '' }}>{{ $mitra->nama_mitra }}</option>
+                                <option value="{{ $mitra->id }}" {{ old('mitra_jasa_id', $editing ? $editLaporan->mitra_jasa_id : '') == $mitra->id ? 'selected' : '' }}>{{ $mitra->nama_mitra }}</option>
                             @endforeach
                         </select>
                     </div>
@@ -297,7 +306,7 @@
                                 <label class="form-label small fw-bold">Bulan</label>
                                 <select name="bulan" class="form-select" required>
                                     @for($i=1; $i<=12; $i++)
-                                        <option value="{{ $i }}" {{ (old('bulan', now()->month) == $i) ? 'selected' : '' }}>
+                                        <option value="{{ $i }}" {{ (old('bulan', $editing ? $editLaporan->bulan : now()->month) == $i) ? 'selected' : '' }}>
                                             {{ \Carbon\Carbon::create()->month($i)->translatedFormat('F') }}
                                         </option>
                                     @endfor
@@ -305,7 +314,7 @@
                             </div>
                             <div class="col-6">
                                 <label class="form-label small fw-bold">Tahun</label>
-                                <input type="number" name="tahun" class="form-control" value="{{ old('tahun', now()->year) }}" required>
+                                <input type="number" name="tahun" class="form-control" value="{{ old('tahun', $editing ? $editLaporan->tahun : now()->year) }}" required>
                             </div>
                         </div>
                     </div>
@@ -314,9 +323,9 @@
                         <div class="util-fieldset-title mb-3"><i class="bi bi-speedometer2"></i> Jenis Pencatatan</div>
                         <div class="row g-2">
                             <div class="col-sm-6">
-                                <label class="util-type-card {{ old('tipe_perhitungan', 'kwh') === 'kwh' ? 'selected' : '' }}" for="tipe_kwh">
+                                <label class="util-type-card {{ old('tipe_perhitungan', $editing ? $editLaporan->tipe_perhitungan : 'kwh') === 'kwh' ? 'selected' : '' }}" for="tipe_kwh">
                                     <div class="form-check mb-0">
-                                        <input class="form-check-input" type="radio" name="tipe_perhitungan" id="tipe_kwh" value="kwh" {{ old('tipe_perhitungan', 'kwh') === 'kwh' ? 'checked' : '' }}>
+                                        <input class="form-check-input" type="radio" name="tipe_perhitungan" id="tipe_kwh" value="kwh" {{ old('tipe_perhitungan', $editing ? $editLaporan->tipe_perhitungan : 'kwh') === 'kwh' ? 'checked' : '' }}>
                                         <div class="ms-1">
                                             <div class="fw-bold">{!! $unitLabel !!}</div>
                                             <div class="small text-muted">Meter</div>
@@ -325,9 +334,9 @@
                                 </label>
                             </div>
                             <div class="col-sm-6">
-                                <label class="util-type-card {{ old('tipe_perhitungan') === 'flat' ? 'selected' : '' }}" for="tipe_flat">
+                                <label class="util-type-card {{ old('tipe_perhitungan', $editing ? $editLaporan->tipe_perhitungan : 'kwh') === 'flat' ? 'selected' : '' }}" for="tipe_flat">
                                     <div class="form-check mb-0">
-                                        <input class="form-check-input" type="radio" name="tipe_perhitungan" id="tipe_flat" value="flat" {{ old('tipe_perhitungan') === 'flat' ? 'checked' : '' }}>
+                                        <input class="form-check-input" type="radio" name="tipe_perhitungan" id="tipe_flat" value="flat" {{ old('tipe_perhitungan', $editing ? $editLaporan->tipe_perhitungan : 'kwh') === 'flat' ? 'checked' : '' }}>
                                         <div class="ms-1">
                                             <div class="fw-bold">Flat</div>
                                             <div class="small text-muted">Manual</div>
@@ -341,7 +350,7 @@
                     <div id="section-flat" class="util-fieldset mb-3" style="display:none;">
                         <div class="util-fieldset-title mb-3"><i class="bi bi-keyboard"></i> Pemakaian Manual</div>
                         <label class="form-label small fw-bold">Jumlah Pemakaian</label>
-                        <input type="number" name="pemakaian_manual" class="form-control" min="0" step="0.01" value="{{ old('pemakaian_manual') }}" placeholder="Masukkan jumlah pemakaian">
+                        <input type="number" name="pemakaian_manual" class="form-control" min="0" step="0.01" value="{{ old('pemakaian_manual', $editing && $editLaporan->tipe_perhitungan === 'flat' ? $editLaporan->pemakaian : '') }}" placeholder="Masukkan jumlah pemakaian">
                     </div>
 
                     <div id="section-kwh" class="util-fieldset mb-3">
@@ -349,11 +358,11 @@
                         <div class="row g-3 mb-3">
                             <div class="col-6">
                                 <label class="form-label small fw-bold">Stan Awal</label>
-                                <input type="number" id="stan_awal" name="stan_awal" class="form-control" min="0" value="{{ old('stan_awal') }}">
+                                <input type="number" id="stan_awal" name="stan_awal" class="form-control" min="0" value="{{ old('stan_awal', $editing ? $editLaporan->stan_awal : '') }}">
                             </div>
                             <div class="col-6">
                                 <label class="form-label small fw-bold">Stan Akhir</label>
-                                <input type="number" id="stan_akhir" name="stan_akhir" class="form-control" min="0" value="{{ old('stan_akhir') }}">
+                                <input type="number" id="stan_akhir" name="stan_akhir" class="form-control" min="0" value="{{ old('stan_akhir', $editing ? $editLaporan->stan_akhir : '') }}">
                             </div>
                         </div>
                         <div class="mb-3">
@@ -362,32 +371,46 @@
                         </div>
                         <div class="row g-3">
                             <div class="col-md-6">
-                                <label class="form-label small fw-bold">Bukti Awal {!! $unitLabel !!} <span class="text-danger">*</span></label>
-                                <label class="util-file" for="file_bukti_awal">
+                                <label class="form-label small fw-bold">Bukti Awal {!! $unitLabel !!} @unless($editing && $editLaporan->file_bukti_awal)<span class="text-danger">*</span>@endunless</label>
+                                <div class="util-file util-file-trigger" data-target="file_bukti_awal" role="button" tabindex="0">
                                     <span class="util-file-icon"><i class="bi bi-cloud-arrow-up"></i></span>
                                     <span class="min-w-0">
-                                        <span class="d-block fw-bold">Pilih Foto</span>
-                                        <span class="d-block util-file-name">Foto meteran awal. Max 5MB.</span>
+                                        <span class="d-block fw-bold">Foto Meteran Awal</span>
+                                        <span class="d-block util-file-name">Pilih file atau ambil foto. Max 5MB.</span>
                                     </span>
-                                </label>
+                                </div>
+                                <div class="d-flex gap-2 mt-2">
+                                    <button type="button" class="btn btn-sm btn-light border flex-fill util-pick" data-target="file_bukti_awal"><i class="bi bi-folder2-open me-1"></i>Pilih File</button>
+                                    <button type="button" class="btn btn-sm btn-light border flex-fill util-cam" data-target="file_bukti_awal"><i class="bi bi-camera me-1"></i>Kamera</button>
+                                </div>
                                 <input type="file" id="file_bukti_awal" name="file_bukti_awal" class="d-none util-file-input" accept="image/*">
+                                @if($editing && $editLaporan->file_bukti_awal)
+                                    <div class="small text-muted mt-1"><i class="bi bi-paperclip me-1"></i><a href="{{ asset('storage/'.$editLaporan->file_bukti_awal) }}" target="_blank">Foto saat ini</a> — biarkan kosong untuk dipertahankan.</div>
+                                @endif
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label small fw-bold">Bukti Akhir {!! $unitLabel !!} <span class="text-danger">*</span></label>
-                                <label class="util-file" for="file_bukti">
+                                <label class="form-label small fw-bold">Bukti Akhir {!! $unitLabel !!} @unless($editing && $editLaporan->file_bukti)<span class="text-danger">*</span>@endunless</label>
+                                <div class="util-file util-file-trigger" data-target="file_bukti" role="button" tabindex="0">
                                     <span class="util-file-icon"><i class="bi bi-cloud-arrow-up"></i></span>
                                     <span class="min-w-0">
-                                        <span class="d-block fw-bold">Pilih Foto</span>
-                                        <span class="d-block util-file-name">Foto meteran akhir. Max 5MB.</span>
+                                        <span class="d-block fw-bold">Foto Meteran Akhir</span>
+                                        <span class="d-block util-file-name">Pilih file atau ambil foto. Max 5MB.</span>
                                     </span>
-                                </label>
+                                </div>
+                                <div class="d-flex gap-2 mt-2">
+                                    <button type="button" class="btn btn-sm btn-light border flex-fill util-pick" data-target="file_bukti"><i class="bi bi-folder2-open me-1"></i>Pilih File</button>
+                                    <button type="button" class="btn btn-sm btn-light border flex-fill util-cam" data-target="file_bukti"><i class="bi bi-camera me-1"></i>Kamera</button>
+                                </div>
                                 <input type="file" id="file_bukti" name="file_bukti" class="d-none util-file-input" accept="image/*">
+                                @if($editing && $editLaporan->file_bukti)
+                                    <div class="small text-muted mt-1"><i class="bi bi-paperclip me-1"></i><a href="{{ asset('storage/'.$editLaporan->file_bukti) }}" target="_blank">Foto saat ini</a> — biarkan kosong untuk dipertahankan.</div>
+                                @endif
                             </div>
                         </div>
                     </div>
 
                     <button class="btn btn-primary w-100 fw-bold py-2">
-                        <i class="bi bi-save me-1"></i>Simpan Laporan
+                        <i class="bi {{ $editing ? 'bi-check2-circle' : 'bi-save' }} me-1"></i>{{ $editing ? 'Perbarui Laporan' : 'Simpan Laporan' }}
                     </button>
                 </form>
             </div>
@@ -462,6 +485,7 @@
                                 <td class="text-end">
                                     @if($lap->status == 'draft' || $lap->status == 'ditolak')
                                         <div class="d-flex gap-1 justify-content-end">
+                                            <a href="{{ route('utilitas.dashboard', ['edit' => $lap->id]) }}#utilitasForm" class="btn btn-sm btn-light border text-primary jasa-icon-btn" title="Ubah laporan" aria-label="Ubah laporan"><i class="bi bi-pencil"></i></a>
                                             <form action="{{ route('utilitas.submit', $lap->id) }}" method="POST">
                                                 @csrf
                                                 <button class="btn btn-sm btn-primary jasa-icon-btn" title="Kirim ke Admin Jasa" aria-label="Kirim ke Admin Jasa"><i class="bi bi-send"></i></button>
@@ -505,6 +529,8 @@
 @push('script')
 <script>
     $(document).ready(function() {
+        var utilEditing = {{ $editing ? 'true' : 'false' }};
+
         function refreshTypeCards() {
             $('.util-type-card').removeClass('selected');
             $('input[name="tipe_perhitungan"]:checked').closest('.util-type-card').addClass('selected');
@@ -537,14 +563,42 @@
             $('#pemakaian_display').val(pemakaian + ' unit');
         }).trigger('input');
 
+        function triggerInput(id, useCamera) {
+            var inp = document.getElementById(id);
+            if (!inp) return;
+            if (useCamera) {
+                inp.setAttribute('capture', 'environment');
+            } else {
+                inp.removeAttribute('capture');
+            }
+            inp.click();
+        }
+
+        $('.util-file-trigger, .util-pick').on('click', function() {
+            triggerInput($(this).data('target'), false);
+        });
+        $('.util-cam').on('click', function() {
+            triggerInput($(this).data('target'), true);
+        });
+        $('.util-file-trigger').on('keydown', function(e) {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                triggerInput($(this).data('target'), false);
+            }
+        });
+
         $('.util-file-input').on('change', function() {
             var fileName = this.files && this.files.length ? this.files[0].name : '';
-            var fileLabel = $('label[for="' + this.id + '"]');
-            fileLabel.toggleClass('has-file', !!fileName);
-            fileLabel.find('.util-file-name').text(fileName || (this.id === 'file_bukti_awal' ? 'Foto meteran awal. Max 5MB.' : 'Foto meteran akhir. Max 5MB.'));
+            var zone = $('.util-file-trigger[data-target="' + this.id + '"]');
+            zone.toggleClass('has-file', !!fileName);
+            zone.find('.util-file-name').text(fileName || 'Pilih file atau ambil foto. Max 5MB.');
         });
 
         function fetchLastStanAkhir() {
+            // Saat mengubah laporan, jangan timpa stan awal yang sudah dimuat.
+            if (utilEditing && $('#stan_awal').val() !== '') {
+                return;
+            }
             var mitra_id = $('select[name="mitra_jasa_id"]').val();
             var bulan = $('select[name="bulan"]').val();
             var tahun = $('input[name="tahun"]').val();

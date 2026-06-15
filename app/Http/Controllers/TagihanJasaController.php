@@ -403,7 +403,12 @@ class TagihanJasaController extends Controller
                     ]);
                 }
 
-                $workflowService->startWorkflow('TAGIHAN_JASA', $tagihan);
+                $jasaInstance = $workflowService->startWorkflow('TAGIHAN_JASA', $tagihan);
+                DB::afterCommit(function () use ($jasaInstance) {
+                    if ($jasaInstance) {
+                        app(\App\Services\WorkflowWaNotifier::class)->notifyPendingApprovals($jasaInstance->fresh());
+                    }
+                });
 
                 if ($penjualan) {
                     $penjualan->update([
@@ -760,7 +765,12 @@ class TagihanJasaController extends Controller
                     'status_dokumen_pengantar' => 'DRAFT',
                 ]);
 
-                $workflowService->startWorkflow('TAGIHAN_JASA', $tagihan->fresh());
+                $jasaInstance = $workflowService->startWorkflow('TAGIHAN_JASA', $tagihan->fresh());
+                DB::afterCommit(function () use ($jasaInstance) {
+                    if ($jasaInstance) {
+                        app(\App\Services\WorkflowWaNotifier::class)->notifyPendingApprovals($jasaInstance->fresh());
+                    }
+                });
             });
 
             return back()->with('success', 'Tagihan berhasil dikirim ulang ke alur verifikasi.');

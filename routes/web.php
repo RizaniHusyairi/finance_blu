@@ -848,6 +848,7 @@ Route::middleware(['auth', 'account.active'])->group(function () use ($internalR
         Route::get('/utilitas/dashboard', [UtilitasController::class, 'index'])->name('utilitas.dashboard');
         Route::get('/utilitas/last-stan-akhir', [UtilitasController::class, 'getLastStanAkhir'])->name('utilitas.last-stan-akhir');
         Route::post('/utilitas/laporan', [UtilitasController::class, 'store'])->name('utilitas.store');
+        Route::put('/utilitas/laporan/{id}', [UtilitasController::class, 'update'])->name('utilitas.update');
         Route::post('/utilitas/laporan/{id}/submit', [UtilitasController::class, 'submit'])->name('utilitas.submit');
         Route::delete('/utilitas/laporan/{id}', [UtilitasController::class, 'destroy'])->name('utilitas.destroy');
     });
