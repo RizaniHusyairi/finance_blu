@@ -40,6 +40,7 @@ SUPER ADMIN JASA  →  memantau (rekap tagihan, pembayaran, piutang, performa mi
 |---|---|---|
 | **Super Admin Jasa** | MELLYARTI RAHMAN | `super.admin.jasa@sikeren.id` |
 | **Admin Jasa** | DIAH DESTIANA | `admin.jasa@sikeren.id` |
+| **AMC** | TRI HARDANTI | `amc@sikeren.id` |
 | **Mitra (Mitra Jasa)** | PT ABC | `elfandro11@gmail.com` |
 | Koordinator Jasa (verifikator 1) | MUHAMAD SAPRIANSYAH | `koordinator.jasa@sikeren.id` |
 | Kepala Seksi Yan & Kerjasama (verifikator 2) | ROSLAN | `kasipk@sikeren.id` |
@@ -65,6 +66,7 @@ SUPER ADMIN JASA  →  memantau (rekap tagihan, pembayaran, piutang, performa mi
 | **Nomor Tagihan** | Tagihan Jasa → **Nomor Tagihan** | Set nomor awal register tagihan |
 | **Verifikasi Laporan** | Verifikasi Laporan → Konsesi / PAX PJP2U / Utilitas | Verifikasi laporan mitra & utilitas |
 | **Laporan Jasa** | Pembukuan & Laporan → Laporan Jasa | Rekap Tagihan, per Layanan, Terima Setor, Pembayaran, Piutang, **Performa Mitra** (+ export PDF/Excel) |
+| **Log Perubahan Tarif PJP2U** | Pembukuan & Laporan → Laporan → **Log Perubahan Tarif PJP2U** | Audit trail tarif PJP2U: revisi resmi, diskon periode, koreksi — filter periode + export PDF/Excel |
 
 ### 3.2 ADMIN JASA — operasional penagihan (scoped ke layanan yang ditugaskan)
 | Modul | Menu | Fungsi |
@@ -234,6 +236,131 @@ Cabang:
 - **REVISI** (verifikator klik *Minta Revisi*, bertarget) → kembali ke pembuat (Admin Jasa) → setelah diperbaiki, **diulang dari Koordinator**.
 - **DITOLAK** → workflow ditutup; perbaikan memakai jalur Revisi, bukan Tolak.
 - **Hapus** (soft delete) → hanya untuk tagihan **sebelum PUBLISHED** (status PUBLISHED/LUNAS tidak bisa dihapus).
+
+---
+
+## 11A. Log Perubahan Tarif PJP2U
+
+Tarif PJP2U bisa berubah karena revisi resmi (SK/Permenhub/addendum kontrak), diskon periode, atau koreksi salah input. Setiap kali tarif `Master Layanan Jasa` untuk layanan PJP2U diubah, sistem **wajib** menampilkan modal pencatatan sebelum perubahan disimpan.
+
+**Field wajib di modal:**
+- **Tipe perubahan**: `Revisi Resmi` / `Diskon` / `Koreksi`.
+- **Berlaku mulai** (tanggal efektif, bukan tanggal sistem).
+- **Berlaku sampai** (hanya muncul bila tipe `Diskon`).
+- **Nomor referensi** (opsional, mis. nomor SK / addendum).
+- **Alasan** (≥10 karakter).
+- **File pendukung** (PDF/JPG/PNG, opsional).
+
+**Dimana melihatnya:**
+- **Riwayat per layanan** — tombol *Riwayat Tarif* di header form edit Master Layanan Jasa (hanya muncul untuk layanan PJP2U).
+- **Laporan global** — Pembukuan & Laporan → Laporan → **Log Perubahan Tarif PJP2U**: filter periode / layanan / tipe; export PDF & Excel.
+- **Banner di form Buat Tagihan** — bila ada perubahan tarif PJP2U dalam 90 hari terakhir, sistem menampilkan peringatan di catatan pengisian tagihan agar verifikator/Admin Jasa sadar.
+
+**Aturan defaultnya:**
+- Tidak ada workflow persetujuan — Super Admin Jasa bertanggung jawab langsung (audit trail saja).
+- Diskon **tidak retroaktif**: hanya berlaku untuk laporan PJP2U yang belum ditagihkan.
+- Belum ada tarif khusus per mitra (tarif berlaku global per layanan PJP2U).
+
+---
+
+## 11B. AMC — Permohonan Non-Schedule & Pemakaian Garbarata
+
+Modul operasional untuk peran **AMC** (Apron Movement Control) yang menjadi sumber data lapangan untuk penagihan jenis penerbangan tidak terjadwal & layanan aviobridge.
+
+**Role baru:** `AMC` — hanya bisa mengakses dua menu di bawah; tidak bisa membuat tagihan.
+
+**Permohonan Non-Schedule** (menu *AMC → Permohonan Non-Schedule*)
+- AMC mengunggah **surat permohonan** dari maskapai/operator (PDF/JPG/PNG ≤5MB) untuk penerbangan **non-schedule kargo** atau **non-schedule lainnya**.
+- Isi nomor surat, tanggal, jenis, rentang tanggal penerbangan, nomor penerbangan, registrasi pesawat, rute.
+- Status awal: `DIAJUKAN`. Admin Jasa / Koordinator Jasa membuka modal *Review* untuk **menyetujui** atau **menolak** (catatan opsional).
+- Hanya permohonan berstatus **DISETUJUI** yang muncul di picker form Buat Tagihan.
+
+**Pemakaian Garbarata** — alur lengkap AMC
+
+Modul mengikuti format **AMC Sheet** (rekap harian/bulanan per maskapai). Alur dari input lapangan sampai siap ditagihkan terdiri dari **3 tahap**:
+
+### Tahap 1: Input batch pemakaian (*AMC → Pemakaian Garbarata → Catat Pemakaian*)
+
+- AMC memilih **mitra/maskapai** (dropdown otomatis disaring `jenis_mitra=Maskapai` + aktif — tenant non-airline tidak muncul) + **periode bulan**.
+- **Rincian per-flight** (tambah baris sebanyak yang perlu):
+  - Tanggal, registrasi pesawat, **ARR/DEP** (auto-suggest dari `JadwalPenerbangan` mitra), Route, Type pesawat, Bobot ton, Docking & Undocking (HH:MM), Tarif, **Avio (1/2)**, **File pendukung per baris** (PDF/JPG/PNG ≤5MB).
+- Sistem otomatis menghitung **durasi** & **jumlah rentang** (1 rentang = 120 menit), serta **total Rp** per baris dan **Total Batch**.
+- **Auto-detect mitra per baris**: bila ARR/DEP terdaftar di `JadwalPenerbangan` milik mitra lain, sistem otomatis pakai mitra dari jadwal — mencegah salah-attribute (mis. flight Citilink tercatat sebagai Batik).
+- Status awal saat simpan: `SIAP_DITAGIH`.
+
+### Tahap 2: Review & rekap (*AMC → Rekap Harian Garbarata*)
+
+- **Daftar Pemakaian** (`/pemakaian-garbarata`) — dikelompokkan **per maskapai** (collapsible), menampilkan status (`DRAFT` / `SIAP_DITAGIH` / `DIAJUKAN` / `TERTAGIH`).
+- **Rekap Harian** — akordeon 2-level: per tanggal → per mitra → tabel flight. Filter periode, mitra, status. Tombol **Detail Hari** membuka tampilan ala form input (mirror AMC sheet) untuk verifikasi visual sebelum diajukan.
+- **Detail Hari** (`/pemakaian-garbarata/detail-hari/{tanggal}`) — semua mitra hari itu, format mengikuti AMC sheet asli.
+- **Indikator file pendukung**: baris tanpa file ditandai ⚠️ supaya AMC tahu mana yang perlu dilengkapi sebelum diajukan.
+
+### Tahap 3: Ambil & kunci rekap tagihan (*Admin Jasa -> Rekap Tagihan Garbarata*)
+
+> **Catatan domain:** AMC hanya berurusan dengan input pemakaian & rekap harian (Tahap 1-2). Admin Jasa mengambil data Garbarata yang sudah dicatat AMC, mengunci rekap bulanan, lalu menjadikannya bahan Tagihan Jasa.
+
+- Admin Jasa membuka modul **Rekap Tagihan Garbarata** -> klik **Ambil Data Garbarata** -> pilih mitra maskapai + periode bulan.
+- Form **Tinjau Data** otomatis mengambil semua pemakaian status `DRAFT` / `SIAP_DITAGIH` milik mitra+periode tsb yang belum terikat rekap lain (tabel: tanggal, flight, route, type, docking, undocking, durasi, rentang, **tarif**, **total Rp**, indikator file) + footer grand total Rp.
+- Centang baris yang akan ditarik (default semua), tulis catatan rekap bila perlu -> **Kunci Rekap & Buat Tagihan**.
+- Validasi anti-duplikat: tidak boleh ada rekap Garbarata yang masih belum ditagihkan untuk mitra+periode sama.
+- Saat disimpan: rekap langsung berstatus `DISETUJUI` (label UI: **Siap Ditagih**), pemakaian terkait -> status `DIAJUKAN` (label UI: **Dikunci Rekap**) + FK `pengajuan_penagihan_garbarata_id` terisi.
+- Setelah rekap terkunci, sistem langsung mengarahkan Admin Jasa ke form **Buat Tagihan Jasa** dengan mitra dan rekap Garbarata tersebut sudah terpilih.
+
+### Tahap 4: Pembuatan Tagihan Jasa (*Admin Jasa -> Buat Tagihan Jasa*)
+
+- Saat Admin Jasa membuka form **Buat Tagihan**, panel **"Tarik Rincian Garbarata dari Rekap AMC"** aktif setelah memilih mitra. Dropdown otomatis terisi daftar rekap berstatus **Siap Ditagih** milik mitra tersebut yang **belum** terikat tagihan lain (saat mode edit/revisi, rekap yang sudah terikat tagihan ini juga muncul dengan label *"terkait tagihan ini"*).
+- Setiap opsi menampilkan ringkasan: **periode** · **jumlah flight** · **nominal total** untuk memudahkan picker.
+- Pilih satu rekap -> tambahkan layanan **Garbarata** di tabel layanan -> klik **"Tarik Rincian"**:
+  - Sistem load semua pemakaian milik rekap tersebut ke panel rincian penerbangan (auto-fill: tanggal, registrasi, flight, route, docking/undocking, bobot, tarif, durasi, rentang, total per baris).
+  - Tarif satuan otomatis terisi dari pemakaian pertama; keterangan auto-fill `Rekap pemakaian Garbarata periode {bulan tahun}`.
+  - Status bar menampilkan: jumlah rincian, total rentang, total Rp tertarik.
+- Saat tagihan **disimpan** (`store`/`update`) dalam satu transaksi:
+  - `pengajuan_penagihan_garbarata.tagihan_jasa_id` diisi dengan id tagihan/referensi rekap.
+  - Semua pemakaian terkait → status `TERTAGIH` + `tagihan_jasa_id` terisi.
+- Saat tagihan **dihapus / dibatalkan**:
+  - `pengajuan.tagihan_jasa_id` di-clear -> rekap kembali tersedia di dropdown.
+  - Pemakaian rollback ke `DIAJUKAN` (tetap terkunci di rekap, siap dipilih ulang ke tagihan baru).
+- Saat mode **revisi** (REVISI/DITOLAK): rekap asli tetap terlihat sebagai "terkait tagihan ini" -> Admin Jasa bisa tarik ulang rincian tanpa kehilangan ikatan.
+- Validasi server-side: rekap harus `DISETUJUI`, harus milik mitra yang dipilih di form, dan belum terikat tagihan lain. Pelanggaran -> DomainException + rollback transaksi.
+
+### Status lifecycle pemakaian garbarata
+
+```
+DRAFT / SIAP_DITAGIH  ──(Admin Jasa: Susun Pengajuan)──►  DIAJUKAN
+                                                            │
+                                  ┌─────────────────────────┴────────────────────┐
+                                  │                                              │
+                       (Koord. Jasa: Tolak)                       (Koord. Jasa: Setujui)
+                                  │                                              │
+                                  ▼                                              ▼
+                                DRAFT                                         DIAJUKAN
+                          (susun ulang)                                 (siap dibuat tagihan)
+                                                                          │
+                                                                  (Tagihan dibuat)
+                                                                          │
+                                                                          ▼
+                                                                       TERTAGIH
+                                                                          │
+                                                            (Tagihan dihapus/dibatalkan)
+                                                                          │
+                                                                          ▼
+                                                                       DIAJUKAN
+                                                              (pengajuan dilepas, siap
+                                                               dipilih ulang ke tagihan baru)
+```
+
+### Jenis Penerbangan di Form Buat Tagihan
+- Field **Jenis Penerbangan** (default `Schedule`) di atas section *Informasi Mitra*.
+- Bila non-schedule, picker **Surat Permohonan** wajib diisi; daftar tersaring otomatis berdasarkan **mitra yang dipilih** + jenis penerbangan + status `DISETUJUI`.
+- Backend tolak penyimpanan bila permohonan bukan milik mitra terkait atau belum disetujui.
+
+### Aturan default:
+- AMC hanya bisa mengedit catatan milik dirinya & masih dalam status `DRAFT` / `SIAP_DITAGIH` (yang sudah `DIAJUKAN` / `TERTAGIH` terkunci).
+- File pendukung sekarang **per-baris** (bukan per-batch) — tiap flight punya bukti sendiri (foto docking, AMC sheet per flight, dsb).
+- Approval permohonan/pengajuan: belum ada notifikasi otomatis ke mitra/AMC (sementara cukup di dashboard).
+- Layanan garbarata di catatan AMC bersifat opsional — bisa dipilih saat input (jika sudah pasti) atau ditentukan kemudian saat Admin Jasa membuat tagihan.
+- **Satu pengajuan ↔ satu tagihan**: pengajuan yang sudah terikat ke tagihan tidak muncul lagi di dropdown picker pengajuan lain (kecuali untuk tagihan yang sama saat mode edit). Jika tagihan dihapus/dibatalkan, pengajuan dilepas kembali ke pool eligible.
+- Tarik rincian dari pengajuan tidak mengubah status pengajuan; status `DISETUJUI` tetap, hanya `tagihan_jasa_id` yang terisi setelah tagihan disimpan.
 
 ---
 

@@ -4,9 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Models\LayananJasa;
 use App\Models\KontrakMitraJasa;
+use App\Models\LogPerubahanTarifPjp2u;
 use App\Models\ArsipDokumen;
 use App\Models\MitraJasa;
 use App\Models\MitraJasaPenjualan;
+use App\Models\PemakaianGarbarata;
+use App\Models\PengajuanPenagihanGarbarata;
 use App\Models\TagihanJasa;
 use App\Models\User;
 use App\Services\WhatsappService;
@@ -103,6 +106,30 @@ class TagihanJasaController extends Controller
                 'kurs' => 1,
                 'satuan' => $utilitas->layananJasa?->satuan ?? ($utilitas->jenis == 'listrik' ? 'kWh' : 'm³'),
                 'keterangan' => $deskripsi . " | Periode {$utilitas->bulan}/{$utilitas->tahun}",
+            ];
+        }
+
+        if ($request->filled('amc_garbarata_pengajuan_id')) {
+            $pengajuanGarbarata = PengajuanPenagihanGarbarata::with(['pemakaian.layanan'])
+                ->where('status', PengajuanPenagihanGarbarata::STATUS_DISETUJUI)
+                ->whereNull('tagihan_jasa_id')
+                ->findOrFail($request->integer('amc_garbarata_pengajuan_id'));
+
+            $pemakaianGarbarata = $pengajuanGarbarata->pemakaian->first();
+            $layananGarbarata = $pemakaianGarbarata?->layanan;
+
+            $tipe = 'FUNGSI';
+            $mode = 'pnbp';
+            $prefillTagihan = [
+                'amc_garbarata_pengajuan_id' => $pengajuanGarbarata->id,
+                'mitra_jasa_id' => $pengajuanGarbarata->mitra_jasa_id,
+                'layanan_jasa_id' => $pemakaianGarbarata?->layanan_jasa_id,
+                'qty' => max((float) $pengajuanGarbarata->total_rentang, 1),
+                'harga_satuan' => (float) ($pemakaianGarbarata?->tarif_garbarata ?? $layananGarbarata?->tarif_dasar ?? 0),
+                'kurs' => 1,
+                'calculation_mode' => 'TARIF',
+                'satuan' => $layananGarbarata?->satuan,
+                'keterangan' => 'Rekap pemakaian Garbarata AMC periode ' . $pengajuanGarbarata->periode_label,
             ];
         }
 
@@ -225,8 +252,10 @@ class TagihanJasaController extends Controller
         });
 
         $pltPlhUsers = $this->pltPlhUsers();
+        $pjp2uTariffChanges = $this->recentPjp2uTariffChanges($pjp2uLayananIds);
+        $permohonanNonScheduleOptions = $this->permohonanNonScheduleOptions();
 
-        return view('tagihan_jasa.create', compact('mitras', 'layanans', 'tipe', 'mode', 'mitraLayananMap', 'mitraMetaMap', 'prefillTagihan', 'pltPlhUsers'));
+        return view('tagihan_jasa.create', compact('mitras', 'layanans', 'tipe', 'mode', 'mitraLayananMap', 'mitraMetaMap', 'prefillTagihan', 'pltPlhUsers', 'pjp2uTariffChanges', 'permohonanNonScheduleOptions'));
     }
 
     public function store(Request $request, WorkflowService $workflowService, JasaAccessService $jasaAccessService, TagihanJasaCalculationService $calculationService)
@@ -237,12 +266,16 @@ class TagihanJasaController extends Controller
             'tipe_pnbp' => ['required', 'in:FUNGSI,NON_FUNGSI,KONSESI'],
             'mitra_jasa_id' => ['required', 'exists:mitra_jasa,id'],
             'tanggal_tagihan' => ['required', 'date'],
+            'jenis_penerbangan' => ['nullable', 'in:schedule,non_schedule_kargo,non_schedule_lain'],
+            'permohonan_non_schedule_id' => ['nullable', 'exists:permohonan_non_schedule,id', 'required_unless:jenis_penerbangan,schedule'],
             'final_verifier_role' => ['required', 'in:KPA,PLT/PLH'],
             'final_verifier_jenis' => ['nullable', 'in:PLT,PLH', 'required_if:final_verifier_role,PLT/PLH'],
             'final_verifier_user_id' => ['nullable', 'exists:users,id', 'required_if:final_verifier_role,PLT/PLH'],
             'kontrak_mitra_jasa_id' => ['nullable', 'exists:kontrak_mitra_jasa,id'],
             'penjualan_id' => ['nullable', 'exists:mitra_jasa_penjualan,id'],
             'utilitas_id' => ['nullable', 'exists:laporan_utilitas,id'],
+            'amc_garbarata_ids' => ['nullable', 'string'],
+            'amc_garbarata_pengajuan_id' => ['nullable', 'integer', 'exists:pengajuan_penagihan_garbarata,id'],
             'layanan' => ['required', 'array', 'min:1'],
             'layanan.*.id' => ['required', 'exists:layanan_jasas,id'],
             'layanan.*.mode' => ['nullable', 'in:TARIF,PERSENTASE'],
@@ -254,10 +287,24 @@ class TagihanJasaController extends Controller
             'layanan.*.calculation_payload' => ['nullable', 'json'],
         ]);
 
+        $validated['jenis_penerbangan'] = $validated['jenis_penerbangan'] ?? 'schedule';
+        if ($validated['jenis_penerbangan'] === 'schedule') {
+            $validated['permohonan_non_schedule_id'] = null;
+        }
+
         try {
             $mitra = MitraJasa::findOrFail($validated['mitra_jasa_id']);
             if (! $mitra->status_aktif) {
                 return back()->withInput()->with('error', 'Mitra nonaktif tidak dapat dibuatkan tagihan.');
+            }
+
+            if ($validated['jenis_penerbangan'] !== 'schedule' && ! empty($validated['permohonan_non_schedule_id'])) {
+                $permohonan = \App\Models\PermohonanNonSchedule::find($validated['permohonan_non_schedule_id']);
+                if (! $permohonan
+                    || $permohonan->status !== \App\Models\PermohonanNonSchedule::STATUS_DISETUJUI
+                    || (int) $permohonan->mitra_jasa_id !== (int) $mitra->id) {
+                    return back()->withInput()->with('error', 'Permohonan non-schedule tidak valid: harus berstatus DISETUJUI dan milik mitra yang sama.');
+                }
             }
 
             $penjualan = null;
@@ -357,6 +404,8 @@ class TagihanJasaController extends Controller
 
                 $tagihan = TagihanJasa::create([
                     'tipe_pnbp' => $tipe,
+                    'jenis_penerbangan' => $validated['jenis_penerbangan'],
+                    'permohonan_non_schedule_id' => $validated['permohonan_non_schedule_id'] ?? null,
                     'mitra_jasa_id' => $validated['mitra_jasa_id'],
                     'kontrak_mitra_jasa_id' => $kontrak?->id,
                     'file_kontrak' => $kontrak?->file_kontrak,
@@ -427,6 +476,13 @@ class TagihanJasaController extends Controller
                     }
                 }
 
+                $this->syncGarbarataTagihanLinks(
+                    $tagihan,
+                    $this->parseGarbarataIds($validated['amc_garbarata_ids'] ?? null),
+                    (int) $validated['mitra_jasa_id'],
+                    isset($validated['amc_garbarata_pengajuan_id']) ? (int) $validated['amc_garbarata_pengajuan_id'] : null
+                );
+
                 return $tagihan;
             });
 
@@ -458,9 +514,14 @@ class TagihanJasaController extends Controller
 
         $tipe = $tagihan->tipe_pnbp ?: 'FUNGSI';
         $mode = $tipe === 'KONSESI' ? 'konsesi' : 'pnbp';
+        $boundGarbarataPengajuanId = PemakaianGarbarata::where('tagihan_jasa_id', $tagihan->id)
+            ->whereNotNull('pengajuan_penagihan_garbarata_id')
+            ->value('pengajuan_penagihan_garbarata_id');
+
         $prefillTagihan = [
             'mitra_jasa_id' => $tagihan->mitra_jasa_id,
             'kontrak_mitra_jasa_id' => $tagihan->kontrak_mitra_jasa_id,
+            'amc_garbarata_pengajuan_id' => $boundGarbarataPengajuanId,
         ];
         $detailPrefills = $tagihan->details->map(function ($detail) {
             $payload = is_array($detail->calculation_payload) ? $detail->calculation_payload : [];
@@ -597,8 +658,10 @@ class TagihanJasaController extends Controller
         });
 
         $pltPlhUsers = $this->pltPlhUsers();
+        $pjp2uTariffChanges = $this->recentPjp2uTariffChanges($pjp2uLayananIds);
+        $permohonanNonScheduleOptions = $this->permohonanNonScheduleOptions();
 
-        return view('tagihan_jasa.create', compact('mitras', 'layanans', 'tipe', 'mode', 'mitraLayananMap', 'mitraMetaMap', 'prefillTagihan', 'detailPrefills', 'tagihan', 'pltPlhUsers'));
+        return view('tagihan_jasa.create', compact('mitras', 'layanans', 'tipe', 'mode', 'mitraLayananMap', 'mitraMetaMap', 'prefillTagihan', 'detailPrefills', 'tagihan', 'pltPlhUsers', 'pjp2uTariffChanges', 'permohonanNonScheduleOptions'));
     }
 
     public function update(Request $request, $id, JasaAccessService $jasaAccessService, TagihanJasaCalculationService $calculationService)
@@ -678,8 +741,13 @@ class TagihanJasaController extends Controller
 
                 $signer = $this->resolveFinalSigner($validated['final_verifier_role'], $validated['final_verifier_user_id'] ?? null, $validated['final_verifier_jenis'] ?? null);
 
+                $jenisPenerbangan = $validated['jenis_penerbangan'] ?? 'schedule';
+                $permohonanId = $jenisPenerbangan === 'schedule' ? null : ($validated['permohonan_non_schedule_id'] ?? null);
+
                 $tagihan->update([
                     'tipe_pnbp' => $validated['tipe_pnbp'],
+                    'jenis_penerbangan' => $jenisPenerbangan,
+                    'permohonan_non_schedule_id' => $permohonanId,
                     'mitra_jasa_id' => $validated['mitra_jasa_id'],
                     'kontrak_mitra_jasa_id' => $kontrak?->id,
                     'file_kontrak' => $kontrak?->file_kontrak,
@@ -726,6 +794,13 @@ class TagihanJasaController extends Controller
                         'total_biaya' => $totalTagihan,
                     ]);
                 }
+
+                $this->syncGarbarataTagihanLinks(
+                    $tagihan,
+                    $this->parseGarbarataIds($validated['amc_garbarata_ids'] ?? null),
+                    (int) $validated['mitra_jasa_id'],
+                    isset($validated['amc_garbarata_pengajuan_id']) ? (int) $validated['amc_garbarata_pengajuan_id'] : null
+                );
             });
 
             return redirect()
@@ -783,7 +858,10 @@ class TagihanJasaController extends Controller
         }
 
         $nomor = $tagihan->nomor_tagihan;
-        $tagihan->delete(); // soft delete — dapat dipulihkan bila diperlukan
+        DB::transaction(function () use ($tagihan) {
+            $this->releaseGarbarataTagihanLinks($tagihan);
+            $tagihan->delete(); // soft delete — dapat dipulihkan bila diperlukan
+        });
 
         return back()->with('success', "Tagihan {$nomor} berhasil dihapus.");
     }
@@ -818,6 +896,8 @@ class TagihanJasaController extends Controller
                 'status' => 'BATAL',
                 'status_dokumen_pengantar' => 'DRAFT',
             ]);
+
+            $this->releaseGarbarataTagihanLinks($tagihan);
 
             $tagihan->logs()->create([
                 'user_id' => Auth::id(),
@@ -1483,6 +1563,118 @@ class TagihanJasaController extends Controller
         ]);
     }
 
+    public function garbarataAmcOptions(Request $request)
+    {
+        abort_unless($this->canCreateTagihanJasa(), 403);
+
+        $validated = $request->validate([
+            'pengajuan_id' => ['required', 'integer', 'exists:pengajuan_penagihan_garbarata,id'],
+            'tagihan_jasa_id' => ['nullable', 'integer'],
+        ]);
+
+        $pengajuan = PengajuanPenagihanGarbarata::with('mitra')->findOrFail($validated['pengajuan_id']);
+        $boundTagihanId = $validated['tagihan_jasa_id'] ?? null;
+
+        if ($pengajuan->status !== PengajuanPenagihanGarbarata::STATUS_DISETUJUI) {
+            return response()->json(['message' => 'Rekap Garbarata belum siap ditagih.'], 422);
+        }
+        if ($pengajuan->tagihan_jasa_id && (int) $pengajuan->tagihan_jasa_id !== (int) $boundTagihanId) {
+            return response()->json(['message' => 'Rekap Garbarata sudah terikat ke tagihan lain.'], 422);
+        }
+
+        $items = PemakaianGarbarata::query()
+            ->where('pengajuan_penagihan_garbarata_id', $pengajuan->id)
+            ->orderBy('tanggal')
+            ->orderBy('docking_at')
+            ->get();
+
+        $rows = $items->map(fn (PemakaianGarbarata $item) => [
+            'id' => $item->id,
+            'tanggal' => $item->tanggal?->format('dmY'),
+            'tanggal_iso' => $item->tanggal?->toDateString(),
+            'reg' => $item->registrasi_pesawat,
+            'flight_arr' => $item->flight_arr,
+            'flight_dep' => $item->flight_dep,
+            'route' => $item->route,
+            'docking' => $item->docking_at?->format('H:i'),
+            'undocking' => $item->undocking_at?->format('H:i'),
+            'type_pesawat' => $item->type_pesawat,
+            'bobot_ton' => (float) ($item->bobot_ton ?? 0),
+            'jasa_pemakaian_garbarata' => (float) ($item->tarif_garbarata ?? 0),
+            'duration_minutes' => (int) $item->durasi_menit,
+            'rentang' => (int) $item->jumlah_rentang,
+            'total' => $item->total_garbarata,
+        ])->values();
+
+        $periodeLabel = sprintf(
+            '%s %d',
+            PengajuanPenagihanGarbarata::BULAN_LABEL[$pengajuan->periode_bulan] ?? sprintf('%02d', $pengajuan->periode_bulan),
+            $pengajuan->periode_tahun,
+        );
+
+        return response()->json([
+            'rows' => $rows,
+            'ids' => $items->pluck('id')->values(),
+            'pengajuan_id' => $pengajuan->id,
+            'summary' => [
+                'count' => $items->count(),
+                'rentang' => (int) $items->sum('jumlah_rentang'),
+                'total' => (float) $items->sum(fn ($item) => $item->total_garbarata),
+                'periode' => $periodeLabel,
+                'mitra' => $pengajuan->mitra?->nama_mitra,
+                'catatan_amc' => $pengajuan->catatan_amc,
+            ],
+        ]);
+    }
+
+    public function garbarataAmcPengajuanList(Request $request)
+    {
+        abort_unless($this->canCreateTagihanJasa(), 403);
+
+        $validated = $request->validate([
+            'mitra_jasa_id' => ['required', 'exists:mitra_jasa,id'],
+            'tagihan_jasa_id' => ['nullable', 'integer'],
+        ]);
+
+        $boundTagihanId = $validated['tagihan_jasa_id'] ?? null;
+
+        $pengajuans = PengajuanPenagihanGarbarata::query()
+            ->with('creator.profilable')
+            ->where('mitra_jasa_id', $validated['mitra_jasa_id'])
+            ->where('status', PengajuanPenagihanGarbarata::STATUS_DISETUJUI)
+            ->where(function ($q) use ($boundTagihanId) {
+                $q->whereNull('tagihan_jasa_id');
+                if ($boundTagihanId) {
+                    $q->orWhere('tagihan_jasa_id', $boundTagihanId);
+                }
+            })
+            ->orderByDesc('periode_tahun')
+            ->orderByDesc('periode_bulan')
+            ->orderByDesc('id')
+            ->get();
+
+        $options = $pengajuans->map(function (PengajuanPenagihanGarbarata $p) {
+            $nominal = PemakaianGarbarata::where('pengajuan_penagihan_garbarata_id', $p->id)
+                ->get()
+                ->sum(fn ($item) => (float) ($item->tarif_garbarata ?? 0) * (int) $item->jumlah_rentang);
+
+            return [
+                'id' => $p->id,
+                'periode_label' => $p->periode_label,
+                'periode_tahun' => $p->periode_tahun,
+                'periode_bulan' => $p->periode_bulan,
+                'jumlah_pemakaian' => (int) $p->jumlah_pemakaian,
+                'total_rentang' => (int) $p->total_rentang,
+                'nominal' => (float) $nominal,
+                'created_by' => $p->creator?->name,
+                'reviewed_at' => optional($p->reviewed_at)->translatedFormat('d M Y'),
+                'is_locked_here' => $boundTagihanId && (int) $p->tagihan_jasa_id === (int) $boundTagihanId,
+            ];
+        })->values();
+
+        return response()->json(['options' => $options]);
+    }
+
     /**
      * Bangun nomor tagihan jasa dengan format (tanpa pemisah titik):
      *   {nomor satker}{nomor mak}{bulan}{tahun}{nomor urut 4 digit}
@@ -1583,10 +1775,14 @@ class TagihanJasaController extends Controller
             'tipe_pnbp' => ['required', 'in:FUNGSI,NON_FUNGSI,KONSESI'],
             'mitra_jasa_id' => ['required', 'exists:mitra_jasa,id'],
             'tanggal_tagihan' => ['required', 'date'],
+            'jenis_penerbangan' => ['nullable', 'in:schedule,non_schedule_kargo,non_schedule_lain'],
+            'permohonan_non_schedule_id' => ['nullable', 'exists:permohonan_non_schedule,id'],
             'final_verifier_role' => ['required', 'in:KPA,PLT/PLH'],
             'final_verifier_jenis' => ['nullable', 'in:PLT,PLH', 'required_if:final_verifier_role,PLT/PLH'],
             'final_verifier_user_id' => ['nullable', 'exists:users,id', 'required_if:final_verifier_role,PLT/PLH'],
             'kontrak_mitra_jasa_id' => ['nullable', 'exists:kontrak_mitra_jasa,id'],
+            'amc_garbarata_ids' => ['nullable', 'string'],
+            'amc_garbarata_pengajuan_id' => ['nullable', 'integer', 'exists:pengajuan_penagihan_garbarata,id'],
             'layanan' => ['required', 'array', 'min:1'],
             'layanan.*.id' => ['required', 'exists:layanan_jasas,id'],
             'layanan.*.mode' => ['nullable', 'in:TARIF,PERSENTASE'],
@@ -1597,6 +1793,116 @@ class TagihanJasaController extends Controller
             'layanan.*.keterangan' => ['nullable', 'string', 'max:1000'],
             'layanan.*.calculation_payload' => ['nullable', 'json'],
         ]);
+    }
+
+    private function parseGarbarataIds(?string $value): array
+    {
+        if (! $value) {
+            return [];
+        }
+
+        return collect(explode(',', $value))
+            ->map(fn ($id) => (int) trim($id))
+            ->filter(fn ($id) => $id > 0)
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    private function syncGarbarataTagihanLinks(TagihanJasa $tagihan, array $ids, int $mitraId, ?int $pengajuanId = null): void
+    {
+        $previousPengajuanIds = PemakaianGarbarata::where('tagihan_jasa_id', $tagihan->id)
+            ->whereNotNull('pengajuan_penagihan_garbarata_id')
+            ->pluck('pengajuan_penagihan_garbarata_id')
+            ->unique()
+            ->all();
+
+        $rollbackQuery = PemakaianGarbarata::where('tagihan_jasa_id', $tagihan->id);
+        if ($ids !== []) {
+            $rollbackQuery->whereNotIn('id', $ids);
+        }
+        $rollbackQuery->update([
+            'tagihan_jasa_id' => null,
+            'status' => PemakaianGarbarata::STATUS_DIAJUKAN,
+        ]);
+
+        if ($pengajuanId === null && $ids === []) {
+            PengajuanPenagihanGarbarata::whereIn('id', $previousPengajuanIds)
+                ->where('tagihan_jasa_id', $tagihan->id)
+                ->update(['tagihan_jasa_id' => null]);
+            return;
+        }
+
+        if ($pengajuanId === null) {
+            throw new \DomainException('Rekap penagihan Garbarata wajib dipilih saat menarik rincian AMC.');
+        }
+        if ($ids === []) {
+            throw new \DomainException('Rekap dipilih tetapi tidak ada rincian Garbarata yang terhubung. Tarik ulang rincian dari rekap.');
+        }
+
+        $pengajuan = PengajuanPenagihanGarbarata::where('id', $pengajuanId)
+            ->where('mitra_jasa_id', $mitraId)
+            ->lockForUpdate()
+            ->first();
+
+        if (! $pengajuan) {
+            throw new \DomainException('Rekap penagihan Garbarata tidak ditemukan atau bukan milik mitra yang dipilih.');
+        }
+        if ($pengajuan->status !== PengajuanPenagihanGarbarata::STATUS_DISETUJUI) {
+            throw new \DomainException('Rekap penagihan Garbarata belum siap ditagih.');
+        }
+        if ($pengajuan->tagihan_jasa_id && (int) $pengajuan->tagihan_jasa_id !== (int) $tagihan->id) {
+            throw new \DomainException('Rekap penagihan Garbarata sudah terikat ke tagihan lain.');
+        }
+
+        $rows = PemakaianGarbarata::query()
+            ->whereIn('id', $ids)
+            ->where('mitra_jasa_id', $mitraId)
+            ->where('pengajuan_penagihan_garbarata_id', $pengajuan->id)
+            ->where(function ($query) use ($tagihan) {
+                $query->whereIn('status', [PemakaianGarbarata::STATUS_DIAJUKAN])
+                    ->orWhere('tagihan_jasa_id', $tagihan->id);
+            })
+            ->lockForUpdate()
+            ->get();
+
+        if ($rows->count() !== count($ids)) {
+            throw new \DomainException('Sebagian rincian Garbarata AMC tidak valid atau bukan bagian dari rekap ini.');
+        }
+
+        PemakaianGarbarata::whereIn('id', $ids)->update([
+            'tagihan_jasa_id' => $tagihan->id,
+            'status' => PemakaianGarbarata::STATUS_TERTAGIH,
+        ]);
+
+        $pengajuan->update(['tagihan_jasa_id' => $tagihan->id]);
+
+        $stalePengajuanIds = array_diff($previousPengajuanIds, [$pengajuan->id]);
+        if ($stalePengajuanIds) {
+            PengajuanPenagihanGarbarata::whereIn('id', $stalePengajuanIds)
+                ->where('tagihan_jasa_id', $tagihan->id)
+                ->update(['tagihan_jasa_id' => null]);
+        }
+    }
+
+    private function releaseGarbarataTagihanLinks(TagihanJasa $tagihan): void
+    {
+        $pengajuanIds = PemakaianGarbarata::where('tagihan_jasa_id', $tagihan->id)
+            ->whereNotNull('pengajuan_penagihan_garbarata_id')
+            ->pluck('pengajuan_penagihan_garbarata_id')
+            ->unique()
+            ->all();
+
+        PemakaianGarbarata::where('tagihan_jasa_id', $tagihan->id)->update([
+            'tagihan_jasa_id' => null,
+            'status' => PemakaianGarbarata::STATUS_DIAJUKAN,
+        ]);
+
+        if ($pengajuanIds) {
+            PengajuanPenagihanGarbarata::whereIn('id', $pengajuanIds)
+                ->where('tagihan_jasa_id', $tagihan->id)
+                ->update(['tagihan_jasa_id' => null]);
+        }
     }
 
     private function generateNomorSuratPengantar(TagihanJasa $tagihan): string
@@ -1675,6 +1981,55 @@ class TagihanJasaController extends Controller
     private function pltPlhUsers()
     {
         return User::role(['PLT/PLH', 'KPA'])->active()->with('profilable')->orderByDisplayName()->get();
+    }
+
+    /**
+     * Daftar perubahan tarif PJP2U yang berlaku dalam 90 hari terakhir,
+     * dipetakan layanan_id => detail terakhir, untuk badge informasi pada form tagihan.
+     */
+    private function recentPjp2uTariffChanges($pjp2uLayananIds): array
+    {
+        $ids = collect($pjp2uLayananIds)->map(fn ($id) => (int) $id)->all();
+        if (empty($ids)) {
+            return [];
+        }
+
+        return LogPerubahanTarifPjp2u::query()
+            ->whereIn('layanan_jasa_id', $ids)
+            ->whereDate('berlaku_mulai', '>=', now()->subDays(90)->toDateString())
+            ->orderByDesc('berlaku_mulai')
+            ->orderByDesc('id')
+            ->get()
+            ->groupBy('layanan_jasa_id')
+            ->map(fn ($group) => $group->first())
+            ->map(fn ($log) => [
+                'berlaku_mulai' => $log->berlaku_mulai?->format('d/m/Y'),
+                'tarif_lama' => (float) $log->tarif_lama,
+                'tarif_baru' => (float) $log->tarif_baru,
+                'tipe' => $log->tipe_label,
+            ])
+            ->all();
+    }
+
+    /**
+     * Permohonan non-schedule yang sudah DISETUJUI, untuk picker di form tagihan.
+     */
+    private function permohonanNonScheduleOptions(): array
+    {
+        return \App\Models\PermohonanNonSchedule::query()
+            ->where('status', \App\Models\PermohonanNonSchedule::STATUS_DISETUJUI)
+            ->orderByDesc('tanggal_surat')
+            ->orderByDesc('id')
+            ->get(['id', 'mitra_jasa_id', 'nomor_surat', 'tanggal_surat', 'jenis_penerbangan', 'tanggal_penerbangan_dari', 'tanggal_penerbangan_sampai'])
+            ->map(fn ($p) => [
+                'id' => $p->id,
+                'mitra_jasa_id' => $p->mitra_jasa_id,
+                'nomor_surat' => $p->nomor_surat,
+                'tanggal_surat' => $p->tanggal_surat?->format('d/m/Y'),
+                'jenis_penerbangan' => $p->jenis_penerbangan,
+                'periode' => trim(($p->tanggal_penerbangan_dari?->format('d/m/Y') ?: '') . ($p->tanggal_penerbangan_sampai ? ' – ' . $p->tanggal_penerbangan_sampai->format('d/m/Y') : '')),
+            ])
+            ->all();
     }
 
     /**

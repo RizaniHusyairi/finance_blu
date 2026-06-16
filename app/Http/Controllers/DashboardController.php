@@ -190,6 +190,9 @@ class DashboardController extends Controller
         if (Auth::user()->hasRole('Admin Konsesi')) {
             return redirect()->route('jasa.mitra.penjualan.index');
         }
+        if (Auth::user()->hasRole('AMC')) {
+            return redirect()->route('pemakaian-garbarata.index');
+        }
         if (Auth::user()->hasRole('KPA')) {
             return $this->kpa();
         }

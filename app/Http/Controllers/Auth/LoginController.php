@@ -84,6 +84,10 @@ class LoginController extends Controller
             return redirect()->route('koordinator-jasa.dashboard');
         }
 
+        if ($user->hasRole('AMC')) {
+            return redirect()->route('pemakaian-garbarata.index');
+        }
+
         if ($user->hasAnyRole(self::INTERNAL_ROLES)) {
             return redirect()->route('dashboard');
         }

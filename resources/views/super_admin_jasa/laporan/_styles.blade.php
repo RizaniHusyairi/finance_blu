@@ -23,7 +23,15 @@
         position: relative;
         z-index: 1;
     }
-    .sa-report-hero h4 {
+    .sa-report-hero {
+        --bs-heading-color: #fff;
+    }
+    .sa-report-hero h1,
+    .sa-report-hero h2,
+    .sa-report-hero h3,
+    .sa-report-hero h4,
+    .sa-report-hero h5,
+    .sa-report-hero h6 {
         color: #fff;
     }
     .sa-report-hero p {

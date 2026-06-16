@@ -41,6 +41,7 @@ class RoleAndPermissionSeeder extends Seeder
             'Koordinator Jasa',
             'Admin Listrik',
             'Admin Air',
+            'AMC',
         ];
 
         foreach ($roles as $role) {
