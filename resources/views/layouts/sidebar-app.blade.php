@@ -27,8 +27,12 @@
           </a>
           <ul>
             @unlessrole('Mitra|Mitra Jasa|Koordinator Jasa')
-            <li><a href="{{ route('dashboard') }}"><i class="material-icons-outlined">arrow_right</i>Dashboard
-                Internal</a>
+            @php
+                $isPureAmc = auth()->check()
+                    && auth()->user()->hasRole('AMC')
+                    && ! auth()->user()->hasAnyRole(['Super Admin', 'Super Admin Jasa', 'Admin Jasa', 'Koordinator Jasa']);
+            @endphp
+            <li><a href="{{ route('dashboard') }}"><i class="material-icons-outlined">arrow_right</i>{{ $isPureAmc ? 'Dashboard AMC' : 'Dashboard Internal' }}</a>
             </li>
             @endunlessrole
             @hasrole('PPSPM')
@@ -111,6 +115,43 @@
             @endhasanyrole
           </ul>
         </li>
+
+        {{-- ════════════════════════════════════════════════════
+             AMC — Operasional Penerbangan
+             ════════════════════════════════════════════════════ --}}
+        @hasanyrole('Super Admin|Super Admin Jasa|Admin Jasa|Koordinator Jasa|AMC|Operator BLU')
+        <li class="menu-label">AMC &mdash; Operasional</li>
+        <li>
+          <a href="{{ route('permohonan-non-schedule.index') }}">
+            <div class="parent-icon"><i class="material-icons-outlined">flight_takeoff</i></div>
+            <div class="menu-title">Permohonan Non-Schedule</div>
+          </a>
+        </li>
+        <li>
+          <a href="{{ route('pemakaian-garbarata.index') }}">
+            <div class="parent-icon"><i class="material-icons-outlined">airline_seat_recline_normal</i></div>
+            <div class="menu-title">Pemakaian Garbarata</div>
+          </a>
+        </li>
+        {{-- Rekap Harian = rekap operasional harian AMC; disembunyikan untuk Admin Jasa (fokus penagihan). --}}
+        @unless(auth()->user()?->hasRole('Admin Jasa') && ! auth()->user()?->hasAnyRole(['Super Admin', 'Super Admin Jasa']))
+        <li>
+          <a href="{{ route('pemakaian-garbarata.rekap-harian') }}">
+            <div class="parent-icon"><i class="material-icons-outlined">calendar_view_week</i></div>
+            <div class="menu-title">Rekap Harian Garbarata</div>
+          </a>
+        </li>
+        @endunless
+        @endhasanyrole
+
+        @hasanyrole('Super Admin|Super Admin Jasa|Admin Jasa|Koordinator Jasa|Operator BLU')
+        <li>
+          <a href="{{ route('pengajuan-penagihan-garbarata.index') }}">
+            <div class="parent-icon"><i class="material-icons-outlined">request_quote</i></div>
+            <div class="menu-title">Rekap Tagihan Garbarata</div>
+          </a>
+        </li>
+        @endhasanyrole
 
         {{-- ════════════════════════════════════════════════════
              PERSETUJUAN & VERIFIKASI
@@ -615,6 +656,13 @@
                 <i class="material-icons-outlined">arrow_right</i>Performa Pembayaran Mitra
               </a>
             </li>
+            @hasanyrole('Super Admin|Super Admin Jasa')
+            <li>
+              <a href="{{ route('super-admin-jasa.laporan.log-tarif-pjp2u') }}">
+                <i class="material-icons-outlined">arrow_right</i>Log Perubahan Tarif PJP2U
+              </a>
+            </li>
+            @endhasanyrole
           </ul>
         </li>
         @endhasanyrole

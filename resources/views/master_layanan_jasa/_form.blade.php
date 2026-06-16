@@ -7,6 +7,8 @@
     $selectedKodePembayaran = $selectedKodeMak && $selectedKodeJenisPembayaran
         ? $selectedKodeMak . '.' . $selectedKodeJenisPembayaran
         : ($isEdit ? ($layanan->kode_pembayaran_lengkap ?? '') : '');
+    $isPjp2uLayanan = $isEdit && $layanan->is_leaf && $layanan->isPjp2u();
+    $originalTarif = $isEdit ? (float) $layanan->tarif_dasar : 0;
 @endphp
 
 @push('css')
@@ -350,13 +352,20 @@
                 <p class="mb-0 fw-semibold small">Mulai dari nama dan posisi, pilih jenis data, lalu isi tarif hanya jika layanan ini bisa ditagihkan.</p>
             </div>
         </div>
-        <a href="{{ route('master-layanan-jasa.index') }}" class="btn btn-light text-primary fw-bold shadow-sm">
-            <i class="bi bi-arrow-left me-1"></i> Kembali
-        </a>
+        <div class="d-flex gap-2">
+            @if($isPjp2uLayanan)
+                <a href="{{ route('master-layanan-jasa.riwayat-tarif-pjp2u', $layanan->id) }}" class="btn btn-warning fw-bold shadow-sm">
+                    <i class="bi bi-clock-history me-1"></i> Riwayat Tarif
+                </a>
+            @endif
+            <a href="{{ route('master-layanan-jasa.index') }}" class="btn btn-light text-primary fw-bold shadow-sm">
+                <i class="bi bi-arrow-left me-1"></i> Kembali
+            </a>
+        </div>
     </div>
 </div>
 
-<form action="{{ $action }}" method="POST" id="masterLayananForm">
+<form action="{{ $action }}" method="POST" id="masterLayananForm" enctype="multipart/form-data" data-is-pjp2u="{{ $isPjp2uLayanan ? '1' : '0' }}" data-original-tarif="{{ $originalTarif }}">
     @csrf
     @isset($method)
         @method($method)
@@ -618,12 +627,97 @@
         <div class="service-form-section bg-light">
             <div class="d-flex flex-column flex-sm-row justify-content-end gap-2">
                 <a href="{{ route('master-layanan-jasa.index') }}" class="btn btn-light fw-bold text-secondary border px-4">Batal</a>
-                <button type="submit" class="btn btn-primary fw-bold px-4">
+                <button type="submit" class="btn btn-primary fw-bold px-4" id="masterLayananSubmit">
                     <i class="bi bi-save me-1"></i>{{ $submitLabel }}
                 </button>
             </div>
         </div>
     </div>
+
+    @if($isPjp2uLayanan)
+        {{-- Modal Wajib Isi: Alasan Perubahan Tarif PJP2U.
+             Dipicu otomatis saat user menyimpan dan tarif_dasar berubah. --}}
+        <div class="modal fade" id="pjp2uTarifLogModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+            <div class="modal-dialog modal-lg modal-dialog-centered">
+                <div class="modal-content" style="border-radius:18px;overflow:hidden;border:0;box-shadow:0 24px 60px rgba(15,47,87,.25);">
+                    <div class="modal-header border-0 position-relative" style="background:linear-gradient(120deg, #14375d 0%, #1d5d95 64%, #207560 100%);color:#fff;padding:20px 24px;">
+                        <div class="d-flex align-items-center gap-3 w-100">
+                            <div class="d-flex align-items-center justify-content-center" style="width:44px;height:44px;border-radius:12px;background:rgba(255,255,255,.18);">
+                                <i class="bi bi-journal-text fs-4"></i>
+                            </div>
+                            <div class="flex-grow-1">
+                                <div class="small text-uppercase fw-bold" style="letter-spacing:.08em;color:#fbbf24;">Audit Trail PJP2U</div>
+                                <h5 class="modal-title fw-bold mb-0" style="color:#fff;">Catat Perubahan Tarif PJP2U</h5>
+                            </div>
+                        </div>
+                        <span style="position:absolute;right:-40px;bottom:-60px;width:160px;height:160px;border-radius:999px;background:rgba(251,191,36,.18);"></span>
+                    </div>
+                    <div class="modal-body" style="padding:24px;">
+                        <div class="alert border-0 d-flex align-items-start gap-3 mb-4" style="background:#eaf3fb;border-left:4px solid #1d5d95 !important;border-radius:14px;">
+                            <i class="bi bi-info-circle-fill text-primary fs-4"></i>
+                            <div class="flex-grow-1">
+                                <div class="fw-bold text-primary">Tarif layanan PJP2U akan diubah.</div>
+                                <div class="small text-secondary mt-1">Wajib mencatat alasan, tipe perubahan, dan tanggal berlaku. Riwayat ini muncul di halaman <strong>Riwayat Tarif</strong> & laporan Super Admin.</div>
+                                <div class="mt-3 d-flex flex-wrap gap-2">
+                                    <span class="badge bg-light text-secondary border px-3 py-2"><i class="bi bi-cash me-1"></i>Tarif lama: <strong class="ms-1">Rp <span id="pjp2uModalTarifLama">0</span></strong></span>
+                                    <span class="badge bg-primary px-3 py-2"><i class="bi bi-cash-coin me-1"></i>Tarif baru: <strong class="ms-1">Rp <span id="pjp2uModalTarifBaru">0</span></strong></span>
+                                    <span class="badge bg-warning text-dark px-3 py-2"><i class="bi bi-arrow-up-right me-1"></i>Selisih: <strong class="ms-1" id="pjp2uModalSelisih">-</strong></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold" for="pjp2u_log_tipe_perubahan">Tipe Perubahan <span class="text-danger">*</span></label>
+                                <select name="pjp2u_log_tipe_perubahan" id="pjp2u_log_tipe_perubahan" class="form-select" required disabled>
+                                    <option value="">Pilih tipe</option>
+                                    <option value="revisi_resmi">Revisi Resmi (SK/Permenhub/Kontrak)</option>
+                                    <option value="diskon">Diskon / Penyesuaian Periode</option>
+                                    <option value="koreksi">Koreksi Salah Input</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold" for="pjp2u_log_nomor_referensi">Nomor Referensi</label>
+                                <input type="text" name="pjp2u_log_nomor_referensi" id="pjp2u_log_nomor_referensi" class="form-control" placeholder="Contoh: SK-123/2026" maxlength="100" disabled>
+                                <div class="form-text small">Nomor SK, surat, atau addendum kontrak (opsional).</div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold" for="pjp2u_log_berlaku_mulai">Berlaku Mulai <span class="text-danger">*</span></label>
+                                <input type="date" name="pjp2u_log_berlaku_mulai" id="pjp2u_log_berlaku_mulai" class="form-control" required disabled value="{{ now()->toDateString() }}">
+                            </div>
+
+                            <div class="col-md-6 d-none" id="pjp2u_log_berlaku_sampai_wrap">
+                                <label class="form-label fw-bold" for="pjp2u_log_berlaku_sampai">Berlaku Sampai</label>
+                                <input type="date" name="pjp2u_log_berlaku_sampai" id="pjp2u_log_berlaku_sampai" class="form-control" disabled>
+                                <div class="form-text small">Untuk diskon periode tertentu. Setelah tanggal ini, tarif harus dikembalikan manual.</div>
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label fw-bold" for="pjp2u_log_alasan">Alasan Perubahan <span class="text-danger">*</span></label>
+                                <textarea name="pjp2u_log_alasan" id="pjp2u_log_alasan" rows="3" class="form-control" placeholder="Jelaskan latar belakang perubahan tarif (min. 10 karakter)" required minlength="10" maxlength="2000" disabled></textarea>
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label fw-bold" for="pjp2u_log_file">File Pendukung</label>
+                                <input type="file" name="pjp2u_log_file" id="pjp2u_log_file" class="form-control" accept=".pdf,.jpg,.jpeg,.png" disabled>
+                                <div class="form-text small">PDF/JPG/PNG, maks 5MB. Lampirkan SK / surat / dokumen pendukung.</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer border-0" style="background:#f8fafc;padding:18px 24px;">
+                        <button type="button" class="btn btn-light border fw-bold px-4" id="pjp2uTarifLogCancel">
+                            <i class="bi bi-x-lg me-1"></i>Batal
+                        </button>
+                        <button type="button" class="btn fw-bold px-4 text-white" id="pjp2uTarifLogConfirm" style="background:linear-gradient(120deg, #14375d 0%, #1d5d95 64%, #207560 100%);border:0;">
+                            <i class="bi bi-check2-circle me-1"></i>Simpan & Catat Perubahan
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endif
     <aside class="service-side-card">
         <div class="side-section">
             <div class="side-title">Cara Membaca Form</div>
@@ -796,6 +890,87 @@
         }
 
         renderForm();
+
+        // === PJP2U Tariff Change Log Modal ===
+        const form = document.getElementById('masterLayananForm');
+        const isPjp2u = form?.dataset.isPjp2u === '1';
+        const originalTarif = parseFloat(form?.dataset.originalTarif || '0');
+        const modalEl = document.getElementById('pjp2uTarifLogModal');
+
+        if (form && isPjp2u && modalEl && window.bootstrap) {
+            const modal = new bootstrap.Modal(modalEl);
+            const modalInputs = modalEl.querySelectorAll('input, select, textarea');
+            const tipeSelect = document.getElementById('pjp2u_log_tipe_perubahan');
+            const berlakuSampaiWrap = document.getElementById('pjp2u_log_berlaku_sampai_wrap');
+            const berlakuSampaiInput = document.getElementById('pjp2u_log_berlaku_sampai');
+            const alasanInput = document.getElementById('pjp2u_log_alasan');
+            const tarifLamaSpan = document.getElementById('pjp2uModalTarifLama');
+            const tarifBaruSpan = document.getElementById('pjp2uModalTarifBaru');
+            const selisihSpan = document.getElementById('pjp2uModalSelisih');
+            const confirmBtn = document.getElementById('pjp2uTarifLogConfirm');
+            const cancelBtn = document.getElementById('pjp2uTarifLogCancel');
+            let confirmed = false;
+
+            function setInputsEnabled(enabled) {
+                modalInputs.forEach((el) => {
+                    el.disabled = !enabled;
+                });
+            }
+
+            function tarifChanged() {
+                const current = parseFloat(tarifInput?.value || '0');
+                return Math.abs(current - originalTarif) > 0.00001;
+            }
+
+            function fmt(n) { return Number(n || 0).toLocaleString('id-ID'); }
+
+            function refreshSummary() {
+                const baru = parseFloat(tarifInput?.value || '0');
+                tarifLamaSpan.textContent = fmt(originalTarif);
+                tarifBaruSpan.textContent = fmt(baru);
+                const selisih = baru - originalTarif;
+                const pct = originalTarif > 0 ? ((selisih / originalTarif) * 100).toFixed(2) : null;
+                const sign = selisih >= 0 ? '+' : '';
+                selisihSpan.textContent = sign + 'Rp ' + fmt(selisih) + (pct !== null ? ' (' + sign + pct + '%)' : '');
+                selisihSpan.style.color = selisih >= 0 ? '#15803d' : '#b91c1c';
+            }
+
+            tipeSelect?.addEventListener('change', function () {
+                const needsRange = this.value === 'diskon';
+                berlakuSampaiWrap.classList.toggle('d-none', !needsRange);
+                if (!needsRange) berlakuSampaiInput.value = '';
+            });
+
+            form.addEventListener('submit', function (e) {
+                if (confirmed || !tarifChanged()) return; // allow submit
+                e.preventDefault();
+                setInputsEnabled(true);
+                refreshSummary();
+                modal.show();
+            });
+
+            cancelBtn?.addEventListener('click', function () {
+                setInputsEnabled(false);
+                modal.hide();
+            });
+
+            confirmBtn?.addEventListener('click', function () {
+                // Trigger native validation on the modal fields
+                if (!tipeSelect.value) { tipeSelect.reportValidity(); return; }
+                if ((alasanInput.value || '').trim().length < 10) {
+                    alasanInput.reportValidity();
+                    return;
+                }
+                if (tipeSelect.value === 'diskon' && !berlakuSampaiInput.value) {
+                    berlakuSampaiInput.required = true;
+                    berlakuSampaiInput.reportValidity();
+                    return;
+                }
+                confirmed = true;
+                modal.hide();
+                form.submit();
+            });
+        }
     });
 </script>
 @endpush

@@ -503,6 +503,55 @@
         @method('PUT')
     @endif
     <input type="hidden" name="tipe_pnbp" value="{{ $tipe }}">
+    <input type="hidden" name="amc_garbarata_ids" id="amcGarbarataIds" value="{{ old('amc_garbarata_ids') }}">
+    <input type="hidden" name="amc_garbarata_pengajuan_id" id="amcGarbarataPengajuanId" value="{{ old('amc_garbarata_pengajuan_id', $prefillTagihan['amc_garbarata_pengajuan_id'] ?? '') }}">
+    @php
+        $currentJenis = old('jenis_penerbangan', $tagihan->jenis_penerbangan ?? ($prefillTagihan['jenis_penerbangan'] ?? 'schedule'));
+        $currentPermohonan = old('permohonan_non_schedule_id', $tagihan->permohonan_non_schedule_id ?? ($prefillTagihan['permohonan_non_schedule_id'] ?? null));
+        $permohonanOptionsJson = json_encode($permohonanNonScheduleOptions ?? []);
+        $showFlightTypePanelInitially = $currentJenis !== 'schedule' || !empty($currentPermohonan);
+    @endphp
+
+    <div id="flightTypeCard"
+         data-force-visible="{{ $showFlightTypePanelInitially ? '1' : '0' }}"
+         class="tw-invoice-card mb-4 overflow-hidden rounded-3xl border border-amber-200 bg-amber-50/40 shadow-[0_16px_42px_rgba(245,158,11,.08)] {{ $showFlightTypePanelInitially ? '' : 'd-none' }}">
+        <div class="border-b border-amber-200 bg-gradient-to-r from-amber-100 via-amber-50 to-white px-4 py-2.5">
+            <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-lg bg-amber-600 text-white shadow-sm shadow-amber-500/30">
+                        <i class="bi bi-airplane-engines"></i>
+                    </div>
+                    <div>
+                        <h6 class="mb-0 text-base font-black text-amber-900">Jenis Penerbangan</h6>
+                        <p class="mb-0 text-xs font-bold text-amber-700">Wajib pilih schedule / non-schedule. Non-schedule butuh surat permohonan AMC yang DISETUJUI.</p>
+                    </div>
+                </div>
+                <a href="{{ route('permohonan-non-schedule.index') }}" target="_blank" class="text-xs font-bold text-amber-700 no-underline">
+                    <i class="bi bi-box-arrow-up-right me-1"></i>Lihat permohonan AMC
+                </a>
+            </div>
+        </div>
+        <div class="p-4">
+            <div class="row g-3">
+                <div class="col-md-5">
+                    <label class="form-label fw-bold small">Jenis Penerbangan</label>
+                    <select name="jenis_penerbangan" id="jenisPenerbanganSelect" class="form-select">
+                        <option value="schedule" @selected($currentJenis === 'schedule')>Schedule (Berjadwal)</option>
+                        <option value="non_schedule_kargo" @selected($currentJenis === 'non_schedule_kargo')>Non-Schedule Kargo</option>
+                        <option value="non_schedule_lain" @selected($currentJenis === 'non_schedule_lain')>Non-Schedule Lainnya</option>
+                    </select>
+                </div>
+                <div class="col-md-7" id="permohonanWrap" style="display:none;">
+                    <label class="form-label fw-bold small">Surat Permohonan Non-Schedule <span class="text-danger">*</span></label>
+                    <select name="permohonan_non_schedule_id" id="permohonanSelect" class="form-select">
+                        <option value="">— Pilih surat permohonan —</option>
+                    </select>
+                    <div class="form-text small">Hanya menampilkan permohonan dengan status <strong>DISETUJUI</strong> untuk mitra yang dipilih.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     @if(!empty($prefillTagihan['penjualan_id']))
         <input type="hidden" name="penjualan_id" value="{{ $prefillTagihan['penjualan_id'] }}">
     @endif
@@ -844,6 +893,21 @@
                                 @endif
                             @endif
                             <li>Tagihan PJP2U tidak digabung dengan tarif layanan lain karena memiliki ketentuan jatuh tempo 7 hari.</li>
+                            @if(! empty($pjp2uTariffChanges ?? []))
+                                <li class="text-warning-emphasis">
+                                    <strong><i class="bi bi-megaphone"></i> Perhatian — Tarif PJP2U baru berubah dalam 90 hari terakhir:</strong>
+                                    <ul class="mb-0">
+                                        @foreach($pjp2uTariffChanges as $layananId => $change)
+                                            @php $layananName = optional($layanans->firstWhere('id', $layananId))->nama_layanan ?? ('Layanan #'.$layananId); @endphp
+                                            <li>
+                                                <span class="fw-bold">{{ $layananName }}</span>:
+                                                tarif berubah pada <strong>{{ $change['berlaku_mulai'] }}</strong>
+                                                (Rp {{ number_format($change['tarif_lama'], 0, ',', '.') }} → Rp {{ number_format($change['tarif_baru'], 0, ',', '.') }}, {{ $change['tipe'] }})
+                                            </li>
+                                        @endforeach
+                                    </ul>
+                                </li>
+                            @endif
                             <li>Untuk satuan khusus seperti per jam per ton, per kg per hari, per m2 per bulan, dan tiap 1000 kg, sistem akan menampilkan input perhitungan otomatis.</li>
                             <li>Untuk tarif yang memakai kata "atau bagiannya", sistem membulatkan ke atas sesuai ketentuan satuan. Contoh 80.001 kg pada tarif tiap 1000 kg dihitung 81 volume tagih.</li>
                             <li>Untuk layanan manual seperti per penumpang, per jam, atau per kg, isi angka sesuai volume yang benar-benar ditagihkan.</li>
@@ -865,6 +929,25 @@
                             <div class="text-xs font-black uppercase text-blue-700">Rumus</div>
                             <div class="mt-1 text-sm font-bold text-blue-700">Tarif x Volume Tagih = Jumlah</div>
                         </div>
+                    </div>
+
+                    <div id="amcGarbarataImportPanel" class="mb-3 rounded-2xl border border-cyan-200 bg-cyan-50/70 p-3" style="display:none;">
+                        <div class="d-flex flex-column flex-lg-row align-items-lg-end gap-3">
+                            <div class="me-lg-auto">
+                                <div class="text-xs font-black uppercase text-cyan-800"><i class="bi bi-airplane-engines me-1"></i>Tarik Rincian Garbarata dari Rekap AMC</div>
+                                <div class="small text-slate-600">Pilih mitra terlebih dahulu, sistem akan memuat daftar rekap AMC yang sudah <strong>siap ditagih</strong> dan belum terikat tagihan.</div>
+                            </div>
+                            <div style="min-width:280px;">
+                                <label class="form-label small fw-bold mb-1">Rekap AMC</label>
+                                <select id="amcGarbarataPengajuanSelect" class="form-select">
+                                    <option value="">— Pilih mitra dulu —</option>
+                                </select>
+                            </div>
+                            <button type="button" class="btn btn-info text-white fw-bold" id="btnImportAmcGarbarata">
+                                <i class="bi bi-download me-1"></i>Tarik Rincian
+                            </button>
+                        </div>
+                        <div class="small fw-bold mt-2 text-cyan-800" id="amcGarbarataImportStatus"></div>
                     </div>
 
                     <div class="overflow-hidden rounded-2xl border border-slate-200 shadow-sm">
@@ -1049,6 +1132,49 @@
         </div>
     </div>
 </div>
+
+<script>
+    (function () {
+        const allPermohonan = {!! $permohonanOptionsJson !!};
+        const currentPermohonan = @json($currentPermohonan);
+        const jenisSel = document.getElementById('jenisPenerbanganSelect');
+        const permohonanWrap = document.getElementById('permohonanWrap');
+        const permohonanSel = document.getElementById('permohonanSelect');
+        const mitraSel = document.getElementById('mitraSelect');
+
+        function rebuildPermohonan() {
+            if (!jenisSel || !permohonanWrap || !permohonanSel) return;
+            const jenis = jenisSel.value;
+            const mitraId = mitraSel ? parseInt(mitraSel.value || 0, 10) : 0;
+            if (jenis === 'schedule') {
+                permohonanWrap.style.display = 'none';
+                permohonanSel.required = false;
+                permohonanSel.value = '';
+                return;
+            }
+            permohonanWrap.style.display = '';
+            permohonanSel.required = true;
+            const filtered = allPermohonan.filter(p =>
+                (!mitraId || p.mitra_jasa_id === mitraId) && p.jenis_penerbangan === jenis
+            );
+            const opts = ['<option value="">— Pilih surat permohonan —</option>'];
+            filtered.forEach(p => {
+                const sel = String(p.id) === String(currentPermohonan) ? 'selected' : '';
+                opts.push(`<option value="${p.id}" ${sel}>${p.nomor_surat} · ${p.tanggal_surat} · ${p.periode}</option>`);
+            });
+            if (filtered.length === 0) {
+                opts.push('<option value="" disabled>(Belum ada permohonan DISETUJUI untuk mitra ini)</option>');
+            }
+            permohonanSel.innerHTML = opts.join('');
+        }
+
+        jenisSel?.addEventListener('change', rebuildPermohonan);
+        mitraSel?.addEventListener('change', rebuildPermohonan);
+        document.addEventListener('DOMContentLoaded', rebuildPermohonan);
+        window.refreshPermohonanNonScheduleOptions = rebuildPermohonan;
+        rebuildPermohonan();
+    })();
+</script>
 
 @endsection
 
@@ -1391,9 +1517,10 @@
 
         function garbarataLineHtml(data = {}) {
             const value = key => escapeHtml(data[key] ?? '');
+            const amcId = escapeHtml(data.amc_id ?? data.id ?? '');
 
             return `
-                <tr class="garbarata-line">
+                <tr class="garbarata-line" data-amc-id="${amcId}">
                     <td class="text-center fw-bold garbarata-no"></td>
                     <td><input type="text" class="form-control garbarata-input garbarata-tanggal" value="${value('tanggal')}" placeholder="01032026"></td>
                     <td><input type="text" class="form-control garbarata-input garbarata-reg" value="${value('reg')}" placeholder="PK-SAT"></td>
@@ -1482,6 +1609,7 @@
                     waktu: formatDuration(minutes),
                     rentang_pemakaian: rentang,
                     total,
+                    amc_id: line.data('amc-id') || null,
                 });
             });
 
@@ -1717,6 +1845,209 @@
             return names.join(' > ');
         }
 
+        function isFlightTypeRelevantService(service) {
+            if (!service) {
+                return false;
+            }
+
+            const text = `${buildServicePath(service)} ${service.nama_layanan || ''} ${service.satuan || ''}`.toLowerCase();
+            return text.includes('garbarata')
+                || text.includes('aviobridge')
+                || text.includes('non-schedule')
+                || text.includes('non schedule');
+        }
+
+        function refreshFlightTypePanel() {
+            const card = $('#flightTypeCard');
+            if (!card.length) {
+                return;
+            }
+
+            const forceVisible = String(card.attr('data-force-visible') || '0') === '1';
+            let hasRelevantService = false;
+
+            $('.service-row').each(function () {
+                const serviceId = $(this).find('.layanan-id-input').val();
+                const service = serviceId ? layanansById[serviceId] : null;
+
+                if (isFlightTypeRelevantService(service)) {
+                    hasRelevantService = true;
+                    return false;
+                }
+            });
+
+            const shouldShow = forceVisible || hasRelevantService;
+            card.toggleClass('d-none', !shouldShow);
+
+            if (!shouldShow) {
+                $('#jenisPenerbanganSelect').val('schedule');
+                $('#permohonanSelect').val('').prop('required', false);
+                $('#permohonanWrap').hide();
+                card.attr('data-force-visible', '0');
+                return;
+            }
+
+            if (typeof window.refreshPermohonanNonScheduleOptions === 'function') {
+                window.refreshPermohonanNonScheduleOptions();
+            }
+        }
+
+        function firstGarbarataServiceRow() {
+            let found = null;
+            $('.service-row').each(function () {
+                const serviceId = $(this).find('.layanan-id-input').val();
+                const service = serviceId ? layanansById[serviceId] : null;
+                if (isGarbarataService(service)) {
+                    found = $(this);
+                    return false;
+                }
+            });
+            return found;
+        }
+
+        // Panel "Tarik Rincian dari Rekap AMC" hanya relevan bila ada layanan garbarata dipilih.
+        function refreshGarbarataImportPanel() {
+            $('#amcGarbarataImportPanel').toggle(!!firstGarbarataServiceRow());
+        }
+
+        const TAGIHAN_ID_FOR_PENGAJUAN = @json(($isEditMode ?? false) && isset($tagihan) ? $tagihan->id : null);
+
+        function formatRupiahShort(value) {
+            return 'Rp ' + (Math.round(Number(value) || 0)).toLocaleString('id-ID');
+        }
+
+        async function refreshGarbarataPengajuanOptions(preselectId = null) {
+            const select = $('#amcGarbarataPengajuanSelect');
+            const status = $('#amcGarbarataImportStatus');
+            const mitraId = $('#mitraSelect').val();
+
+            select.empty();
+
+            if (!mitraId) {
+                select.append('<option value="">— Pilih mitra dulu —</option>');
+                return;
+            }
+
+            select.append('<option value="">Memuat rekap...</option>');
+
+            try {
+                const url = new URL(@json(route('tagihan-jasa.garbarata-pengajuan')), window.location.origin);
+                url.searchParams.set('mitra_jasa_id', mitraId);
+                if (TAGIHAN_ID_FOR_PENGAJUAN) {
+                    url.searchParams.set('tagihan_jasa_id', TAGIHAN_ID_FOR_PENGAJUAN);
+                }
+
+                const response = await fetch(url.toString(), {
+                    headers: { 'Accept': 'application/json' },
+                    credentials: 'same-origin',
+                });
+                if (!response.ok) {
+                    let msg = 'Gagal memuat daftar rekap AMC.';
+                    try {
+                        const err = await response.json();
+                        if (err.message) msg = err.message;
+                    } catch (_) {}
+                    throw new Error(msg);
+                }
+                const payload = await response.json();
+                const options = payload.options || [];
+
+                select.empty();
+                if (options.length === 0) {
+                    select.append('<option value="">Tidak ada rekap siap ditagih yang tersedia.</option>');
+                    return;
+                }
+
+                select.append('<option value="">— Pilih rekap —</option>');
+                options.forEach(opt => {
+                    const lockedLabel = opt.is_locked_here ? ' (terkait tagihan ini)' : '';
+                    const label = `${opt.periode_label} · ${opt.jumlah_pemakaian} flight · ${formatRupiahShort(opt.nominal)}${lockedLabel}`;
+                    const $opt = $('<option>').val(opt.id).text(label);
+                    if (preselectId && Number(preselectId) === Number(opt.id)) {
+                        $opt.prop('selected', true);
+                    }
+                    select.append($opt);
+                });
+
+                if (preselectId && select.val() !== String(preselectId)) {
+                    status.removeClass('text-success').addClass('text-danger')
+                        .text('Rekap yang sebelumnya terikat tidak lagi tersedia.');
+                }
+            } catch (error) {
+                select.empty().append('<option value="">Gagal memuat rekap.</option>');
+                status.removeClass('text-success').addClass('text-danger').text(error.message || 'Gagal memuat rekap.');
+            }
+        }
+
+        async function importAmcGarbarataRows() {
+            const status = $('#amcGarbarataImportStatus');
+            const mitraId = $('#mitraSelect').val();
+            const pengajuanId = $('#amcGarbarataPengajuanSelect').val();
+            const row = firstGarbarataServiceRow();
+
+            if (!mitraId) {
+                status.removeClass('text-success').addClass('text-danger').text('Pilih mitra terlebih dahulu.');
+                return;
+            }
+            if (!pengajuanId) {
+                status.removeClass('text-success').addClass('text-danger').text('Pilih rekap AMC terlebih dahulu.');
+                return;
+            }
+            if (!row) {
+                status.removeClass('text-success').addClass('text-danger').text('Pilih layanan Garbarata di tabel layanan terlebih dahulu.');
+                return;
+            }
+
+            status.removeClass('text-danger text-success').addClass('text-cyan-800').text('Mengambil rincian dari rekap...');
+
+            try {
+                const url = new URL(@json(route('tagihan-jasa.garbarata-amc')), window.location.origin);
+                url.searchParams.set('pengajuan_id', pengajuanId);
+                if (TAGIHAN_ID_FOR_PENGAJUAN) {
+                    url.searchParams.set('tagihan_jasa_id', TAGIHAN_ID_FOR_PENGAJUAN);
+                }
+
+                const response = await fetch(url.toString(), {
+                    headers: { 'Accept': 'application/json' },
+                    credentials: 'same-origin',
+                });
+
+                if (!response.ok) {
+                    let msg = 'Gagal mengambil data AMC.';
+                    try {
+                        const err = await response.json();
+                        if (err.message) msg = err.message;
+                    } catch (_) {}
+                    throw new Error(msg);
+                }
+
+                const payload = await response.json();
+                if (!payload.rows || payload.rows.length === 0) {
+                    $('#amcGarbarataIds').val('');
+                    $('#amcGarbarataPengajuanId').val('');
+                    status.removeClass('text-success').addClass('text-danger').text('Rekap tidak memiliki rincian pemakaian.');
+                    return;
+                }
+
+                const tariff = Number(payload.rows[0].jasa_pemakaian_garbarata || 0);
+                if (tariff > 0) {
+                    row.find('.price-input').val(tariff);
+                }
+
+                const periodeLabel = payload.summary?.periode || '';
+                row.find('.keterangan-input').val(`Rekap pemakaian Garbarata AMC periode ${periodeLabel}`);
+                showGarbarataPanel(row, payload.rows.map(item => ({ ...item, amc_id: item.id })));
+                $('#amcGarbarataIds').val((payload.ids || []).join(','));
+                $('#amcGarbarataPengajuanId').val(payload.pengajuan_id || pengajuanId);
+                calculateTotals();
+
+                status.removeClass('text-danger').addClass('text-success')
+                    .text(`Berhasil tarik ${payload.summary.count} rincian, ${payload.summary.rentang} rentang, total Rp ${formatMoney(payload.summary.total)}.`);
+            } catch (error) {
+                status.removeClass('text-success').addClass('text-danger').text(error.message || 'Gagal mengambil data AMC.');
+            }
+        }
+
         function calculateTotals() {
             let grandTotal = 0;
             $('.service-row').each(function() {
@@ -1785,6 +2116,10 @@
                 showGarbarataPanel(row, options.garbarataRows);
             }
 
+            if (!isGarbarataService(service) && !firstGarbarataServiceRow()) {
+                $('#amcGarbarataIds').val('');
+            }
+
             syncRowCalculation(row);
 
             if (!options.skipCalculate) {
@@ -1792,6 +2127,8 @@
             }
             refreshKontrakOptions();
             updateNomorTagihanPreview();
+            refreshFlightTypePanel();
+            refreshGarbarataImportPanel();
         }
 
         function addServiceRow() {
@@ -1801,6 +2138,7 @@
 
             rowIndex++;
             calculateTotals();
+            refreshFlightTypePanel();
         }
 
         function escapeHtml(value) {
@@ -2197,6 +2535,7 @@
             
             syncRowCalculation(row);
             calculateTotals();
+            refreshFlightTypePanel();
         }
 
         function updateSelectedServiceInfo() {
@@ -2207,9 +2546,24 @@
         addServiceRow();
         refreshAllowedServices();
         applyPrefillTagihan();
+        refreshFlightTypePanel();
+        refreshGarbarataImportPanel();
+        const initialPengajuanId = $('#amcGarbarataPengajuanId').val();
+        refreshGarbarataPengajuanOptions(initialPengajuanId || null).then(() => {
+            if (initialPengajuanId && $('#amcGarbarataPengajuanSelect').val() === String(initialPengajuanId) && firstGarbarataServiceRow()) {
+                importAmcGarbarataRows();
+            }
+        });
+        $('#mitraSelect').on('change', refreshAllowedServices);
         $('#mitraSelect').on('change', function () {
-            refreshAllowedServices();
-            refreshTarifEfektif(true);
+            $('#amcGarbarataPengajuanId').val('');
+            $('#amcGarbarataIds').val('');
+            $('#amcGarbarataImportStatus').removeClass('text-success text-danger').text('');
+            refreshGarbarataPengajuanOptions(null);
+        });
+        $('#jenisPenerbanganSelect').on('change', function() {
+            $('#flightTypeCard').attr('data-force-visible', this.value === 'schedule' ? '0' : '1');
+            refreshFlightTypePanel();
         });
         $('#kontrakSelect').on('change', function() {
             oldKontrakMitraJasaId = null;
@@ -2219,6 +2573,8 @@
         $('#btnAddService').click(function() {
             addServiceRow();
         });
+
+        $('#btnImportAmcGarbarata').on('click', importAmcGarbarataRows);
 
         $(document).on('click', '.btn-search-service', function() {
             activeRow = $(this).closest('tr');
@@ -2259,6 +2615,12 @@
                 calculateTotals();
                 refreshKontrakOptions();
                 updateNomorTagihanPreview();
+                refreshFlightTypePanel();
+                if (!firstGarbarataServiceRow()) {
+                    $('#amcGarbarataIds').val('');
+                    $('#amcGarbarataPengajuanId').val('');
+                }
+                refreshGarbarataImportPanel();
             } else {
                 alert('Minimal harus ada 1 layanan.');
             }

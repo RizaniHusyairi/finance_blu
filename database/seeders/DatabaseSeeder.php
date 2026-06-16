@@ -25,6 +25,7 @@ class DatabaseSeeder extends Seeder
             MasterUangHarianPerjaldinSeeder::class,
             MasterTarifPajakSeeder::class,
             CompletedKontrakPengadaanSeeder::class,
+            MitraMaskapaiSeeder::class,
         ]);
     }
 }

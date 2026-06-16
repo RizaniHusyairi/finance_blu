@@ -3,16 +3,21 @@
 namespace App\Http\Controllers;
 
 use App\Models\LayananJasa;
+use App\Services\Pjp2uTariffLogService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class MasterLayananJasaController extends Controller
 {
+    public function __construct(private Pjp2uTariffLogService $pjp2uTariffLog)
+    {
+    }
+
     public function index(Request $request)
     {
         $canManageMaster = $this->canManageMaster();
         $tipe = $request->query('tipe', 'SEMUA');
-        if (! in_array($tipe, ['SEMUA', 'PNBP', 'KONSESI'], true)) {
+        if (! in_array($tipe, ['SEMUA', 'PNBP', 'KONSESI', 'TARIF'], true)) {
             $tipe = 'SEMUA';
         }
 
@@ -30,14 +35,13 @@ class MasterLayananJasaController extends Controller
             'SEMUA' => $layanans->count(),
             'PNBP' => $layanans->where('tipe_layanan', 'PNBP')->count(),
             'KONSESI' => $layanans->where('mendukung_konsesi', true)->count(),
+            'TARIF' => $layanans->where('is_leaf', true)->count(),
         ];
 
-        $filteredLayanans = $tipe === 'SEMUA'
-            ? $layanans
-            : $this->filterTreeByType($layanans, $tipe);
-
+        // Tampilan kartu memfilter secara client-side, jadi selalu kirim daftar lengkap
+        // (sudah ter-scope untuk Admin Jasa bila bukan pengelola master).
         return view('master_layanan_jasa.index', [
-            'layanans' => $filteredLayanans,
+            'layanans' => $layanans,
             'canManageMaster' => $canManageMaster,
             'tipe' => $tipe,
             'counts' => $counts,
@@ -141,7 +145,13 @@ class MasterLayananJasaController extends Controller
     {
         abort_unless($this->canManageMaster(), 403);
 
-        $validated = $request->validate([
+        $tarifLama = (float) $master_layanan_jasa->tarif_dasar;
+        $tarifBaru = (float) $request->input('tarif_dasar', 0);
+        $needsPjp2uLog = $this->pjp2uTariffLog->isPjp2u($master_layanan_jasa)
+            && $request->input('node_type') === 'item'
+            && abs($tarifBaru - $tarifLama) > 0.00001;
+
+        $rules = [
             'nama_layanan' => 'required|string|max:255',
             'node_type' => 'required|in:category,item',
             'parent_id' => 'nullable|exists:layanan_jasas,id',
@@ -159,10 +169,40 @@ class MasterLayananJasaController extends Controller
             'wajib_tagihan_terpisah' => 'boolean',
             'catatan_jatuh_tempo' => 'nullable|string',
             'is_active' => 'boolean',
+        ];
+
+        if ($needsPjp2uLog) {
+            $rules += [
+                'pjp2u_log_tipe_perubahan' => 'required|in:revisi_resmi,diskon,koreksi',
+                'pjp2u_log_berlaku_mulai' => 'required|date',
+                'pjp2u_log_berlaku_sampai' => 'nullable|date|after_or_equal:pjp2u_log_berlaku_mulai|required_if:pjp2u_log_tipe_perubahan,diskon',
+                'pjp2u_log_nomor_referensi' => 'nullable|string|max:100',
+                'pjp2u_log_alasan' => 'required|string|min:10|max:2000',
+                'pjp2u_log_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
+            ];
+        }
+
+        $validated = $request->validate($rules, [], [
+            'pjp2u_log_tipe_perubahan' => 'tipe perubahan tarif',
+            'pjp2u_log_berlaku_mulai' => 'tanggal berlaku',
+            'pjp2u_log_berlaku_sampai' => 'berlaku sampai',
+            'pjp2u_log_nomor_referensi' => 'nomor referensi',
+            'pjp2u_log_alasan' => 'alasan perubahan tarif',
+            'pjp2u_log_file' => 'file pendukung',
         ]);
 
         $nodeType = $validated['node_type'];
         unset($validated['node_type']);
+
+        // Strip non-column keys so they don't reach update()
+        unset(
+            $validated['pjp2u_log_tipe_perubahan'],
+            $validated['pjp2u_log_berlaku_mulai'],
+            $validated['pjp2u_log_berlaku_sampai'],
+            $validated['pjp2u_log_nomor_referensi'],
+            $validated['pjp2u_log_alasan'],
+            $validated['pjp2u_log_file'],
+        );
 
         if ($nodeType === 'item' && $master_layanan_jasa->children()->exists()) {
             return back()
@@ -212,7 +252,23 @@ class MasterLayananJasaController extends Controller
         }
 
         $master_layanan_jasa->update($validated);
-        
+
+        if ($needsPjp2uLog) {
+            $this->pjp2uTariffLog->record(
+                $master_layanan_jasa->fresh(),
+                $tarifLama,
+                $tarifBaru,
+                [
+                    'tipe_perubahan' => $request->input('pjp2u_log_tipe_perubahan'),
+                    'berlaku_mulai' => $request->input('pjp2u_log_berlaku_mulai'),
+                    'berlaku_sampai' => $request->input('pjp2u_log_berlaku_sampai'),
+                    'nomor_referensi' => $request->input('pjp2u_log_nomor_referensi'),
+                    'alasan' => $request->input('pjp2u_log_alasan'),
+                ],
+                $request->file('pjp2u_log_file'),
+            );
+        }
+
         // Re-evaluate old parent if changed
         if ($oldParentId && $oldParentId != $validated['parent_id']) {
             $oldParent = LayananJasa::find($oldParentId);

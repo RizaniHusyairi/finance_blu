@@ -159,6 +159,207 @@
         margin: 0 .15rem;
         box-shadow: 0 2px 6px rgba(244, 63, 94, .25);
     }
+
+    /* ============ Payment proof modal ============ */
+    .mp-pay-modal .modal-dialog { max-width: 760px; }
+    .mp-pay-modal .modal-content {
+        border: 0;
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 26px 70px rgba(15, 23, 42, .28);
+    }
+    .mp-pay-head {
+        position: relative;
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+        padding: 1.55rem 1.9rem 1.25rem;
+        border-bottom: 1px solid #e2e8f0;
+        background: #ffffff;
+    }
+    .mp-pay-icon {
+        width: 56px;
+        height: 56px;
+        border-radius: 18px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        font-size: 1.55rem;
+        background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+        box-shadow: 0 14px 28px rgba(37, 99, 235, .30);
+        flex-shrink: 0;
+    }
+    .mp-pay-title {
+        margin: 0;
+        font-size: 1.1rem;
+        font-weight: 900;
+        color: #153e8a;
+        letter-spacing: 0;
+    }
+    .mp-pay-subtitle {
+        margin: .25rem 0 0;
+        font-size: .82rem;
+        font-weight: 600;
+        color: #64748b;
+    }
+    .mp-pay-close {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        border: 0;
+        background: transparent;
+        color: #64748b;
+        width: 34px;
+        height: 34px;
+        border-radius: 10px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .mp-pay-close:hover { background: #f1f5f9; color: #0f172a; }
+    .mp-pay-body {
+        padding: 1.45rem 1.9rem 1.55rem;
+        background: #ffffff;
+    }
+    .mp-pay-label {
+        margin-bottom: .45rem;
+        font-size: .78rem;
+        font-weight: 900;
+        color: #153e8a;
+    }
+    .mp-pay-input-wrap { position: relative; }
+    .mp-pay-input-wrap .form-control {
+        min-height: 46px;
+        border-color: #cbd5e1;
+        border-radius: 8px;
+        color: #334155;
+        font-weight: 650;
+        padding-right: 2.45rem;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, .03);
+    }
+    .mp-pay-input-wrap .form-control:focus {
+        border-color: #60a5fa;
+        box-shadow: 0 0 0 4px rgba(96, 165, 250, .16);
+    }
+    .mp-pay-input-wrap .form-control[readonly] {
+        background: #f8fafc;
+        color: #1e293b;
+    }
+    .mp-pay-input-icon {
+        position: absolute;
+        right: .85rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #94a3b8;
+        pointer-events: none;
+    }
+    .mp-pay-help {
+        margin-top: .45rem;
+        font-size: .74rem;
+        line-height: 1.35;
+        font-weight: 600;
+        color: #64748b;
+    }
+    .mp-pay-dropzone {
+        min-height: 158px;
+        border: 1.5px dashed #cbd5e1;
+        border-radius: 12px;
+        background: linear-gradient(180deg, #f8fbff, #ffffff);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1.5rem;
+        text-align: center;
+    }
+    .mp-pay-dropzone.is-dragover {
+        border-color: #3b82f6;
+        background: #eff6ff;
+        box-shadow: inset 0 0 0 1px rgba(59, 130, 246, .18);
+    }
+    .mp-pay-drop-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 58px;
+        height: 48px;
+        margin-bottom: .7rem;
+        color: #1d4ed8;
+        font-size: 2.65rem;
+    }
+    .mp-pay-drop-title {
+        margin-bottom: .15rem;
+        font-size: .88rem;
+        font-weight: 850;
+        color: #1e293b;
+    }
+    .mp-pay-drop-sub {
+        margin-bottom: .85rem;
+        font-size: .78rem;
+        font-weight: 650;
+        color: #64748b;
+    }
+    .mp-pay-file-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: .35rem;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        background: #fff;
+        color: #153e8a;
+        font-weight: 800;
+        padding: .5rem 1rem;
+        cursor: pointer;
+        box-shadow: 0 4px 12px rgba(15, 23, 42, .06);
+    }
+    .mp-pay-file-btn:hover { border-color: #60a5fa; color: #1d4ed8; }
+    .mp-pay-file-name {
+        margin-top: .65rem;
+        font-size: .76rem;
+        font-weight: 650;
+        color: #475569;
+    }
+    .mp-pay-note {
+        min-height: 70px;
+        border-color: #cbd5e1;
+        border-radius: 8px;
+        font-weight: 600;
+        padding-right: 2.45rem;
+    }
+    .mp-pay-footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: .85rem;
+        padding: 1rem 1.9rem;
+        background: #f8fafc;
+        border-top: 1px solid #e2e8f0;
+    }
+    .mp-pay-cancel {
+        min-width: 104px;
+        border-radius: 9px;
+        background: #e2e8f0;
+        border-color: #cbd5e1;
+        color: #0f172a;
+        font-weight: 850;
+    }
+    .mp-pay-submit {
+        min-width: 230px;
+        border: 0;
+        border-radius: 10px;
+        background: linear-gradient(135deg, #22c55e, #10b981);
+        color: #fff;
+        font-weight: 900;
+        box-shadow: 0 14px 24px rgba(16, 185, 129, .28);
+    }
+    .mp-pay-submit:hover {
+        color: #fff;
+        background: linear-gradient(135deg, #16a34a, #059669);
+    }
+    @media (max-width: 575.98px) {
+        .mp-pay-head, .mp-pay-body, .mp-pay-footer { padding-left: 1rem; padding-right: 1rem; }
+        .mp-pay-footer { flex-direction: column-reverse; }
+        .mp-pay-cancel, .mp-pay-submit { width: 100%; }
+    }
 </style>
 @endpush
 
@@ -360,6 +561,158 @@
         </div>
         @endunless
 
+        @php
+            $paymentProofs = $tagihan->paymentProofs ?? collect();
+            $pendingProof = $paymentProofs->firstWhere('status', \App\Models\TagihanJasaPaymentProof::STATUS_MENUNGGU);
+        @endphp
+        @unless($isLunas)
+        <div class="card border-0 shadow-sm rounded-4 mb-4">
+            <div class="card-header bg-white fw-bold d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-upload text-primary me-2"></i>Upload Bukti Pembayaran</span>
+                @if($pendingProof)
+                    <span class="badge {{ $pendingProof->status_badge_class }}">{{ $pendingProof->status_label }}</span>
+                @endif
+            </div>
+            <div class="card-body">
+                @if($pendingProof)
+                    <div class="alert alert-info small mb-0">
+                        Bukti pembayaran Anda sedang menunggu verifikasi. Jika perlu perbaikan, catatan admin akan tampil di riwayat bukti.
+                    </div>
+                @else
+                    <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+                        <div>
+                            <div class="fw-bold">Konfirmasi pembayaran VA manual</div>
+                            <div class="small text-muted">Unggah bukti setelah pembayaran dilakukan. Nominal dikunci mengikuti total tagihan berjalan.</div>
+                        </div>
+                        <button type="button" class="btn btn-success fw-bold" data-bs-toggle="modal" data-bs-target="#modalUploadBuktiPembayaran">
+                            <i class="bi bi-upload me-1"></i>Upload Bukti
+                        </button>
+                    </div>
+                @endif
+            </div>
+        </div>
+
+        @unless($pendingProof)
+        <div class="modal fade mp-pay-modal" id="modalUploadBuktiPembayaran" tabindex="-1" aria-labelledby="modalUploadBuktiPembayaranLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered modal-lg">
+                <div class="modal-content">
+                    <form action="{{ route('mitra.tagihan-jasa.bukti-pembayaran.store', $tagihan->id) }}" method="POST" enctype="multipart/form-data">
+                        @csrf
+                        <div class="mp-pay-head">
+                            <span class="mp-pay-icon"><i class="bi bi-cloud-arrow-up"></i></span>
+                            <div>
+                                <h5 class="mp-pay-title" id="modalUploadBuktiPembayaranLabel">Upload Bukti Pembayaran</h5>
+                                <p class="mp-pay-subtitle">Unggah bukti pembayaran yang telah dilakukan</p>
+                            </div>
+                            <button type="button" class="mp-pay-close" data-bs-dismiss="modal" aria-label="Tutup">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
+                        </div>
+                        <div class="mp-pay-body">
+                            <div class="row g-4">
+                                <div class="col-md-6">
+                                    <label class="mp-pay-label">Tanggal Bayar</label>
+                                    <div class="mp-pay-input-wrap">
+                                        <input type="date" name="tanggal_bayar" class="form-control @error('tanggal_bayar') is-invalid @enderror" value="{{ old('tanggal_bayar', now()->toDateString()) }}" required>
+                                        <i class="bi bi-calendar3 mp-pay-input-icon"></i>
+                                    </div>
+                                    @error('tanggal_bayar')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="mp-pay-label">Nominal Bayar</label>
+                                    <div class="mp-pay-input-wrap">
+                                        <input type="number" name="nominal_bayar" class="form-control" value="{{ (int) $tagihan->total_dengan_denda }}" min="1" step="1" readonly aria-readonly="true">
+                                        <i class="bi bi-lock mp-pay-input-icon"></i>
+                                    </div>
+                                    <div class="mp-pay-help">Nominal mengikuti total tagihan berjalan, termasuk denda jika ada.</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="mp-pay-label">Bank Pengirim</label>
+                                    <div class="mp-pay-input-wrap">
+                                        <input type="text" name="bank_pengirim" class="form-control @error('bank_pengirim') is-invalid @enderror" value="{{ old('bank_pengirim') }}" placeholder="Contoh: BTN / BRI / Mandiri">
+                                        <i class="bi bi-bank mp-pay-input-icon"></i>
+                                    </div>
+                                    @error('bank_pengirim')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="mp-pay-label">Nomor Referensi</label>
+                                    <div class="mp-pay-input-wrap">
+                                        <input type="text" name="nomor_referensi" class="form-control @error('nomor_referensi') is-invalid @enderror" value="{{ old('nomor_referensi') }}" placeholder="Nomor transaksi dari bank">
+                                        <i class="bi bi-hash mp-pay-input-icon"></i>
+                                    </div>
+                                    @error('nomor_referensi')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                </div>
+                                <div class="col-12">
+                                    <label class="mp-pay-label">File Bukti Transfer</label>
+                                    <div class="mp-pay-dropzone">
+                                        <div>
+                                            <div class="mp-pay-drop-icon"><i class="bi bi-cloud-arrow-up"></i></div>
+                                            <div class="mp-pay-drop-title">Drag & drop file di sini atau klik untuk memilih</div>
+                                            <div class="mp-pay-drop-sub">PDF, JPG atau PNG (maks. 5MB)</div>
+                                            <input type="file" name="file_bukti" id="fileBuktiPembayaran" class="visually-hidden @error('file_bukti') is-invalid @enderror" accept=".pdf,.jpg,.jpeg,.png" required>
+                                            <label for="fileBuktiPembayaran" class="mp-pay-file-btn">
+                                                <i class="bi bi-paperclip"></i>Pilih File
+                                            </label>
+                                            <div class="mp-pay-file-name" id="fileBuktiPembayaranName">Belum ada file dipilih</div>
+                                        </div>
+                                    </div>
+                                    @error('file_bukti')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                </div>
+                                <div class="col-12">
+                                    <label class="mp-pay-label">Catatan (Opsional)</label>
+                                    <div class="mp-pay-input-wrap">
+                                        <textarea name="catatan_mitra" rows="2" class="form-control mp-pay-note @error('catatan_mitra') is-invalid @enderror" placeholder="Tulis catatan tambahan jika diperlukan...">{{ old('catatan_mitra') }}</textarea>
+                                        <i class="bi bi-file-earmark-text mp-pay-input-icon"></i>
+                                    </div>
+                                    @error('catatan_mitra')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mp-pay-footer">
+                            <button type="button" class="btn mp-pay-cancel" data-bs-dismiss="modal">Batal</button>
+                            <button type="submit" class="btn mp-pay-submit">
+                                <i class="bi bi-send-check me-1"></i>Kirim Bukti Pembayaran
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        @endunless
+        @endunless
+
+        @if($paymentProofs->isNotEmpty())
+        <div class="card border-0 shadow-sm rounded-4 mb-4">
+            <div class="card-header bg-white fw-bold">Riwayat Bukti Pembayaran</div>
+            <div class="list-group list-group-flush">
+                @foreach($paymentProofs as $proof)
+                    <div class="list-group-item">
+                        <div class="d-flex justify-content-between gap-3">
+                            <div>
+                                <div class="fw-bold">Rp {{ number_format($proof->nominal_bayar, 0, ',', '.') }}</div>
+                                <div class="small text-muted">
+                                    {{ optional($proof->tanggal_bayar)->translatedFormat('d F Y') }} · {{ $proof->bank_pengirim ?: 'Bank tidak diisi' }}
+                                    @if($proof->nomor_referensi)
+                                        · Ref: {{ $proof->nomor_referensi }}
+                                    @endif
+                                </div>
+                                @if($proof->catatan_verifikator)
+                                    <div class="small text-danger mt-1">{{ $proof->catatan_verifikator }}</div>
+                                @endif
+                            </div>
+                            <div class="text-end">
+                                <span class="badge {{ $proof->status_badge_class }}">{{ $proof->status_label }}</span>
+                                <a href="{{ route('mitra.tagihan-jasa.bukti-pembayaran.download', [$tagihan->id, $proof->id]) }}" class="btn btn-sm btn-outline-secondary mt-2 d-block">
+                                    <i class="bi bi-download me-1"></i>Bukti
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+        @endif
+
         <div class="card border-0 shadow-sm rounded-4">
             <div class="card-header bg-white fw-bold">Dokumen</div>
             <div class="card-body d-grid gap-2">
@@ -453,5 +806,51 @@
         render();
         if (! isPaid) setInterval(render, 1000);
     })();
+
+    (function () {
+        const input = document.getElementById('fileBuktiPembayaran');
+        const nameEl = document.getElementById('fileBuktiPembayaranName');
+        const dropzone = input ? input.closest('.mp-pay-dropzone') : null;
+        if (!input || !nameEl || !dropzone) return;
+
+        const setFileName = function () {
+            nameEl.textContent = input.files && input.files.length
+                ? input.files[0].name
+                : 'Belum ada file dipilih';
+        };
+
+        input.addEventListener('change', setFileName);
+
+        ['dragenter', 'dragover'].forEach(function (eventName) {
+            dropzone.addEventListener(eventName, function (event) {
+                event.preventDefault();
+                dropzone.classList.add('is-dragover');
+            });
+        });
+
+        ['dragleave', 'drop'].forEach(function (eventName) {
+            dropzone.addEventListener(eventName, function (event) {
+                event.preventDefault();
+                dropzone.classList.remove('is-dragover');
+            });
+        });
+
+        dropzone.addEventListener('drop', function (event) {
+            if (event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files.length) {
+                input.files = event.dataTransfer.files;
+                setFileName();
+            }
+        });
+    })();
 </script>
+@if($errors->hasAny(['tanggal_bayar', 'bank_pengirim', 'nomor_referensi', 'catatan_mitra', 'file_bukti']))
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const modalEl = document.getElementById('modalUploadBuktiPembayaran');
+        if (modalEl && window.bootstrap) {
+            bootstrap.Modal.getOrCreateInstance(modalEl).show();
+        }
+    });
+</script>
+@endif
 @endpush

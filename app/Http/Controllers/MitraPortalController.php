@@ -7,6 +7,7 @@ use App\Models\LayananJasa;
 use App\Models\MitraJasa;
 use App\Models\MitraJasaPenjualan;
 use App\Models\TagihanJasa;
+use App\Models\TagihanJasaPaymentProof;
 use App\Services\MitraJasaKonsesiService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
@@ -27,12 +28,94 @@ class MitraPortalController extends Controller
             'mitra',
             'kontrakMitraJasa',
             'details.layananJasa.parent.parent.parent.parent.parent',
+            'paymentProofs.uploader',
+            'paymentProofs.verifier',
         ])
             ->where('mitra_jasa_id', $mitra->id)
             ->whereIn('status', ['PUBLISHED', 'LUNAS'])
             ->findOrFail($id);
 
         return view('dashboard.mitra_tagihan_jasa_show', compact('mitra', 'tagihan'));
+    }
+
+    public function storePaymentProof(Request $request, $id)
+    {
+        $mitra = $this->currentMitraJasa();
+
+        $tagihan = TagihanJasa::with(['paymentProofs'])
+            ->where('mitra_jasa_id', $mitra->id)
+            ->where('status', 'PUBLISHED')
+            ->where('status_pembayaran', '!=', 'lunas')
+            ->findOrFail($id);
+
+        $hasPendingProof = $tagihan->paymentProofs
+            ->contains(fn (TagihanJasaPaymentProof $proof) => $proof->status === TagihanJasaPaymentProof::STATUS_MENUNGGU);
+
+        if ($hasPendingProof) {
+            return back()->with('error', 'Masih ada bukti pembayaran yang menunggu verifikasi. Tunggu hasil verifikasi sebelum mengunggah ulang.');
+        }
+
+        $validated = $request->validate([
+            'tanggal_bayar' => ['required', 'date', 'before_or_equal:today'],
+            'bank_pengirim' => ['nullable', 'string', 'max:100'],
+            'nomor_referensi' => ['nullable', 'string', 'max:150'],
+            'catatan_mitra' => ['nullable', 'string', 'max:1000'],
+            'file_bukti' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
+        ], [
+            'file_bukti.required' => 'File bukti transfer wajib diunggah.',
+            'file_bukti.mimes' => 'Bukti transfer harus berupa PDF, JPG, JPEG, atau PNG.',
+            'file_bukti.max' => 'Ukuran bukti transfer maksimal 5MB.',
+        ]);
+
+        $file = $request->file('file_bukti');
+        $path = $file->store('tagihan-jasa/payment-proofs', 'local');
+
+        $proof = TagihanJasaPaymentProof::create([
+            'tagihan_jasa_id' => $tagihan->id,
+            'mitra_jasa_id' => $mitra->id,
+            'uploaded_by' => $request->user()?->id,
+            'tanggal_bayar' => $validated['tanggal_bayar'],
+            'nominal_bayar' => $tagihan->total_dengan_denda,
+            'bank_pengirim' => $validated['bank_pengirim'] ?? null,
+            'nomor_referensi' => $validated['nomor_referensi'] ?? null,
+            'file_path' => $path,
+            'original_name' => $file->getClientOriginalName(),
+            'mime_type' => $file->getMimeType(),
+            'file_size' => $file->getSize(),
+            'status' => TagihanJasaPaymentProof::STATUS_MENUNGGU,
+            'catatan_mitra' => $validated['catatan_mitra'] ?? null,
+        ]);
+
+        $tagihan->update(['status_pembayaran' => 'menunggu_verifikasi']);
+
+        $tagihan->logs()->create([
+            'user_id' => $request->user()?->id,
+            'role_saat_itu' => $request->user()?->getRoleNames()->first() ?? 'Mitra',
+            'status_sebelumnya' => 'PUBLISHED',
+            'status_baru' => 'PUBLISHED',
+            'aksi' => 'UPLOAD_BUKTI_PEMBAYARAN',
+            'catatan' => 'Bukti pembayaran #' . $proof->id . ' diunggah oleh mitra.',
+            'ip_address' => $request->ip(),
+        ]);
+
+        return back()->with('success', 'Bukti pembayaran berhasil diunggah dan menunggu verifikasi admin.');
+    }
+
+    public function downloadPaymentProof($id, TagihanJasaPaymentProof $proof)
+    {
+        $mitra = $this->currentMitraJasa();
+
+        $tagihan = TagihanJasa::where('mitra_jasa_id', $mitra->id)
+            ->whereIn('status', ['PUBLISHED', 'LUNAS'])
+            ->findOrFail($id);
+
+        abort_unless((int) $proof->tagihan_jasa_id === (int) $tagihan->id, 404);
+        abort_unless(Storage::disk('local')->exists($proof->file_path), 404);
+
+        return Storage::disk('local')->download(
+            $proof->file_path,
+            $proof->original_name ?: ('bukti-pembayaran-' . $proof->id)
+        );
     }
 
     public function invoiceTagihanJasaPdf(Request $request, $id)

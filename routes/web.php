@@ -35,12 +35,15 @@ use App\Http\Controllers\HonorariumController;
 use App\Http\Controllers\JasaIntegrationSettingController;
 use App\Http\Controllers\KontrakMitraJasaController;
 use App\Http\Controllers\KpaApprovalController;
-use App\Http\Controllers\LayananTarifDiskonController;
+use App\Http\Controllers\LogPerubahanTarifPjp2uController;
 use App\Http\Controllers\MasterLayananJasaController;
 use App\Http\Controllers\MasterTarifPajakController;
 use App\Http\Controllers\MasterUangHarianPerjaldinController;
 use App\Http\Controllers\MitraAccountController;
 use App\Http\Controllers\MitraJasaController;
+use App\Http\Controllers\PemakaianGarbarataController;
+use App\Http\Controllers\PengajuanPenagihanGarbarataController;
+use App\Http\Controllers\PermohonanNonScheduleController;
 use App\Http\Controllers\MitraJasaKonsesiController;
 use App\Http\Controllers\MitraJasaPenjualanController;
 use App\Http\Controllers\MitraJasaPjp2uController;
@@ -191,8 +194,9 @@ Route::get('/', function () {
 });
 
 $internalRoles = 'Super Admin|Super Admin Jasa|KPA|PLT/PLH|Kepala Subbagian Keuangan dan Tata Usaha|Kepala Seksi Pelayanan dan Kerjasama|PPK|PPSPM|Bendahara Pengeluaran|Bendahara Penerimaan|Pejabat Pengadaan|Operator BLU|PPABP|Operator Perjaldin|Koordinator Keuangan|Admin Jasa|Admin Konsesi|Koordinator Jasa';
+$dashboardRoles = $internalRoles . '|AMC';
 
-Route::middleware(['auth', 'account.active'])->group(function () use ($internalRoles) {
+Route::middleware(['auth', 'account.active'])->group(function () use ($internalRoles, $dashboardRoles) {
 
     // Universal Profile
     Route::get('/profile', [ProfileController::class, 'index'])->name('profile.index');
@@ -204,9 +208,13 @@ Route::middleware(['auth', 'account.active'])->group(function () use ($internalR
     Route::get('/arsip-sensitif/{arsip}/download', [DocumentController::class, 'downloadArsipSensitif'])
         ->name('arsip-sensitif.download');
 
-    // Internal Dashboard — all internal roles
+    // Internal Dashboard — route masuk umum; role khusus seperti AMC langsung diarahkan oleh controller.
+    Route::get('/dashboard', [DashboardController::class, 'internal'])
+        ->middleware("role:$dashboardRoles")
+        ->name('dashboard');
+
+    // Internal Dashboard — dashboard spesifik untuk role internal.
     Route::middleware("role:$internalRoles")->group(function () {
-        Route::get('/dashboard', [DashboardController::class, 'internal'])->name('dashboard');
         Route::get('/dashboard/bendahara-penerimaan', [BendaharaPenerimaanDashboardController::class, 'index'])->name('dashboard.bendahara-penerimaan');
         Route::get('/dashboard/bendahara-pengeluaran', [BendaharaPengeluaranDashboardController::class, 'index'])->name('dashboard.bendahara-pengeluaran');
         Route::get('/dashboard/ppspm', [DashboardController::class, 'ppspmDashboard'])->name('dashboard.ppspm');
@@ -273,6 +281,14 @@ Route::middleware(['auth', 'account.active'])->group(function () use ($internalR
                 ->where('report', 'rekap-tagihan|rekap-layanan|rekap-terima-setor|rekap-pembayaran|rekap-piutang|performa-mitra')
                 ->where('format', 'pdf|excel')
                 ->name('export');
+
+            Route::get('/log-tarif-pjp2u', [LogPerubahanTarifPjp2uController::class, 'laporan'])
+                ->name('log-tarif-pjp2u');
+            Route::get('/log-tarif-pjp2u/export/{format}', [LogPerubahanTarifPjp2uController::class, 'export'])
+                ->where('format', 'pdf|excel')
+                ->name('log-tarif-pjp2u.export');
+            Route::get('/log-tarif-pjp2u/{log}/file', [LogPerubahanTarifPjp2uController::class, 'fileDownload'])
+                ->name('log-tarif-pjp2u.file');
         });
 
     // Workflow Engine General Routes
@@ -418,8 +434,40 @@ Route::middleware(['auth', 'account.active'])->group(function () use ($internalR
     });
 
     // Master Data — Layanan Jasa
-    Route::middleware('role:Super Admin|Super Admin Jasa|Operator BLU|Koordinator Keuangan|Admin Jasa|Koordinator Jasa')->group(function () {
+    Route::middleware('role:Super Admin|Super Admin Jasa|Operator BLU|Koordinator Keuangan|Admin Jasa|Koordinator Jasa|AMC')->group(function () {
+        Route::get('/master-layanan-jasa/{master_layanan_jasa}/riwayat-tarif-pjp2u', [LogPerubahanTarifPjp2uController::class, 'riwayat'])
+            ->name('master-layanan-jasa.riwayat-tarif-pjp2u');
         Route::resource('master-layanan-jasa', MasterLayananJasaController::class);
+
+        Route::middleware('role:Super Admin|Super Admin Jasa|Admin Jasa|Koordinator Jasa|AMC|Operator BLU')->group(function () {
+            Route::get('/permohonan-non-schedule', [PermohonanNonScheduleController::class, 'index'])->name('permohonan-non-schedule.index');
+            Route::get('/permohonan-non-schedule/create', [PermohonanNonScheduleController::class, 'create'])->name('permohonan-non-schedule.create');
+            Route::post('/permohonan-non-schedule', [PermohonanNonScheduleController::class, 'store'])->name('permohonan-non-schedule.store');
+            Route::get('/permohonan-non-schedule/{permohonan_non_schedule}/edit', [PermohonanNonScheduleController::class, 'edit'])->name('permohonan-non-schedule.edit');
+            Route::put('/permohonan-non-schedule/{permohonan_non_schedule}', [PermohonanNonScheduleController::class, 'update'])->name('permohonan-non-schedule.update');
+            Route::delete('/permohonan-non-schedule/{permohonan_non_schedule}', [PermohonanNonScheduleController::class, 'destroy'])->name('permohonan-non-schedule.destroy');
+            Route::post('/permohonan-non-schedule/{permohonan_non_schedule}/review', [PermohonanNonScheduleController::class, 'review'])->name('permohonan-non-schedule.review');
+            Route::get('/permohonan-non-schedule/{permohonan_non_schedule}/file', [PermohonanNonScheduleController::class, 'file'])->name('permohonan-non-schedule.file');
+
+            Route::get('/pemakaian-garbarata/jadwal-lookup', [PemakaianGarbarataController::class, 'jadwal'])->name('pemakaian-garbarata.jadwal-lookup');
+            Route::get('/pemakaian-garbarata/rekap-harian', [PemakaianGarbarataController::class, 'rekapHarian'])->name('pemakaian-garbarata.rekap-harian');
+            Route::get('/pemakaian-garbarata/detail-hari/{tanggal}', [PemakaianGarbarataController::class, 'detailHari'])->name('pemakaian-garbarata.detail-hari');
+            Route::get('/pemakaian-garbarata', [PemakaianGarbarataController::class, 'index'])->name('pemakaian-garbarata.index');
+            Route::get('/pemakaian-garbarata/create', [PemakaianGarbarataController::class, 'create'])->name('pemakaian-garbarata.create');
+            Route::post('/pemakaian-garbarata', [PemakaianGarbarataController::class, 'store'])->name('pemakaian-garbarata.store');
+            Route::get('/pemakaian-garbarata/{pemakaian_garbarata}/edit', [PemakaianGarbarataController::class, 'edit'])->name('pemakaian-garbarata.edit');
+            Route::put('/pemakaian-garbarata/{pemakaian_garbarata}', [PemakaianGarbarataController::class, 'update'])->name('pemakaian-garbarata.update');
+            Route::delete('/pemakaian-garbarata/{pemakaian_garbarata}', [PemakaianGarbarataController::class, 'destroy'])->name('pemakaian-garbarata.destroy');
+            Route::get('/pemakaian-garbarata/{pemakaian_garbarata}/file', [PemakaianGarbarataController::class, 'file'])->name('pemakaian-garbarata.file');
+
+            Route::get('/pengajuan-penagihan-garbarata', [PengajuanPenagihanGarbarataController::class, 'index'])->name('pengajuan-penagihan-garbarata.index');
+            Route::get('/pengajuan-penagihan-garbarata/create', [PengajuanPenagihanGarbarataController::class, 'create'])->name('pengajuan-penagihan-garbarata.create');
+            Route::post('/pengajuan-penagihan-garbarata', [PengajuanPenagihanGarbarataController::class, 'store'])->name('pengajuan-penagihan-garbarata.store');
+            Route::get('/pengajuan-penagihan-garbarata/{pengajuan_penagihan_garbarata}', [PengajuanPenagihanGarbarataController::class, 'show'])->name('pengajuan-penagihan-garbarata.show');
+            Route::post('/pengajuan-penagihan-garbarata/{pengajuan_penagihan_garbarata}/review', [PengajuanPenagihanGarbarataController::class, 'review'])->name('pengajuan-penagihan-garbarata.review');
+            Route::delete('/pengajuan-penagihan-garbarata/{pengajuan_penagihan_garbarata}', [PengajuanPenagihanGarbarataController::class, 'destroy'])->name('pengajuan-penagihan-garbarata.destroy');
+        });
+
         Route::get('/layanan-tarif-jasa', [TarifLayananController::class, 'index'])->name('tarif-layanan.index');
         Route::get('/layanan-tarif-jasa/kategori/{kategori}', [TarifLayananController::class, 'showKategori'])->name('tarif-layanan.kategori.show');
         Route::get('/layanan-tarif-jasa/item/{item}', [TarifLayananController::class, 'showItem'])->name('tarif-layanan.item.show');
@@ -517,6 +565,8 @@ Route::middleware(['auth', 'account.active'])->group(function () use ($internalR
         Route::get('/tagihan-jasa/create', [TagihanJasaController::class, 'create'])->name('tagihan-jasa.create');
         Route::get('/tagihan-jasa/preview-nomor', [TagihanJasaController::class, 'previewNomorTagihan'])->name('tagihan-jasa.preview-nomor');
         Route::get('/tagihan-jasa/tarif-efektif', [TagihanJasaController::class, 'tarifEfektif'])->name('tagihan-jasa.tarif-efektif');
+        Route::get('/tagihan-jasa/garbarata-amc', [TagihanJasaController::class, 'garbarataAmcOptions'])->name('tagihan-jasa.garbarata-amc');
+        Route::get('/tagihan-jasa/garbarata-pengajuan', [TagihanJasaController::class, 'garbarataAmcPengajuanList'])->name('tagihan-jasa.garbarata-pengajuan');
         Route::post('/tagihan-jasa', [TagihanJasaController::class, 'store'])->name('tagihan-jasa.store');
         Route::get('/tagihan-jasa/{id}/edit', [TagihanJasaController::class, 'edit'])->name('tagihan-jasa.edit');
         Route::put('/tagihan-jasa/{id}', [TagihanJasaController::class, 'update'])->name('tagihan-jasa.update');
@@ -536,10 +586,13 @@ Route::middleware(['auth', 'account.active'])->group(function () use ($internalR
         Route::get('/tagihan-jasa/{id}/surat-pengantar-final', [TagihanJasaController::class, 'viewSuratPengantarFinal'])->name('tagihan-jasa.surat-pengantar-final.view');
         Route::post('/tagihan-jasa/{id}/surat-pengantar-final', [TagihanJasaController::class, 'uploadSuratPengantarFinal'])->name('tagihan-jasa.surat-pengantar-final.upload');
         Route::get('/tagihan-jasa/{id}/surat-pengantar-arsip/{arsipId}', [TagihanJasaController::class, 'viewSuratPengantarArchive'])->name('tagihan-jasa.surat-pengantar-arsip.view');
+        Route::get('/tagihan-jasa/{id}/bukti-pembayaran/{proof}/download', [TagihanJasaController::class, 'downloadPaymentProof'])->name('tagihan-jasa.bukti-pembayaran.download');
         Route::get('/tagihan-jasa/{id}', [TagihanJasaController::class, 'show'])->name('tagihan-jasa.show');
         Route::get('/tagihan-jasa/{id}/pdf', [TagihanJasaController::class, 'generateInvoicePdf'])->name('tagihan-jasa.pdf');
         Route::post('/tagihan-jasa/{id}/publish', [TagihanJasaController::class, 'publish'])->name('tagihan-jasa.publish');
         Route::post('/tagihan-jasa/{id}/mark-lunas', [TagihanJasaController::class, 'markAsPaid'])->name('tagihan-jasa.mark-lunas');
+        Route::post('/tagihan-jasa/{id}/bukti-pembayaran/{proof}/terima', [TagihanJasaController::class, 'acceptPaymentProof'])->name('tagihan-jasa.bukti-pembayaran.terima');
+        Route::post('/tagihan-jasa/{id}/bukti-pembayaran/{proof}/tolak', [TagihanJasaController::class, 'rejectPaymentProof'])->name('tagihan-jasa.bukti-pembayaran.tolak');
         Route::post('/tagihan-jasa/{id}/auto-approve', [TagihanJasaController::class, 'autoApproveAll'])->name('tagihan-jasa.auto-approve');
         Route::delete('/tagihan-jasa/{id}', [TagihanJasaController::class, 'destroy'])->name('tagihan-jasa.destroy');
         Route::post('/tagihan-jasa/{id}/cancel', [TagihanJasaController::class, 'cancel'])->name('tagihan-jasa.cancel');
@@ -889,6 +942,8 @@ Route::middleware(['auth', 'account.active'])->group(function () use ($internalR
         Route::get('/mitra/laporan-pax/create', [MitraPortalController::class, 'createPax'])->name('mitra.pax.create');
         Route::post('/mitra/laporan-pax', [MitraPortalController::class, 'storePax'])->name('mitra.pax.store');
         Route::get('/mitra/tagihan-jasa/{id}', [MitraPortalController::class, 'showTagihanJasa'])->name('mitra.tagihan-jasa.show');
+        Route::post('/mitra/tagihan-jasa/{id}/bukti-pembayaran', [MitraPortalController::class, 'storePaymentProof'])->name('mitra.tagihan-jasa.bukti-pembayaran.store');
+        Route::get('/mitra/tagihan-jasa/{id}/bukti-pembayaran/{proof}/download', [MitraPortalController::class, 'downloadPaymentProof'])->name('mitra.tagihan-jasa.bukti-pembayaran.download');
         Route::get('/mitra/tagihan-jasa/{id}/pdf', [MitraPortalController::class, 'invoiceTagihanJasaPdf'])->name('mitra.tagihan-jasa.pdf');
         Route::get('/mitra/tagihan-jasa/{id}/surat-pengantar-final', [MitraPortalController::class, 'downloadSuratPengantarFinal'])->name('mitra.tagihan-jasa.surat-final');
         Route::get('/mitra/kontrak-jasa/{kontrak}/download', [MitraPortalController::class, 'downloadKontrak'])->name('mitra.kontrak-jasa.download');

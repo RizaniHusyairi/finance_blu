@@ -8,672 +8,468 @@
     </script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @keyframes blueHeaderGlow {
-            0%, 100% { opacity: .55; transform: translate3d(-28px, 0, 0) scale(1); }
-            50% { opacity: .95; transform: translate3d(72px, -18px, 0) scale(1.12); }
+        .tw-scope { color: #0f172a; }
+        .lj-hero {
+            background: linear-gradient(120deg, #12355c 0%, #174f86 55%, #1d65a6 100%);
+            box-shadow: 0 18px 50px rgba(18, 53, 92, .22);
         }
-        @keyframes blueHeaderSweep {
-            0% { transform: translateX(-120%) skewX(-18deg); opacity: 0; }
-            18% { opacity: .35; }
-            45%, 100% { transform: translateX(220%) skewX(-18deg); opacity: 0; }
+        /* Tab pills */
+        .lj-tab { transition: all .15s ease; }
+        .lj-tab.is-active { background: #2563eb; color: #fff; box-shadow: 0 6px 16px rgba(37,99,235,.28); }
+        .lj-tab.is-active .lj-tab-badge { background: rgba(255,255,255,.25); color: #fff; }
+        /* Category panel */
+        .lj-cat { transition: background .12s ease; }
+        .lj-cat:hover { background: #eff6ff; }
+        .lj-cat.is-active { background: #dbeafe; color: #1d4ed8; font-weight: 700; }
+        .lj-cat-scroll { max-height: 620px; overflow: auto; }
+        .lj-cat-scroll::-webkit-scrollbar { width: 7px; }
+        .lj-cat-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 99px; }
+        /* Card */
+        .lj-card {
+            background: #fff; border: 1px solid #e8eef5; border-radius: 16px; padding: 16px 18px;
+            box-shadow: 0 6px 18px rgba(15, 47, 87, .06); transition: transform .15s ease, box-shadow .15s ease;
+            display: flex; flex-direction: column; gap: 10px;
         }
-        .blue-animated-header { position: relative; isolation: isolate; }
-        .blue-animated-header::before,
-        .blue-animated-header::after,
-        .blue-animated-header .blue-header-wave {
-            content: "";
-            position: absolute;
-            pointer-events: none;
-            z-index: -1;
-        }
-        .blue-animated-header::before {
-            width: 360px;
-            height: 360px;
-            right: 8%;
-            top: -170px;
-            border-radius: 999px;
-            background: radial-gradient(circle, rgba(125, 211, 252, .32), rgba(59, 130, 246, .22) 42%, transparent 68%);
-            animation: blueHeaderGlow 4.5s ease-in-out infinite;
-        }
-        .blue-animated-header::after {
-            inset: 0;
-            width: 48%;
-            background: linear-gradient(90deg, transparent, rgba(125,211,252,.16), rgba(255,255,255,.24), rgba(96,165,250,.14), transparent);
-            animation: blueHeaderSweep 3.8s ease-in-out infinite;
-        }
-        .blue-animated-header .blue-header-wave {
-            left: -90px;
-            bottom: -120px;
-            width: 420px;
-            height: 230px;
-            border-radius: 999px;
-            background: radial-gradient(circle, rgba(125, 211, 252, .22), transparent 65%);
-            animation: blueHeaderGlow 5.2s ease-in-out infinite reverse;
-        }
-        .service-tabs .nav-link {
-            border: 1px solid #dbe3ef;
-            color: #475569;
-            font-weight: 700;
-            padding: 8px 14px;
-        }
-
-        .service-tabs .nav-link.active {
-            background: #0d6efd;
-            border-color: #0d6efd;
-            color: #fff;
-        }
-
-        .service-tree-card {
-            border: 1px solid rgba(37, 99, 235, .12);
-            border-radius: 18px;
-            background: #fff;
-            overflow: hidden;
-            box-shadow: 0 16px 42px rgba(37, 99, 235, .08);
-        }
-
-        .service-tree-header {
-            display: grid;
-            grid-template-columns: minmax(0, 1fr) auto;
-            gap: 12px;
-            align-items: center;
-            padding: 10px 14px;
-            border-bottom: 1px solid #bfdbfe;
-            background: linear-gradient(90deg, #eff6ff 0%, #f8fbff 58%, #ffffff 100%);
-        }
-
-        .soft-table-title {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .soft-table-icon {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 34px;
-            height: 34px;
-            flex: 0 0 34px;
-            border-radius: 9px;
-            background: #1d4ed8;
-            color: #fff;
-            box-shadow: 0 10px 20px rgba(37, 99, 235, .18);
-        }
-
-        .soft-table-title h6 {
-            margin: 0;
-            color: #1e3a8a;
-            font-weight: 800;
-        }
-
-        .soft-table-title .text-muted {
-            color: #64748b !important;
-            font-size: 12px;
-            font-weight: 700;
-        }
-
-        .service-tree-body {
-            padding: 22px 20px;
-        }
-
-        .service-tree-tools {
-            display: grid;
-            grid-template-columns: minmax(0, 1fr) auto;
-            gap: 12px;
-            align-items: center;
-            padding: 14px 20px 0;
-        }
-
-        .service-search-box {
-            position: relative;
-        }
-
-        .service-search-box .bi-search {
-            position: absolute;
-            left: 14px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #2563eb;
-            pointer-events: none;
-        }
-
-        .service-search-box input {
-            border: 1px solid #bfdbfe;
-            border-radius: 14px;
-            min-height: 44px;
-            padding-left: 40px;
-            box-shadow: 0 8px 24px rgba(37, 99, 235, .07);
-        }
-
-        .service-search-box input:focus {
-            border-color: #2563eb;
-            box-shadow: 0 0 0 4px rgba(37, 99, 235, .12);
-        }
-
-        .service-search-count {
-            border: 1px solid #bfdbfe;
-            border-radius: 999px;
-            background: #eff6ff;
-            color: #1d4ed8;
-            font-size: 12px;
-            font-weight: 900;
-            padding: 8px 12px;
-            white-space: nowrap;
-        }
-
-        .service-tree-panel {
-            border: 1px solid #dbe3ef;
-            border-radius: 14px;
-            background: #fff;
-            padding: 12px 16px;
-            max-height: 560px;
-            overflow: auto;
-        }
-
-        .tree-node {
-            --level: 0;
-            display: grid;
-            grid-template-columns: minmax(0, 1fr) auto;
-            gap: 14px;
-            align-items: center;
-            padding: 6px 0 6px calc(var(--level) * 20px);
-            border-bottom: 0;
-            transition: background-color .18s ease;
-        }
-
-        .tree-node:hover {
-            background: rgba(239, 246, 255, .55);
-        }
-
-        .tree-node.is-search-match {
-            border-radius: 10px;
-            background: #eff6ff;
-        }
-
-        .tree-node.is-search-match .tree-title {
-            color: #1d4ed8;
-        }
-
-        .tree-main {
-            min-width: 0;
-            display: flex;
-            align-items: flex-start;
-            gap: 7px;
-        }
-
-        .tree-branch {
-            color: #111827;
-            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-            line-height: 1.35;
-            flex: 0 0 22px;
-            font-size: 14px;
-            white-space: pre;
-        }
-
-        .tree-title {
-            color: #2563a8;
-            font-weight: 800;
-            line-height: 1.35;
-            word-break: break-word;
-            letter-spacing: .01em;
-        }
-
-        .tree-meta {
-            color: #64748b;
-            font-size: 12px;
-            margin-top: 2px;
-        }
-
-        .tree-actions {
-            display: flex;
-            align-items: center;
-            justify-content: flex-end;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
-
-        .tree-actions .badge {
-            border-radius: 7px;
-            font-size: 10px;
-            font-weight: 900;
-            padding: 5px 8px;
-        }
-
-        .tree-action-buttons {
-            display: flex;
-            gap: 4px;
-        }
-
-        .tree-toggle {
-            border: 0;
-            background: transparent;
-            color: #334155;
-            padding: 0;
-            margin-top: 1px;
-            line-height: 1;
-        }
-
-        .tree-toggle-spacer {
-            width: 15px;
-            flex: 0 0 15px;
-        }
-
-        .tree-toggle .bi {
-            font-size: 14px;
-        }
-
-        .tree-node.is-collapsed .bi-dash-square {
-            display: none;
-        }
-
-        .tree-node:not(.is-collapsed) .bi-plus-square {
-            display: none;
-        }
-
-        .tree-folder-closed {
-            display: none;
-        }
-
-        .tree-item-count {
-            min-width: 44px;
-            text-align: right;
-            color: #475569;
-            font-size: 12px;
-            font-weight: 700;
-        }
-
-        .tree-node.is-collapsed .tree-folder-open {
-            display: none;
-        }
-
-        .tree-node.is-collapsed .tree-folder-closed {
-            display: inline-block;
-        }
-
-        .tree-empty {
-            min-height: 170px;
-            display: grid;
-            place-items: center;
-            color: #64748b;
-            text-align: center;
-        }
-
-        @media (max-width: 768px) {
-            .service-tree-header,
-            .tree-node {
-                grid-template-columns: 1fr;
-            }
-
-            .tree-actions {
-                justify-content: flex-start;
-                padding-left: calc(var(--level) * 20px + 28px);
-            }
-
-            .service-tree-tools {
-                grid-template-columns: 1fr;
-            }
-        }
+        .lj-card { animation: ljFadeUp .35s ease both; }
+        @keyframes ljFadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+        .lj-card:hover, .lj-card:focus-within { transform: translateY(-3px); box-shadow: 0 14px 30px rgba(37, 99, 235, .16); border-color: #93c5fd; }
+        .lj-sec-title { font-weight: 800; font-size: .95rem; color: #1e3a5f; }
+        .lj-sec-count { background: #eff6ff; color: #1d4ed8; }
+        .lj-card-title { font-weight: 800; font-size: .95rem; color: #1e3a5f; line-height: 1.3; }
+        .lj-badge { font-size: .66rem; font-weight: 800; letter-spacing: .02em; padding: 3px 9px; border-radius: 999px; text-transform: uppercase; }
+        .lj-badge-pnbp { background: #dbeafe; color: #1d4ed8; }
+        .lj-badge-konsesi-type { background: #cffafe; color: #0e7490; }
+        .lj-badge-tarif { background: #fef3c7; color: #b45309; }
+        .lj-badge-konsesi { background: #dcfce7; color: #15803d; }
+        .lj-badge-kategori { background: #ede9fe; color: #6d28d9; }
+        .lj-meta-label { font-size: .64rem; text-transform: uppercase; letter-spacing: .05em; color: #94a3b8; font-weight: 700; }
+        .lj-tarif { font-size: .98rem; font-weight: 800; color: #b91c1c; }
+        .lj-star { color: #cbd5e1; cursor: pointer; }
+        .lj-star.is-on { color: #f59e0b; }
+        .lj-kebab { line-height: 1; } .lj-kebab:hover { color: #1d4ed8; }
+        .lj-card .dropdown-item { font-size: .85rem; }
+        .lj-status-dot { width: 8px; height: 8px; border-radius: 999px; display: inline-block; }
+        /* List mode */
+        #ljGrid.is-list { grid-template-columns: 1fr !important; }
+        #ljGrid.is-list .lj-card { flex-direction: row; align-items: center; flex-wrap: wrap; }
+        .lj-view-btn.is-active { background: #2563eb; color: #fff; }
+        .lj-page-btn.is-active { background: #2563eb; color: #fff; border-color: #2563eb; }
     </style>
 @endpush
 
 @section('content')
 @php
-    $childrenByParent = $layanans->groupBy(fn ($layanan) => $layanan->parent_id ?: 0);
-    $visibleIds = $layanans->pluck('id')->map(fn ($id) => (int) $id)->all();
-    $visibleIdSet = array_flip($visibleIds);
-    $roots = $childrenByParent->get(0, collect());
+    $byId = $layanans->keyBy('id');
 
-    $countVisibleChildren = function ($layanan) use (&$countVisibleChildren, $childrenByParent) {
-        return $childrenByParent->get($layanan->id, collect())->reduce(function ($count, $child) use (&$countVisibleChildren) {
-            return $count + 1 + $countVisibleChildren($child);
-        }, 0);
-    };
-
-    $renderNode = function ($layanan, $level = 0) use (&$renderNode, $childrenByParent, $countVisibleChildren, $canManageMaster, $visibleIdSet) {
-        $children = $childrenByParent->get($layanan->id, collect())
-            ->filter(fn ($child) => isset($visibleIdSet[$child->id]))
-            ->sortBy('nama_layanan', SORT_NATURAL | SORT_FLAG_CASE);
-        $hasChildren = $children->isNotEmpty();
-        $type = $layanan->tipe_layanan ?? 'PNBP';
-        $hasKonsesi = (bool) ($layanan->mendukung_konsesi ?? false);
-        $childCount = $countVisibleChildren($layanan);
-        $branch = '|_';
-        $nodeClasses = 'tree-node' . ($hasChildren ? '' : ' tree-leaf');
-        $searchText = collect([
-            $layanan->nama_layanan,
-            $layanan->kode_layanan,
-            $layanan->kode_mak,
-            $layanan->kode_jenis_pembayaran,
-            $layanan->kode_pembayaran_lengkap,
-            $layanan->kode_akun,
-            $layanan->satuan,
-            $layanan->tarif_dasar,
-            $layanan->tipe_layanan,
-            $hasKonsesi ? 'konsesi' : null,
-            $layanan->is_leaf ? 'tarif item tarif' : 'jenis kategori',
-            $layanan->is_active ? 'aktif' : 'nonaktif',
-        ])->filter()->implode(' ');
-@endphp
-        <div class="{{ $nodeClasses }} {{ $hasChildren ? 'is-collapsed' : '' }}" data-node-id="{{ $layanan->id }}" data-parent-id="{{ $layanan->parent_id ?: 0 }}" data-search="{{ e(mb_strtolower($searchText)) }}" style="--level: {{ $level }};">
-            <div class="tree-main">
-                <span class="tree-branch">{{ $branch }}</span>
-                @if($hasChildren)
-                    <button type="button" class="tree-toggle" data-tree-toggle="{{ $layanan->id }}" aria-label="Buka tutup layanan">
-                        <i class="bi bi-dash-square"></i>
-                        <i class="bi bi-plus-square"></i>
-                    </button>
-                    <i class="bi bi-folder2-open text-primary mt-1 tree-folder-open"></i>
-                    <i class="bi bi-folder text-primary mt-1 tree-folder-closed"></i>
-                @else
-                    <span class="tree-toggle-spacer"></span>
-                    <i class="bi bi-folder2-open text-primary mt-1"></i>
-                @endif
-                <div class="min-w-0">
-                    <div class="tree-title">{{ $layanan->nama_layanan }}</div>
-                    <div class="tree-meta">
-                        @if($layanan->kode_pembayaran_lengkap)
-                            Kode bayar {{ $layanan->kode_pembayaran_lengkap }}
-                        @elseif($layanan->kode_mak)
-                            MAK {{ $layanan->kode_mak }}
-                        @else
-                            -
-                        @endif
-                        <span class="mx-1">|</span>
-                        @if($layanan->is_leaf)
-                            Tarif Rp {{ number_format($layanan->tarif_dasar ?? 0, 0, ',', '.') }}{{ $layanan->satuan ? ' / ' . $layanan->satuan : '' }}
-                            @if($hasKonsesi && $layanan->persentase_konsesi !== null)
-                                <span class="mx-1">|</span>
-                                Konsesi {{ rtrim(rtrim(number_format((float) $layanan->persentase_konsesi, 4, ',', '.'), '0'), ',') }}%
-                            @endif
-                        @else
-                            {{ $childCount }} item
-                        @endif
-                        <span class="mx-1">|</span>
-                        {{ $layanan->is_active ? 'Aktif' : 'Nonaktif' }}
-                    </div>
-                </div>
-            </div>
-            <div class="tree-actions">
-                <span class="badge {{ $type === 'KONSESI' ? 'bg-info text-dark' : 'bg-primary' }}">{{ $type === 'KONSESI' ? 'Konsesi Saja' : 'PNBP' }}</span>
-                @if($hasKonsesi)
-                    <span class="badge bg-success">Ada Konsesi</span>
-                @endif
-                <span class="badge {{ $layanan->is_leaf ? 'bg-warning text-dark' : 'bg-primary' }}">{{ $layanan->is_leaf ? 'Tarif' : ($level === 0 ? 'Jenis Layanan' : 'Kategori') }}</span>
-                @if($canManageMaster)
-                    <div class="tree-action-buttons">
-                        <a href="{{ route('master-layanan-jasa.edit', $layanan->id) }}" class="btn btn-sm btn-light text-primary border" title="Edit">
-                            <i class="bi bi-pencil-square"></i>
-                        </a>
-                        <form action="{{ route('master-layanan-jasa.destroy', $layanan->id) }}" method="POST" onsubmit="return confirm('Yakin ingin menghapus data ini?');">
-                            @csrf
-                            @method('DELETE')
-                            <button type="submit" class="btn btn-sm btn-light text-danger border" title="Hapus">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                        </form>
-                    </div>
-                @endif
-                <span class="tree-item-count">{{ $hasChildren ? $childCount . ' item' : 'leaf' }}</span>
-            </div>
-        </div>
-@php
-        foreach ($children as $child) {
-            echo $renderNode($child, $level + 1);
+    $ancestorsOf = function ($l) use ($byId) {
+        $ids = [];
+        $cur = $l; $guard = 0;
+        while ($cur && $guard++ < 25) {
+            $ids[] = (int) $cur->id;
+            $cur = $cur->parent_id ? $byId->get($cur->parent_id) : null;
         }
+        return $ids; // self-first ... root
     };
+
+    // Jumlah descendant (tanpa diri sendiri) per kategori + jumlah anak langsung.
+    $catCount = [];
+    $childCount = [];
+    foreach ($layanans as $l) {
+        if ($l->parent_id) {
+            $childCount[(int) $l->parent_id] = ($childCount[(int) $l->parent_id] ?? 0) + 1;
+        }
+        foreach (array_slice($ancestorsOf($l), 1) as $aid) {
+            $catCount[$aid] = ($catCount[$aid] ?? 0) + 1;
+        }
+    }
+
+    $nonLeaf = $layanans->filter(fn ($l) => ! $l->is_leaf);
+    $rootCats = $nonLeaf->filter(fn ($l) => empty($l->parent_id))->sortBy('nama_layanan', SORT_NATURAL | SORT_FLAG_CASE);
+    $childrenByParent = $nonLeaf->groupBy('parent_id');
+
+    // Peta untuk grouping client-side: nama kategori + daftar sub-kategori per parent (root).
+    $catNameMap = $nonLeaf->mapWithKeys(fn ($c) => [(int) $c->id => $c->nama_layanan])->all();
+    $catChildrenMap = [];
+    foreach ($rootCats as $root) {
+        $catChildrenMap[(int) $root->id] = $childrenByParent->get($root->id, collect())
+            ->sortBy('nama_layanan', SORT_NATURAL | SORT_FLAG_CASE)
+            ->pluck('id')->map(fn ($i) => (int) $i)->values()->all();
+    }
 @endphp
 
 <div class="tw-scope">
-<div class="blue-animated-header mb-4 overflow-hidden rounded-3xl border border-blue-900/20 bg-gradient-to-r from-[#12355c] via-[#174f86] to-[#1d65a6] px-5 py-5 shadow-[0_18px_50px_rgba(18,53,92,.22)] sm:px-6">
-    <span class="blue-header-wave"></span>
-    <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div class="flex items-start gap-3">
-            <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-600/20">
-                <i class="bi bi-diagram-3 text-xl"></i>
-            </div>
-            <div>
-                <h4 class="mb-1 text-xl font-black text-white lg:text-2xl">{{ $canManageMaster ? 'Master Data Layanan Jasa' : 'Layanan Jasa Dikelola' }}</h4>
-                <p class="mb-0 text-sm font-semibold text-blue-100/80">{{ $canManageMaster ? 'Satu master layanan dengan pemisahan tipe PNBP dan Konsesi' : 'Daftar layanan jasa yang ditugaskan kepada Admin Jasa login' }}</p>
-            </div>
-        </div>
-        @if($canManageMaster)
-            <a href="{{ route('master-layanan-jasa.create') }}" class="inline-flex items-center justify-center rounded-xl bg-white px-4 py-2 text-sm font-bold text-blue-700 shadow-lg shadow-slate-950/15 transition hover:-translate-y-0.5 hover:bg-blue-50">
-                <i class="bi bi-plus-lg me-2"></i>Tambah Layanan
-            </a>
-        @endif
-    </div>
-</div>
 
-@if(session('success'))
-    <div class="alert alert-success alert-dismissible fade show">
-        <i class="bi bi-check-circle me-2"></i> {{ session('success') }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-@endif
-
-@if(session('error'))
-    <div class="alert alert-danger alert-dismissible fade show">
-        <i class="bi bi-exclamation-triangle me-2"></i> {{ session('error') }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-@endif
-
-<ul class="nav nav-pills service-tabs gap-2 mb-3">
-    <li class="nav-item">
-        <a class="nav-link {{ $tipe === 'SEMUA' ? 'active' : '' }}" href="{{ route('master-layanan-jasa.index') }}">
-            Semua <span class="badge {{ $tipe === 'SEMUA' ? 'bg-light text-primary' : 'bg-secondary' }} ms-1">{{ $counts['SEMUA'] ?? 0 }}</span>
-        </a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link {{ $tipe === 'PNBP' ? 'active' : '' }}" href="{{ route('master-layanan-jasa.index', ['tipe' => 'PNBP']) }}">
-            PNBP <span class="badge {{ $tipe === 'PNBP' ? 'bg-light text-primary' : 'bg-secondary' }} ms-1">{{ $counts['PNBP'] ?? 0 }}</span>
-        </a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link {{ $tipe === 'KONSESI' ? 'active' : '' }}" href="{{ route('master-layanan-jasa.index', ['tipe' => 'KONSESI']) }}">
-            Konsesi <span class="badge {{ $tipe === 'KONSESI' ? 'bg-light text-primary' : 'bg-secondary' }} ms-1">{{ $counts['KONSESI'] ?? 0 }}</span>
-        </a>
-    </li>
-</ul>
-
-<div class="service-tree-card shadow-sm">
-    <div class="service-tree-header">
-        <div class="soft-table-title">
-            <span class="soft-table-icon"><i class="bi bi-list-task"></i></span>
-            <div>
-                <h6>Pilih Jenis Penerimaan</h6>
-                <div class="text-muted">
-                    {{ $tipe === 'SEMUA' ? 'Menampilkan semua layanan PNBP dan layanan yang mendukung Konsesi' : ($tipe === 'KONSESI' ? 'Menampilkan layanan yang mendukung Konsesi' : 'Menampilkan layanan bertipe PNBP') }}
+    {{-- ===== HERO ===== --}}
+    <div class="lj-hero mb-4 overflow-hidden rounded-3xl px-5 py-5 sm:px-6">
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div class="flex items-start gap-3">
+                <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white shadow-lg">
+                    <i class="bi bi-diagram-3 text-xl"></i>
                 </div>
-            </div>
-        </div>
-        <div class="d-flex gap-2 flex-wrap justify-content-end">
-            <span class="badge bg-primary">PNBP</span>
-            <span class="badge bg-success">Ada Konsesi</span>
-            <span class="badge bg-warning text-dark">Tarif</span>
-        </div>
-    </div>
-    <div class="service-tree-tools">
-        <div class="service-search-box">
-            <i class="bi bi-search"></i>
-            <input type="search" id="masterServiceSearch" class="form-control" placeholder="Cari nama layanan, kode MAK, akun, satuan, tarif, PNBP, atau Konsesi">
-        </div>
-        <div class="service-search-count" id="masterServiceSearchCount">{{ $layanans->count() }} layanan</div>
-    </div>
-    <div class="service-tree-body">
-        <div class="service-tree-panel">
-            <div class="tree-empty d-none" id="masterServiceNoResult">
                 <div>
-                    <i class="bi bi-search fs-1 d-block mb-2"></i>
-                    Layanan tidak ditemukan.
+                    <h4 class="mb-1 text-xl font-black text-white lg:text-2xl">{{ $canManageMaster ? 'Master Data Layanan Jasa' : 'Layanan Jasa Dikelola' }}</h4>
+                    <p class="mb-0 text-sm font-semibold text-blue-100/80">{{ $canManageMaster ? 'Katalog layanan jasa dengan tarif PNBP & Konsesi' : 'Daftar layanan jasa yang ditugaskan kepada Admin Jasa login' }}</p>
                 </div>
             </div>
-            @if($roots->isEmpty())
-                <div class="tree-empty">
-                    <div>
-                        <i class="bi bi-folder2-open fs-1 d-block mb-2"></i>
-                        Belum ada layanan jasa pada filter ini.
-                    </div>
-                </div>
-            @else
-                @foreach($roots->sortBy('nama_layanan', SORT_NATURAL | SORT_FLAG_CASE) as $root)
-                    {!! $renderNode($root, 0) !!}
-                @endforeach
+            @if($canManageMaster)
+                <a href="{{ route('master-layanan-jasa.create') }}" class="inline-flex items-center justify-center rounded-xl bg-white px-4 py-2 text-sm font-bold text-blue-700 shadow-lg transition hover:-translate-y-0.5 hover:bg-blue-50">
+                    <i class="bi bi-plus-lg me-2"></i>Tambah Layanan
+                </a>
             @endif
         </div>
     </div>
-</div>
+
+    @if(session('success'))
+        <div class="alert alert-success alert-dismissible fade show"><i class="bi bi-check-circle me-2"></i>{{ session('success') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    @endif
+    @if(session('error'))
+        <div class="alert alert-danger alert-dismissible fade show"><i class="bi bi-exclamation-triangle me-2"></i>{{ session('error') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    @endif
+
+    {{-- ===== TOOLBAR ===== --}}
+    <div class="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        {{-- Tabs --}}
+        <div class="flex flex-wrap items-center gap-2">
+            @php
+                $tabs = [
+                    'SEMUA' => ['Semua', 'bg-slate-100 text-slate-700'],
+                    'PNBP' => ['PNBP', 'bg-blue-50 text-blue-700'],
+                    'KONSESI' => ['Konsesi', 'bg-emerald-50 text-emerald-700'],
+                    'TARIF' => ['Tarif', 'bg-amber-50 text-amber-700'],
+                ];
+            @endphp
+            @foreach($tabs as $key => [$label, $cls])
+                <button type="button" class="lj-tab {{ $tipe === $key ? 'is-active' : $cls }} inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-bold" data-tab="{{ $key }}">
+                    {{ $label }}
+                    <span class="lj-tab-badge rounded-full bg-slate-200 px-2 py-0.5 text-xs font-black text-slate-600">{{ $counts[$key] ?? 0 }}</span>
+                </button>
+            @endforeach
+        </div>
+        {{-- Search + sort + view --}}
+        <div class="flex flex-wrap items-center gap-2">
+            <div class="relative">
+                <i class="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                <input type="search" id="ljSearch" class="form-control !w-72 !rounded-xl !pl-9" placeholder="Cari layanan, kode, satuan, tarif...">
+            </div>
+            <select id="ljSort" class="form-select !w-auto !rounded-xl">
+                <option value="name-asc">Urutkan: Nama A-Z</option>
+                <option value="name-desc">Nama Z-A</option>
+                <option value="tarif-desc">Tarif tertinggi</option>
+                <option value="tarif-asc">Tarif terendah</option>
+                <option value="updated-desc">Terbaru diperbarui</option>
+            </select>
+            <div class="inline-flex overflow-hidden rounded-xl border border-slate-200">
+                <button type="button" class="lj-view-btn is-active px-3 py-2" data-view="grid" title="Grid"><i class="bi bi-grid-3x3-gap-fill"></i></button>
+                <button type="button" class="lj-view-btn px-3 py-2" data-view="list" title="List"><i class="bi bi-list-ul"></i></button>
+            </div>
+        </div>
+    </div>
+
+    {{-- ===== BODY: kategori + kartu ===== --}}
+    <div class="grid grid-cols-1 gap-4 lg:grid-cols-[260px_minmax(0,1fr)]">
+
+        {{-- Kategori --}}
+        <aside class="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm self-start lg:sticky lg:top-4">
+            <div class="mb-2 px-2 text-xs font-black uppercase tracking-wide text-slate-500">Kategori Layanan</div>
+            <div class="lj-cat-scroll">
+                <button type="button" class="lj-cat is-active flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm" data-cat="all">
+                    <span class="font-semibold">Semua Kategori</span>
+                    <span class="rounded-full bg-slate-100 px-2 text-xs font-bold text-slate-600">{{ $counts['SEMUA'] ?? 0 }}</span>
+                </button>
+                @foreach($rootCats as $root)
+                    <button type="button" class="lj-cat flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm" data-cat="{{ $root->id }}">
+                        <span class="min-w-0 truncate"><i class="bi bi-folder2 me-1 text-blue-500"></i>{{ $root->nama_layanan }}</span>
+                        <span class="ms-2 shrink-0 rounded-full bg-slate-100 px-2 text-xs font-bold text-slate-600">{{ $catCount[$root->id] ?? 0 }}</span>
+                    </button>
+                    @foreach(($childrenByParent->get($root->id, collect()))->sortBy('nama_layanan', SORT_NATURAL | SORT_FLAG_CASE) as $sub)
+                        <button type="button" class="lj-cat flex w-full items-center justify-between rounded-lg px-3 py-1.5 pl-7 text-left text-[.8rem]" data-cat="{{ $sub->id }}">
+                            <span class="min-w-0 truncate text-slate-600">{{ $sub->nama_layanan }}</span>
+                            <span class="ms-2 shrink-0 rounded-full bg-slate-100 px-1.5 text-[.7rem] font-bold text-slate-500">{{ $catCount[$sub->id] ?? 0 }}</span>
+                        </button>
+                    @endforeach
+                @endforeach
+            </div>
+        </aside>
+
+        {{-- Kartu --}}
+        <section>
+            <div class="mb-3 flex flex-wrap items-baseline gap-2">
+                <h5 id="ljHeader" class="m-0 text-base font-extrabold text-slate-800">{{ $counts['SEMUA'] ?? 0 }} layanan ditemukan</h5>
+                <span id="ljHeaderSub" class="text-sm text-slate-400"></span>
+            </div>
+
+            <div id="ljGrid" class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                @foreach($layanans as $l)
+                    @php
+                        $type = $l->tipe_layanan ?? 'PNBP';
+                        $hasKonsesi = (bool) ($l->mendukung_konsesi ?? false);
+                        $isLeaf = (bool) $l->is_leaf;
+                        $kodeText = $l->kode_pembayaran_lengkap
+                            ? 'Kode bayar ' . $l->kode_pembayaran_lengkap
+                            : ($l->kode_mak ? 'MAK ' . $l->kode_mak : '-');
+                        $ancIds = implode(' ', $ancestorsOf($l));
+                        $searchText = mb_strtolower(collect([
+                            $l->nama_layanan, $l->kode_mak, $l->kode_pembayaran_lengkap, $l->kode_akun,
+                            $l->satuan, $l->tarif_dasar, $type, $hasKonsesi ? 'konsesi' : null,
+                        ])->filter()->implode(' '));
+                    @endphp
+                    <article class="lj-card"
+                        data-tipe="{{ $type }}"
+                        data-konsesi="{{ $hasKonsesi ? 1 : 0 }}"
+                        data-leaf="{{ $isLeaf ? 1 : 0 }}"
+                        data-cats="{{ $ancIds }}"
+                        data-name="{{ e(mb_strtolower($l->nama_layanan)) }}"
+                        data-tarif="{{ (float) ($l->tarif_dasar ?? 0) }}"
+                        data-updated="{{ optional($l->updated_at)->timestamp ?? 0 }}"
+                        data-search="{{ e($searchText) }}">
+                        <div class="flex items-start justify-between gap-2">
+                            <h3 class="lj-card-title">{{ $l->nama_layanan }}</h3>
+                            <div class="flex shrink-0 items-center gap-1">
+                                <i class="bi bi-star lj-star" role="button" title="Tandai"></i>
+                                @if($canManageMaster)
+                                    <div class="dropdown">
+                                        <button class="lj-kebab btn border-0 p-0 px-1 text-slate-400" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Aksi"><i class="bi bi-three-dots-vertical"></i></button>
+                                        <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                                            <li><a class="dropdown-item" href="{{ route('master-layanan-jasa.edit', $l->id) }}"><i class="bi bi-pencil-square me-2 text-primary"></i>Edit</a></li>
+                                            <li><hr class="dropdown-divider"></li>
+                                            <li>
+                                                <form action="{{ route('master-layanan-jasa.destroy', $l->id) }}" method="POST" onsubmit="return confirm('Yakin ingin menghapus layanan ini?');">
+                                                    @csrf @method('DELETE')
+                                                    <button type="submit" class="dropdown-item text-danger"><i class="bi bi-trash me-2"></i>Hapus</button>
+                                                </form>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                @endif
+                            </div>
+                        </div>
+                        <div class="flex flex-wrap gap-1">
+                            <span class="lj-badge {{ $type === 'KONSESI' ? 'lj-badge-konsesi-type' : 'lj-badge-pnbp' }}">{{ $type === 'KONSESI' ? 'Konsesi Saja' : 'PNBP' }}</span>
+                            @if($isLeaf)
+                                <span class="lj-badge lj-badge-tarif">Tarif</span>
+                            @else
+                                <span class="lj-badge lj-badge-kategori">{{ empty($l->parent_id) ? 'Jenis Layanan' : 'Kategori' }}</span>
+                            @endif
+                            @if($hasKonsesi)
+                                <span class="lj-badge lj-badge-konsesi">Konsesi</span>
+                            @endif
+                        </div>
+                        <div>
+                            <div class="lj-meta-label">Kode Layanan</div>
+                            <div class="text-sm font-semibold text-slate-700">{{ $kodeText }}</div>
+                        </div>
+                        <div class="flex items-end justify-between gap-2">
+                            <div>
+                                <div class="lj-meta-label">Tarif</div>
+                                @if($isLeaf)
+                                    <div class="lj-tarif">Rp {{ number_format((float) ($l->tarif_dasar ?? 0), 0, ',', '.') }}</div>
+                                    @if($hasKonsesi && $l->persentase_konsesi !== null)
+                                        <div class="text-xs font-bold text-emerald-600">Konsesi {{ rtrim(rtrim(number_format((float) $l->persentase_konsesi, 4, ',', '.'), '0'), ',') }}%</div>
+                                    @endif
+                                @else
+                                    <div class="text-sm font-bold text-slate-600">{{ $childCount[$l->id] ?? 0 }} item</div>
+                                @endif
+                            </div>
+                            <div class="text-right">
+                                <div class="lj-meta-label">Satuan</div>
+                                <div class="text-sm font-semibold text-slate-700">{{ $l->satuan ?: '-' }}</div>
+                            </div>
+                        </div>
+                        <hr class="my-1 border-slate-100">
+                        <div class="flex items-center justify-between text-xs text-slate-500">
+                            <span class="inline-flex items-center gap-1 font-semibold {{ $l->is_active ? 'text-emerald-600' : 'text-slate-400' }}">
+                                <span class="lj-status-dot {{ $l->is_active ? 'bg-emerald-500' : 'bg-slate-300' }}"></span>{{ $l->is_active ? 'Aktif' : 'Nonaktif' }}
+                            </span>
+                            <span><i class="bi bi-calendar3 me-1"></i>{{ optional($l->updated_at)->translatedFormat('d M Y') ?: '-' }}</span>
+                        </div>
+                    </article>
+                @endforeach
+            </div>
+
+            {{-- Grouped sections (muncul saat parent kategori dipilih) --}}
+            <div id="ljGrouped" class="hidden space-y-6"></div>
+
+            {{-- Empty state --}}
+            <div id="ljEmpty" class="hidden rounded-2xl border border-dashed border-slate-200 bg-white py-16 text-center text-slate-400">
+                <i class="bi bi-inbox d-block fs-1 mb-2"></i>Tidak ada layanan yang cocok dengan filter.
+            </div>
+
+            {{-- Pagination --}}
+            <div id="ljPagerWrap" class="mt-4 flex flex-col items-center justify-between gap-3 sm:flex-row">
+                <div class="text-sm text-slate-500" id="ljPageInfo"></div>
+                <div class="flex items-center gap-2">
+                    <div id="ljPager" class="flex flex-wrap items-center gap-1"></div>
+                    <select id="ljPageSize" class="form-select !w-auto !rounded-xl">
+                        <option value="12">12 / halaman</option>
+                        <option value="24">24 / halaman</option>
+                        <option value="48">48 / halaman</option>
+                    </select>
+                </div>
+            </div>
+        </section>
+    </div>
 </div>
 @endsection
 
 @push('script')
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            const childMap = {};
-            const nodeMap = {};
-            const rootNodes = [];
+<script>
+(function () {
+    const grid = document.getElementById('ljGrid');
+    if (!grid) return;
+    const cards = Array.from(grid.querySelectorAll('.lj-card'));
+    const groupedBox = document.getElementById('ljGrouped');
+    const pager = document.getElementById('ljPager');
+    const pagerWrap = document.getElementById('ljPagerWrap');
+    const pageInfo = document.getElementById('ljPageInfo');
+    const emptyBox = document.getElementById('ljEmpty');
+    const headerEl = document.getElementById('ljHeader');
+    const headerSub = document.getElementById('ljHeaderSub');
 
-            document.querySelectorAll('[data-node-id]').forEach(function (node) {
-                nodeMap[node.getAttribute('data-node-id')] = node;
-                const parentId = node.getAttribute('data-parent-id');
-                if (! childMap[parentId]) {
-                    childMap[parentId] = [];
-                }
-                childMap[parentId].push(node);
+    const LJ_CAT_NAME = @json((object) ($catNameMap ?? []));
+    const LJ_CAT_CHILDREN = @json((object) ($catChildrenMap ?? []));
 
-                if (parentId === '0') {
-                    rootNodes.push(node);
-                }
+    const state = { tab: @json($tipe), cat: 'all', q: '', sort: 'name-asc', page: 1, size: 12 };
+
+    const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    const hasCat = (c, id) => (' ' + c.dataset.cats + ' ').includes(' ' + id + ' ');
+    const SEC_GRID = 'grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3';
+    function appendSection(title, list) {
+        const wrap = document.createElement('div');
+        wrap.innerHTML = `<div class="mb-2 mt-1 flex items-center gap-2"><span class="lj-sec-title">${esc(title)}</span><span class="lj-sec-count rounded-full px-2 py-0.5 text-xs font-bold">${list.length} item</span></div>`;
+        const g = document.createElement('div');
+        g.className = SEC_GRID;
+        list.forEach(c => g.appendChild(c));
+        wrap.appendChild(g);
+        groupedBox.appendChild(wrap);
+    }
+
+    function matches(card) {
+        if (state.tab === 'PNBP' && card.dataset.tipe !== 'PNBP') return false;
+        if (state.tab === 'KONSESI' && card.dataset.konsesi !== '1') return false;
+        if (state.tab === 'TARIF' && card.dataset.leaf !== '1') return false;
+        if (state.cat !== 'all' && !(' ' + card.dataset.cats + ' ').includes(' ' + state.cat + ' ')) return false;
+        if (state.q && !card.dataset.search.includes(state.q)) return false;
+        return true;
+    }
+
+    function sortCards(list) {
+        const by = {
+            'name-asc': (a, b) => a.dataset.name.localeCompare(b.dataset.name),
+            'name-desc': (a, b) => b.dataset.name.localeCompare(a.dataset.name),
+            'tarif-desc': (a, b) => (+b.dataset.tarif) - (+a.dataset.tarif),
+            'tarif-asc': (a, b) => (+a.dataset.tarif) - (+b.dataset.tarif),
+            'updated-desc': (a, b) => (+b.dataset.updated) - (+a.dataset.updated),
+        }[state.sort];
+        return by ? list.slice().sort(by) : list;
+    }
+
+    function render() {
+        const visible = sortCards(cards.filter(matches));
+        const total = visible.length;
+
+        // Detach semua kartu lalu render ulang sesuai mode (memicu animasi fade-up).
+        cards.forEach(c => { if (c.parentNode) c.parentNode.removeChild(c); });
+        groupedBox.innerHTML = '';
+
+        if (state.cat !== 'all') {
+            headerEl.textContent = LJ_CAT_NAME[state.cat] || 'Kategori';
+            headerSub.textContent = '· ' + total.toLocaleString('id-ID') + ' layanan';
+        } else {
+            headerEl.textContent = total.toLocaleString('id-ID') + ' layanan ditemukan';
+            headerSub.textContent = '';
+        }
+        emptyBox.classList.toggle('hidden', total !== 0);
+
+        const subCats = LJ_CAT_CHILDREN[state.cat] || [];
+        const isGrouped = state.cat !== 'all' && subCats.length > 0;
+
+        // ===== MODE GROUPED: parent kategori dipilih → section per sub-kategori =====
+        if (isGrouped) {
+            grid.classList.add('hidden');
+            groupedBox.classList.remove('hidden');
+            pagerWrap.classList.add('hidden');
+            const used = new Set();
+            subCats.forEach(childId => {
+                const sect = visible.filter(c => hasCat(c, childId));
+                if (!sect.length) return;
+                sect.forEach(c => used.add(c));
+                appendSection(LJ_CAT_NAME[childId] || 'Sub Kategori', sect);
             });
+            const leftovers = visible.filter(c => !used.has(c));
+            if (leftovers.length) appendSection('Lainnya', leftovers);
+            return;
+        }
 
-            function setChildrenVisible(parentId, visible) {
-                (childMap[parentId] || []).forEach(function (child) {
-                    child.classList.toggle('d-none', !visible);
+        // ===== MODE FLAT: semua / child kategori / tab → grid + pagination =====
+        groupedBox.classList.add('hidden');
+        grid.classList.remove('hidden');
+        pagerWrap.classList.remove('hidden');
 
-                    const childId = child.getAttribute('data-node-id');
-                    if (! visible) {
-                        setChildrenVisible(childId, false);
-                    } else if (! child.classList.contains('is-collapsed')) {
-                        setChildrenVisible(childId, true);
-                    }
-                });
+        const pages = Math.max(1, Math.ceil(total / state.size));
+        if (state.page > pages) state.page = pages;
+        const start = (state.page - 1) * state.size;
+        const end = start + state.size;
+        visible.slice(start, end).forEach(c => grid.appendChild(c));
+        pageInfo.textContent = total === 0 ? '' : `Menampilkan ${start + 1}–${Math.min(end, total)} dari ${total} layanan`;
+
+        pager.innerHTML = '';
+        const addBtn = (label, page, opts = {}) => {
+            const b = document.createElement('button');
+            b.type = 'button';
+            b.className = 'lj-page-btn btn btn-sm border ' + (opts.active ? 'is-active' : 'btn-light');
+            b.innerHTML = label;
+            if (opts.disabled) { b.disabled = true; }
+            else if (!opts.active) { b.addEventListener('click', () => { state.page = page; render(); }); }
+            pager.appendChild(b);
+        };
+        addBtn('<i class="bi bi-chevron-left"></i>', state.page - 1, { disabled: state.page === 1 });
+        const win = 2;
+        for (let p = 1; p <= pages; p++) {
+            if (p === 1 || p === pages || (p >= state.page - win && p <= state.page + win)) {
+                addBtn(String(p), p, { active: p === state.page });
+            } else if (p === state.page - win - 1 || p === state.page + win + 1) {
+                const dots = document.createElement('span');
+                dots.className = 'px-1 text-slate-400';
+                dots.textContent = '…';
+                pager.appendChild(dots);
             }
+        }
+        addBtn('<i class="bi bi-chevron-right"></i>', state.page + 1, { disabled: state.page === pages });
+    }
 
-            document.querySelectorAll('[data-tree-toggle]').forEach(function (button) {
-                button.addEventListener('click', function () {
-                    const id = button.getAttribute('data-tree-toggle');
-                    const node = document.querySelector('[data-node-id="' + id + '"]');
-                    const collapsed = ! node.classList.contains('is-collapsed');
+    document.querySelectorAll('.lj-tab').forEach(btn => btn.addEventListener('click', () => {
+        document.querySelectorAll('.lj-tab').forEach(b => b.classList.remove('is-active'));
+        btn.classList.add('is-active');
+        state.tab = btn.dataset.tab; state.page = 1; render();
+    }));
 
-                    node.classList.toggle('is-collapsed', collapsed);
-                    setChildrenVisible(id, !collapsed);
-                });
-            });
+    document.querySelectorAll('.lj-cat').forEach(btn => btn.addEventListener('click', () => {
+        document.querySelectorAll('.lj-cat').forEach(b => b.classList.remove('is-active'));
+        btn.classList.add('is-active');
+        state.cat = btn.dataset.cat; state.page = 1; render();
+    }));
 
-            function collapseInitialTree() {
-                document.querySelectorAll('[data-node-id]').forEach(function (node) {
-                    node.classList.remove('is-search-match');
-                    if (node.getAttribute('data-parent-id') !== '0') {
-                        node.classList.add('d-none');
-                    } else {
-                        node.classList.remove('d-none');
-                    }
+    let t = null;
+    document.getElementById('ljSearch').addEventListener('input', function () {
+        clearTimeout(t);
+        t = setTimeout(() => { state.q = this.value.trim().toLowerCase(); state.page = 1; render(); }, 180);
+    });
 
-                    if (!node.classList.contains('tree-leaf')) {
-                        node.classList.add('is-collapsed');
-                    }
-                });
-            }
+    document.getElementById('ljSort').addEventListener('change', function () { state.sort = this.value; render(); });
+    document.getElementById('ljPageSize').addEventListener('change', function () { state.size = parseInt(this.value, 10) || 12; state.page = 1; render(); });
 
-            function collectDescendants(node, visibleIds) {
-                const id = node.getAttribute('data-node-id');
-                (childMap[id] || []).forEach(function (child) {
-                    visibleIds.add(child.getAttribute('data-node-id'));
-                    collectDescendants(child, visibleIds);
-                });
-            }
+    document.querySelectorAll('.lj-view-btn').forEach(btn => btn.addEventListener('click', () => {
+        document.querySelectorAll('.lj-view-btn').forEach(b => b.classList.remove('is-active'));
+        btn.classList.add('is-active');
+        grid.classList.toggle('is-list', btn.dataset.view === 'list');
+    }));
 
-            function collectAncestors(node, visibleIds) {
-                let parentId = node.getAttribute('data-parent-id');
-                while (parentId && parentId !== '0') {
-                    const parentNode = nodeMap[parentId];
-                    if (!parentNode) {
-                        break;
-                    }
+    document.addEventListener('click', e => {
+        const star = e.target.closest('.lj-star');
+        if (star) { star.classList.toggle('bi-star'); star.classList.toggle('bi-star-fill'); star.classList.toggle('is-on'); }
+    });
 
-                    visibleIds.add(parentId);
-                    parentId = parentNode.getAttribute('data-parent-id');
-                }
-            }
-
-            function updateSearchCount(count, isSearching) {
-                const counter = document.getElementById('masterServiceSearchCount');
-                if (!counter) {
-                    return;
-                }
-
-                counter.textContent = isSearching ? count + ' hasil' : document.querySelectorAll('[data-node-id]').length + ' layanan';
-            }
-
-            function applySearch(term) {
-                const normalizedTerm = term.trim().toLowerCase();
-                const noResult = document.getElementById('masterServiceNoResult');
-                const nodes = Array.from(document.querySelectorAll('[data-node-id]'));
-
-                if (!normalizedTerm) {
-                    if (noResult) {
-                        noResult.classList.add('d-none');
-                    }
-                    collapseInitialTree();
-                    updateSearchCount(nodes.length, false);
-                    return;
-                }
-
-                const visibleIds = new Set();
-                let matchCount = 0;
-
-                nodes.forEach(function (node) {
-                    const isMatch = (node.getAttribute('data-search') || '').includes(normalizedTerm);
-                    node.classList.toggle('is-search-match', isMatch);
-
-                    if (isMatch) {
-                        matchCount++;
-                        visibleIds.add(node.getAttribute('data-node-id'));
-                        collectAncestors(node, visibleIds);
-                        collectDescendants(node, visibleIds);
-                    }
-                });
-
-                nodes.forEach(function (node) {
-                    const id = node.getAttribute('data-node-id');
-                    const visible = visibleIds.has(id);
-                    node.classList.toggle('d-none', !visible);
-
-                    if (visible && !node.classList.contains('tree-leaf')) {
-                        node.classList.remove('is-collapsed');
-                    }
-                });
-
-                if (noResult) {
-                    noResult.classList.toggle('d-none', matchCount > 0);
-                }
-                updateSearchCount(matchCount, true);
-            }
-
-            collapseInitialTree();
-
-            const searchInput = document.getElementById('masterServiceSearch');
-            if (searchInput) {
-                searchInput.addEventListener('input', function () {
-                    applySearch(searchInput.value);
-                });
-            }
-
-            document.querySelectorAll('[data-node-id]').forEach(function (node) {
-                if (node.getAttribute('data-parent-id') !== '0') {
-                    node.classList.add('d-none');
-                }
-            });
-        });
-    </script>
+    render();
+})();
+</script>
 @endpush
