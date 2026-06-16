@@ -46,7 +46,8 @@ class KontrakMitraJasaController extends Controller
     public function show(MitraJasa $mitra, KontrakMitraJasa $kontrak)
     {
         $this->ensureOwnedByMitra($mitra, $kontrak);
-        $kontrak->load('layananJasa.parent.parent.parent.parent.parent');
+        $kontrak->load('layananJasa.parent.parent.parent.parent.parent')
+            ->loadCount(['tagihanJasa', 'konsesi', 'penjualan', 'pjp2u']);
 
         return view('super_admin_jasa.mitra.kontrak-show', compact('mitra', 'kontrak'));
     }

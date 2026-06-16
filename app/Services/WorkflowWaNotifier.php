@@ -7,6 +7,7 @@ use App\Models\DokumenSp2d;
 use App\Models\DokumenSpm;
 use App\Models\DokumenSpp;
 use App\Models\Tagihan;
+use App\Models\TagihanJasa;
 use App\Models\User;
 use App\Models\WorkflowApproval;
 use App\Models\WorkflowInstance;
@@ -91,6 +92,15 @@ class WorkflowWaNotifier
         $tipe = $tagihan?->tipe_tagihan; // PERJALDIN | KONTRAK | HONORARIUM
 
         return match (true) {
+            $doc instanceof TagihanJasa => [
+                'label' => 'Tagihan Jasa',
+                'nomor' => $doc->nomor_tagihan ?? ('#' . $doc->id),
+                'uraian' => $doc->keterangan ?: '-',
+                'nilai' => (float) ($doc->total_tagihan ?? 0),
+                'tipe' => $doc->tipe_pnbp,
+                'docKey' => 'TAGIHAN_JASA',
+                'tagihanId' => $doc->id,
+            ],
             $doc instanceof Tagihan => [
                 'label' => 'Tagihan',
                 'nomor' => $doc->nomor_tagihan ?? ('#' . $doc->id),
@@ -179,6 +189,14 @@ class WorkflowWaNotifier
      */
     private function resolveActionUrl(string $docKey, ?string $tipe, string $roleCode, ?int $tagihanId = null): ?string
     {
+        if ($tagihanId && $docKey === 'TAGIHAN_JASA') {
+            try {
+                return route('verifikasi-tagihan-jasa.show', $tagihanId);
+            } catch (\Throwable $e) {
+                return null;
+            }
+        }
+
         if ($tagihanId && in_array($docKey, ['SPP', 'SPM', 'NPI', 'SP2D'], true)) {
             try {
                 return route('proses-tagihan.show', $tagihanId);

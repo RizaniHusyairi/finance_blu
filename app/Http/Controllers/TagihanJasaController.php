@@ -19,6 +19,7 @@ use App\Services\EmailNotificationService;
 use App\Services\WorkflowService;
 use App\Services\JasaAccessService;
 use App\Services\TagihanJasaCalculationService;
+use App\Services\TagihanJasaPublishService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -68,8 +69,13 @@ class TagihanJasaController extends Controller
                 'kontrak_mitra_jasa_id' => $penjualan->kontrak_mitra_jasa_id,
                 'layanan_jasa_id' => $penjualan->layanan_jasa_id,
                 'qty' => (float) $penjualan->total_omzet,
+                // PJP2U memakai tarif rupiah → ikuti tarif efektif (termasuk perubahan tarif
+                // berjadwal) untuk tanggal tagihan & mitra terkait. Konsesi memakai persentase
+                // (tidak terdampak perubahan tarif rupiah).
                 'harga_satuan' => $isPjp2uPenjualan
-                    ? (float) ($penjualan->layananJasa?->tarif_dasar ?? 0)
+                    ? (float) ($penjualan->layananJasa
+                        ? app(\App\Services\TarifLayananService::class)->resolve($penjualan->layananJasa, now(), $penjualan->mitra_jasa_id)['tarif']
+                        : 0)
                     : (float) ($penjualan->persentase_konsesi ?? $penjualan->layananJasa?->persentase_konsesi ?? $penjualan->layananJasa?->tarif_dasar ?? 0),
                 'kurs' => 1,
                 'calculation_mode' => $isPjp2uPenjualan ? 'TARIF' : 'PERSENTASE',
@@ -209,6 +215,9 @@ class TagihanJasaController extends Controller
             ->orderBy('id')
             ->get();
 
+        // Tarif efektif (termasuk diskon berjadwal) untuk tanggal tagihan default = hari ini.
+        app(\App\Services\TarifLayananService::class)->attachTarifEfektif($layanans, now());
+
         $mitraLayananMap = [];
         foreach ($mitras as $mitra) {
             $mitraLayananMap[$mitra->id] = $jasaAccessService
@@ -253,10 +262,12 @@ class TagihanJasaController extends Controller
         });
 
         $pltPlhUsers = $this->pltPlhUsers();
+        $vaManual = $this->vaManualMode();
+
         $pjp2uTariffChanges = $this->recentPjp2uTariffChanges($pjp2uLayananIds);
         $permohonanNonScheduleOptions = $this->permohonanNonScheduleOptions();
 
-        return view('tagihan_jasa.create', compact('mitras', 'layanans', 'tipe', 'mode', 'mitraLayananMap', 'mitraMetaMap', 'prefillTagihan', 'pltPlhUsers', 'pjp2uTariffChanges', 'permohonanNonScheduleOptions'));
+        return view('tagihan_jasa.create', compact('mitras', 'layanans', 'tipe', 'mode', 'mitraLayananMap', 'mitraMetaMap', 'prefillTagihan', 'pltPlhUsers', 'pjp2uTariffChanges', 'permohonanNonScheduleOptions', 'vaManual'));
     }
 
     public function store(Request $request, WorkflowService $workflowService, JasaAccessService $jasaAccessService, TagihanJasaCalculationService $calculationService)
@@ -288,6 +299,8 @@ class TagihanJasaController extends Controller
             'layanan.*.calculation_payload' => ['nullable', 'json'],
         ]);
 
+        // Nomor VA manual diisi sejak draft saat integrasi VA otomatis dimatikan.
+        $validated += $this->validateNomorVaManual($request);
         $validated['jenis_penerbangan'] = $validated['jenis_penerbangan'] ?? 'schedule';
         if ($validated['jenis_penerbangan'] === 'schedule') {
             $validated['permohonan_non_schedule_id'] = null;
@@ -426,6 +439,7 @@ class TagihanJasaController extends Controller
                     'final_verifier_role' => $validated['final_verifier_role'],
                     'final_verifier_user_id' => $validated['final_verifier_role'] === 'PLT/PLH' ? ($validated['final_verifier_user_id'] ?? null) : null,
                     'final_verifier_jenis' => $validated['final_verifier_role'] === 'PLT/PLH' ? ($validated['final_verifier_jenis'] ?? null) : null,
+                    'nomor_va' => $validated['nomor_va'] ?? null,
                     'created_by' => Auth::id(),
                 ]);
 
@@ -453,7 +467,12 @@ class TagihanJasaController extends Controller
                     ]);
                 }
 
-                $workflowService->startWorkflow('TAGIHAN_JASA', $tagihan);
+                $jasaInstance = $workflowService->startWorkflow('TAGIHAN_JASA', $tagihan);
+                DB::afterCommit(function () use ($jasaInstance) {
+                    if ($jasaInstance) {
+                        app(\App\Services\WorkflowWaNotifier::class)->notifyPendingApprovals($jasaInstance->fresh());
+                    }
+                });
 
                 if ($penjualan) {
                     $penjualan->update([
@@ -613,6 +632,9 @@ class TagihanJasaController extends Controller
             ->orderBy('id')
             ->get();
 
+        // Tarif efektif (termasuk diskon berjadwal) untuk tanggal tagihan yang sedang diedit.
+        app(\App\Services\TarifLayananService::class)->attachTarifEfektif($layanans, $tagihan->tanggal_tagihan ?? now());
+
         $mitraLayananMap = [];
         foreach ($mitras as $mitra) {
             $allowedIds = $jasaAccessService
@@ -659,10 +681,12 @@ class TagihanJasaController extends Controller
         });
 
         $pltPlhUsers = $this->pltPlhUsers();
+        $vaManual = $this->vaManualMode();
+
         $pjp2uTariffChanges = $this->recentPjp2uTariffChanges($pjp2uLayananIds);
         $permohonanNonScheduleOptions = $this->permohonanNonScheduleOptions();
 
-        return view('tagihan_jasa.create', compact('mitras', 'layanans', 'tipe', 'mode', 'mitraLayananMap', 'mitraMetaMap', 'prefillTagihan', 'detailPrefills', 'tagihan', 'pltPlhUsers', 'pjp2uTariffChanges', 'permohonanNonScheduleOptions'));
+        return view('tagihan_jasa.create', compact('mitras', 'layanans', 'tipe', 'mode', 'mitraLayananMap', 'mitraMetaMap', 'prefillTagihan', 'detailPrefills', 'tagihan', 'pltPlhUsers', 'pjp2uTariffChanges', 'permohonanNonScheduleOptions','vaManual'));
     }
 
     public function update(Request $request, $id, JasaAccessService $jasaAccessService, TagihanJasaCalculationService $calculationService)
@@ -679,6 +703,7 @@ class TagihanJasaController extends Controller
         }
 
         $validated = $this->validateTagihanJasaInput($request);
+        $validated += $this->validateNomorVaManual($request, (int) $tagihan->id);
 
         try {
             $mitra = MitraJasa::findOrFail($validated['mitra_jasa_id']);
@@ -762,6 +787,7 @@ class TagihanJasaController extends Controller
                     'final_verifier_role' => $validated['final_verifier_role'],
                     'final_verifier_user_id' => $validated['final_verifier_role'] === 'PLT/PLH' ? ($validated['final_verifier_user_id'] ?? null) : null,
                     'final_verifier_jenis' => $validated['final_verifier_role'] === 'PLT/PLH' ? ($validated['final_verifier_jenis'] ?? null) : null,
+                    'nomor_va' => $validated['nomor_va'] ?? $tagihan->nomor_va,
                     'pejabat_penandatangan_nama' => $signer['nama'],
                     'pejabat_penandatangan_nip' => $signer['nip'],
                     'pejabat_penandatangan_jabatan' => $signer['jabatan'],
@@ -836,7 +862,12 @@ class TagihanJasaController extends Controller
                     'status_dokumen_pengantar' => 'DRAFT',
                 ]);
 
-                $workflowService->startWorkflow('TAGIHAN_JASA', $tagihan->fresh());
+                $jasaInstance = $workflowService->startWorkflow('TAGIHAN_JASA', $tagihan->fresh());
+                DB::afterCommit(function () use ($jasaInstance) {
+                    if ($jasaInstance) {
+                        app(\App\Services\WorkflowWaNotifier::class)->notifyPendingApprovals($jasaInstance->fresh());
+                    }
+                });
             });
 
             return back()->with('success', 'Tagihan berhasil dikirim ulang ke alur verifikasi.');
@@ -1126,7 +1157,7 @@ class TagihanJasaController extends Controller
         return $this->streamSuratPengantarArchive($arsip);
     }
 
-    public function publish(Request $request, $id, WhatsappService $whatsappService, BtnVirtualAccountService $btnVirtualAccountService, EmailNotificationService $emailNotificationService)
+    public function publish(Request $request, $id, TagihanJasaPublishService $publishService)
     {
         abort_unless($this->canManageTagihanJasa(), 403);
 
@@ -1138,8 +1169,11 @@ class TagihanJasaController extends Controller
             'email_tujuan' => ['nullable', 'email', 'max:255'],
         ];
 
-        // Nomor VA hanya wajib diketik ketika VA otomatis dimatikan.
-        if (! $vaOtomatis) {
+        // Nomor VA hanya wajib diketik ketika VA otomatis dimatikan DAN belum diisi sejak draft.
+        $tagihan = TagihanJasa::with(['mitra', 'mitraLegacy', 'workflowInstance', 'details.layananJasa'])->findOrFail($id);
+        $this->abortIfAdminJasaCannotAccess($tagihan);
+
+        if (! $vaOtomatis && blank($tagihan->nomor_va)) {
             $rules['nomor_va'] = ['required', 'regex:/^[0-9]{8,30}$/', 'unique:tagihan_jasas,nomor_va,'.$id];
         }
 
@@ -1148,9 +1182,6 @@ class TagihanJasaController extends Controller
             'nomor_va.regex' => 'Nomor Virtual Account harus berupa 8–30 digit angka.',
             'nomor_va.unique' => 'Nomor Virtual Account ini sudah dipakai tagihan lain.',
         ]);
-
-        $tagihan = TagihanJasa::with(['mitra', 'mitraLegacy', 'workflowInstance', 'details.layananJasa'])->findOrFail($id);
-        $this->abortIfAdminJasaCannotAccess($tagihan);
 
         if (in_array($tagihan->status, ['PUBLISHED', 'LUNAS'], true)) {
             return back()->with('error', 'Tagihan ini sudah dipublish.');
@@ -1172,67 +1203,23 @@ class TagihanJasaController extends Controller
             return back()->with('error', 'Tagihan lama belum terhubung ke data Mitra Jasa.');
         }
 
-        $accountInfo = $this->ensureMitraAccount($tagihan->mitra);
-
-        $dueData = $this->resolveDueDateData($tagihan);
-
-        // Sumber nomor VA mengikuti toggle:
-        //  - VA otomatis ON  : dibuat lewat BtnVirtualAccountService (API BTN; saat ini masih mock sampai endpoint diisi).
-        //  - VA otomatis OFF : nomor VA asli dari BTN diketik manual oleh Admin Jasa.
-        $vaData = [];
-        if ($vaOtomatis) {
-            $vaData = $btnVirtualAccountService->createVirtualAccount($tagihan);
-            $nomorVa = $vaData['number'] ?? $tagihan->nomor_va;
-        } else {
-            $nomorVa = $validated['nomor_va'];
-        }
-
-        if (blank($nomorVa)) {
-            return back()->with('error', 'Nomor Virtual Account belum tersedia. Aktifkan VA otomatis atau isi nomor VA manual.');
-        }
-
-        $tagihan->update([
-            'status' => 'PUBLISHED',
-            'status_pembayaran' => 'belum_dibayar',
-            'nomor_va' => $nomorVa,
-            'va_provider' => $vaData['provider'] ?? 'btn',
-            'va_reference' => $vaData['reference'] ?? null,
-            'va_expired_at' => $vaData['expired_at'] ?? ($dueData['tanggal_jatuh_tempo'] ?? null),
-            'tanggal_publish' => now()->toDateString(),
-            'jumlah_hari_jatuh_tempo' => $dueData['jumlah_hari_jatuh_tempo'],
-            'masa_toleransi_hari' => $dueData['masa_toleransi_hari'],
-            'tanggal_jatuh_tempo' => $dueData['tanggal_jatuh_tempo'],
-            'tanggal_akhir_toleransi' => $dueData['tanggal_akhir_toleransi'],
-            'catatan_jatuh_tempo' => $dueData['catatan_jatuh_tempo'],
-            'jumlah_dibayar' => 0,
-            'sisa_tagihan' => $tagihan->total_tagihan,
-        ]);
-
-        $publishedTagihan = $tagihan->fresh(['mitra', 'mitraLegacy', 'details']);
-
-        if (! empty($validated['email_tujuan'])) {
-            $accountInfo['notification_email'] = $validated['email_tujuan'];
-        }
-
-        // Sync ke piutang (TransaksiPenerimaan) — muncul di menu Piutang Bendahara Penerimaan.
         try {
-            app(\App\Services\Pembukuan\PiutangSyncService::class)->syncFromPublished($publishedTagihan);
-        } catch (\Throwable $e) {
-            \Log::error('Gagal sync piutang saat publish: ' . $e->getMessage());
+            $result = $publishService->publish($tagihan, [
+                'nomor_va' => $validated['nomor_va'] ?? null,
+                'wa_tujuan' => $validated['wa_tujuan'],
+                'email_tujuan' => $validated['email_tujuan'] ?? null,
+            ]);
+        } catch (\RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
         }
-
-        $message = $this->buildWhatsappMessage($publishedTagihan, $accountInfo);
-        $whatsappService->sendMessage($validated['wa_tujuan'], $message, $publishedTagihan);
-        $emailMessage = $emailNotificationService->buildPublishedTagihanMessage($publishedTagihan, $accountInfo);
-        $emailNotificationService->sendPublishedTagihan($publishedTagihan, $accountInfo);
 
         return back()
             ->with('success', 'Tagihan berhasil dipublish dan notifikasi WA serta email diproses.')
-            ->with('wa_message_preview', $message)
-            ->with('email_message_preview', $emailMessage)
-            ->with('is_new_mitra', $accountInfo['is_new'])
-            ->with('mitra_email', $accountInfo['email'])
-            ->with('mitra_password', $accountInfo['password']);
+            ->with('wa_message_preview', $result['wa_message'])
+            ->with('email_message_preview', $result['email_message'])
+            ->with('is_new_mitra', $result['account']['is_new'])
+            ->with('mitra_email', $result['account']['email'])
+            ->with('mitra_password', $result['account']['password']);
     }
 
     public function markAsPaid($id)
@@ -1799,6 +1786,47 @@ class TagihanJasaController extends Controller
     }
 
     /**
+     * Resolusi tarif efektif (memperhitungkan diskon berjadwal) untuk tanggal &
+     * mitra yang sedang dipilih di form. Dipakai re-resolusi AJAX saat mitra/tanggal
+     * tagihan diubah. Mengembalikan peta layanan_id => info tarif.
+     */
+    public function tarifEfektif(Request $request)
+    {
+        abort_unless($this->canCreateTagihanJasa(), 403);
+
+        $validated = $request->validate([
+            'tanggal' => ['nullable', 'date'],
+            'mitra_jasa_id' => ['nullable', 'exists:mitra_jasa,id'],
+            'layanan_ids' => ['nullable', 'array'],
+            'layanan_ids.*' => ['integer'],
+        ]);
+
+        $tanggal = ! empty($validated['tanggal']) ? \Carbon\Carbon::parse($validated['tanggal']) : now();
+        $mitraId = ! empty($validated['mitra_jasa_id']) ? (int) $validated['mitra_jasa_id'] : null;
+
+        $layanans = LayananJasa::query()
+            ->where('is_leaf', true)
+            ->when(! empty($validated['layanan_ids']), fn ($q) => $q->whereIn('id', $validated['layanan_ids']))
+            ->get();
+
+        app(\App\Services\TarifLayananService::class)->attachTarifEfektif($layanans, $tanggal, $mitraId);
+
+        $map = [];
+        foreach ($layanans as $layanan) {
+            $map[$layanan->id] = [
+                'tarif_efektif' => (float) $layanan->tarif_efektif,
+                'tarif_normal' => (float) $layanan->tarif_normal,
+                'diskon_aktif' => (bool) $layanan->diskon_aktif,
+                'diskon_sampai' => $layanan->diskon_sampai,
+                'diskon_persen' => $layanan->diskon_persen,
+                'diskon_keterangan' => $layanan->diskon_keterangan,
+            ];
+        }
+
+        return response()->json(['data' => $map]);
+    }
+
+    /**
      * Bangun nomor tagihan jasa dengan format (tanpa pemisah titik):
      *   {nomor satker}{nomor mak}{bulan}{tahun}{nomor urut 4 digit}
      *
@@ -1879,6 +1907,36 @@ class TagihanJasaController extends Controller
     private function canManageTagihanJasa(): bool
     {
         return Auth::user()?->hasAnyRole(['Super Admin', 'Super Admin Jasa', 'Admin Jasa']) === true;
+    }
+
+    /**
+     * Mode VA manual aktif ketika integrasi VA otomatis (btn.enabled) dimatikan.
+     * Pada mode ini nomor VA asli BTN diisi manual sejak form Buat Tagihan.
+     */
+    private function vaManualMode(): bool
+    {
+        return ! (bool) \App\Models\IntegrationSetting::getValue('btn.enabled', false);
+    }
+
+    /**
+     * Validasi nomor VA manual (hanya saat mode VA manual aktif).
+     * $ignoreId dipakai pada update agar unique tidak bentrok dengan diri sendiri.
+     */
+    private function validateNomorVaManual(Request $request, ?int $ignoreId = null): array
+    {
+        if (! $this->vaManualMode()) {
+            return [];
+        }
+
+        $unique = 'unique:tagihan_jasas,nomor_va' . ($ignoreId ? ',' . $ignoreId : '');
+
+        return $request->validate([
+            'nomor_va' => ['required', 'regex:/^[0-9]{8,30}$/', $unique],
+        ], [
+            'nomor_va.required' => 'Nomor Virtual Account wajib diisi.',
+            'nomor_va.regex' => 'Nomor Virtual Account harus berupa 8–30 digit angka.',
+            'nomor_va.unique' => 'Nomor Virtual Account ini sudah dipakai tagihan lain.',
+        ]);
     }
 
     private function canUsePercentageCalculation(?LayananJasa $layanan): bool
@@ -2041,36 +2099,6 @@ class TagihanJasaController extends Controller
         // & Perjaldin) pada tahun yang sama.
         return app(\App\Services\DocumentNumberService::class)
             ->generateByKey('KU_SURAT_PENGANTAR_JASA', $year);
-    }
-
-    private function resolveDueDateData(TagihanJasa $tagihan): array
-    {
-        $layanans = $tagihan->details->pluck('layananJasa')->filter();
-        $dueDays = (int) ($layanans->min('jumlah_hari_jatuh_tempo') ?: 30);
-        $toleranceDays = (int) ($layanans->min('masa_toleransi_hari') ?? 0);
-        $publishDate = now()->startOfDay();
-        $dueDate = $publishDate->copy()->addDays($dueDays);
-        $toleranceDate = $dueDate->copy()->addDays($toleranceDays);
-        $forcedSeparate = $layanans->where('wajib_tagihan_terpisah', true);
-        $notes = $layanans
-            ->pluck('catatan_jatuh_tempo')
-            ->filter()
-            ->unique()
-            ->values();
-
-        if ($forcedSeparate->isNotEmpty()) {
-            $notes->push('Terdapat layanan yang wajib dibuat dalam tagihan terpisah.');
-        }
-
-        return [
-            'jumlah_hari_jatuh_tempo' => $dueDays,
-            'masa_toleransi_hari' => $toleranceDays,
-            'tanggal_jatuh_tempo' => $dueDate->toDateString(),
-            'tanggal_akhir_toleransi' => $toleranceDate->toDateString(),
-            'catatan_jatuh_tempo' => $notes->isNotEmpty()
-                ? $notes->implode(' ')
-                : "Jatuh tempo {$dueDays} hari sejak tanggal publish tagihan.",
-        ];
     }
 
     private function ensureSuratPengantarDefaults(TagihanJasa $tagihan): void
@@ -2276,72 +2304,4 @@ class TagihanJasaController extends Controller
             ->all();
     }
 
-    private function ensureMitraAccount(MitraJasa $mitra): array
-    {
-        $user = $mitra->user;
-
-        if ($user) {
-            return [
-                'is_new' => false,
-                'email' => $user->email,
-                'password' => null,
-            ];
-        }
-
-        $email = $mitra->email ?: 'mitra-' . $mitra->id . '@sikeren.id';
-
-        if (User::where('email', $email)->exists()) {
-            $email = 'mitra-' . $mitra->id . '-' . Str::lower(Str::random(5)) . '@sikeren.id';
-        }
-        $password = Str::password(10);
-
-        Role::findOrCreate('Mitra Jasa', 'web');
-
-        $user = User::create([
-            'email' => $email,
-            'password' => Hash::make($password),
-            'profilable_type' => MitraJasa::class,
-            'profilable_id' => $mitra->id,
-        ]);
-        $user->assignRole('Mitra Jasa');
-
-        return [
-            'is_new' => true,
-            'email' => $email,
-            'password' => $password,
-        ];
-    }
-
-    private function buildWhatsappMessage(TagihanJasa $tagihan, array $accountInfo): string
-    {
-        $message = "*PEMBERITAHUAN TAGIHAN PNBP*\n\n";
-        $message .= "Yth. " . ($tagihan->mitra->nama_mitra ?? '-') . ",\n\n";
-        $message .= "Berikut adalah informasi tagihan layanan Anda:\n";
-        $message .= "No Tagihan: *" . $tagihan->nomor_tagihan . "*\n";
-        $message .= "Total Tagihan: *Rp " . number_format((float) $tagihan->total_tagihan, 0, ',', '.') . "*\n\n";
-        $message .= "Silakan lakukan pembayaran melalui Virtual Account Bank BTN berikut:\n";
-        $message .= "No VA: *" . ($tagihan->nomor_va ?? '-') . "*\n\n";
-        if ($tagihan->tanggal_jatuh_tempo) {
-            $message .= "Jatuh Tempo: *" . $tagihan->tanggal_jatuh_tempo->format('d/m/Y') . "*\n";
-        }
-        $shortLink = \App\Models\ShortLink::forTarget('tagihan_jasa', $tagihan->id, auth()->id());
-        $message .= "Link Surat Pengantar dan Nota Tagihan: " . $shortLink->publicUrl() . "\n\n";
-        $message .= "----------------------------------------\n";
-        $message .= "*AKUN PORTAL MITRA*\n";
-        $message .= "Email Login: " . ($accountInfo['email'] ?? '-') . "\n";
-
-        if (!empty($accountInfo['password'])) {
-            $message .= "Password: " . $accountInfo['password'] . "\n";
-            $message .= "Mohon segera ubah password setelah login pertama.\n";
-        } else {
-            $message .= "Gunakan password akun yang sudah terdaftar sebelumnya.\n";
-        }
-
-        $message .= "Login Portal: " . route('login') . "\n";
-        $message .= "----------------------------------------\n\n";
-        $message .= "Terima kasih atas kerja sama Anda.\n";
-        $message .= "_Sistem Informasi Keuangan (SIKEREN)_";
-
-        return $message;
-    }
 }

@@ -553,13 +553,11 @@
                 <i class="material-icons-outlined">arrow_right</i>Layanan Jasa
               </a>
             </li>
-            @hasrole('Super Admin')
             <li>
-              <a href="{{ route('jasa.integrasi.index') }}">
-                <i class="material-icons-outlined">arrow_right</i>Integrasi API
+              <a href="{{ route('tarif-diskon.index') }}">
+                <i class="material-icons-outlined">arrow_right</i>Perubahan Tarif
               </a>
             </li>
-            @endhasrole
           </ul>
         </li>
         @endhasanyrole
@@ -581,13 +579,6 @@
                 <i class="material-icons-outlined">arrow_right</i>Mitra Jasa
               </a>
             </li>
-            @hasrole('Super Admin')
-            <li>
-              <a href="{{ route('jasa.integrasi.index') }}">
-                <i class="material-icons-outlined">arrow_right</i>Integrasi API
-              </a>
-            </li>
-            @endhasrole
           </ul>
         </li>
         @endhasrole
@@ -755,7 +746,17 @@
             <li><a href="{{ route('admin.users.index') }}"><i class="material-icons-outlined">arrow_right</i>Manajemen User</a></li>
             <li><a href="{{ route('admin.roles.index') }}"><i class="material-icons-outlined">arrow_right</i>Manajemen Role</a></li>
             <li><a href="{{ route('admin.pegawai.index') }}"><i class="material-icons-outlined">arrow_right</i>Data Pegawai</a></li>
+          </ul>
+        </li>
+
+        <li>
+          <a href="javascript:;" class="has-arrow">
+            <div class="parent-icon"><i class="material-icons-outlined">hub</i></div>
+            <div class="menu-title">Integrasi & Notifikasi</div>
+          </a>
+          <ul>
             <li><a href="{{ route('admin.notifikasi-wa.index') }}"><i class="material-icons-outlined">arrow_right</i>Notifikasi WhatsApp</a></li>
+            <li><a href="{{ route('jasa.integrasi.index') }}"><i class="material-icons-outlined">arrow_right</i>Integrasi API</a></li>
           </ul>
         </li>
         @endhasrole

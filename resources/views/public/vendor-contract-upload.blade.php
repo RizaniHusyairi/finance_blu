@@ -2,11 +2,22 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#1d4ed8">
     <title>Portal Unggah Dokumen Kontrak Vendor &middot; SIKEREN</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+@php
+    $docs = collect([$spkFinal, $spmkFinal, $ringkasanFinal]);
+    $uploadedCount = $docs->filter()->count();
+    $totalDocs = $docs->count();
+    $progressPct = $totalDocs ? round($uploadedCount / $totalDocs * 100) : 0;
+@endphp
 <style>
+    :root {
+        --vp-primary: #2563eb;
+        --vp-primary-dark: #1d4ed8;
+    }
     body {
         background-color: #f4f7f6;
         font-family: 'Inter', sans-serif;
@@ -42,6 +53,27 @@
     .vendor-card-body {
         padding: 2rem 1.5rem;
     }
+    /* Progress unggah */
+    .upload-progress-wrap {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 1rem;
+        padding: 1rem 1.25rem;
+        margin-bottom: 1.5rem;
+    }
+    .upload-progress-bar {
+        height: 8px;
+        border-radius: 999px;
+        background: #e2e8f0;
+        overflow: hidden;
+    }
+    .upload-progress-bar > span {
+        display: block;
+        height: 100%;
+        border-radius: 999px;
+        background: linear-gradient(90deg, #22c55e, #16a34a);
+        transition: width .4s ease;
+    }
     .doc-section {
         border: 1px solid #e2e8f0;
         border-radius: 1rem;
@@ -69,6 +101,7 @@
         color: white;
         font-weight: bold;
         margin-right: 0.75rem;
+        flex-shrink: 0;
     }
     .is-uploaded .step-badge {
         background: #22c55e;
@@ -120,6 +153,90 @@
         margin-bottom: 0.5rem;
         color: #475569;
     }
+    /* Instruksi yang bisa dilipat (default terbuka di desktop) */
+    .instruction-toggle { display: none; }
+
+    /* ============================================================
+       TAMPILAN KHUSUS HP  (viewport <= 575px)
+       ============================================================ */
+    @media (max-width: 575.98px) {
+        body {
+            /* beri ruang untuk tombol unggah sticky di bawah */
+            padding-bottom: 5.5rem;
+        }
+        .hero-section {
+            padding: 1.75rem 1.25rem 4.5rem;
+            border-radius: 0 0 1.5rem 1.5rem;
+        }
+        .hero-section h2 { font-size: 1.4rem; }
+        .hero-section p { font-size: .85rem; }
+
+        .container.pb-5 { padding-left: .75rem; padding-right: .75rem; }
+
+        .vendor-card {
+            border-radius: 1rem;
+            margin-bottom: 1rem;
+        }
+        .vendor-card-header { padding: 1.1rem; }
+        .vendor-card-body { padding: 1.25rem 1rem; }
+        .vendor-card-header h5 { font-size: 1.05rem; }
+
+        /* badge status pindah ke bawah judul, rata kiri */
+        .vendor-card-header.d-flex {
+            flex-direction: column;
+            align-items: flex-start !important;
+            gap: .65rem;
+        }
+
+        .doc-section {
+            padding: 1.1rem;
+            border-radius: .85rem;
+            margin-bottom: 1rem;
+        }
+
+        /* Instruksi dapat dilipat pada HP untuk hemat ruang */
+        .instruction-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            background: #eff6ff;
+            color: #1e40af;
+            border: none;
+            border-radius: .75rem;
+            padding: .85rem 1rem;
+            font-weight: 700;
+            font-size: .9rem;
+        }
+        .instruction-toggle .bi-chevron-down { transition: transform .25s; }
+        .instruction-toggle[aria-expanded="true"] .bi-chevron-down { transform: rotate(180deg); }
+        .instruction-body { margin-top: .75rem; }
+
+        /* tombol lebih besar & ramah-sentuh */
+        .btn-download,
+        .file-input-wrapper .btn {
+            padding: .85rem 1rem !important;
+            font-size: .95rem;
+        }
+
+        /* tombol unggah utama menempel di bawah layar */
+        .submit-bar {
+            position: fixed;
+            left: 0; right: 0; bottom: 0;
+            z-index: 1030;
+            background: rgba(255,255,255,.96);
+            backdrop-filter: blur(8px);
+            border-top: 1px solid #e2e8f0;
+            padding: .75rem 1rem calc(.75rem + env(safe-area-inset-bottom));
+            box-shadow: 0 -4px 16px rgba(0,0,0,.06);
+            margin: 0 !important;
+        }
+        .submit-bar.border-top { border-top: 1px solid #e2e8f0 !important; }
+        .submit-bar .submit-hint { display: none; }
+        .btn-upload { padding: .95rem 1.5rem; font-size: 1rem; }
+
+        .footer-credit { margin-bottom: 1rem; }
+    }
 </style>
 </head>
 <body>
@@ -127,7 +244,7 @@
 <div class="hero-section">
     <div class="container">
         <h2>Portal Vendor BLU</h2>
-        <p>Unggah Dokumen Kontrak Final (Tanda Tangan Basah & Stempel)</p>
+        <p>Unggah Dokumen Kontrak Final (Tanda Tangan Basah &amp; Stempel)</p>
     </div>
 </div>
 
@@ -146,7 +263,7 @@
                         <span class="badge bg-warning text-dark rounded-pill px-3 py-2 fs-6"><i class="bi bi-hourglass-split me-1"></i> Menunggu Upload</span>
                     @endif
                 </div>
-                
+
                 <div class="vendor-card-body">
                     @if(session('success'))
                         <div class="alert alert-success border-0 shadow-sm rounded-3 mb-4">
@@ -168,8 +285,24 @@
                         </div>
                     @endif
 
-                    <div class="alert alert-info border-0 rounded-3 mb-4 shadow-sm" style="background-color: #eff6ff; color: #1e40af;">
-                        <h6 class="fw-bold"><i class="bi bi-info-circle-fill me-2"></i>Instruksi untuk Vendor</h6>
+                    {{-- Progress unggah (ringkas, sangat membantu di layar HP) --}}
+                    <div class="upload-progress-wrap">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <span class="fw-bold text-dark small"><i class="bi bi-list-check me-1 text-primary"></i> Progres Unggah Dokumen</span>
+                            <span class="fw-bold small {{ $isComplete ? 'text-success' : 'text-primary' }}">{{ $uploadedCount }}/{{ $totalDocs }} dokumen</span>
+                        </div>
+                        <div class="upload-progress-bar">
+                            <span style="width: {{ $progressPct }}%"></span>
+                        </div>
+                    </div>
+
+                    {{-- Instruksi: tombol toggle hanya tampil di HP --}}
+                    <button type="button" class="instruction-toggle mb-2" data-bs-toggle="collapse" data-bs-target="#instruksiVendor" aria-expanded="false" aria-controls="instruksiVendor">
+                        <span><i class="bi bi-info-circle-fill me-2"></i>Lihat Instruksi untuk Vendor</span>
+                        <i class="bi bi-chevron-down"></i>
+                    </button>
+                    <div class="alert alert-info border-0 rounded-3 mb-4 shadow-sm collapse show instruction-body" id="instruksiVendor" style="background-color: #eff6ff; color: #1e40af;">
+                        <h6 class="fw-bold d-none d-sm-block"><i class="bi bi-info-circle-fill me-2"></i>Instruksi untuk Vendor</h6>
                         <ul class="instruction-list ps-3 mb-0 mt-2 small">
                             <li><strong>Unduh</strong> dokumen draf final yang telah memiliki <em>QR Code</em> TTE dari PPK.</li>
                             <li><strong>Cetak (Print)</strong> dokumen tersebut.</li>
@@ -181,7 +314,7 @@
 
                     <form action="{{ \Illuminate\Support\Facades\URL::signedRoute('public.vendor.contract-upload.store', ['id' => $kontrak->id]) }}" method="POST" enctype="multipart/form-data">
                         @csrf
-                        
+
                         {{-- 1. SPK --}}
                         <div class="doc-section {{ $spkFinal ? 'is-uploaded' : '' }}">
                             <div class="d-flex align-items-center mb-3">
@@ -193,7 +326,7 @@
                                     </small>
                                 </div>
                             </div>
-                            
+
                             <div class="row g-3">
                                 <div class="col-md-6">
                                     <a href="{{ \Illuminate\Support\Facades\URL::signedRoute('public.contract-tte.document', ['type' => 'spk', 'id' => $kontrak->id]) }}" class="btn btn-download w-100 d-flex align-items-center justify-content-center" target="_blank">
@@ -225,7 +358,7 @@
                                     </small>
                                 </div>
                             </div>
-                            
+
                             <div class="row g-3">
                                 <div class="col-md-6">
                                     <a href="{{ \Illuminate\Support\Facades\URL::signedRoute('public.contract-tte.document', ['type' => 'spmk', 'id' => $kontrak->id]) }}" class="btn btn-download w-100 d-flex align-items-center justify-content-center" target="_blank">
@@ -257,7 +390,7 @@
                                     </small>
                                 </div>
                             </div>
-                            
+
                             <div class="row g-3">
                                 <div class="col-md-6">
                                     <a href="{{ \Illuminate\Support\Facades\URL::signedRoute('public.contract-tte.document', ['type' => 'ringkasan_kontrak', 'id' => $kontrak->id]) }}" class="btn btn-download w-100 d-flex align-items-center justify-content-center" target="_blank">
@@ -278,18 +411,18 @@
                             </div>
                         </div>
 
-                        <div class="mt-4 pt-3 border-top">
+                        <div class="submit-bar mt-4 pt-3 border-top">
                             <button type="submit" class="btn btn-upload btn-lg">
                                 <i class="bi bi-cloud-arrow-up-fill me-2"></i> Unggah Dokumen Terpilih
                             </button>
-                            <div class="text-center mt-2 small text-muted">
+                            <div class="text-center mt-2 small text-muted submit-hint">
                                 Anda dapat mengunggah dokumen satu per satu atau sekaligus.
                             </div>
                         </div>
                     </form>
                 </div>
             </div>
-            <div class="text-center text-muted small mt-4">
+            <div class="text-center text-muted small mt-4 footer-credit">
                 &copy; {{ date('Y') }} Sistem Informasi Keuangan BLU. Hak Cipta Dilindungi.
             </div>
         </div>
@@ -297,5 +430,28 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // Pada HP, instruksi tampil terlipat secara default; di layar lebar tetap terbuka.
+    document.addEventListener('DOMContentLoaded', function () {
+        var instruksi = document.getElementById('instruksiVendor');
+        var toggle = document.querySelector('.instruction-toggle');
+        if (!instruksi || !toggle) return;
+
+        var mobile = window.matchMedia('(max-width: 575.98px)');
+        function sync(e) {
+            if (e.matches) {
+                instruksi.classList.remove('show');
+                toggle.setAttribute('aria-expanded', 'false');
+            } else {
+                instruksi.classList.add('show');
+            }
+        }
+        sync(mobile);
+        mobile.addEventListener('change', sync);
+
+        instruksi.addEventListener('shown.bs.collapse', function () { toggle.setAttribute('aria-expanded', 'true'); });
+        instruksi.addEventListener('hidden.bs.collapse', function () { toggle.setAttribute('aria-expanded', 'false'); });
+    });
+</script>
 </body>
 </html>

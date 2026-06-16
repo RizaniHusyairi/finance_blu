@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use App\Services\WorkflowService;
+use App\Services\TagihanJasaPublishService;
 
 class TagihanJasaVerifikasiController extends Controller
 {
@@ -72,6 +73,8 @@ class TagihanJasaVerifikasiController extends Controller
             return back()->with('error', 'Workflow tidak ditemukan.');
         }
 
+        $finalApproved = false;
+
         try {
             DB::beginTransaction();
 
@@ -91,6 +94,7 @@ class TagihanJasaVerifikasiController extends Controller
                 $tagihan->status = 'DISETUJUI';
                 $tagihan->save();
                 $this->generateFinalSuratPengantar($tagihan);
+                $finalApproved = true;
             } elseif ($currentApproval) {
                 $statusMap = [
                     'Koordinator Jasa'                          => 'VERIFIKASI_KOORDINATOR',
@@ -106,11 +110,29 @@ class TagihanJasaVerifikasiController extends Controller
             }
 
             DB::commit();
-            return back()->with('success', 'Tagihan Jasa berhasil disetujui.');
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
         }
+
+        // Auto-publish: begitu verifikator final menyetujui, tagihan langsung diterbitkan
+        // (VA, jatuh tempo, piutang, notifikasi WA + email) tanpa langkah publish manual.
+        // Dijalankan setelah commit agar pengiriman notifikasi tidak menahan transaksi.
+        if ($finalApproved) {
+            try {
+                app(TagihanJasaPublishService::class)->publish($tagihan->fresh());
+
+                return back()->with('success', 'Tagihan disetujui dan langsung diterbitkan ke mitra (VA, piutang, notifikasi WA & email diproses).');
+            } catch (\Throwable $e) {
+                // Gagal auto-publish (mis. mode VA manual tanpa nomor VA) — tagihan tetap
+                // berstatus DISETUJUI dan dapat dipublish manual oleh Admin Jasa.
+                \Illuminate\Support\Facades\Log::warning('Auto-publish tagihan jasa gagal: ' . $e->getMessage(), ['tagihan_id' => $tagihan->id]);
+
+                return back()->with('success', 'Tagihan Jasa berhasil disetujui. Penerbitan otomatis belum dapat dilakukan (' . $e->getMessage() . '); silakan publish manual.');
+            }
+        }
+
+        return back()->with('success', 'Tagihan Jasa berhasil disetujui.');
     }
 
     private function generateFinalSuratPengantar(TagihanJasa $tagihan): void

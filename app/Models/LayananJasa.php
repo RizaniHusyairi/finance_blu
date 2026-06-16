@@ -50,6 +50,20 @@ class LayananJasa extends Model
             ->withTimestamps();
     }
 
+    public function tarifPeriodes()
+    {
+        return $this->hasMany(LayananJasaTarif::class, 'layanan_jasa_id');
+    }
+
+    /**
+     * Tarif efektif pada tanggal tertentu (memperhitungkan diskon berjadwal).
+     * Shortcut ke App\Services\TarifLayananService::resolve().
+     */
+    public function tarifEfektif(\Illuminate\Support\Carbon|string|null $tanggal = null, ?int $mitraJasaId = null): float
+    {
+        return app(\App\Services\TarifLayananService::class)->resolve($this, $tanggal, $mitraJasaId)['tarif'];
+    }
+
     public function scopeLeaves($query)
     {
         return $query->where('is_leaf', true);
@@ -90,6 +104,17 @@ class LayananJasa extends Model
 
     public function isPjp2u()
     {
-        return stripos($this->nama_lengkap, 'PJP2U') !== false || stripos($this->nama_lengkap, 'Penumpang') !== false;
+        $nama = (string) $this->nama_lengkap;
+
+        // Garbarata / Bis Layanan Penumpang di Apron mengandung kata "Penumpang"
+        // tetapi BUKAN layanan PJP2U — kecualikan secara eksplisit.
+        if (stripos($nama, 'Garbarata') !== false || stripos($nama, 'Apron') !== false) {
+            return false;
+        }
+
+        // PJP2U = Pelayanan Jasa Penumpang Pesawat Udara. Cocokkan token resmi
+        // "PJP2U" atau frasa lengkapnya, bukan sekadar kata "Penumpang".
+        return stripos($nama, 'PJP2U') !== false
+            || stripos($nama, 'Penumpang Pesawat Udara') !== false;
     }
 }
