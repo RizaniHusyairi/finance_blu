@@ -44,7 +44,18 @@
                 <div class="mp-timeline-content">
                     <div class="mp-timeline-title">Diajukan untuk Verifikasi</div>
                     <div class="mp-timeline-time"><i class="bi bi-clock text-warning"></i>{{ $tanggalWaktu($penjualan->submitted_at) }}</div>
-                    <div class="mp-timeline-note">Laporan sudah dikirim dan menunggu pemeriksaan admin.</div>
+                    @php
+                        $pengaju = $penjualan->createdByUser?->name
+                            ?? $penjualan->createdByUser?->email
+                            ?? $penjualan->mitraJasa?->nama_mitra;
+                    @endphp
+                    <div class="mp-timeline-note">
+                        Diajukan oleh <strong>{{ $pengaju ?: 'Mitra' }}</strong>
+                        kepada <strong>Admin Jasa</strong> untuk diperiksa dan diverifikasi.
+                    </div>
+                    @unless($penjualan->verified_at)
+                        <div class="mp-timeline-note text-warning"><i class="bi bi-hourglass-split me-1"></i>Menunggu pemeriksaan Admin Jasa.</div>
+                    @endunless
                 </div>
             </div>
         @endif

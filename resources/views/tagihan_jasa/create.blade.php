@@ -711,6 +711,27 @@
                         </div>
                     </div>
 
+                    @if(!empty($vaManual))
+                    <div class="invoice-date-card mb-4" style="background: linear-gradient(135deg,#ecfdf5 0%,#f0fdfa 100%); border:1px solid #99f6e4;">
+                        <div class="row align-items-start g-3">
+                            <div class="col-lg-4">
+                                <span class="invoice-section-kicker" style="color:#0f766e;"><i class="bi bi-bank2"></i> Virtual Account BTN</span>
+                                <div class="mt-1 text-xs font-semibold text-slate-600">
+                                    Integrasi VA otomatis sedang dimatikan, jadi nomor VA BTN diisi manual di sini. Nomor ini dipakai saat tagihan terbit (publish).
+                                </div>
+                            </div>
+                            <div class="col-lg-8">
+                                <label class="form-label fw-bold">Nomor Virtual Account <span class="text-danger">*</span></label>
+                                <input type="text" name="nomor_va" inputmode="numeric" pattern="[0-9]{8,30}"
+                                       class="form-control fw-bold font-monospace bg-white"
+                                       value="{{ old('nomor_va', $tagihan->nomor_va ?? '') }}"
+                                       placeholder="Contoh: 8801234567890123" required>
+                                <div class="form-text">8–30 digit angka, sesuai nomor VA BTN yang diterbitkan untuk tagihan ini.</div>
+                            </div>
+                        </div>
+                    </div>
+                    @endif
+
                     <div class="invoice-document-card">
                         <div class="mb-3 flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
                             <div>
@@ -948,6 +969,12 @@
         <td>
             <div class="invoice-field">
                 <div class="invoice-field-label"><i class="bi bi-pencil-square"></i>Catatan</div>
+                <select class="form-select form-select-sm keterangan-bulan mb-1" title="Tagihan untuk bulan">
+                    <option value="">— Bulan tagihan —</option>
+                    @for($b = 1; $b <= 12; $b++)
+                        <option value="{{ $b }}">{{ \Carbon\Carbon::create()->month($b)->translatedFormat('F') }}</option>
+                    @endfor
+                </select>
                 <input type="text" name="layanan[__INDEX__][keterangan]" class="form-control keterangan-input" placeholder="Catatan">
             </div>
         </td>
@@ -1088,7 +1115,13 @@
                 return 'Tarif ' + value.toLocaleString('id-ID') + '%';
             }
 
-            return 'Tarif Rp ' + value.toLocaleString('id-ID') + (unit ? ' / ' + unit : '');
+            let label = 'Tarif Rp ' + value.toLocaleString('id-ID') + (unit ? ' / ' + unit : '');
+            // Tandai bila tarif sedang diskon (berbeda dari tarif normal).
+            if (item.diskon_aktif && item.tarif_normal && parseFloat(item.tarif_normal) !== value) {
+                label += ' • DISKON (normal Rp ' + parseFloat(item.tarif_normal).toLocaleString('id-ID') + ')';
+            }
+
+            return label;
         }
 
         function isPercentageService(item) {
@@ -1111,6 +1144,11 @@
 
             if (isPercentageService(item)) {
                 return parseFloat(item.persentase_konsesi || item.tarif_dasar || 0);
+            }
+
+            // Pakai tarif efektif (sudah memperhitungkan diskon berjadwal) bila tersedia.
+            if (item.tarif_efektif !== undefined && item.tarif_efektif !== null && item.tarif_efektif !== '') {
+                return parseFloat(item.tarif_efektif);
             }
 
             return parseFloat(item.tarif_dasar || 0);
@@ -2044,6 +2082,43 @@
             resetServiceRows();
         }
 
+        // Re-resolusi tarif efektif (diskon berjadwal) sesuai tanggal & mitra terpilih.
+        function refreshTarifEfektif(updateRows) {
+            const tanggal = (document.getElementById('inputTanggalTagihan')?.value) || '';
+            const mitraId = $('#mitraSelect').val() || '';
+
+            $.ajax({
+                url: '{{ route("tagihan-jasa.tarif-efektif") }}',
+                type: 'GET',
+                data: { tanggal: tanggal, mitra_jasa_id: mitraId },
+                success: function (res) {
+                    const map = (res && res.data) ? res.data : {};
+                    Object.keys(map).forEach(function (id) {
+                        if (!layanansById[id]) return;
+                        layanansById[id].tarif_efektif = map[id].tarif_efektif;
+                        layanansById[id].tarif_normal = map[id].tarif_normal;
+                        layanansById[id].diskon_aktif = map[id].diskon_aktif;
+                        layanansById[id].diskon_sampai = map[id].diskon_sampai;
+                        layanansById[id].diskon_persen = map[id].diskon_persen;
+                        layanansById[id].diskon_keterangan = map[id].diskon_keterangan;
+                    });
+
+                    if (updateRows) {
+                        $('.service-row').each(function () {
+                            const row = $(this);
+                            const id = row.find('.layanan-id-input').val();
+                            const service = id ? layanansById[id] : null;
+                            // Tarif diskon hanya menyentuh layanan tarif (bukan persentase/konsesi).
+                            if (!service || isPercentageService(service)) return;
+                            row.find('.price-input').val(serviceRateValue(service));
+                            syncRowCalculation(row);
+                        });
+                        calculateTotals();
+                    }
+                }
+            });
+        }
+
         function applyPrefillTagihan() {
             if (Array.isArray(detailPrefills) && detailPrefills.length > 0) {
                 $('#serviceList').empty();
@@ -2132,7 +2207,10 @@
         addServiceRow();
         refreshAllowedServices();
         applyPrefillTagihan();
-        $('#mitraSelect').on('change', refreshAllowedServices);
+        $('#mitraSelect').on('change', function () {
+            refreshAllowedServices();
+            refreshTarifEfektif(true);
+        });
         $('#kontrakSelect').on('change', function() {
             oldKontrakMitraJasaId = null;
             refreshKontrakInfo();
@@ -2212,9 +2290,42 @@
             calculateTotals();
         });
 
+        // Sisipkan/segarkan frasa "Tagihan bulan <Bulan> <Tahun>" pada catatan baris.
+        const BULAN_NAMA = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+        function tahunTagihan() {
+            const tgl = document.getElementById('inputTanggalTagihan')?.value;
+            const y = tgl ? new Date(tgl).getFullYear() : NaN;
+            return isNaN(y) ? new Date().getFullYear() : y;
+        }
+        function applyKeteranganBulan(row) {
+            const sel = row.find('.keterangan-bulan');
+            const ket = row.find('.keterangan-input');
+            if (!sel.length || !ket.length) return;
+            // Buang frasa periode sebelumnya agar tidak menumpuk saat bulan diganti.
+            let base = (ket.val() || '').replace(/\s*(?:—\s*)?Tagihan bulan\s+\S+\s+\d{4}\s*$/i, '').trim();
+            const bulan = parseInt(sel.val(), 10);
+            if (!bulan) {
+                ket.val(base);
+                return;
+            }
+            const frasa = 'Tagihan bulan ' + BULAN_NAMA[bulan] + ' ' + tahunTagihan();
+            ket.val(base ? (base + ' — ' + frasa) : frasa);
+        }
+
+        $(document).on('change', '.keterangan-bulan', function() {
+            applyKeteranganBulan($(this).closest('tr'));
+        });
+
         // Perbarui preview nomor tagihan saat tanggal tagihan diubah.
         $(document).on('change', '#inputTanggalTagihan', function() {
             updateNomorTagihanPreview();
+            refreshTarifEfektif(true);
+            // Segarkan tahun pada frasa periode untuk baris yang sudah memilih bulan.
+            $('.service-row').each(function() {
+                if ($(this).find('.keterangan-bulan').val()) {
+                    applyKeteranganBulan($(this));
+                }
+            });
         });
         
         $('form').submit(function(e) {

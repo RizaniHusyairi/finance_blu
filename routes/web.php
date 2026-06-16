@@ -35,6 +35,7 @@ use App\Http\Controllers\HonorariumController;
 use App\Http\Controllers\JasaIntegrationSettingController;
 use App\Http\Controllers\KontrakMitraJasaController;
 use App\Http\Controllers\KpaApprovalController;
+use App\Http\Controllers\LayananTarifDiskonController;
 use App\Http\Controllers\MasterLayananJasaController;
 use App\Http\Controllers\MasterTarifPajakController;
 use App\Http\Controllers\MasterUangHarianPerjaldinController;
@@ -452,6 +453,14 @@ Route::middleware(['auth', 'account.active'])->group(function () use ($internalR
         Route::put('/jasa/admin/{user}/layanan', [AdminJasaLayananController::class, 'update'])->name('jasa.admin.layanan.update');
     });
 
+    // Tarif & Diskon Berkala layanan jasa — hanya Super Admin / Super Admin Jasa.
+    Route::middleware('role:Super Admin|Super Admin Jasa')->group(function () {
+        Route::get('/jasa/tarif-diskon', [LayananTarifDiskonController::class, 'index'])->name('tarif-diskon.index');
+        Route::post('/jasa/tarif-diskon', [LayananTarifDiskonController::class, 'store'])->name('tarif-diskon.store');
+        Route::put('/jasa/tarif-diskon/{tarif_diskon}', [LayananTarifDiskonController::class, 'update'])->name('tarif-diskon.update');
+        Route::delete('/jasa/tarif-diskon/{tarif_diskon}', [LayananTarifDiskonController::class, 'destroy'])->name('tarif-diskon.destroy');
+    });
+
     // Integrasi API — hanya Super Admin
     Route::middleware('role:Super Admin')->group(function () {
         Route::get('/jasa/integrasi', [JasaIntegrationSettingController::class, 'index'])->name('jasa.integrasi.index');
@@ -507,6 +516,7 @@ Route::middleware(['auth', 'account.active'])->group(function () use ($internalR
     Route::middleware('role:Super Admin|Admin Jasa|Admin Konsesi')->group(function () {
         Route::get('/tagihan-jasa/create', [TagihanJasaController::class, 'create'])->name('tagihan-jasa.create');
         Route::get('/tagihan-jasa/preview-nomor', [TagihanJasaController::class, 'previewNomorTagihan'])->name('tagihan-jasa.preview-nomor');
+        Route::get('/tagihan-jasa/tarif-efektif', [TagihanJasaController::class, 'tarifEfektif'])->name('tagihan-jasa.tarif-efektif');
         Route::post('/tagihan-jasa', [TagihanJasaController::class, 'store'])->name('tagihan-jasa.store');
         Route::get('/tagihan-jasa/{id}/edit', [TagihanJasaController::class, 'edit'])->name('tagihan-jasa.edit');
         Route::put('/tagihan-jasa/{id}', [TagihanJasaController::class, 'update'])->name('tagihan-jasa.update');

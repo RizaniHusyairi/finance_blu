@@ -13,6 +13,13 @@ return new class extends Migration
      */
     public function up(): void
     {
+        // Index komposit unik ini menjadi penyangga FK mitra_jasa_id (kolom paling kiri),
+        // sehingga MySQL menolak men-drop-nya. Tambahkan index khusus untuk FK tersebut
+        // lebih dulu agar unique komposit boleh dihapus.
+        Schema::table('laporan_utilitas', function (Blueprint $table) {
+            $table->index('mitra_jasa_id', 'lu_mitra_jasa_id_idx');
+        });
+
         Schema::table('laporan_utilitas', function (Blueprint $table) {
             $table->dropUnique('unik_laporan_utilitas');
         });
@@ -22,6 +29,10 @@ return new class extends Migration
     {
         Schema::table('laporan_utilitas', function (Blueprint $table) {
             $table->unique(['mitra_jasa_id', 'layanan_jasa_id', 'bulan', 'tahun'], 'unik_laporan_utilitas');
+        });
+
+        Schema::table('laporan_utilitas', function (Blueprint $table) {
+            $table->dropIndex('lu_mitra_jasa_id_idx');
         });
     }
 };
