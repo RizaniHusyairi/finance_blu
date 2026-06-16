@@ -323,8 +323,12 @@
                             <h6 class="ib-section-title">Data Dasar Batch</h6>
                         </div>
                     </div>
+                    @php
+                        // AMC (operasional) tidak menentukan layanan tarif — ditetapkan Admin Jasa saat membuat tagihan.
+                        $hideLayananTarif = auth()->user()?->hasRole('AMC') && ! auth()->user()?->hasRole('Super Admin');
+                    @endphp
                     <div class="row g-3">
-                        <div class="col-lg-4">
+                        <div class="{{ $hideLayananTarif ? 'col-lg-6' : 'col-lg-4' }}">
                             <label class="form-label">Mitra / Maskapai <span class="text-danger">*</span></label>
                             <select name="mitra_jasa_id" class="form-select" required>
                                 <option value="">-- Pilih mitra --</option>
@@ -333,11 +337,12 @@
                                 @endforeach
                             </select>
                         </div>
-                        <div class="col-lg-3">
+                        <div class="{{ $hideLayananTarif ? 'col-lg-6' : 'col-lg-3' }}">
                             <label class="form-label">Periode Bulan</label>
                             <input type="month" name="periode_bulan" id="periodeBulan" class="form-control" value="{{ old('periode_bulan', optional($item->tanggal)->format('Y-m') ?: now()->format('Y-m')) }}">
                             <div class="form-text small">Dipakai untuk memudahkan input tanggal sebulan.</div>
                         </div>
+                        @unless($hideLayananTarif)
                         <div class="col-lg-5">
                             <label class="form-label">Layanan Tarif Garbarata</label>
                             <select name="layanan_jasa_id" class="form-select">
@@ -347,6 +352,10 @@
                                 @endforeach
                             </select>
                         </div>
+                        @else
+                        {{-- Pertahankan nilai lama agar tidak terhapus saat AMC mengedit --}}
+                        <input type="hidden" name="layanan_jasa_id" value="{{ old('layanan_jasa_id', $item->layanan_jasa_id) }}">
+                        @endunless
                         <div class="col-12">
                             <label class="form-label">Permohonan Non-Schedule (opsional)</label>
                             <select name="permohonan_non_schedule_id" class="form-select">

@@ -104,7 +104,8 @@
             $cardId = 'mitra-block-' . $idx;
             $eligibleCount = ($g['status_counts']['DRAFT'] ?? 0) + ($g['status_counts']['SIAP_DITAGIH'] ?? 0);
             $periodeAjuan = \Carbon\Carbon::parse($filters['tanggal_dari'])->format('Y-m');
-            $canAjukan = auth()->user()?->hasAnyRole(['Super Admin', 'AMC']) && $eligibleCount > 0 && $g['mitra'];
+            // Selaras dengan PengajuanPenagihanGarbarataController::canCreate() — AMC tidak boleh memulai tagihan.
+            $canAjukan = auth()->user()?->hasAnyRole(['Super Admin', 'Super Admin Jasa', 'Admin Jasa']) && $eligibleCount > 0 && $g['mitra'];
         @endphp
         <div class="card mitra-card mb-3">
             <div class="mitra-header d-flex justify-content-between align-items-center">
@@ -116,9 +117,11 @@
                     </div>
                 </div>
                 <div class="d-flex gap-2 flex-wrap justify-content-end align-items-center">
-                    @foreach($g['status_counts'] as $stCode => $stCount)
-                        <span class="mitra-pill {{ $stCode === 'TERTAGIH' ? 'success' : ($stCode === 'DIAJUKAN' ? 'warning' : '') }}">{{ $statusOpt[$stCode] ?? $stCode }}: {{ $stCount }}</span>
-                    @endforeach
+                    @if($canSeeBilling)
+                        @foreach($g['status_counts'] as $stCode => $stCount)
+                            <span class="mitra-pill {{ $stCode === 'TERTAGIH' ? 'success' : ($stCode === 'DIAJUKAN' ? 'warning' : '') }}">{{ $statusOpt[$stCode] ?? $stCode }}: {{ $stCount }}</span>
+                        @endforeach
+                    @endif
                     @if($canAjukan)
                         <a href="{{ route('pengajuan-penagihan-garbarata.create', ['mitra_jasa_id' => $g['mitra']->id, 'periode_bulan' => $periodeAjuan]) }}"
                            class="btn btn-sm btn-warning fw-bold"
@@ -144,8 +147,10 @@
                                     <th class="text-end">Durasi</th>
                                     <th class="text-center">Rentang</th>
                                     <th class="text-center">Avio</th>
-                                    <th class="text-end">Total</th>
-                                    <th class="text-center">Status</th>
+                                    @if($canSeeBilling)
+                                        <th class="text-end">Total</th>
+                                        <th class="text-center">Status</th>
+                                    @endif
                                     <th class="text-center">Aksi</th>
                                 </tr>
                             </thead>
@@ -167,13 +172,15 @@
                                         <td class="text-end">{{ $row->durasi_menit }} mnt</td>
                                         <td class="text-center fw-bold text-primary">{{ $row->jumlah_rentang }}</td>
                                         <td class="text-center">{{ $row->nomor_avio ?? '-' }}</td>
-                                        <td class="text-end fw-bold text-success">Rp {{ number_format((float) $row->total_garbarata, 0, ',', '.') }}</td>
-                                        <td class="text-center">
-                                            <span class="badge {{ $row->status_badge }}">{{ $row->status_label }}</span>
-                                            @if($row->tagihan)
-                                                <div class="small text-muted mt-1">{{ $row->tagihan->nomor_tagihan }}</div>
-                                            @endif
-                                        </td>
+                                        @if($canSeeBilling)
+                                            <td class="text-end fw-bold text-success">Rp {{ number_format((float) $row->total_garbarata, 0, ',', '.') }}</td>
+                                            <td class="text-center">
+                                                <span class="badge {{ $row->status_badge }}">{{ $row->status_label }}</span>
+                                                @if($row->tagihan)
+                                                    <div class="small text-muted mt-1">{{ $row->tagihan->nomor_tagihan }}</div>
+                                                @endif
+                                            </td>
+                                        @endif
                                         <td class="text-center">
                                             <div class="btn-group btn-group-sm">
                                                 @if($row->file_pendukung)

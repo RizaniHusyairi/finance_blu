@@ -83,6 +83,16 @@ class TagihanJasa extends Model
         return $this->hasOne(TransaksiPenerimaan::class, 'nomor_invoice', 'nomor_tagihan');
     }
 
+    public function paymentProofs()
+    {
+        return $this->hasMany(TagihanJasaPaymentProof::class, 'tagihan_jasa_id')->latest();
+    }
+
+    public function latestPaymentProof()
+    {
+        return $this->hasOne(TagihanJasaPaymentProof::class, 'tagihan_jasa_id')->latestOfMany();
+    }
+
     /* ── Scope Helpers ── */
 
     public function scopeFungsi($query)
@@ -120,7 +130,10 @@ class TagihanJasa extends Model
             return 0;
         }
 
-        return max(0, $this->tanggal_jatuh_tempo->diffInDays(now(), false));
+        $today = now()->startOfDay();
+        $due = $this->tanggal_jatuh_tempo->copy()->startOfDay();
+
+        return max(0, (int) $due->diffInDays($today, false));
     }
 
     public function getTarifDendaKeterlambatanAttribute(): float

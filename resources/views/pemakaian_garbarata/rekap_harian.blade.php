@@ -162,7 +162,9 @@
                                                         <th class="text-end">Durasi</th>
                                                         <th class="text-center">Rentang</th>
                                                         <th class="text-center">Avio</th>
-                                                        <th class="text-center">Status</th>
+                                                        @if($canSeeBilling)
+                                                            <th class="text-center">Status</th>
+                                                        @endif
                                                         <th class="text-center" style="width:96px;">Aksi</th>
                                                     </tr>
                                                 </thead>
@@ -179,7 +181,9 @@
                                                             <td class="text-end">{{ $row->durasi_menit }} mnt</td>
                                                             <td class="text-center fw-bold text-primary">{{ $row->jumlah_rentang }}</td>
                                                             <td class="text-center">{{ $row->nomor_avio ?? '-' }}</td>
-                                                            <td class="text-center"><span class="badge {{ $row->status_badge }} small">{{ $row->status_label }}</span></td>
+                                                            @if($canSeeBilling)
+                                                                <td class="text-center"><span class="badge {{ $row->status_badge }} small">{{ $row->status_label }}</span></td>
+                                                            @endif
                                                             <td class="text-center">
                                                                 <div class="btn-group btn-group-sm">
                                                                     <button type="button" class="btn btn-outline-primary btn-detail" data-id="{{ $row->id }}" title="Detail"><i class="bi bi-eye"></i></button>
@@ -196,9 +200,11 @@
                                                         <th colspan="7" class="text-end">Subtotal {{ $mitraData['mitra']?->nama_mitra }}</th>
                                                         <th class="text-end">{{ $mitraData['total_durasi'] }} mnt</th>
                                                         <th class="text-center text-primary">{{ $mitraData['total_rentang'] }}</th>
-                                                        <th></th>
-                                                        <th></th>
-                                                        <th></th>
+                                                        <th></th>{{-- Avio --}}
+                                                        @if($canSeeBilling)
+                                                            <th></th>{{-- Status --}}
+                                                        @endif
+                                                        <th></th>{{-- Aksi --}}
                                                     </tr>
                                                 </tfoot>
                                             </table>
@@ -245,17 +251,18 @@
                     'durasi_menit' => $row->durasi_menit,
                     'jumlah_rentang' => $row->jumlah_rentang,
                     'nomor_avio' => $row->nomor_avio,
-                    'tarif_garbarata' => (float) $row->tarif_garbarata,
-                    'total_garbarata' => (float) $row->total_garbarata,
+                    'tarif_garbarata' => $canSeeBilling ? (float) $row->tarif_garbarata : null,
+                    'total_garbarata' => $canSeeBilling ? (float) $row->total_garbarata : null,
                     'keterangan' => $row->keterangan,
                     'status_label' => $row->status_label,
                     'status_badge' => $row->status_badge,
-                    'tagihan' => $row->tagihan?->nomor_tagihan,
+                    'tagihan' => $canSeeBilling ? $row->tagihan?->nomor_tagihan : null,
                     'permohonan' => $row->permohonan?->nomor_surat,
                     'creator' => $row->creator?->name,
                     'created_at' => $row->created_at?->format('d/m/Y H:i'),
                     'file_url' => $row->file_pendukung ? route('pemakaian-garbarata.file', $row->id) : null,
                     'edit_url' => route('pemakaian-garbarata.edit', $row->id),
+                    'editable' => auth()->user()?->hasRole('Super Admin') || (auth()->id() === $row->created_by && $row->status !== 'TERTAGIH'),
                 ];
             }
         }
@@ -612,6 +619,7 @@
                                 <div class="dm-stat-value" id="dm-rentang">—</div>
                             </div>
                         </div>
+                        @if($canSeeBilling)
                         <div class="dm-stat-tile">
                             <span class="dm-stat-icon" style="background:#f5f3ff;color:#7c3aed;"><i class="bi bi-flag-fill"></i></span>
                             <div class="dm-stat-body">
@@ -626,6 +634,7 @@
                                 <div class="dm-stat-value" id="dm-link">—</div>
                             </div>
                         </div>
+                        @endif
                     </div>
 
                     {{-- Keterangan + Audit --}}
@@ -766,7 +775,13 @@
                 fileSlot.innerHTML = '<span class="text-muted small">— Tidak ada file —</span>';
             }
 
-            document.getElementById('dm-edit').setAttribute('href', d.edit_url);
+            const dmEdit = document.getElementById('dm-edit');
+            if (d.editable) {
+                dmEdit.style.display = '';
+                dmEdit.setAttribute('href', d.edit_url);
+            } else {
+                dmEdit.style.display = 'none';
+            }
 
             detailModal.show();
         });

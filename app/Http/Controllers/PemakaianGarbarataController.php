@@ -34,6 +34,7 @@ class PemakaianGarbarataController extends Controller
         if ($mitraId = $request->input('mitra_jasa_id')) {
             $query->where('mitra_jasa_id', $mitraId);
         }
+        $this->applyAmcScope($query);
 
         $items = $query->get();
 
@@ -58,6 +59,7 @@ class PemakaianGarbarataController extends Controller
         return view('pemakaian_garbarata.index', [
             'grouped' => $grouped,
             'summary' => $summary,
+            'canSeeBilling' => $this->canSeeBilling(),
             'filters' => [
                 'status' => $request->input('status'),
                 'mitra_jasa_id' => $request->input('mitra_jasa_id'),
@@ -190,6 +192,7 @@ class PemakaianGarbarataController extends Controller
         if ($status) {
             $query->where('status', $status);
         }
+        $this->applyAmcScope($query);
 
         $items = $query->get();
 
@@ -229,6 +232,7 @@ class PemakaianGarbarataController extends Controller
         return view('pemakaian_garbarata.rekap_harian', [
             'grouped' => $grouped,
             'grand' => $grand,
+            'canSeeBilling' => $this->canSeeBilling(),
             'filters' => [
                 'tanggal_dari' => $dari,
                 'tanggal_sampai' => $sampai,
@@ -250,11 +254,12 @@ class PemakaianGarbarataController extends Controller
             abort(404);
         }
 
-        $rows = PemakaianGarbarata::with(['mitra', 'layanan', 'creator', 'tagihan', 'permohonan'])
+        $rowsQuery = PemakaianGarbarata::with(['mitra', 'layanan', 'creator', 'tagihan', 'permohonan'])
             ->whereDate('tanggal', $tgl->toDateString())
             ->orderBy('mitra_jasa_id')
-            ->orderBy('docking_at')
-            ->get();
+            ->orderBy('docking_at');
+        $this->applyAmcScope($rowsQuery);
+        $rows = $rowsQuery->get();
 
         $byMitra = $rows->groupBy('mitra_jasa_id')->map(function ($items) {
             return [
@@ -400,10 +405,35 @@ class PemakaianGarbarataController extends Controller
         return $user && $user->hasAnyRole(['Super Admin', 'Super Admin Jasa', 'Admin Jasa', 'Koordinator Jasa', 'AMC', 'Operator BLU']);
     }
 
+    /**
+     * Informasi tagihan garbarata (nominal rupiah, status tagihan, nomor tagihan)
+     * hanya untuk peran keuangan/jasa. AMC (operasional apron) tidak boleh melihatnya.
+     */
+    private function canSeeBilling(): bool
+    {
+        $user = Auth::user();
+        return $user && $user->hasAnyRole(['Super Admin', 'Super Admin Jasa', 'Admin Jasa', 'Koordinator Jasa', 'Operator BLU']);
+    }
+
     private function canCreate(): bool
     {
         $user = Auth::user();
         return $user && $user->hasAnyRole(['Super Admin', 'AMC']);
+    }
+
+    /**
+     * Operator AMC murni hanya melihat catatan pemakaian yang ia buat sendiri.
+     * Peran pengawas/jasa (Super Admin, Super Admin Jasa, Admin Jasa, Koordinator Jasa,
+     * Operator BLU non-AMC) tetap melihat seluruh data. Selaras dengan scoping di
+     * PermohonanNonScheduleController::index().
+     */
+    private function applyAmcScope($query)
+    {
+        $user = Auth::user();
+        if ($user && $user->hasRole('AMC') && ! $user->hasAnyRole(['Super Admin', 'Super Admin Jasa', 'Admin Jasa', 'Koordinator Jasa'])) {
+            $query->where('created_by', $user->id);
+        }
+        return $query;
     }
 
     private function canEdit(PemakaianGarbarata $item): bool

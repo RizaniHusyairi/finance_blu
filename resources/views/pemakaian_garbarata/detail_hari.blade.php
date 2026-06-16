@@ -147,7 +147,9 @@
                                             @if($row->file_pendukung)
                                                 <a href="{{ route('pemakaian-garbarata.file', $row->id) }}" target="_blank" class="btn btn-outline-secondary" title="File"><i class="bi bi-paperclip"></i></a>
                                             @endif
-                                            <a href="{{ route('pemakaian-garbarata.edit', $row->id) }}" class="btn btn-outline-warning" title="Ubah"><i class="bi bi-pencil"></i></a>
+                                            @if(auth()->user()?->hasRole('Super Admin') || (auth()->id() === $row->created_by && $row->status !== 'TERTAGIH'))
+                                                <a href="{{ route('pemakaian-garbarata.edit', $row->id) }}" class="btn btn-outline-warning" title="Ubah"><i class="bi bi-pencil"></i></a>
+                                            @endif
                                         </div>
                                     </td>
                                 </tr>

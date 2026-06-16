@@ -85,7 +85,7 @@ class LoginController extends Controller
         }
 
         if ($user->hasRole('AMC')) {
-            return redirect()->route('pemakaian-garbarata.index');
+            return redirect()->route('dashboard');
         }
 
         if ($user->hasAnyRole(self::INTERNAL_ROLES)) {

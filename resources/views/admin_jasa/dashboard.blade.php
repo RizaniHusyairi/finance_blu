@@ -7,6 +7,12 @@
     $tanggal = fn ($value) => $value ? \Carbon\Carbon::parse($value)->format('d/m/Y') : '-';
     $canCreateTagihanJasa = auth()->user()?->hasRole('Super Admin') === true
         || (auth()->user()?->hasAnyRole(['Admin Jasa', 'Admin Konsesi']) === true && ! auth()->user()?->hasRole('Super Admin Jasa'));
+    $activity = $todayActivity ?? [];
+    $activityAttention = (int) ($activity['manual_payment_proof_count'] ?? 0)
+        + (int) ($activity['due_today_count'] ?? 0)
+        + (int) ($activity['overdue_count'] ?? 0)
+        + (int) ($activity['draft_count'] ?? 0)
+        + (int) ($activity['revision_count'] ?? 0);
     $dueBadge = function ($tagihan) {
         return match ($tagihan->status_jatuh_tempo) {
             'LEWAT_JATUH_TEMPO' => ['Lewat Jatuh Tempo', 'bg-danger'],
@@ -33,6 +39,14 @@
     @keyframes ajContourDrift {
         0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); opacity: .68; }
         50%      { transform: translate3d(-14px, 10px, 0) rotate(2deg); opacity: .95; }
+    }
+    @keyframes ajActivityIn {
+        from { opacity: 0; transform: translateY(12px) scale(.98); }
+        to { opacity: 1; transform: none; }
+    }
+    @keyframes ajActivityPulse {
+        0%, 100% { transform: scale(1); box-shadow: inset 0 0 0 1px rgba(255,255,255,.18), 0 0 0 0 rgba(251,191,36,.28); }
+        50% { transform: scale(1.07); box-shadow: inset 0 0 0 1px rgba(255,255,255,.22), 0 0 0 9px rgba(251,191,36,0); }
     }
     .aj-hero-shell {
         position: relative;
@@ -121,6 +135,12 @@
         background: rgba(15, 23, 42, .22);
         padding: 8px 14px;
         backdrop-filter: blur(8px);
+    }
+    .aj-activity-btn {
+        position: relative;
+        border: 0;
+        color: #0f2f57;
+        box-shadow: 0 12px 26px rgba(15, 23, 42, .18);
     }
     @media (prefers-reduced-motion: reduce) {
         .aj-hero,
@@ -502,6 +522,219 @@
     .text-slate {
         color: #334155;
     }
+
+    .aj-activity-modal .modal-dialog { max-width: 790px; }
+    .aj-activity-modal .modal-content {
+        border: 0;
+        border-radius: 24px;
+        overflow: hidden;
+        box-shadow: 0 28px 80px rgba(15,23,42,.28);
+    }
+    .aj-activity-head {
+        position: relative;
+        overflow: hidden;
+        padding: 24px 26px;
+        color: #fff;
+        background: linear-gradient(120deg, #071421 0%, #0d2744 44%, #174f86 100%);
+    }
+    .aj-activity-head::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(90deg, rgba(2,8,23,.42), rgba(2,8,23,.12) 58%, transparent);
+        pointer-events: none;
+    }
+    .aj-activity-head::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        width: 46%;
+        background: linear-gradient(90deg, transparent, rgba(125,211,252,.16), rgba(255,255,255,.22), transparent);
+        animation: ajHeroSweep 5.2s ease-in-out infinite;
+        pointer-events: none;
+    }
+    .aj-activity-head > * { position: relative; z-index: 1; }
+    .aj-activity-head .modal-title {
+        color: #fff !important;
+        font-weight: 900;
+        text-shadow: 0 2px 14px rgba(0,0,0,.24);
+    }
+    .aj-activity-date { color: rgba(255,255,255,.82) !important; }
+    .aj-activity-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 16px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(255,255,255,.16);
+        color: #fff;
+        font-size: 1.35rem;
+        animation: ajActivityPulse 2.8s ease-in-out infinite;
+    }
+    .aj-activity-eyebrow {
+        color: #fbbf24;
+        font-size: .7rem;
+        font-weight: 900;
+        letter-spacing: .14em;
+        text-transform: uppercase;
+    }
+    .aj-activity-body { background: #f8fbff; }
+    .aj-activity-alert {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        border-radius: 18px;
+        padding: 15px 16px;
+        margin-bottom: 14px;
+        border: 1px solid transparent;
+        opacity: 0;
+        animation: ajActivityIn .45s cubic-bezier(.22,.61,.36,1) .05s both;
+    }
+    .aj-activity-alert.is-warning { color: #92400e; background: #fff7ed; border-color: #fed7aa; }
+    .aj-activity-alert.is-safe { color: #047857; background: #ecfdf5; border-color: #bbf7d0; }
+    .aj-activity-alert i { font-size: 1.2rem; margin-top: 1px; }
+    .aj-activity-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 11px;
+    }
+    .aj-activity-tile {
+        position: relative;
+        overflow: hidden;
+        border: 1px solid #e5eefb;
+        border-radius: 18px;
+        background: #fff;
+        padding: 14px;
+        opacity: 0;
+        animation: ajActivityIn .45s cubic-bezier(.22,.61,.36,1) both;
+        animation-delay: calc(.12s + var(--i, 0) * .06s);
+        transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+    }
+    .aj-activity-tile::before {
+        content: "";
+        position: absolute;
+        inset: 0 0 auto;
+        height: 4px;
+        background: var(--accent, #2563eb);
+    }
+    .aj-activity-tile:hover {
+        transform: translateY(-4px);
+        border-color: #cfe1ff;
+        box-shadow: 0 16px 32px rgba(15,47,87,.11);
+    }
+    .aj-activity-tile .tile-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+    }
+    .aj-activity-tile .tile-icon {
+        width: 34px;
+        height: 34px;
+        border-radius: 12px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--soft, #eff6ff);
+        color: var(--accent, #2563eb);
+    }
+    .aj-activity-tile .label {
+        color: #64748b;
+        font-size: .7rem;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+    }
+    .aj-activity-tile .num {
+        color: #0f172a;
+        font-size: 1.65rem;
+        font-weight: 900;
+        line-height: 1;
+        font-variant-numeric: tabular-nums;
+    }
+    .aj-activity-list {
+        display: grid;
+        gap: 9px;
+        margin-top: 14px;
+    }
+    .aj-activity-task {
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        border-radius: 17px;
+        border: 1px solid #eaf1fb;
+        background: #fff;
+        padding: 13px 14px 13px 15px;
+        opacity: 0;
+        animation: ajActivityIn .45s cubic-bezier(.22,.61,.36,1) both;
+        animation-delay: calc(.32s + var(--i, 0) * .06s);
+        transition: transform .18s ease, box-shadow .18s ease;
+    }
+    .aj-activity-task::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 14px;
+        bottom: 14px;
+        width: 4px;
+        border-radius: 0 999px 999px 0;
+        background: var(--accent, #2563eb);
+    }
+    .aj-activity-task:hover { transform: translateX(4px); box-shadow: 0 12px 26px rgba(15,47,87,.09); }
+    .aj-activity-task .task-icon {
+        width: 38px;
+        height: 38px;
+        border-radius: 13px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex: 0 0 auto;
+        background: var(--soft, #dbeafe);
+        color: var(--accent, #1d4ed8);
+    }
+    .aj-activity-task.is-warning { --accent: #f59e0b; --soft: #fef3c7; }
+    .aj-activity-task.is-danger { --accent: #ef4444; --soft: #fee2e2; }
+    .aj-activity-task.is-safe { --accent: #10b981; --soft: #d1fae5; }
+    .aj-activity-task.is-info { --accent: #2563eb; --soft: #dbeafe; }
+    .aj-activity-pending {
+        border: 1px dashed #bfdbfe;
+        border-radius: 18px;
+        background: #fff;
+        padding: 13px;
+        opacity: 0;
+        animation: ajActivityIn .45s cubic-bezier(.22,.61,.36,1) .58s both;
+    }
+    .aj-activity-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 11px 0;
+        border-bottom: 1px solid #eaf1fb;
+    }
+    .aj-activity-row:last-child { border-bottom: 0; }
+    .aj-activity-row-icon {
+        width: 34px;
+        height: 34px;
+        border-radius: 11px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex: 0 0 auto;
+        color: #2563eb;
+        background: #eff6ff;
+    }
+    .aj-min-w-0 { min-width: 0; }
+    .aj-activity-modal .modal-footer { border-top: 1px solid #eaf1fb; }
+    @media (max-width: 767.98px) {
+        .aj-activity-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 575.98px) {
+        .aj-activity-grid { grid-template-columns: 1fr; }
+        .aj-activity-head { padding: 20px; }
+    }
 </style>
 
 <div class="aj-hero-shell">
@@ -514,6 +747,12 @@
                 <p class="mb-0 small text-white-50">Monitoring tagihan layanan jasa, jatuh tempo, dan aktivitas mitra.</p>
             </div>
             <div class="d-flex flex-wrap align-items-end gap-2">
+                <button type="button" class="btn btn-warning btn-sm fw-bold aj-activity-btn" data-bs-toggle="modal" data-bs-target="#adminJasaActivityModal">
+                    <i class="bi bi-bell me-1"></i>Aktivitas Hari Ini
+                    @if($activityAttention > 0)
+                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">{{ $activityAttention }}</span>
+                    @endif
+                </button>
                 <span class="aj-hero-date small text-white-50 d-none d-md-inline-flex align-items-center">
                     <i class="bi bi-calendar3 me-1"></i>
                     {{ now()->format('d/m/Y') }}
@@ -535,6 +774,155 @@
                         <button class="btn btn-light btn-sm fw-bold">Terapkan</button>
                     </div>
                 </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade aj-activity-modal" id="adminJasaActivityModal" tabindex="-1" aria-labelledby="adminJasaActivityModalLabel" aria-hidden="true" data-storage-key="{{ $activity['storage_key'] ?? 'admin_jasa_activity_seen' }}">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="aj-activity-head d-flex align-items-start gap-3">
+                <span class="aj-activity-icon"><i class="bi bi-bell-fill"></i></span>
+                <div class="flex-grow-1">
+                    <div class="aj-activity-eyebrow">Peringatan Admin Jasa</div>
+                    <h5 class="modal-title mb-1" id="adminJasaActivityModalLabel">Aktivitas yang perlu dicek hari ini</h5>
+                    <p class="aj-activity-date mb-0 small">{{ $activity['date_label'] ?? now()->isoFormat('dddd, D MMMM Y') }}</p>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Tutup"></button>
+            </div>
+            <div class="modal-body aj-activity-body p-4">
+                <div class="aj-activity-alert {{ ($activity['needs_attention'] ?? false) ? 'is-warning' : 'is-safe' }}">
+                    <i class="bi {{ ($activity['needs_attention'] ?? false) ? 'bi-exclamation-triangle-fill' : 'bi-check-circle-fill' }}"></i>
+                    <div>
+                        <div class="fw-bold">{{ ($activity['needs_attention'] ?? false) ? 'Ada aktivitas yang perlu ditindaklanjuti.' : 'Tidak ada peringatan penting untuk hari ini.' }}</div>
+                        <div class="small">Popup ini otomatis muncul sekali per hari. Setelah ditutup, bisa dibuka lagi dari tombol Aktivitas Hari Ini.</div>
+                    </div>
+                </div>
+
+                <div class="aj-activity-grid">
+                    <div class="aj-activity-tile" style="--i: 0; --accent: #2563eb; --soft: #eff6ff;">
+                        <div class="tile-top">
+                            <div class="label">Dibuat Hari Ini</div>
+                            <span class="tile-icon"><i class="bi bi-receipt-cutoff"></i></span>
+                        </div>
+                        <div class="num mt-2">{{ number_format((int) ($activity['created_today_count'] ?? 0), 0, ',', '.') }}</div>
+                        <div class="small text-muted mt-1">{{ $rupiah($activity['created_today_nominal'] ?? 0) }}</div>
+                    </div>
+                    <div class="aj-activity-tile" style="--i: 1; --accent: #f59e0b; --soft: #fffbeb;">
+                        <div class="tile-top">
+                            <div class="label">Bukti Manual</div>
+                            <span class="tile-icon"><i class="bi bi-file-earmark-arrow-up"></i></span>
+                        </div>
+                        <div class="num mt-2">{{ number_format((int) ($activity['manual_payment_proof_count'] ?? 0), 0, ',', '.') }}</div>
+                        <div class="small text-muted mt-1">menunggu verifikasi</div>
+                    </div>
+                    <div class="aj-activity-tile" style="--i: 2; --accent: #ef4444; --soft: #fef2f2;">
+                        <div class="tile-top">
+                            <div class="label">Lewat Tempo</div>
+                            <span class="tile-icon"><i class="bi bi-calendar-x"></i></span>
+                        </div>
+                        <div class="num mt-2">{{ number_format((int) ($activity['overdue_count'] ?? 0), 0, ',', '.') }}</div>
+                        <div class="small text-muted mt-1">{{ number_format((int) ($activity['due_today_count'] ?? 0), 0, ',', '.') }} jatuh tempo hari ini</div>
+                    </div>
+                    <div class="aj-activity-tile" style="--i: 3; --accent: #7c3aed; --soft: #f5f3ff;">
+                        <div class="tile-top">
+                            <div class="label">Draft / Revisi</div>
+                            <span class="tile-icon"><i class="bi bi-journal-text"></i></span>
+                        </div>
+                        <div class="num mt-2">{{ number_format((int) ($activity['draft_count'] ?? 0) + (int) ($activity['revision_count'] ?? 0), 0, ',', '.') }}</div>
+                        <div class="small text-muted mt-1">{{ number_format((int) ($activity['draft_count'] ?? 0), 0, ',', '.') }} draft, {{ number_format((int) ($activity['revision_count'] ?? 0), 0, ',', '.') }} revisi</div>
+                    </div>
+                </div>
+
+                <div class="aj-activity-list">
+                    <div class="aj-activity-task {{ ((int) ($activity['manual_payment_proof_count'] ?? 0) > 0) ? 'is-warning' : 'is-safe' }}" style="--i: 0;">
+                        <span class="task-icon"><i class="bi {{ ((int) ($activity['manual_payment_proof_count'] ?? 0) > 0) ? 'bi-file-earmark-arrow-up' : 'bi-check2' }}"></i></span>
+                        <div class="flex-grow-1">
+                            <div class="fw-semibold">Verifikasi bukti pembayaran manual dari mitra.</div>
+                            <div class="small text-muted">{{ number_format((int) ($activity['manual_payment_proof_count'] ?? 0), 0, ',', '.') }} tagihan menunggu validasi nominal dan bukti transfer.</div>
+                        </div>
+                    </div>
+                    <div class="aj-activity-task {{ ((int) ($activity['due_today_count'] ?? 0) > 0) ? 'is-warning' : 'is-safe' }}" style="--i: 1;">
+                        <span class="task-icon"><i class="bi {{ ((int) ($activity['due_today_count'] ?? 0) > 0) ? 'bi-calendar-event' : 'bi-check2' }}"></i></span>
+                        <div class="flex-grow-1">
+                            <div class="fw-semibold">Pantau tagihan yang jatuh tempo hari ini.</div>
+                            <div class="small text-muted">{{ number_format((int) ($activity['due_today_count'] ?? 0), 0, ',', '.') }} tagihan jatuh tempo hari ini dan belum lunas.</div>
+                        </div>
+                    </div>
+                    <div class="aj-activity-task {{ ((int) ($activity['overdue_count'] ?? 0) > 0) ? 'is-danger' : 'is-safe' }}" style="--i: 2;">
+                        <span class="task-icon"><i class="bi {{ ((int) ($activity['overdue_count'] ?? 0) > 0) ? 'bi-exclamation-octagon' : 'bi-shield-check' }}"></i></span>
+                        <div class="flex-grow-1">
+                            <div class="fw-semibold">Tindak lanjuti tagihan lewat jatuh tempo.</div>
+                            <div class="small text-muted">{{ number_format((int) ($activity['overdue_count'] ?? 0), 0, ',', '.') }} tagihan perlu reminder atau eskalasi.</div>
+                        </div>
+                    </div>
+                    <div class="aj-activity-task {{ (((int) ($activity['draft_count'] ?? 0) + (int) ($activity['revision_count'] ?? 0)) > 0) ? 'is-info' : 'is-safe' }}" style="--i: 3;">
+                        <span class="task-icon"><i class="bi {{ (((int) ($activity['draft_count'] ?? 0) + (int) ($activity['revision_count'] ?? 0)) > 0) ? 'bi-pencil-square' : 'bi-check2' }}"></i></span>
+                        <div class="flex-grow-1">
+                            <div class="fw-semibold">Rapikan draft dan tagihan revisi.</div>
+                            <div class="small text-muted">Pastikan tagihan siap diajukan atau dikirim ulang ke alur verifikasi.</div>
+                        </div>
+                    </div>
+                </div>
+
+                @if(($activity['latest_manual_payment_proofs'] ?? collect())->isNotEmpty())
+                    <div class="aj-activity-pending mt-3">
+                        <div class="fw-bold small text-uppercase text-muted mb-1">Bukti pembayaran menunggu verifikasi</div>
+                        @foreach($activity['latest_manual_payment_proofs'] as $tagihan)
+                            <div class="aj-activity-row">
+                                <div class="d-flex align-items-center gap-2 aj-min-w-0">
+                                    <span class="aj-activity-row-icon"><i class="bi bi-file-earmark-arrow-up"></i></span>
+                                    <div class="aj-min-w-0">
+                                        <div class="fw-semibold text-truncate">{{ $tagihan->nomor_tagihan ?? '-' }}</div>
+                                        <div class="small text-muted text-truncate">{{ $tagihan->mitra?->nama_mitra ?? '-' }}</div>
+                                    </div>
+                                </div>
+                                <a href="{{ route('tagihan-jasa.show', $tagihan->id) }}" class="btn btn-sm detail-btn">Detail</a>
+                            </div>
+                        @endforeach
+                    </div>
+                @elseif(($activity['latest_due_today'] ?? collect())->isNotEmpty())
+                    <div class="aj-activity-pending mt-3">
+                        <div class="fw-bold small text-uppercase text-muted mb-1">Tagihan jatuh tempo hari ini</div>
+                        @foreach($activity['latest_due_today'] as $tagihan)
+                            <div class="aj-activity-row">
+                                <div class="d-flex align-items-center gap-2 aj-min-w-0">
+                                    <span class="aj-activity-row-icon"><i class="bi bi-calendar-event"></i></span>
+                                    <div class="aj-min-w-0">
+                                        <div class="fw-semibold text-truncate">{{ $tagihan->nomor_tagihan ?? '-' }}</div>
+                                        <div class="small text-muted text-truncate">{{ $tagihan->mitra?->nama_mitra ?? '-' }}</div>
+                                    </div>
+                                </div>
+                                <a href="{{ route('tagihan-jasa.show', $tagihan->id) }}" class="btn btn-sm detail-btn">Detail</a>
+                            </div>
+                        @endforeach
+                    </div>
+                @elseif(($activity['latest_overdue'] ?? collect())->isNotEmpty())
+                    <div class="aj-activity-pending mt-3">
+                        <div class="fw-bold small text-uppercase text-muted mb-1">Tagihan lewat jatuh tempo</div>
+                        @foreach($activity['latest_overdue'] as $tagihan)
+                            <div class="aj-activity-row">
+                                <div class="d-flex align-items-center gap-2 aj-min-w-0">
+                                    <span class="aj-activity-row-icon"><i class="bi bi-calendar-x"></i></span>
+                                    <div class="aj-min-w-0">
+                                        <div class="fw-semibold text-truncate">{{ $tagihan->nomor_tagihan ?? '-' }}</div>
+                                        <div class="small text-muted text-truncate">{{ $tagihan->mitra?->nama_mitra ?? '-' }}</div>
+                                    </div>
+                                </div>
+                                <a href="{{ route('tagihan-jasa.show', $tagihan->id) }}" class="btn btn-sm detail-btn">Detail</a>
+                            </div>
+                        @endforeach
+                    </div>
+                @endif
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Tutup</button>
+                <a href="{{ route('tagihan-jasa.index', ['status_pembayaran' => 'menunggu_verifikasi']) }}" class="btn btn-outline-primary"><i class="bi bi-file-earmark-arrow-up me-1"></i>Bukti Manual</a>
+                <a href="{{ route('admin-jasa.tagihan.jatuh-tempo') }}" class="btn btn-outline-danger"><i class="bi bi-calendar-x me-1"></i>Jatuh Tempo</a>
+                @if($canCreateTagihanJasa)
+                    <a href="{{ route('tagihan-jasa.create') }}" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>Buat Tagihan</a>
+                @endif
             </div>
         </div>
     </div>
@@ -583,6 +971,7 @@
                 <select name="status_pembayaran" class="form-select form-select-sm">
                     <option value="">Semua</option>
                     <option value="belum_dibayar" {{ ($filters['status_pembayaran'] ?? '') === 'belum_dibayar' ? 'selected' : '' }}>Belum Dibayar</option>
+                    <option value="menunggu_verifikasi" {{ ($filters['status_pembayaran'] ?? '') === 'menunggu_verifikasi' ? 'selected' : '' }}>Menunggu Verifikasi</option>
                     <option value="sebagian" {{ ($filters['status_pembayaran'] ?? '') === 'sebagian' ? 'selected' : '' }}>Sebagian</option>
                     <option value="lunas" {{ ($filters['status_pembayaran'] ?? '') === 'lunas' ? 'selected' : '' }}>Lunas</option>
                 </select>
@@ -960,6 +1349,32 @@
     const topMitra = @json($chartTopMitra);
     const topLayanan = @json($chartTopLayanan);
     const moneyTick = value => new Intl.NumberFormat('id-ID').format(value);
+
+    // ===== Aktivitas hari ini: auto muncul sekali per user per hari =====
+    (function () {
+        const activityModalEl = document.getElementById('adminJasaActivityModal');
+        if (!activityModalEl || !window.bootstrap || !bootstrap.Modal) return;
+
+        const storageKey = activityModalEl.dataset.storageKey || 'admin_jasa_activity_seen';
+        const modal = bootstrap.Modal.getOrCreateInstance(activityModalEl);
+        let alreadySeen = false;
+
+        try {
+            alreadySeen = localStorage.getItem(storageKey) === '1';
+        } catch (error) {
+            alreadySeen = true;
+        }
+
+        if (!alreadySeen) {
+            setTimeout(() => modal.show(), 650);
+        }
+
+        activityModalEl.addEventListener('hidden.bs.modal', function () {
+            try {
+                localStorage.setItem(storageKey, '1');
+            } catch (error) {}
+        });
+    })();
 
     const chartGradient = (context, start, end) => {
         const chart = context.chart;

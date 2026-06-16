@@ -17,7 +17,7 @@ class MasterLayananJasaController extends Controller
     {
         $canManageMaster = $this->canManageMaster();
         $tipe = $request->query('tipe', 'SEMUA');
-        if (! in_array($tipe, ['SEMUA', 'PNBP', 'KONSESI'], true)) {
+        if (! in_array($tipe, ['SEMUA', 'PNBP', 'KONSESI', 'TARIF'], true)) {
             $tipe = 'SEMUA';
         }
 
@@ -35,14 +35,13 @@ class MasterLayananJasaController extends Controller
             'SEMUA' => $layanans->count(),
             'PNBP' => $layanans->where('tipe_layanan', 'PNBP')->count(),
             'KONSESI' => $layanans->where('mendukung_konsesi', true)->count(),
+            'TARIF' => $layanans->where('is_leaf', true)->count(),
         ];
 
-        $filteredLayanans = $tipe === 'SEMUA'
-            ? $layanans
-            : $this->filterTreeByType($layanans, $tipe);
-
+        // Tampilan kartu memfilter secara client-side, jadi selalu kirim daftar lengkap
+        // (sudah ter-scope untuk Admin Jasa bila bukan pengelola master).
         return view('master_layanan_jasa.index', [
-            'layanans' => $filteredLayanans,
+            'layanans' => $layanans,
             'canManageMaster' => $canManageMaster,
             'tipe' => $tipe,
             'counts' => $counts,

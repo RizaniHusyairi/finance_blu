@@ -36,6 +36,7 @@
     $paymentClass = fn ($status) => match ($status) {
         'lunas' => 'bg-success',
         'sebagian' => 'bg-warning text-dark',
+        'menunggu_verifikasi' => 'bg-info text-dark',
         default => 'bg-light text-dark border',
     };
 @endphp
@@ -209,6 +210,7 @@
                     <select name="status_pembayaran" class="form-select form-select-sm">
                         <option value="">Semua</option>
                         <option value="belum_dibayar" {{ ($filters['status_pembayaran'] ?? '') === 'belum_dibayar' ? 'selected' : '' }}>Belum Dibayar</option>
+                        <option value="menunggu_verifikasi" {{ ($filters['status_pembayaran'] ?? '') === 'menunggu_verifikasi' ? 'selected' : '' }}>Menunggu Verifikasi</option>
                         <option value="sebagian" {{ ($filters['status_pembayaran'] ?? '') === 'sebagian' ? 'selected' : '' }}>Sebagian</option>
                         <option value="lunas" {{ ($filters['status_pembayaran'] ?? '') === 'lunas' ? 'selected' : '' }}>Lunas</option>
                     </select>

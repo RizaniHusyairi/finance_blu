@@ -910,7 +910,7 @@
                         </div>
                     </div>
 
-                    <div id="amcGarbarataImportPanel" class="mb-3 rounded-2xl border border-cyan-200 bg-cyan-50/70 p-3">
+                    <div id="amcGarbarataImportPanel" class="mb-3 rounded-2xl border border-cyan-200 bg-cyan-50/70 p-3" style="display:none;">
                         <div class="d-flex flex-column flex-lg-row align-items-lg-end gap-3">
                             <div class="me-lg-auto">
                                 <div class="text-xs font-black uppercase text-cyan-800"><i class="bi bi-airplane-engines me-1"></i>Tarik Rincian Garbarata dari Rekap AMC</div>
@@ -1867,6 +1867,11 @@
             return found;
         }
 
+        // Panel "Tarik Rincian dari Rekap AMC" hanya relevan bila ada layanan garbarata dipilih.
+        function refreshGarbarataImportPanel() {
+            $('#amcGarbarataImportPanel').toggle(!!firstGarbarataServiceRow());
+        }
+
         const TAGIHAN_ID_FOR_PENGAJUAN = @json(($isEditMode ?? false) && isset($tagihan) ? $tagihan->id : null);
 
         function formatRupiahShort(value) {
@@ -2085,6 +2090,7 @@
             refreshKontrakOptions();
             updateNomorTagihanPreview();
             refreshFlightTypePanel();
+            refreshGarbarataImportPanel();
         }
 
         function addServiceRow() {
@@ -2466,6 +2472,7 @@
         refreshAllowedServices();
         applyPrefillTagihan();
         refreshFlightTypePanel();
+        refreshGarbarataImportPanel();
         const initialPengajuanId = $('#amcGarbarataPengajuanId').val();
         refreshGarbarataPengajuanOptions(initialPengajuanId || null).then(() => {
             if (initialPengajuanId && $('#amcGarbarataPengajuanSelect').val() === String(initialPengajuanId) && firstGarbarataServiceRow()) {
@@ -2538,6 +2545,7 @@
                     $('#amcGarbarataIds').val('');
                     $('#amcGarbarataPengajuanId').val('');
                 }
+                refreshGarbarataImportPanel();
             } else {
                 alert('Minimal harus ada 1 layanan.');
             }

@@ -54,6 +54,14 @@
         20% { opacity: .32; }
         55%, 100% { transform: translateX(220%) skewX(-18deg); opacity: 0; }
     }
+    @keyframes mitraActivityIn {
+        from { opacity: 0; transform: translateY(12px) scale(.98); }
+        to { opacity: 1; transform: none; }
+    }
+    @keyframes mitraActivityPulse {
+        0%, 100% { transform: scale(1); box-shadow: inset 0 0 0 1px rgba(255,255,255,.18), 0 0 0 0 rgba(251,191,36,.28); }
+        50% { transform: scale(1.07); box-shadow: inset 0 0 0 1px rgba(255,255,255,.22), 0 0 0 9px rgba(251,191,36,0); }
+    }
     @keyframes mitraContourDrift {
         0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); opacity: .68; }
         50% { transform: translate3d(-14px, 10px, 0) rotate(2deg); opacity: .95; }
@@ -164,6 +172,12 @@
     .mitra-hero .btn-outline-light {
         background: rgba(255, 255, 255, .08);
         box-shadow: 0 10px 24px rgba(15, 23, 42, .18);
+    }
+    .mitra-activity-btn {
+        position: relative;
+        border: 0;
+        color: #0f2f57;
+        box-shadow: 0 12px 26px rgba(15, 23, 42, .18);
     }
     
     .stat-card {
@@ -325,6 +339,214 @@
     /* Clean up default button and link colors */
     .btn-outline-light { border-color: #cbd5e1; color: #f8fafc; }
     .btn-outline-light:hover { background-color: rgba(255,255,255,0.1); }
+    .mitra-activity-modal .modal-dialog { max-width: 790px; }
+    .mitra-activity-modal .modal-content {
+        border: 0;
+        border-radius: 24px;
+        overflow: hidden;
+        box-shadow: 0 28px 80px rgba(15,23,42,.28);
+    }
+    .mitra-activity-head {
+        position: relative;
+        overflow: hidden;
+        padding: 24px 26px;
+        color: #fff;
+        background: linear-gradient(120deg, #071421 0%, #0d2744 44%, #174f86 100%);
+    }
+    .mitra-activity-head::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(90deg, rgba(2,8,23,.42), rgba(2,8,23,.12) 58%, transparent);
+        pointer-events: none;
+    }
+    .mitra-activity-head::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        width: 46%;
+        background: linear-gradient(90deg, transparent, rgba(125,211,252,.16), rgba(255,255,255,.22), transparent);
+        animation: mitraHeroSweep 5.2s ease-in-out infinite;
+        pointer-events: none;
+    }
+    .mitra-activity-head > * { position: relative; z-index: 1; }
+    .mitra-activity-head .modal-title {
+        color: #fff !important;
+        font-weight: 900;
+        text-shadow: 0 2px 14px rgba(0,0,0,.24);
+    }
+    .mitra-activity-date { color: rgba(255,255,255,.82) !important; }
+    .mitra-activity-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 16px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(255,255,255,.16);
+        color: #fff;
+        font-size: 1.35rem;
+        animation: mitraActivityPulse 2.8s ease-in-out infinite;
+    }
+    .mitra-activity-eyebrow {
+        color: #fbbf24;
+        font-size: .7rem;
+        font-weight: 900;
+        letter-spacing: .14em;
+        text-transform: uppercase;
+    }
+    .mitra-activity-body { background: #f8fbff; }
+    .mitra-activity-alert {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        border-radius: 18px;
+        padding: 15px 16px;
+        margin-bottom: 14px;
+        border: 1px solid transparent;
+        opacity: 0;
+        animation: mitraActivityIn .45s cubic-bezier(.22,.61,.36,1) .05s both;
+    }
+    .mitra-activity-alert.is-warning { color: #92400e; background: #fff7ed; border-color: #fed7aa; }
+    .mitra-activity-alert.is-safe { color: #047857; background: #ecfdf5; border-color: #bbf7d0; }
+    .mitra-activity-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 11px;
+    }
+    .mitra-activity-tile {
+        position: relative;
+        overflow: hidden;
+        border: 1px solid #e5eefb;
+        border-radius: 18px;
+        background: #fff;
+        padding: 14px;
+        opacity: 0;
+        animation: mitraActivityIn .45s cubic-bezier(.22,.61,.36,1) both;
+        animation-delay: calc(.12s + var(--i, 0) * .06s);
+        transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+    }
+    .mitra-activity-tile::before {
+        content: "";
+        position: absolute;
+        inset: 0 0 auto;
+        height: 4px;
+        background: var(--accent, #2563eb);
+    }
+    .mitra-activity-tile:hover {
+        transform: translateY(-4px);
+        border-color: #cfe1ff;
+        box-shadow: 0 16px 32px rgba(15,47,87,.11);
+    }
+    .mitra-activity-tile .tile-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+    }
+    .mitra-activity-tile .tile-icon {
+        width: 34px;
+        height: 34px;
+        border-radius: 12px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--soft, #eff6ff);
+        color: var(--accent, #2563eb);
+    }
+    .mitra-activity-tile .label {
+        color: #64748b;
+        font-size: .7rem;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+    }
+    .mitra-activity-tile .num {
+        color: #0f172a;
+        font-size: 1.65rem;
+        font-weight: 900;
+        line-height: 1;
+        font-variant-numeric: tabular-nums;
+    }
+    .mitra-activity-list { display: grid; gap: 9px; margin-top: 14px; }
+    .mitra-activity-task {
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        border-radius: 17px;
+        border: 1px solid #eaf1fb;
+        background: #fff;
+        padding: 13px 14px 13px 15px;
+        opacity: 0;
+        animation: mitraActivityIn .45s cubic-bezier(.22,.61,.36,1) both;
+        animation-delay: calc(.32s + var(--i, 0) * .06s);
+        transition: transform .18s ease, box-shadow .18s ease;
+    }
+    .mitra-activity-task::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 14px;
+        bottom: 14px;
+        width: 4px;
+        border-radius: 0 999px 999px 0;
+        background: var(--accent, #2563eb);
+    }
+    .mitra-activity-task:hover { transform: translateX(4px); box-shadow: 0 12px 26px rgba(15,47,87,.09); }
+    .mitra-activity-task .task-icon {
+        width: 38px;
+        height: 38px;
+        border-radius: 13px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex: 0 0 auto;
+        background: var(--soft, #dbeafe);
+        color: var(--accent, #1d4ed8);
+    }
+    .mitra-activity-task.is-warning { --accent: #f59e0b; --soft: #fef3c7; }
+    .mitra-activity-task.is-danger { --accent: #ef4444; --soft: #fee2e2; }
+    .mitra-activity-task.is-safe { --accent: #10b981; --soft: #d1fae5; }
+    .mitra-activity-task.is-info { --accent: #2563eb; --soft: #dbeafe; }
+    .mitra-activity-pending {
+        border: 1px dashed #bfdbfe;
+        border-radius: 18px;
+        background: #fff;
+        padding: 13px;
+        opacity: 0;
+        animation: mitraActivityIn .45s cubic-bezier(.22,.61,.36,1) .58s both;
+    }
+    .mitra-activity-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 11px 0;
+        border-bottom: 1px solid #eaf1fb;
+    }
+    .mitra-activity-row:last-child { border-bottom: 0; }
+    .mitra-activity-row-icon {
+        width: 34px;
+        height: 34px;
+        border-radius: 11px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex: 0 0 auto;
+        color: #2563eb;
+        background: #eff6ff;
+    }
+    .mitra-min-w-0 { min-width: 0; }
+    .mitra-activity-modal .modal-footer { border-top: 1px solid #eaf1fb; }
+    @media (max-width: 767.98px) {
+        .mitra-activity-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .mitra-hero { align-items: flex-start !important; flex-direction: column; }
+    }
+    @media (max-width: 575.98px) {
+        .mitra-activity-grid { grid-template-columns: 1fr; }
+        .mitra-activity-head { padding: 20px; }
+    }
     @media (prefers-reduced-motion: reduce) {
         .mitra-hero,
         .mitra-hero::before,
@@ -334,7 +556,13 @@
         .stat-card::after,
         .stat-icon,
         .stat-card:hover .stat-icon,
-        .modern-table-card {
+        .modern-table-card,
+        .mitra-activity-head::after,
+        .mitra-activity-icon,
+        .mitra-activity-alert,
+        .mitra-activity-tile,
+        .mitra-activity-task,
+        .mitra-activity-pending {
             animation: none !important;
         }
         .stat-card:hover {
@@ -354,6 +582,12 @@
     @else
         @php
             $isMitraJasaPortal = $isMitraJasaPortal ?? false;
+            $activity = $mitraActivity ?? [];
+            $activityAttention = (int) ($activity['unpaid_count'] ?? 0)
+                + (int) ($activity['due_today_count'] ?? 0)
+                + (int) ($activity['overdue_count'] ?? 0)
+                + (int) ($activity['pending_proof_count'] ?? 0)
+                + (int) ($activity['correction_proof_count'] ?? 0);
         @endphp
         @if($isMitraJasaPortal)
             <style>
@@ -418,8 +652,14 @@
                     <h4 class="mb-1 fw-bold text-white">Selamat Datang, {{ $vendor->nama_pihak ?? $vendor->nama_mitra }}!</h4>
                     <p class="mb-0 small text-white-50">Pantau status kontrak, layanan jasa, dan riwayat tagihan Anda dalam satu tempat.</p>
                 </div>
-                <div class="mitra-hero-content d-none d-md-flex align-items-center gap-2 small text-white-50">
-                    <span class="mitra-hero-date">
+                <div class="mitra-hero-content d-flex flex-wrap align-items-center justify-content-end gap-2 small text-white-50">
+                    <button type="button" class="btn btn-warning btn-sm fw-bold mitra-activity-btn" data-bs-toggle="modal" data-bs-target="#mitraActivityModal">
+                        <i class="bi bi-bell me-1"></i>Aktivitas Hari Ini
+                        @if($activityAttention > 0)
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">{{ $activityAttention }}</span>
+                        @endif
+                    </button>
+                    <span class="mitra-hero-date d-none d-md-inline-flex">
                         <i class="bi bi-calendar3 me-1"></i>
                         {{ now()->format('d/m/Y') }}
                     </span>
@@ -428,6 +668,148 @@
                             <i class="bi bi-person-circle"></i> Profil
                         </a>
                     @endif
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade mitra-activity-modal" id="mitraActivityModal" tabindex="-1" aria-labelledby="mitraActivityModalLabel" aria-hidden="true" data-storage-key="{{ $activity['storage_key'] ?? 'mitra_activity_seen' }}">
+            <div class="modal-dialog modal-dialog-centered modal-lg">
+                <div class="modal-content">
+                    <div class="mitra-activity-head d-flex align-items-start gap-3">
+                        <span class="mitra-activity-icon"><i class="bi bi-bell-fill"></i></span>
+                        <div class="flex-grow-1">
+                            <div class="mitra-activity-eyebrow">Peringatan Mitra</div>
+                            <h5 class="modal-title mb-1" id="mitraActivityModalLabel">Aktivitas yang perlu dicek hari ini</h5>
+                            <p class="mitra-activity-date mb-0 small">{{ $activity['date_label'] ?? now()->isoFormat('dddd, D MMMM Y') }}</p>
+                        </div>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Tutup"></button>
+                    </div>
+                    <div class="modal-body mitra-activity-body p-4">
+                        <div class="mitra-activity-alert {{ ($activity['needs_attention'] ?? false) ? 'is-warning' : 'is-safe' }}">
+                            <i class="bi {{ ($activity['needs_attention'] ?? false) ? 'bi-exclamation-triangle-fill' : 'bi-check-circle-fill' }}"></i>
+                            <div>
+                                <div class="fw-bold">{{ ($activity['needs_attention'] ?? false) ? 'Ada tagihan atau pembayaran yang perlu dicek.' : 'Tidak ada peringatan penting untuk hari ini.' }}</div>
+                                <div class="small">Popup ini otomatis muncul sekali per hari. Setelah ditutup, bisa dibuka lagi dari tombol Aktivitas Hari Ini.</div>
+                            </div>
+                        </div>
+
+                        <div class="mitra-activity-grid">
+                            <div class="mitra-activity-tile" style="--i: 0; --accent: #2563eb; --soft: #eff6ff;">
+                                <div class="tile-top">
+                                    <div class="label">Belum Dibayar</div>
+                                    <span class="tile-icon"><i class="bi bi-receipt-cutoff"></i></span>
+                                </div>
+                                <div class="num mt-2">{{ number_format((int) ($activity['unpaid_count'] ?? 0), 0, ',', '.') }}</div>
+                                <div class="small text-muted mt-1">Rp {{ number_format((float) ($activity['unpaid_nominal'] ?? 0), 0, ',', '.') }}</div>
+                            </div>
+                            <div class="mitra-activity-tile" style="--i: 1; --accent: #ef4444; --soft: #fef2f2;">
+                                <div class="tile-top">
+                                    <div class="label">Lewat Tempo</div>
+                                    <span class="tile-icon"><i class="bi bi-calendar-x"></i></span>
+                                </div>
+                                <div class="num mt-2">{{ number_format((int) ($activity['overdue_count'] ?? 0), 0, ',', '.') }}</div>
+                                <div class="small text-muted mt-1">{{ number_format((int) ($activity['due_today_count'] ?? 0), 0, ',', '.') }} jatuh tempo hari ini</div>
+                            </div>
+                            <div class="mitra-activity-tile" style="--i: 2; --accent: #f59e0b; --soft: #fffbeb;">
+                                <div class="tile-top">
+                                    <div class="label">Bukti Transfer</div>
+                                    <span class="tile-icon"><i class="bi bi-file-earmark-arrow-up"></i></span>
+                                </div>
+                                <div class="num mt-2">{{ number_format((int) ($activity['pending_proof_count'] ?? 0), 0, ',', '.') }}</div>
+                                <div class="small text-muted mt-1">menunggu verifikasi</div>
+                            </div>
+                            <div class="mitra-activity-tile" style="--i: 3; --accent: #7c3aed; --soft: #f5f3ff;">
+                                <div class="tile-top">
+                                    <div class="label">Perlu Perbaikan</div>
+                                    <span class="tile-icon"><i class="bi bi-pencil-square"></i></span>
+                                </div>
+                                <div class="num mt-2">{{ number_format((int) ($activity['correction_proof_count'] ?? 0), 0, ',', '.') }}</div>
+                                <div class="small text-muted mt-1">{{ number_format((int) ($activity['due_soon_count'] ?? 0), 0, ',', '.') }} mendekati tempo</div>
+                            </div>
+                        </div>
+
+                        <div class="mitra-activity-list">
+                            <div class="mitra-activity-task {{ ((int) ($activity['unpaid_count'] ?? 0) > 0) ? 'is-warning' : 'is-safe' }}" style="--i: 0;">
+                                <span class="task-icon"><i class="bi {{ ((int) ($activity['unpaid_count'] ?? 0) > 0) ? 'bi-credit-card' : 'bi-check2' }}"></i></span>
+                                <div class="flex-grow-1">
+                                    <div class="fw-semibold">Cek tagihan yang belum dibayar.</div>
+                                    <div class="small text-muted">{{ number_format((int) ($activity['unpaid_count'] ?? 0), 0, ',', '.') }} tagihan masih terbuka di portal Anda.</div>
+                                </div>
+                            </div>
+                            <div class="mitra-activity-task {{ ((int) ($activity['pending_proof_count'] ?? 0) > 0) ? 'is-info' : 'is-safe' }}" style="--i: 1;">
+                                <span class="task-icon"><i class="bi {{ ((int) ($activity['pending_proof_count'] ?? 0) > 0) ? 'bi-hourglass-split' : 'bi-check2' }}"></i></span>
+                                <div class="flex-grow-1">
+                                    <div class="fw-semibold">Pantau bukti pembayaran yang sedang diverifikasi.</div>
+                                    <div class="small text-muted">{{ number_format((int) ($activity['pending_proof_count'] ?? 0), 0, ',', '.') }} bukti transfer sedang dicek Admin Jasa.</div>
+                                </div>
+                            </div>
+                            <div class="mitra-activity-task {{ ((int) ($activity['correction_proof_count'] ?? 0) > 0) ? 'is-danger' : 'is-safe' }}" style="--i: 2;">
+                                <span class="task-icon"><i class="bi {{ ((int) ($activity['correction_proof_count'] ?? 0) > 0) ? 'bi-exclamation-octagon' : 'bi-shield-check' }}"></i></span>
+                                <div class="flex-grow-1">
+                                    <div class="fw-semibold">Perbaiki bukti pembayaran yang ditolak/perlu koreksi.</div>
+                                    <div class="small text-muted">{{ number_format((int) ($activity['correction_proof_count'] ?? 0), 0, ',', '.') }} bukti pembayaran perlu tindak lanjut.</div>
+                                </div>
+                            </div>
+                            <div class="mitra-activity-task {{ (((int) ($activity['due_today_count'] ?? 0) + (int) ($activity['overdue_count'] ?? 0)) > 0) ? 'is-danger' : 'is-safe' }}" style="--i: 3;">
+                                <span class="task-icon"><i class="bi {{ (((int) ($activity['due_today_count'] ?? 0) + (int) ($activity['overdue_count'] ?? 0)) > 0) ? 'bi-calendar-x' : 'bi-check2' }}"></i></span>
+                                <div class="flex-grow-1">
+                                    <div class="fw-semibold">Prioritaskan tagihan jatuh tempo.</div>
+                                    <div class="small text-muted">{{ number_format((int) ($activity['due_today_count'] ?? 0), 0, ',', '.') }} jatuh tempo hari ini, {{ number_format((int) ($activity['overdue_count'] ?? 0), 0, ',', '.') }} lewat tempo.</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        @if(($activity['highlight_tagihan'] ?? collect())->isNotEmpty())
+                            <div class="mitra-activity-pending mt-3">
+                                <div class="fw-bold small text-uppercase text-muted mb-1">Prioritas tagihan</div>
+                                @foreach($activity['highlight_tagihan'] as $item)
+                                    @php
+                                        $proofStatus = $item->latestPaymentProof?->status;
+                                        $priorityLabel = match (true) {
+                                            in_array($proofStatus, [
+                                                \App\Models\TagihanJasaPaymentProof::STATUS_DITOLAK,
+                                                \App\Models\TagihanJasaPaymentProof::STATUS_PERLU_PERBAIKAN,
+                                            ], true) => 'Perlu Perbaikan',
+                                            $proofStatus === \App\Models\TagihanJasaPaymentProof::STATUS_MENUNGGU || $item->status_pembayaran === 'menunggu_verifikasi' => 'Menunggu Verifikasi',
+                                            $item->status_jatuh_tempo === 'LEWAT_JATUH_TEMPO' => 'Lewat Tempo',
+                                            $item->status_jatuh_tempo === 'JATUH_TEMPO_HARI_INI' => 'Jatuh Tempo Hari Ini',
+                                            default => 'Belum Dibayar',
+                                        };
+                                        $priorityBadge = match ($priorityLabel) {
+                                            'Lewat Tempo', 'Perlu Perbaikan' => 'bg-danger',
+                                            'Jatuh Tempo Hari Ini' => 'bg-warning text-dark',
+                                            'Menunggu Verifikasi' => 'bg-info text-dark',
+                                            default => 'bg-primary',
+                                        };
+                                    @endphp
+                                    <div class="mitra-activity-row">
+                                        <div class="d-flex align-items-center gap-2 mitra-min-w-0">
+                                            <span class="mitra-activity-row-icon"><i class="bi bi-receipt"></i></span>
+                                            <div class="mitra-min-w-0">
+                                                <div class="fw-semibold text-truncate">{{ $item->nomor_tagihan ?? '-' }}</div>
+                                                <div class="small text-muted text-truncate">
+                                                    {{ $item->tanggal_jatuh_tempo ? 'Jatuh tempo ' . $item->tanggal_jatuh_tempo->format('d/m/Y') : 'Belum ada jatuh tempo' }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="badge {{ $priorityBadge }}">{{ $priorityLabel }}</span>
+                                            @if($isMitraJasaPortal)
+                                                <a href="{{ route('mitra.tagihan-jasa.show', $item->id) }}" class="btn btn-sm btn-primary rounded-pill fw-bold">Detail</a>
+                                            @endif
+                                        </div>
+                                    </div>
+                                @endforeach
+                            </div>
+                        @endif
+                    </div>
+                    <div class="modal-footer bg-light">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Tutup</button>
+                        <a href="#mitraStatusPembayaran" class="btn btn-outline-primary"><i class="bi bi-receipt-cutoff me-1"></i>Lihat Tagihan</a>
+                        @if(Auth::user()->hasRole('Mitra Jasa'))
+                            <a href="{{ route('mitra.profile') }}" class="btn btn-primary"><i class="bi bi-person-circle me-1"></i>Profil Mitra</a>
+                        @endif
+                    </div>
                 </div>
             </div>
         </div>
@@ -546,7 +928,7 @@
         </div>
 
         {{-- Transactions / Payment Timeline --}}
-        <div class="card modern-table-card mb-5">
+        <div class="card modern-table-card mb-5" id="mitraStatusPembayaran">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0 fw-bold text-dark"><i class="bi bi-receipt-cutoff text-success me-2"></i> Status Pembayaran Anda</h5>
             </div>
@@ -677,3 +1059,32 @@
         </div>
     @endif
 @endsection
+
+@push('script')
+<script>
+(function () {
+    const activityModalEl = document.getElementById('mitraActivityModal');
+    if (!activityModalEl || !window.bootstrap || !bootstrap.Modal) return;
+
+    const storageKey = activityModalEl.dataset.storageKey || 'mitra_activity_seen';
+    const modal = bootstrap.Modal.getOrCreateInstance(activityModalEl);
+    let alreadySeen = false;
+
+    try {
+        alreadySeen = localStorage.getItem(storageKey) === '1';
+    } catch (error) {
+        alreadySeen = true;
+    }
+
+    if (!alreadySeen) {
+        setTimeout(() => modal.show(), 650);
+    }
+
+    activityModalEl.addEventListener('hidden.bs.modal', function () {
+        try {
+            localStorage.setItem(storageKey, '1');
+        } catch (error) {}
+    });
+})();
+</script>
+@endpush

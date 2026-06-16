@@ -373,3 +373,179 @@ DRAFT / SIAP_DITAGIH  ──(Admin Jasa: Susun Pengajuan)──►  DIAJUKAN
 - **Saat lunas**, sistem otomatis: catat **piutang (PAID)** + **BKU penerimaan**, lalu kirim **struk** via WhatsApp & email.
 - **Pengingat jatuh tempo otomatis** — perintah terjadwal `SendDueDateReminderCommand` mengirim notifikasi ke mitra yang **mendekati / lewat** jatuh tempo (lihat menu **Tagihan → Jatuh Tempo** untuk pemantauan manual).
 - **Nomor VA** mengikuti toggle Integrasi: **OFF** = diketik manual saat publish; **ON** = dibuat otomatis (API BTN).
+
+---
+
+## 12. Plan Demo Jatuh Tempo & Denda
+
+Demo ini sebaiknya menjadi **sisipan 6-8 menit** setelah Babak 4 (Mitra menerima tagihan) dan sebelum Babak 5 (Admin Jasa menandai lunas). Pesan utamanya: *"Setelah tagihan dipublish, sistem otomatis memantau batas bayar, menampilkan prioritas penagihan, menghitung denda berjalan, dan tetap mengalir ke pelunasan serta pembukuan."*
+
+### 12.1 Target yang harus terlihat
+
+| Target demo | Bukti di layar |
+|---|---|
+| Jatuh tempo terbaca jelas | Detail tagihan / portal mitra menampilkan **Tanggal Jatuh Tempo** dan status jatuh tempo |
+| Tagihan mendekati tempo bisa dipantau | Dashboard Admin Jasa menampilkan KPI **Jatuh Tempo 7 Hari** |
+| Tagihan lewat tempo masuk prioritas | Menu **Tagihan → Jatuh Tempo** menampilkan tagihan berstatus **Lewat Jatuh Tempo** |
+| Denda berjalan otomatis | Detail tagihan/invoice publik/portal mitra menampilkan **Denda 2% per hari × hari terlambat** dan **Total Bayar dengan Denda** |
+| Pelunasan tetap satu pipeline | Admin Jasa klik **Tandai Lunas** memakai total berjalan; sistem mencatat piutang/BKU seperti pelunasan normal |
+
+### 12.2 Data staging sebelum demo
+
+Siapkan **3 tagihan PUBLISHED** untuk PT ABC, jangan ditandai lunas dulu:
+
+| Skenario | Tanggal jatuh tempo | Status yang diharapkan | Catatan |
+|---|---:|---|---|
+| A. Normal | H+10 | `NORMAL` | Pembanding: belum perlu ditindak |
+| B. Mendekati | H+3 | `MENDEKATI_JATUH_TEMPO` | Masuk narasi reminder H-7/H-3/H-1/H |
+| C. Lewat tempo | H-3 | `LEWAT_JATUH_TEMPO` | Dipakai untuk demo denda |
+
+Contoh bila demo dilakukan **16 Juni 2026**:
+- Normal: jatuh tempo **26 Juni 2026**.
+- Mendekati: jatuh tempo **19 Juni 2026**.
+- Lewat tempo: jatuh tempo **13 Juni 2026**.
+
+Nominal yang enak untuk dihitung cepat:
+- Total tagihan C: **Rp 1.000.000**.
+- Denda: **2% × 3 hari × Rp 1.000.000 = Rp 60.000**.
+- Total bayar berjalan: **Rp 1.060.000**.
+
+> Catatan teknis: denda keterlambatan dihitung dinamis dari `TagihanJasa::nominal_denda_keterlambatan` (`2% × total_tagihan × hari_terlambat`). Karena berjalan mengikuti tanggal hari ini, gunakan tanggal jatuh tempo relatif terhadap hari demo, bukan tanggal tetap yang terlalu lama.
+
+### 12.2A Khusus PJP2U: tagihan awal 7 hari, berikutnya 30 hari
+
+Untuk PJP2U, narasi bisnisnya:
+
+| Urutan tagihan PJP2U | Jatuh tempo | Maksud demo |
+|---|---:|---|
+| **Tagihan pertama** setelah hak/kontrak PJP2U aktif atau setelah periode awal operasional | **7 hari** sejak tagihan dipublish | BLU memberi batas bayar lebih cepat untuk tagihan awal agar settlement pertama tidak menumpuk |
+| **Tagihan kedua dan seterusnya** untuk mitra/layanan PJP2U yang sama | **30 hari** sejak tagihan dipublish | Siklus normal penagihan rutin |
+
+Cara menjelaskannya saat demo:
+
+1. **Master layanan PJP2U** menyimpan default jatuh tempo ketat 7 hari dan wajib tagihan terpisah.
+2. Untuk demo aturan lanjutan, tagihan PJP2U berikutnya disiapkan dengan `jumlah_hari_jatuh_tempo = 30` dan catatan jatuh tempo yang menjelaskan bahwa ini tagihan PJP2U lanjutan.
+3. Denda tetap memakai rumus yang sama: **2% per hari × total tagihan × hari terlambat**.
+
+> Catatan implementasi: perhitungan tanggal jatuh tempo saat publish mengambil nilai `jumlah_hari_jatuh_tempo` dari layanan/tagihan. Jika aturan "tagihan PJP2U pertama 7 hari, berikutnya 30 hari" ingin dibuat otomatis penuh, sistem perlu rule tambahan untuk mendeteksi urutan tagihan PJP2U per mitra+layanan. Untuk kebutuhan demo, data staging cukup menyimpan tagihan pertama = 7 hari dan tagihan lanjutan = 30 hari.
+
+Seeder demo siap pakai:
+
+```bash
+php artisan db:seed --class=DemoPjp2uJatuhTempoDendaSeeder
+```
+
+Seeder ini membuat/memperbarui 3 tagihan PJP2U demo:
+
+| Nomor tagihan | Jatuh tempo | Status layar | Fungsi |
+|---|---:|---|---|
+| `TAG-PJP2U-DEMO-AWAL-7H` | H+7 | Mendekati jatuh tempo | Bukti tagihan PJP2U pertama memakai 7 hari |
+| `TAG-PJP2U-DEMO-LANJUT-H3` | H+3 | Mendekati jatuh tempo | Bukti tagihan lanjutan memakai 30 hari |
+| `TAG-PJP2U-DEMO-DENDA-H3` | H-3 | Lewat jatuh tempo | Bukti denda berjalan |
+
+Dengan default pax demo 25 dan tarif PJP2U mengikuti master layanan, contoh bila tarif Rp40.000:
+- Total tagihan: **25 × Rp40.000 = Rp1.000.000**.
+- Denda untuk `TAG-PJP2U-DEMO-DENDA-H3`: **2% × 3 hari × Rp1.000.000 = Rp60.000**.
+- Total bayar berjalan: **Rp1.060.000**.
+
+### 12.3 Alur demo singkat
+
+1. **Admin Jasa → Dashboard Admin Jasa**
+   - Tunjukkan kartu **Tagihan Jatuh Tempo** dan **Jatuh Tempo 7 Hari**.
+   - Narasi: *"Admin tidak perlu mencari manual invoice mana yang harus ditagih dulu; sistem sudah mengangkat prioritasnya."*
+
+2. **Admin Jasa → Tagihan → Jatuh Tempo**
+   - Filter PT ABC bila perlu.
+   - Buka tagihan skenario C yang lewat tempo.
+   - Tunjukkan badge **Lewat Jatuh Tempo**, tanggal jatuh tempo, hari terlambat, dan sisa tagihan.
+
+3. **Detail Tagihan / Invoice Publik**
+   - Buka detail tagihan atau link publik invoice.
+   - Tunjukkan baris **denda keterlambatan** dan **total dengan denda**.
+   - Narasi: *"Denda bukan input manual admin; sistem menghitung berdasarkan hari keterlambatan berjalan."*
+
+4. **Mitra → Dashboard Mitra / Detail Tagihan**
+   - Login PT ABC.
+   - Buka tagihan yang sama.
+   - Tunjukkan countdown/status **Tagihan Lewat Jatuh Tempo** dan informasi denda.
+   - Narasi: *"Mitra melihat angka yang sama dengan admin, jadi tidak ada perbedaan versi tagihan."*
+
+5. **Admin Jasa → Simulasi Pelunasan**
+   - Kembali ke tagihan lewat tempo.
+   - Klik **Tandai Lunas**.
+   - Pastikan nominal yang dibayarkan mengikuti total berjalan dengan denda.
+   - Tunjukkan status berubah **LUNAS** dan denda tidak bertambah lagi.
+
+6. **Super Admin Jasa / Bendahara Penerimaan → Laporan**
+   - Buka **Rekap Piutang** atau **Rekap Pembayaran**.
+   - Tunjukkan tagihan tersebut sudah keluar dari outstanding dan masuk catatan pembayaran.
+
+### 12.4 Demo reminder WhatsApp tanpa mengirim pesan nyata
+
+Untuk demo aman, tetap gunakan **WA OFF** di Integrasi API. Jika perlu menunjukkan mekanismenya:
+
+1. Super Admin Jasa → pengaturan notifikasi WA: tunjukkan konfigurasi reminder `7,3,1,0`.
+2. Jelaskan command terjadwal `wa:reminder-due-date` berjalan per jam dan hanya mengirim pada offset yang dikonfigurasi.
+3. Jika ingin live tanpa kirim WA, jalankan mode dry-run:
+
+```bash
+php artisan wa:reminder-due-date --dry-run --force
+```
+
+Output dry-run cukup dibacakan sebagai bukti kandidat tagihan yang akan dikirimi reminder.
+
+### 12.5 Fallback saat data belum siap
+
+- Bila belum ada tagihan lewat tempo, gunakan tagihan PUBLISHED yang sudah ada lalu ubah `tanggal_jatuh_tempo` ke **H-3** sebelum demo.
+- Bila angka denda terlihat terlalu besar, pakai nominal kecil atau jatuh tempo **H-1**.
+- Bila portal mitra belum bisa login, tunjukkan detail tagihan dari Admin Jasa + invoice publik lewat link/QR surat pengantar.
+- Bila tombol pelunasan tidak ingin dipakai karena data demo harus tetap outstanding, cukup berhenti di bukti denda berjalan dan jelaskan pelunasan sebagai langkah berikutnya.
+
+---
+
+## 13. Hardening Visibilitas & Dashboard Role AMC
+
+Catatan perubahan modul Garbarata/AMC (prinsip: **AMC = operasional apron, tidak melihat informasi tagihan**).
+
+### 13.1 Perbaikan Bug
+- **Dropdown "Rekap AMC" gagal memuat** saat Admin Jasa menekan **Buat Tagihan** dari Rekap Tagihan Garbarata. Penyebab: closure `->map()` di `TagihanJasaController@garbarataAmcPengajuanList` tidak meng-`use ($boundTagihanId)` sehingga melempar *Undefined variable* (HTTP 500) ketika mitra memiliki rekap siap-ditagih. **Fix:** tambahkan `use ($boundTagihanId)`.
+- **Tombol "Ambil Data Tagihan" → 403 untuk AMC.** Tombol tampil ke AMC padahal route `pengajuan-penagihan-garbarata.create` (`canCreate`) tidak mengizinkan AMC. **Fix:** gate tombol diselaraskan ke `['Super Admin', 'Super Admin Jasa', 'Admin Jasa']`.
+- **Tombol "Ubah" tidak ter-gate** di Rekap Harian (modal detail) & Detail Hari — selalu tampil sehingga klik pada record `TERTAGIH` / milik operator lain (atau oleh role view-only) → 403. **Fix:** gate disamakan dengan index → *Super Admin* atau *pemilik record yang belum `TERTAGIH`*.
+
+### 13.2 Sembunyikan Informasi Tagihan dari AMC (`canSeeBilling`)
+Helper `PemakaianGarbarataController::canSeeBilling()` = `true` hanya untuk `Super Admin, Super Admin Jasa, Admin Jasa, Koordinator Jasa, Operator BLU`. Untuk **AMC** disembunyikan:
+- **Pemakaian Garbarata (index):** kolom **TOTAL** (nominal), kolom **STATUS** (badge + nomor tagihan), dan **pill hitungan status** di header maskapai.
+- **Rekap Harian:** kolom **STATUS** di tabel; di **modal detail** tile **STATUS** & **PERMOHONAN/TAGIHAN** tidak dirender. Nilai `tarif`, `total`, dan `nomor tagihan` juga **tidak dikirim** ke klien (di-`null` pada JSON `$detailMap`) agar tidak bocor via view-source.
+- **Detail Hari:** tidak ada kolom status/nominal (aman, tanpa perubahan).
+
+### 13.3 Cakupan Data AMC
+- Helper `PemakaianGarbarataController::applyAmcScope()` — **operator AMC murni** (punya peran `AMC` tanpa peran pengawas/jasa) hanya melihat catatan pemakaian **yang ia buat sendiri** di index, Rekap Harian, dan Detail Hari. Selaras dengan scoping `PermohonanNonScheduleController@index`. Peran pengawas/jasa & Operator BLU tetap melihat seluruh data.
+
+### 13.4 Dashboard Operasional AMC (baru)
+- AMC kini punya **dashboard sendiri** (`DashboardController@amc` → `resources/views/dashboard/amc.blade.php`), menggantikan redirect mentah ke daftar Pemakaian Garbarata.
+- Isi (tanpa nominal): **KPI bulan berjalan** (Penerbangan, Total Rentang, Total Durasi jam, Maskapai dilayani), **tren penerbangan 6 bulan**, **ringkasan Permohonan Non-Schedule** (menunggu/disetujui/ditolak), **daftar Pemakaian & Permohonan terbaru**, serta aksi cepat *Catat Pemakaian* / *Buat Permohonan*.
+- Data mengikuti scoping yang sama (operator murni → data sendiri).
+- **Menu sidebar:** label berubah jadi **"Dashboard AMC"** khusus untuk operator AMC murni (role lain tetap "Dashboard Internal").
+
+### 13.5 Penyederhanaan Form "Catat Pemakaian" (Input Batch)
+Analisis field **Data Dasar Batch**: `Mitra` (wajib, hanya *fallback* — mitra per baris auto-resolve dari ARR/DEP), `Periode Bulan` (**tidak disimpan**, sekadar prefill tanggal di JS), `Layanan Tarif Garbarata` (opsional, "tentukan saat tagihan"), `Permohonan Non-Schedule` (opsional).
+- **Keputusan: rampingkan untuk AMC.** Field **Layanan Tarif Garbarata** disembunyikan dari form bagi operator AMC murni (tetap tampil untuk Super Admin). Penetapan layanan/tarif dilakukan Admin Jasa saat membuat tagihan — sejalan prinsip *AMC tidak mengurus tagihan*.
+- Saat AMC mengedit, nilai `layanan_jasa_id` lama **dipertahankan** lewat `<input type="hidden">` (tidak ter-reset jadi null). Kolom Mitra & Periode dilebarkan agar layout tetap rapi.
+- Sisa Data Dasar untuk AMC: **Mitra** (wajib) + **Periode Bulan** (helper) + **Permohonan Non-Schedule** (opsional).
+- *Catatan lanjutan (belum diubah):* kolom **TARIF** per-baris di tabel rincian masih wajib diisi AMC. Bila ingin benar-benar bebas-nominal untuk AMC, tarif per-baris juga perlu ditunda ke tahap tagihan (perubahan validasi + UX terpisah).
+
+### 13.6 Menu Garbarata untuk Admin Jasa (Tailored)
+Menu Garbarata disesuaikan dengan tanggung jawab Admin Jasa (fokus penagihan), bukan ditampilkan semua.
+- **Tampil untuk Admin Jasa:** *Permohonan Non-Schedule* (Admin Jasa = penyetuju, `canReview`), *Pemakaian Garbarata* (verifikasi data mentah), *Rekap Tagihan Garbarata* (alat utama; punya tombol **Ambil Data Garbarata** sendiri sehingga alur menagih self-contained).
+- **Disembunyikan untuk Admin Jasa:** *Rekap Harian Garbarata* — rekap operasional harian AMC, redundan & tak dipakai untuk menagih. Gate di `sidebar-app.blade.php`: `@unless(hasRole('Admin Jasa') && ! hasAnyRole(['Super Admin','Super Admin Jasa']))`. Tetap tampil untuk AMC, Super Admin, Super Admin Jasa, Koordinator Jasa, Operator BLU.
+
+### 13.7 Panel "Tarik Rincian Garbarata dari Rekap AMC" Kontekstual
+Di form **Buat Tagihan Jasa** (`tagihan_jasa/create.blade.php`), panel `#amcGarbarataImportPanel` sebelumnya selalu tampil meski tagihan bukan garbarata.
+- Sekarang panel **default disembunyikan** dan hanya muncul ketika ada **baris layanan garbarata** terpilih. Helper JS `refreshGarbarataImportPanel()` toggle berdasarkan `firstGarbarataServiceRow()`, dipanggil saat: memilih/mengganti layanan (`applyServiceToRow`), menghapus baris, dan saat inisialisasi form (termasuk mode edit/prefill).
+
+### 13.8 Tampilan Layanan Jasa: dari Tree → Grid Kartu
+Halaman **Layanan Jasa** (Super Admin) / **Layanan Dikelola** (Admin Jasa) — keduanya `master-layanan-jasa.index` ([master_layanan_jasa/index.blade.php](../resources/views/master_layanan_jasa/index.blade.php)) — dirombak dari tampilan **pohon (tree)** menjadi **grid kartu** mengikuti referensi desain.
+- **Toolbar:** 4 tab filter (**Semua / PNBP / Konsesi / Tarif**) dengan badge jumlah, kotak **pencarian**, dropdown **urutkan** (nama A-Z/Z-A, tarif tertinggi/terendah, terbaru diperbarui), dan **toggle Grid/List**.
+- **Panel "Kategori Layanan"** di kiri: daftar kategori akar + sub-kategori dengan jumlah; klik untuk memfilter kartu pada subtree tsb.
+- **Kartu** per layanan: judul, badge (PNBP/Konsesi/Tarif/Kategori), Kode Layanan (MAK/kode bayar), Tarif + Satuan (atau "N item" untuk kategori), status Aktif/Nonaktif, tanggal diperbarui, dan aksi **Edit/Hapus** (hanya untuk pengelola master).
+- **Filter, sort, pagination, dan toggle semuanya client-side** (data dimuat penuh sekali). Controller `MasterLayananJasaController@index` kini selalu mengirim daftar lengkap (sudah ter-scope untuk Admin Jasa) + menambah hitungan **TARIF** (= jumlah item leaf).

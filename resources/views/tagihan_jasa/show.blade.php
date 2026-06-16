@@ -1018,11 +1018,74 @@
             </div>
         @endif
 
+        @if($canManageTagihanJasa && ($tagihan->paymentProofs?->isNotEmpty()))
+            <div class="card tj-card border-0 mb-4 border-start border-4 border-info">
+                <div class="card-body p-4">
+                    <h5 class="fw-bold mb-3"><i class="bi bi-receipt text-info me-2"></i>Bukti Pembayaran Manual</h5>
+                    <div class="d-grid gap-3">
+                        @foreach($tagihan->paymentProofs as $proof)
+                            <div class="border rounded-3 p-3 bg-light">
+                                <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
+                                    <div>
+                                        <div class="fw-bold">Rp {{ number_format($proof->nominal_bayar, 0, ',', '.') }}</div>
+                                        <div class="small text-muted">
+                                            Bayar {{ optional($proof->tanggal_bayar)->format('d M Y') }}
+                                            @if($proof->bank_pengirim)
+                                                · {{ $proof->bank_pengirim }}
+                                            @endif
+                                            @if($proof->nomor_referensi)
+                                                · Ref: {{ $proof->nomor_referensi }}
+                                            @endif
+                                        </div>
+                                        <div class="small text-muted">Upload: {{ optional($proof->created_at)->format('d M Y, H:i') }} oleh {{ $proof->uploader->name ?? 'Mitra' }}</div>
+                                    </div>
+                                    <span class="badge {{ $proof->status_badge_class }}">{{ $proof->status_label }}</span>
+                                </div>
+
+                                @if($proof->catatan_mitra)
+                                    <div class="small mb-2"><strong>Catatan mitra:</strong> {{ $proof->catatan_mitra }}</div>
+                                @endif
+                                @if($proof->catatan_verifikator)
+                                    <div class="small text-danger mb-2"><strong>Catatan verifikator:</strong> {{ $proof->catatan_verifikator }}</div>
+                                @endif
+
+                                <a href="{{ route('tagihan-jasa.bukti-pembayaran.download', [$tagihan->id, $proof->id]) }}" class="btn btn-sm btn-outline-secondary fw-bold mb-2">
+                                    <i class="bi bi-download me-1"></i>Unduh Bukti
+                                </a>
+
+                                @if($tagihan->status === 'PUBLISHED' && $proof->status === \App\Models\TagihanJasaPaymentProof::STATUS_MENUNGGU)
+                                    <form action="{{ route('tagihan-jasa.bukti-pembayaran.terima', [$tagihan->id, $proof->id]) }}" method="POST" class="mb-2">
+                                        @csrf
+                                        <textarea name="catatan_verifikator" rows="2" class="form-control form-control-sm mb-2" placeholder="Catatan penerimaan pembayaran (opsional)"></textarea>
+                                        <button type="submit" class="btn btn-success btn-sm fw-bold w-100" onclick="return confirm('Terima bukti pembayaran ini dan tandai tagihan sebagai LUNAS?')">
+                                            <i class="bi bi-check2-circle me-1"></i>Terima & Tandai Lunas
+                                        </button>
+                                    </form>
+                                    <form action="{{ route('tagihan-jasa.bukti-pembayaran.tolak', [$tagihan->id, $proof->id]) }}" method="POST">
+                                        @csrf
+                                        <textarea name="catatan_verifikator" rows="2" class="form-control form-control-sm mb-2" placeholder="Catatan untuk mitra" required></textarea>
+                                        <div class="d-flex gap-2">
+                                            <button type="submit" name="status" value="PERLU_PERBAIKAN" class="btn btn-warning btn-sm fw-bold flex-fill" onclick="return confirm('Minta mitra memperbaiki bukti pembayaran?')">
+                                                <i class="bi bi-arrow-repeat me-1"></i>Perlu Perbaikan
+                                            </button>
+                                            <button type="submit" name="status" value="DITOLAK" class="btn btn-outline-danger btn-sm fw-bold flex-fill" onclick="return confirm('Tolak bukti pembayaran ini?')">
+                                                <i class="bi bi-x-circle me-1"></i>Tolak
+                                            </button>
+                                        </div>
+                                    </form>
+                                @endif
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            </div>
+        @endif
+
         @if($canManageTagihanJasa && $tagihan->status === 'PUBLISHED')
             <div class="card tj-card border-0 mb-4 border-start border-4 border-primary">
                 <div class="card-body p-4 text-center">
                     <h5 class="fw-bold mb-3"><i class="bi bi-cash-coin text-primary me-2"></i>Status Pembayaran</h5>
-                    <p class="small text-muted mb-4">Tagihan ini sedang menunggu pembayaran dari Mitra via Virtual Account. Untuk keperluan simulasi, Anda dapat menandai tagihan ini menjadi LUNAS secara manual dan sistem akan memproses notifikasi WA serta email ke mitra.</p>
+                    <p class="small text-muted mb-4">Tagihan ini sedang menunggu pembayaran dari Mitra via Virtual Account. Gunakan panel bukti pembayaran manual jika mitra sudah mengunggah bukti. Tombol di bawah tetap tersedia untuk koreksi manual terbatas.</p>
                     
                     <form action="{{ route('tagihan-jasa.mark-lunas', $tagihan->id) }}" method="POST">
                         @csrf

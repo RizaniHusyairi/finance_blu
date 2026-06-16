@@ -14,6 +14,9 @@ use App\Models\DetailPerjaldin;
 use App\Models\MasterMitraVendor;
 use App\Models\MasterPihak;
 use App\Models\MitraJasa;
+use App\Models\PemakaianGarbarata;
+use App\Models\PermohonanNonSchedule;
+use App\Models\TagihanJasaPaymentProof;
 use App\Models\DokumenSpp;
 use App\Models\DokumenSpm;
 use App\Models\DokumenNpi;
@@ -147,6 +150,98 @@ class DashboardController extends Controller
     }
 
     /**
+     * Dashboard Operasional AMC (Apron Movement Control).
+     * Fokus operasional apron — tanpa nilai tagihan/nominal. Operator AMC murni
+     * hanya melihat data yang ia catat sendiri (selaras scoping di modul Garbarata).
+     */
+    public function amc()
+    {
+        $user = Auth::user();
+        $scoped = $user && $user->hasRole('AMC')
+            && ! $user->hasAnyRole(['Super Admin', 'Super Admin Jasa', 'Admin Jasa', 'Koordinator Jasa']);
+
+        $now = now();
+        $startMonth = $now->copy()->startOfMonth()->toDateString();
+        $endMonth = $now->copy()->endOfMonth()->toDateString();
+
+        $pemakaian = fn () => PemakaianGarbarata::query()
+            ->when($scoped, fn ($q) => $q->where('created_by', $user->id));
+        $permohonan = fn () => PermohonanNonSchedule::query()
+            ->when($scoped, fn ($q) => $q->where('created_by', $user->id));
+
+        // KPI bulan berjalan
+        $bulanIni = $pemakaian()->whereBetween('tanggal', [$startMonth, $endMonth]);
+        $kpi = [
+            'penerbangan' => (clone $bulanIni)->count(),
+            'rentang' => (int) (clone $bulanIni)->sum('jumlah_rentang'),
+            'durasi_menit' => (int) (clone $bulanIni)->sum('durasi_menit'),
+            'maskapai' => (int) (clone $bulanIni)->distinct('mitra_jasa_id')->count('mitra_jasa_id'),
+        ];
+
+        // Permohonan non-schedule (lingkup operator)
+        $permohonanStat = [
+            'menunggu' => $permohonan()->where('status', PermohonanNonSchedule::STATUS_DIAJUKAN)->count(),
+            'disetujui' => $permohonan()->where('status', PermohonanNonSchedule::STATUS_DISETUJUI)->count(),
+            'ditolak' => $permohonan()->where('status', PermohonanNonSchedule::STATUS_DITOLAK)->count(),
+        ];
+
+        // Tren 6 bulan (penerbangan & rentang)
+        $trend = collect();
+        for ($i = 5; $i >= 0; $i--) {
+            $m = $now->copy()->subMonths($i);
+            $base = $pemakaian()->whereYear('tanggal', $m->year)->whereMonth('tanggal', $m->month);
+            $trend->push([
+                'label' => $m->isoFormat('MMM'),
+                'penerbangan' => (clone $base)->count(),
+                'rentang' => (int) (clone $base)->sum('jumlah_rentang'),
+            ]);
+        }
+
+        $recentPemakaian = $pemakaian()->with('mitra')
+            ->orderByDesc('tanggal')->orderByDesc('docking_at')
+            ->limit(8)->get();
+
+        $recentPermohonan = $permohonan()->with('mitra')
+            ->orderByDesc('tanggal_surat')->orderByDesc('id')
+            ->limit(5)->get();
+
+        $today = $now->toDateString();
+        $todayPemakaian = $pemakaian()->whereDate('tanggal', $today);
+        $todayPemakaianCount = (clone $todayPemakaian)->count();
+        $pendingPermohonanCount = (int) $permohonanStat['menunggu'];
+        $draftPemakaianCount = $pemakaian()->where('status', PemakaianGarbarata::STATUS_DRAFT)->count();
+        $siapPemakaianCount = $pemakaian()->where('status', PemakaianGarbarata::STATUS_SIAP)->count();
+
+        $amcBriefing = [
+            'storage_key' => 'amc_briefing_seen_' . ($user?->id ?? 'guest') . '_' . $today,
+            'checklist_key' => 'amc_briefing_checklist_' . ($user?->id ?? 'guest') . '_' . $today,
+            'date_label' => $now->isoFormat('dddd, D MMMM Y'),
+            'today_pemakaian_count' => $todayPemakaianCount,
+            'today_rentang' => (int) (clone $todayPemakaian)->sum('jumlah_rentang'),
+            'draft_pemakaian_count' => $draftPemakaianCount,
+            'siap_pemakaian_count' => $siapPemakaianCount,
+            'pending_permohonan_count' => $pendingPermohonanCount,
+            'latest_pending_permohonan' => $permohonan()->with('mitra')
+                ->where('status', PermohonanNonSchedule::STATUS_DIAJUKAN)
+                ->orderByDesc('tanggal_surat')->orderByDesc('id')
+                ->limit(3)->get(),
+            'needs_attention' => $todayPemakaianCount === 0 || $pendingPermohonanCount > 0 || $draftPemakaianCount > 0,
+        ];
+
+        return view('dashboard.amc', [
+            'user' => $user,
+            'bulanLabel' => $now->isoFormat('MMMM Y'),
+            'kpi' => $kpi,
+            'permohonanStat' => $permohonanStat,
+            'trend' => $trend,
+            'recentPemakaian' => $recentPemakaian,
+            'recentPermohonan' => $recentPermohonan,
+            'amcBriefing' => $amcBriefing,
+            'canCreate' => $user && $user->hasAnyRole(['Super Admin', 'AMC']),
+        ]);
+    }
+
+    /**
      * Internal Dashboard (KPA, Operator BLU, Bendahara, Kasubag, PPSPM, dll)
      */
     public function internal()
@@ -191,7 +286,7 @@ class DashboardController extends Controller
             return redirect()->route('jasa.mitra.penjualan.index');
         }
         if (Auth::user()->hasRole('AMC')) {
-            return redirect()->route('pemakaian-garbarata.index');
+            return $this->amc();
         }
         if (Auth::user()->hasRole('KPA')) {
             return $this->kpa();
@@ -476,7 +571,7 @@ class DashboardController extends Controller
                 ->get();
 
             $tagihan = TagihanJasa::query()
-                ->with(['kontrakMitraJasa', 'details.layananJasa'])
+                ->with(['kontrakMitraJasa', 'details.layananJasa', 'latestPaymentProof'])
                 ->where('mitra_jasa_id', $vendor->id)
                 ->whereIn('status', ['PUBLISHED', 'LUNAS'])
                 ->latest('tanggal_tagihan')
@@ -508,6 +603,62 @@ class DashboardController extends Controller
                 })
                 ->latest()
                 ->get();
+        }
+
+        $today = now()->toDateString();
+        $mitraActivity = [
+            'storage_key' => 'mitra_activity_seen_' . ($user?->id ?? 'guest') . '_' . $today,
+            'date_label' => now()->isoFormat('dddd, D MMMM Y'),
+            'unpaid_count' => 0,
+            'unpaid_nominal' => 0.0,
+            'due_today_count' => 0,
+            'overdue_count' => 0,
+            'due_soon_count' => 0,
+            'pending_proof_count' => 0,
+            'correction_proof_count' => 0,
+            'highlight_tagihan' => collect(),
+            'needs_attention' => false,
+        ];
+
+        if ($isMitraJasaPortal) {
+            $openTagihan = $tagihan->filter(fn ($item) => $item->status === 'PUBLISHED' && $item->status_pembayaran !== 'lunas');
+            $pendingProofTagihan = $tagihan->filter(function ($item) {
+                return $item->status_pembayaran === 'menunggu_verifikasi'
+                    || $item->latestPaymentProof?->status === TagihanJasaPaymentProof::STATUS_MENUNGGU;
+            });
+            $correctionProofTagihan = $tagihan->filter(function ($item) {
+                return in_array($item->latestPaymentProof?->status, [
+                    TagihanJasaPaymentProof::STATUS_DITOLAK,
+                    TagihanJasaPaymentProof::STATUS_PERLU_PERBAIKAN,
+                ], true);
+            });
+            $dueTodayTagihan = $openTagihan->filter(fn ($item) => $item->tanggal_jatuh_tempo?->toDateString() === $today);
+            $overdueTagihan = $openTagihan->filter(fn ($item) => $item->status_jatuh_tempo === 'LEWAT_JATUH_TEMPO');
+            $dueSoonTagihan = $openTagihan->filter(fn ($item) => $item->status_jatuh_tempo === 'MENDEKATI_JATUH_TEMPO');
+            $highlightTagihan = $correctionProofTagihan
+                ->merge($pendingProofTagihan)
+                ->merge($overdueTagihan)
+                ->merge($dueTodayTagihan)
+                ->unique('id')
+                ->take(3)
+                ->values();
+
+            $mitraActivity = [
+                ...$mitraActivity,
+                'unpaid_count' => $openTagihan->count(),
+                'unpaid_nominal' => (float) $openTagihan->sum(fn ($item) => (float) ($item->sisa_tagihan_berjalan ?: $item->total_tagihan)),
+                'due_today_count' => $dueTodayTagihan->count(),
+                'overdue_count' => $overdueTagihan->count(),
+                'due_soon_count' => $dueSoonTagihan->count(),
+                'pending_proof_count' => $pendingProofTagihan->count(),
+                'correction_proof_count' => $correctionProofTagihan->count(),
+                'highlight_tagihan' => $highlightTagihan,
+                'needs_attention' => $openTagihan->isNotEmpty()
+                    || $pendingProofTagihan->isNotEmpty()
+                    || $correctionProofTagihan->isNotEmpty()
+                    || $dueTodayTagihan->isNotEmpty()
+                    || $overdueTagihan->isNotEmpty(),
+            ];
         }
 
         // Summary stats for the mitra
@@ -624,7 +775,8 @@ class DashboardController extends Controller
             'chartTagihanBulanan',
             'chartStatus',
             'persentaseLunas',
-            'calendar'
+            'calendar',
+            'mitraActivity'
         ));
     }
 

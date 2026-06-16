@@ -11,6 +11,7 @@ use App\Models\MitraJasaPenjualan;
 use App\Models\PemakaianGarbarata;
 use App\Models\PengajuanPenagihanGarbarata;
 use App\Models\TagihanJasa;
+use App\Models\TagihanJasaPaymentProof;
 use App\Models\User;
 use App\Services\WhatsappService;
 use App\Services\BtnVirtualAccountService;
@@ -922,6 +923,8 @@ class TagihanJasaController extends Controller
             'creator',
             'arsipDokumen.uploader',
             'details.layananJasa.parent.parent.parent.parent.parent',
+            'paymentProofs.uploader',
+            'paymentProofs.verifier',
             'transaksiPenerimaan.bukuKasUmums.sumberRekening',
             'workflowInstance.approvals.actedByUser',
             'workflowInstance.approvals.assignedUser',
@@ -941,6 +944,8 @@ class TagihanJasaController extends Controller
             'creator',
             'arsipDokumen.uploader',
             'details.layananJasa.parent.parent.parent.parent.parent',
+            'paymentProofs.uploader',
+            'paymentProofs.verifier',
             'transaksiPenerimaan.bukuKasUmums.sumberRekening',
             'workflowInstance.approvals.actedByUser',
             'workflowInstance.approvals.assignedUser',
@@ -1241,6 +1246,125 @@ class TagihanJasaController extends Controller
             return back()->with('error', 'Hanya tagihan yang sudah dipublish yang dapat ditandai lunas.');
         }
 
+        $this->settleTagihanAsPaid($tagihan, 'BKU-MASUK/' . $tagihan->nomor_tagihan, now());
+
+        return back()->with('success', 'Tagihan berhasil ditandai LUNAS, piutang & BKU diperbarui, notifikasi WA dan email diproses.');
+    }
+
+    public function acceptPaymentProof(Request $request, $id, TagihanJasaPaymentProof $proof)
+    {
+        abort_unless($this->canManageTagihanJasa(), 403);
+
+        $tagihan = TagihanJasa::with(['paymentProofs'])->findOrFail($id);
+        $this->abortIfAdminJasaCannotAccess($tagihan);
+        abort_unless((int) $proof->tagihan_jasa_id === (int) $tagihan->id, 404);
+
+        if ($tagihan->status !== 'PUBLISHED') {
+            return back()->with('error', 'Bukti pembayaran hanya dapat diverifikasi untuk tagihan yang sudah publish dan belum lunas.');
+        }
+
+        if ($proof->status !== TagihanJasaPaymentProof::STATUS_MENUNGGU) {
+            return back()->with('error', 'Bukti pembayaran ini sudah diproses.');
+        }
+
+        $validated = $request->validate([
+            'catatan_verifikator' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $totalTagihanBerjalan = (float) $tagihan->total_dengan_denda;
+        if ((float) $proof->nominal_bayar < $totalTagihanBerjalan) {
+            return back()->with('error', 'Nominal bukti pembayaran belum mencukupi total tagihan berjalan. Tolak atau minta perbaikan bukti dari mitra.');
+        }
+
+        $paymentReference = $proof->nomor_referensi ?: ('BUKTI-TRANSFER/' . $proof->id);
+        $paidAt = $proof->tanggal_bayar ? $proof->tanggal_bayar->copy()->endOfDay() : now();
+
+        DB::transaction(function () use ($proof, $validated, $tagihan) {
+            $proof->update([
+                'status' => TagihanJasaPaymentProof::STATUS_DITERIMA,
+                'verified_by' => Auth::id(),
+                'verified_at' => now(),
+                'catatan_verifikator' => $validated['catatan_verifikator'] ?? null,
+            ]);
+
+            $tagihan->logs()->create([
+                'user_id' => Auth::id(),
+                'role_saat_itu' => Auth::user()?->getRoleNames()->first() ?? 'Admin Jasa',
+                'status_sebelumnya' => 'PUBLISHED',
+                'status_baru' => 'LUNAS',
+                'aksi' => 'TERIMA_BUKTI_PEMBAYARAN',
+                'catatan' => 'Bukti pembayaran #' . $proof->id . ' diterima.',
+                'ip_address' => request()->ip(),
+            ]);
+        });
+
+        $this->settleTagihanAsPaid($tagihan, $paymentReference, $paidAt);
+
+        return back()->with('success', 'Bukti pembayaran diterima. Tagihan ditandai LUNAS, piutang/BKU diperbarui, dan notifikasi diproses.');
+    }
+
+    public function rejectPaymentProof(Request $request, $id, TagihanJasaPaymentProof $proof)
+    {
+        abort_unless($this->canManageTagihanJasa(), 403);
+
+        $tagihan = TagihanJasa::with(['paymentProofs'])->findOrFail($id);
+        $this->abortIfAdminJasaCannotAccess($tagihan);
+        abort_unless((int) $proof->tagihan_jasa_id === (int) $tagihan->id, 404);
+
+        if ($proof->status !== TagihanJasaPaymentProof::STATUS_MENUNGGU) {
+            return back()->with('error', 'Bukti pembayaran ini sudah diproses.');
+        }
+
+        $validated = $request->validate([
+            'status' => ['required', 'in:DITOLAK,PERLU_PERBAIKAN'],
+            'catatan_verifikator' => ['required', 'string', 'max:1000'],
+        ]);
+
+        DB::transaction(function () use ($proof, $validated, $tagihan) {
+            $proof->update([
+                'status' => $validated['status'],
+                'verified_by' => Auth::id(),
+                'verified_at' => now(),
+                'catatan_verifikator' => $validated['catatan_verifikator'],
+            ]);
+
+            if ($tagihan->status !== 'LUNAS') {
+                $tagihan->update(['status_pembayaran' => 'belum_dibayar']);
+            }
+
+            $tagihan->logs()->create([
+                'user_id' => Auth::id(),
+                'role_saat_itu' => Auth::user()?->getRoleNames()->first() ?? 'Admin Jasa',
+                'status_sebelumnya' => 'PUBLISHED',
+                'status_baru' => 'PUBLISHED',
+                'aksi' => $validated['status'] === TagihanJasaPaymentProof::STATUS_PERLU_PERBAIKAN
+                    ? 'MINTA_PERBAIKAN_BUKTI_PEMBAYARAN'
+                    : 'TOLAK_BUKTI_PEMBAYARAN',
+                'catatan' => $validated['catatan_verifikator'],
+                'ip_address' => request()->ip(),
+            ]);
+        });
+
+        return back()->with('success', 'Bukti pembayaran berhasil diproses. Mitra dapat mengunggah ulang bila diperlukan.');
+    }
+
+    public function downloadPaymentProof($id, TagihanJasaPaymentProof $proof)
+    {
+        abort_unless($this->canManageTagihanJasa(), 403);
+
+        $tagihan = TagihanJasa::findOrFail($id);
+        $this->abortIfAdminJasaCannotAccess($tagihan);
+        abort_unless((int) $proof->tagihan_jasa_id === (int) $tagihan->id, 404);
+        abort_unless(Storage::disk('local')->exists($proof->file_path), 404);
+
+        return Storage::disk('local')->download(
+            $proof->file_path,
+            $proof->original_name ?: ('bukti-pembayaran-' . $proof->id)
+        );
+    }
+
+    private function settleTagihanAsPaid(TagihanJasa $tagihan, string $paymentReference, $paidAt): TagihanJasa
+    {
         $totalTagihanBerjalan = (float) $tagihan->total_dengan_denda;
 
         $tagihan->update([
@@ -1252,7 +1376,6 @@ class TagihanJasaController extends Controller
         ]);
 
         $freshTagihan = $tagihan->fresh(['mitra', 'mitraLegacy', 'details']);
-        $paymentReference = 'BKU-MASUK/' . $freshTagihan->nomor_tagihan;
 
         // Sync ke piutang (PAID) + catat BKU DEBIT_MASUK.
         try {
@@ -1260,7 +1383,7 @@ class TagihanJasaController extends Controller
                 $freshTagihan,
                 [
                     'amount' => $totalTagihanBerjalan,
-                    'paid_at' => now(),
+                    'paid_at' => $paidAt,
                     'reference' => $paymentReference,
                 ]
             );
@@ -1276,7 +1399,7 @@ class TagihanJasaController extends Controller
                 $freshTagihan,
                 [
                     'amount' => $totalTagihanBerjalan,
-                    'paid_at' => now(),
+                    'paid_at' => $paidAt,
                     'reference' => $paymentReference,
                 ]
             );
@@ -1284,7 +1407,7 @@ class TagihanJasaController extends Controller
             \Log::error('Gagal kirim notifikasi lunas: ' . $e->getMessage());
         }
 
-        return back()->with('success', 'Tagihan berhasil ditandai LUNAS, piutang & BKU diperbarui, notifikasi WA dan email diproses.');
+        return $freshTagihan;
     }
 
     public function autoApproveAll($id)
@@ -1653,7 +1776,7 @@ class TagihanJasaController extends Controller
             ->orderByDesc('id')
             ->get();
 
-        $options = $pengajuans->map(function (PengajuanPenagihanGarbarata $p) {
+        $options = $pengajuans->map(function (PengajuanPenagihanGarbarata $p) use ($boundTagihanId) {
             $nominal = PemakaianGarbarata::where('pengajuan_penagihan_garbarata_id', $p->id)
                 ->get()
                 ->sum(fn ($item) => (float) ($item->tarif_garbarata ?? 0) * (int) $item->jumlah_rentang);
