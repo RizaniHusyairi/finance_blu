@@ -83,4 +83,9 @@ class BukuKasUmum extends Model
     {
         return $this->belongsTo(TransaksiPenerimaan::class, 'referensi_penerimaan_id');
     }
+
+    public function rekonsiliasiBanks()
+    {
+        return $this->hasMany(RekonsiliasiBank::class, 'bku_id');
+    }
 }

@@ -12,6 +12,7 @@ use App\Http\Controllers\AdminJasaUtilitasController;
 use App\Http\Controllers\MonitoringPelaporanController;
 use App\Http\Controllers\BendaharaHonorariumVerifikasiController;
 use App\Http\Controllers\BendaharaPenerimaanDashboardController;
+use App\Http\Controllers\ManajemenPnbpController;
 use App\Http\Controllers\BendaharaPengeluaranDashboardController;
 use App\Http\Controllers\BtnPaymentCallbackController;
 use App\Http\Controllers\BukuKasUmumController;
@@ -501,14 +502,6 @@ Route::middleware(['auth', 'account.active'])->group(function () use ($internalR
         Route::put('/jasa/admin/{user}/layanan', [AdminJasaLayananController::class, 'update'])->name('jasa.admin.layanan.update');
     });
 
-    // Tarif & Diskon Berkala layanan jasa — hanya Super Admin / Super Admin Jasa.
-    Route::middleware('role:Super Admin|Super Admin Jasa')->group(function () {
-        Route::get('/jasa/tarif-diskon', [LayananTarifDiskonController::class, 'index'])->name('tarif-diskon.index');
-        Route::post('/jasa/tarif-diskon', [LayananTarifDiskonController::class, 'store'])->name('tarif-diskon.store');
-        Route::put('/jasa/tarif-diskon/{tarif_diskon}', [LayananTarifDiskonController::class, 'update'])->name('tarif-diskon.update');
-        Route::delete('/jasa/tarif-diskon/{tarif_diskon}', [LayananTarifDiskonController::class, 'destroy'])->name('tarif-diskon.destroy');
-    });
-
     // Integrasi API — hanya Super Admin
     Route::middleware('role:Super Admin')->group(function () {
         Route::get('/jasa/integrasi', [JasaIntegrationSettingController::class, 'index'])->name('jasa.integrasi.index');
@@ -797,6 +790,14 @@ Route::middleware(['auth', 'account.active'])->group(function () use ($internalR
         Route::post('/verifikasi-bendahara-penerimaan/perjaldin/{id}/revisi', [PerjaldinVerifikasiController::class, 'bendaharaPenerimaanRevisi'])->name('verifikasi-bendahara-penerimaan.perjaldin.revisi');
     });
 
+    // ==== MANAJEMEN / MONITORING PNBP — Bendahara Penerimaan ====
+    Route::middleware('role:Super Admin|Bendahara Penerimaan')->group(function () {
+        Route::get('/manajemen-pnbp', [ManajemenPnbpController::class, 'index'])->name('manajemen-pnbp.index');
+        Route::get('/manajemen-pnbp/export', [ManajemenPnbpController::class, 'export'])->name('manajemen-pnbp.export');
+        Route::get('/manajemen-pnbp/umum/edit', [ManajemenPnbpController::class, 'umumEdit'])->name('manajemen-pnbp.umum.edit');
+        Route::post('/manajemen-pnbp/umum', [ManajemenPnbpController::class, 'umumStore'])->name('manajemen-pnbp.umum.store');
+    });
+
     // Cetak PDF SPP/SPM/NPI/SP2D bisa diakses oleh berbagai role terkait
     Route::middleware('auth')->group(function () {
         Route::get('/spps/{spp}/pdf', [SppController::class, 'cetakPdf'])->name('spps.cetak-pdf');
@@ -824,11 +825,18 @@ Route::middleware(['auth', 'account.active'])->group(function () use ($internalR
             ->name('pembukuan.bku.show');
 
         Route::get('/pembukuan/bank/mutasi', [BukuPembantuBankController::class, 'mutasi'])->name('pembukuan.bank.mutasi');
-        Route::get('/pembukuan/bank/rekonsiliasi', [BukuPembantuBankController::class, 'rekonsiliasi'])->name('pembukuan.bank.rekonsiliasi');
         Route::get('/pembukuan/bank', [BukuPembantuBankController::class, 'index'])->name('pembukuan.bank.index');
         Route::get('/pembukuan/bank/{rekening}', [BukuPembantuBankController::class, 'show'])
             ->whereNumber('rekening')
             ->name('pembukuan.bank.show');
+
+        // Rekonsiliasi BKU ↔ rekening koran — di halaman detail per rekening.
+        Route::post('/pembukuan/bank/{rekening}/koran/upload', [BukuPembantuBankController::class, 'uploadKoran'])->whereNumber('rekening')->name('pembukuan.bank.koran.upload');
+        Route::post('/pembukuan/bank/{rekening}/koran/baris', [BukuPembantuBankController::class, 'storeKoranLine'])->whereNumber('rekening')->name('pembukuan.bank.koran.line.store');
+        Route::delete('/pembukuan/bank/{rekening}/koran/baris/{mutasi}', [BukuPembantuBankController::class, 'destroyKoranLine'])->whereNumber('rekening')->whereNumber('mutasi')->name('pembukuan.bank.koran.line.destroy');
+        Route::post('/pembukuan/bank/{rekening}/rekonsiliasi/auto', [BukuPembantuBankController::class, 'autoReconcile'])->whereNumber('rekening')->name('pembukuan.bank.rekonsiliasi.auto');
+        Route::post('/pembukuan/bank/{rekening}/rekonsiliasi/manual', [BukuPembantuBankController::class, 'manualMatch'])->whereNumber('rekening')->name('pembukuan.bank.rekonsiliasi.manual');
+        Route::post('/pembukuan/bank/{rekening}/rekonsiliasi/unmatch', [BukuPembantuBankController::class, 'unmatch'])->whereNumber('rekening')->name('pembukuan.bank.rekonsiliasi.unmatch');
 
         Route::get('/pembukuan/bendahara/pdf', [BukuPembantuBendaharaController::class, 'pdf'])->name('pembukuan.bendahara.pdf');
         Route::get('/pembukuan/bendahara', [BukuPembantuBendaharaController::class, 'index'])->name('pembukuan.bendahara.index');

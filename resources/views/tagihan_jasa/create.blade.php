@@ -123,46 +123,6 @@
             font-weight: 800;
             width: 100% !important;
         }
-        .invoice-info-grid {
-            display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 12px;
-        }
-        .invoice-info-tile {
-            border: 1px solid #dbeafe;
-            border-radius: 16px;
-            background: linear-gradient(180deg, #ffffff, #f8fbff);
-            padding: 12px 14px;
-            min-height: 74px;
-            box-shadow: 0 10px 24px rgba(15, 23, 42, .04);
-        }
-        .invoice-info-tile label {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            color: #64748b;
-            font-size: 11px;
-            font-weight: 900;
-            margin-bottom: 6px;
-            text-transform: uppercase;
-        }
-        .invoice-info-tile label i {
-            color: #2563eb;
-        }
-        .invoice-info-tile .form-control {
-            min-height: 0;
-            border: 0 !important;
-            border-radius: 0 !important;
-            background: transparent !important;
-            box-shadow: none !important;
-            color: #0f172a;
-            font-weight: 800;
-            padding: 0;
-        }
-        .invoice-info-tile textarea.form-control {
-            line-height: 1.45;
-            resize: none;
-        }
         .invoice-date-card,
         .invoice-document-card {
             border: 1px solid #dbeafe;
@@ -185,15 +145,170 @@
             letter-spacing: .02em;
             text-transform: uppercase;
         }
+        /* ===== Ringkasan Mitra (redesign) ===== */
+        .mitra-summary-card {
+            border-radius: 22px;
+            border: 1px solid #e0e7ff;
+            background:
+                radial-gradient(120% 140% at 0% 0%, #eff6ff 0%, rgba(239, 246, 255, 0) 46%),
+                radial-gradient(120% 140% at 100% 0%, #faf5ff 0%, rgba(250, 245, 255, 0) 42%),
+                #ffffff;
+            box-shadow: 0 26px 60px rgba(30, 64, 175, .10);
+            overflow: hidden;
+        }
+        .mitra-summary-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 15px 18px;
+            background: linear-gradient(120deg, #4f46e5 0%, #2563eb 52%, #0ea5e9 100%);
+            color: #fff;
+            position: relative;
+        }
+        .mitra-summary-head::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(80% 120% at 88% -10%, rgba(255, 255, 255, .28), transparent 60%);
+            pointer-events: none;
+        }
+        .mitra-summary-head-left {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            position: relative;
+            z-index: 1;
+        }
+        .mitra-avatar {
+            width: 46px;
+            height: 46px;
+            border-radius: 14px;
+            display: grid;
+            place-items: center;
+            background: rgba(255, 255, 255, .18);
+            border: 1px solid rgba(255, 255, 255, .35);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, .45);
+            font-size: 1.35rem;
+            color: #fff;
+        }
+        .mitra-summary-title {
+            font-size: 14px;
+            font-weight: 900;
+            letter-spacing: .02em;
+            line-height: 1.1;
+        }
+        .mitra-summary-sub {
+            font-size: 11px;
+            font-weight: 600;
+            opacity: .85;
+            margin-top: 2px;
+        }
+        .mitra-chip-active {
+            position: relative;
+            z-index: 1;
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 6px 14px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, .16);
+            border: 1px solid rgba(255, 255, 255, .42);
+            color: #fff;
+            font-size: 11px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: .04em;
+        }
+        .mitra-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #34d399;
+            box-shadow: 0 0 0 0 rgba(52, 211, 153, .7);
+            animation: mitraPulse 1.8s infinite;
+        }
+        @keyframes mitraPulse {
+            0%   { box-shadow: 0 0 0 0 rgba(52, 211, 153, .6); }
+            70%  { box-shadow: 0 0 0 7px rgba(52, 211, 153, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0); }
+        }
+        .mitra-summary-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 12px;
+            padding: 18px;
+        }
+        .mitra-tile {
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+            border: 1px solid #eef2f7;
+            border-radius: 16px;
+            background: #fff;
+            padding: 13px 14px;
+            transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+        }
+        .mitra-tile:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 16px 30px rgba(15, 23, 42, .08);
+            border-color: #dbeafe;
+        }
+        .mitra-tile-wide { grid-column: span 3; }
+        .mitra-tile-icon {
+            flex: 0 0 auto;
+            width: 38px;
+            height: 38px;
+            border-radius: 12px;
+            display: grid;
+            place-items: center;
+            font-size: 1.05rem;
+        }
+        .mitra-ic-blue    { background: #dbeafe; color: #2563eb; }
+        .mitra-ic-indigo  { background: #e0e7ff; color: #4f46e5; }
+        .mitra-ic-violet  { background: #ede9fe; color: #7c3aed; }
+        .mitra-ic-emerald { background: #d1fae5; color: #059669; }
+        .mitra-ic-amber   { background: #fef3c7; color: #d97706; }
+        .mitra-ic-cyan    { background: #cffafe; color: #0891b2; }
+        .mitra-ic-rose    { background: #ffe4e6; color: #e11d48; }
+        .mitra-tile-body {
+            min-width: 0;
+            flex: 1;
+        }
+        .mitra-tile-body label {
+            display: block;
+            color: #94a3b8;
+            font-size: 10.5px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: .04em;
+            margin-bottom: 3px;
+        }
+        .mitra-tile-value {
+            border: 0 !important;
+            background: transparent !important;
+            box-shadow: none !important;
+            padding: 0 !important;
+            height: auto !important;
+            min-height: 0 !important;
+            color: #0f172a;
+            font-weight: 800;
+            font-size: .95rem;
+            width: 100%;
+            resize: none;
+            line-height: 1.4;
+        }
+        .mitra-tile-value:focus {
+            outline: none;
+            box-shadow: none !important;
+        }
         @media (max-width: 991.98px) {
-            .invoice-info-grid {
-                grid-template-columns: repeat(2, minmax(0, 1fr));
-            }
+            .mitra-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .mitra-tile-wide { grid-column: span 2; }
         }
         @media (max-width: 575.98px) {
-            .invoice-info-grid {
-                grid-template-columns: 1fr;
-            }
+            .mitra-summary-grid { grid-template-columns: 1fr; }
+            .mitra-tile-wide { grid-column: span 1; }
         }
         .tw-invoice-table {
             border-collapse: separate;
@@ -604,42 +719,74 @@
                     </div>
 
                     <div class="mb-4 d-none" id="mitraInfoPanel">
-                        <div class="mb-2 flex items-center justify-between gap-2">
-                            <span class="invoice-section-kicker"><i class="bi bi-card-checklist"></i> Ringkasan Mitra</span>
-                            <span class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-black text-emerald-700 ring-1 ring-emerald-200">Terpilih</span>
-                        </div>
-                        <div class="invoice-info-grid">
-                            <div class="invoice-info-tile">
-                                <label><i class="bi bi-hash"></i>Kode Mitra</label>
-                                <input type="text" id="mitraKode" class="form-control" readonly>
+                        <div class="mitra-summary-card">
+                            <div class="mitra-summary-head">
+                                <div class="mitra-summary-head-left">
+                                    <div class="mitra-avatar"><i class="bi bi-building-fill-check"></i></div>
+                                    <div>
+                                        <div class="mitra-summary-title">Ringkasan Mitra</div>
+                                        <div class="mitra-summary-sub">Detail identitas mitra terpilih</div>
+                                    </div>
+                                </div>
+                                <span class="mitra-chip-active"><span class="mitra-dot"></span>Terpilih</span>
                             </div>
-                            <div class="invoice-info-tile">
-                                <label><i class="bi bi-building"></i>Jenis Mitra</label>
-                                <input type="text" id="mitraJenis" class="form-control" readonly>
-                            </div>
-                            <div class="invoice-info-tile">
-                                <label><i class="bi bi-file-text"></i>NPWP</label>
-                                <input type="text" id="mitraNpwp" class="form-control" readonly>
-                            </div>
-                            <div class="invoice-info-tile">
-                                <label><i class="bi bi-envelope"></i>Email</label>
-                                <input type="text" id="mitraEmail" class="form-control" readonly>
-                            </div>
-                            <div class="invoice-info-tile">
-                                <label><i class="bi bi-whatsapp"></i>No Telepon/WA</label>
-                                <input type="text" id="mitraTelepon" class="form-control" readonly>
-                            </div>
-                            <div class="invoice-info-tile">
-                                <label><i class="bi bi-person-badge"></i>Penanggung Jawab</label>
-                                <input type="text" id="mitraPenanggungJawab" class="form-control" readonly>
-                            </div>
-                            <div class="invoice-info-tile">
-                                <label><i class="bi bi-briefcase"></i>Jabatan PJ</label>
-                                <input type="text" id="mitraJabatanPenanggungJawab" class="form-control" readonly>
-                            </div>
-                            <div class="invoice-info-tile md:col-span-2">
-                                <label><i class="bi bi-geo-alt"></i>Alamat</label>
-                                <textarea id="mitraAlamat" class="form-control" rows="2" readonly></textarea>
+                            <div class="mitra-summary-grid">
+                                <div class="mitra-tile">
+                                    <div class="mitra-tile-icon mitra-ic-blue"><i class="bi bi-hash"></i></div>
+                                    <div class="mitra-tile-body">
+                                        <label>Kode Mitra</label>
+                                        <input type="text" id="mitraKode" class="mitra-tile-value" readonly>
+                                    </div>
+                                </div>
+                                <div class="mitra-tile">
+                                    <div class="mitra-tile-icon mitra-ic-indigo"><i class="bi bi-building"></i></div>
+                                    <div class="mitra-tile-body">
+                                        <label>Jenis Mitra</label>
+                                        <input type="text" id="mitraJenis" class="mitra-tile-value" readonly>
+                                    </div>
+                                </div>
+                                <div class="mitra-tile">
+                                    <div class="mitra-tile-icon mitra-ic-violet"><i class="bi bi-file-text"></i></div>
+                                    <div class="mitra-tile-body">
+                                        <label>NPWP</label>
+                                        <input type="text" id="mitraNpwp" class="mitra-tile-value" readonly>
+                                    </div>
+                                </div>
+                                <div class="mitra-tile">
+                                    <div class="mitra-tile-icon mitra-ic-cyan"><i class="bi bi-envelope"></i></div>
+                                    <div class="mitra-tile-body">
+                                        <label>Email</label>
+                                        <input type="text" id="mitraEmail" class="mitra-tile-value" readonly>
+                                    </div>
+                                </div>
+                                <div class="mitra-tile">
+                                    <div class="mitra-tile-icon mitra-ic-emerald"><i class="bi bi-whatsapp"></i></div>
+                                    <div class="mitra-tile-body">
+                                        <label>No Telepon/WA</label>
+                                        <input type="text" id="mitraTelepon" class="mitra-tile-value" readonly>
+                                    </div>
+                                </div>
+                                <div class="mitra-tile">
+                                    <div class="mitra-tile-icon mitra-ic-amber"><i class="bi bi-person-badge"></i></div>
+                                    <div class="mitra-tile-body">
+                                        <label>Penanggung Jawab</label>
+                                        <input type="text" id="mitraPenanggungJawab" class="mitra-tile-value" readonly>
+                                    </div>
+                                </div>
+                                <div class="mitra-tile">
+                                    <div class="mitra-tile-icon mitra-ic-blue"><i class="bi bi-briefcase"></i></div>
+                                    <div class="mitra-tile-body">
+                                        <label>Jabatan PJ</label>
+                                        <input type="text" id="mitraJabatanPenanggungJawab" class="mitra-tile-value" readonly>
+                                    </div>
+                                </div>
+                                <div class="mitra-tile mitra-tile-wide">
+                                    <div class="mitra-tile-icon mitra-ic-rose"><i class="bi bi-geo-alt"></i></div>
+                                    <div class="mitra-tile-body">
+                                        <label>Alamat</label>
+                                        <textarea id="mitraAlamat" class="mitra-tile-value" rows="2" readonly></textarea>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>

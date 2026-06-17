@@ -35,6 +35,9 @@
             <li><a href="{{ route('dashboard') }}"><i class="material-icons-outlined">arrow_right</i>{{ $isPureAmc ? 'Dashboard AMC' : 'Dashboard Internal' }}</a>
             </li>
             @endunlessrole
+            @hasanyrole('Bendahara Penerimaan|Super Admin')
+            <li><a href="{{ route('manajemen-pnbp.index') }}"><i class="material-icons-outlined">arrow_right</i>Manajemen PNBP</a></li>
+            @endhasanyrole
             @hasrole('PPSPM')
             <li><a href="{{ route('dashboard.ppspm') }}"><i class="material-icons-outlined">arrow_right</i>Dashboard PPSPM</a>
             </li>
@@ -551,11 +554,6 @@
             <li>
               <a href="{{ route('master-layanan-jasa.index') }}">
                 <i class="material-icons-outlined">arrow_right</i>Layanan Jasa
-              </a>
-            </li>
-            <li>
-              <a href="{{ route('tarif-diskon.index') }}">
-                <i class="material-icons-outlined">arrow_right</i>Perubahan Tarif
               </a>
             </li>
           </ul>

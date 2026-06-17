@@ -90,6 +90,15 @@ class LayananJasa extends Model
         return implode(' > ', $names);
     }
 
+    public function getKelompokPnbpLabelAttribute(): string
+    {
+        return match ($this->kelompok_pnbp) {
+            'AERO' => 'Aeronautika (AERO)',
+            'NON_AERO' => 'Non-Aeronautika (NON-AERO)',
+            default => 'Lainnya',
+        };
+    }
+
     public function getKodePembayaranLengkapAttribute()
     {
         $kodeMak = trim((string) ($this->kode_mak ?? ''));

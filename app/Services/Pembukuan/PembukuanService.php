@@ -11,14 +11,17 @@ use App\Models\LaporanPengesahanBlu;
 use App\Models\PotonganTagihan;
 use App\Models\RealisasiAnggaran;
 use App\Models\RekonsiliasiBank;
+use App\Models\RekonsiliasiBankLog;
 use App\Models\RekeningBank;
 use App\Models\Tagihan;
 use App\Models\TransaksiPenerimaan;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class PembukuanService
@@ -224,37 +227,51 @@ class PembukuanService
         $rekeningList = RekeningBank::query()
             ->where('status_aktif', true)
             ->when($filters['rekening_bank_id'], fn (Builder $query) => $query->whereKey($filters['rekening_bank_id']))
+            ->when($filters['search'], function (Builder $query) use ($filters) {
+                $term = '%'.$filters['search'].'%';
+                $query->where(fn (Builder $q) => $q
+                    ->where('nama_bank', 'like', $term)
+                    ->orWhere('nomor_rekening', 'like', $term)
+                    ->orWhere('nama_rekening', 'like', $term));
+            })
             ->orderBy('nama_bank')
             ->orderBy('nomor_rekening')
             ->get();
 
-        $mutasiBase = DetailMutasiBank::query()
-            ->join('import_mutasi_bank', 'import_mutasi_bank.id', '=', 'detail_mutasi_bank.import_mutasi_bank_id');
+        // Buku Pembantu Bank bersumber dari BKU (buku_kas_umum) per rekening,
+        // bukan dari rekening koran impor. Rekening koran hanya dipakai sebagai
+        // pembanding di tab Rekonsiliasi.
+        $bkuBase = BukuKasUmum::query()
+            ->when($filters['rekening_bank_id'], fn (Builder $q) => $q->where('sumber_rekening_id', $filters['rekening_bank_id']));
+        $this->applyDateRange($bkuBase, 'tanggal_transaksi', $filters);
 
-        $this->applyMutasiFilters($mutasiBase, $filters, 'detail_mutasi_bank.tanggal_transaksi');
+        $bkuCounts = (clone $bkuBase)
+            ->selectRaw('sumber_rekening_id, COUNT(*) as jml')
+            ->groupBy('sumber_rekening_id')
+            ->pluck('jml', 'sumber_rekening_id');
 
-        $mutasiCounts = (clone $mutasiBase)
-            ->selectRaw('import_mutasi_bank.rekening_bank_id, COUNT(*) as jumlah_mutasi')
-            ->groupBy('import_mutasi_bank.rekening_bank_id')
-            ->pluck('jumlah_mutasi', 'import_mutasi_bank.rekening_bank_id');
+        // BKU yang sudah tersanding (punya pasangan rekonsiliasi dengan rekening koran).
+        $reconciledBkuIds = RekonsiliasiBank::whereNotNull('bku_id')->pluck('bku_id')->unique();
+        $reconciledCounts = (clone $bkuBase)
+            ->whereIn('id', $reconciledBkuIds)
+            ->selectRaw('sumber_rekening_id, COUNT(*) as jml')
+            ->groupBy('sumber_rekening_id')
+            ->pluck('jml', 'sumber_rekening_id');
 
-        $latestStatuses = (clone $mutasiBase)
-            ->select([
-                'import_mutasi_bank.rekening_bank_id',
-                'detail_mutasi_bank.status_rekonsiliasi',
-                'detail_mutasi_bank.tanggal_transaksi',
-                'detail_mutasi_bank.id',
-            ])
-            ->orderByDesc('detail_mutasi_bank.tanggal_transaksi')
-            ->orderByDesc('detail_mutasi_bank.id')
-            ->get()
-            ->groupBy('rekening_bank_id')
-            ->map(fn (Collection $items) => optional($items->first())->status_rekonsiliasi);
-
-        $rekeningList->each(function (RekeningBank $rekening) use ($mutasiCounts, $latestStatuses) {
-            $rekening->jumlah_mutasi = (int) ($mutasiCounts[$rekening->id] ?? 0);
-            $rekening->status_rekonsiliasi_terakhir = $latestStatuses[$rekening->id] ?? 'BELUM';
+        $rekeningList->each(function (RekeningBank $rekening) use ($bkuCounts, $reconciledCounts) {
+            $total = (int) ($bkuCounts[$rekening->id] ?? 0);
+            $cocok = (int) ($reconciledCounts[$rekening->id] ?? 0);
+            $rekening->jumlah_mutasi = $total;
+            $rekening->status_rekonsiliasi_terakhir = match (true) {
+                $total === 0 => 'BELUM',
+                $cocok >= $total => 'MATCHED',
+                $cocok > 0 => 'PARTIAL',
+                default => 'BELUM',
+            };
         });
+
+        $totalTransaksi = (clone $bkuBase)->count();
+        $totalCocok = (clone $bkuBase)->whereIn('id', $reconciledBkuIds)->count();
 
         return [
             'filters' => $filters,
@@ -262,9 +279,9 @@ class PembukuanService
             'rekeningOptions' => $this->rekeningOptions(),
             'summary' => [
                 'rekening_aktif' => RekeningBank::query()->where('status_aktif', true)->count(),
-                'belum' => (clone $mutasiBase)->where('detail_mutasi_bank.status_rekonsiliasi', 'BELUM')->count(),
-                'matched' => (clone $mutasiBase)->where('detail_mutasi_bank.status_rekonsiliasi', 'MATCHED')->count(),
-                'selisih' => (clone $mutasiBase)->where('detail_mutasi_bank.status_rekonsiliasi', 'SELISIH')->count(),
+                'total_transaksi' => $totalTransaksi,
+                'tercocok' => $totalCocok,
+                'belum_cocok' => max(0, $totalTransaksi - $totalCocok),
             ],
         ];
     }
@@ -305,20 +322,45 @@ class PembukuanService
 
         $rekening->loadMissing('pemilik');
 
-        $query = DetailMutasiBank::query()
-            ->with([
-                'importMutasiBank.rekeningBank',
-                'rekonsiliasiBanks.bku',
-                'rekonsiliasiBanks.tagihan',
-                'rekonsiliasiBanks.transaksiPenerimaan',
-                'rekonsiliasiBanks.direkonsiliasiOleh',
-            ])
-            ->whereHas('importMutasiBank', fn (Builder $q) => $q->where('rekening_bank_id', $rekening->id));
+        // Detail Buku Pembantu Bank = transaksi BKU rekening ini (bukan rekening koran).
+        $query = BukuKasUmum::query()
+            ->with(['rekonsiliasiBanks', 'referensiPengeluaran', 'referensiPenerimaan'])
+            ->where('sumber_rekening_id', $rekening->id);
 
-        $this->applyMutasiFilters($query, $filters);
+        $this->applyDateRange($query, 'tanggal_transaksi', $filters);
 
-        $mutasi = $query
-            ->orderByDesc('tanggal_transaksi')
+        if ($filters['arah_mutasi']) {
+            $query->where('arus_kas', $filters['arah_mutasi'] === 'MASUK' ? 'DEBIT_MASUK' : 'KREDIT_KELUAR');
+        }
+
+        if ($filters['status_rekonsiliasi']) {
+            if ($filters['status_rekonsiliasi'] === 'BELUM') {
+                $query->whereDoesntHave('rekonsiliasiBanks');
+            } else {
+                $query->whereHas('rekonsiliasiBanks', fn (Builder $q) => $q->where('status', $filters['status_rekonsiliasi']));
+            }
+        }
+
+        $bku = $query->orderBy('tanggal_transaksi')->orderBy('id')->get();
+
+        // ── Workspace rekonsiliasi: BKU ↔ rekening koran (khusus rekening ini) ──
+        $filters['rekening_bank_id'] = $rekening->id;
+
+        $unmatchedBku = $this->unmatchedBkuQuery($filters)->get();
+        $unmatchedMutasi = $this->unmatchedMutasiQuery($filters)->get();
+
+        $reconciliations = RekonsiliasiBank::query()
+            ->with(['detailMutasiBank', 'bku', 'direkonsiliasiOleh'])
+            ->whereHas('bku', fn (Builder $q) => $q->where('sumber_rekening_id', $rekening->id))
+            ->orderByDesc('direkonsiliasi_pada')
+            ->orderByDesc('id')
+            ->get();
+
+        $imports = ImportMutasiBank::query()
+            ->where('rekening_bank_id', $rekening->id)
+            ->withCount('detailMutasiBanks')
+            ->with('uploader')
+            ->orderByDesc('uploaded_at')
             ->orderByDesc('id')
             ->get();
 
@@ -326,48 +368,217 @@ class PembukuanService
             'rekening' => $rekening,
             'filters' => $filters,
             'rekeningOptions' => $this->rekeningOptions(),
-            'mutasi' => $mutasi,
+            'bku' => $bku,
+            'unmatchedBku' => $unmatchedBku,
+            'unmatchedMutasi' => $unmatchedMutasi,
+            'reconciliations' => $reconciliations,
+            'imports' => $imports,
             'summary' => [
-                'jumlah_mutasi' => $mutasi->count(),
-                'total_masuk' => $mutasi->sum(fn (DetailMutasiBank $item) => (float) $item->debit),
-                'total_keluar' => $mutasi->sum(fn (DetailMutasiBank $item) => (float) $item->kredit),
-                'matched' => $mutasi->where('status_rekonsiliasi', 'MATCHED')->count(),
+                'jumlah_transaksi' => $bku->count(),
+                'total_masuk' => $bku->where('arus_kas', 'DEBIT_MASUK')->sum(fn (BukuKasUmum $item) => (float) $item->nominal),
+                'total_keluar' => $bku->where('arus_kas', 'KREDIT_KELUAR')->sum(fn (BukuKasUmum $item) => (float) $item->nominal),
+                'tercocok' => $bku->filter(fn (BukuKasUmum $item) => $item->rekonsiliasiBanks->isNotEmpty())->count(),
+                'koran_belum' => $unmatchedMutasi->count(),
             ],
         ];
     }
 
-    public function buildBankReconciliationData(array $filters = []): array
+    /** Simpan file rekening koran sebagai lampiran/bukti untuk satu rekening. */
+    public function uploadKoran(RekeningBank $rekening, UploadedFile $file, array $data, int $userId): ImportMutasiBank
+    {
+        $path = $file->store('rekening-koran', 'public');
+
+        return ImportMutasiBank::create([
+            'rekening_bank_id' => $rekening->id,
+            'periode_awal' => $data['periode_awal'] ?? null,
+            'periode_akhir' => $data['periode_akhir'] ?? null,
+            'nama_file_asli' => $file->getClientOriginalName(),
+            'path_file' => $path,
+            'uploaded_by' => $userId,
+            'uploaded_at' => now(),
+            'status_import' => 'UPLOADED',
+        ]);
+    }
+
+    /** Tambah satu baris rekening koran manual untuk rekening ini. */
+    public function addKoranLine(RekeningBank $rekening, array $data): DetailMutasiBank
+    {
+        $import = $this->resolveKoranImport($rekening);
+        $masuk = $data['arah_mutasi'] === 'MASUK';
+        $nominal = (float) $data['nominal'];
+
+        return DetailMutasiBank::create([
+            'import_mutasi_bank_id' => $import->id,
+            'tanggal_transaksi' => $data['tanggal_transaksi'],
+            'deskripsi' => $data['deskripsi'] ?? null,
+            'nomor_referensi_bank' => $data['nomor_referensi_bank'] ?? null,
+            'debit' => $masuk ? 0 : $nominal,
+            'kredit' => $masuk ? $nominal : 0,
+            'saldo' => $data['saldo'] ?? null,
+            'arah_mutasi' => $data['arah_mutasi'],
+            'status_rekonsiliasi' => 'BELUM',
+            'kategori_mutasi' => 'LAINNYA',
+        ]);
+    }
+
+    /** Hapus satu baris rekening koran (hanya bila belum tersanding). */
+    public function deleteKoranLine(RekeningBank $rekening, int $mutasiId): void
+    {
+        $mutasi = DetailMutasiBank::whereHas('importMutasiBank', fn (Builder $q) => $q->where('rekening_bank_id', $rekening->id))
+            ->findOrFail($mutasiId);
+
+        abort_if($mutasi->rekonsiliasiBanks()->exists(), 422, 'Baris koran sudah tersanding — batalkan pasangannya terlebih dahulu.');
+
+        $mutasi->delete();
+    }
+
+    /** Wadah impor untuk baris koran input manual (dibuat sekali per rekening). */
+    private function resolveKoranImport(RekeningBank $rekening): ImportMutasiBank
+    {
+        return ImportMutasiBank::firstOrCreate(
+            ['rekening_bank_id' => $rekening->id, 'nama_file_asli' => '(input manual)'],
+            [
+                'path_file' => '',
+                'status_import' => 'PARSED',
+                'uploaded_by' => auth()->id(),
+                'uploaded_at' => now(),
+            ],
+        );
+    }
+
+    /** Mutasi rekening koran yang belum dipasangkan (untuk rekening & periode terpilih). */
+    private function unmatchedMutasiQuery(array $filters): Builder
+    {
+        $query = DetailMutasiBank::query()
+            ->with('importMutasiBank.rekeningBank')
+            ->whereHas('importMutasiBank', fn (Builder $q) => $q->where('rekening_bank_id', $filters['rekening_bank_id']))
+            ->whereDoesntHave('rekonsiliasiBanks');
+
+        $this->applyDateRange($query, 'tanggal_transaksi', $filters);
+
+        return $query->orderBy('tanggal_transaksi')->orderBy('id');
+    }
+
+    /** Catatan BKU sistem yang belum dipasangkan (untuk rekening & periode terpilih). */
+    private function unmatchedBkuQuery(array $filters): Builder
+    {
+        $usedBkuIds = RekonsiliasiBank::whereNotNull('bku_id')->pluck('bku_id');
+
+        $query = BukuKasUmum::query()
+            ->where('sumber_rekening_id', $filters['rekening_bank_id'])
+            ->whereNotIn('id', $usedBkuIds);
+
+        $this->applyDateRange($query, 'tanggal_transaksi', $filters);
+
+        return $query->orderBy('tanggal_transaksi')->orderBy('id');
+    }
+
+    /**
+     * Cocokkan otomatis mutasi ↔ BKU berdasarkan arah, nominal sama, dan
+     * selisih tanggal dalam toleransi. Mengembalikan jumlah yang tercocok.
+     */
+    public function autoReconcileBank(array $filters, int $userId, int $toleransiHari = 3): array
     {
         $filters = $this->normalizeFilters($filters);
+        abort_unless($filters['rekening_bank_id'], 422, 'Pilih rekening terlebih dahulu untuk pencocokan otomatis.');
 
-        $query = RekonsiliasiBank::query()
-            ->with([
-                'detailMutasiBank.importMutasiBank.rekeningBank',
-                'bku.sumberRekening',
-                'tagihan.pihak',
-                'transaksiPenerimaan.mitra',
-                'direkonsiliasiOleh',
-                'logs.user',
-            ]);
+        return DB::transaction(function () use ($filters, $userId, $toleransiHari) {
+            $mutasiList = $this->unmatchedMutasiQuery($filters)->get();
+            $bkuList = $this->unmatchedBkuQuery($filters)->get();
+            $usedBku = [];
+            $matched = 0;
 
-        $this->applyReconciliationFilters($query, $filters);
+            foreach ($mutasiList as $mutasi) {
+                $nominalMutasi = $mutasi->arah_mutasi === 'MASUK' ? (float) $mutasi->kredit : (float) $mutasi->debit;
+                $arusKasBku = $mutasi->arah_mutasi === 'MASUK' ? 'DEBIT_MASUK' : 'KREDIT_KELUAR';
+                $tglMutasi = Carbon::parse($mutasi->tanggal_transaksi);
 
-        $reconciliations = $query
-            ->orderByDesc('direkonsiliasi_pada')
-            ->orderByDesc('id')
-            ->get();
+                $cocok = $bkuList
+                    ->reject(fn (BukuKasUmum $b) => in_array($b->id, $usedBku, true))
+                    ->filter(fn (BukuKasUmum $b) => $b->arus_kas === $arusKasBku
+                        && abs((float) $b->nominal - $nominalMutasi) < 0.01
+                        && abs(Carbon::parse($b->tanggal_transaksi)->diffInDays($tglMutasi)) <= $toleransiHari)
+                    ->sortBy(fn (BukuKasUmum $b) => abs(Carbon::parse($b->tanggal_transaksi)->diffInDays($tglMutasi)))
+                    ->first();
 
-        return [
-            'filters' => $filters,
-            'rekeningOptions' => $this->rekeningOptions(),
-            'reconciliations' => $reconciliations,
-            'summary' => [
-                'matched' => $reconciliations->where('status', 'MATCHED')->count(),
-                'partial' => $reconciliations->where('status', 'PARTIAL')->count(),
-                'selisih' => $reconciliations->where('status', 'SELISIH')->count(),
-                'manual' => $reconciliations->where('status', 'MANUAL_OVERRIDE')->count(),
-            ],
-        ];
+                if (! $cocok) {
+                    continue;
+                }
+
+                $this->createReconciliation($mutasi, $cocok, $nominalMutasi, (float) $cocok->nominal, 'MATCHED', 'AUTO_MATCH', $userId, 'Cocok otomatis');
+                $usedBku[] = $cocok->id;
+                $matched++;
+            }
+
+            return ['matched' => $matched, 'sisa_mutasi' => $mutasiList->count() - $matched];
+        });
+    }
+
+    /** Pasangkan satu mutasi dengan satu BKU secara manual. */
+    public function manualMatchBank(int $mutasiId, int $bkuId, ?string $catatan, int $userId): RekonsiliasiBank
+    {
+        return DB::transaction(function () use ($mutasiId, $bkuId, $catatan, $userId) {
+            $mutasi = DetailMutasiBank::findOrFail($mutasiId);
+            $bku = BukuKasUmum::findOrFail($bkuId);
+
+            abort_if($mutasi->rekonsiliasiBanks()->exists(), 422, 'Mutasi ini sudah terekonsiliasi.');
+            abort_if(RekonsiliasiBank::where('bku_id', $bkuId)->exists(), 422, 'Catatan BKU ini sudah terekonsiliasi.');
+
+            $nominalMutasi = $mutasi->arah_mutasi === 'MASUK' ? (float) $mutasi->kredit : (float) $mutasi->debit;
+            $nominalSistem = (float) $bku->nominal;
+            $status = round($nominalMutasi - $nominalSistem, 2) == 0.0 ? 'MATCHED' : 'MANUAL_OVERRIDE';
+
+            return $this->createReconciliation($mutasi, $bku, $nominalMutasi, $nominalSistem, $status, 'MANUAL_MATCH', $userId, $catatan);
+        });
+    }
+
+    /** Batalkan pasangan rekonsiliasi (kembalikan mutasi ke status BELUM). */
+    public function unmatchBank(int $rekonsiliasiId, int $userId): void
+    {
+        DB::transaction(function () use ($rekonsiliasiId) {
+            $rekon = RekonsiliasiBank::with('detailMutasiBank')->findOrFail($rekonsiliasiId);
+            $rekon->detailMutasiBank?->update(['status_rekonsiliasi' => 'BELUM']);
+            $rekon->logs()->delete();
+            $rekon->delete();
+        });
+    }
+
+    /** Buat record rekonsiliasi + log, dan set status mutasi. */
+    private function createReconciliation(
+        DetailMutasiBank $mutasi,
+        BukuKasUmum $bku,
+        float $nominalMutasi,
+        float $nominalSistem,
+        string $status,
+        string $aksi,
+        int $userId,
+        ?string $catatan = null
+    ): RekonsiliasiBank {
+        $selisih = round($nominalMutasi - $nominalSistem, 2);
+
+        $rekon = RekonsiliasiBank::create([
+            'detail_mutasi_bank_id' => $mutasi->id,
+            'bku_id' => $bku->id,
+            'transaksi_penerimaan_id' => $bku->referensi_penerimaan_id,
+            'nominal_mutasi' => $nominalMutasi,
+            'nominal_sistem' => $nominalSistem,
+            'selisih' => $selisih,
+            'status' => $status,
+            'catatan' => $catatan,
+            'direkonsiliasi_oleh' => $userId,
+            'direkonsiliasi_pada' => now(),
+        ]);
+
+        $mutasi->update(['status_rekonsiliasi' => $selisih == 0.0 ? 'MATCHED' : 'SELISIH']);
+
+        RekonsiliasiBankLog::create([
+            'rekonsiliasi_bank_id' => $rekon->id,
+            'user_id' => $userId,
+            'aksi' => $aksi,
+            'catatan' => $catatan,
+        ]);
+
+        return $rekon;
     }
 
     public function buildBendaharaIndexData(array $filters = []): array
@@ -983,6 +1194,7 @@ class PembukuanService
             'start_date' => $this->normalizeDate($filters['start_date'] ?? null),
             'end_date' => $this->normalizeDate($filters['end_date'] ?? null),
             'rekening_bank_id' => $filters['rekening_bank_id'] ?? null,
+            'search' => isset($filters['search']) ? trim((string) $filters['search']) : null,
             'arus_kas' => $filters['arus_kas'] ?? null,
             'sumber_transaksi' => $filters['sumber_transaksi'] ?? null,
             'arah_mutasi' => $filters['arah_mutasi'] ?? null,
@@ -1078,23 +1290,6 @@ class PembukuanService
 
         if ($filters['status_rekonsiliasi']) {
             $query->where('status_rekonsiliasi', $filters['status_rekonsiliasi']);
-        }
-    }
-
-    private function applyReconciliationFilters(Builder $query, array $filters): void
-    {
-        $query
-            ->when($filters['status'], fn (Builder $q) => $q->where('status', $filters['status']))
-            ->when($filters['rekening_bank_id'], function (Builder $q) use ($filters) {
-                $q->whereHas('detailMutasiBank.importMutasiBank', fn (Builder $sub) => $sub->where('rekening_bank_id', $filters['rekening_bank_id']));
-            });
-
-        if ($filters['start_date']) {
-            $query->whereHas('detailMutasiBank', fn (Builder $q) => $q->whereDate('tanggal_transaksi', '>=', $filters['start_date']));
-        }
-
-        if ($filters['end_date']) {
-            $query->whereHas('detailMutasiBank', fn (Builder $q) => $q->whereDate('tanggal_transaksi', '<=', $filters['end_date']));
         }
     }
 
