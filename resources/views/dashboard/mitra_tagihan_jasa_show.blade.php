@@ -399,6 +399,11 @@
                     <i class="bi bi-download me-1"></i>Surat Pengantar
                 </a>
             @endif
+            @if($tagihan->status === 'LUNAS')
+                <a href="{{ route('mitra.tagihan-jasa.kuitansi', $tagihan->id) }}" target="_blank" class="btn btn-success fw-bold">
+                    <i class="bi bi-receipt me-1"></i>Kuitansi Lunas
+                </a>
+            @endif
             <a href="{{ route('mitra.dashboard') }}" class="btn btn-light fw-bold">Kembali</a>
         </div>
     </div>
@@ -720,6 +725,11 @@
                 <a href="{{ route('mitra.tagihan-jasa.pdf', ['id' => $tagihan->id, 'download' => 1]) }}" class="btn btn-danger fw-bold">
                     <i class="bi bi-download me-1"></i> Download Nota Tagihan
                 </a>
+                @if($tagihan->status === 'LUNAS')
+                    <a href="{{ route('mitra.tagihan-jasa.kuitansi', ['id' => $tagihan->id, 'download' => 1]) }}" class="btn btn-success fw-bold">
+                        <i class="bi bi-receipt me-1"></i> Download Kuitansi Lunas
+                    </a>
+                @endif
                 @if($tagihan->file_surat_pengantar_final)
                     <a href="{{ route('mitra.tagihan-jasa.surat-final', $tagihan->id) }}" class="btn btn-primary fw-bold">
                         <i class="bi bi-download me-1"></i> Download Surat Pengantar TTD

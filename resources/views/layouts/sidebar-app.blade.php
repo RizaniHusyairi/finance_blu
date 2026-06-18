@@ -111,6 +111,8 @@
               </ul>
             </li>
             @endif
+            <li><a href="{{ route('mitra.tagihan-jatuh-tempo') }}"><i class="material-icons-outlined">arrow_right</i>Jatuh Tempo & Denda</a></li>
+            <li><a href="{{ route('mitra.riwayat-pembayaran') }}"><i class="material-icons-outlined">arrow_right</i>Riwayat Pembayaran</a></li>
             <li><a href="{{ route('mitra.profile') }}"><i class="material-icons-outlined">arrow_right</i>Profil &
                 Password</a>
             </li>

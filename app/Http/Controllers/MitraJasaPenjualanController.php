@@ -6,6 +6,7 @@ use App\Models\LayananJasa;
 use App\Models\MitraJasa;
 use App\Models\MitraJasaPenjualan;
 use App\Models\TagihanJasa;
+use App\Notifications\WorkflowNotification;
 use App\Services\MitraJasaKonsesiService;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Http\Request;
@@ -491,6 +492,15 @@ class MitraJasaPenjualanController extends Controller
                     'send_report_status_email'
                 );
             }
+
+            $mitra->user?->notify(new WorkflowNotification([
+                'title' => $judul,
+                'message' => "Laporan {$jenis} ({$layanan}) periode {$periode} "
+                    . ($event === 'ditolak' ? ('ditolak. ' . $catatan) : 'telah diverifikasi.'),
+                'url' => route('mitra.penjualan.show', $penjualan->id),
+                'icon' => $event === 'ditolak' ? 'error_outline' : 'task_alt',
+                'color' => $event === 'ditolak' ? 'danger' : 'success',
+            ]));
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('Gagal kirim notifikasi status laporan mitra: ' . $e->getMessage());
         }

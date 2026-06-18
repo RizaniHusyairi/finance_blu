@@ -118,6 +118,63 @@ class MitraPortalController extends Controller
         );
     }
 
+    public function riwayatPembayaran(Request $request)
+    {
+        $mitra = $this->currentMitraJasa();
+
+        $filters = $request->validate([
+            'status' => ['nullable', 'in:MENUNGGU_VERIFIKASI,DITERIMA,DITOLAK,PERLU_PERBAIKAN'],
+            'dari' => ['nullable', 'date'],
+            'sampai' => ['nullable', 'date', 'after_or_equal:dari'],
+        ]);
+
+        $scope = fn () => TagihanJasaPaymentProof::whereHas(
+            'tagihanJasa',
+            fn ($q) => $q->where('mitra_jasa_id', $mitra->id)
+        );
+
+        $proofs = $scope()
+            ->with('tagihanJasa:id,nomor_tagihan,total_tagihan')
+            ->when($filters['status'] ?? null, fn ($q, $s) => $q->where('status', $s))
+            ->when($filters['dari'] ?? null, fn ($q, $d) => $q->whereDate('tanggal_bayar', '>=', $d))
+            ->when($filters['sampai'] ?? null, fn ($q, $d) => $q->whereDate('tanggal_bayar', '<=', $d))
+            ->latest('tanggal_bayar')
+            ->latest('id')
+            ->paginate(15)
+            ->withQueryString();
+
+        $ringkas = [
+            'total' => $scope()->count(),
+            'diterima' => $scope()->where('status', TagihanJasaPaymentProof::STATUS_DITERIMA)->count(),
+            'menunggu' => $scope()->where('status', TagihanJasaPaymentProof::STATUS_MENUNGGU)->count(),
+            'nominal_diterima' => (float) $scope()->where('status', TagihanJasaPaymentProof::STATUS_DITERIMA)->sum('nominal_bayar'),
+        ];
+
+        return view('dashboard.mitra_riwayat_pembayaran', compact('mitra', 'proofs', 'filters', 'ringkas'));
+    }
+
+    public function tagihanJatuhTempo(Request $request)
+    {
+        $mitra = $this->currentMitraJasa();
+
+        $tagihan = TagihanJasa::where('mitra_jasa_id', $mitra->id)
+            ->where('status', 'PUBLISHED')
+            ->where('status_pembayaran', '!=', 'lunas')
+            ->orderByRaw('tanggal_jatuh_tempo IS NULL')
+            ->orderBy('tanggal_jatuh_tempo')
+            ->get();
+
+        $ringkas = [
+            'jumlah' => $tagihan->count(),
+            'pokok' => (float) $tagihan->sum(fn ($t) => (float) $t->total_tagihan),
+            'denda' => (float) $tagihan->sum(fn ($t) => (float) $t->nominal_denda_keterlambatan),
+            'total' => (float) $tagihan->sum(fn ($t) => (float) $t->total_dengan_denda),
+            'lewat_tempo' => $tagihan->filter(fn ($t) => in_array($t->status_jatuh_tempo, ['LEWAT_JATUH_TEMPO', 'MACET'], true))->count(),
+        ];
+
+        return view('dashboard.mitra_tagihan_jatuh_tempo', compact('mitra', 'tagihan', 'ringkas'));
+    }
+
     public function invoiceTagihanJasaPdf(Request $request, $id)
     {
         $mitra = $this->currentMitraJasa();
@@ -145,6 +202,33 @@ class MitraPortalController extends Controller
         }
 
         return $pdf->stream($fileName);
+    }
+
+    public function kuitansiTagihanJasaPdf(Request $request, $id)
+    {
+        $mitra = $this->currentMitraJasa();
+
+        $tagihan = TagihanJasa::with([
+            'mitra',
+            'mitraLegacy',
+            'kontrakMitraJasa',
+            'latestPaymentProof',
+        ])
+            ->where('mitra_jasa_id', $mitra->id)
+            ->where('status', 'LUNAS')
+            ->findOrFail($id);
+
+        $jumlahDibayar = (float) ($tagihan->jumlah_dibayar ?: $tagihan->total_tagihan);
+        $terbilang = function_exists('terbilang_rupiah')
+            ? terbilang_rupiah($jumlahDibayar)
+            : trim(terbilang($jumlahDibayar)) . ' Rupiah';
+
+        $pdf = Pdf::loadView('tagihan_jasa.kuitansi', compact('tagihan', 'terbilang', 'jumlahDibayar'))
+            ->setPaper('a4', 'portrait');
+
+        $fileName = 'kuitansi-' . str_replace(['/', '\\'], '-', $tagihan->nomor_tagihan) . '.pdf';
+
+        return $request->boolean('download') ? $pdf->download($fileName) : $pdf->stream($fileName);
     }
 
     public function downloadSuratPengantarFinal($id)

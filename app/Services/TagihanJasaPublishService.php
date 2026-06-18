@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\IntegrationSetting;
 use App\Models\MitraJasa;
+use App\Notifications\WorkflowNotification;
 use App\Models\ShortLink;
 use App\Models\TagihanJasa;
 use App\Models\User;
@@ -102,6 +103,15 @@ class TagihanJasaPublishService
 
         $emailMessage = $this->emailNotificationService->buildPublishedTagihanMessage($publishedTagihan, $accountInfo);
         $this->emailNotificationService->sendPublishedTagihan($publishedTagihan, $accountInfo);
+
+        // Notifikasi in-app ke portal mitra.
+        $publishedTagihan->mitra?->user?->notify(new WorkflowNotification([
+            'title' => 'Tagihan Baru Terbit',
+            'message' => 'Tagihan ' . $publishedTagihan->nomor_tagihan . ' telah terbit. Segera lakukan pembayaran sebelum jatuh tempo.',
+            'url' => route('mitra.tagihan-jasa.show', $publishedTagihan->id),
+            'icon' => 'receipt_long',
+            'color' => 'primary',
+        ]));
 
         return [
             'nomor_va' => $nomorVa,

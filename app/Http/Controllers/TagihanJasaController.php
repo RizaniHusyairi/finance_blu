@@ -13,6 +13,7 @@ use App\Models\PengajuanPenagihanGarbarata;
 use App\Models\TagihanJasa;
 use App\Models\TagihanJasaPaymentProof;
 use App\Models\User;
+use App\Notifications\WorkflowNotification;
 use App\Services\WhatsappService;
 use App\Services\BtnVirtualAccountService;
 use App\Services\EmailNotificationService;
@@ -1349,6 +1350,16 @@ class TagihanJasaController extends Controller
             ]);
         });
 
+        // Notifikasi in-app ke portal mitra agar segera memperbaiki/mengunggah ulang.
+        $perluPerbaikan = $validated['status'] === TagihanJasaPaymentProof::STATUS_PERLU_PERBAIKAN;
+        $tagihan->mitra?->user?->notify(new WorkflowNotification([
+            'title' => $perluPerbaikan ? 'Bukti Pembayaran Perlu Perbaikan' : 'Bukti Pembayaran Ditolak',
+            'message' => 'Tagihan ' . $tagihan->nomor_tagihan . ': ' . $validated['catatan_verifikator'],
+            'url' => route('mitra.tagihan-jasa.show', $tagihan->id),
+            'icon' => 'error_outline',
+            'color' => $perluPerbaikan ? 'warning' : 'danger',
+        ]));
+
         return back()->with('success', 'Bukti pembayaran berhasil diproses. Mitra dapat mengunggah ulang bila diperlukan.');
     }
 
@@ -1410,6 +1421,15 @@ class TagihanJasaController extends Controller
         } catch (\Throwable $e) {
             \Log::error('Gagal kirim notifikasi lunas: ' . $e->getMessage());
         }
+
+        // Notifikasi in-app ke portal mitra.
+        $freshTagihan->mitra?->user?->notify(new WorkflowNotification([
+            'title' => 'Pembayaran Lunas',
+            'message' => 'Tagihan ' . $freshTagihan->nomor_tagihan . ' telah LUNAS. Kuitansi dapat diunduh dari portal.',
+            'url' => route('mitra.tagihan-jasa.show', $freshTagihan->id),
+            'icon' => 'verified',
+            'color' => 'success',
+        ]));
 
         return $freshTagihan;
     }

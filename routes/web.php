@@ -982,6 +982,9 @@ Route::middleware(['auth', 'account.active'])->group(function () use ($internalR
         Route::post('/mitra/tagihan-jasa/{id}/bukti-pembayaran', [MitraPortalController::class, 'storePaymentProof'])->name('mitra.tagihan-jasa.bukti-pembayaran.store');
         Route::get('/mitra/tagihan-jasa/{id}/bukti-pembayaran/{proof}/download', [MitraPortalController::class, 'downloadPaymentProof'])->name('mitra.tagihan-jasa.bukti-pembayaran.download');
         Route::get('/mitra/tagihan-jasa/{id}/pdf', [MitraPortalController::class, 'invoiceTagihanJasaPdf'])->name('mitra.tagihan-jasa.pdf');
+        Route::get('/mitra/tagihan-jasa/{id}/kuitansi', [MitraPortalController::class, 'kuitansiTagihanJasaPdf'])->name('mitra.tagihan-jasa.kuitansi');
+        Route::get('/mitra/riwayat-pembayaran', [MitraPortalController::class, 'riwayatPembayaran'])->name('mitra.riwayat-pembayaran');
+        Route::get('/mitra/tagihan-jatuh-tempo', [MitraPortalController::class, 'tagihanJatuhTempo'])->name('mitra.tagihan-jatuh-tempo');
         Route::get('/mitra/tagihan-jasa/{id}/surat-pengantar-final', [MitraPortalController::class, 'downloadSuratPengantarFinal'])->name('mitra.tagihan-jasa.surat-final');
         Route::get('/mitra/kontrak-jasa/{kontrak}/download', [MitraPortalController::class, 'downloadKontrak'])->name('mitra.kontrak-jasa.download');
     });
