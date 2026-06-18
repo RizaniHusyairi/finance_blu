@@ -19,6 +19,12 @@
             && $l->berlaku_mulai && $l->berlaku_mulai->lte($today)
             && (!$l->berlaku_sampai || $l->berlaku_sampai->gte($today));
     });
+
+    // Tarif efektif hari ini (memperhitungkan periode diskon; otomatis kembali
+    // ke tarif normal setelah periode diskon berakhir).
+    $tarifNormalKini = (float) $layanan->tarif_dasar;
+    $tarifEfektifKini = (float) $layanan->tarifEfektif();
+    $adaDiskonBerjalan = abs($tarifEfektifKini - $tarifNormalKini) > 0.001;
 @endphp
 
 <div class="sa-report-page">
@@ -26,7 +32,14 @@
         <div>
             <div class="small text-uppercase fw-bold" style="letter-spacing:.08em;color:#fbbf24;">{{ $layanan->nama_lengkap }}</div>
             <h4 class="fw-bold mb-1"><i class="bi bi-clock-history me-2"></i>Riwayat Perubahan Tarif PJP2U</h4>
-            <p class="mb-0 small">Tarif berjalan: <strong>{{ $rupiah($layanan->tarif_dasar) }}</strong> / {{ $layanan->satuan ?? '-' }}</p>
+            <p class="mb-0 small">
+                Tarif berlaku saat ini: <strong>{{ $rupiah($tarifEfektifKini) }}</strong> / {{ $layanan->satuan ?? '-' }}
+                @if($adaDiskonBerjalan)
+                    <span class="badge bg-warning text-dark ms-1">diskon aktif &middot; normal {{ $rupiah($tarifNormalKini) }}</span>
+                @else
+                    <span class="text-white-50">(tarif normal)</span>
+                @endif
+            </p>
         </div>
         <div class="d-flex gap-2 flex-wrap">
             <a href="{{ route('master-layanan-jasa.edit', $layanan->id) }}" class="btn btn-warning fw-bold">
@@ -125,6 +138,17 @@
                             $isAktif = $log->tipe_perubahan === 'diskon'
                                 && $log->berlaku_mulai && $log->berlaku_mulai->lte($today)
                                 && (!$log->berlaku_sampai || $log->berlaku_sampai->gte($today));
+
+                            $statusDiskon = null;
+                            if ($log->tipe_perubahan === 'diskon') {
+                                if ($log->berlaku_mulai && $log->berlaku_mulai->gt($today)) {
+                                    $statusDiskon = ['Akan datang', 'bg-info text-dark', 'bi-clock'];
+                                } elseif ($log->berlaku_sampai && $log->berlaku_sampai->lt($today)) {
+                                    $statusDiskon = ['Berakhir — tarif kembali normal', 'bg-secondary', 'bi-arrow-counterclockwise'];
+                                } else {
+                                    $statusDiskon = ['Aktif', 'bg-success', 'bi-check2-circle'];
+                                }
+                            }
                         @endphp
                         <tr @class(['table-warning' => $isAktif])>
                             <td>
@@ -132,8 +156,8 @@
                                 @if($log->berlaku_sampai)
                                     <div class="small text-muted">s.d. {{ $log->berlaku_sampai->format('d/m/Y') }}</div>
                                 @endif
-                                @if($isAktif)
-                                    <span class="badge bg-success mt-1"><i class="bi bi-check2-circle me-1"></i>Aktif</span>
+                                @if($statusDiskon)
+                                    <span class="badge {{ $statusDiskon[1] }} mt-1"><i class="bi {{ $statusDiskon[2] }} me-1"></i>{{ $statusDiskon[0] }}</span>
                                 @endif
                             </td>
                             <td class="text-end">{{ $rupiah($log->tarif_lama) }}</td>

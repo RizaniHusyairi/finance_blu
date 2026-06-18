@@ -217,6 +217,9 @@
                         data-tipe="{{ $type }}"
                         data-konsesi="{{ $hasKonsesi ? 1 : 0 }}"
                         data-leaf="{{ $isLeaf ? 1 : 0 }}"
+                        data-id="{{ (int) $l->id }}"
+                        data-parent="{{ (int) ($l->parent_id ?? 0) }}"
+                        data-kode="{{ e((string) ($l->kode_layanan ?? '')) }}"
                         data-cats="{{ $ancIds }}"
                         data-name="{{ e(mb_strtolower($l->nama_layanan)) }}"
                         data-tarif="{{ (float) ($l->tarif_dasar ?? 0) }}"
@@ -343,98 +346,100 @@
         groupedBox.appendChild(wrap);
     }
 
-    function matches(card) {
-        if (state.tab === 'PNBP' && card.dataset.tipe !== 'PNBP') return false;
-        if (state.tab === 'KONSESI' && card.dataset.konsesi !== '1') return false;
-        if (state.tab === 'TARIF' && card.dataset.leaf !== '1') return false;
-        if (state.cat !== 'all' && !(' ' + card.dataset.cats + ' ').includes(' ' + state.cat + ' ')) return false;
-        if (state.q && !card.dataset.search.includes(state.q)) return false;
+    // ===== Peta pohon dari kartu: id -> kartu, parent -> anak langsung =====
+    const cardById = {};
+    const kids = {};
+    cards.forEach(c => {
+        cardById[c.dataset.id] = c;
+        const p = c.dataset.parent || '0';
+        (kids[p] = kids[p] || []).push(c);
+    });
+
+    // Urut kanonik mengikuti kode layanan (hierarkis & berurutan), fallback nama.
+    const byKode = (a, b) =>
+        (a.dataset.kode || a.dataset.name).localeCompare(b.dataset.kode || b.dataset.name, undefined, { numeric: true });
+    const sortBy = {
+        'name-asc': (a, b) => a.dataset.name.localeCompare(b.dataset.name, undefined, { numeric: true }),
+        'name-desc': (a, b) => b.dataset.name.localeCompare(a.dataset.name, undefined, { numeric: true }),
+        'tarif-desc': (a, b) => (+b.dataset.tarif) - (+a.dataset.tarif),
+        'tarif-asc': (a, b) => (+a.dataset.tarif) - (+b.dataset.tarif),
+        'updated-desc': (a, b) => (+b.dataset.updated) - (+a.dataset.updated),
+    };
+
+    // Apakah sebuah kartu tarif (leaf) lolos filter tab + pencarian.
+    function leafVisible(c) {
+        if (c.dataset.leaf !== '1') return false;
+        if (state.tab === 'PNBP' && c.dataset.tipe !== 'PNBP') return false;
+        if (state.tab === 'KONSESI' && c.dataset.konsesi !== '1') return false;
+        if (state.q && !c.dataset.search.includes(state.q)) return false;
         return true;
     }
 
-    function sortCards(list) {
-        const by = {
-            'name-asc': (a, b) => a.dataset.name.localeCompare(b.dataset.name),
-            'name-desc': (a, b) => b.dataset.name.localeCompare(a.dataset.name),
-            'tarif-desc': (a, b) => (+b.dataset.tarif) - (+a.dataset.tarif),
-            'tarif-asc': (a, b) => (+a.dataset.tarif) - (+b.dataset.tarif),
-            'updated-desc': (a, b) => (+b.dataset.updated) - (+a.dataset.updated),
-        }[state.sort];
-        return by ? list.slice().sort(by) : list;
+    // Jumlah leaf terlihat di seluruh keturunan sebuah kategori (memoized).
+    const countCache = new Map();
+    function visibleLeafCount(catId) {
+        if (countCache.has(catId)) return countCache.get(catId);
+        let n = 0;
+        (kids[catId] || []).forEach(ch => {
+            n += ch.dataset.leaf === '1' ? (leafVisible(ch) ? 1 : 0) : visibleLeafCount(ch.dataset.id);
+        });
+        countCache.set(catId, n);
+        return n;
+    }
+
+    // Render satu subtree: leaf langsung jadi kartu, kategori jadi header lalu rekursi.
+    function renderSubtree(parentId, depth) {
+        const children = (kids[parentId] || []).slice().sort(byKode);
+        let buffer = [];
+        const flush = () => {
+            if (!buffer.length) return;
+            const g = document.createElement('div');
+            g.className = SEC_GRID;
+            const ordered = sortBy[state.sort] ? buffer.slice().sort(sortBy[state.sort]) : buffer;
+            ordered.forEach(c => g.appendChild(c));
+            groupedBox.appendChild(g);
+            buffer = [];
+        };
+        children.forEach(ch => {
+            if (ch.dataset.leaf === '1') {
+                if (leafVisible(ch)) buffer.push(ch);
+                return;
+            }
+            if (visibleLeafCount(ch.dataset.id) === 0) return; // kategori kosong (kena filter) → sembunyikan
+            flush();
+            const h = document.createElement('div');
+            h.className = 'lj-tree-head flex items-center gap-2 mb-2 mt-3';
+            if (depth > 0) h.style.paddingLeft = (depth * 16) + 'px';
+            h.innerHTML = `<i class="bi bi-folder2 text-blue-500"></i>`
+                + `<span class="lj-sec-title">${esc(LJ_CAT_NAME[ch.dataset.id] || '')}</span>`
+                + `<span class="lj-sec-count rounded-full px-2 py-0.5 text-xs font-bold">${visibleLeafCount(ch.dataset.id)} item</span>`;
+            groupedBox.appendChild(h);
+            renderSubtree(ch.dataset.id, depth + 1);
+        });
+        flush();
     }
 
     function render() {
-        const visible = sortCards(cards.filter(matches));
-        const total = visible.length;
-
-        // Detach semua kartu lalu render ulang sesuai mode (memicu animasi fade-up).
+        countCache.clear();
         cards.forEach(c => { if (c.parentNode) c.parentNode.removeChild(c); });
         groupedBox.innerHTML = '';
+        grid.classList.add('hidden');
+        groupedBox.classList.remove('hidden');
+        pagerWrap.classList.add('hidden');
+
+        const rootId = state.cat === 'all' ? '0' : String(state.cat);
+        const total = visibleLeafCount(rootId);
 
         if (state.cat !== 'all') {
             headerEl.textContent = LJ_CAT_NAME[state.cat] || 'Kategori';
             headerSub.textContent = '· ' + total.toLocaleString('id-ID') + ' layanan';
         } else {
-            headerEl.textContent = total.toLocaleString('id-ID') + ' layanan ditemukan';
+            headerEl.textContent = total.toLocaleString('id-ID') + ' layanan';
             headerSub.textContent = '';
         }
         emptyBox.classList.toggle('hidden', total !== 0);
 
-        const subCats = LJ_CAT_CHILDREN[state.cat] || [];
-        const isGrouped = state.cat !== 'all' && subCats.length > 0;
-
-        // ===== MODE GROUPED: parent kategori dipilih → section per sub-kategori =====
-        if (isGrouped) {
-            grid.classList.add('hidden');
-            groupedBox.classList.remove('hidden');
-            pagerWrap.classList.add('hidden');
-            const used = new Set();
-            subCats.forEach(childId => {
-                const sect = visible.filter(c => hasCat(c, childId));
-                if (!sect.length) return;
-                sect.forEach(c => used.add(c));
-                appendSection(LJ_CAT_NAME[childId] || 'Sub Kategori', sect);
-            });
-            const leftovers = visible.filter(c => !used.has(c));
-            if (leftovers.length) appendSection('Lainnya', leftovers);
-            return;
-        }
-
-        // ===== MODE FLAT: semua / child kategori / tab → grid + pagination =====
-        groupedBox.classList.add('hidden');
-        grid.classList.remove('hidden');
-        pagerWrap.classList.remove('hidden');
-
-        const pages = Math.max(1, Math.ceil(total / state.size));
-        if (state.page > pages) state.page = pages;
-        const start = (state.page - 1) * state.size;
-        const end = start + state.size;
-        visible.slice(start, end).forEach(c => grid.appendChild(c));
-        pageInfo.textContent = total === 0 ? '' : `Menampilkan ${start + 1}–${Math.min(end, total)} dari ${total} layanan`;
-
-        pager.innerHTML = '';
-        const addBtn = (label, page, opts = {}) => {
-            const b = document.createElement('button');
-            b.type = 'button';
-            b.className = 'lj-page-btn btn btn-sm border ' + (opts.active ? 'is-active' : 'btn-light');
-            b.innerHTML = label;
-            if (opts.disabled) { b.disabled = true; }
-            else if (!opts.active) { b.addEventListener('click', () => { state.page = page; render(); }); }
-            pager.appendChild(b);
-        };
-        addBtn('<i class="bi bi-chevron-left"></i>', state.page - 1, { disabled: state.page === 1 });
-        const win = 2;
-        for (let p = 1; p <= pages; p++) {
-            if (p === 1 || p === pages || (p >= state.page - win && p <= state.page + win)) {
-                addBtn(String(p), p, { active: p === state.page });
-            } else if (p === state.page - win - 1 || p === state.page + win + 1) {
-                const dots = document.createElement('span');
-                dots.className = 'px-1 text-slate-400';
-                dots.textContent = '…';
-                pager.appendChild(dots);
-            }
-        }
-        addBtn('<i class="bi bi-chevron-right"></i>', state.page + 1, { disabled: state.page === pages });
+        renderSubtree(rootId, 0);
     }
 
     document.querySelectorAll('.lj-tab').forEach(btn => btn.addEventListener('click', () => {

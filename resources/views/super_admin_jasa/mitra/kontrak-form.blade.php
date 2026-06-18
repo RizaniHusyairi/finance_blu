@@ -77,8 +77,8 @@
                     <label class="form-label fw-bold">Jenis Dokumen {!! $requiredMark !!}</label>
                     <select name="jenis_dokumen" class="form-select" required>
                         <option value="">Pilih dokumen</option>
-                        @foreach(['KONTRAK', 'PERJANJIAN_KERJA_SAMA', 'SURAT_PERMOHONAN', 'BERITA_ACARA', 'REKAP_PEMAKAIAN', 'DOKUMEN_LAINNYA'] as $jenis)
-                            <option value="{{ $jenis }}" @selected(old('jenis_dokumen', $kontrak->jenis_dokumen) === $jenis)>{{ str_replace('_', ' ', $jenis) }}</option>
+                        @foreach(\App\Models\KontrakMitraJasa::JENIS_DOKUMEN as $jenis => $label)
+                            <option value="{{ $jenis }}" @selected(old('jenis_dokumen', $kontrak->jenis_dokumen) === $jenis)>{{ $label }}</option>
                         @endforeach
                     </select>
                 </div>

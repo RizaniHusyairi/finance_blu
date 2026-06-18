@@ -26,6 +26,7 @@
     $tanggal = fn ($value) => $value ? \Carbon\Carbon::parse($value)->format('d/m/Y') : '-';
     $badge = function ($tagihan) {
         return match ($tagihan->status_jatuh_tempo) {
+            'MACET' => 'Macet',
             'LEWAT_JATUH_TEMPO' => 'Lewat Jatuh Tempo',
             'JATUH_TEMPO_HARI_INI' => 'Jatuh Tempo Hari Ini',
             'MENDEKATI_JATUH_TEMPO' => 'Mendekati Jatuh Tempo',

@@ -67,33 +67,40 @@ class DemoPjp2uJatuhTempoDendaSeeder extends Seeder
 
         $legacyMitraId = $legacyPihak->id;
 
+        // Aturan PJP2U: SEMUA tagihan jatuh tempo 7 hari sejak publish. Setelah lewat
+        // tempo, denda 2% per periode 30 hari (dibulatkan ke atas) yang terus berjalan
+        // tanpa dibekukan. Kualitas piutang mengikuti umur tunggakan: Lancar 0,
+        // Kurang Lancar 1-90, Diragukan 91-180, Macet > 180 hari.
         $scenarios = [
             [
-                'nomor' => 'TAG-PJP2U-DEMO-AWAL-7H',
-                'label' => 'Demo PJP2U tagihan pertama - jatuh tempo 7 hari',
+                'nomor' => 'TAG-PJP2U-DEMO-AKTIF-7H',
+                'label' => 'Demo PJP2U - jatuh tempo 7 hari (masih berjalan)',
                 'pax' => 25,
                 'due_days' => 7,
+                'masa_denda' => 30,
                 'publish_offset_days' => 0,
                 'nomor_va' => '880010000001',
-                'note' => 'Tagihan PJP2U pertama: jatuh tempo 7 hari sejak publish.',
+                'note' => 'Tagihan PJP2U: jatuh tempo 7 hari sejak publish.',
             ],
             [
-                'nomor' => 'TAG-PJP2U-DEMO-LANJUT-H3',
-                'label' => 'Demo PJP2U tagihan berikutnya - jatuh tempo 30 hari (H-3)',
+                'nomor' => 'TAG-PJP2U-DEMO-DENDA-2P',
+                'label' => 'Demo PJP2U - lewat tempo, denda 2 periode',
                 'pax' => 25,
-                'due_days' => 30,
-                'publish_offset_days' => -27,
+                'due_days' => 7,
+                'masa_denda' => 30,
+                'publish_offset_days' => -45, // jatuh tempo H-38 -> telat 38 hari -> 2 periode = 4%
                 'nomor_va' => '880010000002',
-                'note' => 'Tagihan PJP2U berikutnya: jatuh tempo 30 hari sejak publish, sekarang H-3.',
+                'note' => 'Tagihan PJP2U: telat 38 hari -> denda 2% x 2 periode = 4% (terus berjalan).',
             ],
             [
-                'nomor' => 'TAG-PJP2U-DEMO-DENDA-H3',
-                'label' => 'Demo PJP2U lewat jatuh tempo - denda berjalan',
+                'nomor' => 'TAG-PJP2U-DEMO-MACET',
+                'label' => 'Demo PJP2U - tunggakan > 180 hari (macet)',
                 'pax' => 25,
-                'due_days' => 30,
-                'publish_offset_days' => -33,
+                'due_days' => 7,
+                'masa_denda' => 30,
+                'publish_offset_days' => -195, // jatuh tempo H-188 -> telat 188 hari -> 7 periode = 14%, macet
                 'nomor_va' => '880010000003',
-                'note' => 'Tagihan PJP2U berikutnya: sudah lewat jatuh tempo 3 hari, denda 2% per hari.',
+                'note' => 'Tagihan PJP2U: telat 188 hari -> denda 2% x 7 periode = 14%, kualitas piutang macet.',
             ],
         ];
 
@@ -114,6 +121,7 @@ class DemoPjp2uJatuhTempoDendaSeeder extends Seeder
                         'tanggal_publish' => $publishDate->toDateString(),
                         'jumlah_hari_jatuh_tempo' => $scenario['due_days'],
                         'masa_toleransi_hari' => 0,
+                        'masa_denda_hari' => $scenario['masa_denda'],
                         'tanggal_jatuh_tempo' => $dueDate->toDateString(),
                         'tanggal_akhir_toleransi' => $dueDate->toDateString(),
                         'catatan_jatuh_tempo' => $scenario['note'],
@@ -146,7 +154,7 @@ class DemoPjp2uJatuhTempoDendaSeeder extends Seeder
                         'calculation_payload' => [
                             'demo' => true,
                             'jenis' => 'PJP2U',
-                            'aturan_jatuh_tempo' => $scenario['due_days'] === 7 ? 'pertama_7_hari' : 'lanjutan_30_hari',
+                            'aturan_jatuh_tempo' => 'jatuh_tempo_7_hari_masa_denda_30_hari',
                             'pax' => $scenario['pax'],
                             'tarif' => $tarif,
                         ],

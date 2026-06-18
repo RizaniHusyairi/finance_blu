@@ -18,6 +18,7 @@
     $canDeleteTagihanJasa = auth()->user()?->hasAnyRole(['Super Admin', 'Super Admin Jasa', 'Admin Jasa']) === true;
     $badge = function ($tagihan) {
         return match ($tagihan->status_jatuh_tempo) {
+            'MACET' => ['Macet', 'bg-dark'],
             'LEWAT_JATUH_TEMPO' => ['Lewat Jatuh Tempo', 'bg-danger'],
             'JATUH_TEMPO_HARI_INI' => ['Jatuh Tempo Hari Ini', 'bg-dark'],
             'MENDEKATI_JATUH_TEMPO' => ['Mendekati Jatuh Tempo', 'bg-warning text-dark'],
@@ -282,7 +283,7 @@
                 @forelse($tagihans as $tagihan)
                     @php([$label, $class] = $badge($tagihan))
                     @php($paymentStatus = $tagihan->status_pembayaran ?? 'belum_dibayar')
-                    @php($showDueBadge = in_array($tagihan->status_jatuh_tempo, ['LEWAT_JATUH_TEMPO', 'JATUH_TEMPO_HARI_INI', 'MENDEKATI_JATUH_TEMPO'], true))
+                    @php($showDueBadge = in_array($tagihan->status_jatuh_tempo, ['MACET', 'LEWAT_JATUH_TEMPO', 'JATUH_TEMPO_HARI_INI', 'MENDEKATI_JATUH_TEMPO'], true))
                     <tr>
                         <td>
                             <div class="invoice-number">{{ $tagihan->nomor_tagihan }}</div>

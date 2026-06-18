@@ -1048,8 +1048,18 @@
                                             @php $layananName = optional($layanans->firstWhere('id', $layananId))->nama_layanan ?? ('Layanan #'.$layananId); @endphp
                                             <li>
                                                 <span class="fw-bold">{{ $layananName }}</span>:
-                                                tarif berubah pada <strong>{{ $change['berlaku_mulai'] }}</strong>
-                                                (Rp {{ number_format($change['tarif_lama'], 0, ',', '.') }} → Rp {{ number_format($change['tarif_baru'], 0, ',', '.') }}, {{ $change['tipe'] }})
+                                                @if($change['is_diskon'] && $change['diskon_berakhir'])
+                                                    diskon Rp {{ number_format($change['tarif_lama'], 0, ',', '.') }} → Rp {{ number_format($change['tarif_baru'], 0, ',', '.') }}
+                                                    ({{ $change['berlaku_mulai'] }}–{{ $change['berlaku_sampai'] }})
+                                                    <span class="badge bg-secondary">sudah berakhir</span> —
+                                                    tarif kembali normal <strong>Rp {{ number_format($change['tarif_lama'], 0, ',', '.') }}</strong>.
+                                                @elseif($change['is_diskon'])
+                                                    diskon aktif Rp {{ number_format($change['tarif_baru'], 0, ',', '.') }}
+                                                    (normal Rp {{ number_format($change['tarif_lama'], 0, ',', '.') }})@if($change['berlaku_sampai']) berlaku s.d. <strong>{{ $change['berlaku_sampai'] }}</strong>@endif.
+                                                @else
+                                                    tarif berubah pada <strong>{{ $change['berlaku_mulai'] }}</strong>
+                                                    (Rp {{ number_format($change['tarif_lama'], 0, ',', '.') }} → Rp {{ number_format($change['tarif_baru'], 0, ',', '.') }}, {{ $change['tipe'] }}).
+                                                @endif
                                             </li>
                                         @endforeach
                                     </ul>

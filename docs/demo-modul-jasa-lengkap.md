@@ -387,7 +387,7 @@ Demo ini sebaiknya menjadi **sisipan 6-8 menit** setelah Babak 4 (Mitra menerima
 | Jatuh tempo terbaca jelas | Detail tagihan / portal mitra menampilkan **Tanggal Jatuh Tempo** dan status jatuh tempo |
 | Tagihan mendekati tempo bisa dipantau | Dashboard Admin Jasa menampilkan KPI **Jatuh Tempo 7 Hari** |
 | Tagihan lewat tempo masuk prioritas | Menu **Tagihan → Jatuh Tempo** menampilkan tagihan berstatus **Lewat Jatuh Tempo** |
-| Denda berjalan otomatis | Detail tagihan/invoice publik/portal mitra menampilkan **Denda 2% per hari × hari terlambat** dan **Total Bayar dengan Denda** |
+| Denda berjalan otomatis | Detail tagihan/invoice publik/portal mitra menampilkan **Denda 2% per 30 hari × jumlah periode** dan **Total Bayar dengan Denda** |
 | Pelunasan tetap satu pipeline | Admin Jasa klik **Tandai Lunas** memakai total berjalan; sistem mencatat piutang/BKU seperti pelunasan normal |
 
 ### 12.2 Data staging sebelum demo
@@ -405,29 +405,36 @@ Contoh bila demo dilakukan **16 Juni 2026**:
 - Mendekati: jatuh tempo **19 Juni 2026**.
 - Lewat tempo: jatuh tempo **13 Juni 2026**.
 
-Nominal yang enak untuk dihitung cepat:
+Nominal yang enak untuk dihitung cepat (denda 2% per periode 30 hari, telat 3 hari = 1 periode):
 - Total tagihan C: **Rp 1.000.000**.
-- Denda: **2% × 3 hari × Rp 1.000.000 = Rp 60.000**.
-- Total bayar berjalan: **Rp 1.060.000**.
+- Denda: **2% × 1 periode × Rp 1.000.000 = Rp 20.000**.
+- Total bayar berjalan: **Rp 1.020.000**.
 
-> Catatan teknis: denda keterlambatan dihitung dinamis dari `TagihanJasa::nominal_denda_keterlambatan` (`2% × total_tagihan × hari_terlambat`). Karena berjalan mengikuti tanggal hari ini, gunakan tanggal jatuh tempo relatif terhadap hari demo, bukan tanggal tetap yang terlalu lama.
+> Catatan teknis: denda keterlambatan dihitung dinamis dari `TagihanJasa::nominal_denda_keterlambatan` (`2% × total_tagihan × jumlah_periode_denda`, di mana satu periode = 30 hari). Karena berjalan mengikuti tanggal hari ini, gunakan tanggal jatuh tempo relatif terhadap hari demo, bukan tanggal tetap yang terlalu lama.
 
-### 12.2A Khusus PJP2U: tagihan awal 7 hari, berikutnya 30 hari
+### 12.2A Khusus PJP2U: jatuh tempo 7 hari + denda 2% per 30 hari
 
-Untuk PJP2U, narasi bisnisnya:
+Untuk PJP2U, narasi bisnisnya (berlaku untuk **semua** tagihan PJP2U — pertama maupun berikutnya):
 
-| Urutan tagihan PJP2U | Jatuh tempo | Maksud demo |
-|---|---:|---|
-| **Tagihan pertama** setelah hak/kontrak PJP2U aktif atau setelah periode awal operasional | **7 hari** sejak tagihan dipublish | BLU memberi batas bayar lebih cepat untuk tagihan awal agar settlement pertama tidak menumpuk |
-| **Tagihan kedua dan seterusnya** untuk mitra/layanan PJP2U yang sama | **30 hari** sejak tagihan dipublish | Siklus normal penagihan rutin |
+| Tahap | Hari | Perilaku |
+|---|---|---|
+| Tempo bayar | H0–H7 | Belum kena denda |
+| Denda berjalan | H8+ | Denda = `2% × total tagihan × jumlah periode`, di mana jumlah periode = `ceil(hari terlambat ÷ 30)`. Terus bertambah tiap periode, **tidak dibekukan** |
+
+Kualitas piutang (label, tidak menghentikan denda) mengikuti umur tunggakan sejak jatuh tempo, sesuai tangga baku piutang pemerintah (lihat `PiutangAgingService`):
+
+| Umur tunggakan | Kualitas |
+|---|---|
+| 0 hari (belum jatuh tempo / lunas) | Lancar |
+| 1–90 hari | Kurang Lancar |
+| 91–180 hari | Diragukan |
+| > 180 hari | **Macet** |
 
 Cara menjelaskannya saat demo:
 
-1. **Master layanan PJP2U** menyimpan default jatuh tempo ketat 7 hari dan wajib tagihan terpisah.
-2. Untuk demo aturan lanjutan, tagihan PJP2U berikutnya disiapkan dengan `jumlah_hari_jatuh_tempo = 30` dan catatan jatuh tempo yang menjelaskan bahwa ini tagihan PJP2U lanjutan.
-3. Denda tetap memakai rumus yang sama: **2% per hari × total tagihan × hari terlambat**.
-
-> Catatan implementasi: perhitungan tanggal jatuh tempo saat publish mengambil nilai `jumlah_hari_jatuh_tempo` dari layanan/tagihan. Jika aturan "tagihan PJP2U pertama 7 hari, berikutnya 30 hari" ingin dibuat otomatis penuh, sistem perlu rule tambahan untuk mendeteksi urutan tagihan PJP2U per mitra+layanan. Untuk kebutuhan demo, data staging cukup menyimpan tagihan pertama = 7 hari dan tagihan lanjutan = 30 hari.
+1. **Master layanan PJP2U** menyimpan `jumlah_hari_jatuh_tempo = 7`, `masa_denda_hari = 30` (periode denda), dan wajib tagihan terpisah.
+2. Saat publish, nilai tersebut di-*snapshot* ke tagihan (kolom `tagihan_jasas.masa_denda_hari`). Bila layanan PJP2U belum dikonfigurasi, sistem tetap memakai periode 30 hari sebagai default.
+3. Denda memakai rumus **2% × total tagihan × `ceil(hari_terlambat ÷ periode_denda_hari)`**. Status `MACET` muncul lewat accessor `TagihanJasa::status_jatuh_tempo`/`is_macet`/`kualitas_piutang` saat umur tunggakan > 180 hari, dan denda tetap berjalan.
 
 Seeder demo siap pakai:
 
@@ -435,18 +442,18 @@ Seeder demo siap pakai:
 php artisan db:seed --class=DemoPjp2uJatuhTempoDendaSeeder
 ```
 
-Seeder ini membuat/memperbarui 3 tagihan PJP2U demo:
+Seeder ini membuat/memperbarui 3 tagihan PJP2U demo (semua jatuh tempo 7 hari, periode denda 30 hari):
 
-| Nomor tagihan | Jatuh tempo | Status layar | Fungsi |
-|---|---:|---|---|
-| `TAG-PJP2U-DEMO-AWAL-7H` | H+7 | Mendekati jatuh tempo | Bukti tagihan PJP2U pertama memakai 7 hari |
-| `TAG-PJP2U-DEMO-LANJUT-H3` | H+3 | Mendekati jatuh tempo | Bukti tagihan lanjutan memakai 30 hari |
-| `TAG-PJP2U-DEMO-DENDA-H3` | H-3 | Lewat jatuh tempo | Bukti denda berjalan |
+| Nomor tagihan | Kondisi | Status layar | Fungsi |
+|---|---|---|---|
+| `TAG-PJP2U-DEMO-AKTIF-7H` | Baru terbit, jatuh tempo H+7 | Mendekati jatuh tempo | Bukti tempo PJP2U 7 hari |
+| `TAG-PJP2U-DEMO-DENDA-2P` | Telat 38 hari (2 periode) | Lewat jatuh tempo | Bukti denda 2% × 2 periode berjalan |
+| `TAG-PJP2U-DEMO-MACET` | Telat 188 hari (> 180) | Macet | Bukti denda akumulatif & kualitas macet |
 
 Dengan default pax demo 25 dan tarif PJP2U mengikuti master layanan, contoh bila tarif Rp40.000:
 - Total tagihan: **25 × Rp40.000 = Rp1.000.000**.
-- Denda untuk `TAG-PJP2U-DEMO-DENDA-H3`: **2% × 3 hari × Rp1.000.000 = Rp60.000**.
-- Total bayar berjalan: **Rp1.060.000**.
+- Denda `TAG-PJP2U-DEMO-DENDA-2P`: **2% × 2 periode × Rp1.000.000 = Rp80.000** (terus berjalan), total bayar **Rp1.080.000**.
+- Denda `TAG-PJP2U-DEMO-MACET`: **2% × 7 periode × Rp1.000.000 = Rp140.000**, total bayar **Rp1.140.000**, kualitas piutang macet.
 
 ### 12.3 Alur demo singkat
 

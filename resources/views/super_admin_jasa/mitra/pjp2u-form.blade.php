@@ -80,9 +80,9 @@
                     <div class="form-text">Jika daftar kosong, aktifkan layanan PJP2U dulu di menu Atur Layanan Mitra.</div>
                 </div>
                 <div class="col-lg-5">
-                    <label class="form-label fw-bold">Kontrak Dasar (Opsional)</label>
-                    <select name="kontrak_mitra_jasa_id" id="kontrakPjp2u" class="form-select">
-                        <option value="">Tanpa Kontrak</option>
+                    <label class="form-label fw-bold">Kontrak Dasar <span class="text-danger">*</span></label>
+                    <select name="kontrak_mitra_jasa_id" id="kontrakPjp2u" class="form-select" required>
+                        <option value="">Pilih kontrak dasar</option>
                         @foreach($kontraks as $kontrak)
                             @php
                                 $scopeIds = $kontrak->layananJasa->pluck('id')->implode(',');

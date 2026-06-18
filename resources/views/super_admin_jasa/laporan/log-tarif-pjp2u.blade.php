@@ -129,12 +129,26 @@
                             'koreksi' => 'bg-secondary',
                             default => 'bg-light text-dark',
                         };
+                        $today = now()->startOfDay();
+                        $statusDiskon = null;
+                        if ($log->tipe_perubahan === 'diskon') {
+                            if ($log->berlaku_mulai && $log->berlaku_mulai->gt($today)) {
+                                $statusDiskon = ['Akan datang', 'bg-info text-dark', 'bi-clock'];
+                            } elseif ($log->berlaku_sampai && $log->berlaku_sampai->lt($today)) {
+                                $statusDiskon = ['Berakhir — tarif kembali normal', 'bg-secondary', 'bi-arrow-counterclockwise'];
+                            } else {
+                                $statusDiskon = ['Aktif', 'bg-success', 'bi-check2-circle'];
+                            }
+                        }
                     @endphp
                     <tr>
                         <td>
                             <div class="fw-bold">{{ $log->berlaku_mulai?->format('d/m/Y') }}</div>
                             @if($log->berlaku_sampai)
                                 <div class="small text-muted">s.d. {{ $log->berlaku_sampai->format('d/m/Y') }}</div>
+                            @endif
+                            @if($statusDiskon)
+                                <span class="badge {{ $statusDiskon[1] }} mt-1"><i class="bi {{ $statusDiskon[2] }} me-1"></i>{{ $statusDiskon[0] }}</span>
                             @endif
                         </td>
                         <td>

@@ -126,7 +126,7 @@ class MitraJasaKonsesiController extends Controller
     private function validateKonsesi(Request $request, MitraJasa $mitra): array
     {
         $validated = $request->validate([
-            'kontrak_mitra_jasa_id' => ['nullable', 'integer', Rule::exists('kontrak_mitra_jasa', 'id')->where('mitra_jasa_id', $mitra->id)],
+            'kontrak_mitra_jasa_id' => ['required', 'integer', Rule::exists('kontrak_mitra_jasa', 'id')->where('mitra_jasa_id', $mitra->id)],
             'layanan_jasa_id' => ['nullable', 'integer', 'exists:layanan_jasas,id'],
             'jenis_konsesi' => ['required', Rule::in(['persen_omzet', 'nilai_tetap', 'minimum_guarantee', 'kombinasi'])],
             'persentase_konsesi' => ['nullable', 'numeric', 'min:0', 'max:100'],

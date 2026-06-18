@@ -26,6 +26,7 @@ class TagihanJasa extends Model
         'total_tagihan' => 'decimal:2',
         'jumlah_dibayar' => 'decimal:2',
         'sisa_tagihan' => 'decimal:2',
+        'masa_denda_hari' => 'integer',
     ];
 
     public function mitra()
@@ -136,6 +137,29 @@ class TagihanJasa extends Model
         return max(0, (int) $due->diffInDays($today, false));
     }
 
+    /**
+     * Panjang satu periode denda (hari). Denda PJP2U dihitung per 30 hari.
+     * Disnapshot dari layanan saat publish; default 30 bila belum dikonfigurasi.
+     */
+    public function getPeriodeDendaHariAttribute(): int
+    {
+        return (int) $this->masa_denda_hari ?: 30;
+    }
+
+    /**
+     * Jumlah periode denda yang berjalan = pembulatan ke atas dari hari keterlambatan
+     * dibagi panjang periode. Denda terus bertambah tiap periode (tidak dibekukan).
+     */
+    public function getJumlahPeriodeDendaAttribute(): int
+    {
+        if ($this->hari_terlambat <= 0) {
+            return 0;
+        }
+
+        return (int) ceil($this->hari_terlambat / $this->periode_denda_hari);
+    }
+
+    /** Tarif denda per periode (2% per 30 hari). */
     public function getTarifDendaKeterlambatanAttribute(): float
     {
         return 0.02;
@@ -143,7 +167,32 @@ class TagihanJasa extends Model
 
     public function getNominalDendaKeterlambatanAttribute(): float
     {
-        return round((float) $this->total_tagihan * $this->tarif_denda_keterlambatan * $this->hari_terlambat, 2);
+        return round((float) $this->total_tagihan * $this->tarif_denda_keterlambatan * $this->jumlah_periode_denda, 2);
+    }
+
+    /**
+     * Kualitas piutang berdasarkan umur tunggakan sejak jatuh tempo, mengikuti
+     * tangga baku piutang pemerintah (lihat PiutangAgingService):
+     *   Lancar 0 · Kurang Lancar 1–90 · Diragukan 91–180 · Macet >180 hari.
+     */
+    public function getKualitasPiutangAttribute(): string
+    {
+        if ($this->status_pembayaran === 'lunas' || $this->status === 'LUNAS') {
+            return 'LANCAR';
+        }
+
+        return match (true) {
+            $this->hari_terlambat <= 0 => 'LANCAR',
+            $this->hari_terlambat <= 90 => 'KURANG_LANCAR',
+            $this->hari_terlambat <= 180 => 'DIRAGUKAN',
+            default => 'MACET',
+        };
+    }
+
+    /** Piutang macet (umur tunggakan > 180 hari). Denda tetap berjalan. */
+    public function getIsMacetAttribute(): bool
+    {
+        return $this->kualitas_piutang === 'MACET';
     }
 
     public function getTotalDenganDendaAttribute(): float
@@ -217,6 +266,10 @@ class TagihanJasa extends Model
 
         if (! $this->tanggal_jatuh_tempo) {
             return 'BELUM_DISET';
+        }
+
+        if ($this->is_macet) {
+            return 'MACET';
         }
 
         $today = now()->startOfDay();

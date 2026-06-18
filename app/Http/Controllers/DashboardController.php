@@ -633,7 +633,7 @@ class DashboardController extends Controller
                 ], true);
             });
             $dueTodayTagihan = $openTagihan->filter(fn ($item) => $item->tanggal_jatuh_tempo?->toDateString() === $today);
-            $overdueTagihan = $openTagihan->filter(fn ($item) => $item->status_jatuh_tempo === 'LEWAT_JATUH_TEMPO');
+            $overdueTagihan = $openTagihan->filter(fn ($item) => in_array($item->status_jatuh_tempo, ['LEWAT_JATUH_TEMPO', 'MACET'], true));
             $dueSoonTagihan = $openTagihan->filter(fn ($item) => $item->status_jatuh_tempo === 'MENDEKATI_JATUH_TEMPO');
             $highlightTagihan = $correctionProofTagihan
                 ->merge($pendingProofTagihan)

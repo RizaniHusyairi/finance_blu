@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\KontrakMitraJasa;
 use App\Models\LayananJasa;
 use App\Models\MitraJasa;
+use App\Services\MitraLayananService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -115,6 +116,9 @@ class KontrakMitraJasaController extends Controller
 
         $kontrak->delete();
 
+        // Pool layanan mitra disesuaikan ulang dari kontrak yang tersisa.
+        app(MitraLayananService::class)->syncFromKontrak($mitra, auth()->id());
+
         return redirect()
             ->route('jasa.mitra.show', $mitra)
             ->with('success', 'Kontrak Mitra Jasa berhasil dihapus.');
@@ -125,7 +129,7 @@ class KontrakMitraJasaController extends Controller
         return $request->validate([
             'nomor_kontrak' => ['required', 'string', 'max:255'],
             'nama_kontrak' => ['required', 'string', 'max:255'],
-            'jenis_dokumen' => ['required', 'in:KONTRAK,PERJANJIAN_KERJA_SAMA,SURAT_PERMOHONAN,BERITA_ACARA,REKAP_PEMAKAIAN,DOKUMEN_LAINNYA'],
+            'jenis_dokumen' => ['required', 'in:' . implode(',', array_keys(KontrakMitraJasa::JENIS_DOKUMEN))],
             'tanggal_kontrak' => ['required', 'date'],
             'tanggal_mulai' => ['required', 'date'],
             'tanggal_selesai' => ['required', 'date', 'after_or_equal:tanggal_mulai'],
@@ -144,21 +148,22 @@ class KontrakMitraJasaController extends Controller
 
     private function layanansForMitra(MitraJasa $mitra)
     {
-        return $mitra->layananJasaAktif()
-            ->where('layanan_jasas.is_active', true)
-            ->where('layanan_jasas.is_leaf', true)
+        // Sumber pilihan = master layanan aktif (leaf), bukan pool mitra — memecah
+        // sirkularitas: pool justru DITURUNKAN dari kontrak (lihat syncLayanan).
+        return LayananJasa::query()
+            ->where('is_active', true)
+            ->where('is_leaf', true)
             ->with('parent.parent.parent.parent.parent')
-            ->orderBy('layanan_jasas.nama_layanan')
+            ->orderBy('nama_layanan')
             ->get();
     }
 
     private function syncLayanan(KontrakMitraJasa $kontrak, array $layananIds): void
     {
-        $allowedIds = $kontrak->mitraJasa
-            ->layananJasaAktif()
-            ->where('layanan_jasas.is_active', true)
-            ->where('layanan_jasas.is_leaf', true)
-            ->pluck('layanan_jasas.id')
+        $allowedIds = LayananJasa::query()
+            ->where('is_active', true)
+            ->where('is_leaf', true)
+            ->pluck('id')
             ->map(fn ($id) => (int) $id)
             ->all();
 
@@ -170,6 +175,9 @@ class KontrakMitraJasaController extends Controller
             ->all();
 
         $kontrak->layananJasa()->sync($syncIds);
+
+        // Pool layanan mitra = turunan dari kontrak AKTIF.
+        app(MitraLayananService::class)->syncFromKontrak($kontrak->mitraJasa, auth()->id());
     }
 
     private function abortUnlessCanManageMitraMaster(): void

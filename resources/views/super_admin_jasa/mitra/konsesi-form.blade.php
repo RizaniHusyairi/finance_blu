@@ -53,9 +53,9 @@
 
             <div class="row g-3">
                 <div class="col-lg-6">
-                    <label class="form-label">Kontrak Dasar (Opsional)</label>
-                    <select name="kontrak_mitra_jasa_id" class="form-select @error('kontrak_mitra_jasa_id') is-invalid @enderror">
-                        <option value="">Tanpa Kontrak</option>
+                    <label class="form-label">Kontrak Dasar <span class="text-danger">*</span></label>
+                    <select name="kontrak_mitra_jasa_id" class="form-select @error('kontrak_mitra_jasa_id') is-invalid @enderror" required>
+                        <option value="">Pilih kontrak dasar</option>
                         @foreach($kontraks as $kontrak)
                             @php
                                 $scopeText = $kontrak->layananJasa->isEmpty() ? 'Semua layanan' : $kontrak->layananJasa->pluck('kode_layanan')->filter()->join(', ');

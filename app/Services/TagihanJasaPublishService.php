@@ -72,6 +72,7 @@ class TagihanJasaPublishService
             'tanggal_publish' => now()->toDateString(),
             'jumlah_hari_jatuh_tempo' => $dueData['jumlah_hari_jatuh_tempo'],
             'masa_toleransi_hari' => $dueData['masa_toleransi_hari'],
+            'masa_denda_hari' => $dueData['masa_denda_hari'],
             'tanggal_jatuh_tempo' => $dueData['tanggal_jatuh_tempo'],
             'tanggal_akhir_toleransi' => $dueData['tanggal_akhir_toleransi'],
             'catatan_jatuh_tempo' => $dueData['catatan_jatuh_tempo'],
@@ -152,6 +153,14 @@ class TagihanJasaPublishService
         $layanans = $tagihan->details->pluck('layananJasa')->filter();
         $dueDays = (int) ($layanans->min('jumlah_hari_jatuh_tempo') ?: 30);
         $toleranceDays = (int) ($layanans->min('masa_toleransi_hari') ?? 0);
+        $dendaDays = (int) ($layanans->max('masa_denda_hari') ?: 0);
+
+        // Safeguard: tagihan yang memuat layanan PJP2U wajib punya masa denda 30 hari,
+        // meskipun master layanan belum dikonfigurasi.
+        if ($dendaDays <= 0 && $layanans->contains(fn ($layanan) => $layanan->isPjp2u())) {
+            $dendaDays = 30;
+        }
+
         $publishDate = now()->startOfDay();
         $dueDate = $publishDate->copy()->addDays($dueDays);
         $toleranceDate = $dueDate->copy()->addDays($toleranceDays);
@@ -169,6 +178,7 @@ class TagihanJasaPublishService
         return [
             'jumlah_hari_jatuh_tempo' => $dueDays,
             'masa_toleransi_hari' => $toleranceDays,
+            'masa_denda_hari' => $dendaDays,
             'tanggal_jatuh_tempo' => $dueDate->toDateString(),
             'tanggal_akhir_toleransi' => $toleranceDate->toDateString(),
             'catatan_jatuh_tempo' => $notes->isNotEmpty()

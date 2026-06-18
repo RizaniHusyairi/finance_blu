@@ -90,7 +90,7 @@ class MitraJasaPjp2uController extends Controller
 
         $validated = $request->validate([
             'layanan_jasa_id' => ['required', Rule::in($allowedLayananIds)],
-            'kontrak_mitra_jasa_id' => ['nullable', Rule::exists('kontrak_mitra_jasa', 'id')->where('mitra_jasa_id', $mitra->id)],
+            'kontrak_mitra_jasa_id' => ['required', Rule::exists('kontrak_mitra_jasa', 'id')->where('mitra_jasa_id', $mitra->id)],
             'tanggal_mulai' => ['nullable', 'date'],
             'tanggal_selesai' => ['nullable', 'date', 'after_or_equal:tanggal_mulai'],
             'status_aktif' => ['nullable', 'boolean'],

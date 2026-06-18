@@ -232,7 +232,12 @@
                                     <span class="sa-soft-badge warning">Belum Ada Akun</span>
                                 @endif
                             </td>
-                            <td>{{ $mitra->kontrakAktif->count() }}</td>
+                            <td>
+                                {{ $mitra->kontrakAktif->count() }}
+                                @if($mitra->kontrakAktif->contains(fn ($k) => \Illuminate\Support\Str::startsWith((string) $k->nomor_kontrak, 'LEGACY-')))
+                                    <br><small class="badge bg-warning text-dark" title="Kontrak legacy hasil migrasi otomatis — mohon lengkapi data kontrak yang sebenarnya">Legacy perlu dilengkapi</small>
+                                @endif
+                            </td>
                             <td>{{ $mitra->layananJasa->count() }}</td>
                             <td>
                                 <div>{{ $mitra->laporan_penjualan_count }} laporan</div>
@@ -250,7 +255,7 @@
                                     <a href="{{ route('jasa.mitra.show', $mitra) }}" class="btn btn-sm btn-light border sa-action jasa-icon-btn" title="Detail" aria-label="Detail"><i class="bi bi-eye"></i></a>
                                     @if($canManageMitraMaster)
                                         <a href="{{ route('jasa.mitra.edit', $mitra) }}" class="btn btn-sm btn-light border sa-action jasa-icon-btn" title="Edit" aria-label="Edit"><i class="bi bi-pencil"></i></a>
-                                        <a href="{{ route('jasa.mitra.layanan.edit', $mitra) }}" class="btn btn-sm btn-primary sa-action jasa-icon-btn" title="Atur layanan" aria-label="Atur layanan"><i class="bi bi-sliders"></i></a>
+                                        <a href="{{ route('jasa.mitra.kontrak.create', $mitra) }}" class="btn btn-sm btn-primary sa-action jasa-icon-btn" title="Kelola kontrak (layanan mengikuti kontrak)" aria-label="Kelola kontrak"><i class="bi bi-file-earmark-text"></i></a>
                                         <form method="POST" action="{{ route('jasa.mitra.destroy', $mitra) }}" class="d-inline" onsubmit="return confirm('Hapus mitra jasa ini? Data yang sudah dipakai laporan, kontrak, atau tagihan tidak bisa dihapus.');">
                                             @csrf
                                             @method('DELETE')

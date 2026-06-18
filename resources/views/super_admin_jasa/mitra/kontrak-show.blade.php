@@ -146,17 +146,6 @@
     {{-- ===== Stat tiles ===== --}}
     <div class="row g-3 mb-4">
         <div class="col-6 col-lg-3">
-            <div class="kc-stat" style="--st:#16a34a;--st-soft:#dcfce7;">
-                <div class="d-flex align-items-start justify-content-between gap-2">
-                    <div>
-                        <div class="kc-stat-lbl mb-2">Nilai Kontrak</div>
-                        <div class="kc-stat-val">{{ $kontrak->nilai_kontrak ? 'Rp '.number_format((float) $kontrak->nilai_kontrak, 0, ',', '.') : '—' }}</div>
-                    </div>
-                    <span class="kc-stat-ico" style="--st:#16a34a;--st-soft:#dcfce7;"><i class="bi bi-cash-stack"></i></span>
-                </div>
-            </div>
-        </div>
-        <div class="col-6 col-lg-3">
             <div class="kc-stat" style="--st:#4f46e5;--st-soft:rgba(79,70,229,.12);">
                 <div class="d-flex align-items-start justify-content-between gap-2">
                     <div>
@@ -218,10 +207,6 @@
                         <div class="kc-info-item">
                             <div class="kc-info-label"><i class="bi bi-calendar-event"></i>Tanggal Kontrak</div>
                             <div class="kc-info-value">{{ optional($kontrak->tanggal_kontrak)->translatedFormat('d F Y') ?: '-' }}</div>
-                        </div>
-                        <div class="kc-info-item">
-                            <div class="kc-info-label"><i class="bi bi-cash-stack"></i>Nilai Kontrak</div>
-                            <div class="kc-info-value">{{ $kontrak->nilai_kontrak ? 'Rp '.number_format((float) $kontrak->nilai_kontrak, 0, ',', '.') : '-' }}</div>
                         </div>
                         <div class="kc-info-item">
                             <div class="kc-info-label"><i class="bi bi-patch-check"></i>Status</div>

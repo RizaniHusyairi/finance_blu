@@ -771,11 +771,13 @@
                                                 \App\Models\TagihanJasaPaymentProof::STATUS_PERLU_PERBAIKAN,
                                             ], true) => 'Perlu Perbaikan',
                                             $proofStatus === \App\Models\TagihanJasaPaymentProof::STATUS_MENUNGGU || $item->status_pembayaran === 'menunggu_verifikasi' => 'Menunggu Verifikasi',
+                                            $item->status_jatuh_tempo === 'MACET' => 'Macet',
                                             $item->status_jatuh_tempo === 'LEWAT_JATUH_TEMPO' => 'Lewat Tempo',
                                             $item->status_jatuh_tempo === 'JATUH_TEMPO_HARI_INI' => 'Jatuh Tempo Hari Ini',
                                             default => 'Belum Dibayar',
                                         };
                                         $priorityBadge = match ($priorityLabel) {
+                                            'Macet' => 'bg-dark',
                                             'Lewat Tempo', 'Perlu Perbaikan' => 'bg-danger',
                                             'Jatuh Tempo Hari Ini' => 'bg-warning text-dark',
                                             'Menunggu Verifikasi' => 'bg-info text-dark',
@@ -986,7 +988,9 @@
                                 @if($isMitraJasaPortal)
                                     <td>
                                         {{ $t->tanggal_jatuh_tempo ? \Carbon\Carbon::parse($t->tanggal_jatuh_tempo)->format('d/m/Y') : '-' }}
-                                        @if($t->status_jatuh_tempo === 'LEWAT_JATUH_TEMPO')
+                                        @if($t->status_jatuh_tempo === 'MACET')
+                                            <div class="badge bg-dark">Macet</div>
+                                        @elseif($t->status_jatuh_tempo === 'LEWAT_JATUH_TEMPO')
                                             <div class="badge bg-danger">Lewat tempo</div>
                                         @elseif($t->status_jatuh_tempo === 'MENDEKATI_JATUH_TEMPO')
                                             <div class="badge bg-warning text-dark">Mendekati</div>

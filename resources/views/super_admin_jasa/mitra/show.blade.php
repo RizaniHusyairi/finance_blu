@@ -760,6 +760,37 @@
         align-items: center;
         gap: .35rem;
     }
+    .kontrak-row-modern .krm-scope-acc { margin-top: .35rem; max-width: 100%; }
+    .kontrak-row-modern .krm-scope-acc > summary {
+        list-style: none;
+        cursor: pointer;
+        font-size: .76rem;
+        color: #4338ca;
+        background: rgba(99,102,241,.08);
+        padding: .25rem .6rem;
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        gap: .35rem;
+        max-width: 100%;
+    }
+    .kontrak-row-modern .krm-scope-acc > summary::-webkit-details-marker { display: none; }
+    .kontrak-row-modern .krm-scope-prev {
+        color: #6b7280; font-weight: 400;
+        overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 360px;
+    }
+    .kontrak-row-modern .krm-scope-chev { transition: transform .15s ease; }
+    .kontrak-row-modern .krm-scope-acc[open] .krm-scope-chev { transform: rotate(180deg); }
+    .kontrak-row-modern .krm-scope-chips {
+        display: flex; flex-wrap: wrap; gap: .3rem;
+        margin-top: .5rem; max-height: 220px; overflow: auto;
+        padding: .5rem; background: #f8fafc;
+        border: 1px solid #eef2f7; border-radius: .6rem;
+    }
+    .kontrak-row-modern .krm-chip {
+        font-size: .72rem; background: #fff; border: 1px solid #e5e7eb;
+        color: #374151; padding: .15rem .5rem; border-radius: 999px; white-space: nowrap;
+    }
     .kontrak-row-modern .krm-actions {
         display: flex;
         gap: .35rem;
@@ -1140,10 +1171,26 @@
                                     <span><i class="bi bi-calendar3 me-1"></i>{{ optional($kontrak->tanggal_mulai)->format('d/m/Y') ?: '-' }} &mdash; {{ optional($kontrak->tanggal_selesai)->format('d/m/Y') ?: '-' }}</span>
                                     <span class="kontrak-status-pill {{ $statusCls }}">{{ $kontrak->status_kontrak }}</span>
                                 </div>
-                                <span class="krm-scope">
-                                    <i class="bi bi-diagram-3"></i>
-                                    {{ $kontrak->layananJasa->isEmpty() ? 'Berlaku untuk semua layanan aktif mitra' : $kontrak->layananJasa->pluck('kode_layanan')->filter()->join(', ') }}
-                                </span>
+                                @if($kontrak->layananJasa->isEmpty())
+                                    <span class="krm-scope"><i class="bi bi-diagram-3"></i> Berlaku untuk semua layanan aktif mitra</span>
+                                @else
+                                    @php
+                                        $scope = $kontrak->layananJasa->sortBy('kode_layanan');
+                                    @endphp
+                                    <details class="krm-scope-acc">
+                                        <summary>
+                                            <i class="bi bi-diagram-3"></i>
+                                            <strong>{{ $scope->count() }} layanan</strong>
+                                            <span class="krm-scope-prev">— {{ $scope->take(2)->pluck('nama_layanan')->join(', ') }}{{ $scope->count() > 2 ? ', …' : '' }}</span>
+                                            <i class="bi bi-chevron-down krm-scope-chev"></i>
+                                        </summary>
+                                        <div class="krm-scope-chips">
+                                            @foreach($scope as $l)
+                                                <span class="krm-chip" title="{{ $l->kode_layanan }}">{{ $l->nama_layanan }}</span>
+                                            @endforeach
+                                        </div>
+                                    </details>
+                                @endif
                             </div>
                             <div class="krm-actions">
                                 <a href="{{ route('jasa.mitra.kontrak.show', [$mitra, $kontrak]) }}" class="btn btn-sm btn-light border jasa-icon-btn" title="Detail" aria-label="Detail"><i class="bi bi-eye"></i></a>

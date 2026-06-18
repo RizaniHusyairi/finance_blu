@@ -8,6 +8,24 @@ use Illuminate\Support\Facades\DB;
 
 class MitraLayananService
 {
+    /**
+     * Pool layanan mitra = turunan dari layanan seluruh kontrak AKTIF.
+     * Dipanggil setiap kontrak disimpan/diubah/dihapus agar pool selalu sinkron.
+     */
+    public function syncFromKontrak(MitraJasa $mitra, ?int $createdBy = null): void
+    {
+        $layananIds = $mitra->kontrakAktif()
+            ->with('layananJasa:id')
+            ->get()
+            ->flatMap(fn ($kontrak) => $kontrak->layananJasa->pluck('id'))
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
+
+        $this->sync($mitra, $layananIds, $createdBy);
+    }
+
     public function sync(MitraJasa $mitra, array $layananIds, ?int $createdBy = null): void
     {
         $billableIds = LayananJasa::query()

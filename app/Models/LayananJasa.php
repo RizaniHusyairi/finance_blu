@@ -24,6 +24,7 @@ class LayananJasa extends Model
         'wajib_tagihan_terpisah' => 'boolean',
         'jumlah_hari_jatuh_tempo' => 'integer',
         'masa_toleransi_hari' => 'integer',
+        'masa_denda_hari' => 'integer',
     ];
 
     public function parent()

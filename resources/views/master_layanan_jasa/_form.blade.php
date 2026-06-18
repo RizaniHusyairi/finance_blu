@@ -597,7 +597,16 @@
                     @enderror
                 </div>
 
-                <div class="col-lg-6">
+                <div class="col-lg-3">
+                    <label class="form-label">Periode Denda (Hari)</label>
+                    <input type="number" name="masa_denda_hari" class="form-control @error('masa_denda_hari') is-invalid @enderror" value="{{ old('masa_denda_hari', $isEdit ? ($layanan->masa_denda_hari ?? 0) : 0) }}" min="0">
+                    <small class="text-muted">Denda 2% dihitung per periode ini (PJP2U = 30 hari). 0 = default 30.</small>
+                    @error('masa_denda_hari')
+                        <div class="invalid-feedback">{{ $message }}</div>
+                    @enderror
+                </div>
+
+                <div class="col-lg-12">
                     <label class="form-label">Catatan Jatuh Tempo</label>
                     <input type="text" name="catatan_jatuh_tempo" class="form-control @error('catatan_jatuh_tempo') is-invalid @enderror" value="{{ old('catatan_jatuh_tempo', $isEdit ? $layanan->catatan_jatuh_tempo : '') }}" placeholder="Contoh: PJP2U jatuh tempo 7 hari dan tidak boleh digabung.">
                     @error('catatan_jatuh_tempo')

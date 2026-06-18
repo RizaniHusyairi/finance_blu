@@ -371,6 +371,7 @@
         default => 'secondary',
     };
     $dueLabel = match($tagihan->status_jatuh_tempo) {
+        'MACET' => ['Macet', 'bg-dark'],
         'LEWAT_JATUH_TEMPO' => ['Lewat Jatuh Tempo', 'bg-danger'],
         'JATUH_TEMPO_HARI_INI' => ['Jatuh Tempo Hari Ini', 'bg-dark'],
         'MENDEKATI_JATUH_TEMPO' => ['Mendekati Jatuh Tempo', 'bg-warning text-dark'],
@@ -495,8 +496,8 @@
                 <div class="small text-muted fw-bold">Tanggal Jatuh Tempo</div>
                 <div class="fw-semibold">{{ $tagihan->tanggal_jatuh_tempo ? \Carbon\Carbon::parse($tagihan->tanggal_jatuh_tempo)->format('d F Y') : '-' }}</div>
                 <div class="mt-2"><span class="badge {{ $dueLabel[1] }}">{{ $dueLabel[0] }}</span></div>
-                @if($tagihan->status_jatuh_tempo === 'LEWAT_JATUH_TEMPO')
-                    <div class="small text-danger mt-2">Terlambat {{ $tagihan->hari_terlambat }} hari.</div>
+                @if(in_array($tagihan->status_jatuh_tempo, ['LEWAT_JATUH_TEMPO', 'MACET'], true))
+                    <div class="small text-danger mt-2">Terlambat {{ $tagihan->hari_terlambat }} hari{{ $tagihan->status_jatuh_tempo === 'MACET' ? ' — macet' : '' }}.</div>
                 @elseif($tagihan->status !== 'LUNAS')
                     <div class="small text-muted mt-2">Umur piutang {{ $tagihan->umur_piutang_hari }} hari.</div>
                 @endif

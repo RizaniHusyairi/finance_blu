@@ -668,7 +668,7 @@
                             @if($tagihan->nominal_denda_keterlambatan > 0)
                                 <tr>
                                     <td colspan="5" class="text-end fw-bold text-danger">
-                                        DENDA KETERLAMBATAN 2% x {{ $tagihan->hari_terlambat }} HARI :
+                                        DENDA KETERLAMBATAN 2% x {{ $tagihan->jumlah_periode_denda }} PERIODE (per 30 hari) :
                                     </td>
                                     <td class="text-end fw-bold text-danger">Rp {{ number_format($tagihan->nominal_denda_keterlambatan, 0, ',', '.') }}</td>
                                 </tr>
@@ -701,6 +701,7 @@
                 @if($tagihan->tanggal_jatuh_tempo)
                     @php
                         $dueLabel = match($tagihan->status_jatuh_tempo) {
+                            'MACET' => ['Macet', 'bg-dark'],
                             'LEWAT_JATUH_TEMPO' => ['Lewat Jatuh Tempo', 'bg-danger'],
                             'JATUH_TEMPO_HARI_INI' => ['Jatuh Tempo Hari Ini', 'bg-dark'],
                             'MENDEKATI_JATUH_TEMPO' => ['Mendekati Jatuh Tempo', 'bg-warning text-dark'],
@@ -729,8 +730,11 @@
                         @if($tagihan->nominal_denda_keterlambatan > 0)
                             <div class="alert alert-danger small mt-3 mb-0">
                                 <i class="bi bi-exclamation-triangle me-1"></i>
-                                Denda berjalan: 2% per hari x {{ $tagihan->hari_terlambat }} hari = 
+                                Denda berjalan: 2% per 30 hari x {{ $tagihan->jumlah_periode_denda }} periode (telat {{ $tagihan->hari_terlambat }} hari) =
                                 <strong>Rp {{ number_format($tagihan->nominal_denda_keterlambatan, 0, ',', '.') }}</strong>.
+                                @if($tagihan->is_macet)
+                                    Kualitas piutang: <strong>MACET</strong>.
+                                @endif
                                 Total tagihan berjalan menjadi
                                 <strong>Rp {{ number_format($tagihan->total_dengan_denda, 0, ',', '.') }}</strong>.
                             </div>

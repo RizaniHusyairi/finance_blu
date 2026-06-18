@@ -222,7 +222,7 @@
             'items' => [
                 'Publish hanya dapat dilakukan setelah workflow disetujui final dan Surat Final TTD sudah digenerate.',
                 'Saat publish, sistem membuat Virtual Account dan mengirim notifikasi WhatsApp ke mitra.',
-                'Tagihan jatuh tempo akan menghitung denda 2% per hari dari total tagihan jika belum lunas.',
+                'Tagihan jatuh tempo akan menghitung denda 2% per 30 hari (per periode, dibulatkan ke atas) dari total tagihan jika belum lunas, dan terus berjalan sampai dilunasi.',
                 'Status pembayaran berubah setelah callback VA diterima atau pembayaran ditandai lunas manual oleh petugas berwenang.',
             ],
         ],

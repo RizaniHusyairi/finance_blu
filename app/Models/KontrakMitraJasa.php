@@ -19,7 +19,6 @@ class KontrakMitraJasa extends Model
         'tanggal_kontrak',
         'tanggal_mulai',
         'tanggal_selesai',
-        'nilai_kontrak',
         'file_kontrak',
         'status_kontrak',
         'keterangan',
@@ -31,7 +30,22 @@ class KontrakMitraJasa extends Model
         'tanggal_kontrak' => 'date',
         'tanggal_mulai' => 'date',
         'tanggal_selesai' => 'date',
-        'nilai_kontrak' => 'decimal:2',
+    ];
+
+    /**
+     * Jenis dokumen dasar kontrak (kode => label). Setiap layanan yang ditagihkan
+     * harus punya dasar dokumen; jenisnya menyesuaikan sifat layanan.
+     */
+    public const JENIS_DOKUMEN = [
+        'KONTRAK' => 'Kontrak',
+        'PERJANJIAN_KERJA_SAMA' => 'Perjanjian Kerja Sama',
+        'PERJANJIAN_KONSESI' => 'Perjanjian Konsesi',
+        'SK_REGULASI_TARIF' => 'SK / Regulasi Tarif',
+        'SPK' => 'Surat Perintah Kerja (SPK)',
+        'SURAT_PERMOHONAN' => 'Surat Permohonan',
+        'BERITA_ACARA' => 'Berita Acara',
+        'REKAP_PEMAKAIAN' => 'Rekap Pemakaian',
+        'DOKUMEN_LAINNYA' => 'Dokumen Lainnya',
     ];
 
     public function mitraJasa()

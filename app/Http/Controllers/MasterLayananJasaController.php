@@ -76,6 +76,7 @@ class MasterLayananJasaController extends Controller
             'persentase_konsesi' => 'nullable|numeric|min:0|max:100',
             'jumlah_hari_jatuh_tempo' => 'required|integer|min:0|max:365',
             'masa_toleransi_hari' => 'required|integer|min:0|max:365',
+            'masa_denda_hari' => 'nullable|integer|min:0|max:365',
             'wajib_tagihan_terpisah' => 'boolean',
             'catatan_jatuh_tempo' => 'nullable|string',
             'is_active' => 'boolean',
@@ -85,6 +86,7 @@ class MasterLayananJasaController extends Controller
         unset($validated['node_type']);
 
         $validated['is_active'] = $request->has('is_active');
+        $validated['masa_denda_hari'] = (int) ($validated['masa_denda_hari'] ?? 0);
         $validated['is_leaf'] = $nodeType === 'item';
         $validated['tarif_dasar'] = $validated['is_leaf'] ? ($validated['tarif_dasar'] ?? 0) : 0;
         $validated['satuan'] = $validated['is_leaf'] ? ($validated['satuan'] ?? null) : null;
@@ -166,6 +168,7 @@ class MasterLayananJasaController extends Controller
             'persentase_konsesi' => 'nullable|numeric|min:0|max:100',
             'jumlah_hari_jatuh_tempo' => 'required|integer|min:0|max:365',
             'masa_toleransi_hari' => 'required|integer|min:0|max:365',
+            'masa_denda_hari' => 'nullable|integer|min:0|max:365',
             'wajib_tagihan_terpisah' => 'boolean',
             'catatan_jatuh_tempo' => 'nullable|string',
             'is_active' => 'boolean',
@@ -211,6 +214,7 @@ class MasterLayananJasaController extends Controller
         }
 
         $validated['is_active'] = $request->has('is_active');
+        $validated['masa_denda_hari'] = (int) ($validated['masa_denda_hari'] ?? 0);
         $validated['is_leaf'] = $nodeType === 'item';
         $validated['tarif_dasar'] = $validated['is_leaf'] ? ($validated['tarif_dasar'] ?? 0) : 0;
         $validated['satuan'] = $validated['is_leaf'] ? ($validated['satuan'] ?? null) : null;
@@ -237,7 +241,17 @@ class MasterLayananJasaController extends Controller
         if (! $validated['is_leaf']) {
             $validated['wajib_tagihan_terpisah'] = false;
         }
-        
+
+        // Diskon PJP2U bersifat SEMENTARA: tarif dasar tetap normal, diskonnya
+        // disimpan sebagai periode tarif (LayananJasaTarif) yang otomatis kembali
+        // ke tarif normal setelah masa berlakunya habis. Revisi resmi/koreksi tetap
+        // mengubah tarif dasar secara permanen.
+        $isDiskonPjp2u = $needsPjp2uLog
+            && $request->input('pjp2u_log_tipe_perubahan') === \App\Models\LogPerubahanTarifPjp2u::TIPE_DISKON;
+        if ($isDiskonPjp2u) {
+            $validated['tarif_dasar'] = $tarifLama;
+        }
+
         $oldParentId = $master_layanan_jasa->parent_id;
 
         if ($validated['parent_id']) {

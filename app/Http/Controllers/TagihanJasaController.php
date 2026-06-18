@@ -508,12 +508,29 @@ class TagihanJasaController extends Controller
 
             return redirect()
                 ->route('tagihan-jasa.show', $tagihan->id)
-                ->with('success', 'Tagihan Jasa berhasil dibuat dan masuk alur verifikasi.');
+                ->with('success', 'Tagihan Jasa berhasil dibuat dan masuk alur verifikasi.' . $this->kontrakGraceNote($kontrak));
         } catch (\Throwable $e) {
             return back()
                 ->withInput()
                 ->with('error', 'Gagal membuat tagihan jasa: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Peringatan grace (tidak memblok) untuk mendorong pelengkapan dasar kontrak:
+     * tagihan tanpa kontrak terlampir, atau mereferensi Kontrak Legacy hasil migrasi.
+     */
+    private function kontrakGraceNote(?KontrakMitraJasa $kontrak): string
+    {
+        if (! $kontrak) {
+            return ' ⚠️ Catatan: tagihan ini belum direferensikan ke kontrak/dokumen dasar — sebaiknya pilih/lengkapi kontrak mitra.';
+        }
+
+        if (\Illuminate\Support\Str::startsWith((string) $kontrak->nomor_kontrak, 'LEGACY-')) {
+            return ' ⚠️ Catatan: tagihan mereferensi Kontrak Legacy (' . $kontrak->nomor_kontrak . ') yang masih perlu dilengkapi datanya.';
+        }
+
+        return '';
     }
 
     public function edit(Request $request, $id, JasaAccessService $jasaAccessService)
@@ -832,7 +849,7 @@ class TagihanJasaController extends Controller
 
             return redirect()
                 ->route('tagihan-jasa.show', $tagihan->id)
-                ->with('success', 'Revisi tagihan berhasil disimpan. Kirim ulang tagihan untuk memulai workflow verifikasi baru.');
+                ->with('success', 'Revisi tagihan berhasil disimpan. Kirim ulang tagihan untuk memulai workflow verifikasi baru.' . $this->kontrakGraceNote($kontrak));
         } catch (\Throwable $e) {
             return back()
                 ->withInput()
@@ -2153,12 +2170,20 @@ class TagihanJasaController extends Controller
             ->get()
             ->groupBy('layanan_jasa_id')
             ->map(fn ($group) => $group->first())
-            ->map(fn ($log) => [
-                'berlaku_mulai' => $log->berlaku_mulai?->format('d/m/Y'),
-                'tarif_lama' => (float) $log->tarif_lama,
-                'tarif_baru' => (float) $log->tarif_baru,
-                'tipe' => $log->tipe_label,
-            ])
+            ->map(function ($log) {
+                $today = now()->startOfDay();
+                $isDiskon = $log->tipe_perubahan === LogPerubahanTarifPjp2u::TIPE_DISKON;
+
+                return [
+                    'berlaku_mulai' => $log->berlaku_mulai?->format('d/m/Y'),
+                    'berlaku_sampai' => $log->berlaku_sampai?->format('d/m/Y'),
+                    'tarif_lama' => (float) $log->tarif_lama,
+                    'tarif_baru' => (float) $log->tarif_baru,
+                    'tipe' => $log->tipe_label,
+                    'is_diskon' => $isDiskon,
+                    'diskon_berakhir' => $isDiskon && $log->berlaku_sampai && $log->berlaku_sampai->lt($today),
+                ];
+            })
             ->all();
     }
 

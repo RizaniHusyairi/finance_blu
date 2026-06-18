@@ -15,6 +15,7 @@
         + (int) ($activity['revision_count'] ?? 0);
     $dueBadge = function ($tagihan) {
         return match ($tagihan->status_jatuh_tempo) {
+            'MACET' => ['Macet', 'bg-dark'],
             'LEWAT_JATUH_TEMPO' => ['Lewat Jatuh Tempo', 'bg-danger'],
             'JATUH_TEMPO_HARI_INI' => ['Jatuh Tempo', 'bg-dark'],
             'MENDEKATI_JATUH_TEMPO' => ['Mendekati Jatuh Tempo', 'bg-warning text-dark'],

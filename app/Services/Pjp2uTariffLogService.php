@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\LayananJasa;
+use App\Models\LayananJasaTarif;
 use App\Models\LogPerubahanTarifPjp2u;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
@@ -32,7 +33,7 @@ class Pjp2uTariffLogService
             $filePath = $file->store(self::STORAGE_DIR, self::STORAGE_DISK);
         }
 
-        return LogPerubahanTarifPjp2u::create([
+        $log = LogPerubahanTarifPjp2u::create([
             'layanan_jasa_id' => $layanan->id,
             'tarif_lama' => $tarifLama,
             'tarif_baru' => $tarifBaru,
@@ -46,6 +47,27 @@ class Pjp2uTariffLogService
             'file_pendukung' => $filePath,
             'created_by' => Auth::id(),
         ]);
+
+        // Diskon sementara → simpan sebagai PERIODE tarif khusus. TarifLayananService
+        // akan memakai tarif diskon ini selama periodenya, lalu otomatis kembali ke
+        // tarif normal (tarif_dasar) begitu masa berlaku habis.
+        if ($payload['tipe_perubahan'] === LogPerubahanTarifPjp2u::TIPE_DISKON && ! empty($payload['berlaku_sampai'])) {
+            $persen = $tarifLama > 0 ? round((($tarifLama - $tarifBaru) / $tarifLama) * 100, 2) : null;
+
+            LayananJasaTarif::create([
+                'layanan_jasa_id' => $layanan->id,
+                'mitra_jasa_id' => null,
+                'tarif' => $tarifBaru,
+                'persen_diskon' => $persen,
+                'berlaku_mulai' => Carbon::parse($payload['berlaku_mulai'])->toDateString(),
+                'berlaku_sampai' => Carbon::parse($payload['berlaku_sampai'])->toDateString(),
+                'keterangan' => $payload['alasan'] ?? null,
+                'is_active' => true,
+                'created_by' => Auth::id(),
+            ]);
+        }
+
+        return $log;
     }
 
     public function latestForLayanan(int $layananId): ?LogPerubahanTarifPjp2u

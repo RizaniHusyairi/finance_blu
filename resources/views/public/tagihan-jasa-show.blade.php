@@ -350,6 +350,7 @@
         default => 'secondary',
     };
     $dueLabel = match($tagihan->status_jatuh_tempo ?? null) {
+        'MACET' => ['Macet', 'due-late'],
         'LEWAT_JATUH_TEMPO' => ['Lewat Jatuh Tempo', 'due-late'],
         'JATUH_TEMPO_HARI_INI' => ['Jatuh Tempo Hari Ini', 'due-late'],
         'MENDEKATI_JATUH_TEMPO' => ['Mendekati Jatuh Tempo', 'due-warn'],
@@ -456,7 +457,7 @@
                                 </tr>
                                 @if($tagihan->nominal_denda_keterlambatan > 0)
                                     <tr>
-                                        <td colspan="4" class="text-end text-danger fw-bold">Denda 2% x {{ $tagihan->hari_terlambat }} hari</td>
+                                        <td colspan="4" class="text-end text-danger fw-bold">Denda 2% x {{ $tagihan->jumlah_periode_denda }} periode (per 30 hari)</td>
                                         <td class="text-end text-danger fw-bold">Rp {{ number_format($tagihan->nominal_denda_keterlambatan, 0, ',', '.') }}</td>
                                     </tr>
                                     <tr class="total-row">
@@ -540,13 +541,13 @@
                 <div>
                     <div class="pc-title"><i class="bi bi-info-circle me-1"></i>Informasi Denda Keterlambatan</div>
                     <p class="pc-text">
-                        Jatuh tempo tagihan adalah <strong>30 (tiga puluh) hari</strong> sesuai dengan nota tagihan,
+                        Jatuh tempo tagihan adalah <strong>{{ (int) ($tagihan->jumlah_hari_jatuh_tempo ?: 30) }} hari</strong> sesuai dengan nota tagihan,
                         sehingga apabila pada tanggal tersebut tagihan belum dibayar maka akan dikenakan
-                        <span class="pc-percent">denda 2% per hari</span> dari total tagihan.
+                        <span class="pc-percent">denda 2% per 30 hari</span> dari total tagihan yang terus berjalan sampai tagihan dilunasi.
                     </p>
                     @if($tagihan->nominal_denda_keterlambatan > 0)
                         <div class="alert alert-danger small mt-3 mb-0">
-                            Terlambat {{ $tagihan->hari_terlambat }} hari:
+                            Terlambat {{ $tagihan->hari_terlambat }} hari ({{ $tagihan->jumlah_periode_denda }} periode){{ $tagihan->is_macet ? ' — kualitas piutang macet' : '' }}:
                             denda Rp {{ number_format($tagihan->nominal_denda_keterlambatan, 0, ',', '.') }}.
                             Total harus dibayar Rp {{ number_format($tagihan->total_dengan_denda, 0, ',', '.') }}.
                         </div>
@@ -562,8 +563,8 @@
                         {{ $tagihan->tanggal_jatuh_tempo ? \Carbon\Carbon::parse($tagihan->tanggal_jatuh_tempo)->translatedFormat('d F Y') : '-' }}
                     </div>
                     <span class="due-pill {{ $dueLabel[1] }} mt-2">{{ $dueLabel[0] }}</span>
-                    @if(($tagihan->status_jatuh_tempo ?? null) === 'LEWAT_JATUH_TEMPO')
-                        <div class="small text-danger mt-2">Terlambat {{ $tagihan->hari_terlambat }} hari.</div>
+                    @if(in_array($tagihan->status_jatuh_tempo ?? null, ['LEWAT_JATUH_TEMPO', 'MACET'], true))
+                        <div class="small text-danger mt-2">Terlambat {{ $tagihan->hari_terlambat }} hari{{ ($tagihan->status_jatuh_tempo ?? null) === 'MACET' ? ' — macet' : '' }}.</div>
                     @elseif($tagihan->status !== 'LUNAS')
                         <div class="small text-muted mt-2">Umur piutang {{ $tagihan->umur_piutang_hari }} hari.</div>
                     @endif

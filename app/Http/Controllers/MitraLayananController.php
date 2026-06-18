@@ -2,38 +2,30 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\LayananJasa;
 use App\Models\MitraJasa;
-use App\Services\MitraLayananService;
-use Illuminate\Http\Request;
 
 class MitraLayananController extends Controller
 {
+    // Catatan: layanan mitra kini DITURUNKAN otomatis dari kontrak aktif
+    // (lihat MitraLayananService::syncFromKontrak). Pengaturan manual dipensiunkan
+    // agar tidak bertabrakan dengan recompute saat kontrak disimpan.
+
     public function edit(MitraJasa $mitra)
     {
         $this->abortUnlessCanManageMitraMaster();
 
-        $layanans = LayananJasa::where('is_active', true)->orderBy('level')->orderBy('id')->get();
-        $selectedIds = $mitra->layananJasa()
-            ->wherePivot('status_aktif', true)
-            ->pluck('layanan_jasas.id')
-            ->all();
-
-        return view('jasa_assignments.mitra-layanan', compact('mitra', 'layanans', 'selectedIds'));
+        return redirect()
+            ->route('jasa.mitra.show', $mitra)
+            ->with('success', 'Layanan mitra kini ditentukan dari Kontrak aktif. Tambah/ubah layanan lewat menu Kontrak.');
     }
 
-    public function update(Request $request, MitraJasa $mitra, MitraLayananService $service)
+    public function update(MitraJasa $mitra)
     {
         $this->abortUnlessCanManageMitraMaster();
 
-        $validated = $request->validate([
-            'layanan_ids' => ['nullable', 'array'],
-            'layanan_ids.*' => ['integer', 'exists:layanan_jasas,id'],
-        ]);
-
-        $service->sync($mitra, $validated['layanan_ids'] ?? [], auth()->id());
-
-        return back()->with('success', 'Pengaturan layanan mitra berhasil disimpan.');
+        return redirect()
+            ->route('jasa.mitra.show', $mitra)
+            ->with('success', 'Layanan mitra tidak diatur manual lagi — kelola lewat Kontrak aktif.');
     }
 
     private function abortUnlessCanManageMitraMaster(): void
