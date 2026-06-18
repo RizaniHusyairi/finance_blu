@@ -16,7 +16,13 @@ use App\Http\Controllers\ManajemenPnbpController;
 use App\Http\Controllers\BendaharaPengeluaranDashboardController;
 use App\Http\Controllers\BtnPaymentCallbackController;
 use App\Http\Controllers\BukuKasUmumController;
+use App\Http\Controllers\BkuPenerimaanController;
+use App\Http\Controllers\BkuPengeluaranController;
 use App\Http\Controllers\BukuPembantuBankController;
+use App\Http\Controllers\BukuPembantuPartisiController;
+use App\Http\Controllers\KlasifikasiPenerimaanController;
+use App\Http\Controllers\PembukuanSetupController;
+use App\Http\Controllers\RealisasiPenerimaanController;
 use App\Http\Controllers\BukuPembantuBendaharaController;
 use App\Http\Controllers\BukuPembantuBungaController;
 use App\Http\Controllers\BukuPembantuPajakController;
@@ -824,19 +830,25 @@ Route::middleware(['auth', 'account.active'])->group(function () use ($internalR
             ->whereNumber('id')
             ->name('pembukuan.bku.show');
 
-        Route::get('/pembukuan/bank/mutasi', [BukuPembantuBankController::class, 'mutasi'])->name('pembukuan.bank.mutasi');
+        // Setup identitas satker (kop dokumen) — dipakai kedua bendahara.
+        Route::get('/pembukuan/setup', [PembukuanSetupController::class, 'edit'])->name('pembukuan.setup.edit');
+        Route::post('/pembukuan/setup', [PembukuanSetupController::class, 'update'])->name('pembukuan.setup.update');
+        Route::post('/pembukuan/setup/saldo-awal', [PembukuanSetupController::class, 'storeSaldoAwal'])->name('pembukuan.setup.saldo-awal');
+
+        // Buku pembantu (partisi BKU) generik: Kas Tunai/UP/BPP/Perjadin/Pajak LS/Pengesahan/Pengembalian.
+        Route::get('/pembukuan/buku-pembantu/pdf', [BukuPembantuPartisiController::class, 'pdf'])->name('pembukuan.buku-pembantu.pdf');
+        Route::get('/pembukuan/buku-pembantu/excel', [BukuPembantuPartisiController::class, 'excel'])->name('pembukuan.buku-pembantu.excel');
+        Route::get('/pembukuan/buku-pembantu', [BukuPembantuPartisiController::class, 'index'])->name('pembukuan.buku-pembantu.index');
+
         Route::get('/pembukuan/bank', [BukuPembantuBankController::class, 'index'])->name('pembukuan.bank.index');
         Route::get('/pembukuan/bank/{rekening}', [BukuPembantuBankController::class, 'show'])
             ->whereNumber('rekening')
             ->name('pembukuan.bank.show');
 
-        // Rekonsiliasi BKU ↔ rekening koran — di halaman detail per rekening.
+        // Impor rekening koran (sumber data Klasifikasi Penerimaan).
         Route::post('/pembukuan/bank/{rekening}/koran/upload', [BukuPembantuBankController::class, 'uploadKoran'])->whereNumber('rekening')->name('pembukuan.bank.koran.upload');
         Route::post('/pembukuan/bank/{rekening}/koran/baris', [BukuPembantuBankController::class, 'storeKoranLine'])->whereNumber('rekening')->name('pembukuan.bank.koran.line.store');
         Route::delete('/pembukuan/bank/{rekening}/koran/baris/{mutasi}', [BukuPembantuBankController::class, 'destroyKoranLine'])->whereNumber('rekening')->whereNumber('mutasi')->name('pembukuan.bank.koran.line.destroy');
-        Route::post('/pembukuan/bank/{rekening}/rekonsiliasi/auto', [BukuPembantuBankController::class, 'autoReconcile'])->whereNumber('rekening')->name('pembukuan.bank.rekonsiliasi.auto');
-        Route::post('/pembukuan/bank/{rekening}/rekonsiliasi/manual', [BukuPembantuBankController::class, 'manualMatch'])->whereNumber('rekening')->name('pembukuan.bank.rekonsiliasi.manual');
-        Route::post('/pembukuan/bank/{rekening}/rekonsiliasi/unmatch', [BukuPembantuBankController::class, 'unmatch'])->whereNumber('rekening')->name('pembukuan.bank.rekonsiliasi.unmatch');
 
         Route::get('/pembukuan/bendahara/pdf', [BukuPembantuBendaharaController::class, 'pdf'])->name('pembukuan.bendahara.pdf');
         Route::get('/pembukuan/bendahara', [BukuPembantuBendaharaController::class, 'index'])->name('pembukuan.bendahara.index');
@@ -858,6 +870,11 @@ Route::middleware(['auth', 'account.active'])->group(function () use ($internalR
             Route::get('/pembukuan/pengesahan-belanja/{laporan}', [BukuPengesahanBelanjaController::class, 'show'])
                 ->whereNumber('laporan')
                 ->name('pembukuan.pengesahan.show');
+
+            // BKU Bendahara Pengeluaran (partisi BKU, peran=PENGELUARAN).
+            Route::get('/pembukuan/pengeluaran/pdf', [BkuPengeluaranController::class, 'pdf'])->name('pembukuan.pengeluaran.pdf');
+            Route::get('/pembukuan/pengeluaran/excel', [BkuPengeluaranController::class, 'excel'])->name('pembukuan.pengeluaran.excel');
+            Route::get('/pembukuan/pengeluaran', [BkuPengeluaranController::class, 'index'])->name('pembukuan.pengeluaran.index');
         });
 
         // Pengesahan Pendapatan khusus Bendahara Penerimaan — lensa sisi
@@ -868,6 +885,18 @@ Route::middleware(['auth', 'account.active'])->group(function () use ($internalR
             Route::get('/pembukuan/pengesahan-pendapatan/{laporan}', [BukuPengesahanPendapatanController::class, 'show'])
                 ->whereNumber('laporan')
                 ->name('pembukuan.pengesahan-pendapatan.show');
+
+            // BKU Penerimaan (berbasis rekening koran terklasifikasi) + rekap realisasi.
+            Route::get('/pembukuan/penerimaan/pdf', [BkuPenerimaanController::class, 'pdf'])->name('pembukuan.penerimaan.pdf');
+            Route::get('/pembukuan/penerimaan/excel', [BkuPenerimaanController::class, 'excel'])->name('pembukuan.penerimaan.excel');
+            Route::get('/pembukuan/penerimaan', [BkuPenerimaanController::class, 'index'])->name('pembukuan.penerimaan.index');
+            Route::get('/pembukuan/realisasi/pdf', [RealisasiPenerimaanController::class, 'pdf'])->name('pembukuan.realisasi.pdf');
+            Route::get('/pembukuan/realisasi', [RealisasiPenerimaanController::class, 'index'])->name('pembukuan.realisasi.index');
+
+            // Klasifikasi baris rekening koran → akun pendapatan → BKU Penerimaan.
+            Route::get('/pembukuan/klasifikasi-penerimaan', [KlasifikasiPenerimaanController::class, 'index'])->name('pembukuan.klasifikasi.index');
+            Route::post('/pembukuan/klasifikasi-penerimaan/post-batch', [KlasifikasiPenerimaanController::class, 'postBatch'])->name('pembukuan.klasifikasi.post-batch');
+            Route::post('/pembukuan/klasifikasi-penerimaan/{detail}/akun', [KlasifikasiPenerimaanController::class, 'updateAkun'])->whereNumber('detail')->name('pembukuan.klasifikasi.akun');
         });
 
         // Generator laporan pengesahan per periode — record bersama, boleh

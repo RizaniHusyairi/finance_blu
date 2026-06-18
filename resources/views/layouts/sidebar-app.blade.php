@@ -595,7 +595,14 @@
             <div class="menu-title">Pembukuan</div>
           </a>
           <ul>
-            <li><a href="{{ route('pembukuan.bku.index') }}"><i class="material-icons-outlined">arrow_right</i>Buku Kas Umum</a></li>
+            @php
+                // Satu menu "Buku Kas Umum" dengan tab Penerimaan/Pengeluaran di dalam halaman.
+                // Link mengarah ke peran yang boleh diakses user; Super Admin default ke Pengeluaran.
+                $bkuUrl = auth()->user()?->hasAnyRole(['Bendahara Pengeluaran', 'Super Admin'])
+                    ? route('pembukuan.pengeluaran.index')
+                    : route('pembukuan.penerimaan.index');
+            @endphp
+            <li><a href="{{ $bkuUrl }}"><i class="material-icons-outlined">arrow_right</i>Buku Kas Umum</a></li>
             <li><a href="{{ route('pembukuan.bank.index') }}"><i class="material-icons-outlined">arrow_right</i>Buku Pembantu Bank</a></li>
             <li><a href="{{ route('pembukuan.bendahara.index') }}"><i class="material-icons-outlined">arrow_right</i>Buku Pembantu Bendahara</a></li>
             <li><a href="{{ route('pembukuan.bunga.index') }}"><i class="material-icons-outlined">arrow_right</i>Buku Pembantu Bunga Rekening</a></li>
@@ -608,11 +615,14 @@
             <li><a href="{{ route('pembukuan.pengesahan.index') }}"><i class="material-icons-outlined">arrow_right</i>Buku Pengesahan Belanja</a></li>
             @endhasanyrole
             @hasanyrole('Bendahara Penerimaan|Super Admin')
+            <li><a href="{{ route('pembukuan.klasifikasi.index') }}"><i class="material-icons-outlined">arrow_right</i>Klasifikasi Penerimaan</a></li>
+            <li><a href="{{ route('pembukuan.realisasi.index') }}"><i class="material-icons-outlined">arrow_right</i>Realisasi Penerimaan</a></li>
             <li><a href="{{ route('pembukuan.pengesahan-pendapatan.index') }}"><i class="material-icons-outlined">arrow_right</i>Buku Pengesahan Pendapatan</a></li>
             @endhasanyrole
             @hasrole('Bendahara Penerimaan')
             <li><a href="{{ route('pembukuan.piutang.index') }}"><i class="material-icons-outlined">arrow_right</i>Pengecekan Pembayaran (Piutang)</a></li>
             @endhasrole
+            <li><a href="{{ route('pembukuan.setup.edit') }}"><i class="material-icons-outlined">arrow_right</i>Setup Pembukuan</a></li>
           </ul>
         </li>
         @endhasanyrole

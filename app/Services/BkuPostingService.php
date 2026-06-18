@@ -7,6 +7,7 @@ use App\Models\DokumenSp2d;
 use App\Models\LogStatusDokumen;
 use App\Models\RekeningBank;
 use App\Models\Tagihan;
+use App\Models\TransaksiPembukuan;
 use App\Models\User;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Auth;
@@ -15,6 +16,11 @@ use RuntimeException;
 
 class BkuPostingService
 {
+    public function __construct(
+        private readonly \App\Services\Pembukuan\PostingPembukuanService $postingService,
+    ) {
+    }
+
     public function postTagihanPengeluaran(
         Tagihan $tagihan,
         ?DokumenSp2d $sp2d = null,
@@ -51,36 +57,44 @@ class BkuPostingService
                 throw new RuntimeException('Nominal BKU tidak valid.');
             }
 
-            $tanggalTransaksi = $sp2d->tanggal_sp2d ?? now();
-            $saldoAkhir = $this->nextSaldoAkhir($rekening, $nominalTransaksi);
-
-            try {
-                $bku = BukuKasUmum::create([
-                    'tanggal_transaksi' => $tanggalTransaksi,
-                    'nomor_bukti' => $nomorBukti,
+            // Catat sebagai baris jurnal SILABI kode I2 (Belanja LS - Bank), lalu
+            // distribusikan ke BKU + buku pembantu (Bank, LS Bendahara, Pengesahan)
+            // via PostingPembukuanService (sudah idempoten & menghitung saldo).
+            $trx = TransaksiPembukuan::firstOrCreate(
+                [
+                    'referensi_type' => Tagihan::class,
+                    'referensi_id' => $tagihan->id,
+                    'no_bukti' => $nomorBukti,
+                ],
+                [
+                    'tanggal' => $sp2d->tanggal_sp2d ?? now(),
+                    'kode_transaksi' => 'I2',
                     'uraian' => $catatan ?: $this->defaultUraian($tagihan, $sp2d),
-                    'arus_kas' => 'KREDIT_KELUAR',
-                    'nominal' => $nominalTransaksi,
-                    'saldo_akhir' => $saldoAkhir,
-                    'sumber_rekening_id' => $rekening->id,
-                    'referensi_pengeluaran_id' => $tagihan->id,
-                    'referensi_penerimaan_id' => null,
-                ]);
-            } catch (QueryException $e) {
-                // Pelanggaran unique akibat race: baris BKU sudah dibuat request lain.
-                $existing = $this->findExistingBku($tagihan->id, $nomorBukti);
+                    'jumlah_kotor' => $nominalTransaksi,
+                    'rekening_bank_id' => $rekening->id,
+                    'created_by' => Auth::id(),
+                ],
+            );
 
-                if ($existing) {
-                    return $existing;
-                }
+            $this->postingService->post($trx);
 
-                throw $e;
+            // Baris BKU (buku induk) sisi KREDIT — tandai referensi tagihan agar
+            // halaman detail BKU & alur pajak lama tetap dapat menelusurinya.
+            $bku = BukuKasUmum::query()
+                ->where('transaksi_pembukuan_id', $trx->id)
+                ->where('kode_buku', \App\Enums\KodeBuku::BKU->value)
+                ->where('arus_kas', 'KREDIT_KELUAR')
+                ->first();
+
+            if (! $bku) {
+                throw new RuntimeException('Distribusi BKU pengeluaran gagal.');
             }
 
-            // Saldo awal di atas hanya estimasi "best-effort" dari baris terakhir.
-            // Recompute kronologis (tanggal_transaksi ASC, id ASC) agar saldo berjalan
-            // tetap benar walau transaksi ini back-dated. Recompute jadi source of truth.
-            BukuKasUmum::recalculateRunningBalance($rekening->id);
+            if (! $bku->referensi_pengeluaran_id) {
+                $bku->referensi_pengeluaran_id = $tagihan->id;
+                $bku->saveQuietly();
+            }
+
             $bku->refresh();
 
             LogStatusDokumen::create([

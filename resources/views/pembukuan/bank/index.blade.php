@@ -10,12 +10,7 @@
         <div class="d-flex flex-column flex-lg-row justify-content-between gap-3 align-items-lg-center">
             <div>
                 <h4 class="mb-1 fw-bold text-dark">Buku Pembantu Bank</h4>
-                <div class="text-muted">Transaksi bank per rekening bersumber dari Buku Kas Umum (BKU). Rekening koran impor dipakai sebagai pembanding di menu Rekonsiliasi.</div>
-            </div>
-            <div class="d-flex gap-2">
-                <a href="{{ route('pembukuan.bank.mutasi', request()->query()) }}" class="btn btn-outline-primary">
-                    <i class="bi bi-list-ul me-1"></i> Mutasi Global
-                </a>
+                <div class="text-muted">Transaksi bank per rekening bersumber dari Buku Kas Umum (BKU).</div>
             </div>
         </div>
     </div>
@@ -24,8 +19,6 @@
         $cards = [
             ['label' => 'Total Rekening Aktif', 'value' => number_format($summary['rekening_aktif'] ?? 0, 0, ',', '.'), 'class' => 'text-dark'],
             ['label' => 'Total Transaksi BKU', 'value' => number_format($summary['total_transaksi'] ?? 0, 0, ',', '.'), 'class' => 'text-primary'],
-            ['label' => 'Sudah Tersanding', 'value' => number_format($summary['tercocok'] ?? 0, 0, ',', '.'), 'class' => 'text-success'],
-            ['label' => 'Belum Tersanding', 'value' => number_format($summary['belum_cocok'] ?? 0, 0, ',', '.'), 'class' => 'text-secondary'],
         ];
     @endphp
     @include('pembukuan.partials.summary-cards', ['cards' => $cards])
@@ -80,7 +73,6 @@
                                 <th>Nomor Rekening</th>
                                 <th>Atas Nama</th>
                                 <th class="text-end">Jumlah Transaksi BKU</th>
-                                <th>Status Penyandingan</th>
                                 <th class="text-center">Aksi</th>
                             </tr>
                         </thead>
@@ -91,10 +83,9 @@
                                     <td class="fw-semibold">{{ $rekening->nomor_rekening }}</td>
                                     <td>{{ $rekening->nama_rekening }}</td>
                                     <td class="text-end">{{ number_format($rekening->jumlah_mutasi ?? 0, 0, ',', '.') }}</td>
-                                    <td>@include('pembukuan.partials.status-badge', ['value' => $rekening->status_rekonsiliasi_terakhir])</td>
                                     <td class="text-center">
                                         <div class="d-flex justify-content-center gap-2">
-                                            <a href="{{ route('pembukuan.bank.show', $rekening->id) }}" class="btn btn-sm btn-outline-primary">Detail &amp; Rekonsiliasi</a>
+                                            <a href="{{ route('pembukuan.bank.show', $rekening->id) }}" class="btn btn-sm btn-outline-primary">Detail</a>
                                         </div>
                                     </td>
                                 </tr>

@@ -2,6 +2,9 @@
 
 namespace App\Services\Pembukuan;
 
+use App\Enums\KodeBuku;
+use App\Enums\PeranBuku;
+use App\Models\AkunPendapatan;
 use App\Models\BukuKasUmum;
 use App\Models\MasterCoa;
 use App\Models\MasterPihak;
@@ -14,6 +17,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
+use RuntimeException;
 
 /**
  * Sync TagihanJasa <-> Piutang (TransaksiPenerimaan) <-> BKU.
@@ -133,28 +137,51 @@ class PiutangSyncService
                 }
                 $reference = (string) ($payment['reference'] ?? ('BKU-MASUK/' . $tagihan->nomor_tagihan));
 
-                $piutang->total_dibayar = $amount;
-                $piutang->status_pembayaran = 'PAID';
-                $piutang->save();
-
+                // Resolusi rekening DILAKUKAN LEBIH DULU — sebelum piutang ditandai PAID.
+                // Tanpa rekening, baris BKU tidak mungkin dibuat; menandai piutang PAID di
+                // sini akan menghasilkan piutang lunas TANPA jejak kas di BKU (inkonsistensi
+                // senyap). Lempar exception agar SELURUH transaksi rollback — sehingga status
+                // PAID dan baris BKU selalu tercatat bersama, atau tidak sama sekali.
                 $rekeningId = $this->resolvePenerimaanRekeningId();
                 if (! $rekeningId) {
-                    Log::warning('PiutangSync: belum ada rekening_bank default. BKU tidak dicatat untuk ' . $tagihan->nomor_tagihan);
-                    return null;
+                    throw new RuntimeException(
+                        'Tidak ada rekening bank penerimaan/aktif untuk mencatat BKU penerimaan tagihan '
+                        . $tagihan->nomor_tagihan . '. Tetapkan rekening Bendahara Penerimaan atau '
+                        . 'rekening default terlebih dahulu sebelum menandai lunas.'
+                    );
                 }
 
-                // Pastikan tidak duplikat BKU untuk piutang yang sama.
+                // Idempoten: bila BKU untuk piutang ini sudah ada, cukup pastikan piutang
+                // PAID lalu kembalikan baris yang ada (tanpa membuat duplikat).
                 $existingBku = BukuKasUmum::where('referensi_penerimaan_id', $piutang->id)
                     ->where('arus_kas', 'DEBIT_MASUK')
                     ->first();
                 if ($existingBku) {
+                    $piutang->total_dibayar = $amount;
+                    $piutang->status_pembayaran = 'PAID';
+                    $piutang->save();
+
+                    // Backfill peran/klasifikasi bila baris lama belum lengkap.
+                    if ($existingBku->peran !== PeranBuku::PENERIMAAN->value || ! $existingBku->akun_pendapatan_id) {
+                        $existingBku->forceFill([
+                            'peran' => PeranBuku::PENERIMAAN->value,
+                            'kode_buku' => KodeBuku::BKU->value,
+                            'akun_pendapatan_id' => $existingBku->akun_pendapatan_id ?: $this->resolveAkunPendapatanId($tagihan),
+                        ])->save();
+                    }
+
                     return $existingBku;
                 }
 
+                // Rekening sudah pasti ada → aman menandai piutang PAID bersama baris BKU.
+                $piutang->total_dibayar = $amount;
+                $piutang->status_pembayaran = 'PAID';
+                $piutang->save();
+
                 // Estimasi awal saldo akhir dari saldo BKU terakhir untuk rekening tsb.
-                $saldoTerakhir = (float) BukuKasUmum::where('sumber_rekening_id', $rekeningId)
+                $saldoTerakhir = (float) (BukuKasUmum::where('sumber_rekening_id', $rekeningId)
                     ->latest('id')
-                    ->value('saldo_akhir') ?? 0.0;
+                    ->value('saldo_akhir') ?? 0);
 
                 $bku = BukuKasUmum::create([
                     'tanggal_transaksi' => $paidAt->toDateString(),
@@ -162,6 +189,9 @@ class PiutangSyncService
                     'uraian' => 'Penerimaan PNBP Jasa: ' . $tagihan->nomor_tagihan
                         . ' (' . ($tagihan->mitra->nama_mitra ?? '-') . ')',
                     'arus_kas' => 'DEBIT_MASUK',
+                    'peran' => PeranBuku::PENERIMAAN->value,
+                    'kode_buku' => KodeBuku::BKU->value,
+                    'akun_pendapatan_id' => $this->resolveAkunPendapatanId($tagihan),
                     'nominal' => $amount,
                     'saldo_akhir' => $saldoTerakhir + $amount,
                     'sumber_rekening_id' => $rekeningId,
@@ -255,6 +285,33 @@ class PiutangSyncService
             ->first();
 
         return $any?->id ?? MasterCoa::query()->value('id');
+    }
+
+    /**
+     * Tentukan akun pendapatan dari kode_akun detail tagihan — format "424115.905"
+     * (kode_akun . kode_jenis) → cocok persis ke master akun_pendapatan.
+     * Fallback: cocokkan kode akun saja (ambil jenis pertama) bila tanpa sub-jenis.
+     */
+    private function resolveAkunPendapatanId(TagihanJasa $tagihan): ?int
+    {
+        $detail = $tagihan->relationLoaded('details') ? $tagihan->details->first() : $tagihan->details()->first();
+        $kode = trim((string) ($detail->kode_akun ?? ''));
+
+        if ($kode === '') {
+            return null;
+        }
+
+        if (str_contains($kode, '.')) {
+            [$akun, $jenis] = array_pad(explode('.', $kode, 2), 2, null);
+            $id = AkunPendapatan::where('kode_akun', $akun)->where('kode_jenis', $jenis)->value('id');
+            if ($id) {
+                return (int) $id;
+            }
+        }
+
+        $id = AkunPendapatan::where('kode_akun', explode('.', $kode)[0])->value('id');
+
+        return $id ? (int) $id : null;
     }
 
     /**

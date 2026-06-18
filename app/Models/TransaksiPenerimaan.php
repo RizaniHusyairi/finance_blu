@@ -15,10 +15,19 @@ class TransaksiPenerimaan extends Model
     protected $casts = [
         'tanggal_invoice' => 'date',
         'tanggal_jatuh_tempo' => 'date',
+        'tanggal_bayar' => 'date',
         'nominal_tagihan' => 'decimal:2',
         'nominal_denda_keterlambatan' => 'decimal:2',
         'total_dibayar' => 'decimal:2',
+        'persentase_penyisihan' => 'decimal:2',
+        'penyisihan' => 'decimal:2',
     ];
+
+    /** Sisa piutang = tagihan - dibayar (tidak negatif). */
+    public function sisaPiutang(): float
+    {
+        return max((float) $this->nominal_tagihan - (float) $this->total_dibayar, 0);
+    }
 
     public function mitra()
     {

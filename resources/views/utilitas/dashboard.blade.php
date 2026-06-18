@@ -186,7 +186,24 @@
     .cm-usage-bar span { display:block; height:100%; border-radius:999px; background:linear-gradient(90deg,var(--cm-accent),var(--cm-accent-2)); }
     .cm-thumb-link { display:inline-flex; width:38px; height:38px; border-radius:9px; overflow:hidden; border:1px solid #e2e8f0; background:#f8fafc; align-items:center; justify-content:center; color:var(--cm-accent-deep); }
     .cm-thumb-link img { width:100%; height:100%; object-fit:cover; }
-    .cm-meter-trail { font-family:ui-monospace,Menlo,Consolas,monospace; font-weight:800; color:#0f2138; }
+    .cm-meter-trail { font-family:ui-monospace,Menlo,Consolas,monospace; font-weight:800; color:#0f2138; white-space:nowrap; }
+
+    /* reading history as compact cards (fits the narrow column without cramping a 7-col table) */
+    .cm-reading-list { display:flex; flex-direction:column; gap:10px; padding:14px 16px; }
+    .cm-reading-item { border:1px solid #eef2f7; border-radius:14px; background:linear-gradient(180deg,#fbfdff,#fff); padding:13px 14px; transition:border-color .18s ease, box-shadow .18s ease; animation:cmPop .4s ease both; }
+    .cm-reading-item:hover { border-color:#e2e8f0; box-shadow:0 10px 24px rgba(15,23,42,.07); }
+    .cm-reading-head { display:flex; align-items:flex-start; gap:10px; }
+    .cm-reading-period { flex:0 0 auto; display:inline-flex; flex-direction:column; align-items:center; justify-content:center; min-width:46px; padding:6px 8px; border-radius:11px; background:var(--cm-soft); color:var(--cm-accent-deep); font-family:ui-monospace,Menlo,Consolas,monospace; line-height:1.05; }
+    .cm-reading-period .mo { font-size:17px; font-weight:900; }
+    .cm-reading-period .yr { font-size:10px; font-weight:800; opacity:.85; }
+    .cm-reading-mitra { flex:1 1 auto; min-width:0; }
+    .cm-reading-mitra .nm { font-weight:800; color:#0f2138; line-height:1.2; }
+    .cm-reading-mitra .sv { font-size:12px; color:#94a3b8; font-weight:600; }
+    .cm-reading-meta { display:flex; align-items:center; flex-wrap:wrap; gap:8px; margin-top:11px; }
+    .cm-reading-meta .small { white-space:nowrap; }
+    .cm-reading-foot { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:11px; }
+    .cm-reading-proofs { display:flex; gap:6px; align-items:center; }
+    .cm-reading-actions { display:flex; gap:6px; align-items:center; }
 
     /* ---------- Multi-entry (batch) ---------- */
     .cm-tips-strip { display:flex; align-items:flex-start; gap:10px; padding:11px 14px; border-radius:12px; background:var(--cm-soft); color:#475569; font-size:13px; font-weight:600; }
@@ -621,94 +638,76 @@
                         <small>Stan meter dan status proses tiap periode</small>
                     </div>
                 </div>
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0 mp-table">
-                        <thead>
-                            <tr>
-                                <th>Periode</th>
-                                <th>Mitra</th>
-                                <th>Tipe</th>
-                                <th>Stan / Pemakaian</th>
-                                <th>Bukti</th>
-                                <th>Status</th>
-                                <th class="text-end">Aksi</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse($laporans as $lap)
-                                @php($badge = $statusMeta($lap->status))
-                                @php($pct = min(100, round(((float) $lap->pemakaian / $maxUsage) * 100)))
-                                <tr>
-                                    <td class="cm-meter-trail">{{ str_pad($lap->bulan, 2, '0', STR_PAD_LEFT) }}/{{ $lap->tahun }}</td>
-                                    <td>
-                                        <div class="fw-semibold text-dark">{{ $lap->mitraJasa->nama_mitra ?? '-' }}</div>
-                                        <div class="small text-muted">{{ $lap->layananJasa->nama_layanan ?? 'Utilitas' }}</div>
-                                    </td>
-                                    <td>
-                                        <span class="mp-soft-badge {{ $lap->tipe_perhitungan == 'kwh' ? 'info' : 'muted' }}">
-                                            {{ $lap->tipe_perhitungan == 'kwh' ? ($lap->jenis == 'listrik' ? 'KWH' : 'M3') : 'FLAT' }}
-                                        </span>
-                                    </td>
-                                    <td style="min-width:170px;">
-                                        @if($lap->tipe_perhitungan == 'kwh')
-                                            <span class="cm-meter-trail">{{ $lap->stan_awal }} &rarr; {{ $lap->stan_akhir }}</span>
-                                        @else
-                                            <span class="cm-meter-trail">Flat manual</span>
-                                        @endif
-                                        <div class="small text-muted">= {{ number_format((float) $lap->pemakaian, 0, ',', '.') }} {{ $isListrik ? 'kWh' : 'm³' }}</div>
-                                        <div class="cm-usage-bar"><span style="width:{{ $pct }}%"></span></div>
-                                    </td>
-                                    <td>
-                                        <div class="d-flex gap-1">
-                                            @if($lap->file_bukti_awal)
-                                                <a href="{{ asset('storage/' . $lap->file_bukti_awal) }}" target="_blank" class="cm-thumb-link" title="Bukti awal" aria-label="Bukti awal"><img src="{{ asset('storage/' . $lap->file_bukti_awal) }}" alt="Bukti awal" loading="lazy"></a>
-                                            @endif
-                                            @if($lap->file_bukti)
-                                                <a href="{{ asset('storage/' . $lap->file_bukti) }}" target="_blank" class="cm-thumb-link" title="Bukti akhir" aria-label="Bukti akhir"><img src="{{ asset('storage/' . $lap->file_bukti) }}" alt="Bukti akhir" loading="lazy"></a>
-                                            @endif
-                                            @if(!$lap->file_bukti && !$lap->file_bukti_awal)
-                                                <span class="text-muted">-</span>
-                                            @endif
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <span class="mp-soft-badge {{ $badge[1] }}" title="{{ $lap->status == 'ditolak' ? $lap->catatan_admin_jasa : '' }}">
-                                            <i class="bi {{ $badge[2] }}"></i>{{ $badge[0] }}
-                                        </span>
-                                    </td>
-                                    <td class="text-end">
-                                        @if($lap->status == 'draft' || $lap->status == 'ditolak')
-                                            <div class="d-flex gap-1 justify-content-end">
-                                                <a href="{{ route('utilitas.dashboard', ['edit' => $lap->id]) }}#utilitasForm" class="btn btn-sm btn-light border text-primary jasa-icon-btn" title="Ubah laporan" aria-label="Ubah laporan"><i class="bi bi-pencil"></i></a>
-                                                <form action="{{ route('utilitas.submit', $lap->id) }}" method="POST">
-                                                    @csrf
-                                                    <button class="btn btn-sm btn-primary jasa-icon-btn" title="Kirim ke Admin Jasa" aria-label="Kirim ke Admin Jasa"><i class="bi bi-send"></i></button>
-                                                </form>
-                                                <form action="{{ route('utilitas.destroy', $lap->id) }}" method="POST" onsubmit="return confirm('Hapus laporan?');">
-                                                    @csrf @method('DELETE')
-                                                    <button class="btn btn-sm btn-outline-danger jasa-icon-btn" title="Hapus laporan" aria-label="Hapus laporan"><i class="bi bi-trash"></i></button>
-                                                </form>
-                                            </div>
-                                        @elseif($lap->status == 'ditagihkan' && $lap->tagihan_jasa_id)
-                                            <span class="mp-soft-badge success"><i class="bi bi-check-circle"></i>Selesai</span>
-                                        @else
-                                            <span class="text-muted small">-</span>
-                                        @endif
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="7">
-                                        <div class="mp-empty d-flex flex-column align-items-center justify-content-center text-center py-4">
-                                            <span class="mp-empty-icon"><i class="bi bi-inbox"></i></span>
-                                            <div class="fw-bold">Belum ada riwayat laporan.</div>
-                                            <div class="small">Laporan yang disimpan akan tampil di sini.</div>
-                                        </div>
-                                    </td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
+                <div class="cm-reading-list">
+                    @forelse($laporans as $lap)
+                        @php($badge = $statusMeta($lap->status))
+                        @php($pct = min(100, round(((float) $lap->pemakaian / $maxUsage) * 100)))
+                        <div class="cm-reading-item">
+                            <div class="cm-reading-head">
+                                <div class="cm-reading-period">
+                                    <span class="mo">{{ str_pad($lap->bulan, 2, '0', STR_PAD_LEFT) }}</span>
+                                    <span class="yr">{{ $lap->tahun }}</span>
+                                </div>
+                                <div class="cm-reading-mitra">
+                                    <div class="nm">{{ $lap->mitraJasa->nama_mitra ?? '-' }}</div>
+                                    <div class="sv">{{ $lap->layananJasa->nama_layanan ?? 'Utilitas' }}</div>
+                                </div>
+                                <span class="mp-soft-badge {{ $badge[1] }}" title="{{ $lap->status == 'ditolak' ? $lap->catatan_admin_jasa : '' }}">
+                                    <i class="bi {{ $badge[2] }}"></i>{{ $badge[0] }}
+                                </span>
+                            </div>
+
+                            <div class="cm-reading-meta">
+                                <span class="mp-soft-badge {{ $lap->tipe_perhitungan == 'kwh' ? 'info' : 'muted' }}">
+                                    {{ $lap->tipe_perhitungan == 'kwh' ? ($lap->jenis == 'listrik' ? 'KWH' : 'M3') : 'FLAT' }}
+                                </span>
+                                @if($lap->tipe_perhitungan == 'kwh')
+                                    <span class="cm-meter-trail">{{ $lap->stan_awal }} &rarr; {{ $lap->stan_akhir }}</span>
+                                @else
+                                    <span class="cm-meter-trail">Flat manual</span>
+                                @endif
+                                <span class="small text-muted ms-auto">= {{ number_format((float) $lap->pemakaian, 0, ',', '.') }} {{ $isListrik ? 'kWh' : 'm³' }}</span>
+                            </div>
+                            <div class="cm-usage-bar"><span style="width:{{ $pct }}%"></span></div>
+
+                            <div class="cm-reading-foot">
+                                <div class="cm-reading-proofs">
+                                    @if($lap->file_bukti_awal)
+                                        <a href="{{ asset('storage/' . $lap->file_bukti_awal) }}" target="_blank" class="cm-thumb-link" title="Bukti awal" aria-label="Bukti awal"><img src="{{ asset('storage/' . $lap->file_bukti_awal) }}" alt="Bukti awal" loading="lazy"></a>
+                                    @endif
+                                    @if($lap->file_bukti)
+                                        <a href="{{ asset('storage/' . $lap->file_bukti) }}" target="_blank" class="cm-thumb-link" title="Bukti akhir" aria-label="Bukti akhir"><img src="{{ asset('storage/' . $lap->file_bukti) }}" alt="Bukti akhir" loading="lazy"></a>
+                                    @endif
+                                    @if(!$lap->file_bukti && !$lap->file_bukti_awal)
+                                        <span class="text-muted small">Tanpa bukti</span>
+                                    @endif
+                                </div>
+                                <div class="cm-reading-actions">
+                                    @if($lap->status == 'draft' || $lap->status == 'ditolak')
+                                        <a href="{{ route('utilitas.dashboard', ['edit' => $lap->id]) }}#utilitasForm" class="btn btn-sm btn-light border text-primary jasa-icon-btn" title="Ubah laporan" aria-label="Ubah laporan"><i class="bi bi-pencil"></i></a>
+                                        <form action="{{ route('utilitas.submit', $lap->id) }}" method="POST">
+                                            @csrf
+                                            <button class="btn btn-sm btn-primary jasa-icon-btn" title="Kirim ke Admin Jasa" aria-label="Kirim ke Admin Jasa"><i class="bi bi-send"></i></button>
+                                        </form>
+                                        <form action="{{ route('utilitas.destroy', $lap->id) }}" method="POST" onsubmit="return confirm('Hapus laporan?');">
+                                            @csrf @method('DELETE')
+                                            <button class="btn btn-sm btn-outline-danger jasa-icon-btn" title="Hapus laporan" aria-label="Hapus laporan"><i class="bi bi-trash"></i></button>
+                                        </form>
+                                    @elseif($lap->status == 'ditagihkan' && $lap->tagihan_jasa_id)
+                                        <span class="mp-soft-badge success"><i class="bi bi-check-circle"></i>Selesai</span>
+                                    @else
+                                        <span class="text-muted small">&mdash;</span>
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+                    @empty
+                        <div class="mp-empty d-flex flex-column align-items-center justify-content-center text-center py-4">
+                            <span class="mp-empty-icon"><i class="bi bi-inbox"></i></span>
+                            <div class="fw-bold">Belum ada riwayat laporan.</div>
+                            <div class="small">Laporan yang disimpan akan tampil di sini.</div>
+                        </div>
+                    @endforelse
                 </div>
                 @if($laporans->hasPages())
                     <div class="card-footer bg-white border-0 pt-3">

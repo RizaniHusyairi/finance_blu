@@ -21,8 +21,6 @@ class PembukuanMenuTest extends TestCase
         $routes = [
             'pembukuan.bku.index',
             'pembukuan.bank.index',
-            'pembukuan.bank.mutasi',
-            'pembukuan.bank.rekonsiliasi',
             'pembukuan.bendahara.index',
             'pembukuan.bunga.index',
             'pembukuan.pajak.index',
@@ -47,8 +45,6 @@ class PembukuanMenuTest extends TestCase
         $routes = [
             'pembukuan.bku.index',
             'pembukuan.bank.index',
-            'pembukuan.bank.mutasi',
-            'pembukuan.bank.rekonsiliasi',
             'pembukuan.bendahara.index',
             'pembukuan.bunga.index',
             'pembukuan.pengesahan.index',

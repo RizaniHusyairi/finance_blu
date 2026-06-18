@@ -248,6 +248,7 @@
         font-size: 10px;
         font-weight: 900;
         letter-spacing: .02em;
+        white-space: nowrap;
     }
 
     .mp-soft-badge.success { color: #047857; background: #d1fae5; }

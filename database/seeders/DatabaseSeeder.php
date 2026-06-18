@@ -26,6 +26,10 @@ class DatabaseSeeder extends Seeder
             MasterTarifPajakSeeder::class,
             CompletedKontrakPengadaanSeeder::class,
             MitraMaskapaiSeeder::class,
+            // Pembukuan SILABI — master kode transaksi, akun pendapatan, kop satker.
+            KodeTransaksiSeeder::class,
+            AkunPendapatanSeeder::class,
+            PembukuanSetupSeeder::class,
         ]);
     }
 }

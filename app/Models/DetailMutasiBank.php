@@ -26,4 +26,19 @@ class DetailMutasiBank extends Model
     {
         return $this->hasMany(RekonsiliasiBank::class, 'detail_mutasi_bank_id');
     }
+
+    public function akunPendapatan()
+    {
+        return $this->belongsTo(AkunPendapatan::class, 'akun_pendapatan_id');
+    }
+
+    public function layananJasa()
+    {
+        return $this->belongsTo(LayananJasa::class, 'layanan_jasa_id');
+    }
+
+    public function bukuKasUmum()
+    {
+        return $this->hasOne(BukuKasUmum::class, 'detail_mutasi_bank_id');
+    }
 }

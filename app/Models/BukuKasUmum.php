@@ -16,57 +16,92 @@ class BukuKasUmum extends Model
         'tanggal_transaksi' => 'date',
         'nominal' => 'decimal:2',
         'saldo_akhir' => 'decimal:2',
+        'kode_buku' => 'integer',
     ];
 
     /**
-     * Hitung ulang kolom `saldo_akhir` untuk SELURUH baris satu rekening
-     * secara KRONOLOGIS (tanggal_transaksi ASC, id ASC).
+     * Hitung ulang `saldo_akhir` secara KRONOLOGIS (tanggal_transaksi ASC, id ASC),
+     * per kombinasi (rekening, PERAN, kode_buku).
      *
-     * Kenapa kronologis? Karena baris BKU ditulis oleh dua service independen
-     * (BkuPostingService & PiutangSyncService) yang masing-masing menghitung
-     * saldo dari "baris terakhir". Bila ada transaksi back-dated (mis. SP2D
-     * yang tanggalnya lebih awal dari baris yang sudah ada), saldo berjalan
-     * jadi salah. View index menampilkan baris urut (tanggal_transaksi, id),
-     * jadi saldo tersimpan harus mengikuti urutan yang sama. Recompute ini
-     * menjadi sumber kebenaran (source of truth) saldo berjalan.
+     * Model SILABI memisahkan dua BKU (Penerimaan vs Pengeluaran) dan banyak buku
+     * pembantu (Tunai, Bank, …) — masing-masing punya saldo berjalan sendiri. Maka
+     * recompute dijalankan per (peran, kode_buku) dalam satu rekening, bukan dicampur.
+     *
+     * Kenapa kronologis? Baris BKU ditulis beberapa service independen yang
+     * mengestimasi saldo dari "baris terakhir"; transaksi back-dated bisa membuat
+     * saldo salah. Recompute ini jadi sumber kebenaran. Backward-compatible:
+     * data lama (kode_buku=1) berperilaku sama seperti sebelumnya.
+     *
+     * @param int      $rekeningId rekening sumber
+     * @param int|null $kodeBuku   batasi ke satu buku; null = semua buku rekening
      */
-    public static function recalculateRunningBalance(int $rekeningId): void
+    public static function recalculateRunningBalance(int $rekeningId, ?int $kodeBuku = null): void
     {
-        // Saldo awal pembukuan rekening jadi titik mulai saldo berjalan. Bila
-        // rekening belum di-set saldo awal, default 0 (perilaku lama).
         $rekening = RekeningBank::find($rekeningId);
-        $running = (float) ($rekening?->saldo_awal ?? 0);
-        $saldoAwalTanggal = $rekening?->saldo_awal_per_tanggal;
 
-        // Ambil seluruh baris terurut KRONOLOGIS dalam satu query. Sengaja TIDAK
-        // memakai chunkById(): kursor "id > lastId"-nya berasumsi urutan = id,
-        // sehingga baris ber-id kecil tapi tanggal lebih awal (back-dated) bisa
-        // terlewat begitu melewati batas chunk. Jumlah baris BKU per rekening
-        // terbatas, jadi memuat sekaligus aman dan benar.
-        $rows = static::query()
+        // Kombinasi (peran, kode_buku) yang ada untuk rekening ini.
+        $combos = static::query()
             ->where('sumber_rekening_id', $rekeningId)
-            // Bila tanggal saldo awal di-set, baris pra-periode diabaikan dari
-            // perhitungan (saldo awal sudah merangkum transaksi sebelum tanggal itu).
-            ->when($saldoAwalTanggal, fn ($q) => $q->whereDate('tanggal_transaksi', '>=', $saldoAwalTanggal))
-            ->orderBy('tanggal_transaksi')
-            ->orderBy('id')
+            ->when($kodeBuku !== null, fn ($q) => $q->where('kode_buku', $kodeBuku))
+            ->select('peran', 'kode_buku')
+            ->distinct()
             ->get();
 
-        foreach ($rows as $row) {
-            $nominal = (float) $row->nominal;
+        foreach ($combos as $combo) {
+            $peran = $combo->peran ?? 'PENGELUARAN';
+            $buku = (int) ($combo->kode_buku ?? 1);
 
-            // DEBIT_MASUK menambah saldo, KREDIT_KELUAR mengurangi.
-            $running += $row->arus_kas === 'DEBIT_MASUK' ? $nominal : -$nominal;
+            [$running, $saldoAwalTanggal] = static::saldoAwalSeed($rekening, $peran, $buku);
 
-            $stored = (float) $row->saldo_akhir;
+            $rows = static::query()
+                ->where('sumber_rekening_id', $rekeningId)
+                ->where('peran', $peran)
+                ->where('kode_buku', $buku)
+                ->when($saldoAwalTanggal, fn ($q) => $q->whereDate('tanggal_transaksi', '>=', $saldoAwalTanggal))
+                ->orderBy('tanggal_transaksi')
+                ->orderBy('id')
+                ->get();
 
-            // Hanya persist bila berbeda (epsilon compare untuk hindari selisih
-            // pembulatan float) dan tanpa membump updated_at.
-            if (abs($stored - $running) >= 0.005) {
-                $row->saldo_akhir = $running;
-                $row->saveQuietly();
+            foreach ($rows as $row) {
+                $nominal = (float) $row->nominal;
+
+                // DEBIT_MASUK menambah saldo, KREDIT_KELUAR mengurangi.
+                $running += $row->arus_kas === 'DEBIT_MASUK' ? $nominal : -$nominal;
+
+                if (abs((float) $row->saldo_akhir - $running) >= 0.005) {
+                    $row->saldo_akhir = $running;
+                    $row->saveQuietly(); // jangan bump updated_at
+                }
             }
         }
+    }
+
+    /**
+     * Titik mulai saldo berjalan untuk satu (rekening, peran, kode_buku):
+     * prioritas baris pembukuan_saldo_awal; fallback kolom rekening.saldo_awal
+     * (hanya untuk BKU peran asli rekening — kompat data lama).
+     *
+     * @return array{0: float, 1: string|null}  [saldo awal, tanggal mulai]
+     */
+    public static function saldoAwalSeed(?RekeningBank $rekening, string $peran, int $kodeBuku): array
+    {
+        $sa = PembukuanSaldoAwal::query()
+            ->where('rekening_bank_id', $rekening?->id)
+            ->where('kode_buku', $kodeBuku)
+            ->where('peran', $peran)
+            ->orderByDesc('tanggal_berlaku')
+            ->first();
+
+        if ($sa) {
+            return [(float) $sa->nominal, optional($sa->tanggal_berlaku)->toDateString()];
+        }
+
+        $nativePeran = ($rekening?->jenis_rekening?->value === 'PENERIMAAN') ? 'PENERIMAAN' : 'PENGELUARAN';
+        if ($kodeBuku === 1 && $peran === $nativePeran) {
+            return [(float) ($rekening?->saldo_awal ?? 0), $rekening?->saldo_awal_per_tanggal];
+        }
+
+        return [0.0, null];
     }
 
     public function sumberRekening()
@@ -87,5 +122,25 @@ class BukuKasUmum extends Model
     public function rekonsiliasiBanks()
     {
         return $this->hasMany(RekonsiliasiBank::class, 'bku_id');
+    }
+
+    public function akunPendapatan()
+    {
+        return $this->belongsTo(AkunPendapatan::class, 'akun_pendapatan_id');
+    }
+
+    public function transaksiPembukuan()
+    {
+        return $this->belongsTo(TransaksiPembukuan::class, 'transaksi_pembukuan_id');
+    }
+
+    public function detailMutasiBank()
+    {
+        return $this->belongsTo(DetailMutasiBank::class, 'detail_mutasi_bank_id');
+    }
+
+    public function kodeTransaksiRef()
+    {
+        return $this->belongsTo(KodeTransaksi::class, 'kode_transaksi', 'kode');
     }
 }

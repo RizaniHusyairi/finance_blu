@@ -56,7 +56,7 @@
 <div class="card shadow-sm border-0 rounded-4 mb-4">
     <div class="card-header bg-white border-bottom-0 pt-4 px-4">
         <h5 class="mb-1 fw-bold">Jenis Rekening</h5>
-        <p class="text-muted small mb-0">Jenis menentukan peran rekening pada pembukuan. Saldo awal dicatat lewat menu Buku Kas Umum, bukan di sini.</p>
+        <p class="text-muted small mb-0">Jenis menentukan peran rekening pada pembukuan. Saldo awal diatur di menu <b>Pembukuan &rarr; Setup Pembukuan</b>, bukan di sini.</p>
     </div>
     <div class="card-body px-4 pb-4">
         <div class="row g-3">
