@@ -125,6 +125,12 @@ class RekeningBankController extends Controller
 
     public function destroy(RekeningBank $rekening)
     {
+        if ($rekening->is_terkunci) {
+            return redirect()
+                ->route('rekening-bank.show', $rekening)
+                ->with('error', 'Rekening default sistem tidak dapat dihapus. Anda dapat menyuntingnya atau menonaktifkannya.');
+        }
+
         $dipakaiDiBku = BukuKasUmum::query()->where('sumber_rekening_id', $rekening->id)->exists();
 
         if ($dipakaiDiBku) {

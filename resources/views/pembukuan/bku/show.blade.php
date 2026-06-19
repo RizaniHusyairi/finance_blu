@@ -387,7 +387,7 @@
             </div>
             <div class="text-lg-end">
                 <div class="hero-amount">{{ $isDebit ? '+' : '−' }} Rp <span data-countup="{{ (float) $entry->nominal }}">{{ number_format($entry->nominal, 0, ',', '.') }}</span></div>
-                <a href="{{ route('pembukuan.bku.index') }}" class="btn btn-back mt-2">
+                <a href="{{ $entry->peran === 'PENERIMAAN' ? route('pembukuan.penerimaan.index') : route('pembukuan.pengeluaran.index') }}" class="btn btn-back mt-2">
                     <i class="bi bi-arrow-left me-1"></i>Kembali ke BKU
                 </a>
             </div>

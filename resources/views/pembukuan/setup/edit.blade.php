@@ -52,20 +52,24 @@
                 Saldo BKU pada <b>tanggal mulai pembukuan</b> (go-live) tiap rekening. Cukup diinput
                 <b>sekali</b> — bulan berikutnya saldo awal terbawa otomatis dari saldo akhir bulan
                 sebelumnya. Menyimpan akan <b>menghitung ulang saldo berjalan</b>. Peran buku mengikuti
-                jenis rekening (Penerimaan/Pengeluaran). Anda juga bisa <b>mengubah Atas Nama rekening</b>
-                langsung di tabel ini.
+                jenis rekening (Penerimaan/Pengeluaran). Anda juga bisa <b>mengubah Nama Bank, Nomor &amp;
+                Atas Nama rekening</b> langsung di tabel ini.
             </p>
+            @if(session('error'))<div class="alert alert-warning py-2 small">{{ session('error') }}</div>@endif
             <form method="POST" action="{{ route('pembukuan.setup.saldo-awal') }}">
                 @csrf
                 <div class="table-responsive">
                     <table class="table table-sm align-middle">
                         <thead class="table-light">
-                            <tr><th>Rekening</th><th style="width:240px;">Atas Nama (Nama Rekening)</th><th>Peran / Buku</th><th style="width:150px;">Tanggal Berlaku</th><th style="width:180px;" class="text-end">Saldo Awal (Rp)</th></tr>
+                            <tr><th style="width:240px;">Rekening</th><th style="width:240px;">Atas Nama (Nama Rekening)</th><th>Peran / Buku</th><th style="width:150px;">Tanggal Berlaku</th><th style="width:180px;" class="text-end">Saldo Awal (Rp)</th></tr>
                         </thead>
                         <tbody>
                             @forelse($rekeningSaldo as $r)
                                 <tr>
-                                    <td>{{ $r->nama_bank }}<div class="small text-muted">{{ $r->nomor_rekening }}</div></td>
+                                    <td>
+                                        <input type="text" name="saldo[{{ $r->id }}][nama_bank]" value="{{ $r->nama_bank }}" maxlength="100" class="form-control form-control-sm mb-1" placeholder="Nama bank">
+                                        <input type="text" name="saldo[{{ $r->id }}][nomor_rekening]" value="{{ $r->nomor_rekening }}" maxlength="50" class="form-control form-control-sm" placeholder="Nomor rekening">
+                                    </td>
                                     <td><input type="text" name="saldo[{{ $r->id }}][nama_rekening]" value="{{ $r->nama_rekening }}" maxlength="150" class="form-control form-control-sm" placeholder="Atas nama rekening"></td>
                                     <td><span class="badge {{ $r->peran_bku === 'PENERIMAAN' ? 'bg-success' : 'bg-primary' }}">{{ $r->peran_bku }}</span> <span class="text-muted small">/ BKU</span></td>
                                     <td><input type="date" name="saldo[{{ $r->id }}][tanggal]" value="{{ $r->saldo_awal_tanggal }}" class="form-control form-control-sm"></td>

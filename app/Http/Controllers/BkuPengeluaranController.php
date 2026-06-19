@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Enums\KodeBuku;
 use App\Enums\PeranBuku;
+use App\Models\KodeTransaksi;
+use App\Models\TransaksiPembukuan;
 use App\Services\Pembukuan\BukuPembantuService;
 use App\Services\Pembukuan\DokumenPembukuanService;
 use App\Services\Pembukuan\PembukuanService;
@@ -32,6 +34,12 @@ class BkuPengeluaranController extends Controller
             'invariant' => $this->bukuService->invariant(PeranBuku::PENGELUARAN->value, $filters),
             'filters' => $filters,
             'rekeningOptions' => $this->pembukuan->rekeningOptions(),
+            'kodeTransaksiOptions' => KodeTransaksi::where('status_aktif', true)->orderBy('urutan')->get(),
+            'manualJournals' => TransaksiPembukuan::with('kodeTransaksi')
+                ->whereNull('referensi_type')
+                ->latest()
+                ->limit(15)
+                ->get(),
         ]);
     }
 

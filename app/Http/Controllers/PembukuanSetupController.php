@@ -57,6 +57,8 @@ class PembukuanSetupController extends Controller
     {
         $validated = $request->validate([
             'saldo' => ['array'],
+            'saldo.*.nama_bank' => ['nullable', 'string', 'max:100'],
+            'saldo.*.nomor_rekening' => ['nullable', 'string', 'max:50'],
             'saldo.*.nama_rekening' => ['nullable', 'string', 'max:150'],
             'saldo.*.nominal' => ['nullable', 'numeric', 'min:0'],
             'saldo.*.tanggal' => ['nullable', 'date'],
@@ -65,6 +67,7 @@ class PembukuanSetupController extends Controller
         $allowed = $this->allowedPerans();
         $affected = [];
         $renamed = 0;
+        $conflicts = [];
 
         foreach ($validated['saldo'] ?? [] as $rekeningId => $data) {
             $rekening = RekeningBank::find($rekeningId);
@@ -81,10 +84,37 @@ class PembukuanSetupController extends Controller
                 continue;
             }
 
-            // Ubah "Atas Nama" rekening bila diisi & berbeda.
+            // Ubah identitas rekening (Nama Bank / Nomor / Atas Nama) bila diisi & berbeda.
+            $dirty = false;
+
+            $namaBank = isset($data['nama_bank']) ? trim((string) $data['nama_bank']) : '';
+            if ($namaBank !== '' && $namaBank !== $rekening->nama_bank) {
+                $rekening->nama_bank = $namaBank;
+                $dirty = true;
+            }
+
+            $nomor = isset($data['nomor_rekening']) ? trim((string) $data['nomor_rekening']) : '';
+            if ($nomor !== '' && $nomor !== $rekening->nomor_rekening) {
+                $bentrok = RekeningBank::query()
+                    ->where('nomor_rekening', $nomor)
+                    ->whereKeyNot($rekening->id)
+                    ->exists();
+
+                if ($bentrok) {
+                    $conflicts[] = $nomor;
+                } else {
+                    $rekening->nomor_rekening = $nomor;
+                    $dirty = true;
+                }
+            }
+
             $nama = isset($data['nama_rekening']) ? trim((string) $data['nama_rekening']) : '';
             if ($nama !== '' && $nama !== $rekening->nama_rekening) {
                 $rekening->nama_rekening = $nama;
+                $dirty = true;
+            }
+
+            if ($dirty) {
                 $rekening->save();
                 $renamed++;
             }
@@ -116,14 +146,20 @@ class PembukuanSetupController extends Controller
 
         $pesan = [];
         if ($renamed) {
-            $pesan[] = "{$renamed} nama rekening diperbarui";
+            $pesan[] = "{$renamed} data rekening diperbarui";
         }
         if ($affected) {
             $pesan[] = count($affected) . ' saldo awal disimpan & saldo berjalan dihitung ulang';
         }
 
-        return redirect()->route('pembukuan.setup.edit')
+        $redirect = redirect()->route('pembukuan.setup.edit')
             ->with('success', $pesan ? (ucfirst(implode('; ', $pesan)) . '.') : 'Tidak ada perubahan disimpan.');
+
+        if ($conflicts) {
+            $redirect->with('error', 'Nomor rekening sudah dipakai, gagal diubah: ' . implode(', ', $conflicts) . '.');
+        }
+
+        return $redirect;
     }
 
     /**

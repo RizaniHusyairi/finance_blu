@@ -6,7 +6,6 @@ use App\Models\BukuKasUmum;
 use App\Models\DetailMutasiBank;
 use App\Models\DokumenNpi;
 use App\Models\DokumenSp2d;
-use App\Models\ImportMutasiBank;
 use App\Models\LaporanPengesahanBlu;
 use App\Models\PotonganTagihan;
 use App\Models\RealisasiAnggaran;
@@ -18,7 +17,6 @@ use App\Models\TransaksiPenerimaan;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -282,90 +280,17 @@ class PembukuanService
 
         $bku = $query->orderBy('tanggal_transaksi')->orderBy('id')->get();
 
-        // Daftar file rekening koran terunggah (sumber Klasifikasi Penerimaan).
-        $imports = ImportMutasiBank::query()
-            ->where('rekening_bank_id', $rekening->id)
-            ->withCount('detailMutasiBanks')
-            ->with('uploader')
-            ->orderByDesc('uploaded_at')
-            ->orderByDesc('id')
-            ->get();
-
         return [
             'rekening' => $rekening,
             'filters' => $filters,
             'rekeningOptions' => $this->rekeningOptions(),
             'bku' => $bku,
-            'imports' => $imports,
             'summary' => [
                 'jumlah_transaksi' => $bku->count(),
                 'total_masuk' => $bku->where('arus_kas', 'DEBIT_MASUK')->sum(fn (BukuKasUmum $item) => (float) $item->nominal),
                 'total_keluar' => $bku->where('arus_kas', 'KREDIT_KELUAR')->sum(fn (BukuKasUmum $item) => (float) $item->nominal),
             ],
         ];
-    }
-
-    /** Simpan file rekening koran sebagai lampiran/bukti untuk satu rekening. */
-    public function uploadKoran(RekeningBank $rekening, UploadedFile $file, array $data, int $userId): ImportMutasiBank
-    {
-        $path = $file->store('rekening-koran', 'public');
-
-        return ImportMutasiBank::create([
-            'rekening_bank_id' => $rekening->id,
-            'periode_awal' => $data['periode_awal'] ?? null,
-            'periode_akhir' => $data['periode_akhir'] ?? null,
-            'nama_file_asli' => $file->getClientOriginalName(),
-            'path_file' => $path,
-            'uploaded_by' => $userId,
-            'uploaded_at' => now(),
-            'status_import' => 'UPLOADED',
-        ]);
-    }
-
-    /** Tambah satu baris rekening koran manual untuk rekening ini. */
-    public function addKoranLine(RekeningBank $rekening, array $data): DetailMutasiBank
-    {
-        $import = $this->resolveKoranImport($rekening);
-        $masuk = $data['arah_mutasi'] === 'MASUK';
-        $nominal = (float) $data['nominal'];
-
-        return DetailMutasiBank::create([
-            'import_mutasi_bank_id' => $import->id,
-            'tanggal_transaksi' => $data['tanggal_transaksi'],
-            'deskripsi' => $data['deskripsi'] ?? null,
-            'nomor_referensi_bank' => $data['nomor_referensi_bank'] ?? null,
-            'debit' => $masuk ? 0 : $nominal,
-            'kredit' => $masuk ? $nominal : 0,
-            'saldo' => $data['saldo'] ?? null,
-            'arah_mutasi' => $data['arah_mutasi'],
-            'status_rekonsiliasi' => 'BELUM',
-            'kategori_mutasi' => 'LAINNYA',
-        ]);
-    }
-
-    /** Hapus satu baris rekening koran (hanya bila belum tersanding). */
-    public function deleteKoranLine(RekeningBank $rekening, int $mutasiId): void
-    {
-        $mutasi = DetailMutasiBank::whereHas('importMutasiBank', fn (Builder $q) => $q->where('rekening_bank_id', $rekening->id))
-            ->findOrFail($mutasiId);
-
-        abort_if($mutasi->rekonsiliasiBanks()->exists(), 422, 'Baris koran sudah tersanding — batalkan pasangannya terlebih dahulu.');
-
-        $mutasi->delete();
-    }
-
-    /** Wadah impor untuk baris koran input manual (dibuat sekali per rekening). */
-    private function resolveKoranImport(RekeningBank $rekening): ImportMutasiBank
-    {
-        return ImportMutasiBank::firstOrCreate(
-            ['rekening_bank_id' => $rekening->id, 'nama_file_asli' => '(input manual)'],
-            [
-                'path_file' => '',
-                'status_import' => 'PARSED',
-                'uploaded_by' => auth()->id(),
-                'uploaded_at' => now(),
-            ],
-        );
     }
 
     public function buildBendaharaIndexData(array $filters = []): array

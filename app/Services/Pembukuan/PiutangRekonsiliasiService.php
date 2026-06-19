@@ -2,8 +2,10 @@
 
 namespace App\Services\Pembukuan;
 
+use App\Enums\KodeBuku;
 use App\Enums\PeranBuku;
 use App\Models\BukuKasUmum;
+use App\Models\DetailMutasiBank;
 use App\Models\TransaksiPenerimaan;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
@@ -19,13 +21,101 @@ use Illuminate\Support\Facades\DB;
  */
 class PiutangRekonsiliasiService
 {
+    /** Toleransi selisih hari saat mencocokkan nominal penerimaan (nominal harus sama persis). */
+    public const TOLERANSI_HARI = 3;
+
+    /**
+     * Cari baris BKU Penerimaan asal Path Jasa (punya `referensi_penerimaan_id`,
+     * belum bertaut baris koran) yang cocok dengan satu baris rekening koran MASUK.
+     *
+     * Dipakai sebagai guard di PostingPenerimaanService agar baris koran TIDAK
+     * membuat baris BKU kedua bila penerimaan jasa-nya sudah tercatat lewat
+     * PiutangSyncService::syncFromLunas — cukup digabung (merge) ke baris itu.
+     */
+    public function findJasaRowForKoran(DetailMutasiBank $row): ?BukuKasUmum
+    {
+        $rekeningId = $row->importMutasiBank?->rekening_bank_id;
+        $nominal = (float) $row->kredit; // baris MASUK menaruh nilai di kolom kredit
+
+        if (! $rekeningId || $nominal <= 0) {
+            return null;
+        }
+
+        return $this->matchQuery($rekeningId, $nominal, $row->tanggal_transaksi)
+            ->whereNotNull('referensi_penerimaan_id')
+            ->whereNull('detail_mutasi_bank_id')
+            ->first();
+    }
+
+    /**
+     * Kebalikan dari findJasaRowForKoran: cari baris BKU Penerimaan asal Path
+     * Koran (punya `detail_mutasi_bank_id`, belum bertaut piutang) yang cocok
+     * dengan satu pembayaran piutang. Dipakai sebagai guard di
+     * PiutangSyncService::syncFromLunas.
+     */
+    public function findKoranRowForPiutang(int $rekeningId, float $amount, $tanggal): ?BukuKasUmum
+    {
+        if ($rekeningId <= 0 || $amount <= 0) {
+            return null;
+        }
+
+        return $this->matchQuery($rekeningId, $amount, $tanggal)
+            ->whereNotNull('detail_mutasi_bank_id')
+            ->whereNull('referensi_penerimaan_id')
+            ->first();
+    }
+
+    /** Gabungkan baris koran ke baris BKU Path Jasa yang sudah ada (isi referensi yang kurang). */
+    public function attachKoran(BukuKasUmum $bku, DetailMutasiBank $row): BukuKasUmum
+    {
+        $bku->detail_mutasi_bank_id = $row->id;
+        if (! $bku->akun_pendapatan_id && $row->akun_pendapatan_id) {
+            $bku->akun_pendapatan_id = $row->akun_pendapatan_id;
+        }
+        $bku->saveQuietly();
+
+        return $bku;
+    }
+
+    /** Gabungkan piutang ke baris BKU Path Koran yang sudah ada, lalu hitung ulang status piutang. */
+    public function attachPiutang(BukuKasUmum $bku, TransaksiPenerimaan $p, ?int $akunId = null): BukuKasUmum
+    {
+        $bku->referensi_penerimaan_id = $p->id;
+        if (! $bku->akun_pendapatan_id && $akunId) {
+            $bku->akun_pendapatan_id = $akunId;
+        }
+        $bku->saveQuietly();
+
+        $this->recomputePiutang($p);
+
+        return $bku;
+    }
+
+    /** Query dasar pencocokan: baris BKU Penerimaan DEBIT_MASUK, rekening sama, nominal sama persis, tanggal ±toleransi. */
+    private function matchQuery(int $rekeningId, float $nominal, $tanggal): Builder
+    {
+        $patok = Carbon::parse($tanggal);
+
+        return BukuKasUmum::query()
+            ->where('peran', PeranBuku::PENERIMAAN->value)
+            ->where('kode_buku', KodeBuku::BKU->value)
+            ->where('arus_kas', 'DEBIT_MASUK')
+            ->where('sumber_rekening_id', $rekeningId)
+            ->whereRaw('ABS(nominal - ?) < 0.01', [$nominal])
+            ->whereBetween('tanggal_transaksi', [
+                $patok->copy()->subDays(self::TOLERANSI_HARI)->toDateString(),
+                $patok->copy()->addDays(self::TOLERANSI_HARI)->toDateString(),
+            ])
+            ->orderBy('id');
+    }
+
     /**
      * Cocokkan otomatis: tiap piutang belum lunas dipasangkan ke satu baris BKU
      * Penerimaan (nominal sama, tanggal dalam toleransi) yang belum tertaut.
      *
      * @return array{matched:int, sisa_piutang:int}
      */
-    public function autoMatch(array $filters, int $toleransiHari = 7): array
+    public function autoMatch(array $filters, int $toleransiHari = self::TOLERANSI_HARI): array
     {
         return DB::transaction(function () use ($filters, $toleransiHari) {
             $rekeningId = $filters['rekening_bank_id'] ?? null;

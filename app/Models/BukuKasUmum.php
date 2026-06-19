@@ -17,6 +17,7 @@ class BukuKasUmum extends Model
         'nominal' => 'decimal:2',
         'saldo_akhir' => 'decimal:2',
         'kode_buku' => 'integer',
+        'jenis_transaksi' => \App\Enums\JenisTransaksiPenerimaan::class,
     ];
 
     /**
@@ -81,12 +82,25 @@ class BukuKasUmum extends Model
      * prioritas baris pembukuan_saldo_awal; fallback kolom rekening.saldo_awal
      * (hanya untuk BKU peran asli rekening — kompat data lama).
      *
+     * Bila $rekening null ("Semua Rekening"), seed = Σ saldo awal semua rekening
+     * untuk (peran, kode_buku). Tanggal mulai dikosongkan agar pemanggil
+     * mengakumulasi seluruh mutasi (tiap rekening punya tanggal seed sendiri).
+     *
      * @return array{0: float, 1: string|null}  [saldo awal, tanggal mulai]
      */
     public static function saldoAwalSeed(?RekeningBank $rekening, string $peran, int $kodeBuku): array
     {
+        if ($rekening === null) {
+            $total = PembukuanSaldoAwal::query()
+                ->where('kode_buku', $kodeBuku)
+                ->where('peran', $peran)
+                ->sum('nominal');
+
+            return [(float) $total, null];
+        }
+
         $sa = PembukuanSaldoAwal::query()
-            ->where('rekening_bank_id', $rekening?->id)
+            ->where('rekening_bank_id', $rekening->id)
             ->where('kode_buku', $kodeBuku)
             ->where('peran', $peran)
             ->orderByDesc('tanggal_berlaku')
