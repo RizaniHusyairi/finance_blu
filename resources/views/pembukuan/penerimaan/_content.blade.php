@@ -1,4 +1,19 @@
-@php $bln = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']; @endphp
+@php
+    $bln = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+
+    $curSort = $sort ?? 'tanggal';
+    $curDir = ($dir ?? 'asc') === 'desc' ? 'desc' : 'asc';
+    // Tombol header sortir: klik menukar arah pada kolom aktif, atau buka kolom baru asc.
+    $sortBtn = function (string $key, string $label) use ($curSort, $curDir) {
+        $active = $curSort === $key;
+        $next = $active && $curDir === 'asc' ? 'desc' : 'asc';
+        $ico = ! $active ? 'bi-arrow-down-up' : ($curDir === 'asc' ? 'bi-caret-up-fill' : 'bi-caret-down-fill');
+
+        return '<button type="button" class="bku-sort' . ($active ? ' is-active' : '')
+            . '" data-sort="' . $key . '" data-dir="' . $next . '" aria-label="Urutkan ' . e($label) . '">'
+            . e($label) . ' <i class="bi ' . $ico . '"></i></button>';
+    };
+@endphp
 
 {{-- ====== Ringkasan ====== --}}
 <div class="bku-stats">
@@ -42,12 +57,12 @@
         <table class="bku-table">
             <thead>
                 <tr>
-                    <th>Tanggal</th>
-                    <th>Kode Akun &amp; Jenis</th>
-                    <th>Uraian</th>
-                    <th class="ta-end">Penerimaan</th>
-                    <th class="ta-end">Pengeluaran</th>
-                    <th class="ta-end">Saldo</th>
+                    <th>{!! $sortBtn('tanggal', 'Tanggal') !!}</th>
+                    <th>{!! $sortBtn('kode', 'Kode Akun & Jenis') !!}</th>
+                    <th>{!! $sortBtn('uraian', 'Uraian') !!}</th>
+                    <th class="ta-end">{!! $sortBtn('penerimaan', 'Penerimaan') !!}</th>
+                    <th class="ta-end">{!! $sortBtn('pengeluaran', 'Pengeluaran') !!}</th>
+                    <th class="ta-end">{!! $sortBtn('saldo', 'Saldo') !!}</th>
                     <th class="ta-center">Aksi</th>
                 </tr>
             </thead>

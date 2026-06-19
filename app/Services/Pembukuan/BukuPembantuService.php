@@ -78,6 +78,38 @@ class BukuPembantuService
     }
 
     /**
+     * Sortir koleksi entri ledger untuk TAMPILAN saja.
+     *
+     * saldo_berjalan sudah dianotasi {@see buildBuku()} dalam urutan kronologis
+     * dan tetap valid per baris; sortir di sini hanya menata ulang baris yang
+     * tampil — tidak menghitung ulang saldo, total, maupun ringkasan periode.
+     *
+     * @param  \Illuminate\Support\Collection  $entries  entri yang sudah ber-saldo_berjalan
+     * @return \Illuminate\Support\Collection
+     */
+    public function sortEntries($entries, ?string $sort, ?string $dir = 'asc')
+    {
+        $desc = strtolower((string) $dir) === 'desc';
+
+        $accessor = match ($sort) {
+            'kode' => static fn ($e) => $e->akunPendapatan->kode_gabungan ?? $e->kode_transaksi ?? '',
+            'uraian' => static fn ($e) => mb_strtolower((string) $e->uraian),
+            'penerimaan' => static fn ($e) => $e->arus_kas === 'DEBIT_MASUK' ? (float) $e->nominal : 0.0,
+            'pengeluaran' => static fn ($e) => $e->arus_kas === 'KREDIT_KELUAR' ? (float) $e->nominal : 0.0,
+            'saldo' => static fn ($e) => (float) ($e->saldo_berjalan ?? 0),
+            default => null, // 'tanggal' atau tak dikenal → pakai urutan kronologis bawaan
+        };
+
+        // sortBy stabil (PHP 8): baris dengan kunci sama mempertahankan urutan
+        // kronologis (tanggal, id) sehingga tetap rapi sebagai tie-breaker.
+        if ($accessor === null) {
+            return ($desc ? $entries->reverse() : $entries)->values();
+        }
+
+        return $entries->sortBy($accessor, SORT_REGULAR, $desc)->values();
+    }
+
+    /**
      * Invariant kas: Saldo BKU (1) harus = Saldo Kas Tunai (2) + Saldo Kas Bank (3).
      *
      * @return array{saldo_bku:float, saldo_tunai:float, saldo_bank:float, selisih:float, seimbang:bool}

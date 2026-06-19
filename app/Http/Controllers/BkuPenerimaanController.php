@@ -16,6 +16,9 @@ use Illuminate\Http\Request;
  */
 class BkuPenerimaanController extends Controller
 {
+    /** Kolom yang boleh dijadikan kunci sortir tampilan. */
+    private const SORTABLE = ['tanggal', 'kode', 'uraian', 'penerimaan', 'pengeluaran', 'saldo'];
+
     public function __construct(
         private readonly BukuPembantuService $bukuService,
         private readonly DokumenPembukuanService $dokumen,
@@ -25,7 +28,7 @@ class BkuPenerimaanController extends Controller
 
     public function index(Request $request)
     {
-        $filters = $request->only(['rekening_bank_id', 'start_date', 'end_date', 'search']);
+        $filters = $request->only(['rekening_bank_id', 'start_date', 'end_date', 'search', 'sort', 'dir']);
 
         $buku = $this->bukuService->buildBuku(KodeBuku::BKU->value, 'PENERIMAAN', $filters);
 
@@ -54,11 +57,19 @@ class BkuPenerimaanController extends Controller
             })->values();
         }
 
+        // Sortir tampilan: tata ulang baris TANPA menghitung ulang saldo berjalan
+        // (yang dianotasi kronologis di service) maupun ringkasan periode.
+        $sort = in_array($filters['sort'] ?? null, self::SORTABLE, true) ? $filters['sort'] : 'tanggal';
+        $dir = ($filters['dir'] ?? 'asc') === 'desc' ? 'desc' : 'asc';
+        $entries = $this->bukuService->sortEntries($entries, $sort, $dir);
+
         $data = [
             'buku' => $buku,
             'entries' => $entries,
             'filters' => $filters,
             'search' => $search,
+            'sort' => $sort,
+            'dir' => $dir,
             'rekening' => $this->resolvePenerimaanRekening(),
         ];
 

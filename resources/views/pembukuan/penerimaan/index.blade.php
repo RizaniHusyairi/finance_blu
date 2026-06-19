@@ -79,6 +79,13 @@
     .bku-table thead th{ text-align:left; font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.06em;
         color:#8a90a2; padding:12px 16px; background:#fafbfc; border-bottom:1px solid #eef0f5; white-space:nowrap; }
     .bku-table th.ta-end{ text-align:right; } .bku-table th.ta-center{ text-align:center; }
+    .bku-sort{ display:inline-flex; align-items:center; gap:6px; padding:0; border:0; background:none; cursor:pointer;
+        font:inherit; color:inherit; text-transform:inherit; letter-spacing:inherit; line-height:inherit; }
+    .bku-table th.ta-end .bku-sort{ flex-direction:row-reverse; }
+    .bku-sort i{ font-size:.82em; opacity:.45; transition:opacity .15s, color .15s; }
+    .bku-sort:hover{ color:var(--bku-accent); } .bku-sort:hover i{ opacity:.8; }
+    .bku-sort.is-active{ color:var(--bku-accent); } .bku-sort.is-active i{ opacity:1; }
+    .bku-sort:focus-visible{ outline:2px solid var(--bku-accent); outline-offset:3px; border-radius:4px; }
     .bku-table td{ padding:11px 16px; border-bottom:1px solid #f3f4f8; vertical-align:middle; }
     .bku-table td.ta-end{ text-align:right; } .bku-table td.ta-center{ text-align:center; }
     .bku-table tbody tr:last-child td{ border-bottom:0; }
@@ -190,6 +197,9 @@
         var clearBtn = document.querySelector('.bku-search__clear');
         if (!content) return;
 
+        var sortKey = '{{ $sort ?? 'tanggal' }}';
+        var sortDir = '{{ $dir ?? 'asc' }}';
+
         function countUp(el) {
             var target = parseInt(el.getAttribute('data-value') || '0', 10);
             if (isNaN(target)) return;
@@ -211,6 +221,8 @@
             if (search && search.value.trim()) p.set('search', search.value.trim());
             if (start && start.value) p.set('start_date', start.value);
             if (end && end.value) p.set('end_date', end.value);
+            if (sortKey) p.set('sort', sortKey);
+            if (sortDir) p.set('dir', sortDir);
             p.set('partial', '1');
             return p.toString();
         }
@@ -231,6 +243,15 @@
         if (start) start.addEventListener('change', reload);
         if (end) end.addEventListener('change', reload);
         if (clearBtn) clearBtn.addEventListener('click', function () { clearTimeout(timer); search.value = ''; toggleClear(); reload(); search.focus(); });
+
+        // Sortir kolom: header dirender ulang tiap reload, jadi pakai event delegation.
+        content.addEventListener('click', function (ev) {
+            var btn = ev.target.closest('.bku-sort');
+            if (!btn) return;
+            sortKey = btn.getAttribute('data-sort');
+            sortDir = btn.getAttribute('data-dir') || 'asc';
+            reload();
+        });
 
         toggleClear();
         initContent();

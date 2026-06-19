@@ -51,14 +51,33 @@
 
     @include('pembukuan.pengeluaran.partials.input-transaksi')
 
+    @php
+        $curSort = $sort ?? 'tanggal';
+        $curDir = ($dir ?? 'asc') === 'desc' ? 'desc' : 'asc';
+        // Sortir berbasis tautan GET — query filter (rekening/tanggal) ikut dipertahankan.
+        $sortLink = function (string $key, string $label) use ($curSort, $curDir) {
+            $active = $curSort === $key;
+            $next = $active && $curDir === 'asc' ? 'desc' : 'asc';
+            $ico = ! $active ? 'bi-arrow-down-up text-muted' : ($curDir === 'asc' ? 'bi-caret-up-fill' : 'bi-caret-down-fill');
+            $url = request()->fullUrlWithQuery(['sort' => $key, 'dir' => $next]);
+
+            return '<a href="' . e($url) . '" class="text-decoration-none ' . ($active ? 'fw-bold text-primary' : 'text-reset')
+                . '">' . e($label) . ' <i class="bi ' . $ico . ' small"></i></a>';
+        };
+    @endphp
+
     <div class="card">
         <div class="card-header fw-bold"><i class="bi bi-journal-text text-primary"></i> {{ $buku['nama_buku'] }} — Bendahara Pengeluaran ({{ $buku['jumlah_transaksi'] }} transaksi)</div>
         <div class="table-responsive">
             <table class="table table-sm table-hover align-middle mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th>Tanggal</th><th>Kode Transaksi</th><th>Uraian</th>
-                        <th class="text-end">Penerimaan</th><th class="text-end">Pengeluaran</th><th class="text-end">Saldo</th>
+                        <th>{!! $sortLink('tanggal', 'Tanggal') !!}</th>
+                        <th>{!! $sortLink('kode', 'Kode Transaksi') !!}</th>
+                        <th>{!! $sortLink('uraian', 'Uraian') !!}</th>
+                        <th class="text-end">{!! $sortLink('penerimaan', 'Penerimaan') !!}</th>
+                        <th class="text-end">{!! $sortLink('pengeluaran', 'Pengeluaran') !!}</th>
+                        <th class="text-end">{!! $sortLink('saldo', 'Saldo') !!}</th>
                         <th class="text-center">Aksi</th>
                     </tr>
                 </thead>

@@ -18,6 +18,9 @@ use Illuminate\Http\Request;
  */
 class BkuPengeluaranController extends Controller
 {
+    /** Kolom yang boleh dijadikan kunci sortir tampilan. */
+    private const SORTABLE = ['tanggal', 'kode', 'uraian', 'penerimaan', 'pengeluaran', 'saldo'];
+
     public function __construct(
         private readonly BukuPembantuService $bukuService,
         private readonly DokumenPembukuanService $dokumen,
@@ -29,10 +32,19 @@ class BkuPengeluaranController extends Controller
     {
         $filters = $request->only(['rekening_bank_id', 'start_date', 'end_date']);
 
+        $sort = in_array($request->query('sort'), self::SORTABLE, true) ? $request->query('sort') : 'tanggal';
+        $dir = $request->query('dir') === 'desc' ? 'desc' : 'asc';
+
+        $buku = $this->bukuService->buildBuku(KodeBuku::BKU->value, PeranBuku::PENGELUARAN->value, $filters);
+        // Sortir tampilan saja — saldo berjalan & ringkasan tetap berbasis kronologis.
+        $buku['entries'] = $this->bukuService->sortEntries($buku['entries'], $sort, $dir);
+
         return view('pembukuan.pengeluaran.index', [
-            'buku' => $this->bukuService->buildBuku(KodeBuku::BKU->value, PeranBuku::PENGELUARAN->value, $filters),
+            'buku' => $buku,
             'invariant' => $this->bukuService->invariant(PeranBuku::PENGELUARAN->value, $filters),
             'filters' => $filters,
+            'sort' => $sort,
+            'dir' => $dir,
             'rekeningOptions' => $this->pembukuan->rekeningOptions(),
             'kodeTransaksiOptions' => KodeTransaksi::where('status_aktif', true)->orderBy('urutan')->get(),
             'manualJournals' => TransaksiPembukuan::with('kodeTransaksi')
