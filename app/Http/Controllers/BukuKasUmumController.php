@@ -4,8 +4,15 @@ namespace App\Http\Controllers;
 
 use App\Models\BukuKasUmum;
 use App\Services\Pembukuan\PembukuanService;
-use Illuminate\Http\Request;
 
+/**
+ * BKU gabungan lama dipensiunkan demi BKU per-peran (Penerimaan/Pengeluaran).
+ * Controller ini hanya menyisakan: redirect index → BKU per-peran sesuai role,
+ * dan halaman detail transaksi (endpoint bersama kedua peran).
+ *
+ * Saldo awal kini dikelola via Setup Pembukuan (pembukuan_saldo_awal),
+ * lihat [[App\Http\Controllers\PembukuanSetupController]]::storeSaldoAwal().
+ */
 class BukuKasUmumController extends Controller
 {
     public function __construct(
@@ -13,69 +20,37 @@ class BukuKasUmumController extends Controller
     ) {
     }
 
-    public function index(Request $request)
+    /** Arahkan ke BKU per-peran sesuai role (cermin logika $bkuUrl di sidebar). */
+    public function index()
     {
-        $data = $this->pembukuanService->buildBkuIndexData(
-            $request->only(['start_date', 'end_date', 'rekening_bank_id', 'arus_kas', 'sumber_transaksi'])
+        return redirect()->route(
+            auth()->user()?->hasAnyRole(['Bendahara Pengeluaran', 'Super Admin'])
+                ? 'pembukuan.pengeluaran.index'
+                : 'pembukuan.penerimaan.index'
         );
-
-        return view('pembukuan.bku.index', $data);
     }
 
-    public function storeSaldoAwal(Request $request)
-    {
-        $validated = $request->validate([
-            'rekening_bank_id' => ['required', 'integer', 'exists:rekening_bank,id'],
-            'tanggal' => ['required', 'date'],
-            'nominal' => ['required', 'numeric', 'gt:0'],
-            'uraian' => ['nullable', 'string', 'max:255'],
-        ], [], [
-            'rekening_bank_id' => 'rekening bank',
-            'tanggal' => 'tanggal saldo awal',
-            'nominal' => 'nominal saldo awal',
-        ]);
-
-        try {
-            $this->pembukuanService->createSaldoAwal(
-                (int) $validated['rekening_bank_id'],
-                $validated['tanggal'],
-                (float) $validated['nominal'],
-                $validated['uraian'] ?? null,
-            );
-        } catch (\DomainException $e) {
-            return redirect()
-                ->route('pembukuan.bku.index', ['rekening_bank_id' => $validated['rekening_bank_id']])
-                ->with('error', $e->getMessage());
-        }
-
-        return redirect()
-            ->route('pembukuan.bku.index', ['rekening_bank_id' => $validated['rekening_bank_id']])
-            ->with('success', 'Saldo awal berhasil dicatat ke Buku Kas Umum.');
-    }
-
+    /**
+     * Detail transaksi BKU — ditaut dari BKU Penerimaan/Pengeluaran & Tagihan Jasa.
+     * Bendahara hanya boleh membuka detail peran-nya sendiri; Super Admin keduanya.
+     */
     public function show(BukuKasUmum $id)
     {
+        $this->authorizeBkuPeran($id->peran);
+
         return view('pembukuan.bku.show', $this->pembukuanService->buildBkuDetail($id));
     }
 
-    public function pdf(Request $request)
+    private function authorizeBkuPeran(?string $peran): void
     {
-        $data = $this->pembukuanService->buildBkuIndexData(
-            $request->only(['start_date', 'end_date', 'rekening_bank_id', 'arus_kas', 'sumber_transaksi'])
-        );
+        $user = auth()->user();
 
-        return $this->pembukuanService->streamPdf(
-            'pembukuan.bku.pdf',
-            $data,
-            'Buku_Kas_Umum_' . now()->format('Ymd_His') . '.pdf'
-        );
-    }
+        if ($user?->hasRole('Super Admin')) {
+            return;
+        }
 
-    public function excel(Request $request)
-    {
-        return $this->pembukuanService->streamBkuExcel(
-            $request->only(['start_date', 'end_date', 'rekening_bank_id', 'arus_kas', 'sumber_transaksi']),
-            'Buku_Kas_Umum_' . now()->format('Ymd_His') . '.xlsx'
-        );
+        $role = $peran === 'PENERIMAAN' ? 'Bendahara Penerimaan' : 'Bendahara Pengeluaran';
+
+        abort_unless($user?->hasRole($role), 403, 'Anda tidak berwenang membuka detail BKU ini.');
     }
 }

@@ -18,8 +18,9 @@ class PembukuanMenuTest extends TestCase
         $user = User::factory()->create();
         $user->assignRole('Bendahara Pengeluaran');
 
+        // BKU gabungan lama dipensiunkan → pakai BKU per-peran (Pengeluaran).
         $routes = [
-            'pembukuan.bku.index',
+            'pembukuan.pengeluaran.index',
             'pembukuan.bank.index',
             'pembukuan.bendahara.index',
             'pembukuan.bunga.index',
@@ -42,12 +43,13 @@ class PembukuanMenuTest extends TestCase
         $user = User::factory()->create();
         $user->assignRole('Bendahara Penerimaan');
 
+        // BKU per-peran (Penerimaan); pengesahan sisi penerimaan = Pengesahan Pendapatan.
         $routes = [
-            'pembukuan.bku.index',
+            'pembukuan.penerimaan.index',
             'pembukuan.bank.index',
             'pembukuan.bendahara.index',
             'pembukuan.bunga.index',
-            'pembukuan.pengesahan.index',
+            'pembukuan.pengesahan-pendapatan.index',
             'pembukuan.piutang.index',
         ];
 

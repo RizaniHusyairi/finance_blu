@@ -117,11 +117,11 @@ class CompletedKontrakPengadaanSeeder extends Seeder
         }
 
         $taxes = MasterTarifPajak::query()
-            ->whereIn('kode_pajak', ['PPN-WAPU', 'PPH22-BEND', 'PPH23-JASA', 'PPH4A2-KONST'])
+            ->whereIn('kode_pajak', ['PPN11', 'PPH22-BEND', 'PPH23', 'PPH4A2-265'])
             ->get()
             ->keyBy('kode_pajak');
 
-        foreach (['PPN-WAPU', 'PPH22-BEND', 'PPH23-JASA', 'PPH4A2-KONST'] as $code) {
+        foreach (['PPN11', 'PPH22-BEND', 'PPH23', 'PPH4A2-265'] as $code) {
             if (! $taxes->has($code)) {
                 throw new RuntimeException("Tarif pajak {$code} tidak ditemukan. Jalankan MasterTarifPajakSeeder lebih dulu.");
             }
@@ -383,7 +383,7 @@ class CompletedKontrakPengadaanSeeder extends Seeder
     ): void {
         $rows = [
             [
-                'tax' => $taxes->get('PPN-WAPU'),
+                'tax' => $taxes->get('PPN11'),
                 'nominal' => $ppn,
                 'billing' => "820260{$suffix}001",
                 'ntpn' => "NTPN260{$suffix}PPN",
@@ -642,6 +642,9 @@ class CompletedKontrakPengadaanSeeder extends Seeder
                 'saldo_awal' => 5000000000,
                 'saldo_awal_per_tanggal' => '2026-01-01',
                 'is_default' => true,
+                // Rekening default operasional Bendahara Pengeluaran — dikunci agar
+                // tidak terhapus (satu-satunya rujukan default sumber BKU pengeluaran).
+                'is_terkunci' => true,
                 'status_aktif' => true,
             ]
         );
@@ -707,7 +710,7 @@ class CompletedKontrakPengadaanSeeder extends Seeder
                 'vendor_code' => 'VND-005',
                 'pekerjaan' => 'Pengadaan lisensi dan perangkat jaringan operasional',
                 'nilai' => 187500000,
-                'pph_tax' => 'PPH23-JASA',
+                'pph_tax' => 'PPH23',
                 'tanggal_spk' => '2026-03-04',
                 'tanggal_spmk' => '2026-03-06',
                 'tanggal_mulai' => '2026-03-07',
@@ -726,7 +729,7 @@ class CompletedKontrakPengadaanSeeder extends Seeder
                 'vendor_code' => 'VND-010',
                 'pekerjaan' => 'Pekerjaan pemeliharaan fasilitas teknik gedung operasional',
                 'nilai' => 246000000,
-                'pph_tax' => 'PPH4A2-KONST',
+                'pph_tax' => 'PPH4A2-265',
                 'tanggal_spk' => '2026-03-24',
                 'tanggal_spmk' => '2026-03-25',
                 'tanggal_mulai' => '2026-03-26',

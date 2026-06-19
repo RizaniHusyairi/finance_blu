@@ -27,6 +27,7 @@ class PerjaldinWorkflowTest extends TestCase
             'Bendahara Penerimaan',
             'Bendahara Pengeluaran',
             'PPK',
+            'Koordinator Keuangan',
             'Kepala Subbagian Keuangan dan Tata Usaha',
         ])->mapWithKeys(function (string $role) {
             Role::findOrCreate($role, 'web');
@@ -57,6 +58,8 @@ class PerjaldinWorkflowTest extends TestCase
             'bendahara_penerimaan_nama_snapshot' => $verifiers['Bendahara Penerimaan']->name,
             'bendahara_pengeluaran_user_id' => $verifiers['Bendahara Pengeluaran']->id,
             'bendahara_pengeluaran_nama_snapshot' => $verifiers['Bendahara Pengeluaran']->name,
+            'koordinator_keuangan_user_id' => $verifiers['Koordinator Keuangan']->id,
+            'koordinator_keuangan_nama_snapshot' => $verifiers['Koordinator Keuangan']->name,
             'kasubbag_user_id' => $verifiers['Kepala Subbagian Keuangan dan Tata Usaha']->id,
             'kasubbag_nama_snapshot' => $verifiers['Kepala Subbagian Keuangan dan Tata Usaha']->name,
             'total_bruto' => 500000,
@@ -70,16 +73,17 @@ class PerjaldinWorkflowTest extends TestCase
         $instance = $service->submit($tagihan, $operator, '127.0.0.1');
 
         $this->assertSame('PENDING_VERIFIKASI_PERJALDIN', $tagihan->fresh()->status);
-        $this->assertCount(5, $instance->fresh('approvals')->approvals);
-        $this->assertSame(4, $instance->approvals()->where('urutan_step', 1)->where('status', 'PENDING')->count());
+        $this->assertCount(6, $instance->fresh('approvals')->approvals);
+        $this->assertSame(5, $instance->approvals()->where('urutan_step', 1)->where('status', 'PENDING')->count());
         $this->assertSame(1, $instance->approvals()->where('urutan_step', 2)->where('status', 'WAITING')->count());
         $this->assertSame($verifiers['PPSPM']->id, $instance->approvals()->where('role_code', 'PPSPM')->value('assigned_user_id'));
         $this->assertSame($verifiers['Bendahara Penerimaan']->id, $instance->approvals()->where('role_code', 'BENDAHARA_PENERIMAAN')->value('assigned_user_id'));
         $this->assertSame($verifiers['Bendahara Pengeluaran']->id, $instance->approvals()->where('role_code', 'BENDAHARA_PENGELUARAN')->value('assigned_user_id'));
         $this->assertSame($verifiers['PPK']->id, $instance->approvals()->where('role_code', 'PPK')->value('assigned_user_id'));
+        $this->assertSame($verifiers['Koordinator Keuangan']->id, $instance->approvals()->where('role_code', 'Koordinator Keuangan')->value('assigned_user_id'));
         $this->assertSame($verifiers['Kepala Subbagian Keuangan dan Tata Usaha']->id, $instance->approvals()->where('role_code', 'KASUBBAG')->value('assigned_user_id'));
 
-        foreach (['PPSPM', 'BENDAHARA_PENERIMAAN', 'BENDAHARA_PENGELUARAN', 'PPK'] as $roleCode) {
+        foreach (['PPSPM', 'BENDAHARA_PENERIMAAN', 'BENDAHARA_PENGELUARAN', 'PPK', 'Koordinator Keuangan'] as $roleCode) {
             $approval = $instance->fresh('approvals')->approvals->firstWhere('role_code', $roleCode);
             $roleName = match ($roleCode) {
                 'BENDAHARA_PENERIMAAN' => 'Bendahara Penerimaan',

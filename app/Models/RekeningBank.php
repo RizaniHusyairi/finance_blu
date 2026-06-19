@@ -23,6 +23,7 @@ class RekeningBank extends Model
         'saldo_awal',
         'saldo_awal_per_tanggal',
         'is_default',
+        'is_terkunci',
         'status_aktif',
     ];
 
@@ -31,6 +32,7 @@ class RekeningBank extends Model
         'saldo_awal' => 'decimal:2',
         'saldo_awal_per_tanggal' => 'date',
         'is_default' => 'boolean',
+        'is_terkunci' => 'boolean',
         'status_aktif' => 'boolean',
     ];
 

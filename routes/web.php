@@ -17,7 +17,9 @@ use App\Http\Controllers\BendaharaPengeluaranDashboardController;
 use App\Http\Controllers\BtnPaymentCallbackController;
 use App\Http\Controllers\BukuKasUmumController;
 use App\Http\Controllers\BkuPenerimaanController;
+use App\Http\Controllers\BkuPenerimaanManualController;
 use App\Http\Controllers\BkuPengeluaranController;
+use App\Http\Controllers\TransaksiPembukuanController;
 use App\Http\Controllers\BukuPembantuBankController;
 use App\Http\Controllers\BukuPembantuPartisiController;
 use App\Http\Controllers\KlasifikasiPenerimaanController;
@@ -822,10 +824,9 @@ Route::middleware(['auth', 'account.active'])->group(function () use ($internalR
 
     // ==== MODUL PENYETORAN PAJAK — Bendahara Pengeluaran ====
     Route::middleware('role:Super Admin|Bendahara Pengeluaran|Bendahara Penerimaan')->group(function () {
-        Route::get('/pembukuan/bku/pdf', [BukuKasUmumController::class, 'pdf'])->name('pembukuan.bku.pdf');
-        Route::get('/pembukuan/bku/excel', [BukuKasUmumController::class, 'excel'])->name('pembukuan.bku.excel');
+        // BKU gabungan lama dipensiunkan → index redirect ke BKU per-peran.
         Route::get('/pembukuan/bku', [BukuKasUmumController::class, 'index'])->name('pembukuan.bku.index');
-        Route::post('/pembukuan/bku/saldo-awal', [BukuKasUmumController::class, 'storeSaldoAwal'])->name('pembukuan.bku.saldo-awal.store');
+        // Halaman detail transaksi BKU — endpoint bersama kedua peran (Penerimaan/Pengeluaran).
         Route::get('/pembukuan/bku/{id}', [BukuKasUmumController::class, 'show'])
             ->whereNumber('id')
             ->name('pembukuan.bku.show');
@@ -844,11 +845,6 @@ Route::middleware(['auth', 'account.active'])->group(function () use ($internalR
         Route::get('/pembukuan/bank/{rekening}', [BukuPembantuBankController::class, 'show'])
             ->whereNumber('rekening')
             ->name('pembukuan.bank.show');
-
-        // Impor rekening koran (sumber data Klasifikasi Penerimaan).
-        Route::post('/pembukuan/bank/{rekening}/koran/upload', [BukuPembantuBankController::class, 'uploadKoran'])->whereNumber('rekening')->name('pembukuan.bank.koran.upload');
-        Route::post('/pembukuan/bank/{rekening}/koran/baris', [BukuPembantuBankController::class, 'storeKoranLine'])->whereNumber('rekening')->name('pembukuan.bank.koran.line.store');
-        Route::delete('/pembukuan/bank/{rekening}/koran/baris/{mutasi}', [BukuPembantuBankController::class, 'destroyKoranLine'])->whereNumber('rekening')->whereNumber('mutasi')->name('pembukuan.bank.koran.line.destroy');
 
         Route::get('/pembukuan/bendahara/pdf', [BukuPembantuBendaharaController::class, 'pdf'])->name('pembukuan.bendahara.pdf');
         Route::get('/pembukuan/bendahara', [BukuPembantuBendaharaController::class, 'index'])->name('pembukuan.bendahara.index');
@@ -875,6 +871,10 @@ Route::middleware(['auth', 'account.active'])->group(function () use ($internalR
             Route::get('/pembukuan/pengeluaran/pdf', [BkuPengeluaranController::class, 'pdf'])->name('pembukuan.pengeluaran.pdf');
             Route::get('/pembukuan/pengeluaran/excel', [BkuPengeluaranController::class, 'excel'])->name('pembukuan.pengeluaran.excel');
             Route::get('/pembukuan/pengeluaran', [BkuPengeluaranController::class, 'index'])->name('pembukuan.pengeluaran.index');
+
+            // Input Transaksi (jurnal manual SILABI) → distribusi ke BKU + buku pembantu.
+            Route::post('/pembukuan/input-transaksi', [TransaksiPembukuanController::class, 'store'])->name('pembukuan.input-transaksi.store');
+            Route::delete('/pembukuan/input-transaksi/{transaksiPembukuan}', [TransaksiPembukuanController::class, 'destroy'])->whereNumber('transaksiPembukuan')->name('pembukuan.input-transaksi.destroy');
         });
 
         // Pengesahan Pendapatan khusus Bendahara Penerimaan — lensa sisi
@@ -890,11 +890,16 @@ Route::middleware(['auth', 'account.active'])->group(function () use ($internalR
             Route::get('/pembukuan/penerimaan/pdf', [BkuPenerimaanController::class, 'pdf'])->name('pembukuan.penerimaan.pdf');
             Route::get('/pembukuan/penerimaan/excel', [BkuPenerimaanController::class, 'excel'])->name('pembukuan.penerimaan.excel');
             Route::get('/pembukuan/penerimaan', [BkuPenerimaanController::class, 'index'])->name('pembukuan.penerimaan.index');
+
+            // Catat manual mutasi kas non-jasa (PBK/Setor/Pengembalian/Bunga) ke BKU Penerimaan.
+            Route::post('/pembukuan/penerimaan/manual', [BkuPenerimaanManualController::class, 'store'])->name('pembukuan.penerimaan-manual.store');
+            Route::delete('/pembukuan/penerimaan/manual/{bku}', [BkuPenerimaanManualController::class, 'destroy'])->whereNumber('bku')->name('pembukuan.penerimaan-manual.destroy');
             Route::get('/pembukuan/realisasi/pdf', [RealisasiPenerimaanController::class, 'pdf'])->name('pembukuan.realisasi.pdf');
             Route::get('/pembukuan/realisasi', [RealisasiPenerimaanController::class, 'index'])->name('pembukuan.realisasi.index');
 
             // Klasifikasi baris rekening koran → akun pendapatan → BKU Penerimaan.
             Route::get('/pembukuan/klasifikasi-penerimaan', [KlasifikasiPenerimaanController::class, 'index'])->name('pembukuan.klasifikasi.index');
+            Route::post('/pembukuan/klasifikasi-penerimaan/import', [KlasifikasiPenerimaanController::class, 'importKoran'])->name('pembukuan.klasifikasi.import');
             Route::post('/pembukuan/klasifikasi-penerimaan/post-batch', [KlasifikasiPenerimaanController::class, 'postBatch'])->name('pembukuan.klasifikasi.post-batch');
             Route::post('/pembukuan/klasifikasi-penerimaan/{detail}/akun', [KlasifikasiPenerimaanController::class, 'updateAkun'])->whereNumber('detail')->name('pembukuan.klasifikasi.akun');
         });

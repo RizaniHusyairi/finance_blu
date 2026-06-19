@@ -25,6 +25,7 @@ class PostingPenerimaanService
 {
     public function __construct(
         private readonly AkunPendapatanClassifier $classifier,
+        private readonly PiutangRekonsiliasiService $rekonsiliasi,
     ) {
     }
 
@@ -80,10 +81,12 @@ class PostingPenerimaanService
 
         $start = $filters['start_date'] ?? null;
         $end = $filters['end_date'] ?? null;
+        $importId = $filters['import_id'] ?? null;
 
-        return DB::transaction(function () use ($rekeningId, $start, $end) {
+        return DB::transaction(function () use ($rekeningId, $start, $end, $importId) {
             $rows = DetailMutasiBank::query()
                 ->whereHas('importMutasiBank', fn (Builder $q) => $q->where('rekening_bank_id', $rekeningId))
+                ->when($importId, fn (Builder $q) => $q->where('import_mutasi_bank_id', $importId))
                 ->when($start, fn (Builder $q) => $q->whereDate('tanggal_transaksi', '>=', $start))
                 ->when($end, fn (Builder $q) => $q->whereDate('tanggal_transaksi', '<=', $end))
                 ->orderBy('tanggal_transaksi')->orderBy('id')
@@ -156,6 +159,15 @@ class PostingPenerimaanService
 
         if ($nominal <= 0) {
             return null; // baris tanpa nilai relevan — lewati.
+        }
+
+        // Guard anti-dobel: bila penerimaan ini sudah tercatat lewat Path Jasa
+        // (PiutangSyncService), gabung ke baris itu alih-alih membuat baris kedua.
+        if ($masuk) {
+            $jasaRow = $this->rekonsiliasi->findJasaRowForKoran($row);
+            if ($jasaRow) {
+                return $this->rekonsiliasi->attachKoran($jasaRow, $row);
+            }
         }
 
         return BukuKasUmum::create([

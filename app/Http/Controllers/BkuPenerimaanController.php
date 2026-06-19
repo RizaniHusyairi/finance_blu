@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\JenisRekening;
 use App\Enums\KodeBuku;
+use App\Models\RekeningBank;
 use App\Services\Pembukuan\BukuPembantuService;
 use App\Services\Pembukuan\DokumenPembukuanService;
 use App\Services\Pembukuan\PembukuanService;
@@ -23,13 +25,46 @@ class BkuPenerimaanController extends Controller
 
     public function index(Request $request)
     {
-        $filters = $request->only(['rekening_bank_id', 'start_date', 'end_date']);
+        $filters = $request->only(['rekening_bank_id', 'start_date', 'end_date', 'search']);
 
-        return view('pembukuan.penerimaan.index', [
-            'buku' => $this->bukuService->buildBuku(KodeBuku::BKU->value, 'PENERIMAAN', $filters),
+        $buku = $this->bukuService->buildBuku(KodeBuku::BKU->value, 'PENERIMAAN', $filters);
+
+        // Pencarian level-tampilan: saring baris yang ditampilkan TANPA mengubah
+        // saldo berjalan (yang dihitung atas ledger penuh) maupun ringkasan periode.
+        $entries = $buku['entries'];
+        $search = trim((string) ($filters['search'] ?? ''));
+
+        if ($search !== '') {
+            $needle = mb_strtolower($search);
+            $angka = preg_replace('/[^0-9]/', '', $search);
+
+            $entries = $entries->filter(function ($e) use ($needle, $angka) {
+                $akun = $e->akunPendapatan;
+                $hay = mb_strtolower(trim(
+                    ($e->uraian ?? '') . ' '
+                    . ($akun->kode_gabungan ?? '') . ' ' . ($akun->uraian_jenis ?? '') . ' '
+                    . ($e->jenis_transaksi?->label() ?? '') . ' ' . ($e->nomor_bukti ?? '')
+                ));
+
+                if ($needle !== '' && str_contains($hay, $needle)) {
+                    return true;
+                }
+
+                return $angka !== '' && str_contains(preg_replace('/[^0-9]/', '', (string) $e->nominal), $angka);
+            })->values();
+        }
+
+        $data = [
+            'buku' => $buku,
+            'entries' => $entries,
             'filters' => $filters,
-            'rekeningOptions' => $this->pembukuan->rekeningOptions(),
-        ]);
+            'search' => $search,
+            'rekening' => $this->resolvePenerimaanRekening(),
+        ];
+
+        return $request->boolean('partial')
+            ? view('pembukuan.penerimaan._content', $data)
+            : view('pembukuan.penerimaan.index', $data);
     }
 
     public function pdf(Request $request)
@@ -42,5 +77,15 @@ class BkuPenerimaanController extends Controller
     {
         return $this->dokumen->streamBukuExcel(KodeBuku::BKU->value, 'PENERIMAAN',
             $request->only(['rekening_bank_id', 'start_date', 'end_date']));
+    }
+
+    /** Rekening Penerimaan aktif dari Setup (untuk header). */
+    private function resolvePenerimaanRekening(): ?RekeningBank
+    {
+        return RekeningBank::query()
+            ->where('status_aktif', true)
+            ->where('jenis_rekening', JenisRekening::PENERIMAAN->value)
+            ->orderByDesc('is_terkunci')->orderByDesc('is_default')->orderBy('id')
+            ->first();
     }
 }

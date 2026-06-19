@@ -106,6 +106,25 @@ class RekeningBankCrudTest extends TestCase
         $this->assertSame(500000.0, (float) $rekening->saldo_awal, 'Saldo awal tidak boleh berubah lewat form Rekening Bank.');
     }
 
+    public function test_rekening_terkunci_cannot_be_deleted(): void
+    {
+        $user = $this->bendaharaPenerimaan();
+        $rekening = $this->makeRekening($user, [
+            'nomor_rekening' => 'DEFAULT-PENERIMAAN',
+            'is_default' => true,
+            'is_terkunci' => true,
+        ]);
+
+        $this->actingAs($user)
+            ->delete(route('rekening-bank.destroy', $rekening))
+            ->assertRedirect(route('rekening-bank.show', $rekening));
+
+        $this->assertDatabaseHas('rekening_bank', [
+            'id' => $rekening->id,
+            'deleted_at' => null,
+        ]);
+    }
+
     public function test_only_one_default_per_jenis(): void
     {
         $user = $this->bendaharaPenerimaan();

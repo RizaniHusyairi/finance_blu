@@ -26,7 +26,12 @@
                 <tr>
                     <td class="text-center">{{ $rekenings->firstItem() + $loop->index }}</td>
                     <td>
-                        <div class="fw-bold">{{ $rekening->nama_bank }}</div>
+                        <div class="fw-bold">
+                            {{ $rekening->nama_bank }}
+                            @if($rekening->is_terkunci)
+                                <i class="bi bi-lock-fill text-secondary small" title="Rekening default sistem (tidak bisa dihapus)"></i>
+                            @endif
+                        </div>
                         <div class="small text-muted">{{ $rekening->nomor_rekening }}</div>
                     </td>
                     <td>
@@ -65,13 +70,19 @@
                                     <i class="bi {{ $rekening->status_aktif ? 'bi-toggle-on' : 'bi-toggle-off' }}"></i>
                                 </button>
                             </form>
-                            <form action="{{ route('rekening-bank.destroy', $rekening) }}" method="POST" class="d-inline" onsubmit="return confirm('Hapus rekening ini?');">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="btn btn-sm btn-outline-danger jasa-icon-btn" title="Hapus rekening">
-                                    <i class="bi bi-trash"></i>
+                            @if($rekening->is_terkunci)
+                                <button type="button" class="btn btn-sm btn-outline-secondary jasa-icon-btn" title="Rekening default sistem — tidak dapat dihapus" disabled>
+                                    <i class="bi bi-lock-fill"></i>
                                 </button>
-                            </form>
+                            @else
+                                <form action="{{ route('rekening-bank.destroy', $rekening) }}" method="POST" class="d-inline" onsubmit="return confirm('Hapus rekening ini?');">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="btn btn-sm btn-outline-danger jasa-icon-btn" title="Hapus rekening">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            @endif
                         </div>
                     </td>
                 </tr>

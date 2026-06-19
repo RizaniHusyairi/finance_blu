@@ -126,4 +126,31 @@ class SilabiPembukuanTest extends TestCase
         $this->assertSame(15_000_000.0, $m['grand_total']);
         $this->assertSame(15_000_000.0, $m['total_per_bulan'][1]);
     }
+
+    /**
+     * Case B "Input Transaksi": dana MASUK ke BKU Pengeluaran yang BUKAN dari
+     * tagihan (Terima UP, kode B) terdistribusi ke BKU(1)/Bank(3)/UP(5),
+     * invariant tetap seimbang, dan reverse menghapus seluruh baris.
+     */
+    public function test_terima_up_non_tagihan_masuk_bku_dan_reverse_bersih(): void
+    {
+        $this->seed(KodeTransaksiSeeder::class);
+        $rek = $this->rekening();
+        $trx = $this->jurnal($rek, 'B', 50_000_000); // Terima UP dari KPPN — non-tagihan
+        $post = app(PostingPembukuanService::class);
+        $post->post($trx);
+
+        $keys = BukuKasUmum::where('transaksi_pembukuan_id', $trx->id)->get()
+            ->map(fn ($r) => $r->kode_buku . '|' . $r->arus_kas)->all();
+        $this->assertEqualsCanonicalizing(
+            ['1|DEBIT_MASUK', '3|DEBIT_MASUK', '5|DEBIT_MASUK'],
+            $keys
+        );
+
+        $inv = app(BukuPembantuService::class)->invariant('PENGELUARAN', ['rekening_bank_id' => $rek->id]);
+        $this->assertTrue($inv['seimbang']);
+
+        $post->reverse($trx);
+        $this->assertSame(0, BukuKasUmum::where('transaksi_pembukuan_id', $trx->id)->count());
+    }
 }

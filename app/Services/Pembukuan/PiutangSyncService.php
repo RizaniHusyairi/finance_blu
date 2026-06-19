@@ -35,6 +35,11 @@ use RuntimeException;
  */
 class PiutangSyncService
 {
+    public function __construct(
+        private readonly PiutangRekonsiliasiService $rekonsiliasi,
+    ) {
+    }
+
     /**
      * Buat / refresh baris piutang berdasarkan tagihan yang baru saja PUBLISHED.
      */
@@ -171,6 +176,21 @@ class PiutangSyncService
                     }
 
                     return $existingBku;
+                }
+
+                // Guard anti-dobel: bila baris penerimaan ini sudah lebih dulu
+                // tercatat dari rekening koran (Path Koran), gabung ke baris itu
+                // alih-alih membuat baris BKU kedua.
+                $koranRow = $this->rekonsiliasi->findKoranRowForPiutang($rekeningId, $amount, $paidAt->toDateString());
+                if ($koranRow) {
+                    $piutang->total_dibayar = $amount;
+                    $piutang->status_pembayaran = 'PAID';
+                    $piutang->save();
+
+                    $this->rekonsiliasi->attachPiutang($koranRow, $piutang, $this->resolveAkunPendapatanId($tagihan));
+                    BukuKasUmum::recalculateRunningBalance($rekeningId);
+
+                    return $koranRow->refresh();
                 }
 
                 // Rekening sudah pasti ada → aman menandai piutang PAID bersama baris BKU.

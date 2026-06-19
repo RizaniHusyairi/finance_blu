@@ -1,7 +1,7 @@
 <script>
     (function () {
-        var storageKey = 'maxton-theme';
-        var fallbackTheme = 'blue-theme';
+        var storageKey = 'maxton-theme-v2';
+        var fallbackTheme = 'semi-dark';
         var themeMap = {
             BlueTheme: 'blue-theme',
             LightTheme: 'light',

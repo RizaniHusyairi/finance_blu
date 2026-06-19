@@ -49,6 +49,8 @@
         <span class="fw-bold">{{ $invariant['seimbang'] ? 'SEIMBANG' : 'Selisih Rp ' . number_format($invariant['selisih'], 0, ',', '.') }}</span>
     </div>
 
+    @include('pembukuan.pengeluaran.partials.input-transaksi')
+
     <div class="card">
         <div class="card-header fw-bold"><i class="bi bi-journal-text text-primary"></i> {{ $buku['nama_buku'] }} — Bendahara Pengeluaran ({{ $buku['jumlah_transaksi'] }} transaksi)</div>
         <div class="table-responsive">
@@ -57,10 +59,18 @@
                     <tr>
                         <th>Tanggal</th><th>Kode Transaksi</th><th>Uraian</th>
                         <th class="text-end">Penerimaan</th><th class="text-end">Pengeluaran</th><th class="text-end">Saldo</th>
+                        <th class="text-center">Aksi</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <tr class="table-secondary"><td colspan="5"><em>Saldo Awal Bulan Berjalan</em></td><td class="text-end fw-semibold">{{ number_format($buku['saldo_awal'], 0, ',', '.') }}</td></tr>
+                    <tr class="table-secondary">
+                        <td colspan="5">
+                            <em>Saldo Awal Bulan Berjalan</em>
+                            <a href="{{ route('pembukuan.setup.edit') }}" class="ms-2 small text-decoration-none" title="Atur saldo awal di Setup Pembukuan"><i class="bi bi-gear"></i> Atur</a>
+                        </td>
+                        <td class="text-end fw-semibold">{{ number_format($buku['saldo_awal'], 0, ',', '.') }}</td>
+                        <td></td>
+                    </tr>
                     @forelse($buku['entries'] as $e)
                         @php $masuk = $e->arus_kas === 'DEBIT_MASUK'; @endphp
                         <tr>
@@ -70,9 +80,14 @@
                             <td class="text-end text-success">{{ $masuk ? number_format($e->nominal, 0, ',', '.') : '' }}</td>
                             <td class="text-end text-danger">{{ $masuk ? '' : number_format($e->nominal, 0, ',', '.') }}</td>
                             <td class="text-end">{{ number_format($e->saldo_berjalan ?? 0, 0, ',', '.') }}</td>
+                            <td class="text-center">
+                                @unless(\Illuminate\Support\Str::startsWith($e->nomor_bukti, 'SALDO-AWAL/'))
+                                    <a href="{{ route('pembukuan.bku.show', $e->id) }}" class="btn btn-sm btn-outline-primary py-0 px-1" title="Detail"><i class="bi bi-eye"></i></a>
+                                @endunless
+                            </td>
                         </tr>
                     @empty
-                        <tr><td colspan="6" class="text-center text-muted py-4">Belum ada transaksi pengeluaran. Catat lewat <b>Input Transaksi</b> atau jalankan pencairan SP2D.</td></tr>
+                        <tr><td colspan="7" class="text-center text-muted py-4">Belum ada transaksi pengeluaran. Catat lewat <b>Input Transaksi</b> atau jalankan pencairan SP2D.</td></tr>
                     @endforelse
                 </tbody>
             </table>
