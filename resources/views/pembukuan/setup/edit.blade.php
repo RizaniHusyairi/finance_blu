@@ -3,13 +3,20 @@
 @include('pembukuan.partials.styles')
 
 @section('content')
-<div class="container-fluid">
-    <x-page-title title="Pembukuan" subtitle="Setup Identitas Satker (Kop Dokumen)" />
+<div class="container-fluid bku-page">
 
-    @if(session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
+    <div class="bku-hero">
+        <div class="bku-hero__info">
+            <div class="bku-hero__eyebrow">Pembukuan</div>
+            <h3 class="bku-hero__title">Setup Pembukuan</h3>
+            <span class="bku-hero__rek"><i class="bi bi-building"></i> Identitas Satker &amp; Saldo Awal</span>
+        </div>
+    </div>
 
-    <div class="card">
-        <div class="card-header fw-bold"><i class="bi bi-building text-primary"></i> Identitas Satker</div>
+    @if(session('success'))<div class="alert alert-success alert-dismissible fade show">{{ session('success') }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>@endif
+
+    <div class="card book-card mb-3">
+        <div class="card-header"><h6 class="mb-0 fw-bold"><i class="bi bi-building text-primary me-1"></i> Identitas Satker (Kop Dokumen)</h6></div>
         <div class="card-body">
             <form method="POST" action="{{ route('pembukuan.setup.update') }}" class="row g-3">
                 @csrf
@@ -40,13 +47,13 @@
                         @error($name)<div class="invalid-feedback">{{ $message }}</div>@enderror
                     </div>
                 @endforeach
-                <div class="col-12"><button class="btn btn-primary"><i class="bi bi-save"></i> Simpan</button></div>
+                <div class="col-12"><button class="btn btn-primary"><i class="bi bi-save me-1"></i> Simpan</button></div>
             </form>
         </div>
     </div>
 
-    <div class="card mt-3">
-        <div class="card-header fw-bold"><i class="bi bi-cash-stack text-success"></i> Saldo Awal per Rekening</div>
+    <div class="card book-card">
+        <div class="card-header"><h6 class="mb-0 fw-bold"><i class="bi bi-cash-stack text-success me-1"></i> Saldo Awal per Rekening</h6></div>
         <div class="card-body">
             <p class="text-muted small mb-3">
                 Saldo BKU pada <b>tanggal mulai pembukuan</b> (go-live) tiap rekening. Cukup diinput
@@ -59,8 +66,8 @@
             <form method="POST" action="{{ route('pembukuan.setup.saldo-awal') }}">
                 @csrf
                 <div class="table-responsive">
-                    <table class="table table-sm align-middle">
-                        <thead class="table-light">
+                    <table class="table table-sm align-middle book-table">
+                        <thead>
                             <tr><th style="width:240px;">Rekening</th><th style="width:240px;">Atas Nama (Nama Rekening)</th><th>Peran / Buku</th><th style="width:150px;">Tanggal Berlaku</th><th style="width:180px;" class="text-end">Saldo Awal (Rp)</th></tr>
                         </thead>
                         <tbody>
@@ -92,7 +99,7 @@
                     </table>
                 </div>
                 @if($rekeningSaldo->isNotEmpty())
-                    <button class="btn btn-success btn-sm"><i class="bi bi-save"></i> Simpan Rekening &amp; Saldo Awal</button>
+                    <button class="btn btn-success btn-sm"><i class="bi bi-save me-1"></i> Simpan Rekening &amp; Saldo Awal</button>
                 @endif
             </form>
         </div>

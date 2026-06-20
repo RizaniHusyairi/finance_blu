@@ -1,7 +1,7 @@
-<div class="book-empty">
+<div class="bku-empty">
     <i class="bi bi-inbox"></i>
-    <div class="fw-semibold">{{ $title ?? 'Belum ada data' }}</div>
+    <p>{{ $title ?? 'Belum ada data' }}</p>
     @if(!empty($message))
-        <div class="small mt-1">{{ $message }}</div>
+        <span>{{ $message }}</span>
     @endif
 </div>
