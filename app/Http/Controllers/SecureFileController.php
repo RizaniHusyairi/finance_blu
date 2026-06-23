@@ -2,12 +2,16 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\DetailKontrak;
+use App\Models\DetailPerjaldin;
 use App\Models\KontrakMitraJasa;
 use App\Models\KontrakPengadaan;
 use App\Models\LaporanUtilitas;
 use App\Models\MitraJasa;
 use App\Models\MitraJasaPenjualan;
 use App\Models\MitraJasaPenjualanDetail;
+use App\Models\RiwayatRevisiDipa;
+use App\Models\TagihanJasa;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Storage;
 
@@ -26,17 +30,21 @@ class SecureFileController extends Controller
 {
     /**
      * Registry kind => [modelClass, allowedFields, ownerMode].
-     * ownerMode: 'mitra' (kolom mitra_jasa_id), 'parent' (via relasi penjualan).
-     * Kind tanpa mitra_jasa_id (mis. dokumen internal) otomatis hanya bisa
-     * diakses staf internal karena akun mitra gagal cek kepemilikan.
+     * ownerMode: 'mitra' (kolom mitra_jasa_id), 'parent' (via relasi penjualan),
+     * 'internal' (hanya staf internal/non-mitra). Kind 'mitra' tanpa mitra_jasa_id
+     * juga otomatis hanya bisa diakses staf internal.
      */
     private const REGISTRY = [
         'penjualan'        => [MitraJasaPenjualan::class, ['file_laporan'], 'mitra'],
         'penjualan-detail' => [MitraJasaPenjualanDetail::class, ['file_laporan'], 'parent'],
         'utilitas'         => [LaporanUtilitas::class, ['file_bukti_awal', 'file_bukti'], 'mitra'],
         'kontrak-mitra'    => [KontrakMitraJasa::class, ['file_kontrak'], 'mitra'],
-        // Dokumen internal (tanpa mitra_jasa_id) → otomatis hanya staf internal.
+        'tagihan-jasa'     => [TagihanJasa::class, ['file_kontrak'], 'mitra'],
+        // Dokumen internal (tanpa mitra_jasa_id) → hanya staf internal.
         'kontrak-pengadaan' => [KontrakPengadaan::class, ['file_spk_final_ttd', 'file_gambar_rab', 'file_jaminan_uang_muka'], 'mitra'],
+        'tagihan-kontrak'  => [DetailKontrak::class, ['file_bapp', 'file_bast', 'file_bap', 'file_invoice', 'file_kwitansi', 'file_faktur_pajak', 'file_lampiran_lainnya'], 'internal'],
+        'tagihan-perjaldin' => [DetailPerjaldin::class, ['spt_file_path', 'tiket_file_path', 'transport_file_path', 'penginapan_file_path', 'uang_harian_file_path'], 'internal'],
+        'dipa-revision'    => [RiwayatRevisiDipa::class, ['file_dokumen_dipa'], 'internal'],
     ];
 
     public function show(string $kind, int $id, string $field)
@@ -66,6 +74,12 @@ class SecureFileController extends Controller
     private function authorizeAccess(Model $model, string $ownerMode): void
     {
         $profile = auth()->user()?->profilable;
+
+        // Dokumen internal: hanya staf internal (akun non-mitra) yang boleh.
+        if ($ownerMode === 'internal') {
+            abort_if($profile instanceof MitraJasa, 403, 'Anda tidak berwenang mengakses dokumen ini.');
+            return;
+        }
 
         // Staf internal (akun non-mitra) boleh mengakses seluruh dokumen.
         if (! $profile instanceof MitraJasa) {

@@ -561,7 +561,7 @@
                         </div>
                         <div class="col-md-4 text-md-end mt-3 mt-md-0">
                             @if($tagihan->file_kontrak)
-                                <a href="{{ Storage::url($tagihan->file_kontrak) }}" target="_blank" class="btn btn-sm btn-outline-primary fw-bold">
+                                <a href="{{ route('secure-file', ['tagihan-jasa', $tagihan->id, 'file_kontrak']) }}" target="_blank" class="btn btn-sm btn-outline-primary fw-bold">
                                     <i class="bi bi-file-pdf me-1"></i> Lihat Dokumen Dasar
                                 </a>
                             @endif

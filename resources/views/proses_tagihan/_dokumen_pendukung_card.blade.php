@@ -68,11 +68,11 @@
 
                             // [label, icon, path, nama file, nominal terkait (null = wajib tanpa nominal)]
                             $dokumenPegawai = collect([
-                                ['Surat Tugas / SPT', 'bi-file-earmark-text-fill', $detail->spt_file_path, $detail->spt_file_name, null],
-                                ['Tiket Perjalanan', 'bi-airplane-fill', $detail->tiket_file_path, $detail->tiket_file_name, (float) ($detail->biaya_tiket ?? 0)],
-                                ['Bukti Transport', 'bi-bus-front-fill', $detail->transport_file_path, $detail->transport_file_name, (float) ($detail->biaya_transport ?? 0)],
-                                ['Bukti Penginapan', 'bi-building-fill', $detail->penginapan_file_path, $detail->penginapan_file_name, (float) ($detail->biaya_penginapan ?? 0)],
-                                ['Bukti Uang Harian', 'bi-wallet-fill', $detail->uang_harian_file_path, $detail->uang_harian_file_name, $uangHarianTotal],
+                                ['Surat Tugas / SPT', 'bi-file-earmark-text-fill', $detail->spt_file_path, $detail->spt_file_name, null, 'spt_file_path'],
+                                ['Tiket Perjalanan', 'bi-airplane-fill', $detail->tiket_file_path, $detail->tiket_file_name, (float) ($detail->biaya_tiket ?? 0), 'tiket_file_path'],
+                                ['Bukti Transport', 'bi-bus-front-fill', $detail->transport_file_path, $detail->transport_file_name, (float) ($detail->biaya_transport ?? 0), 'transport_file_path'],
+                                ['Bukti Penginapan', 'bi-building-fill', $detail->penginapan_file_path, $detail->penginapan_file_name, (float) ($detail->biaya_penginapan ?? 0), 'penginapan_file_path'],
+                                ['Bukti Uang Harian', 'bi-wallet-fill', $detail->uang_harian_file_path, $detail->uang_harian_file_name, $uangHarianTotal, 'uang_harian_file_path'],
                             ])
                                 // Tampilkan bila ada file-nya, atau biayanya terisi (jadi terlihat bukti yang kurang).
                                 ->filter(fn ($d) => filled($d[2]) || $d[4] === null || $d[4] > 0)
@@ -122,7 +122,7 @@
                                         <i class="bi bi-eye"></i> Lihat
                                     </a>
                                 </div>
-                                @foreach($dokumenPegawai as [$dLabel, $dIcon, $dPath, $dName, $dAmount])
+                                @foreach($dokumenPegawai as [$dLabel, $dIcon, $dPath, $dName, $dAmount, $dField])
                                     <div class="d-flex align-items-center gap-3 rounded-3 p-2 px-3" style="background: #fcfcfe;">
                                         <i class="bi {{ $dIcon }} {{ filled($dPath) ? 'text-primary' : 'text-secondary opacity-50' }} fs-5 flex-shrink-0"></i>
                                         <div class="flex-grow-1" style="min-width: 0;">
@@ -139,7 +139,7 @@
                                             <span class="fw-semibold text-dark font-monospace fs-8 flex-shrink-0 d-none d-sm-inline">Rp {{ number_format($dAmount, 0, ',', '.') }}</span>
                                         @endif
                                         @if(filled($dPath))
-                                            <a href="{{ url('storage/' . ltrim($dPath, '/')) }}" target="_blank" class="btn btn-sm btn-light border rounded-pill fw-bold btn-pt-action flex-shrink-0">
+                                            <a href="{{ route('secure-file', ['tagihan-perjaldin', $detail->id, $dField]) }}" target="_blank" class="btn btn-sm btn-light border rounded-pill fw-bold btn-pt-action flex-shrink-0">
                                                 <i class="bi bi-eye"></i> Lihat
                                             </a>
                                         @endif

@@ -194,6 +194,7 @@
                                             $pesertaFiles[] = $bt + [
                                                 'path' => $path,
                                                 'name' => $detail->{$bt['key'] . '_file_name'} ?? basename($path),
+                                                'url' => route('secure-file', ['tagihan-perjaldin', $detail->id, $bt['key'] . '_file_path']),
                                             ];
                                         }
                                     }
@@ -204,7 +205,7 @@
                                         <div class="bukti-files">
                                             @foreach($pesertaFiles as $f)
                                                 @php $ext = strtoupper(pathinfo($f['name'], PATHINFO_EXTENSION) ?: pathinfo($f['path'], PATHINFO_EXTENSION)); @endphp
-                                                <a href="{{ Storage::url($f['path']) }}" target="_blank" rel="noopener"
+                                                <a href="{{ $f['url'] }}" target="_blank" rel="noopener"
                                                    class="bukti-file"
                                                    style="--bf-accent: {{ $f['accent'] }}; --bf-shadow: {{ $f['shadow'] }};"
                                                    title="{{ $f['name'] }}">

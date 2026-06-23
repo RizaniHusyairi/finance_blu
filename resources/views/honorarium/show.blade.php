@@ -1297,7 +1297,7 @@
                 <div class="info-label">Dokumen Pendukung (SK Honorarium)</div>
                 <div class="info-value">
                     @if($skDoc)
-                        <a href="{{ Storage::url($skDoc->path_file) }}" target="_blank" class="role-chip" style="--vc-color:#b91c1c; --vc-soft-bg: rgba(244,63,94,.10); padding:.4rem .85rem; text-decoration:none;">
+                        <a href="{{ $skDoc->viewUrl() }}" target="_blank" class="role-chip" style="--vc-color:#b91c1c; --vc-soft-bg: rgba(244,63,94,.10); padding:.4rem .85rem; text-decoration:none;">
                             <i class="bi bi-file-earmark-pdf"></i> {{ \Illuminate\Support\Str::limit($skDoc->nama_file_asli, 40) }}
                         </a>
                     @else
@@ -1457,7 +1457,7 @@
                                 <div class="doc-time"><i class="bi bi-clock"></i> {{ $arsip->created_at->isoFormat('D MMM YYYY HH:mm') }}</div>
                             </div>
                             <div class="doc-actions">
-                                <a href="{{ Storage::url($arsip->path_file) }}" target="_blank" class="doc-action-btn btn-dl" title="Unduh">
+                                <a href="{{ $arsip->downloadUrl() }}" target="_blank" class="doc-action-btn btn-dl" title="Unduh">
                                     <i class="bi bi-download"></i>
                                 </a>
                                 @if($tagihan->status === 'DRAFT')

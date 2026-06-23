@@ -298,7 +298,7 @@ class PerjaldinController extends Controller
                     if ($request->hasFile("peserta.{$index}.{$inputKey}")) {
                         $f = $request->file("peserta.{$index}.{$inputKey}");
                         $files[$cfg['name']] = $f->getClientOriginalName();
-                        $files[$cfg['path']] = $f->store($cfg['dir'], 'public');
+                        $files[$cfg['path']] = $f->store($cfg['dir'], 'local');
                     }
                 }
 
@@ -597,14 +597,23 @@ class PerjaldinController extends Controller
             $oldDetails = DetailPerjaldin::where('tagihan_id', $tagihan->id)->get()->keyBy('id');
             $keptDetailIds = array_filter(array_column($request->peserta, 'detail_id'));
             $buktiMap = $this->buktiFileMap();
-            $storage = \Illuminate\Support\Facades\Storage::disk('public');
+            // INF-01: file bukti kini disimpan di disk privat 'local'. Hapus dari
+            // 'local' sekaligus 'public' agar sisa record lama (belum dimigrasi)
+            // di disk publik ikut terbersihkan.
+            $deleteBukti = function (?string $path) {
+                if (! $path) {
+                    return;
+                }
+                \Illuminate\Support\Facades\Storage::disk('local')->delete($path);
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($path);
+            };
 
             // Hapus file fisik dari detail yang di-remove user
             foreach ($oldDetails as $oldId => $oldDetail) {
                 if (!in_array($oldId, $keptDetailIds)) {
                     foreach ($buktiMap as $cfg) {
                         if ($oldDetail->{$cfg['path']}) {
-                            $storage->delete($oldDetail->{$cfg['path']});
+                            $deleteBukti($oldDetail->{$cfg['path']});
                         }
                     }
                 }
@@ -629,15 +638,15 @@ class PerjaldinController extends Controller
                     if ($request->hasFile("peserta.{$index}.{$inputKey}")) {
                         $f = $request->file("peserta.{$index}.{$inputKey}");
                         if ($oldExisting && $oldExisting->{$cfg['path']}) {
-                            $storage->delete($oldExisting->{$cfg['path']});
+                            $deleteBukti($oldExisting->{$cfg['path']});
                         }
                         $files[$cfg['name']] = $f->getClientOriginalName();
-                        $files[$cfg['path']] = $f->store($cfg['dir'], 'public');
+                        $files[$cfg['path']] = $f->store($cfg['dir'], 'local');
                     }
 
                     // Jika nilai komponen di-zero-kan, hapus file bukti yang nyangkut
                     if ($this->buktiAmountForInput($inputKey, $pesertaData) <= 0 && $files[$cfg['path']]) {
-                        $storage->delete($files[$cfg['path']]);
+                        $deleteBukti($files[$cfg['path']]);
                         $files[$cfg['path']] = null;
                         $files[$cfg['name']] = null;
                     }

@@ -13,15 +13,17 @@
     $potonganPajak = $potonganTagihans->filter(fn ($item) => $item->jenis_potongan !== 'ANGSURAN_UANG_MUKA');
     $totalPotonganPajak = $potonganPajak->sum('nominal_potongan');
 
+    // INF-01: lampiran dokumen kontrak disajikan via route terproteksi `secure-file`.
     $lampiranDokumen = collect([
-        ['label' => 'File BAST', 'path' => $detailKontrak->file_bast ?? null],
-        ['label' => 'File BAPP', 'path' => $detailKontrak->file_bapp ?? null],
-        ['label' => 'File BAP', 'path' => $detailKontrak->file_bap ?? null],
-        ['label' => 'File Invoice', 'path' => $detailKontrak->file_invoice ?? null],
-        ['label' => 'File Kwitansi', 'path' => $detailKontrak->file_kwitansi ?? null],
-        ['label' => 'Faktur Pajak', 'path' => $detailKontrak->file_faktur_pajak ?? null],
-        ['label' => 'Lampiran Lainnya', 'path' => $detailKontrak->file_lampiran_lainnya ?? null],
-    ])->filter(fn ($item) => !empty($item['path']))->values();
+        ['label' => 'File BAST', 'field' => 'file_bast'],
+        ['label' => 'File BAPP', 'field' => 'file_bapp'],
+        ['label' => 'File BAP', 'field' => 'file_bap'],
+        ['label' => 'File Invoice', 'field' => 'file_invoice'],
+        ['label' => 'File Kwitansi', 'field' => 'file_kwitansi'],
+        ['label' => 'Faktur Pajak', 'field' => 'file_faktur_pajak'],
+        ['label' => 'Lampiran Lainnya', 'field' => 'file_lampiran_lainnya'],
+    ])->map(fn ($item) => $item + ['path' => $detailKontrak->{$item['field']} ?? null])
+      ->filter(fn ($item) => !empty($item['path']))->values();
 @endphp
 
 @section('content')
@@ -222,7 +224,7 @@
                                 @if($lampiranDokumen->isNotEmpty())
                                     <div class="list-group">
                                         @foreach($lampiranDokumen as $lampiran)
-                                            <a href="{{ \Illuminate\Support\Facades\Storage::url($lampiran['path']) }}"
+                                            <a href="{{ route('secure-file', ['tagihan-kontrak', $detailKontrak->id, $lampiran['field']]) }}"
                                                target="_blank"
                                                rel="noopener noreferrer"
                                                class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">

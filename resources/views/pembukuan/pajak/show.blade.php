@@ -90,7 +90,7 @@
                                             <td>{{ $arsip->uploader?->name ?? '-' }}</td>
                                             <td>{{ optional($arsip->uploaded_at)->format('d M Y H:i') ?? '-' }}</td>
                                             <td>
-                                                <a href="{{ \Illuminate\Support\Facades\Storage::url($arsip->path_file) }}" target="_blank" class="btn btn-sm btn-outline-primary">Lihat</a>
+                                                <a href="{{ $arsip->viewUrl() }}" target="_blank" class="btn btn-sm btn-outline-primary">Lihat</a>
                                             </td>
                                         </tr>
                                     @endforeach

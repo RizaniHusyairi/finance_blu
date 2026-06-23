@@ -145,7 +145,7 @@
                     <div class="border rounded-4 p-3 h-100">
                         <div class="small text-muted mb-1">Dokumen DIPA</div>
                         @if($activeRevision?->file_dokumen_dipa)
-                            <a href="{{ Storage::url($activeRevision->file_dokumen_dipa) }}" target="_blank" rel="noopener noreferrer" class="btn btn-outline-secondary btn-sm w-100">Buka Dokumen</a>
+                            <a href="{{ route('secure-file', ['dipa-revision', $activeRevision->id, 'file_dokumen_dipa']) }}" target="_blank" rel="noopener noreferrer" class="btn btn-outline-secondary btn-sm w-100">Buka Dokumen</a>
                         @else
                             <div class="fw-semibold text-muted">Belum ada file</div>
                         @endif

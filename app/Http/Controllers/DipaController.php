@@ -94,7 +94,7 @@ class DipaController extends Controller
             ]);
 
             $filePath = $request->hasFile('file_dokumen_dipa')
-                ? $request->file('file_dokumen_dipa')->store('dipa/documents', 'public')
+                ? $request->file('file_dokumen_dipa')->store('dipa/documents', 'local')
                 : null;
 
             RiwayatRevisiDipa::create([
@@ -237,7 +237,7 @@ class DipaController extends Controller
 
         $newRevision = DB::transaction(function () use ($request, $validated, $dipa) {
             $filePath = $request->hasFile('file_dokumen_dipa')
-                ? $request->file('file_dokumen_dipa')->store('dipa/documents', 'public')
+                ? $request->file('file_dokumen_dipa')->store('dipa/documents', 'local')
                 : null;
 
             $revision = RiwayatRevisiDipa::create([

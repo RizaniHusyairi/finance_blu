@@ -2,6 +2,8 @@
 
 namespace App\Console\Commands;
 
+use App\Models\DetailKontrak;
+use App\Models\DetailPerjaldin;
 use App\Models\KontrakMitraJasa;
 use App\Models\KontrakPengadaan;
 use App\Models\LaporanUtilitas;
@@ -10,7 +12,9 @@ use App\Models\MitraJasaPenjualan;
 use App\Models\MitraJasaPenjualanDetail;
 use App\Models\PemakaianGarbarata;
 use App\Models\PermohonanNonSchedule;
+use App\Models\RiwayatRevisiDipa;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -38,6 +42,9 @@ class MovePublicColumnFilesToPrivateCommand extends Command
         PermohonanNonSchedule::class    => ['file_surat'],
         LogPerubahanTarifPjp2u::class   => ['file_pendukung'],
         KontrakPengadaan::class         => ['file_spk_final_ttd', 'file_spmk_final_ttd', 'file_ringkasan_kontrak_final_ttd', 'file_gambar_rab', 'file_jaminan_uang_muka'],
+        RiwayatRevisiDipa::class        => ['file_dokumen_dipa'],
+        DetailKontrak::class            => ['file_bapp', 'file_bast', 'file_bap', 'file_invoice', 'file_kwitansi', 'file_faktur_pajak', 'file_lampiran_lainnya'],
+        DetailPerjaldin::class          => ['spt_file_path', 'tiket_file_path', 'transport_file_path', 'penginapan_file_path', 'uang_harian_file_path'],
     ];
 
     public function handle(): int
@@ -52,6 +59,14 @@ class MovePublicColumnFilesToPrivateCommand extends Command
         $candidates = 0;
 
         foreach (self::TARGETS as $modelClass => $fields) {
+            // Lewati "field" yang ternyata accessor (bukan kolom DB nyata) — mis.
+            // KontrakPengadaan->file_spk_final_ttd yang me-resolve path dari arsip.
+            $table = (new $modelClass)->getTable();
+            $fields = array_values(array_filter($fields, fn ($f) => Schema::hasColumn($table, $f)));
+            if (empty($fields)) {
+                continue;
+            }
+
             $modelClass::query()
                 ->where(function ($q) use ($fields) {
                     foreach ($fields as $field) {
