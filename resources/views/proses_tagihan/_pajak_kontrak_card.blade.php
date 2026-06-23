@@ -10,10 +10,10 @@
     $fakturArsip = $tagihan->detailKontrak?->arsipDokumen
         ?->first(fn ($a) => $a->jenis_dokumen === 'FAKTUR_PAJAK' && $a->is_active)
         ?? $tagihan->detailKontrak?->arsipDokumen?->first(fn ($a) => $a->jenis_dokumen === 'FAKTUR_PAJAK');
-    // url() memakai origin request aktif — Storage::url berbasis APP_URL bisa
-    // salah host saat APP_URL tidak sama dengan alamat akses aplikasi.
+    // INF-01: faktur pajak kini di disk privat — disajikan via route terproteksi
+    // (auth + role internal), bukan tautan publik /storage.
     $fakturUrl = $fakturArsip
-        ? url('storage/' . ltrim($fakturArsip->path_file, '/'))
+        ? route('arsip.view', $fakturArsip)
         : null;
 
     $pajakDone = $state['pajakKontrakDone'];

@@ -309,7 +309,7 @@ class MitraJasaPenjualanController extends Controller
         $hasil = $service->hitungKonsesiLayanan($konsesiContext['layanan'], (float) $validated['total_omzet']);
 
         if ($request->hasFile('file_laporan')) {
-            $validated['file_laporan'] = $request->file('file_laporan')->store('mitra-jasa/penjualan', 'public');
+            $validated['file_laporan'] = $request->file('file_laporan')->store('mitra-jasa/penjualan', 'local');
         }
 
         MitraJasaPenjualan::create(array_merge($validated, [
@@ -370,7 +370,7 @@ class MitraJasaPenjualanController extends Controller
             if ($penjualan->file_laporan) {
                 Storage::disk('public')->delete($penjualan->file_laporan);
             }
-            $validated['file_laporan'] = $request->file('file_laporan')->store('mitra-jasa/penjualan', 'public');
+            $validated['file_laporan'] = $request->file('file_laporan')->store('mitra-jasa/penjualan', 'local');
         }
 
         $penjualan->update(array_merge($validated, [

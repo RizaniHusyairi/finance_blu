@@ -10,6 +10,7 @@ use App\Models\LogStatusDokumen;
 use App\Support\DocumentTte;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 
 class PublicDocumentSignatureController extends Controller
@@ -43,6 +44,15 @@ class PublicDocumentSignatureController extends Controller
 
         $signer = $request->query('signer');
 
+        // TTE-01: bekukan artefak final saat QR pertama dipindai (best-effort),
+        // agar checksum dokumen tersedia di halaman verifikasi dan jendela
+        // perubahan setelah verifikasi diperkecil.
+        try {
+            $documentChecksum = $this->ensureFrozenPdf($type, $document)['checksum'];
+        } catch (\Throwable $e) {
+            $documentChecksum = null;
+        }
+
         return view('public.spp-tte', [
             'spp' => $document instanceof DokumenSpp ? $document : null,
             'document' => $document,
@@ -59,6 +69,7 @@ class PublicDocumentSignatureController extends Controller
             'qrHash' => $qrHash,
             'hashStatus' => $hashStatus,
             'signerInfo' => $this->buildSignerInfo($document, $workflow, $signer),
+            'documentChecksum' => $documentChecksum,
         ]);
     }
 
@@ -68,13 +79,60 @@ class PublicDocumentSignatureController extends Controller
 
         abort_unless(DocumentTte::isFullyVerified($document), 403, 'Dokumen hanya dapat dilihat setelah seluruh verifikator menyetujui dokumen.');
 
-        return match ($type) {
+        // TTE-01: sajikan artefak PDF final yang DIBEKUKAN — di-render sekali saat
+        // pertama diakses lalu disimpan imutabel di disk privat. Dengan begitu,
+        // perubahan data dokumen SETELAH TTE tidak mengubah PDF yang disajikan ke
+        // pemindai QR (dokumen ber-tanda tangan elektronik menjadi tak-bisa-diubah).
+        $frozen = $this->ensureFrozenPdf($type, $document);
+
+        return Storage::disk(DocumentTte::FROZEN_DISK)->response(
+            $frozen['path'],
+            $this->frozenFilename($type, $document),
+            ['Content-Type' => 'application/pdf']
+        );
+    }
+
+    /**
+     * Bekukan PDF final sekali (idempoten) dan kembalikan path + checksum.
+     * Dipanggil dari halaman verifikasi (eager) maupun penyaji PDF.
+     */
+    private function ensureFrozenPdf(string $type, Model $document): array
+    {
+        $disk = Storage::disk(DocumentTte::FROZEN_DISK);
+        $path = DocumentTte::frozenPdfPath($document);
+        $checksumPath = $path . '.sha256';
+
+        if (! $disk->exists($path)) {
+            $binary = $this->renderDocumentPdf($type, (int) $document->getKey(), $document);
+            $disk->put($path, $binary);
+            $disk->put($checksumPath, hash('sha256', $binary));
+        }
+
+        return [
+            'path' => $path,
+            'checksum' => $disk->exists($checksumPath) ? trim((string) $disk->get($checksumPath)) : null,
+        ];
+    }
+
+    /** Render biner PDF dokumen pencairan (sekali) untuk dibekukan. */
+    private function renderDocumentPdf(string $type, int $id, Model $document): string
+    {
+        $response = match ($type) {
             'spp' => app(SppController::class)->cetakPdf($id),
             'spm' => app(SpmController::class)->cetakPdfSpm($id),
             'npi' => app(NpiController::class)->cetakPdf($id),
             'sp2d' => app(DocumentController::class)->printSp2d($document),
             default => abort(404),
         };
+
+        return (string) $response->getContent();
+    }
+
+    private function frozenFilename(string $type, Model $document): string
+    {
+        $number = DocumentTte::numberFor($document) ?: $document->getKey();
+
+        return strtoupper($type) . '-BLU-' . str_replace(['/', '\\'], '-', (string) $number) . '.pdf';
     }
 
     private function resolveDocument(string $type, int $id): Model

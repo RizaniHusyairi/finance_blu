@@ -3,12 +3,13 @@
 namespace App\Models;
 
 use App\Support\DocumentTte;
+use App\Models\Concerns\Blameable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class DokumenSpp extends Model
 {
-    use SoftDeletes;
+    use Blameable, SoftDeletes;
 
     public const STANDING_INSTRUCTION_SIGNED_ARCHIVE_TYPE = 'STANDING_INSTRUCTION_FINAL_TTD';
     public const SPP_SIGNED_ARCHIVE_TYPE = 'SPP_BERTANDATANGAN';

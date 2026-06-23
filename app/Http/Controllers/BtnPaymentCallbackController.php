@@ -10,18 +10,22 @@ class BtnPaymentCallbackController extends Controller
 {
     public function __invoke(Request $request, BtnVirtualAccountService $service)
     {
-        // Verifikasi keaslian callback bila secret dikonfigurasi.
-        // WAJIB diisi untuk produksi agar tidak ada pihak luar yang bisa
-        // mengirim callback palsu dan menandai tagihan LUNAS.
+        // INT-01: secret callback WAJIB dikonfigurasi. Tanpa ini, pihak luar tanpa
+        // kredensial dapat mengirim callback palsu dan menandai tagihan PNBP LUNAS.
+        // Tolak total bila secret belum diisi — JANGAN proses callback tanpa verifikasi.
         $secret = IntegrationSetting::getValue('btn.callback_secret');
-        if (filled($secret)) {
-            $provided = $request->header('X-Callback-Secret') ?: $request->input('callback_secret');
-            abort_unless(
-                is_string($provided) && hash_equals((string) $secret, $provided),
-                401,
-                'Invalid callback signature.'
-            );
-        }
+        abort_if(
+            blank($secret),
+            503,
+            'Callback BTN belum dikonfigurasi (callback_secret kosong).'
+        );
+
+        $provided = $request->header('X-Callback-Secret') ?: $request->input('callback_secret');
+        abort_unless(
+            is_string($provided) && hash_equals((string) $secret, $provided),
+            401,
+            'Invalid callback signature.'
+        );
 
         $result = $service->handlePaymentCallback($request->all());
 

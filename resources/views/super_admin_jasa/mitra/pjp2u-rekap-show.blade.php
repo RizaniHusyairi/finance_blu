@@ -133,7 +133,7 @@
                         </td>
                         <td>
                             @if($penjualan->file_laporan)
-                                <a href="{{ asset('storage/' . $penjualan->file_laporan) }}" target="_blank" class="btn btn-sm btn-light border jasa-icon-btn" title="File laporan" aria-label="File laporan"><i class="bi bi-paperclip"></i></a>
+                                <a href="{{ route('secure-file', ['penjualan', $penjualan->id, 'file_laporan']) }}" target="_blank" class="btn btn-sm btn-light border jasa-icon-btn" title="File laporan" aria-label="File laporan"><i class="bi bi-paperclip"></i></a>
                             @else
                                 <span class="text-muted">-</span>
                             @endif

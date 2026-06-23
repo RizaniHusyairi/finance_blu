@@ -81,6 +81,7 @@ use App\Http\Controllers\PublicTagihanJasaController;
 use App\Http\Controllers\PublicTagihanJasaVerificationController;
 use App\Http\Controllers\PublicTagihanSignatureController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\SecureFileController;
 use App\Http\Controllers\ShortLinkController;
 use App\Http\Controllers\SpmController;
 use App\Http\Controllers\SppController;
@@ -184,7 +185,7 @@ Route::get('/p/kpa-approval/tagihan/{tagihanId}', [KpaApprovalController::class,
     ->middleware(['web'])
     ->name('kpa.approval.show');
 Route::post('/p/kpa-approval/tagihan/{tagihanId}', [KpaApprovalController::class, 'processApproval'])
-    ->middleware(['web', 'auth'])
+    ->middleware(['web', 'auth', 'role:KPA|PLT/PLH|Super Admin'])
     ->name('kpa.approval.process');
 
 // Short link redirector — link pendek di WhatsApp di-resolve ke URL publik signed.
@@ -216,6 +217,22 @@ Route::middleware(['auth', 'account.active'])->group(function () use ($internalR
     // Otorisasi role (Bendahara Pengeluaran / Super Admin) dilakukan di dalam controller.
     Route::get('/arsip-sensitif/{arsip}/download', [DocumentController::class, 'downloadArsipSensitif'])
         ->name('arsip-sensitif.download');
+
+    // INF-01: arsip dokumen internal (INVOICE, FAKTUR_PAJAK, dll) disajikan dari
+    // disk privat lewat route terproteksi role internal — bukan URL publik /storage.
+    Route::middleware("role:$internalRoles")->group(function () {
+        Route::get('/arsip/{arsip}/view', [DocumentController::class, 'viewArsip'])->name('arsip.view');
+        Route::get('/arsip/{arsip}/download', [DocumentController::class, 'downloadArsip'])->name('arsip.download');
+    });
+
+    // INF-01: penyaji file dokumen (kolom model) via streaming terproteksi —
+    // pengganti tautan publik mentah asset('storage/...'). Otorisasi internal/mitra
+    // pemilik dilakukan di controller; berlaku untuk staf internal maupun mitra.
+    Route::get('/secure-file/{kind}/{id}/{field}', [SecureFileController::class, 'show'])
+        ->whereNumber('id')
+        ->where('kind', '[a-z-]+')
+        ->where('field', '[a-z_]+')
+        ->name('secure-file');
 
     // Internal Dashboard — route masuk umum; role khusus seperti AMC langsung diarahkan oleh controller.
     Route::get('/dashboard', [DashboardController::class, 'internal'])
@@ -806,8 +823,12 @@ Route::middleware(['auth', 'account.active'])->group(function () use ($internalR
         Route::post('/manajemen-pnbp/umum', [ManajemenPnbpController::class, 'umumStore'])->name('manajemen-pnbp.umum.store');
     });
 
-    // Cetak PDF SPP/SPM/NPI/SP2D bisa diakses oleh berbagai role terkait
-    Route::middleware('auth')->group(function () {
+    // Cetak PDF SPP/SPM/NPI/SP2D — SEC-07: batasi ke role INTERNAL saja (bukan
+    // sekadar `auth`) agar Mitra/AMC tidak bisa mengunduh dokumen pencairan
+    // (nominal, rekening, rincian pembayaran negara) via tebak-ID (IDOR).
+    // Catatan: otorisasi per-dokumen (Policy keterkaitan user↔tagihan) adalah
+    // penguatan lanjutan.
+    Route::middleware("role:$internalRoles")->group(function () {
         Route::get('/spps/{spp}/pdf', [SppController::class, 'cetakPdf'])->name('spps.cetak-pdf');
         Route::get('/spms/{spm_id}/pdf', [SpmController::class, 'cetakPdfSpm'])->name('spms.cetak-pdf');
         Route::get('/npis/{npi_id}/pdf', [NpiController::class, 'cetakPdf'])->name('npis.cetak-pdf');

@@ -151,10 +151,10 @@
                         </td>
                         <td>
                             @if($lap->file_bukti_awal)
-                                <a href="{{ asset('storage/' . $lap->file_bukti_awal) }}" target="_blank" class="btn btn-sm btn-outline-primary jasa-icon-btn" title="Bukti Awal" aria-label="Bukti Awal"><i class="bi bi-image"></i></a>
+                                <a href="{{ route('secure-file', ['utilitas', $lap->id, 'file_bukti_awal']) }}" target="_blank" class="btn btn-sm btn-outline-primary jasa-icon-btn" title="Bukti Awal" aria-label="Bukti Awal"><i class="bi bi-image"></i></a>
                             @endif
                             @if($lap->file_bukti)
-                                <a href="{{ asset('storage/' . $lap->file_bukti) }}" target="_blank" class="btn btn-sm btn-outline-primary jasa-icon-btn" title="Bukti Akhir" aria-label="Bukti Akhir"><i class="bi bi-images"></i></a>
+                                <a href="{{ route('secure-file', ['utilitas', $lap->id, 'file_bukti']) }}" target="_blank" class="btn btn-sm btn-outline-primary jasa-icon-btn" title="Bukti Akhir" aria-label="Bukti Akhir"><i class="bi bi-images"></i></a>
                             @endif
                             @if(!$lap->file_bukti && !$lap->file_bukti_awal)
                                 <span class="text-muted">-</span>

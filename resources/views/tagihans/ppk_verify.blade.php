@@ -27,6 +27,9 @@
     $isDokumenLengkap = $hasBapp && $hasBap && $hasInvoice && (!$wajibBast || $hasBast);
 
     function getFileViewerPath($fileObj, $legacyPath) {
+        // INF-01: record ArsipDokumen (punya id) disajikan via route terproteksi;
+        // path legacy langsung tetap memakai Storage::url.
+        if ($fileObj && isset($fileObj->id) && isset($fileObj->path_file)) return route('arsip.view', $fileObj);
         if ($fileObj && isset($fileObj->path_file)) return \Illuminate\Support\Facades\Storage::url($fileObj->path_file);
         if ($legacyPath) return \Illuminate\Support\Facades\Storage::url($legacyPath);
         return null;

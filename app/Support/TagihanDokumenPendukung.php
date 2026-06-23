@@ -59,7 +59,7 @@ class TagihanDokumenPendukung
             ]);
         };
 
-        $addArsip = function ($arsip, ?string $source = null) use ($addFile) {
+        $addArsip = function ($arsip, ?string $source = null) use ($items, $addFile) {
             // Versi lama yang sudah digantikan (is_active=false) tidak ditampilkan.
             if ($arsip !== null && isset($arsip->is_active) && ! $arsip->is_active) {
                 return;
@@ -69,6 +69,23 @@ class TagihanDokumenPendukung
             $title = $arsip?->nama_file_asli
                 ?: ($arsip?->jenis_dokumen ? ucwords(strtolower(str_replace('_', ' ', $arsip->jenis_dokumen))) : null);
 
+            // INF-01: record ArsipDokumen disajikan via route terproteksi (auth +
+            // role internal), bukan URL publik /storage. Berlaku untuk arsip di
+            // disk privat (local) maupun yang masih publik — endpoint menyamakan
+            // akses lewat kontrol aplikasi.
+            if ($arsip?->id && trim((string) $path) !== '') {
+                $items->push([
+                    'title' => $title ?: basename((string) $path),
+                    'path' => $path,
+                    'url' => route('arsip.view', $arsip),
+                    'source' => $source,
+                    'is_generated' => false,
+                ]);
+
+                return;
+            }
+
+            // Fallback untuk objek tanpa id (mis. path mentah) — perilaku lama.
             $addFile($title, $path, $source, $arsip?->disk ?? null);
         };
 

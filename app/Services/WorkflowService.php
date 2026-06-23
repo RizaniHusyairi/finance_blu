@@ -111,6 +111,15 @@ class WorkflowService
             throw new \RuntimeException('Tidak ada approval step yang pending untuk Anda.');
         }
 
+        // WF-01: Pemisahan tugas (Segregation of Duties) — pembuat dokumen tidak
+        // boleh menyetujui dokumennya sendiri (maker ≠ checker).
+        foreach (['created_by', 'dibuat_oleh', 'dibuat_oleh_id'] as $makerCol) {
+            $makerId = $document->getAttribute($makerCol);
+            if ($makerId !== null && (int) $makerId === (int) $actedByUserId) {
+                throw new \RuntimeException('Pemisahan tugas: Anda tidak dapat menyetujui dokumen yang Anda buat sendiri.');
+            }
+        }
+
         $approval->update([
             'status' => 'APPROVED',
             'acted_by_user_id' => $actedByUserId,

@@ -8,7 +8,6 @@ use App\Models\PaymentTransaction;
 use App\Models\TagihanJasa;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 
 class BtnVirtualAccountService
 {
@@ -46,13 +45,6 @@ class BtnVirtualAccountService
             'data.virtual_account',
             'data.va_number',
         ]);
-        $externalReference = $this->firstFilled($payload, [
-            'reference',
-            'payment_reference',
-            'transaction_id',
-            'data.reference',
-            'data.transaction_id',
-        ]) ?: 'BTN-' . Str::uuid();
         $amount = (float) ($this->firstFilled($payload, [
             'amount',
             'paid_amount',
@@ -72,13 +64,38 @@ class BtnVirtualAccountService
             'data.payment_channel',
         ]);
 
+        // INT-02: kunci idempotensi diambil dari reference provider. Bila kosong,
+        // TURUNKAN secara DETERMINISTIK dari field stabil (VA + nominal + waktu bayar)
+        // — JANGAN memakai UUID acak yang membuat setiap retry/replay menjadi
+        // transaksi baru sehingga terjadi double credit.
+        $externalReference = $this->firstFilled($payload, [
+            'reference',
+            'payment_reference',
+            'transaction_id',
+            'data.reference',
+            'data.transaction_id',
+        ]);
+        if (blank($externalReference)) {
+            $externalReference = 'BTN-' . sha1(($virtualAccount ?? '') . '|' . $amount . '|' . ($paidAt ?? ''));
+        }
+
         $tagihan = TagihanJasa::where('nomor_va', $virtualAccount)
             ->orWhere('va_reference', $externalReference)
             ->first();
 
-        $transaction = DB::transaction(function () use ($tagihan, $payload, $virtualAccount, $externalReference, $amount, $paidAt, $channel) {
-            $totalTagihanBerjalan = $tagihan ? (float) $tagihan->total_dengan_denda : 0;
-            $isFullPayment = $tagihan && $totalTagihanBerjalan > 0 && $amount >= $totalTagihanBerjalan;
+        $callbackResult = DB::transaction(function () use ($tagihan, $payload, $virtualAccount, $externalReference, $amount, $paidAt, $channel) {
+            // INT-02: kunci baris transaksi yang sudah ada untuk (provider, external_reference)
+            // agar callback yang sama tidak diproses paralel/berulang (race condition).
+            $existing = PaymentTransaction::where('provider', 'btn')
+                ->where('external_reference', $externalReference)
+                ->lockForUpdate()
+                ->first();
+
+            // Bila callback ini sudah pernah dituntaskan (paid), JANGAN proses ulang —
+            // cegah double credit, re-settlement, dan notifikasi ganda saat retry/replay.
+            if ($existing && $existing->status === 'paid') {
+                return ['transaction' => $existing, 'alreadyProcessed' => true];
+            }
 
             $transaction = PaymentTransaction::updateOrCreate(
                 [
@@ -89,18 +106,36 @@ class BtnVirtualAccountService
                     'tagihan_jasa_id' => $tagihan?->id,
                     'virtual_account' => $virtualAccount,
                     'amount' => $amount,
-                    'status' => $tagihan ? ($isFullPayment ? 'paid' : 'partial') : 'unmatched',
+                    'status' => $tagihan ? 'partial' : 'unmatched',
                     'payment_channel' => $channel,
                     'paid_at' => $paidAt ? Carbon::parse($paidAt) : now(),
                     'payload' => $payload,
                 ]
             );
 
+            if (! $tagihan) {
+                return ['transaction' => $transaction, 'alreadyProcessed' => false];
+            }
+
+            $totalTagihanBerjalan = (float) $tagihan->total_dengan_denda;
+
+            // INT-02 / DI-01: AKUMULASI pembayaran = jumlah seluruh transaksi BTN sukses
+            // untuk tagihan ini (bukan menimpa dengan nominal callback tunggal), supaya
+            // pembayaran parsial berulang menambah, bukan menggantikan, dan tidak terjadi
+            // double credit maupun tagihan yang "tak pernah lunas".
+            $totalDibayar = (float) PaymentTransaction::where('provider', 'btn')
+                ->where('tagihan_jasa_id', $tagihan->id)
+                ->whereIn('status', ['paid', 'partial'])
+                ->sum('amount');
+
+            $isFullPayment = $totalTagihanBerjalan > 0 && $totalDibayar >= $totalTagihanBerjalan;
+            $transaction->update(['status' => $isFullPayment ? 'paid' : 'partial']);
+
             if ($isFullPayment) {
                 $tagihan->update([
                     'status' => 'LUNAS',
                     'status_pembayaran' => 'lunas',
-                    'jumlah_dibayar' => $amount,
+                    'jumlah_dibayar' => $totalDibayar,
                     'sisa_tagihan' => 0,
                     'tanggal_lunas' => now()->toDateString(),
                     'paid_at' => $transaction->paid_at,
@@ -108,18 +143,21 @@ class BtnVirtualAccountService
                     'payment_channel' => $channel,
                     'last_payment_sync_at' => now(),
                 ]);
-            } elseif ($tagihan) {
+            } else {
                 $tagihan->update([
-                    'jumlah_dibayar' => $amount,
-                    'sisa_tagihan' => max(0, $totalTagihanBerjalan - $amount),
+                    'jumlah_dibayar' => $totalDibayar,
+                    'sisa_tagihan' => max(0, $totalTagihanBerjalan - $totalDibayar),
                     'payment_reference' => $externalReference,
                     'payment_channel' => $channel,
                     'last_payment_sync_at' => now(),
                 ]);
             }
 
-            return $transaction;
+            return ['transaction' => $transaction, 'alreadyProcessed' => false];
         });
+
+        $transaction = $callbackResult['transaction'];
+        $alreadyProcessed = $callbackResult['alreadyProcessed'];
 
         IntegrationLog::create([
             'provider' => 'btn',
@@ -133,7 +171,7 @@ class BtnVirtualAccountService
             'message' => $tagihan ? 'Callback pembayaran BTN diproses.' : 'Callback diterima tetapi tagihan tidak ditemukan.',
         ]);
 
-        if ($tagihan && $transaction->status === 'partial') {
+        if ($tagihan && ! $alreadyProcessed && $transaction->status === 'partial') {
             $freshTagihan = $tagihan->fresh(['mitra', 'mitraLegacy', 'details']);
 
             try {
@@ -149,7 +187,7 @@ class BtnVirtualAccountService
             }
         }
 
-        if ($tagihan && $transaction->status === 'paid') {
+        if ($tagihan && ! $alreadyProcessed && $transaction->status === 'paid') {
             $freshTagihan = $tagihan->fresh(['mitra', 'mitraLegacy', 'details']);
 
             // Sync ke piutang LUNAS + catat BKU

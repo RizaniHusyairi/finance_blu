@@ -1463,7 +1463,7 @@
                                     <td class="text-end">
                                         <div class="d-flex justify-content-end gap-1 flex-wrap align-items-center">
                                             @if($penjualan->file_laporan)
-                                                <a href="{{ asset('storage/' . $penjualan->file_laporan) }}" target="_blank" class="btn btn-sm btn-light border jasa-icon-btn" title="File laporan" aria-label="File laporan"><i class="bi bi-paperclip"></i></a>
+                                                <a href="{{ route('secure-file', ['penjualan', $penjualan->id, 'file_laporan']) }}" target="_blank" class="btn btn-sm btn-light border jasa-icon-btn" title="File laporan" aria-label="File laporan"><i class="bi bi-paperclip"></i></a>
                                             @endif
                                             <a href="{{ route('jasa.mitra.penjualan.show', [$mitra, $penjualan]) }}" class="btn btn-sm btn-light border jasa-icon-btn" title="Detail" aria-label="Detail"><i class="bi bi-eye"></i></a>
                                             @if($canManageMitraMaster && in_array($penjualan->status, ['draft', 'ditolak'], true))
@@ -1561,7 +1561,7 @@
                                     <td class="text-end">
                                         <div class="d-flex justify-content-end gap-1 flex-wrap align-items-center">
                                             @if($penjualan->file_laporan)
-                                                <a href="{{ asset('storage/' . $penjualan->file_laporan) }}" target="_blank" class="btn btn-sm btn-light border jasa-icon-btn" title="File laporan" aria-label="File laporan"><i class="bi bi-paperclip"></i></a>
+                                                <a href="{{ route('secure-file', ['penjualan', $penjualan->id, 'file_laporan']) }}" target="_blank" class="btn btn-sm btn-light border jasa-icon-btn" title="File laporan" aria-label="File laporan"><i class="bi bi-paperclip"></i></a>
                                             @endif
                                             <a href="{{ route('jasa.mitra.penjualan.show', [$mitra, $penjualan]) }}" class="btn btn-sm btn-light border jasa-icon-btn" title="Detail" aria-label="Detail"><i class="bi bi-eye"></i></a>
                                             @if($penjualan->status === 'diajukan' && $penjualan->can_be_verified)

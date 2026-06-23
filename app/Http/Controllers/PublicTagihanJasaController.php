@@ -48,10 +48,10 @@ class PublicTagihanJasaController extends Controller
 
         $fileName = 'surat-pengantar-dan-nota-tagihan-' . str_replace(['/', '\\'], '-', $tagihan->nomor_tagihan) . '.pdf';
 
-        if ($tagihan->file_surat_pengantar_final && Storage::disk('public')->exists($tagihan->file_surat_pengantar_final)) {
+        if ($tagihan->file_surat_pengantar_final && Storage::disk('local')->exists($tagihan->file_surat_pengantar_final)) {
             return $request->boolean('download')
-                ? Storage::disk('public')->download($tagihan->file_surat_pengantar_final, $fileName)
-                : Storage::disk('public')->response($tagihan->file_surat_pengantar_final, $fileName);
+                ? Storage::disk('local')->download($tagihan->file_surat_pengantar_final, $fileName)
+                : Storage::disk('local')->response($tagihan->file_surat_pengantar_final, $fileName);
         }
 
         $pdf = Pdf::loadView('tagihan_jasa.surat_pengantar_pdf', [

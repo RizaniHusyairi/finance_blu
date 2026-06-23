@@ -119,12 +119,12 @@ class PublicTagihanJasaVerificationController extends Controller
         );
 
         abort_unless(
-            Storage::disk('public')->exists($tagihan->file_surat_pengantar_final),
+            Storage::disk('local')->exists($tagihan->file_surat_pengantar_final),
             404,
             'File surat pengantar final tidak ditemukan.'
         );
 
-        return Storage::disk('public')->response(
+        return Storage::disk('local')->response(
             $tagihan->file_surat_pengantar_final,
             basename($tagihan->file_surat_pengantar_final)
         );

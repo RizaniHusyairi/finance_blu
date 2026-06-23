@@ -28,10 +28,15 @@ class HomeController extends Controller
 
     public function root(Request $request)
     {
-        if(view()->exists($request->path())) {
-            return view($request->path());
-        } else {
-            return abort(404);
+        // SEC-06: JANGAN merender view sembarang berdasarkan path request — itu
+        // membocorkan Blade internal (layout/partial/template) ke pengguna anonim.
+        // Catch-all cukup mengarahkan ke login/dashboard sesuai status & peran.
+        if (! auth()->check()) {
+            return redirect()->route('login');
         }
+
+        return auth()->user()->hasAnyRole(['Mitra', 'Mitra Jasa'])
+            ? redirect()->route('mitra.dashboard')
+            : redirect()->route('dashboard');
     }
 }

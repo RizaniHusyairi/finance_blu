@@ -2,12 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\Blameable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Tagihan extends Model
 {
-    use SoftDeletes;
+    use Blameable, SoftDeletes;
 
     protected $table = 'tagihan';
     protected $guarded = ['id'];

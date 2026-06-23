@@ -19,6 +19,12 @@ class DocumentArchiveService
 
     public function upload(Model $documentable, string $jenisDokumen, UploadedFile $file, array $attributes = []): ArsipDokumen
     {
+        // INF-01: pemanggil dokumen sensitif internal mengirim `'disk' => 'local'`
+        // secara eksplisit (lihat call site INVOICE/FAKTUR_PAJAK/BAPP_GAMBAR_RAB/
+        // LAMPIRAN_LAINNYA). Default dibiarkan `public` agar pemanggil lain yang
+        // me-render via Storage::url() (mis. Honorarium) tidak ikut rusak —
+        // migrasi default ke `local` menyusul setelah seluruh rendering dialihkan
+        // ke route terproteksi arsip.view.
         $disk = $attributes['disk'] ?? 'public';
         $path = $file->store($attributes['directory'] ?? 'arsip-dokumen', $disk);
 
@@ -53,6 +59,19 @@ class DocumentArchiveService
     public function download(ArsipDokumen $arsip)
     {
         return Storage::disk($arsip->disk)->download($arsip->path_file, $arsip->nama_file_asli);
+    }
+
+    /**
+     * Tampilkan arsip secara inline (mis. tombol "Lihat" di halaman tagihan)
+     * dari disk-nya — privat maupun publik — melalui route terproteksi.
+     */
+    public function view(ArsipDokumen $arsip)
+    {
+        return Storage::disk($arsip->disk)->response(
+            $arsip->path_file,
+            $arsip->nama_file_asli,
+            ['Content-Type' => $arsip->mime_type ?: 'application/octet-stream']
+        );
     }
 
     public function delete(ArsipDokumen $arsip): void

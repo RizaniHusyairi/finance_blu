@@ -134,14 +134,14 @@
                     <div class="row g-2 mb-3">
                         @if($laporan->file_bukti_awal)
                             <div class="col-md-6">
-                                <a href="{{ asset('storage/' . $laporan->file_bukti_awal) }}" target="_blank" class="btn btn-light border fw-semibold jasa-icon-btn" title="Bukti stan awal" aria-label="Bukti stan awal">
+                                <a href="{{ route('secure-file', ['utilitas', $laporan->id, 'file_bukti_awal']) }}" target="_blank" class="btn btn-light border fw-semibold jasa-icon-btn" title="Bukti stan awal" aria-label="Bukti stan awal">
                                     <i class="bi bi-file-earmark-image"></i>
                                 </a>
                             </div>
                         @endif
                         @if($laporan->file_bukti)
                             <div class="col-md-6">
-                                <a href="{{ asset('storage/' . $laporan->file_bukti) }}" target="_blank" class="btn btn-light border fw-semibold jasa-icon-btn" title="Bukti stan akhir" aria-label="Bukti stan akhir">
+                                <a href="{{ route('secure-file', ['utilitas', $laporan->id, 'file_bukti']) }}" target="_blank" class="btn btn-light border fw-semibold jasa-icon-btn" title="Bukti stan akhir" aria-label="Bukti stan akhir">
                                     <i class="bi bi-file-earmark-image"></i>
                                 </a>
                             </div>

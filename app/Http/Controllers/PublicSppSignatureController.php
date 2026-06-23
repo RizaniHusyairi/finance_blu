@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\DokumenSpp;
 use App\Models\LogStatusDokumen;
+use App\Support\DocumentTte;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 
 class PublicSppSignatureController extends Controller
@@ -84,6 +86,13 @@ class PublicSppSignatureController extends Controller
             'hash' => $documentHash,
         ]);
 
+        // TTE-01: bekukan artefak final saat QR pertama dipindai (best-effort).
+        try {
+            $documentChecksum = $this->ensureFrozenPdf($spp)['checksum'];
+        } catch (\Throwable $e) {
+            $documentChecksum = null;
+        }
+
         return view('public.spp-tte', compact(
             'spp',
             'workflow',
@@ -94,6 +103,7 @@ class PublicSppSignatureController extends Controller
             'qrHash',
             'hashStatus',
             'signerInfo',
+            'documentChecksum',
         ));
     }
 
@@ -103,7 +113,36 @@ class PublicSppSignatureController extends Controller
 
         abort_unless($spp->isFullyVerifiedForTte(), 403, 'Dokumen SPP hanya dapat dilihat setelah seluruh verifikator menyetujui dokumen.');
 
-        return app(SppController::class)->cetakPdf($id);
+        // TTE-01: sajikan artefak PDF final yang DIBEKUKAN, bukan render ulang dari DB.
+        $frozen = $this->ensureFrozenPdf($spp);
+
+        return Storage::disk(DocumentTte::FROZEN_DISK)->response(
+            $frozen['path'],
+            'SPP-BLU-' . str_replace(['/', '\\'], '-', (string) ($spp->nomor_spp ?: $spp->id)) . '.pdf',
+            ['Content-Type' => 'application/pdf']
+        );
+    }
+
+    /**
+     * TTE-01: bekukan PDF final SPP sekali (idempoten), di-key per tteHash,
+     * lalu sajikan artefak imutabel itu. Mengembalikan path + checksum.
+     */
+    private function ensureFrozenPdf(DokumenSpp $spp): array
+    {
+        $disk = Storage::disk(DocumentTte::FROZEN_DISK);
+        $path = 'tte-final/spp/' . $spp->id . '/' . $spp->tteHash() . '.pdf';
+        $checksumPath = $path . '.sha256';
+
+        if (! $disk->exists($path)) {
+            $binary = (string) app(SppController::class)->cetakPdf($spp->id)->getContent();
+            $disk->put($path, $binary);
+            $disk->put($checksumPath, hash('sha256', $binary));
+        }
+
+        return [
+            'path' => $path,
+            'checksum' => $disk->exists($checksumPath) ? trim((string) $disk->get($checksumPath)) : null,
+        ];
     }
 
     private function buildSignerInfo(DokumenSpp $spp, $workflow): array

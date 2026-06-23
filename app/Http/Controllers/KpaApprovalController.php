@@ -129,6 +129,15 @@ class KpaApprovalController extends Controller
             $userId = $request->query('user_id');
             $user = User::findOrFail($userId);
 
+            // Magic link hanya boleh memberi sesi kepada pemegang kewenangan KPA.
+            // Tanpa cek ini, tautan yang ditandatangani untuk user_id sembarang
+            // akan mengautentikasi penuh akun non-KPA.
+            abort_unless(
+                $user->hasAnyRole(['KPA', 'PLT/PLH']),
+                403,
+                'Pengguna pada tautan ini tidak memiliki kewenangan KPA.'
+            );
+
             // Auto login KPA
             Auth::loginUsingId($user->id);
         } else {
@@ -162,6 +171,16 @@ class KpaApprovalController extends Controller
      */
     public function processApproval(Request $request, $tagihanId, DokumenChainService $chainService)
     {
+        // Otorisasi eksplisit: keputusan persetujuan KPA hanya boleh dieksekusi
+        // oleh pemegang kewenangan KPA/PLT-PLH (atau Super Admin). Tanpa cek ini,
+        // setiap user terotentikasi (Operator/Mitra) dapat menyetujui/menolak
+        // pencairan tagihan. Lapisan kedua setelah middleware `role:` di rute.
+        abort_unless(
+            Auth::check() && Auth::user()->hasAnyRole(['KPA', 'PLT/PLH', 'Super Admin']),
+            403,
+            'Anda tidak berwenang memproses persetujuan KPA.'
+        );
+
         $request->validate([
             'action' => 'required|in:approve,reject',
             'notes' => 'nullable|string'

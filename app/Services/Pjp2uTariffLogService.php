@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Storage;
 
 class Pjp2uTariffLogService
 {
-    public const STORAGE_DISK = 'public';
+    public const STORAGE_DISK = 'local'; // INF-01: file bukti perubahan tarif → disk privat
     public const STORAGE_DIR = 'log_tarif_pjp2u';
 
     public function isPjp2u(LayananJasa $layanan): bool

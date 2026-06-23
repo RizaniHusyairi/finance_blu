@@ -240,13 +240,15 @@ class MitraPortalController extends Controller
             ->whereIn('status', ['PUBLISHED', 'LUNAS'])
             ->findOrFail($id);
 
+        // INF-01: surat pengantar final disimpan di disk privat `local`, disajikan
+        // via streaming terotentikasi (mitra pemilik tagihan) — bukan URL publik.
         abort_unless(
             $tagihan->file_surat_pengantar_final
-                && Storage::disk('public')->exists($tagihan->file_surat_pengantar_final),
+                && Storage::disk('local')->exists($tagihan->file_surat_pengantar_final),
             404
         );
 
-        return Storage::disk('public')->download($tagihan->file_surat_pengantar_final);
+        return Storage::disk('local')->download($tagihan->file_surat_pengantar_final);
     }
 
     public function downloadKontrak(KontrakMitraJasa $kontrak)
@@ -254,9 +256,11 @@ class MitraPortalController extends Controller
         $mitra = $this->currentMitraJasa();
 
         abort_unless((int) $kontrak->mitra_jasa_id === (int) $mitra->id, 404);
-        abort_unless($kontrak->file_kontrak && Storage::disk('public')->exists($kontrak->file_kontrak), 404);
+        // INF-01: file kontrak di disk privat `local` (fallback `public` untuk file lama).
+        $disk = $kontrak->file_kontrak && Storage::disk('local')->exists($kontrak->file_kontrak) ? 'local' : 'public';
+        abort_unless($kontrak->file_kontrak && Storage::disk($disk)->exists($kontrak->file_kontrak), 404);
 
-        return Storage::disk('public')->download($kontrak->file_kontrak);
+        return Storage::disk($disk)->download($kontrak->file_kontrak);
     }
 
     public function layananAktif()
@@ -428,7 +432,7 @@ class MitraPortalController extends Controller
         }
 
         if ($request->hasFile('file_laporan')) {
-            $validated['file_laporan'] = $request->file('file_laporan')->store('mitra-jasa/penjualan', 'public');
+            $validated['file_laporan'] = $request->file('file_laporan')->store('mitra-jasa/penjualan', 'local');
         }
 
         DB::transaction(function () use ($parent, $mitra, $konsesiContext, $validated, $hasil, $bulan, $tahun) {
@@ -590,7 +594,7 @@ class MitraPortalController extends Controller
         $nilaiTagihan = $totalPaxBillable * $tarifDasar;
 
         if ($request->hasFile('file_laporan')) {
-            $validated['file_laporan'] = $request->file('file_laporan')->store('mitra-jasa/pax', 'public');
+            $validated['file_laporan'] = $request->file('file_laporan')->store('mitra-jasa/pax', 'local');
         }
         
         $kontrak = $hakPjp2u->kontrakMitraJasa;

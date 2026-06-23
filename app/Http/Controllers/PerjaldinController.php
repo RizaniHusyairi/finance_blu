@@ -808,13 +808,13 @@ class PerjaldinController extends Controller
                 ->where('is_active', true)
                 ->update(['is_active' => false]);
 
-            $path = $file->store('perjaldin/nominatif-ttd/' . date('Y'), 'public');
+            $path = $file->store('perjaldin/nominatif-ttd/' . date('Y'), 'local');
 
             $tagihan->arsipDokumen()->create([
                 'jenis_dokumen' => $jenis,
                 'nama_file_asli' => $file->getClientOriginalName(),
                 'path_file' => $path,
-                'disk' => 'public',
+                'disk' => 'local',
                 'mime_type' => $file->getMimeType(),
                 'ukuran_file' => $file->getSize(),
                 'uploaded_by' => auth()->id(),

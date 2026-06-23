@@ -65,9 +65,11 @@ class LogPerubahanTarifPjp2uController extends Controller
     public function fileDownload(LogPerubahanTarifPjp2u $log)
     {
         abort_unless($this->canViewLaporan(), 403);
-        abort_unless($log->file_pendukung && Storage::disk('public')->exists($log->file_pendukung), 404);
+        // INF-01: file di disk privat `local` (fallback `public` untuk file lama).
+        $disk = $log->file_pendukung && Storage::disk('local')->exists($log->file_pendukung) ? 'local' : 'public';
+        abort_unless($log->file_pendukung && Storage::disk($disk)->exists($log->file_pendukung), 404);
 
-        return Storage::disk('public')->download($log->file_pendukung);
+        return Storage::disk($disk)->download($log->file_pendukung);
     }
 
     private function buildLaporanData(array $filters, bool $withPagination = true): array

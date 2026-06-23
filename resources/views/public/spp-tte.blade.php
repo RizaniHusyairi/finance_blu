@@ -581,6 +581,13 @@
                                         <p class="small" style="margin: 10px 0 0;">
                                             Nilai hash ini dihitung dari identitas {{ $documentLabel }} dan riwayat approval saat halaman dibuka.
                                         </p>
+                                        @if(!empty($documentChecksum))
+                                            <p class="label" style="margin-top: 14px;">Checksum Dokumen Final (SHA-256)</p>
+                                            <div class="hash-value">{{ $documentChecksum }}</div>
+                                            <p class="small" style="margin: 10px 0 0;">
+                                                Dokumen final dibekukan (imutabel): perubahan data setelah ditandatangani tidak mengubah berkas PDF yang disajikan.
+                                            </p>
+                                        @endif
                                     </div>
                                 </div>
                             </div>

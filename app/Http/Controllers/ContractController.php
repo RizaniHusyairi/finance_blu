@@ -219,8 +219,8 @@ class ContractController extends Controller
             // Clean format Rupiah to numeric (already done by validate if input is right? No, standard HTML <input> gives the string, wait, frontend JS `oninput` copies the clean value to hidden inputs `nilai_total_kontrak_value` and `nilai_uang_muka_value` so laravel receives clean numerics).
 
             // Upload files
-            $pathJaminanUm = $request->hasFile('file_jaminan_um') ? $request->file('file_jaminan_um')->store('kontrak/jaminan-uang-muka', 'public') : null;
-            $pathGambarRab = $request->hasFile('gambar_rab') ? $request->file('gambar_rab')->store('kontrak/gambar-rab', 'public') : null;
+            $pathJaminanUm = $request->hasFile('file_jaminan_um') ? $request->file('file_jaminan_um')->store('kontrak/jaminan-uang-muka', 'local') : null;
+            $pathGambarRab = $request->hasFile('gambar_rab') ? $request->file('gambar_rab')->store('kontrak/gambar-rab', 'local') : null;
 
             $adaUangMuka = $request->has('ada_uang_muka');
             $nilaiUangMuka = $adaUangMuka ? (float) ($validated['nilai_uang_muka'] ?? 0) : 0;
@@ -472,14 +472,14 @@ class ContractController extends Controller
             // Upload files (delete old ones if new uploaded)
             if ($request->hasFile('file_jaminan_um')) {
                 if ($kontrak->file_jaminan_uang_muka) \Illuminate\Support\Facades\Storage::disk('public')->delete($kontrak->file_jaminan_uang_muka);
-                $validated['file_jaminan_um'] = $request->file('file_jaminan_um')->store('kontrak/jaminan-uang-muka', 'public');
+                $validated['file_jaminan_um'] = $request->file('file_jaminan_um')->store('kontrak/jaminan-uang-muka', 'local');
             } else {
                 $validated['file_jaminan_um'] = $kontrak->file_jaminan_uang_muka;
             }
 
             if ($request->hasFile('gambar_rab')) {
                 if ($kontrak->file_gambar_rab) \Illuminate\Support\Facades\Storage::disk('public')->delete($kontrak->file_gambar_rab);
-                $validated['gambar_rab'] = $request->file('gambar_rab')->store('kontrak/gambar-rab', 'public');
+                $validated['gambar_rab'] = $request->file('gambar_rab')->store('kontrak/gambar-rab', 'local');
             } else {
                 $validated['gambar_rab'] = $kontrak->file_gambar_rab;
             }
@@ -765,7 +765,7 @@ class ContractController extends Controller
         $this->replaceKontrakArsipAktif(
             $kontrak,
             'SPK_FINAL_TTD',
-            $request->file('file_spk_final_ttd')->store('kontrak/spk-final-ttd', 'public'),
+            $request->file('file_spk_final_ttd')->store('kontrak/spk-final-ttd', 'local'),
             $request->file('file_spk_final_ttd')->getClientOriginalName()
         );
 
@@ -800,7 +800,7 @@ class ContractController extends Controller
         $this->replaceKontrakArsipAktif(
             $kontrak,
             'GAMBAR_RAB',
-            $file->store('kontrak/gambar-rab', 'public'),
+            $file->store('kontrak/gambar-rab', 'local'),
             $file->getClientOriginalName()
         );
 
@@ -882,7 +882,7 @@ class ContractController extends Controller
         $this->replaceKontrakArsipAktif(
             $kontrak,
             'SPMK_FINAL_TTD',
-            $request->file('file_spmk_final_ttd')->store('kontrak/spmk-final-ttd', 'public'),
+            $request->file('file_spmk_final_ttd')->store('kontrak/spmk-final-ttd', 'local'),
             $request->file('file_spmk_final_ttd')->getClientOriginalName()
         );
 
@@ -904,7 +904,7 @@ class ContractController extends Controller
         $this->replaceKontrakArsipAktif(
             $kontrak,
             'RINGKASAN_KONTRAK_FINAL_TTD',
-            $request->file('file_ringkasan_kontrak_final_ttd')->store('kontrak/ringkasan-kontrak-final-ttd', 'public'),
+            $request->file('file_ringkasan_kontrak_final_ttd')->store('kontrak/ringkasan-kontrak-final-ttd', 'local'),
             $request->file('file_ringkasan_kontrak_final_ttd')->getClientOriginalName()
         );
 
@@ -1065,7 +1065,7 @@ class ContractController extends Controller
                 'jenis_dokumen' => $jenis,
                 'nama_file_asli' => basename($path),
                 'path_file' => $path,
-                'disk' => 'public',
+                'disk' => 'local',
                 'uploaded_by' => Auth::id(),
                 'uploaded_at' => now(),
                 'is_active' => true,
@@ -1087,7 +1087,7 @@ class ContractController extends Controller
             'jenis_dokumen' => $jenisDokumen,
             'nama_file_asli' => $originalName ?: basename($path),
             'path_file' => $path,
-            'disk' => 'public',
+            'disk' => 'local',
             'uploaded_by' => Auth::id(),
             'uploaded_at' => now(),
             'is_active' => true,

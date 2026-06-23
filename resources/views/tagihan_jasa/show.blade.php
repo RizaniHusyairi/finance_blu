@@ -843,7 +843,8 @@
             </div>
         @endif
 
-        @if(Auth::user()->hasRole(['Super Admin', 'Admin Jasa']) && $wfInstance && $wfInstance->status === 'IN_PROGRESS')
+        {{-- ARCH-01: Mode Cepat (auto-approve) hanya tampil di lingkungan pengembangan/testing. --}}
+        @if(app()->environment(['local', 'testing']) && Auth::user()->hasRole(['Super Admin', 'Admin Jasa']) && $wfInstance && $wfInstance->status === 'IN_PROGRESS')
             <div class="card tj-card border-0 mb-4 border-start border-4 border-info">
                 <div class="card-body p-4 text-center">
                     <h5 class="fw-bold mb-2"><i class="bi bi-lightning-charge text-info me-2"></i>Mode Cepat (Testing)</h5>

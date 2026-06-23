@@ -443,7 +443,7 @@
                                     </div>
                                     <input type="file" id="file_bukti_awal" name="file_bukti_awal" class="d-none util-file-input" accept="image/*">
                                     @if($editing && $editLaporan->file_bukti_awal)
-                                        <div class="small text-muted mt-1"><i class="bi bi-paperclip me-1"></i><a href="{{ asset('storage/'.$editLaporan->file_bukti_awal) }}" target="_blank">Foto saat ini</a> — biarkan kosong untuk dipertahankan.</div>
+                                        <div class="small text-muted mt-1"><i class="bi bi-paperclip me-1"></i><a href="{{ route('secure-file', ['utilitas', $editLaporan->id, 'file_bukti_awal']) }}" target="_blank">Foto saat ini</a> — biarkan kosong untuk dipertahankan.</div>
                                     @endif
                                 </div>
                                 <div class="col-md-6">
@@ -461,7 +461,7 @@
                                     </div>
                                     <input type="file" id="file_bukti" name="file_bukti" class="d-none util-file-input" accept="image/*">
                                     @if($editing && $editLaporan->file_bukti)
-                                        <div class="small text-muted mt-1"><i class="bi bi-paperclip me-1"></i><a href="{{ asset('storage/'.$editLaporan->file_bukti) }}" target="_blank">Foto saat ini</a> — biarkan kosong untuk dipertahankan.</div>
+                                        <div class="small text-muted mt-1"><i class="bi bi-paperclip me-1"></i><a href="{{ route('secure-file', ['utilitas', $editLaporan->id, 'file_bukti']) }}" target="_blank">Foto saat ini</a> — biarkan kosong untuk dipertahankan.</div>
                                     @endif
                                 </div>
                             </div>
@@ -673,10 +673,10 @@
                             <div class="cm-reading-foot">
                                 <div class="cm-reading-proofs">
                                     @if($lap->file_bukti_awal)
-                                        <a href="{{ asset('storage/' . $lap->file_bukti_awal) }}" target="_blank" class="cm-thumb-link" title="Bukti awal" aria-label="Bukti awal"><img src="{{ asset('storage/' . $lap->file_bukti_awal) }}" alt="Bukti awal" loading="lazy"></a>
+                                        <a href="{{ route('secure-file', ['utilitas', $lap->id, 'file_bukti_awal']) }}" target="_blank" class="cm-thumb-link" title="Bukti awal" aria-label="Bukti awal"><img src="{{ route('secure-file', ['utilitas', $lap->id, 'file_bukti_awal']) }}" alt="Bukti awal" loading="lazy"></a>
                                     @endif
                                     @if($lap->file_bukti)
-                                        <a href="{{ asset('storage/' . $lap->file_bukti) }}" target="_blank" class="cm-thumb-link" title="Bukti akhir" aria-label="Bukti akhir"><img src="{{ asset('storage/' . $lap->file_bukti) }}" alt="Bukti akhir" loading="lazy"></a>
+                                        <a href="{{ route('secure-file', ['utilitas', $lap->id, 'file_bukti']) }}" target="_blank" class="cm-thumb-link" title="Bukti akhir" aria-label="Bukti akhir"><img src="{{ route('secure-file', ['utilitas', $lap->id, 'file_bukti']) }}" alt="Bukti akhir" loading="lazy"></a>
                                     @endif
                                     @if(!$lap->file_bukti && !$lap->file_bukti_awal)
                                         <span class="text-muted small">Tanpa bukti</span>

@@ -26,4 +26,21 @@ class ArsipDokumen extends Model
     {
         return $this->belongsTo(User::class, 'uploaded_by');
     }
+
+    /**
+     * URL terproteksi (auth + role internal) untuk menampilkan arsip inline.
+     * Dipakai sebagai pengganti tautan publik `/storage/...` (INF-01).
+     */
+    public function viewUrl(): string
+    {
+        return route('arsip.view', $this);
+    }
+
+    /**
+     * URL terproteksi untuk mengunduh arsip (force download).
+     */
+    public function downloadUrl(): string
+    {
+        return route('arsip.download', $this);
+    }
 }

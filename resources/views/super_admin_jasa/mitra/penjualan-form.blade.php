@@ -155,7 +155,7 @@
             <input type="file" name="file_laporan" id="fileInput" class="d-none" accept=".pdf,.xlsx,.xls,.csv,.jpg,.jpeg,.png" {{ $editMode ? '' : 'required' }}>
         </label>
         @if($penjualan->file_laporan)
-            <div class="small text-muted mb-3"><i class="bi bi-paperclip me-1"></i><a href="{{ asset('storage/' . $penjualan->file_laporan) }}" target="_blank">Lihat file lama</a></div>
+            <div class="small text-muted mb-3"><i class="bi bi-paperclip me-1"></i><a href="{{ route('secure-file', ['penjualan', $penjualan->id, 'file_laporan']) }}" target="_blank">Lihat file lama</a></div>
         @endif
         <label class="form-label fw-bold text-muted small text-uppercase">Catatan (Opsional)</label>
         <textarea name="catatan_mitra" rows="3" class="form-control" placeholder="Catatan tambahan...">{{ old('catatan_mitra', $penjualan->catatan_mitra) }}</textarea>

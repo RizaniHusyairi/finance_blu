@@ -28,3 +28,18 @@ Schedule::command('jasa:reminder-pelaporan')
     ->monthlyOn(3, '08:00')
     ->withoutOverlapping()
     ->onOneServer();
+
+// BR-01 — backup database harian (mysqldump → gzip) + retensi 14 berkas.
+// Direktori backup (DB_BACKUP_PATH) WAJIB disinkronkan off-site & terenkripsi.
+// Lihat docs/RUNBOOK-BACKUP-RESTORE.md.
+Schedule::command('db:backup')
+    ->dailyAt('01:30')
+    ->withoutOverlapping()
+    ->onOneServer();
+
+// MON-01 — pantau kesehatan sistem (failed jobs, kesegaran backup) tiap jam;
+// anomali → log critical (Slack/Sentry bila aktif) + alert WA (bila dikonfigurasi).
+Schedule::command('monitor:health --quiet-ok')
+    ->hourly()
+    ->withoutOverlapping()
+    ->onOneServer();
