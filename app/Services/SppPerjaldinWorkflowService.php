@@ -110,6 +110,15 @@ class SppPerjaldinWorkflowService
             throw new Exception("Anda tidak memiliki hak akses untuk memproses persetujuan ini.");
         }
 
+        // WF-01: Pemisahan tugas (Segregation of Duties) — pembuat dokumen tidak
+        // boleh menyetujui dokumennya sendiri (maker ≠ checker).
+        foreach (['created_by', 'dibuat_oleh', 'dibuat_oleh_id'] as $makerCol) {
+            $makerId = $spp->getAttribute($makerCol);
+            if ($makerId !== null && (int) $makerId === (int) $actor->id) {
+                throw new Exception('Pemisahan tugas: Anda tidak dapat menyetujui dokumen yang Anda buat sendiri.');
+            }
+        }
+
         return DB::transaction(function () use ($approval, $actor, $catatan, $ipAddress, $instance, $spp) {
             $oldStatus = $spp->status;
             $stepNaikKe = null;

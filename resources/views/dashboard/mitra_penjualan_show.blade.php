@@ -442,7 +442,7 @@
                 @if($penjualan->file_laporan)
                     <div class="mt-4 p-3 rounded-3 border">
                         <div class="small text-muted fw-bold mb-2"><i class="bi bi-file-earmark me-1 text-primary"></i>File Laporan</div>
-                        <a href="{{ asset('storage/' . $penjualan->file_laporan) }}" target="_blank" class="btn btn-outline-primary btn-sm">
+                        <a href="{{ route('secure-file', ['penjualan', $penjualan->id, 'file_laporan']) }}" target="_blank" class="btn btn-outline-primary btn-sm">
                             <i class="bi bi-download me-1"></i>Lihat / Download File
                         </a>
                     </div>
@@ -481,7 +481,7 @@
                                             <td class="text-center">{{ $detail->total_transaksi ? number_format($detail->total_transaksi, 0, ',', '.') : '-' }}</td>
                                             <td>
                                                 @if($detail->file_laporan)
-                                                    <a href="{{ asset('storage/' . $detail->file_laporan) }}" target="_blank" class="btn btn-sm btn-light border py-0 px-2">
+                                                    <a href="{{ route('secure-file', ['penjualan-detail', $detail->id, 'file_laporan']) }}" target="_blank" class="btn btn-sm btn-light border py-0 px-2">
                                                         <i class="bi bi-file-earmark me-1"></i>Lihat
                                                     </a>
                                                 @else

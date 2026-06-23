@@ -171,7 +171,7 @@
                             <div class="col-md-12 mt-3">
                                 <label class="form-label fw-bold"><i class="bi bi-image"></i> Gambar RAB (JPG/PNG) <small class="text-muted">(Opsional, untuk Lampiran SPK)</small></label>
                                 @if($kontrak->file_gambar_rab)
-                                    <div class="mb-2"><a href="{{ Storage::url($kontrak->file_gambar_rab) }}" target="_blank" class="badge bg-success text-white text-decoration-none"><i class="bi bi-image"></i> Gambar RAB Saat Ini</a></div>
+                                    <div class="mb-2"><a href="{{ route('secure-file', ['kontrak-pengadaan', $kontrak->id, 'file_gambar_rab']) }}" target="_blank" class="badge bg-success text-white text-decoration-none"><i class="bi bi-image"></i> Gambar RAB Saat Ini</a></div>
                                 @endif
                                 <input type="file" class="form-control" name="gambar_rab" id="gambar_rab" accept=".jpg,.jpeg,.png">
                                 <small class="text-muted d-block mt-1"><i class="bi bi-info-circle me-1"></i>Unggah gambar screenshot RAB jika diperlukan untuk cetak lampiran Draft SPK.</small>
@@ -222,7 +222,7 @@
                             <div class="col-md-6" id="wrapper_file_jaminan_um" style="display: none;">
                                 <label class="form-label fw-bold">Jaminan Uang Muka</label>
                                 @if($kontrak->file_jaminan_uang_muka)
-                                    <div class="mb-2"><a href="{{ Storage::url($kontrak->file_jaminan_uang_muka) }}" target="_blank" class="badge bg-warning text-dark text-decoration-none"><i class="bi bi-file-earmark-pdf"></i> Jaminan UM Saat Ini</a></div>
+                                    <div class="mb-2"><a href="{{ route('secure-file', ['kontrak-pengadaan', $kontrak->id, 'file_jaminan_uang_muka']) }}" target="_blank" class="badge bg-warning text-dark text-decoration-none"><i class="bi bi-file-earmark-pdf"></i> Jaminan UM Saat Ini</a></div>
                                 @endif
                                 <input type="file" class="form-control" name="file_jaminan_um" id="file_jaminan_um" accept=".pdf">
                                 <small class="text-muted d-block mt-1">Unggah ulang jika ada perubahan dokumen jaminan uang muka.</small>
@@ -357,7 +357,7 @@
                             <div class="col-md-4" id="wrapper_file_jaminan_um" style="display: none;">
                                 <label class="form-label fw-bold">Jaminan Uang Muka</label>
                                 @if($kontrak->file_jaminan_uang_muka)
-                                    <div class="mb-2"><a href="{{ Storage::url($kontrak->file_jaminan_uang_muka) }}" target="_blank" class="badge bg-warning text-dark text-decoration-none"><i class="bi bi-file-earmark-pdf"></i> Jaminan UM Saat Ini</a></div>
+                                    <div class="mb-2"><a href="{{ route('secure-file', ['kontrak-pengadaan', $kontrak->id, 'file_jaminan_uang_muka']) }}" target="_blank" class="badge bg-warning text-dark text-decoration-none"><i class="bi bi-file-earmark-pdf"></i> Jaminan UM Saat Ini</a></div>
                                 @endif
                                 <input type="file" class="form-control" name="file_jaminan_um" id="file_jaminan_um" accept=".pdf">
                                 <small class="text-muted d-block mt-1">Field ini hanya tampil jika kontrak menggunakan uang muka.</small>

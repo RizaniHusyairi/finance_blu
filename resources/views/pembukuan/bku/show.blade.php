@@ -37,9 +37,6 @@
         'diklat' => 'Diklat',
     ];
 
-    // URL file unggahan (disk public) relatif terhadap origin request.
-    $fileUrl = fn ($path) => filled($path) ? url('storage/' . ltrim($path, '/')) : null;
-
     $rupiah = fn ($v) => 'Rp ' . number_format((float) $v, 0, ',', '.');
 @endphp
 
@@ -610,11 +607,11 @@
 
                                     // [label, path file]
                                     $dokumenPills = collect([
-                                        ['SPT', $pd->spt_file_path],
-                                        ['Tiket', $pd->tiket_file_path],
-                                        ['Transport', $pd->transport_file_path],
-                                        ['Penginapan', $pd->penginapan_file_path],
-                                        ['Uang Harian', $pd->uang_harian_file_path],
+                                        ['SPT', $pd->spt_file_path, 'spt_file_path'],
+                                        ['Tiket', $pd->tiket_file_path, 'tiket_file_path'],
+                                        ['Transport', $pd->transport_file_path, 'transport_file_path'],
+                                        ['Penginapan', $pd->penginapan_file_path, 'penginapan_file_path'],
+                                        ['Uang Harian', $pd->uang_harian_file_path, 'uang_harian_file_path'],
                                     ])->filter(fn ($d) => filled($d[1]));
                                 @endphp
                                 <details class="person-acc" @if($loop->first) open @endif style="animation-delay: {{ $loop->index * .07 }}s;">
@@ -650,8 +647,8 @@
                                             <div class="col-lg-5">
                                                 <div class="small fw-bold text-secondary text-uppercase mb-2" style="letter-spacing:.05em;"><i class="bi bi-paperclip me-1"></i>Dokumen Bukti</div>
                                                 <div class="doc-pills">
-                                                    @forelse($dokumenPills as [$lbl, $path])
-                                                        <a href="{{ $fileUrl($path) }}" target="_blank" class="doc-pill"><i class="bi bi-file-earmark-pdf"></i>{{ $lbl }}</a>
+                                                    @forelse($dokumenPills as [$lbl, $path, $field])
+                                                        <a href="{{ route('secure-file', ['tagihan-perjaldin', $pd->id, $field]) }}" target="_blank" class="doc-pill"><i class="bi bi-file-earmark-pdf"></i>{{ $lbl }}</a>
                                                     @empty
                                                         <span class="text-muted small">Belum ada dokumen terunggah.</span>
                                                     @endforelse

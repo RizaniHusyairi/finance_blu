@@ -214,7 +214,7 @@
                                     @if($doc['status'] === 'ready')
                                         <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1"><i class="bi bi-check-circle me-1"></i> Tersedia</span>
                                         @if($doc['path'])
-                                            <a href="{{ Storage::url($doc['path']) }}" target="_blank" class="btn btn-sm btn-outline-primary py-1 px-2" title="Unduh" style="font-size: 12px;"><i class="bi bi-download"></i> Unduh</a>
+                                            <a href="{{ $doc['url'] }}" target="_blank" class="btn btn-sm btn-outline-primary py-1 px-2" title="Unduh" style="font-size: 12px;"><i class="bi bi-download"></i> Unduh</a>
                                         @endif
                                     @elseif($doc['status'] === 'missing')
                                         <span class="badge bg-danger">Belum Diunggah</span>

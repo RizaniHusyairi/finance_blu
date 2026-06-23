@@ -33,7 +33,7 @@ class KontrakMitraJasaController extends Controller
         $validated['updated_by'] = auth()->id();
 
         if ($request->hasFile('file_kontrak')) {
-            $validated['file_kontrak'] = $request->file('file_kontrak')->store('mitra-jasa/kontrak', 'public');
+            $validated['file_kontrak'] = $request->file('file_kontrak')->store('mitra-jasa/kontrak', 'local');
         }
 
         $kontrak = KontrakMitraJasa::create($validated);
@@ -79,7 +79,7 @@ class KontrakMitraJasaController extends Controller
                 Storage::disk('public')->delete($kontrak->file_kontrak);
             }
 
-            $validated['file_kontrak'] = $request->file('file_kontrak')->store('mitra-jasa/kontrak', 'public');
+            $validated['file_kontrak'] = $request->file('file_kontrak')->store('mitra-jasa/kontrak', 'local');
         }
 
         $kontrak->update($validated);
@@ -94,9 +94,12 @@ class KontrakMitraJasaController extends Controller
     {
         $this->ensureOwnedByMitra($mitra, $kontrak);
 
-        abort_unless($kontrak->file_kontrak && Storage::disk('public')->exists($kontrak->file_kontrak), 404);
+        // INF-01: file kontrak kini di disk privat `local` (fallback `public` untuk
+        // file lama yang belum dimigrasi). Disajikan via streaming terotentikasi.
+        $disk = $kontrak->file_kontrak && Storage::disk('local')->exists($kontrak->file_kontrak) ? 'local' : 'public';
+        abort_unless($kontrak->file_kontrak && Storage::disk($disk)->exists($kontrak->file_kontrak), 404);
 
-        return Storage::disk('public')->download($kontrak->file_kontrak);
+        return Storage::disk($disk)->download($kontrak->file_kontrak);
     }
 
     public function destroy(MitraJasa $mitra, KontrakMitraJasa $kontrak)

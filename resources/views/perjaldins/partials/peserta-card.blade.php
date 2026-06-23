@@ -74,7 +74,7 @@
                         <input type="file" class="form-control form-control-sm spt-file-input @error("peserta.{$index}.spt_file") is-invalid @enderror" name="peserta[{{ $index }}][spt_file]" accept=".pdf,.jpg,.jpeg,.png" {{ isset($row['spt_file_path']) ? '' : 'required' }}>
                         @if(isset($row['spt_file_path']))
                             <small class="text-success d-block mt-1 file-existing-notice">
-                                <i class="bi bi-check-circle"></i> File tersimpan: <a href="{{ Storage::url($row['spt_file_path']) }}" target="_blank">{{ $row['spt_file_name'] ?? 'Lihat Dokumen' }}</a>
+                                <i class="bi bi-check-circle"></i> File tersimpan: <a href="{{ route('secure-file', ['tagihan-perjaldin', $row['id'], 'spt_file_path']) }}" target="_blank">{{ $row['spt_file_name'] ?? 'Lihat Dokumen' }}</a>
                             </small>
                             <small class="text-muted file-existing-notice">Abaikan jika tak diubah.</small>
                         @endif
@@ -134,7 +134,7 @@
                             <input type="file" class="form-control form-control-sm tiket-file-input @error("peserta.{$index}.tiket_file") is-invalid @enderror" name="peserta[{{ $index }}][tiket_file]" accept=".pdf,.jpg,.jpeg,.png" style="font-size: 0.7rem;">
                             @if(isset($row['tiket_file_path']))
                                 <small class="text-success d-block mt-1 tiket-existing-notice" style="font-size: 0.65rem;">
-                                    <i class="bi bi-check-circle"></i> <a href="{{ Storage::url($row['tiket_file_path']) }}" target="_blank">{{ $row['tiket_file_name'] ?? 'Lihat Tiket' }}</a>
+                                    <i class="bi bi-check-circle"></i> <a href="{{ route('secure-file', ['tagihan-perjaldin', $row['id'], 'tiket_file_path']) }}" target="_blank">{{ $row['tiket_file_name'] ?? 'Lihat Tiket' }}</a>
                                 </small>
                             @endif
                             <small class="text-muted d-block" style="font-size: 0.65rem;">Bukti tiket <span class="text-danger">*</span> (PDF/JPG/PNG, maks 5MB)</small>
@@ -147,7 +147,7 @@
                             <input type="file" class="form-control form-control-sm transport-file-input @error("peserta.{$index}.transport_file") is-invalid @enderror" name="peserta[{{ $index }}][transport_file]" accept=".pdf,.jpg,.jpeg,.png" style="font-size: 0.7rem;">
                             @if(isset($row['transport_file_path']))
                                 <small class="text-success d-block mt-1 transport-existing-notice" style="font-size: 0.65rem;">
-                                    <i class="bi bi-check-circle"></i> <a href="{{ Storage::url($row['transport_file_path']) }}" target="_blank">{{ $row['transport_file_name'] ?? 'Lihat Bukti' }}</a>
+                                    <i class="bi bi-check-circle"></i> <a href="{{ route('secure-file', ['tagihan-perjaldin', $row['id'], 'transport_file_path']) }}" target="_blank">{{ $row['transport_file_name'] ?? 'Lihat Bukti' }}</a>
                                 </small>
                             @endif
                             <small class="text-muted d-block" style="font-size: 0.65rem;">Bukti transport <span class="text-danger">*</span> (PDF/JPG/PNG, maks 5MB)</small>
@@ -160,7 +160,7 @@
                             <input type="file" class="form-control form-control-sm penginapan-file-input @error("peserta.{$index}.penginapan_file") is-invalid @enderror" name="peserta[{{ $index }}][penginapan_file]" accept=".pdf,.jpg,.jpeg,.png" style="font-size: 0.7rem;">
                             @if(isset($row['penginapan_file_path']))
                                 <small class="text-success d-block mt-1 penginapan-existing-notice" style="font-size: 0.65rem;">
-                                    <i class="bi bi-check-circle"></i> <a href="{{ Storage::url($row['penginapan_file_path']) }}" target="_blank">{{ $row['penginapan_file_name'] ?? 'Lihat Bukti' }}</a>
+                                    <i class="bi bi-check-circle"></i> <a href="{{ route('secure-file', ['tagihan-perjaldin', $row['id'], 'penginapan_file_path']) }}" target="_blank">{{ $row['penginapan_file_name'] ?? 'Lihat Bukti' }}</a>
                                 </small>
                             @endif
                             <small class="text-muted d-block" style="font-size: 0.65rem;">Bukti penginapan <span class="text-danger">*</span> (PDF/JPG/PNG, maks 5MB)</small>
@@ -199,7 +199,7 @@
                                 <input type="file" class="form-control form-control-sm uang-harian-file-input @error("peserta.{$index}.uang_harian_file") is-invalid @enderror" name="peserta[{{ $index }}][uang_harian_file]" accept=".pdf,.jpg,.jpeg,.png" style="font-size: 0.7rem;">
                                 @if(isset($row['uang_harian_file_path']))
                                     <small class="text-success d-block mt-1 uang-harian-existing-notice" style="font-size: 0.65rem;">
-                                        <i class="bi bi-check-circle"></i> <a href="{{ Storage::url($row['uang_harian_file_path']) }}" target="_blank">{{ $row['uang_harian_file_name'] ?? 'Lihat Bukti' }}</a>
+                                        <i class="bi bi-check-circle"></i> <a href="{{ route('secure-file', ['tagihan-perjaldin', $row['id'], 'uang_harian_file_path']) }}" target="_blank">{{ $row['uang_harian_file_name'] ?? 'Lihat Bukti' }}</a>
                                     </small>
                                 @endif
                                 <small class="text-muted d-block" style="font-size: 0.65rem;">Bukti uang harian <span class="text-danger">*</span> (PDF/JPG/PNG, maks 5MB)</small>

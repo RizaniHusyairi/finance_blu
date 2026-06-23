@@ -2,12 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\Blameable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class DokumenSpm extends Model
 {
-    use SoftDeletes;
+    use Blameable, SoftDeletes;
 
     public const SPM_SIGNED_ARCHIVE_TYPE = 'SPM_BERTANDATANGAN';
 

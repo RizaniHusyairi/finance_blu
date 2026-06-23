@@ -96,8 +96,8 @@ class UtilitasController extends Controller
                         return back()->withInput()->with('error', 'Data Meter #' . ($i + 1) . ': stan akhir tidak boleh lebih kecil dari stan awal.');
                     }
                     $pemakaian = (int) $row['stan_akhir'] - (int) $row['stan_awal'];
-                    $fileBuktiAwal = $request->file("laporan.$i.file_bukti_awal")?->store('bukti-utilitas', 'public');
-                    $fileBukti = $request->file("laporan.$i.file_bukti")?->store('bukti-utilitas', 'public');
+                    $fileBuktiAwal = $request->file("laporan.$i.file_bukti_awal")?->store('bukti-utilitas', 'local');
+                    $fileBukti = $request->file("laporan.$i.file_bukti")?->store('bukti-utilitas', 'local');
                 } else {
                     $pemakaian = $row['pemakaian_manual'];
                     $fileBuktiAwal = null;
@@ -185,14 +185,14 @@ class UtilitasController extends Controller
             if ($laporan->file_bukti_awal) {
                 Storage::disk('public')->delete($laporan->file_bukti_awal);
             }
-            $data['file_bukti_awal'] = $request->file('file_bukti_awal')->store('bukti-utilitas', 'public');
+            $data['file_bukti_awal'] = $request->file('file_bukti_awal')->store('bukti-utilitas', 'local');
         }
 
         if ($request->hasFile('file_bukti')) {
             if ($laporan->file_bukti) {
                 Storage::disk('public')->delete($laporan->file_bukti);
             }
-            $data['file_bukti'] = $request->file('file_bukti')->store('bukti-utilitas', 'public');
+            $data['file_bukti'] = $request->file('file_bukti')->store('bukti-utilitas', 'local');
         }
 
         $laporan->update($data);

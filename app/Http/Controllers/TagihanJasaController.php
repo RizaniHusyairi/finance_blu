@@ -254,7 +254,7 @@ class TagihanJasaController extends Controller
                         'tanggal_kontrak' => optional($kontrak->tanggal_kontrak)->format('Y-m-d'),
                         'tanggal_mulai' => optional($kontrak->tanggal_mulai)->format('Y-m-d'),
                         'tanggal_selesai' => optional($kontrak->tanggal_selesai)->format('Y-m-d'),
-                        'file_url' => $kontrak->file_kontrak ? asset('storage/' . $kontrak->file_kontrak) : null,
+                        'file_url' => $kontrak->file_kontrak ? route('secure-file', ['kontrak-mitra', $kontrak->id, 'file_kontrak']) : null,
                         'status_kontrak' => $kontrak->status_kontrak,
                         'layanan_ids' => $kontrak->layananJasa->pluck('id')->map(fn ($id) => (int) $id)->values(),
                     ])->values(),
@@ -690,7 +690,7 @@ class TagihanJasaController extends Controller
                         'tanggal_kontrak' => optional($kontrak->tanggal_kontrak)->format('Y-m-d'),
                         'tanggal_mulai' => optional($kontrak->tanggal_mulai)->format('Y-m-d'),
                         'tanggal_selesai' => optional($kontrak->tanggal_selesai)->format('Y-m-d'),
-                        'file_url' => $kontrak->file_kontrak ? asset('storage/' . $kontrak->file_kontrak) : null,
+                        'file_url' => $kontrak->file_kontrak ? route('secure-file', ['kontrak-mitra', $kontrak->id, 'file_kontrak']) : null,
                         'status_kontrak' => $kontrak->status_kontrak,
                         'layanan_ids' => $kontrak->layananJasa->pluck('id')->map(fn ($id) => (int) $id)->values(),
                     ])->values(),
@@ -1116,7 +1116,7 @@ class TagihanJasaController extends Controller
             return back()->with('error', 'Surat pengantar final hanya dapat diunggah setelah seluruh verifikasi disetujui.');
         }
 
-        $path = $request->file('file_surat_pengantar_final')->store('tagihan-jasa/surat-pengantar-final', 'public');
+        $path = $request->file('file_surat_pengantar_final')->store('tagihan-jasa/surat-pengantar-final', 'local');
         $this->archiveUploadedSuratPengantar(
             $tagihan,
             'SURAT_PENGANTAR_FINAL_TTD',
@@ -1141,7 +1141,7 @@ class TagihanJasaController extends Controller
         $this->abortIfAdminJasaCannotAccess($tagihan);
 
         if ($tagihan->file_surat_pengantar_final) {
-            $storage = Storage::disk('public');
+            $storage = Storage::disk('local');
 
             if ($storage->exists($tagihan->file_surat_pengantar_final)) {
                 return $storage->response(
@@ -1436,6 +1436,16 @@ class TagihanJasaController extends Controller
 
     public function autoApproveAll($id)
     {
+        // ARCH-01: endpoint pintas "auto-approve" hanya untuk pengembangan/testing.
+        // Di produksi ia akan mem-bypass SELURUH verifikasi berjenjang (KPA/PLT-PLH
+        // dst.) dan menerbitkan Surat Pengantar Final ber-TTE, sehingga harus
+        // diblokir total di lingkungan produksi.
+        abort_unless(
+            app()->environment(['local', 'testing']),
+            403,
+            'Fitur auto-approve hanya tersedia di lingkungan pengembangan/testing.'
+        );
+
         abort_unless($this->canManageTagihanJasa(), 403);
 
         $tagihan = TagihanJasa::with('workflowInstance.approvals')->findOrFail($id);
@@ -1535,7 +1545,7 @@ class TagihanJasaController extends Controller
         $path = 'tagihan-jasa/surat-pengantar-final/' . $fileName;
 
         $pdfContent = $pdf->output();
-        Storage::disk('public')->put($path, $pdfContent);
+        Storage::disk('local')->put($path, $pdfContent);
         $this->archiveStoredSuratPengantar(
             $tagihan,
             'SURAT_PENGANTAR_FINAL_TTD',
@@ -1566,7 +1576,7 @@ class TagihanJasaController extends Controller
         $safeNomor = Str::slug(str_replace(['/', '\\'], '-', $tagihan->nomor_tagihan ?: ('tagihan-' . $tagihan->id)), '-');
         $path = 'arsip-dokumen/TagihanJasa/' . $safeNomor . '/' . now()->format('YmdHis') . '-' . Str::random(6) . '-' . $fileName;
 
-        Storage::disk('public')->put($path, $content);
+        Storage::disk('local')->put($path, $content);
 
         $this->archiveStoredSuratPengantar($tagihan, $jenisDokumen, $fileName, $path, $keterangan, strlen($content));
     }
@@ -1598,7 +1608,7 @@ class TagihanJasaController extends Controller
 
     private function streamSuratPengantarArchive(ArsipDokumen $arsip)
     {
-        $storage = Storage::disk($arsip->disk ?: 'public');
+        $storage = Storage::disk($arsip->disk ?: 'local');
 
         abort_unless($storage->exists($arsip->path_file), 404);
 
@@ -1621,7 +1631,7 @@ class TagihanJasaController extends Controller
             'jenis_dokumen' => $jenisDokumen,
             'nama_file_asli' => $file->getClientOriginalName(),
             'path_file' => $path,
-            'disk' => 'public',
+            'disk' => 'local',
             'mime_type' => $file->getMimeType() ?: 'application/pdf',
             'ukuran_file' => $file->getSize(),
             'checksum' => hash_file('sha256', $file->getRealPath()),
@@ -1641,15 +1651,15 @@ class TagihanJasaController extends Controller
         ?int $size = null
     ): void {
         $this->deactivateSuratPengantarArchives($tagihan, $jenisDokumen);
-        $fullPath = Storage::disk('public')->path($path);
+        $fullPath = Storage::disk('local')->path($path);
 
         $tagihan->arsipDokumen()->create([
             'jenis_dokumen' => $jenisDokumen,
             'nama_file_asli' => $fileName,
             'path_file' => $path,
-            'disk' => 'public',
+            'disk' => 'local',
             'mime_type' => 'application/pdf',
-            'ukuran_file' => $size ?? (Storage::disk('public')->exists($path) ? Storage::disk('public')->size($path) : null),
+            'ukuran_file' => $size ?? (Storage::disk('local')->exists($path) ? Storage::disk('local')->size($path) : null),
             'checksum' => is_file($fullPath) ? hash_file('sha256', $fullPath) : null,
             'uploaded_by' => Auth::id(),
             'uploaded_at' => now(),

@@ -230,7 +230,7 @@
                                         <div class="border rounded-4 p-3 h-100 bg-light">
                                             <div class="small text-muted mb-1">{{ $documentLabels[$arsip->jenis_dokumen] ?? $arsip->jenis_dokumen }}</div>
                                             <div class="fw-semibold text-truncate">{{ $arsip->nama_file_asli }}</div>
-                                            <a href="{{ Storage::url($arsip->path_file) }}" target="_blank" class="btn btn-sm btn-outline-primary mt-2">
+                                            <a href="{{ route('arsip.view', $arsip) }}" target="_blank" class="btn btn-sm btn-outline-primary mt-2">
                                                 <i class="bi bi-eye me-1"></i> Lihat Dokumen
                                             </a>
                                         </div>

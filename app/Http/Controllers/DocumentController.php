@@ -99,6 +99,50 @@ class DocumentController extends Controller
         return $this->documentArchiveService->download($arsip);
     }
 
+    /**
+     * Tampilkan arsip dokumen internal inline dari disk privat (INF-01).
+     * Route sudah dibatasi role internal; untuk arsip super-sensitif tertentu
+     * (bukti setor pajak / transfer SP2D) otorisasi yang lebih ketat tetap
+     * diberlakukan agar tidak melebarkan akses lewat endpoint umum ini.
+     */
+    public function viewArsip(ArsipDokumen $arsip)
+    {
+        $this->authorizeArsipAccess($arsip);
+
+        return $this->documentArchiveService->view($arsip);
+    }
+
+    /**
+     * Unduh arsip dokumen internal dari disk privat (force download).
+     */
+    public function downloadArsip(ArsipDokumen $arsip)
+    {
+        $this->authorizeArsipAccess($arsip);
+
+        return $this->documentArchiveService->download($arsip);
+    }
+
+    /**
+     * Untuk arsip dengan jenis super-sensitif (kode billing, bukti setor pajak,
+     * BPPU, bukti transfer SP2D) berlakukan pembatasan role yang sama dengan
+     * downloadArsipSensitif. Jenis lain cukup dibatasi role internal di route.
+     */
+    private function authorizeArsipAccess(ArsipDokumen $arsip): void
+    {
+        $user = auth()->user();
+        $jenisSensitif = ['KODE_BILLING', 'BUKTI_SETOR_PAJAK', 'BPPU', 'BUKTI_TRANSFER_SP2D'];
+
+        if (! in_array($arsip->jenis_dokumen, $jenisSensitif, true)) {
+            return;
+        }
+
+        $canAll = $user && $user->hasRole(['Bendahara Pengeluaran', 'Super Admin']);
+        $canBuktiTransfer = $arsip->jenis_dokumen === 'BUKTI_TRANSFER_SP2D'
+            && $user && $user->hasRole(['PPK', 'PPSPM', 'Kepala Subbagian Keuangan dan Tata Usaha', 'Koordinator Keuangan']);
+
+        abort_unless($canAll || $canBuktiTransfer, 403, 'Anda tidak berwenang mengakses dokumen ini.');
+    }
+
     public function destroy(ArsipDokumen $arsip)
     {
         $nama = $arsip->nama_file_asli;

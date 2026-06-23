@@ -201,8 +201,8 @@ class TagihanController extends Controller
                 $detailKontrak->arsipDokumen()->create([
                     'jenis_dokumen' => 'INVOICE',
                     'nama_file_asli' => $request->file('file_invoice')->getClientOriginalName(),
-                    'path_file' => $request->file('file_invoice')->store('tagihan/invoice', 'public'),
-                    'disk' => 'public',
+                    'path_file' => $request->file('file_invoice')->store('tagihan/invoice', 'local'),
+                    'disk' => 'local',
                     'mime_type' => $request->file('file_invoice')->getMimeType(),
                     'ukuran_file' => $request->file('file_invoice')->getSize(),
                     'uploaded_by' => Auth::id(),
@@ -215,8 +215,8 @@ class TagihanController extends Controller
                 $detailKontrak->arsipDokumen()->create([
                     'jenis_dokumen' => 'BAPP_GAMBAR_RAB',
                     'nama_file_asli' => $request->file('gambar_rab_bapp')->getClientOriginalName(),
-                    'path_file' => $request->file('gambar_rab_bapp')->store('tagihan/bapp_gambar_rab', 'public'),
-                    'disk' => 'public',
+                    'path_file' => $request->file('gambar_rab_bapp')->store('tagihan/bapp_gambar_rab', 'local'),
+                    'disk' => 'local',
                     'mime_type' => $request->file('gambar_rab_bapp')->getMimeType(),
                     'ukuran_file' => $request->file('gambar_rab_bapp')->getSize(),
                     'uploaded_by' => Auth::id(),
@@ -229,8 +229,8 @@ class TagihanController extends Controller
                 $detailKontrak->arsipDokumen()->create([
                     'jenis_dokumen' => 'LAMPIRAN_LAINNYA',
                     'nama_file_asli' => $request->file('file_lampiran_lainnya')->getClientOriginalName(),
-                    'path_file' => $request->file('file_lampiran_lainnya')->store('tagihan/lampiran', 'public'),
-                    'disk' => 'public',
+                    'path_file' => $request->file('file_lampiran_lainnya')->store('tagihan/lampiran', 'local'),
+                    'disk' => 'local',
                     'mime_type' => $request->file('file_lampiran_lainnya')->getMimeType(),
                     'ukuran_file' => $request->file('file_lampiran_lainnya')->getSize(),
                     'uploaded_by' => Auth::id(),
@@ -352,15 +352,18 @@ class TagihanController extends Controller
         // Nonaktifkan dokumen lama jika ada
         $detailKontrak->arsipDokumen()->where('jenis_dokumen', $jenis)->update(['is_active' => false]);
 
-        // Simpan dokumen baru
+        // Simpan dokumen baru. Gambar RAB BAPP adalah dokumen pendukung internal
+        // → disk privat (INF-01). Dokumen *_FINAL_TTD masih di disk publik
+        // (terkait alur TTE/verifikasi publik — ditangani terpisah pada TTE-01).
         $folder = $isGambarRab ? 'tagihan/bapp_gambar_rab' : 'tagihan/final_docs';
-        $path = $request->file('file')->store($folder, 'public');
+        $disk = $isGambarRab ? 'local' : 'public';
+        $path = $request->file('file')->store($folder, $disk);
 
         $detailKontrak->arsipDokumen()->create([
             'jenis_dokumen' => $jenis,
             'nama_file_asli' => $request->file('file')->getClientOriginalName(),
             'path_file' => $path,
-            'disk' => 'public',
+            'disk' => $disk,
             'mime_type' => $request->file('file')->getMimeType(),
             'ukuran_file' => $request->file('file')->getSize(),
             'uploaded_by' => Auth::id(),

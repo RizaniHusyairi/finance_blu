@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\Blameable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -11,7 +12,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  */
 class TransaksiPembukuan extends Model
 {
-    use SoftDeletes;
+    use Blameable, SoftDeletes;
 
     protected $table = 'transaksi_pembukuan';
     protected $guarded = ['id'];

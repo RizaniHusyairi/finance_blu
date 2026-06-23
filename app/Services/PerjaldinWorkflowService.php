@@ -114,6 +114,20 @@ class PerjaldinWorkflowService
     }
 
     /**
+     * WF-01: Tegakkan pemisahan tugas (maker ≠ checker). Pembuat dokumen
+     * (created_by / dibuat_oleh / dibuat_oleh_id) tidak boleh menjadi penyetuju.
+     */
+    private function assertNotSelfApproval(\Illuminate\Database\Eloquent\Model $document, int $actorId): void
+    {
+        foreach (['created_by', 'dibuat_oleh', 'dibuat_oleh_id'] as $makerCol) {
+            $makerId = $document->getAttribute($makerCol);
+            if ($makerId !== null && (int) $makerId === $actorId) {
+                throw new Exception('Pemisahan tugas: Anda tidak dapat menyetujui dokumen yang Anda buat sendiri.');
+            }
+        }
+    }
+
+    /**
      * Approve sebuah step workflow.
      */
     public function approve(WorkflowApproval $approval, User $actor, ?string $catatan = null, ?string $ipAddress = null): WorkflowInstance
@@ -137,6 +151,10 @@ class PerjaldinWorkflowService
         if (!$this->actorCanAct($approval, $actor)) {
             throw new Exception("Anda tidak memiliki hak akses untuk memproses persetujuan ini.");
         }
+
+        // WF-01: Pemisahan tugas (Segregation of Duties) — pembuat dokumen tidak
+        // boleh menyetujui dokumennya sendiri (maker ≠ checker).
+        $this->assertNotSelfApproval($tagihan, (int) $actor->id);
 
         return DB::transaction(function () use ($approval, $actor, $catatan, $ipAddress, $instance, $tagihan) {
             $oldStatus = $tagihan->status;

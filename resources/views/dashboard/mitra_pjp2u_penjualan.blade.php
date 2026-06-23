@@ -106,7 +106,7 @@
                         <td><span class="badge rounded-pill {{ $statusClass($penjualan->status) }} px-3 py-2 fw-medium">{{ ucfirst($penjualan->status) }}</span></td>
                         <td>
                             @if($penjualan->file_laporan)
-                                <a href="{{ asset('storage/' . $penjualan->file_laporan) }}" target="_blank" class="btn btn-sm btn-light border">Lihat</a>
+                                <a href="{{ route('secure-file', ['penjualan', $penjualan->id, 'file_laporan']) }}" target="_blank" class="btn btn-sm btn-light border">Lihat</a>
                             @else
                                 <span class="text-muted">-</span>
                             @endif

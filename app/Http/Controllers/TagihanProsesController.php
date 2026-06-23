@@ -328,8 +328,8 @@ class TagihanProsesController extends Controller
                     $detail->arsipDokumen()->create([
                         'jenis_dokumen' => 'FAKTUR_PAJAK',
                         'nama_file_asli' => $file->getClientOriginalName(),
-                        'path_file' => $file->store('tagihan/faktur_pajak', 'public'),
-                        'disk' => 'public',
+                        'path_file' => $file->store('tagihan/faktur_pajak', 'local'),
+                        'disk' => 'local',
                         'mime_type' => $file->getMimeType(),
                         'ukuran_file' => $file->getSize(),
                         'uploaded_by' => Auth::id(),

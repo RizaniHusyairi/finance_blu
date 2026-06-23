@@ -8,6 +8,8 @@
 .env
 .env.backup
 .env.production
+.env.testing
+/phpunit.mysql.xml
 .phpactor.json
 .phpunit.result.cache
 Homestead.json
@@ -19,3 +21,4 @@ yarn-error.log
 /.idea
 /.vscode
 /.claude
+/scratch

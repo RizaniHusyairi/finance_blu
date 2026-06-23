@@ -39,7 +39,9 @@ return [
     |
     */
 
-    'debug' => (bool) env('APP_DEBUG', false),
+    // SEC-03: paksa debug NONAKTIF di produksi apa pun nilai APP_DEBUG, agar
+    // halaman error tidak pernah membocorkan stack trace/SQL/secret di produksi.
+    'debug' => env('APP_ENV') === 'production' ? false : (bool) env('APP_DEBUG', false),
 
     /*
     |--------------------------------------------------------------------------

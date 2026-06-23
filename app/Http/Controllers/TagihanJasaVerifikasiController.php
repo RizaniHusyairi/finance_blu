@@ -170,7 +170,7 @@ class TagihanJasaVerifikasiController extends Controller
         $path = 'tagihan-jasa/surat-pengantar-final/' . $fileName;
 
         $pdfContent = $pdf->output();
-        Storage::disk('public')->put($path, $pdfContent);
+        Storage::disk('local')->put($path, $pdfContent);
         $this->archiveFinalSuratPengantar($tagihan, $fileName, $path, strlen($pdfContent));
 
         $tagihan->forceFill([
@@ -188,15 +188,15 @@ class TagihanJasaVerifikasiController extends Controller
             ->where('is_active', true)
             ->update(['is_active' => false]);
 
-        $fullPath = Storage::disk('public')->path($path);
+        $fullPath = Storage::disk('local')->path($path);
 
         $tagihan->arsipDokumen()->create([
             'jenis_dokumen' => 'SURAT_PENGANTAR_FINAL_TTD',
             'nama_file_asli' => $fileName,
             'path_file' => $path,
-            'disk' => 'public',
+            'disk' => 'local',
             'mime_type' => 'application/pdf',
-            'ukuran_file' => $size ?? (Storage::disk('public')->exists($path) ? Storage::disk('public')->size($path) : null),
+            'ukuran_file' => $size ?? (Storage::disk('local')->exists($path) ? Storage::disk('local')->size($path) : null),
             'checksum' => is_file($fullPath) ? hash_file('sha256', $fullPath) : null,
             'uploaded_by' => Auth::id(),
             'uploaded_at' => now(),

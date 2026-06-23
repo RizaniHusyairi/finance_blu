@@ -59,7 +59,7 @@ class PermohonanNonScheduleController extends Controller
         abort_unless($this->canCreate(), 403);
 
         $data = $this->validateData($request);
-        $data['file_surat'] = $request->file('file_surat')->store('permohonan_non_schedule', 'public');
+        $data['file_surat'] = $request->file('file_surat')->store('permohonan_non_schedule', 'local');
         $data['status'] = PermohonanNonSchedule::STATUS_DIAJUKAN;
         $data['created_by'] = Auth::id();
 
@@ -88,7 +88,7 @@ class PermohonanNonScheduleController extends Controller
             if ($permohonan_non_schedule->file_surat) {
                 Storage::disk('public')->delete($permohonan_non_schedule->file_surat);
             }
-            $data['file_surat'] = $request->file('file_surat')->store('permohonan_non_schedule', 'public');
+            $data['file_surat'] = $request->file('file_surat')->store('permohonan_non_schedule', 'local');
         }
         $permohonan_non_schedule->update($data);
 
@@ -117,9 +117,11 @@ class PermohonanNonScheduleController extends Controller
 
     public function file(PermohonanNonSchedule $permohonan_non_schedule)
     {
-        abort_unless($permohonan_non_schedule->file_surat && Storage::disk('public')->exists($permohonan_non_schedule->file_surat), 404);
+        // INF-01: file di disk privat `local` (fallback `public` untuk file lama).
+        $disk = $permohonan_non_schedule->file_surat && Storage::disk('local')->exists($permohonan_non_schedule->file_surat) ? 'local' : 'public';
+        abort_unless($permohonan_non_schedule->file_surat && Storage::disk($disk)->exists($permohonan_non_schedule->file_surat), 404);
 
-        return Storage::disk('public')->download($permohonan_non_schedule->file_surat);
+        return Storage::disk($disk)->download($permohonan_non_schedule->file_surat);
     }
 
     public function destroy(PermohonanNonSchedule $permohonan_non_schedule)

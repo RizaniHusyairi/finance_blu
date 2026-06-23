@@ -130,6 +130,22 @@ class DocumentTte
         return hash('sha256', json_encode(self::hashPayload($document), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
     }
 
+    /** Disk privat tempat artefak PDF final yang dibekukan disimpan (TTE-01). */
+    public const FROZEN_DISK = 'local';
+
+    /**
+     * TTE-01: path artefak PDF final yang DIBEKUKAN. Di-key per-hash dokumen
+     * sehingga setiap state ter-verifikasi memiliki berkas imutabel tersendiri;
+     * perubahan body yang tidak mengubah hash tetap menyajikan berkas asli,
+     * sedangkan perubahan metadata menghasilkan hash (dan berkas) baru.
+     */
+    public static function frozenPdfPath(Model $document): string
+    {
+        return 'tte-final/' . self::typeFor($document)
+            . '/' . $document->getKey()
+            . '/' . self::hash($document) . '.pdf';
+    }
+
     public static function activityQrFilePath(?int $tagihanId): ?string
     {
         if (! $tagihanId) {

@@ -190,7 +190,7 @@
                                 <div class="small text-muted mb-1">{{ $documentLabels[$arsip->jenis_dokumen] ?? $arsip->jenis_dokumen }}</div>
                                 <div class="fw-semibold text-truncate">{{ $arsip->nama_file_asli }}</div>
                                 <div class="small text-muted mt-1">{{ optional($arsip->uploaded_at)->translatedFormat('d M Y H:i') ?? optional($arsip->created_at)->translatedFormat('d M Y H:i') }}</div>
-                                <a href="{{ Storage::url($arsip->path_file) }}" target="_blank" class="btn btn-sm btn-outline-primary mt-3">
+                                <a href="{{ route('arsip.view', $arsip) }}" target="_blank" class="btn btn-sm btn-outline-primary mt-3">
                                     <i class="bi bi-eye me-1"></i> Lihat / Unduh
                                 </a>
                             </div>

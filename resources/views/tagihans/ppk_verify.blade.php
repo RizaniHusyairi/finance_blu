@@ -26,17 +26,24 @@
 
     $isDokumenLengkap = $hasBapp && $hasBap && $hasInvoice && (!$wajibBast || $hasBast);
 
-    function getFileViewerPath($fileObj, $legacyPath) {
-        if ($fileObj && isset($fileObj->path_file)) return \Illuminate\Support\Facades\Storage::url($fileObj->path_file);
-        if ($legacyPath) return \Illuminate\Support\Facades\Storage::url($legacyPath);
-        return null;
+    function getFileViewerPath($fileObj, $secureUrl = null) {
+        // INF-01: ArsipDokumen (punya id) via route terproteksi arsip.view;
+        // file kolom DetailKontrak via secure-file (auth + staf internal),
+        // bukan URL publik /storage.
+        if ($fileObj && isset($fileObj->id) && isset($fileObj->path_file)) return route('arsip.view', $fileObj);
+        return $secureUrl;
     }
-    
-    $urlBapp = getFileViewerPath($fileBapp, optional($tagihan->detailKontrak)->file_bapp);
-    $urlBast = getFileViewerPath($fileBast, optional($tagihan->detailKontrak)->file_bast);
-    $urlBap = getFileViewerPath($fileBap, optional($tagihan->detailKontrak)->file_bap);
-    $urlInvoice = getFileViewerPath($fileInvoice, optional($tagihan->detailKontrak)->file_invoice);
-    $urlFaktur = $fakturPajakPath ? \Illuminate\Support\Facades\Storage::url($fakturPajakPath) : null;
+
+    $detailKontrakFile = function ($field) use ($tagihan) {
+        $dk = $tagihan->detailKontrak;
+        return ($dk && filled($dk->$field)) ? route('secure-file', ['tagihan-kontrak', $dk->id, $field]) : null;
+    };
+
+    $urlBapp = getFileViewerPath($fileBapp, $detailKontrakFile('file_bapp'));
+    $urlBast = getFileViewerPath($fileBast, $detailKontrakFile('file_bast'));
+    $urlBap = getFileViewerPath($fileBap, $detailKontrakFile('file_bap'));
+    $urlInvoice = getFileViewerPath($fileInvoice, $detailKontrakFile('file_invoice'));
+    $urlFaktur = $detailKontrakFile('file_faktur_pajak');
 @endphp
 
 @section('content')

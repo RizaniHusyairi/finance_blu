@@ -59,7 +59,7 @@ class TagihanDokumenPendukung
             ]);
         };
 
-        $addArsip = function ($arsip, ?string $source = null) use ($addFile) {
+        $addArsip = function ($arsip, ?string $source = null) use ($items, $addFile) {
             // Versi lama yang sudah digantikan (is_active=false) tidak ditampilkan.
             if ($arsip !== null && isset($arsip->is_active) && ! $arsip->is_active) {
                 return;
@@ -69,6 +69,23 @@ class TagihanDokumenPendukung
             $title = $arsip?->nama_file_asli
                 ?: ($arsip?->jenis_dokumen ? ucwords(strtolower(str_replace('_', ' ', $arsip->jenis_dokumen))) : null);
 
+            // INF-01: record ArsipDokumen disajikan via route terproteksi (auth +
+            // role internal), bukan URL publik /storage. Berlaku untuk arsip di
+            // disk privat (local) maupun yang masih publik — endpoint menyamakan
+            // akses lewat kontrol aplikasi.
+            if ($arsip?->id && trim((string) $path) !== '') {
+                $items->push([
+                    'title' => $title ?: basename((string) $path),
+                    'path' => $path,
+                    'url' => route('arsip.view', $arsip),
+                    'source' => $source,
+                    'is_generated' => false,
+                ]);
+
+                return;
+            }
+
+            // Fallback untuk objek tanpa id (mis. path mentah) — perilaku lama.
             $addFile($title, $path, $source, $arsip?->disk ?? null);
         };
 
@@ -78,18 +95,29 @@ class TagihanDokumenPendukung
 
         if ($tagihan->detailKontrak) {
             $detail = $tagihan->detailKontrak;
+            // INF-01: file kolom dokumen kontrak disajikan via route terproteksi
+            // (auth + staf internal) `secure-file`, bukan URL publik /storage.
             $kontrakFiles = [
-                'Berita Acara Pemeriksaan Pekerjaan (BAPP)' => $detail->file_bapp,
-                'Berita Acara Serah Terima (BAST)' => $detail->file_bast,
-                'Berita Acara Pembayaran (BAP)' => $detail->file_bap,
-                'Invoice Tagihan' => $detail->file_invoice,
-                'Kwitansi Pembayaran' => $detail->file_kwitansi,
-                'Faktur Pajak' => $detail->file_faktur_pajak,
-                'Lampiran Lainnya' => $detail->file_lampiran_lainnya,
+                'file_bapp' => 'Berita Acara Pemeriksaan Pekerjaan (BAPP)',
+                'file_bast' => 'Berita Acara Serah Terima (BAST)',
+                'file_bap' => 'Berita Acara Pembayaran (BAP)',
+                'file_invoice' => 'Invoice Tagihan',
+                'file_kwitansi' => 'Kwitansi Pembayaran',
+                'file_faktur_pajak' => 'Faktur Pajak',
+                'file_lampiran_lainnya' => 'Lampiran Lainnya',
             ];
 
-            foreach ($kontrakFiles as $title => $path) {
-                $addFile($title, $path, 'Detail Kontrak');
+            foreach ($kontrakFiles as $field => $title) {
+                $path = $detail->$field;
+                if (filled($path)) {
+                    $items->push([
+                        'title' => $title,
+                        'path' => $path,
+                        'url' => route('secure-file', ['tagihan-kontrak', $detail->id, $field]),
+                        'source' => 'Detail Kontrak',
+                        'is_generated' => false,
+                    ]);
+                }
             }
 
             foreach ($detail->arsipDokumen ?? collect() as $arsip) {
@@ -99,11 +127,26 @@ class TagihanDokumenPendukung
 
         foreach ($tagihan->detailPerjaldin ?? collect() as $detail) {
             $nama = $detail->nama_pegawai ?? $detail->pegawai?->nama_lengkap ?? 'Peserta';
-            $addFile('Surat Tugas / SPT - ' . $nama, $detail->spt_file_path ?? null, 'Perjaldin');
-            $addFile('Tiket Perjalanan - ' . $nama, $detail->tiket_file_path ?? null, 'Perjaldin');
-            $addFile('Bukti Transport - ' . $nama, $detail->transport_file_path ?? null, 'Perjaldin');
-            $addFile('Bukti Penginapan - ' . $nama, $detail->penginapan_file_path ?? null, 'Perjaldin');
-            $addFile('Bukti Uang Harian - ' . $nama, $detail->uang_harian_file_path ?? null, 'Perjaldin');
+            // INF-01: bukti perjaldin disajikan via route terproteksi `secure-file`.
+            $perjaldinFiles = [
+                'spt_file_path' => 'Surat Tugas / SPT - ' . $nama,
+                'tiket_file_path' => 'Tiket Perjalanan - ' . $nama,
+                'transport_file_path' => 'Bukti Transport - ' . $nama,
+                'penginapan_file_path' => 'Bukti Penginapan - ' . $nama,
+                'uang_harian_file_path' => 'Bukti Uang Harian - ' . $nama,
+            ];
+            foreach ($perjaldinFiles as $field => $title) {
+                $path = $detail->$field ?? null;
+                if (filled($path)) {
+                    $items->push([
+                        'title' => $title,
+                        'path' => $path,
+                        'url' => route('secure-file', ['tagihan-perjaldin', $detail->id, $field]),
+                        'source' => 'Perjaldin',
+                        'is_generated' => false,
+                    ]);
+                }
+            }
         }
 
         foreach ($tagihan->potonganTagihan ?? collect() as $potongan) {

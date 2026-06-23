@@ -93,7 +93,7 @@ class PemakaianGarbarataController extends Controller
             foreach ($validated['rows'] as $idx => $row) {
                 $data = $this->normalizeGarbarataRow($validated, $row);
                 if ($request->hasFile("rows.$idx.file_pendukung")) {
-                    $data['file_pendukung'] = $request->file("rows.$idx.file_pendukung")->store('pemakaian_garbarata', 'public');
+                    $data['file_pendukung'] = $request->file("rows.$idx.file_pendukung")->store('pemakaian_garbarata', 'local');
                 }
                 PemakaianGarbarata::create($data);
             }
@@ -135,7 +135,7 @@ class PemakaianGarbarataController extends Controller
         $oldFile = $pemakaian_garbarata->file_pendukung;
 
         if ($request->hasFile('rows.0.file_pendukung')) {
-            $newPath = $request->file('rows.0.file_pendukung')->store('pemakaian_garbarata', 'public');
+            $newPath = $request->file('rows.0.file_pendukung')->store('pemakaian_garbarata', 'local');
             $data['file_pendukung'] = $newPath;
 
             if ($oldFile && $oldFile !== $newPath) {
@@ -307,8 +307,10 @@ class PemakaianGarbarataController extends Controller
 
     public function file(PemakaianGarbarata $pemakaian_garbarata)
     {
-        abort_unless($pemakaian_garbarata->file_pendukung && Storage::disk('public')->exists($pemakaian_garbarata->file_pendukung), 404);
-        return Storage::disk('public')->download($pemakaian_garbarata->file_pendukung);
+        // INF-01: file di disk privat `local` (fallback `public` untuk file lama).
+        $disk = $pemakaian_garbarata->file_pendukung && Storage::disk('local')->exists($pemakaian_garbarata->file_pendukung) ? 'local' : 'public';
+        abort_unless($pemakaian_garbarata->file_pendukung && Storage::disk($disk)->exists($pemakaian_garbarata->file_pendukung), 404);
+        return Storage::disk($disk)->download($pemakaian_garbarata->file_pendukung);
     }
 
     private function validateBatchData(Request $request): array

@@ -169,7 +169,9 @@ return [
     |
     */
 
-    'secure' => env('SESSION_SECURE_COOKIE'),
+    // SEC-03: di produksi, default-kan cookie sesi ke Secure (hanya dikirim via
+    // HTTPS) meski env tidak diset — cegah pencurian cookie pada koneksi non-TLS.
+    'secure' => env('SESSION_SECURE_COOKIE', env('APP_ENV') === 'production'),
 
     /*
     |--------------------------------------------------------------------------

@@ -318,7 +318,7 @@
                         <i class="bi bi-filetype-pdf"></i> {{ $isContractTteApproved ? 'Export PDF TTE' : 'Export PDF Draft' }}
                     </a>
                     @if($ringkasanFinalArsip)
-                        <a href="{{ Storage::url($ringkasanFinalArsip->path_file) }}" target="_blank" class="btn-act-modern btn-act-success">
+                        <a href="{{ route('arsip.view', $ringkasanFinalArsip) }}" target="_blank" class="btn-act-modern btn-act-success">
                             <i class="bi bi-file-earmark-check"></i> Lihat Dokumen Final
                         </a>
                     @endif
@@ -379,7 +379,7 @@
                         </a>
                     @endif
                     @if($spkFinalArsip)
-                        <a href="{{ Storage::url($spkFinalArsip->path_file) }}" target="_blank" class="btn-act-modern btn-act-success">
+                        <a href="{{ route('arsip.view', $spkFinalArsip) }}" target="_blank" class="btn-act-modern btn-act-success">
                             <i class="bi bi-file-earmark-check"></i> Lihat Dokumen Final
                         </a>
                     @endif
@@ -441,7 +441,7 @@
                         <i class="bi bi-filetype-pdf"></i> {{ $isContractTteApproved ? 'Export PDF TTE' : 'Export PDF Draft' }}
                     </a>
                     @if($spmkFinalArsip)
-                        <a href="{{ Storage::url($spmkFinalArsip->path_file) }}" target="_blank" class="btn-act-modern btn-act-success">
+                        <a href="{{ route('arsip.view', $spmkFinalArsip) }}" target="_blank" class="btn-act-modern btn-act-success">
                             <i class="bi bi-file-earmark-check"></i> Lihat Dokumen Final
                         </a>
                     @endif
@@ -549,7 +549,7 @@
                     <h6 class="fw-bold mb-3 text-dark">Arsip Dokumen Pendukung & Jaminan</h6>
                     <div class="list-group mb-2">
                         @if($kontrak->file_jaminan_uang_muka)
-                        <a href="{{ Storage::url($kontrak->file_jaminan_uang_muka) }}" target="_blank" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center border rounded-3 mb-2 shadow-sm">
+                        <a href="{{ route('secure-file', ['kontrak-pengadaan', $kontrak->id, 'file_jaminan_uang_muka']) }}" target="_blank" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center border rounded-3 mb-2 shadow-sm">
                             <div><i class="bi bi-file-earmark-pdf-fill text-danger fs-4 me-2 align-middle"></i> <span class="fw-bold">Jaminan Uang Muka</span></div>
                             <span class="btn-act-modern btn-act-primary"><i class="bi bi-download"></i> Unduh</span>
                         </a>
@@ -923,7 +923,7 @@
                             <div class="uc-label">File aktif saat ini</div>
                             <div class="uc-name">SPK Final Bertandatangan &mdash; Tersimpan</div>
                         </div>
-                        <a href="{{ Storage::url($spkFinalArsip->path_file) }}" target="_blank" class="uc-link">
+                        <a href="{{ route('arsip.view', $spkFinalArsip) }}" target="_blank" class="uc-link">
                             <i class="bi bi-box-arrow-up-right"></i> Lihat Dokumen
                         </a>
                     </div>
@@ -1000,7 +1000,7 @@
                             <div class="uc-label">File aktif saat ini</div>
                             <div class="uc-name">Ringkasan Kontrak Final &mdash; Tersimpan</div>
                         </div>
-                        <a href="{{ Storage::url($ringkasanFinalArsip->path_file) }}" target="_blank" class="uc-link">
+                        <a href="{{ route('arsip.view', $ringkasanFinalArsip) }}" target="_blank" class="uc-link">
                             <i class="bi bi-box-arrow-up-right"></i> Lihat Dokumen
                         </a>
                     </div>
@@ -1077,7 +1077,7 @@
                             <div class="uc-label">File aktif saat ini</div>
                             <div class="uc-name">SPMK Final Bertandatangan &mdash; Tersimpan</div>
                         </div>
-                        <a href="{{ Storage::url($spmkFinalArsip->path_file) }}" target="_blank" class="uc-link" style="border-color: rgba(14,165,233,.30); color:#0369a1;">
+                        <a href="{{ route('arsip.view', $spmkFinalArsip) }}" target="_blank" class="uc-link" style="border-color: rgba(14,165,233,.30); color:#0369a1;">
                             <i class="bi bi-box-arrow-up-right"></i> Lihat Dokumen
                         </a>
                     </div>
