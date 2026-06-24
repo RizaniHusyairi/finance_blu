@@ -17,6 +17,7 @@ use App\Services\EmailNotificationService;
 use App\Services\WhatsappService;
 use Illuminate\Support\Facades\Notification;
 use App\Support\ContractDocumentTte;
+use App\Support\PdfCompressor;
 use Barryvdh\DomPDF\Facade\Pdf;
 
 class ContractController extends Controller
@@ -26,37 +27,56 @@ class ContractController extends Controller
      */
     public function index()
     {
-        $contracts = \App\Models\KontrakPengadaan::with(['vendor', 'ppkUser.profilable', 'addendums', 'termin'])->latest()->get();
+        // Performa: tabel kontrak utama kini SERVER-SIDE (DataTables AJAX) — tidak
+        // lagi memuat seluruh baris. KPI dihitung via query agregat. Modal "Tagih"
+        // dibatasi ke kontrak AKTIF saja (subset kecil yang memang punya tombol tagih).
+        $statusCounts = \App\Models\KontrakPengadaan::query()
+            ->selectRaw('status_kontrak, COUNT(*) as jml')
+            ->groupBy('status_kontrak')
+            ->pluck('jml', 'status_kontrak');
+
+        $kpi = [
+            'aktif'   => (int) ($statusCounts['AKTIF'] ?? 0),
+            'pending' => (int) ($statusCounts['PENDING_REVIEW'] ?? 0),
+            'draft'   => (int) ($statusCounts['DRAFT'] ?? 0),
+            'selesai' => (int) ($statusCounts['SELESAI'] ?? 0),
+            'total'   => (int) $statusCounts->sum(),
+        ];
+
+        $aktifContracts = \App\Models\KontrakPengadaan::with('termin')
+            ->where('status_kontrak', 'AKTIF')
+            ->get();
+
+        // Addendum: volume lebih kecil; kandidat konversi server-side berikutnya.
         $addendums = \App\Models\KontrakAddendum::with(['kontrakUtama.vendor', 'logs.user'])->latest()->get();
 
-        $totalAktif = $contracts->where('status_kontrak', 'AKTIF')->count();
-        $totalSelesai = $contracts->where('status_kontrak', 'SELESAI')->count();
-        $totalAdendum = $contracts->filter(function($c) { return $c->addendums->count() > 0; })->count();
-        $totalNilaiAll = $contracts->sum('nilai_total_kontrak');
-        
-        $hampirHabisNilai = 0;
-        $hampirHabisMasa = 0;
+        return view('contracts.index', compact('kpi', 'aktifContracts', 'addendums'));
+    }
 
-        foreach ($contracts as $c) {
-            // Placeholder: hitung realisasi jika tagihan/termin nanti dibuat
-            $realisasi = 0; 
-            $c->realisasi_pembayaran = $realisasi;
-            $c->sisa_kontrak = $c->nilai_total_kontrak - $realisasi;
-
-            if ($c->status_kontrak == 'AKTIF') {
-                if ($c->nilai_total_kontrak > 0 && $c->sisa_kontrak <= ($c->nilai_total_kontrak * 0.2)) {
-                    $hampirHabisNilai++;
-                }
-                if ($c->tanggal_selesai && \Carbon\Carbon::parse($c->tanggal_selesai)->isBetween(now(), now()->addDays(30))) {
-                    $hampirHabisMasa++;
-                }
-            }
-        }
-
-        return view('contracts.index', compact(
-            'contracts', 'addendums', 'totalAktif', 'totalSelesai', 'totalAdendum', 
-            'totalNilaiAll', 'hampirHabisNilai', 'hampirHabisMasa'
-        ));
+    /**
+     * Performa — sumber data SERVER-SIDE untuk DataTables tabel kontrak utama.
+     * Pencarian, urutan, dan pagination ditangani DB (bukan memuat semua baris ke
+     * browser). Format respons mengikuti kontrak DataTables (draw/recordsTotal/
+     * recordsFiltered/data).
+     */
+    public function indexData(Request $request)
+    {
+        return \App\Support\DataTable::respond(
+            $request,
+            \App\Models\KontrakPengadaan::query()->with(['vendor', 'addendums', 'termin']),
+            orderable: [0 => null, 1 => 'nomor_spk', 2 => null, 3 => 'nilai_total_kontrak', 4 => 'status_kontrak', 5 => null],
+            searchable: ['nomor_spk', 'nama_pekerjaan', 'status_kontrak'],
+            rowMapper: fn ($kontrak, $no) => [
+                '<span class="row-num">' . $no . '</span>',
+                '<div class="doc-no">' . e($kontrak->nomor_spk) . '</div>'
+                    . '<div class="doc-desc"><i class="bi bi-briefcase"></i> '
+                    . e(\Illuminate\Support\Str::limit($kontrak->nama_pekerjaan, 50)) . '</div>',
+                view('contracts.partials._cell_vendor', ['kontrak' => $kontrak])->render(),
+                view('contracts.partials._cell_nilai', ['kontrak' => $kontrak])->render(),
+                view('contracts.partials._cell_status', ['kontrak' => $kontrak])->render(),
+                view('contracts.partials._actions', ['kontrak' => $kontrak])->render(),
+            ],
+        );
     }
 
     /**
@@ -219,7 +239,7 @@ class ContractController extends Controller
             // Clean format Rupiah to numeric (already done by validate if input is right? No, standard HTML <input> gives the string, wait, frontend JS `oninput` copies the clean value to hidden inputs `nilai_total_kontrak_value` and `nilai_uang_muka_value` so laravel receives clean numerics).
 
             // Upload files
-            $pathJaminanUm = $request->hasFile('file_jaminan_um') ? $request->file('file_jaminan_um')->store('kontrak/jaminan-uang-muka', 'local') : null;
+            $pathJaminanUm = $request->hasFile('file_jaminan_um') ? PdfCompressor::storeCompressed($request->file('file_jaminan_um'), 'kontrak/jaminan-uang-muka', 'local') : null;
             $pathGambarRab = $request->hasFile('gambar_rab') ? $request->file('gambar_rab')->store('kontrak/gambar-rab', 'local') : null;
 
             $adaUangMuka = $request->has('ada_uang_muka');
@@ -472,7 +492,7 @@ class ContractController extends Controller
             // Upload files (delete old ones if new uploaded)
             if ($request->hasFile('file_jaminan_um')) {
                 if ($kontrak->file_jaminan_uang_muka) \Illuminate\Support\Facades\Storage::disk('public')->delete($kontrak->file_jaminan_uang_muka);
-                $validated['file_jaminan_um'] = $request->file('file_jaminan_um')->store('kontrak/jaminan-uang-muka', 'local');
+                $validated['file_jaminan_um'] = PdfCompressor::storeCompressed($request->file('file_jaminan_um'), 'kontrak/jaminan-uang-muka', 'local');
             } else {
                 $validated['file_jaminan_um'] = $kontrak->file_jaminan_uang_muka;
             }
@@ -668,7 +688,7 @@ class ContractController extends Controller
             $message .= $url . "\n\n";
             $message .= "_Login terlebih dahulu untuk mengakses halaman verifikasi._";
 
-            app(WhatsappService::class)->sendMessage($noHp, $message);
+            app(WhatsappService::class)->queueMessage($noHp, $message);
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('Gagal kirim WA pengajuan kontrak ke PPK: ' . $e->getMessage());
         }

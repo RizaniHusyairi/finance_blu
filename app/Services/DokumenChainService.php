@@ -789,7 +789,7 @@ class DokumenChainService
                     if ($user->profilable instanceof \App\Models\MasterPegawai && $user->profilable->nomor_hp) {
                         $phone = preg_replace('/\D+/', '', $user->profilable->nomor_hp);
                         if (strlen($phone) >= 9) {
-                            app(WhatsappService::class)->sendMessage($phone,
+                            app(WhatsappService::class)->queueMessage($phone,
                                 "*Notifikasi SIKEREN*\n\nTagihan {$tagihan->nomor_tagihan} memerlukan perbaikan *{$info['label']}*:\n{$catatan}\n\nSilakan perbaiki melalui:\n{$url}");
                         }
                     }
@@ -951,7 +951,7 @@ class DokumenChainService
                     if ($user->profilable instanceof \App\Models\MasterPegawai && $user->profilable->nomor_hp) {
                         $phone = preg_replace('/\D+/', '', $user->profilable->nomor_hp);
                         if (strlen($phone) >= 9) {
-                            app(WhatsappService::class)->sendMessage($phone,
+                            app(WhatsappService::class)->queueMessage($phone,
                                 "*Notifikasi SIKEREN*\n\nTagihan {$tagihan->nomor_tagihan} dikembalikan untuk revisi:\n{$ringkasan}\n\nSilakan perbaiki dan ajukan ulang melalui:\n{$url}");
                         }
                     }

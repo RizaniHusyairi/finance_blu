@@ -285,6 +285,36 @@ class ContractAddendumWorkflowTest extends TestCase
         $this->assertSame('AKTIF', $contract->fresh()->status_kontrak);
     }
 
+    public function test_contracts_datatable_endpoint_returns_server_side_json(): void
+    {
+        Role::findOrCreate('Pejabat Pengadaan', 'web');
+        Role::findOrCreate('PPK', 'web');
+
+        $ppk = User::factory()->create();
+        $ppk->assignRole('PPK');
+        $operator = User::factory()->create();
+        $operator->assignRole('Pejabat Pengadaan');
+
+        $this->createContract($ppk, 100000); // 1 kontrak (AKTIF) + termin
+
+        $response = $this->actingAs($operator)
+            ->getJson(route('contracts.index-data') . '?draw=1&start=0&length=10');
+
+        $response->assertOk();
+        $response->assertJsonStructure(['draw', 'recordsTotal', 'recordsFiltered', 'data']);
+        $this->assertSame(1, $response->json('recordsTotal'));
+        $this->assertSame(1, $response->json('recordsFiltered'));
+        $this->assertCount(1, $response->json('data'));
+        $this->assertCount(6, $response->json('data.0')); // 6 sel HTML per baris
+
+        // Pencarian server-side: kata kunci tak cocok → recordsFiltered 0, total tetap.
+        $empty = $this->actingAs($operator)
+            ->getJson(route('contracts.index-data') . '?draw=2&start=0&length=10&search[value]=ZZZ-TIDAK-ADA');
+        $empty->assertOk();
+        $this->assertSame(0, $empty->json('recordsFiltered'));
+        $this->assertSame(1, $empty->json('recordsTotal'));
+    }
+
     private function createContract(User $ppk, float $nilaiTotalKontrak): KontrakPengadaan
     {
         $coaId = DB::table('master_coas')->insertGetId([

@@ -99,7 +99,7 @@ class TagihanTteController extends Controller
                 . "Mohon tautan ini digunakan secara bertanggung jawab dan tidak diteruskan kepada pihak yang tidak berkepentingan.\n\n"
                 . "Hormat kami,\n"
                 . "SIKEREN-BLU";
-            $waService->sendMessage($vendorWa, str_replace("{$vendorDocList}", "*{$vendorDocList}*", str_replace($tagihan->nomor_tagihan, "*{$tagihan->nomor_tagihan}*", $vendorMessage)));
+            $waService->queueMessage($vendorWa, str_replace("{$vendorDocList}", "*{$vendorDocList}*", str_replace($tagihan->nomor_tagihan, "*{$tagihan->nomor_tagihan}*", $vendorMessage)));
 
             if ($emailEnabled) {
                 $emailService->sendNotification(
@@ -120,7 +120,7 @@ class TagihanTteController extends Controller
                 . "Mohon tautan ini digunakan secara bertanggung jawab dan tidak diteruskan kepada pihak yang tidak berkepentingan.\n\n"
                 . "Hormat kami,\n"
                 . "SIKEREN-BLU";
-            $waService->sendMessage($pemeriksaWa, str_replace('BAPP', '*BAPP*', str_replace($tagihan->nomor_tagihan, "*{$tagihan->nomor_tagihan}*", $pemeriksaMessage)));
+            $waService->queueMessage($pemeriksaWa, str_replace('BAPP', '*BAPP*', str_replace($tagihan->nomor_tagihan, "*{$tagihan->nomor_tagihan}*", $pemeriksaMessage)));
 
             if ($emailEnabled) {
                 $pemeriksaEmail = filled($detail->nip_pemeriksa)

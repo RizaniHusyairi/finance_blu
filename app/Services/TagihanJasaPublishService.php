@@ -98,7 +98,7 @@ class TagihanJasaPublishService
         $waTujuan = $options['wa_tujuan'] ?? $publishedTagihan->mitra?->no_telepon;
         $waMessage = $this->buildWhatsappMessage($publishedTagihan, $accountInfo);
         if (filled($waTujuan)) {
-            $this->whatsappService->sendMessage($waTujuan, $waMessage, $publishedTagihan);
+            $this->whatsappService->queueMessage($waTujuan, $waMessage, $publishedTagihan);
         }
 
         $emailMessage = $this->emailNotificationService->buildPublishedTagihanMessage($publishedTagihan, $accountInfo);

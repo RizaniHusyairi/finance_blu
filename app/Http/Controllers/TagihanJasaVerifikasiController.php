@@ -297,7 +297,7 @@ class TagihanJasaVerifikasiController extends Controller
 
             $phone = $creator->pegawai?->no_telepon ?? null;
             if (filled($phone)) {
-                app(\App\Services\WhatsappService::class)->sendMessage($phone, $isi);
+                app(\App\Services\WhatsappService::class)->queueMessage($phone, $isi);
             }
             if (filled($creator->email)) {
                 app(\App\Services\EmailNotificationService::class)->sendNotification(

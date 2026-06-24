@@ -522,13 +522,6 @@
 
 @section('content')
 
-@php
-    $kontrakAktif = $contracts->where('status_kontrak', 'AKTIF')->count();
-    $kontrakSelesai = $contracts->where('status_kontrak', 'SELESAI')->count();
-    $kontrakDraft = $contracts->where('status_kontrak', 'DRAFT')->count();
-    $kontrakDibatalkan = $contracts->where('status_kontrak', 'DIBATALKAN')->count();
-@endphp
-
 {{-- HERO --}}
 <div class="kontrak-hero">
     <i class="bi bi-briefcase-fill briefcase-illust d-none d-md-block"></i>
@@ -550,7 +543,7 @@
             <div class="km-icon"><i class="bi bi-shield-check"></i></div>
             <div>
                 <div class="km-label">Aktif</div>
-                <div class="km-value">{{ $kontrakAktif }}</div>
+                <div class="km-value">{{ $kpi['aktif'] }}</div>
             </div>
         </div>
     </div>
@@ -559,7 +552,7 @@
             <div class="km-icon"><i class="bi bi-hourglass-split"></i></div>
             <div>
                 <div class="km-label">Pending Review</div>
-                <div class="km-value">{{ $contracts->where('status_kontrak', 'PENDING_REVIEW')->count() }}</div>
+                <div class="km-value">{{ $kpi['pending'] }}</div>
             </div>
         </div>
     </div>
@@ -568,7 +561,7 @@
             <div class="km-icon"><i class="bi bi-pencil-square"></i></div>
             <div>
                 <div class="km-label">Draft</div>
-                <div class="km-value">{{ $kontrakDraft }}</div>
+                <div class="km-value">{{ $kpi['draft'] }}</div>
             </div>
         </div>
     </div>
@@ -577,7 +570,7 @@
             <div class="km-icon"><i class="bi bi-check-circle-fill"></i></div>
             <div>
                 <div class="km-label">Selesai</div>
-                <div class="km-value">{{ $kontrakSelesai }}</div>
+                <div class="km-value">{{ $kpi['selesai'] }}</div>
             </div>
         </div>
     </div>
@@ -597,7 +590,7 @@
     <div class="tabs-pill" id="contractTabs">
         <button class="tab-btn active" data-tab="kontrak">
             <i class="bi bi-file-earmark-text-fill"></i> Daftar Kontrak Utama
-            <span class="tab-count">{{ $contracts->count() }}</span>
+            <span class="tab-count">{{ $kpi['total'] }}</span>
         </button>
         <button class="tab-btn" data-tab="addendum">
             <i class="bi bi-journal-plus"></i> Riwayat Addendum
@@ -620,89 +613,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach($contracts as $kontrak)
-                        @php
-                            $av = ($loop->iteration % 5) ?: 5;
-                            $statusCls = match($kontrak->status_kontrak) {
-                                'AKTIF' => 'status-aktif',
-                                'SELESAI' => 'status-selesai',
-                                'DRAFT' => 'status-draft',
-                                'DIBATALKAN' => 'status-dibatalkan',
-                                'PENDING_REVIEW' => 'status-pending',
-                                'REVISI' => 'status-pending',
-                                default => 'status-draft',
-                            };
-                            $endDate = \Carbon\Carbon::parse($kontrak->tanggal_selesai);
-                            $isLate = $endDate->isPast() && $kontrak->status_kontrak === 'AKTIF';
-                            $readyTerms = $kontrak->termin->where('status_termin', 'READY_TO_BILL')->values();
-                        @endphp
-                        <tr>
-                            <td><span class="row-num">{{ $loop->iteration }}</span></td>
-                            <td>
-                                <div class="doc-no">{{ $kontrak->nomor_spk }}</div>
-                                <div class="doc-desc">
-                                    <i class="bi bi-briefcase"></i>
-                                    {{ Str::limit($kontrak->nama_pekerjaan, 50) }}
-                                </div>
-                            </td>
-                            <td>
-                                <div class="vendor-cell">
-                                    <span class="vendor-avatar va-{{ $av }}">
-                                        {{ \Illuminate\Support\Str::upper(mb_substr($kontrak->vendor->nama_perusahaan ?? '?', 0, 1)) }}
-                                    </span>
-                                    <span class="vendor-name">{{ Str::limit($kontrak->vendor->nama_perusahaan ?? 'N/A', 26) }}</span>
-                                </div>
-                            </td>
-                            <td>
-                                <span class="money-pos">Rp {{ number_format($kontrak->nilai_total_kontrak, 0, ',', '.') }}</span>
-                                <div class="timeline-info">
-                                    <i class="bi bi-calendar-event {{ $isLate ? 'text-danger' : '' }}"></i>
-                                    {{ $isLate ? 'Terlambat' : 'Selesai' }}: {{ $endDate->isoFormat('D MMM YYYY') }}
-                                </div>
-                            </td>
-                            <td>
-                                <span class="status-pill {{ $statusCls }}">
-                                    {{ str_replace('_', ' ', $kontrak->status_kontrak) }}
-                                </span>
-                                @if($kontrak->status_kontrak === 'REVISI' && $kontrak->ppk_catatan)
-                                    <div class="timeline-info text-danger mt-1" title="{{ $kontrak->ppk_catatan }}">
-                                        <i class="bi bi-chat-left-text"></i> PPK: {{ Str::limit($kontrak->ppk_catatan, 45) }}
-                                    </div>
-                                @endif
-                            </td>
-                            <td>
-                                <div class="action-bar-cell">
-                                    <a href="{{ route('contracts.show', $kontrak->id) }}" class="btn-act btn-act-detail" title="Detail">
-                                        <i class="bi bi-search"></i> Detail
-                                    </a>
-                                    <a href="{{ route('addendums.index', $kontrak->id) }}" class="btn-act btn-act-addm" title="Kelola Addendum">
-                                        <i class="bi bi-journal-text"></i> Addm. <span>{{ $kontrak->addendums->count() }}</span>
-                                    </a>
-                                    @if(Auth::user()->hasAnyRole(['Super Admin', 'Pejabat Pengadaan']) && in_array($kontrak->status_kontrak, ['DRAFT', 'REVISI'], true))
-                                        <a href="{{ route('contracts.edit', $kontrak->id) }}" class="btn-act btn-act-edit" title="{{ $kontrak->status_kontrak === 'REVISI' ? 'Perbaiki kontrak sesuai catatan PPK' : 'Edit Kontrak' }}">
-                                            <i class="bi bi-pencil-square"></i> {{ $kontrak->status_kontrak === 'REVISI' ? 'Perbaiki' : 'Edit' }}
-                                        </a>
-                                    @endif
-                                    @if(Auth::user()->hasRole('Pejabat Pengadaan') && $kontrak->status_kontrak === 'DRAFT')
-                                        <form action="{{ route('contracts.destroy', $kontrak->id) }}" method="POST" class="d-inline m-0" onsubmit="return confirm('Yakin hapus draf kontrak ini? Arsip terkait akan ikut terhapus permanen.')">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn-act btn-act-delete" title="Hapus Draf">
-                                                <i class="bi bi-trash3"></i>
-                                            </button>
-                                        </form>
-                                    @endif
-                                    @if($kontrak->status_kontrak == 'AKTIF')
-                                        <button type="button" class="btn-act btn-act-tagih" title="{{ !$kontrak->hasVendorUploadedFinalDocs() ? 'SPK, SPMK, dan Ringkasan Kontrak harus disetujui vendor terlebih dahulu' : 'Buat Tagihan' }}"
-                                                data-bs-toggle="modal" data-bs-target="#modalTagihKontrak{{ $kontrak->id }}"
-                                                {{ $readyTerms->isEmpty() || !$kontrak->hasVendorUploadedFinalDocs() ? 'disabled' : '' }}>
-                                            <i class="bi bi-cash-stack"></i> Tagih
-                                        </button>
-                                    @endif
-                                </div>
-                            </td>
-                        </tr>
-                    @endforeach
+                    {{-- Performa: baris diisi SERVER-SIDE via DataTables AJAX (route contracts.index-data). --}}
                 </tbody>
             </table>
         </div>
@@ -777,8 +688,8 @@
     </div>
 </div>
 
-{{-- MODAL TAGIH (per kontrak) --}}
-@foreach($contracts as $kontrak)
+{{-- MODAL TAGIH — hanya kontrak AKTIF (subset yang punya tombol Tagih) agar tak memuat semua kontrak. --}}
+@foreach($aktifContracts as $kontrak)
     @php $readyTerms = $kontrak->termin->where('status_termin', 'READY_TO_BILL')->values(); @endphp
     <div class="modal fade modal-tagih" id="modalTagihKontrak{{ $kontrak->id }}" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-centered">
@@ -861,7 +772,22 @@ $(document).ready(function () {
         }
     };
 
-    $('#tableKontrak').DataTable(dtConfig);
+    // Performa: tabel kontrak utama SERVER-SIDE (pencarian/urut/paginate di DB).
+    $('#tableKontrak').DataTable(Object.assign({}, dtConfig, {
+        serverSide: true,
+        processing: true,
+        ajax: "{{ route('contracts.index-data') }}",
+        order: [],
+        columns: [
+            { data: 0, orderable: false, searchable: false },
+            { data: 1 },
+            { data: 2, orderable: false },
+            { data: 3 },
+            { data: 4 },
+            { data: 5, orderable: false, searchable: false, className: 'text-center' }
+        ]
+    }));
+    // Tab Addendum tetap client-side (volume kecil) — kandidat server-side berikutnya.
     $('#tableAddendum').DataTable(dtConfig);
 });
 </script>

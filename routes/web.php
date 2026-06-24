@@ -391,6 +391,8 @@ Route::middleware(['auth', 'account.active'])->group(function () use ($internalR
 
     // Master Data — Supplier / Mitra
     Route::middleware('role:Super Admin|Pejabat Pengadaan')->group(function () {
+        // Performa — sumber data server-side DataTables master Mitra/Vendor.
+        Route::get('/suppliers/datatable', [SupplierController::class, 'indexData'])->name('suppliers.index-data');
         Route::resource('suppliers', SupplierController::class);
         Route::get('/document-numbers', [DocumentNumberController::class, 'index'])->name('document-numbers.index');
         Route::post('/document-numbers', [DocumentNumberController::class, 'store'])->name('document-numbers.store');
@@ -655,6 +657,8 @@ Route::middleware(['auth', 'account.active'])->group(function () use ($internalR
 
         Route::get('/contracts/verifikasi', [ContractController::class, 'verifikasiIndex'])->name('contracts.verifikasi');
         Route::get('/contracts/verifikasi/{id}', [ContractController::class, 'verifikasiShow'])->name('contracts.verifikasi.show');
+        // Performa — sumber data server-side DataTables untuk tabel kontrak utama.
+        Route::get('/contracts/datatable', [ContractController::class, 'indexData'])->name('contracts.index-data');
         Route::get('/contracts/{contract}/ringkasan-kontrak/export-pdf', [ContractController::class, 'exportRingkasanKontrakPdf'])->name('contracts.ringkasan.export-pdf');
         Route::post('/contracts/{contract}/ringkasan-kontrak/upload-final', [ContractController::class, 'uploadRingkasanKontrakFinal'])->name('contracts.ringkasan.upload-final');
         Route::get('/contracts/{contract}/spk/export-pdf', [ContractController::class, 'exportSpkPdf'])->name('contracts.spk.export-pdf');

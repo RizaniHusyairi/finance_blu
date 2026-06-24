@@ -317,7 +317,7 @@ class MonitoringPelaporanController extends Controller
         $sentAny = false;
 
         if (filled($mitra->no_telepon)) {
-            $whatsapp->sendMessage($mitra->no_telepon, $message);
+            $whatsapp->queueMessage($mitra->no_telepon, $message);
             $sentAny = true;
         }
 

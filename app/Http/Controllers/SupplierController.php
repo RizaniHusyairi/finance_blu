@@ -11,16 +11,34 @@ class SupplierController extends Controller
 {
     public function index()
     {
-        $suppliers = MasterMitraVendor::with('rekening')->get();
+        // Performa: tabel kini SERVER-SIDE (lihat indexData); KPI via query agregat.
+        return view('suppliers.index', [
+            'totalSupplier'      => MasterMitraVendor::count(),
+            'supplierAktif'      => MasterMitraVendor::where('status_aktif', true)->count(),
+            'penyediaBarangJasa' => MasterMitraVendor::where('tipe_supplier', '02 - Penyedia/Badan Usaha')->count(),
+            'dataBelumLengkap'   => MasterMitraVendor::whereNull('npwp')->count(),
+        ]);
+    }
 
-        $totalSupplier = $suppliers->count();
-        $supplierAktif = $suppliers->where('status_aktif', true)->count();
-        $penyediaBarangJasa = $suppliers->where('tipe_supplier', '02 - Penyedia/Badan Usaha')->count();
-        $dataBelumLengkap = $suppliers->whereNull('npwp')->count();
-
-        return view('suppliers.index', compact(
-            'suppliers', 'totalSupplier', 'supplierAktif', 'penyediaBarangJasa', 'dataBelumLengkap'
-        ));
+    /**
+     * Performa — sumber data SERVER-SIDE DataTables untuk master Mitra/Vendor.
+     */
+    public function indexData(Request $request)
+    {
+        return \App\Support\DataTable::respond(
+            $request,
+            MasterMitraVendor::query()->with('rekening'),
+            orderable: [0 => null, 1 => 'nama_pihak', 2 => 'npwp', 3 => null, 4 => null],
+            searchable: ['nama_pihak', 'nama_penanggung_jawab', 'npwp'],
+            rowMapper: fn ($supplier, $no) => [
+                '<div class="text-center">' . $no . '</div>',
+                '<span class="fw-bold">' . e($supplier->nama_perusahaan) . '</span><br>'
+                    . '<small><i class="bi bi-person me-1"></i>Dir: ' . e($supplier->nama_direktur ?: '-') . '</small>',
+                '<span class="font-monospace">' . e($supplier->npwp ?: 'Belum Ada') . '</span>',
+                view('suppliers.partials._cell_bank', ['supplier' => $supplier])->render(),
+                view('suppliers.partials._actions', ['supplier' => $supplier])->render(),
+            ],
+        );
     }
 
     public function create()
