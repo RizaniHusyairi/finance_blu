@@ -556,6 +556,7 @@ class HonorariumController extends Controller
                     'directory' => 'arsip-dokumen/Tagihan/' . $tagihan->nomor_tagihan,
                     'uploaded_by' => Auth::id(),
                     'keterangan' => $request->keterangan ?? 'Diunggah oleh PPABP',
+                    'compress' => true,
                 ]
             );
 

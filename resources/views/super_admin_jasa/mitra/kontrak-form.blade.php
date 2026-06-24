@@ -117,6 +117,7 @@
                 <div class="col-md-6">
                     <label class="form-label fw-bold">File Kontrak PDF @unless($kontrak->exists){!! $requiredMark !!}@endunless</label>
                     <input type="file" name="file_kontrak" class="form-control" accept=".pdf" {{ $kontrak->exists ? '' : 'required' }}>
+                    <div class="form-text"><i class="bi bi-file-zip me-1"></i>PDF maksimal 5 MB. File akan dikompres otomatis di server untuk menghemat penyimpanan.</div>
                     @if($kontrak->file_kontrak)
                         <div class="form-text">File sudah tersedia. Upload file baru untuk mengganti.</div>
                     @endif
