@@ -38,6 +38,7 @@ class KontrakPengadaan extends Model
         'ketentuan_denda',
         'status_kontrak',
         'diajukan_at',
+        'diajukan_by',
         'ppk_approved_at',
         'ppk_approved_by',
         'ppk_catatan',
@@ -239,5 +240,34 @@ class KontrakPengadaan extends Model
             ->toArray();
             
         return count(array_intersect($requiredDocs, $uploadedDocs)) === count($requiredDocs);
+    }
+
+    /**
+     * KP-01/KP-08 — selaraskan status menjadi AKTIF HANYA bila kontrak sudah
+     * disetujui PPK (`ppk_approved_at` terisi) namun statusnya belum AKTIF, dan
+     * seluruh dokumen final TTD telah lengkap.
+     *
+     * Aktivasi kontrak tetap wewenang EKSKLUSIF PPK lewat
+     * ContractController::approve(). Method ini sengaja TIDAK boleh menjadi
+     * jalur alternatif yang mengaktifkan kontrak yang BELUM disetujui PPK —
+     * itu akan melanggar pemisahan tugas (maker Pengadaan tidak boleh
+     * mengaktifkan kontraknya sendiri hanya dengan mengunggah dokumen).
+     *
+     * @return bool true hanya bila method ini benar-benar mengubah status.
+     */
+    public function activateIfDocumentsComplete(): bool
+    {
+        // Sudah aktif, atau belum disetujui PPK → jangan ubah status.
+        if ($this->status_kontrak === 'AKTIF' || is_null($this->ppk_approved_at)) {
+            return false;
+        }
+
+        if (! $this->hasVendorUploadedFinalDocs()) {
+            return false;
+        }
+
+        $this->update(['status_kontrak' => 'AKTIF']);
+
+        return true;
     }
 }

@@ -600,6 +600,7 @@ class ContractController extends Controller
         $kontrak->update([
             'status_kontrak' => 'PENDING_REVIEW',
             'diajukan_at' => now(),
+            'diajukan_by' => Auth::id(),
             'ppk_catatan' => null,
         ]);
 
@@ -680,9 +681,21 @@ class ContractController extends Controller
 
         abort_unless(Auth::user()?->hasAnyRole(['Super Admin', 'PPK']), 403);
 
+        // KP-02/KP-03 — pemisahan tugas (maker != checker): pengaju kontrak tidak
+        // boleh menyetujui kontraknya sendiri. Berlaku juga untuk akun peran ganda
+        // (Pejabat Pengadaan + PPK) maupun Super Admin.
+        abort_if(
+            $kontrak->diajukan_by !== null && (int) $kontrak->diajukan_by === (int) Auth::id(),
+            403,
+            'Pengaju kontrak tidak boleh menyetujui kontraknya sendiri (pemisahan tugas).'
+        );
+
         if ($kontrak->status_kontrak !== 'PENDING_REVIEW') {
             return back()->with('error', 'Kontrak hanya dapat disetujui saat status PENDING REVIEW.');
         }
+
+        // KP-05 — guardrail lunak anggaran (dihitung sebelum aktivasi, tidak memblokir).
+        $budgetWarning = $this->budgetWarningFor($kontrak);
 
         $kontrak->update([
             'status_kontrak' => 'AKTIF',
@@ -703,8 +716,17 @@ class ContractController extends Controller
             'ip_address' => request()->ip(),
         ]);
 
-        return redirect()->route('contracts.verifikasi')
+        $redirect = redirect()->route('contracts.verifikasi')
             ->with('success', 'Kontrak disetujui dan aktif. PDF SPK, SPMK, dan Ringkasan Kontrak kini ber-TTE QR.');
+
+        if ($budgetWarning !== null) {
+            $redirect->with('warning', $budgetWarning);
+            \Illuminate\Support\Facades\Log::warning('KP-05 guardrail anggaran kontrak: ' . $budgetWarning, [
+                'kontrak_id' => $kontrak->id,
+            ]);
+        }
+
+        return $redirect;
     }
 
     public function reject(Request $request, $id)
@@ -757,6 +779,12 @@ class ContractController extends Controller
     public function uploadSpkFinal(Request $request, $id)
     {
         $kontrak = \App\Models\KontrakPengadaan::with('arsipDokumen')->findOrFail($id);
+
+        // KP-08 — dokumen final TTD hanya boleh diunggah setelah kontrak disetujui
+        // PPK (AKTIF). Mencegah finalisasi dokumen pada kontrak yang belum disetujui.
+        if (! in_array($kontrak->status_kontrak, ['AKTIF', 'SELESAI'], true)) {
+            return back()->with('error', 'Dokumen final bertandatangan hanya dapat diunggah setelah kontrak disetujui PPK (AKTIF).');
+        }
 
         $request->validate([
             'file_spk_final_ttd' => 'required|file|mimes:pdf|max:10240',
@@ -875,6 +903,11 @@ class ContractController extends Controller
     {
         $kontrak = \App\Models\KontrakPengadaan::with('arsipDokumen')->findOrFail($id);
 
+        // KP-08 — dokumen final TTD hanya boleh diunggah setelah kontrak disetujui PPK (AKTIF).
+        if (! in_array($kontrak->status_kontrak, ['AKTIF', 'SELESAI'], true)) {
+            return back()->with('error', 'Dokumen final bertandatangan hanya dapat diunggah setelah kontrak disetujui PPK (AKTIF).');
+        }
+
         $request->validate([
             'file_spmk_final_ttd' => 'required|file|mimes:pdf|max:10240',
         ]);
@@ -896,6 +929,11 @@ class ContractController extends Controller
     public function uploadRingkasanKontrakFinal(Request $request, $id)
     {
         $kontrak = \App\Models\KontrakPengadaan::with('arsipDokumen')->findOrFail($id);
+
+        // KP-08 — dokumen final TTD hanya boleh diunggah setelah kontrak disetujui PPK (AKTIF).
+        if (! in_array($kontrak->status_kontrak, ['AKTIF', 'SELESAI'], true)) {
+            return back()->with('error', 'Dokumen final bertandatangan hanya dapat diunggah setelah kontrak disetujui PPK (AKTIF).');
+        }
 
         $request->validate([
             'file_ringkasan_kontrak_final_ttd' => 'required|file|mimes:pdf|max:10240',
@@ -1294,6 +1332,43 @@ class ContractController extends Controller
         if ((int) $kontrak->ppk_user_id !== (int) Auth::id()) {
             abort(403, 'Kontrak ini tidak ditugaskan kepada Anda untuk diverifikasi.');
         }
+    }
+
+    /**
+     * KP-05 — guardrail anggaran lunak. Mengembalikan pesan peringatan (atau null)
+     * bila total komitmen kontrak AKTIF + kontrak ini melampaui pagu DIPA aktif.
+     * Sinyal dini saja: pembebanan per-MAK tetap dilakukan di tahap Proses Tagihan,
+     * sehingga ini sengaja TIDAK memblokir persetujuan PPK.
+     */
+    private function budgetWarningFor(\App\Models\KontrakPengadaan $kontrak): ?string
+    {
+        $dipa = \App\Models\MasterDipa::where('status_aktif', true)->latest('id')->first();
+        if (! $dipa) {
+            return null;
+        }
+
+        $revisi = \App\Models\RiwayatRevisiDipa::where('master_dipa_id', $dipa->id)
+            ->where('is_active', true)
+            ->first();
+        $pagu = (float) optional($revisi)->total_pagu;
+        if ($pagu <= 0) {
+            return null;
+        }
+
+        $komitmenLain = (float) \App\Models\KontrakPengadaan::where('status_kontrak', 'AKTIF')
+            ->where('id', '!=', $kontrak->id)
+            ->sum('nilai_total_kontrak');
+        $total = $komitmenLain + (float) $kontrak->nilai_total_kontrak;
+
+        if ($total <= $pagu) {
+            return null;
+        }
+
+        return sprintf(
+            'Perhatian anggaran: total komitmen kontrak aktif menjadi Rp %s, melampaui pagu DIPA aktif Rp %s. Mohon tinjau ketersediaan anggaran sebelum penagihan.',
+            number_format($total, 0, ',', '.'),
+            number_format($pagu, 0, ',', '.')
+        );
     }
 
     private function notifyRoles(array $roles, string $judul, string $pesan, ?string $linkUrl = null): void

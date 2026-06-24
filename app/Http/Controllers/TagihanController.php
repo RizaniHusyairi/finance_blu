@@ -274,7 +274,16 @@ class TagihanController extends Controller
 
             DB::commit();
 
-            return redirect()->route('tagihan.kontrak.show', $tagihan->id)->with('success', 'Draft Tagihan Termin berhasil dibuat. Silakan lengkapi dokumen final.');
+            $redirect = redirect()->route('tagihan.kontrak.show', $tagihan->id)
+                ->with('success', 'Draft Tagihan Termin berhasil dibuat. Silakan lengkapi dokumen final.');
+
+            // KP-10 — guardrail lunak: ingatkan bila dokumen final TTD vendor
+            // (SPK/SPMK/Ringkasan Kontrak) belum lengkap saat draft tagihan dibuat.
+            if (! $kontrak->hasVendorUploadedFinalDocs()) {
+                $redirect->with('warning', 'Dokumen final bertandatangan vendor (SPK/SPMK/Ringkasan Kontrak) belum lengkap. Mohon lengkapi sebelum proses pencairan.');
+            }
+
+            return $redirect;
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->withInput()->withErrors(['error' => 'Gagal membuat tagihan: ' . $e->getMessage()]);

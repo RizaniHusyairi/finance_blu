@@ -66,6 +66,22 @@ class ContractDocumentTte
         ));
     }
 
+    /** Disk privat tempat artefak PDF kontrak yang dibekukan disimpan (KP-06). */
+    public const FROZEN_DISK = 'local';
+
+    /**
+     * KP-06 — path artefak PDF kontrak yang DIBEKUKAN, di-key per-hash dokumen.
+     * Setiap state ter-tanda-tangan memiliki berkas imutabel tersendiri; perubahan
+     * kontrak (mis. addendum yang mengubah nilai) menghasilkan hash — dan berkas —
+     * baru tanpa menyentuh artefak state sebelumnya.
+     */
+    public static function frozenPdfPath(KontrakPengadaan $kontrak, string $type, ?string $hash = null): string
+    {
+        $hash = $hash ?: self::hash($kontrak, $type);
+
+        return 'tte-final/kontrak_' . $type . '/' . $kontrak->getKey() . '/' . $hash . '.pdf';
+    }
+
     /**
      * Path file SVG QR TTE; null bila kontrak belum disetujui PPK.
      */

@@ -6,8 +6,12 @@ use App\Models\KontrakAddendum;
 use App\Models\KontrakPengadaan;
 use App\Models\KontrakTermin;
 use App\Models\User;
+use App\Support\ContractDocumentTte;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
@@ -138,6 +142,147 @@ class ContractAddendumWorkflowTest extends TestCase
             'status_baru' => KontrakAddendum::STATUS_REJECTED,
             'aksi' => 'REJECT_ADDENDUM',
         ]);
+    }
+
+    public function test_final_doc_upload_blocked_before_approval_and_works_after(): void
+    {
+        Role::findOrCreate('Pejabat Pengadaan', 'web');
+        Role::findOrCreate('PPK', 'web');
+
+        $ppk = User::factory()->create();
+        $ppk->assignRole('PPK');
+        $pejabat = User::factory()->create();
+        $pejabat->assignRole('Pejabat Pengadaan');
+
+        Storage::fake('local');
+
+        $contract = $this->createContract($ppk, 100000);
+        $pdf = fn () => UploadedFile::fake()->create('spk_final.pdf', 200, 'application/pdf');
+
+        // KP-08 — sebelum disetujui PPK (DRAFT): upload final DITOLAK (tanpa error 500),
+        // tanpa menyimpan arsip, status tak berubah.
+        $contract->update(['status_kontrak' => 'DRAFT', 'ppk_approved_at' => null]);
+        $this->actingAs($pejabat)
+            ->post(route('contracts.spk.upload-final', $contract), ['file_spk_final_ttd' => $pdf()])
+            ->assertSessionHas('error');
+        $this->assertDatabaseMissing('arsip_dokumen', [
+            'documentable_id' => $contract->id,
+            'jenis_dokumen' => 'SPK_FINAL_TTD',
+        ]);
+        $this->assertSame('DRAFT', $contract->fresh()->status_kontrak);
+
+        // KP-01 — setelah disetujui PPK (AKTIF): upload final BERHASIL tanpa error 500
+        // (activateIfDocumentsComplete kini terdefinisi); kontrak tetap AKTIF.
+        $contract->update(['status_kontrak' => 'AKTIF', 'ppk_approved_at' => now(), 'ppk_approved_by' => $ppk->id]);
+        $this->actingAs($pejabat)
+            ->post(route('contracts.spk.upload-final', $contract), ['file_spk_final_ttd' => $pdf()])
+            ->assertSessionHas('success');
+        $this->assertDatabaseHas('arsip_dokumen', [
+            'documentable_id' => $contract->id,
+            'jenis_dokumen' => 'SPK_FINAL_TTD',
+            'is_active' => 1,
+        ]);
+        $this->assertSame('AKTIF', $contract->fresh()->status_kontrak);
+    }
+
+    public function test_assigned_ppk_can_approve_contract_submitted_by_pengadaan(): void
+    {
+        Role::findOrCreate('Pejabat Pengadaan', 'web');
+        Role::findOrCreate('PPK', 'web');
+
+        $ppk = User::factory()->create();
+        $ppk->assignRole('PPK');
+        $pejabat = User::factory()->create();
+        $pejabat->assignRole('Pejabat Pengadaan');
+
+        $contract = $this->createContract($ppk, 100000);
+        $contract->update(['status_kontrak' => 'DRAFT', 'ppk_approved_at' => null, 'diajukan_by' => null]);
+
+        $this->actingAs($pejabat)->post(route('contracts.submit', $contract))->assertSessionHasNoErrors();
+        $this->assertSame('PENDING_REVIEW', $contract->fresh()->status_kontrak);
+        $this->assertSame($pejabat->id, (int) $contract->fresh()->diajukan_by);
+
+        // PPK tertugas (≠ pengaju) boleh menyetujui.
+        $this->actingAs($ppk)->post(route('contracts.approve', $contract));
+        $this->assertSame('AKTIF', $contract->fresh()->status_kontrak);
+    }
+
+    public function test_contract_submitter_cannot_approve_own_contract_even_with_dual_role(): void
+    {
+        Role::findOrCreate('Pejabat Pengadaan', 'web');
+        Role::findOrCreate('PPK', 'web');
+
+        // Akun peran ganda yang sekaligus PPK tertugas pada kontrak.
+        $dual = User::factory()->create();
+        $dual->assignRole('PPK');
+        $dual->assignRole('Pejabat Pengadaan');
+
+        $contract = $this->createContract($dual, 100000);
+        $contract->update(['status_kontrak' => 'DRAFT', 'ppk_approved_at' => null, 'diajukan_by' => null]);
+
+        $this->actingAs($dual)->post(route('contracts.submit', $contract))->assertSessionHasNoErrors();
+        $this->assertSame($dual->id, (int) $contract->fresh()->diajukan_by);
+
+        // Pengaju = calon penyetuju → ditolak (KP-02/KP-03 maker != checker).
+        $this->actingAs($dual)->post(route('contracts.approve', $contract))->assertForbidden();
+        $this->assertSame('PENDING_REVIEW', $contract->fresh()->status_kontrak);
+    }
+
+    public function test_contract_tte_document_serves_frozen_artifact_immutably(): void
+    {
+        Role::findOrCreate('PPK', 'web');
+        $ppk = User::factory()->create();
+        $ppk->assignRole('PPK');
+
+        Storage::fake('local');
+
+        $contract = $this->createContract($ppk, 100000);
+        $contract->update(['status_kontrak' => 'AKTIF', 'ppk_approved_at' => now(), 'ppk_approved_by' => $ppk->id]);
+        $contract->refresh();
+
+        // Bekukan artefak untuk hash saat ini (mensimulasikan freeze pada akses pertama).
+        $hash = ContractDocumentTte::hash($contract, 'spk');
+        $frozenBytes = '%PDF-1.4 ARTEFAK-BEKU-SPK';
+        Storage::disk('local')->put(ContractDocumentTte::frozenPdfPath($contract, 'spk', $hash), $frozenBytes);
+
+        $url = URL::signedRoute('public.contract-tte.document', [
+            'type' => 'spk', 'id' => $contract->id, 'hash' => $hash,
+        ]);
+
+        // KP-06: sajikan artefak beku apa adanya (tanpa render ulang).
+        $response = $this->get($url);
+        $response->assertOk();
+        $this->assertSame($frozenBytes, $response->streamedContent());
+
+        // Nilai kontrak berubah → hash baru, tetapi URL lama (hash lama) TETAP
+        // menyajikan artefak beku yang sama → imutabel.
+        $contract->update(['nilai_total_kontrak' => 999000]);
+        $this->assertNotSame($hash, ContractDocumentTte::hash($contract->fresh(), 'spk'));
+
+        $response2 = $this->get($url);
+        $response2->assertOk();
+        $this->assertSame($frozenBytes, $response2->streamedContent());
+    }
+
+    public function test_contract_approval_warns_when_commitment_exceeds_active_dipa_pagu(): void
+    {
+        Role::findOrCreate('Pejabat Pengadaan', 'web');
+        Role::findOrCreate('PPK', 'web');
+
+        $ppk = User::factory()->create();
+        $ppk->assignRole('PPK');
+        $pejabat = User::factory()->create();
+        $pejabat->assignRole('Pejabat Pengadaan');
+
+        // Pagu DIPA aktif = 1.000.000 (dari createContract). Nilai kontrak melampauinya.
+        $contract = $this->createContract($ppk, 1200000);
+        $contract->update(['status_kontrak' => 'DRAFT', 'ppk_approved_at' => null, 'diajukan_by' => null]);
+
+        $this->actingAs($pejabat)->post(route('contracts.submit', $contract));
+        $this->actingAs($ppk)->post(route('contracts.approve', $contract))->assertSessionHas('warning');
+
+        // KP-05 guardrail lunak: kontrak tetap aktif (tidak diblokir).
+        $this->assertSame('AKTIF', $contract->fresh()->status_kontrak);
     }
 
     private function createContract(User $ppk, float $nilaiTotalKontrak): KontrakPengadaan

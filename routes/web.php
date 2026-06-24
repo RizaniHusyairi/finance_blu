@@ -34,11 +34,11 @@ use App\Http\Controllers\CoaController;
 use App\Http\Controllers\RekeningBankController;
 use App\Http\Controllers\ContractAddendumController;
 use App\Http\Controllers\ContractController;
-use App\Http\Controllers\ContractTermController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DipaController;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\DocumentNumberController;
+use App\Http\Controllers\HealthController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\HonorariumController;
 use App\Http\Controllers\JasaIntegrationSettingController;
@@ -104,6 +104,11 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
 Auth::routes();
+
+// MON-03 — endpoint observability kesehatan sistem (readiness + detail per-probe).
+// Publik, tetapi detail hanya tampil dengan MONITORING_HEALTH_TOKEN; mengembalikan
+// HTTP 503 saat "down". Liveness sederhana tetap di `/up`.
+Route::get('/health', HealthController::class)->name('health');
 
 Route::post('/integrations/btn/virtual-account/callback', BtnPaymentCallbackController::class)
     ->name('integrations.btn.virtual-account.callback')
@@ -674,8 +679,6 @@ Route::middleware(['auth', 'account.active'])->group(function () use ($internalR
         Route::post('/contracts/{contract}/addendums/{addendum}/approve', [ContractAddendumController::class, 'approve'])->name('addendums.approve');
         Route::post('/contracts/{contract}/addendums/{addendum}/reject', [ContractAddendumController::class, 'reject'])->name('addendums.reject');
         Route::delete('/contracts/{contract}/addendums/{addendum}', [ContractAddendumController::class, 'destroy'])->name('addendums.destroy');
-        Route::post('/contracts/{contract}/terms', [ContractTermController::class, 'store'])->name('terms.store');
-        Route::delete('/contracts/{contract}/terms/{term}', [ContractTermController::class, 'destroy'])->name('terms.destroy');
 
         // Contract approval workflow
         Route::post('/contracts/{contract}/submit', [ContractController::class, 'submit'])->name('contracts.submit');
