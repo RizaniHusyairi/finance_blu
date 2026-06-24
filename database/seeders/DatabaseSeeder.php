@@ -13,7 +13,6 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             RoleAndPermissionSeeder::class,
-            MasterPihakSeeder::class,
             MasterCoaSeeder::class,
             MasterDipaSeeder::class,
             MasterPegawaiSeeder::class,
@@ -31,10 +30,6 @@ class DatabaseSeeder extends Seeder
             KodeTransaksiSeeder::class,
             AkunPendapatanSeeder::class,
             PembukuanSetupSeeder::class,
-            CompletedKontrakPengadaanSeeder::class,
-            // Mitra + tagihan jasa lunas → BKU Penerimaan (uji alur penerimaan jasa).
-            MitraJasaSeeder::class,
-            TagihanJasaLunasSeeder::class,
         ]);
     }
 }
