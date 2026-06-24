@@ -481,7 +481,7 @@ class MitraJasaPenjualanController extends Controller
             }
 
             if (filled($mitra->no_telepon)) {
-                app(\App\Services\WhatsappService::class)->sendMessage($mitra->no_telepon, $isi);
+                app(\App\Services\WhatsappService::class)->queueMessage($mitra->no_telepon, $isi);
             }
             if (filled($mitra->email)) {
                 app(\App\Services\EmailNotificationService::class)->sendNotification(

@@ -4,74 +4,79 @@ namespace App\Console\Commands;
 
 use App\Models\IntegrationSetting;
 use App\Services\WhatsappService;
+use App\Support\HealthCheck;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 /**
- * MON-01 — pemantauan kesehatan sistem & alerting proaktif.
+ * MON-01/MON-03 — pemantauan kesehatan sistem & alerting proaktif.
  *
- * Mendeteksi anomali operasional (job antrian gagal, backup DB basi) lalu
- * MENGALERT lewat dua jalur:
- *   1) Log level `critical` — backbone alerting; mengalir ke Slack/Sentry/
- *      papertrail begitu channel-nya diaktifkan di LOG_STACK (lihat config/logging).
- *   2) WhatsApp langsung ke kontak admin (opsional, throttled) bila dikonfigurasi
- *      via IntegrationSetting `monitoring.alert_*`.
+ * Menjalankan seluruh probe observability (lihat App\Support\HealthCheck:
+ * database, cache, antrian, storage, disk, backup, heartbeat scheduler, laju
+ * error, integrasi) lalu MENGALERT setiap anomali (warn/critical) lewat:
+ *   1) Log level `critical` — backbone alerting; mengalir ke Slack/Sentry begitu
+ *      channel-nya diaktifkan di LOG_STACK (lihat config/logging).
+ *   2) WhatsApp langsung ke admin (opsional, throttled) via IntegrationSetting
+ *      `monitoring.alert_*`.
  *
  * Dijadwalkan tiap jam (routes/console.php). Exit non-zero saat ada anomali agar
- * terlihat oleh monitor scheduler eksternal.
+ * terlihat oleh monitor scheduler eksternal. Endpoint `/health` memakai service
+ * yang sama untuk monitor uptime/observability.
  */
 class MonitorHealthCommand extends Command
 {
     protected $signature = 'monitor:health
                             {--quiet-ok : Jangan cetak apa-apa bila sehat}';
 
-    protected $description = 'Pantau kesehatan sistem (failed jobs, kesegaran backup) & kirim alert (MON-01)';
+    protected $description = 'Pantau kesehatan sistem (DB, cache, antrian, storage, disk, backup, scheduler, error, integrasi) & kirim alert (MON-01/03)';
 
-    public function handle(): int
+    public function handle(HealthCheck $health): int
     {
-        $alerts = [];
+        $report = $health->run();
+        $checks = $report['checks'];
+        $anomalies = array_values(array_filter($checks, fn ($c) => $c['status'] !== 'ok'));
 
-        // 1) Job antrian gagal — notifikasi/email/WA yang gagal mengendap di sini.
-        if (DB::getSchemaBuilder()->hasTable('failed_jobs')) {
-            $failed = DB::table('failed_jobs')->count();
-            if ($failed > 0) {
-                $alerts[] = "Antrian: {$failed} job di tabel failed_jobs (notifikasi/email mungkin tidak terkirim).";
-            }
+        if (! ($this->option('quiet-ok') && $anomalies === [])) {
+            $this->table(
+                ['Probe', 'Status', 'Detail', 'ms'],
+                array_map(fn ($c) => [
+                    $c['label'],
+                    strtoupper($c['status']),
+                    Str::limit((string) $c['detail'], 70),
+                    $c['latency_ms'],
+                ], $checks)
+            );
         }
 
-        // 2) Kesegaran backup DB (BR-01).
-        $backupDir = rtrim((string) env('DB_BACKUP_PATH', storage_path('app/backups')), '/\\');
-        $latest = 0;
-        foreach (glob($backupDir . DIRECTORY_SEPARATOR . 'sikeren-*.gz') ?: [] as $f) {
-            $latest = max($latest, (int) filemtime($f));
-        }
-        if ($latest === 0) {
-            $alerts[] = "Backup DB: tidak ada berkas backup di {$backupDir} (jadwalkan `db:backup`).";
-        } elseif ((time() - $latest) > 26 * 3600) {
-            $jam = (int) round((time() - $latest) / 3600);
-            $alerts[] = "Backup DB: backup terakhir {$jam} jam lalu (> 26 jam) — kemungkinan scheduler mati.";
-        }
-
-        if ($alerts === []) {
+        if ($anomalies === []) {
             if (! $this->option('quiet-ok')) {
-                $this->info('Sistem sehat: tidak ada anomali terdeteksi.');
+                $this->info('Sistem sehat: ' . $report['summary']['ok'] . ' probe OK.');
             }
 
             return self::SUCCESS;
         }
 
-        $message = "*ALERT SIKEREN — Monitoring*\n" . implode("\n", array_map(fn ($a) => '• ' . $a, $alerts));
+        $lines = array_map(
+            fn ($c) => sprintf('[%s] %s: %s', strtoupper($c['status']), $c['label'], $c['detail']),
+            $anomalies
+        );
+
+        $message = "*ALERT SIKEREN — Monitoring*\nStatus keseluruhan: " . strtoupper($report['status']) . "\n"
+            . implode("\n", array_map(fn ($l) => '• ' . $l, $lines));
 
         // Jalur 1: log critical (→ Slack/Sentry bila dikonfigurasi di LOG_STACK).
-        Log::critical('MON-01: anomali kesehatan sistem', ['alerts' => $alerts]);
-        foreach ($alerts as $a) {
-            $this->warn($a);
+        Log::critical('MON-03: anomali kesehatan sistem', [
+            'status' => $report['status'],
+            'anomalies' => $lines,
+        ]);
+        foreach ($lines as $l) {
+            $this->warn($l);
         }
 
         // Jalur 2: WhatsApp langsung ke admin (opsional, throttled per 6 jam).
-        $this->maybeNotifyWhatsapp($message, $alerts);
+        $this->maybeNotifyWhatsapp($message, $lines);
 
         return self::FAILURE;
     }
@@ -97,7 +102,7 @@ class MonitorHealthCommand extends Command
         try {
             app(WhatsappService::class)->sendMessage((string) $target, $message);
         } catch (\Throwable $e) {
-            Log::error('MON-01: gagal mengirim alert WhatsApp: ' . $e->getMessage());
+            Log::error('MON-03: gagal mengirim alert WhatsApp: ' . $e->getMessage());
         }
     }
 }

@@ -72,7 +72,7 @@ class WorkflowWaNotifier
                 $sudahDikirim[] = $noHp;
 
                 $message = $this->buildMessage($meta, $user, $approval);
-                $this->whatsapp->sendMessage($noHp, $message);
+                $this->whatsapp->queueMessage($noHp, $message);
             }
         } catch (\Throwable $e) {
             Log::error('WorkflowWaNotifier gagal kirim WA: ' . $e->getMessage());

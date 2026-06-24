@@ -322,7 +322,7 @@ class BtnVirtualAccountService
         $waTarget = $tagihan->mitra?->no_telepon;
 
         if ($waEnabled && filled($waTarget)) {
-            app(WhatsappService::class)->sendMessage($waTarget, $message, $tagihan);
+            app(WhatsappService::class)->queueMessage($waTarget, $message, $tagihan);
         }
 
         $emailEnabled = (bool) \App\Models\IntegrationSetting::getValue('email.lunas.enabled', true);

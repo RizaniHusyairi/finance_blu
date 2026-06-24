@@ -2,6 +2,7 @@
 
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schedule;
 
 Artisan::command('inspire', function () {
@@ -43,3 +44,10 @@ Schedule::command('monitor:health --quiet-ok')
     ->hourly()
     ->withoutOverlapping()
     ->onOneServer();
+
+// MON-03 — heartbeat scheduler: tulis timestamp tiap menit. Bila basi (lihat
+// HealthCheck probe `scheduler`), berarti cron `schedule:run` mati — silent
+// failure paling berbahaya (semua job terjadwal ikut mati tanpa jejak).
+Schedule::call(function () {
+    Cache::put('health:scheduler_last_run', now()->timestamp, now()->addDay());
+})->everyMinute()->name('scheduler-heartbeat')->withoutOverlapping();

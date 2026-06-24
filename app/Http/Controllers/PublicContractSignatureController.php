@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\KontrakPengadaan;
 use App\Support\ContractDocumentTte;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 
 class PublicContractSignatureController extends Controller
@@ -63,7 +64,7 @@ class PublicContractSignatureController extends Controller
         ]);
     }
 
-    public function document(string $type, int $id)
+    public function document(Request $request, string $type, int $id)
     {
         abort_unless(ContractDocumentTte::isValidType($type), 404);
 
@@ -75,13 +76,67 @@ class PublicContractSignatureController extends Controller
             'Dokumen hanya dapat dilihat setelah kontrak disetujui PPK.'
         );
 
+        // KP-06 — sajikan artefak PDF yang DIBEKUKAN (imutabel per-hash) alih-alih
+        // me-render ulang dari data hidup. Hash diambil dari URL bertanda-tangan
+        // (middleware `signed`), jadi tidak dapat dipalsukan.
+        $disk = Storage::disk(ContractDocumentTte::FROZEN_DISK);
+        $requestedHash = (string) $request->query('hash', '');
+        $currentHash = ContractDocumentTte::hash($kontrak, $type);
+
+        // 1) Artefak beku untuk hash yang diminta sudah ada → sajikan apa adanya
+        //    (persis seperti saat ditandatangani/di-scan).
+        if ($requestedHash !== '') {
+            $frozen = ContractDocumentTte::frozenPdfPath($kontrak, $type, $requestedHash);
+            if ($disk->exists($frozen)) {
+                return $disk->response($frozen, $this->frozenFilename($kontrak, $type), [
+                    'Content-Type' => 'application/pdf',
+                ]);
+            }
+        }
+
+        // 2) Belum ada artefak → render state saat ini sekali.
+        $rendered = $this->renderContractPdf($kontrak, $type);
+        $content = $rendered->getContent();
+        $isPdf = $rendered->getStatusCode() === 200
+            && is_string($content)
+            && str_starts_with($content, '%PDF');
+
+        // 3) Bekukan HANYA bila data saat ini masih konsisten dengan hash yang
+        //    diminta (atau tanpa hash) — agar artefak mencerminkan state yang
+        //    benar-benar ditandatangani, bukan state yang sudah berubah.
+        if ($isPdf && ($requestedHash === '' || hash_equals($currentHash, $requestedHash))) {
+            $frozen = ContractDocumentTte::frozenPdfPath($kontrak, $type, $currentHash);
+            if (! $disk->exists($frozen)) {
+                $disk->put($frozen, $content);
+            }
+
+            return $disk->response($frozen, $this->frozenFilename($kontrak, $type), [
+                'Content-Type' => 'application/pdf',
+            ]);
+        }
+
+        // 4) Data berubah sejak QR dibuat & snapshot lama tak tersedia, atau render
+        //    gagal (mis. Gambar RAB belum diunggah) → kembalikan respons render apa adanya.
+        return $rendered;
+    }
+
+    private function renderContractPdf(KontrakPengadaan $kontrak, string $type)
+    {
         $controller = app(ContractController::class);
 
         return match ($type) {
-            'spk' => $controller->exportSpkPdf($id),
-            'spmk' => $controller->exportSpmkPdf($id),
-            'ringkasan_kontrak' => $controller->exportRingkasanKontrakPdf($id),
+            'spk' => $controller->exportSpkPdf($kontrak->getKey()),
+            'spmk' => $controller->exportSpmkPdf($kontrak->getKey()),
+            'ringkasan_kontrak' => $controller->exportRingkasanKontrakPdf($kontrak->getKey()),
             default => abort(404),
         };
+    }
+
+    private function frozenFilename(KontrakPengadaan $kontrak, string $type): string
+    {
+        $nomor = ContractDocumentTte::numberFor($kontrak, $type) ?: $kontrak->getKey();
+        $safe = str_replace(['/', '\\', ' '], ['-', '-', '_'], (string) $nomor);
+
+        return strtoupper($type) . '_' . $safe . '.pdf';
     }
 }

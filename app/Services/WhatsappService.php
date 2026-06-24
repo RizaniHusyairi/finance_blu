@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Jobs\SendWhatsappMessage;
 use App\Models\IntegrationLog;
 use App\Models\IntegrationSetting;
 use App\Models\TagihanJasa;
@@ -48,6 +49,18 @@ class WhatsappService
             'wa_gateway' => $this->sendViaGateway($log, $target, $message, $tagihan),
             default      => $this->sendViaFonnte($log, $target, $message, $tagihan),
         };
+    }
+
+    /**
+     * Performa — kirim pesan WhatsApp secara ASINKRON via queue (fire-and-forget)
+     * sehingga panggilan HTTP ke gateway (timeout s.d. 20 dtk) tidak memblokir
+     * request pengguna. Pakai sendMessage() bila butuh hasil pengiriman seketika.
+     * Lihat App\Jobs\SendWhatsappMessage (perlu worker antrian saat
+     * QUEUE_CONNECTION=database).
+     */
+    public function queueMessage(string $target, string $message, ?TagihanJasa $tagihan = null): void
+    {
+        SendWhatsappMessage::dispatch($target, $message, $tagihan);
     }
 
     /**

@@ -198,13 +198,15 @@ class TagihanController extends Controller
             ]);
 
             if ($request->hasFile('file_invoice')) {
+                $invoiceFile = $request->file('file_invoice');
+                $invoicePath = PdfCompressor::storeCompressed($invoiceFile, 'tagihan/invoice', 'local');
                 $detailKontrak->arsipDokumen()->create([
                     'jenis_dokumen' => 'INVOICE',
-                    'nama_file_asli' => $request->file('file_invoice')->getClientOriginalName(),
-                    'path_file' => $request->file('file_invoice')->store('tagihan/invoice', 'local'),
+                    'nama_file_asli' => $invoiceFile->getClientOriginalName(),
+                    'path_file' => $invoicePath,
                     'disk' => 'local',
-                    'mime_type' => $request->file('file_invoice')->getMimeType(),
-                    'ukuran_file' => $request->file('file_invoice')->getSize(),
+                    'mime_type' => $invoiceFile->getMimeType(),
+                    'ukuran_file' => Storage::disk('local')->size($invoicePath),
                     'uploaded_by' => Auth::id(),
                     'uploaded_at' => now(),
                     'is_active' => true,
@@ -274,7 +276,16 @@ class TagihanController extends Controller
 
             DB::commit();
 
-            return redirect()->route('tagihan.kontrak.show', $tagihan->id)->with('success', 'Draft Tagihan Termin berhasil dibuat. Silakan lengkapi dokumen final.');
+            $redirect = redirect()->route('tagihan.kontrak.show', $tagihan->id)
+                ->with('success', 'Draft Tagihan Termin berhasil dibuat. Silakan lengkapi dokumen final.');
+
+            // KP-10 — guardrail lunak: ingatkan bila dokumen final TTD vendor
+            // (SPK/SPMK/Ringkasan Kontrak) belum lengkap saat draft tagihan dibuat.
+            if (! $kontrak->hasVendorUploadedFinalDocs()) {
+                $redirect->with('warning', 'Dokumen final bertandatangan vendor (SPK/SPMK/Ringkasan Kontrak) belum lengkap. Mohon lengkapi sebelum proses pencairan.');
+            }
+
+            return $redirect;
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->withInput()->withErrors(['error' => 'Gagal membuat tagihan: ' . $e->getMessage()]);
@@ -496,7 +507,7 @@ class TagihanController extends Controller
                     $waPhone = preg_replace('/\D+/', '', $u->profilable->nomor_hp);
                     if (strlen($waPhone) >= 9) {
                         $waMsg = "*Notifikasi SIKEREN*\n\n" . $message . "\n\nSilakan cek di aplikasi melalui link berikut:\n" . $url;
-                        $waService->sendMessage($waPhone, $waMsg);
+                        $waService->queueMessage($waPhone, $waMsg);
                     }
                 }
 

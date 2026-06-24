@@ -17,6 +17,7 @@ use App\Services\EmailNotificationService;
 use App\Services\WhatsappService;
 use Illuminate\Support\Facades\Notification;
 use App\Support\ContractDocumentTte;
+use App\Support\PdfCompressor;
 use Barryvdh\DomPDF\Facade\Pdf;
 
 class ContractController extends Controller
@@ -26,37 +27,56 @@ class ContractController extends Controller
      */
     public function index()
     {
-        $contracts = \App\Models\KontrakPengadaan::with(['vendor', 'ppkUser.profilable', 'addendums', 'termin'])->latest()->get();
+        // Performa: tabel kontrak utama kini SERVER-SIDE (DataTables AJAX) — tidak
+        // lagi memuat seluruh baris. KPI dihitung via query agregat. Modal "Tagih"
+        // dibatasi ke kontrak AKTIF saja (subset kecil yang memang punya tombol tagih).
+        $statusCounts = \App\Models\KontrakPengadaan::query()
+            ->selectRaw('status_kontrak, COUNT(*) as jml')
+            ->groupBy('status_kontrak')
+            ->pluck('jml', 'status_kontrak');
+
+        $kpi = [
+            'aktif'   => (int) ($statusCounts['AKTIF'] ?? 0),
+            'pending' => (int) ($statusCounts['PENDING_REVIEW'] ?? 0),
+            'draft'   => (int) ($statusCounts['DRAFT'] ?? 0),
+            'selesai' => (int) ($statusCounts['SELESAI'] ?? 0),
+            'total'   => (int) $statusCounts->sum(),
+        ];
+
+        $aktifContracts = \App\Models\KontrakPengadaan::with('termin')
+            ->where('status_kontrak', 'AKTIF')
+            ->get();
+
+        // Addendum: volume lebih kecil; kandidat konversi server-side berikutnya.
         $addendums = \App\Models\KontrakAddendum::with(['kontrakUtama.vendor', 'logs.user'])->latest()->get();
 
-        $totalAktif = $contracts->where('status_kontrak', 'AKTIF')->count();
-        $totalSelesai = $contracts->where('status_kontrak', 'SELESAI')->count();
-        $totalAdendum = $contracts->filter(function($c) { return $c->addendums->count() > 0; })->count();
-        $totalNilaiAll = $contracts->sum('nilai_total_kontrak');
-        
-        $hampirHabisNilai = 0;
-        $hampirHabisMasa = 0;
+        return view('contracts.index', compact('kpi', 'aktifContracts', 'addendums'));
+    }
 
-        foreach ($contracts as $c) {
-            // Placeholder: hitung realisasi jika tagihan/termin nanti dibuat
-            $realisasi = 0; 
-            $c->realisasi_pembayaran = $realisasi;
-            $c->sisa_kontrak = $c->nilai_total_kontrak - $realisasi;
-
-            if ($c->status_kontrak == 'AKTIF') {
-                if ($c->nilai_total_kontrak > 0 && $c->sisa_kontrak <= ($c->nilai_total_kontrak * 0.2)) {
-                    $hampirHabisNilai++;
-                }
-                if ($c->tanggal_selesai && \Carbon\Carbon::parse($c->tanggal_selesai)->isBetween(now(), now()->addDays(30))) {
-                    $hampirHabisMasa++;
-                }
-            }
-        }
-
-        return view('contracts.index', compact(
-            'contracts', 'addendums', 'totalAktif', 'totalSelesai', 'totalAdendum', 
-            'totalNilaiAll', 'hampirHabisNilai', 'hampirHabisMasa'
-        ));
+    /**
+     * Performa — sumber data SERVER-SIDE untuk DataTables tabel kontrak utama.
+     * Pencarian, urutan, dan pagination ditangani DB (bukan memuat semua baris ke
+     * browser). Format respons mengikuti kontrak DataTables (draw/recordsTotal/
+     * recordsFiltered/data).
+     */
+    public function indexData(Request $request)
+    {
+        return \App\Support\DataTable::respond(
+            $request,
+            \App\Models\KontrakPengadaan::query()->with(['vendor', 'addendums', 'termin']),
+            orderable: [0 => null, 1 => 'nomor_spk', 2 => null, 3 => 'nilai_total_kontrak', 4 => 'status_kontrak', 5 => null],
+            searchable: ['nomor_spk', 'nama_pekerjaan', 'status_kontrak'],
+            rowMapper: fn ($kontrak, $no) => [
+                '<span class="row-num">' . $no . '</span>',
+                '<div class="doc-no">' . e($kontrak->nomor_spk) . '</div>'
+                    . '<div class="doc-desc"><i class="bi bi-briefcase"></i> '
+                    . e(\Illuminate\Support\Str::limit($kontrak->nama_pekerjaan, 50)) . '</div>',
+                view('contracts.partials._cell_vendor', ['kontrak' => $kontrak])->render(),
+                view('contracts.partials._cell_nilai', ['kontrak' => $kontrak])->render(),
+                view('contracts.partials._cell_status', ['kontrak' => $kontrak])->render(),
+                view('contracts.partials._actions', ['kontrak' => $kontrak])->render(),
+            ],
+        );
     }
 
     /**
@@ -219,7 +239,7 @@ class ContractController extends Controller
             // Clean format Rupiah to numeric (already done by validate if input is right? No, standard HTML <input> gives the string, wait, frontend JS `oninput` copies the clean value to hidden inputs `nilai_total_kontrak_value` and `nilai_uang_muka_value` so laravel receives clean numerics).
 
             // Upload files
-            $pathJaminanUm = $request->hasFile('file_jaminan_um') ? $request->file('file_jaminan_um')->store('kontrak/jaminan-uang-muka', 'local') : null;
+            $pathJaminanUm = $request->hasFile('file_jaminan_um') ? PdfCompressor::storeCompressed($request->file('file_jaminan_um'), 'kontrak/jaminan-uang-muka', 'local') : null;
             $pathGambarRab = $request->hasFile('gambar_rab') ? $request->file('gambar_rab')->store('kontrak/gambar-rab', 'local') : null;
 
             $adaUangMuka = $request->has('ada_uang_muka');
@@ -472,7 +492,7 @@ class ContractController extends Controller
             // Upload files (delete old ones if new uploaded)
             if ($request->hasFile('file_jaminan_um')) {
                 if ($kontrak->file_jaminan_uang_muka) \Illuminate\Support\Facades\Storage::disk('public')->delete($kontrak->file_jaminan_uang_muka);
-                $validated['file_jaminan_um'] = $request->file('file_jaminan_um')->store('kontrak/jaminan-uang-muka', 'local');
+                $validated['file_jaminan_um'] = PdfCompressor::storeCompressed($request->file('file_jaminan_um'), 'kontrak/jaminan-uang-muka', 'local');
             } else {
                 $validated['file_jaminan_um'] = $kontrak->file_jaminan_uang_muka;
             }
@@ -600,6 +620,7 @@ class ContractController extends Controller
         $kontrak->update([
             'status_kontrak' => 'PENDING_REVIEW',
             'diajukan_at' => now(),
+            'diajukan_by' => Auth::id(),
             'ppk_catatan' => null,
         ]);
 
@@ -667,7 +688,7 @@ class ContractController extends Controller
             $message .= $url . "\n\n";
             $message .= "_Login terlebih dahulu untuk mengakses halaman verifikasi._";
 
-            app(WhatsappService::class)->sendMessage($noHp, $message);
+            app(WhatsappService::class)->queueMessage($noHp, $message);
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('Gagal kirim WA pengajuan kontrak ke PPK: ' . $e->getMessage());
         }
@@ -680,9 +701,21 @@ class ContractController extends Controller
 
         abort_unless(Auth::user()?->hasAnyRole(['Super Admin', 'PPK']), 403);
 
+        // KP-02/KP-03 — pemisahan tugas (maker != checker): pengaju kontrak tidak
+        // boleh menyetujui kontraknya sendiri. Berlaku juga untuk akun peran ganda
+        // (Pejabat Pengadaan + PPK) maupun Super Admin.
+        abort_if(
+            $kontrak->diajukan_by !== null && (int) $kontrak->diajukan_by === (int) Auth::id(),
+            403,
+            'Pengaju kontrak tidak boleh menyetujui kontraknya sendiri (pemisahan tugas).'
+        );
+
         if ($kontrak->status_kontrak !== 'PENDING_REVIEW') {
             return back()->with('error', 'Kontrak hanya dapat disetujui saat status PENDING REVIEW.');
         }
+
+        // KP-05 — guardrail lunak anggaran (dihitung sebelum aktivasi, tidak memblokir).
+        $budgetWarning = $this->budgetWarningFor($kontrak);
 
         $kontrak->update([
             'status_kontrak' => 'AKTIF',
@@ -703,8 +736,17 @@ class ContractController extends Controller
             'ip_address' => request()->ip(),
         ]);
 
-        return redirect()->route('contracts.verifikasi')
+        $redirect = redirect()->route('contracts.verifikasi')
             ->with('success', 'Kontrak disetujui dan aktif. PDF SPK, SPMK, dan Ringkasan Kontrak kini ber-TTE QR.');
+
+        if ($budgetWarning !== null) {
+            $redirect->with('warning', $budgetWarning);
+            \Illuminate\Support\Facades\Log::warning('KP-05 guardrail anggaran kontrak: ' . $budgetWarning, [
+                'kontrak_id' => $kontrak->id,
+            ]);
+        }
+
+        return $redirect;
     }
 
     public function reject(Request $request, $id)
@@ -757,6 +799,12 @@ class ContractController extends Controller
     public function uploadSpkFinal(Request $request, $id)
     {
         $kontrak = \App\Models\KontrakPengadaan::with('arsipDokumen')->findOrFail($id);
+
+        // KP-08 — dokumen final TTD hanya boleh diunggah setelah kontrak disetujui
+        // PPK (AKTIF). Mencegah finalisasi dokumen pada kontrak yang belum disetujui.
+        if (! in_array($kontrak->status_kontrak, ['AKTIF', 'SELESAI'], true)) {
+            return back()->with('error', 'Dokumen final bertandatangan hanya dapat diunggah setelah kontrak disetujui PPK (AKTIF).');
+        }
 
         $request->validate([
             'file_spk_final_ttd' => 'required|file|mimes:pdf|max:10240',
@@ -875,6 +923,11 @@ class ContractController extends Controller
     {
         $kontrak = \App\Models\KontrakPengadaan::with('arsipDokumen')->findOrFail($id);
 
+        // KP-08 — dokumen final TTD hanya boleh diunggah setelah kontrak disetujui PPK (AKTIF).
+        if (! in_array($kontrak->status_kontrak, ['AKTIF', 'SELESAI'], true)) {
+            return back()->with('error', 'Dokumen final bertandatangan hanya dapat diunggah setelah kontrak disetujui PPK (AKTIF).');
+        }
+
         $request->validate([
             'file_spmk_final_ttd' => 'required|file|mimes:pdf|max:10240',
         ]);
@@ -896,6 +949,11 @@ class ContractController extends Controller
     public function uploadRingkasanKontrakFinal(Request $request, $id)
     {
         $kontrak = \App\Models\KontrakPengadaan::with('arsipDokumen')->findOrFail($id);
+
+        // KP-08 — dokumen final TTD hanya boleh diunggah setelah kontrak disetujui PPK (AKTIF).
+        if (! in_array($kontrak->status_kontrak, ['AKTIF', 'SELESAI'], true)) {
+            return back()->with('error', 'Dokumen final bertandatangan hanya dapat diunggah setelah kontrak disetujui PPK (AKTIF).');
+        }
 
         $request->validate([
             'file_ringkasan_kontrak_final_ttd' => 'required|file|mimes:pdf|max:10240',
@@ -1294,6 +1352,43 @@ class ContractController extends Controller
         if ((int) $kontrak->ppk_user_id !== (int) Auth::id()) {
             abort(403, 'Kontrak ini tidak ditugaskan kepada Anda untuk diverifikasi.');
         }
+    }
+
+    /**
+     * KP-05 — guardrail anggaran lunak. Mengembalikan pesan peringatan (atau null)
+     * bila total komitmen kontrak AKTIF + kontrak ini melampaui pagu DIPA aktif.
+     * Sinyal dini saja: pembebanan per-MAK tetap dilakukan di tahap Proses Tagihan,
+     * sehingga ini sengaja TIDAK memblokir persetujuan PPK.
+     */
+    private function budgetWarningFor(\App\Models\KontrakPengadaan $kontrak): ?string
+    {
+        $dipa = \App\Models\MasterDipa::where('status_aktif', true)->latest('id')->first();
+        if (! $dipa) {
+            return null;
+        }
+
+        $revisi = \App\Models\RiwayatRevisiDipa::where('master_dipa_id', $dipa->id)
+            ->where('is_active', true)
+            ->first();
+        $pagu = (float) optional($revisi)->total_pagu;
+        if ($pagu <= 0) {
+            return null;
+        }
+
+        $komitmenLain = (float) \App\Models\KontrakPengadaan::where('status_kontrak', 'AKTIF')
+            ->where('id', '!=', $kontrak->id)
+            ->sum('nilai_total_kontrak');
+        $total = $komitmenLain + (float) $kontrak->nilai_total_kontrak;
+
+        if ($total <= $pagu) {
+            return null;
+        }
+
+        return sprintf(
+            'Perhatian anggaran: total komitmen kontrak aktif menjadi Rp %s, melampaui pagu DIPA aktif Rp %s. Mohon tinjau ketersediaan anggaran sebelum penagihan.',
+            number_format($total, 0, ',', '.'),
+            number_format($pagu, 0, ',', '.')
+        );
     }
 
     private function notifyRoles(array $roles, string $judul, string $pesan, ?string $linkUrl = null): void

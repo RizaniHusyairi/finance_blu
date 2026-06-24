@@ -200,6 +200,14 @@ class ContractAddendumController extends Controller
         $this->ensureAddendumBelongsToContract($contract, $addendum);
         $this->ensureReviewPermission();
 
+        // KP-04 — pemisahan tugas: pengaju addendum tidak boleh menyetujui
+        // addendum yang ia ajukan sendiri (termasuk PPK peran ganda / Super Admin).
+        abort_if(
+            $addendum->diajukan_by !== null && (int) $addendum->diajukan_by === (int) Auth::id(),
+            403,
+            'Pengaju addendum tidak boleh menyetujui addendum yang ia ajukan sendiri (pemisahan tugas).'
+        );
+
         if ($addendum->status_workflow !== KontrakAddendum::STATUS_SUBMITTED) {
             return back()->with('error', 'Addendum tidak sedang menunggu persetujuan.');
         }
@@ -444,6 +452,7 @@ class ContractAddendumController extends Controller
         $addendum->update([
             'status_addendum' => KontrakAddendum::STATUS_DRAFT,
             'status_proses' => KontrakAddendum::STATUS_SUBMITTED,
+            'diajukan_by' => Auth::id(),
         ]);
 
         $this->logStatus(
