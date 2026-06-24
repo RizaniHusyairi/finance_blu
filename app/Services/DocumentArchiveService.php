@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\ArsipDokumen;
+use App\Support\PdfCompressor;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -26,7 +27,20 @@ class DocumentArchiveService
         // migrasi default ke `local` menyusul setelah seluruh rendering dialihkan
         // ke route terproteksi arsip.view.
         $disk = $attributes['disk'] ?? 'public';
-        $path = $file->store($attributes['directory'] ?? 'arsip-dokumen', $disk);
+        $directory = $attributes['directory'] ?? 'arsip-dokumen';
+
+        if (($attributes['compress'] ?? false) === true) {
+            // Kompres PDF (mis. dokumen honorarium hasil scan) bila memungkinkan.
+            // PdfCompressor melewati non-PDF & PDF bertanda tangan secara otomatis,
+            // jadi aman; ukuran & checksum dihitung dari berkas yang BENAR tersimpan.
+            $path = PdfCompressor::storeCompressed($file, $directory, $disk);
+            $ukuran = Storage::disk($disk)->size($path);
+            $checksum = hash_file('sha256', Storage::disk($disk)->path($path));
+        } else {
+            $path = $file->store($directory, $disk);
+            $ukuran = $file->getSize();
+            $checksum = hash_file('sha256', $file->getRealPath());
+        }
 
         return $documentable->arsipDokumen()->create([
             'jenis_dokumen' => $jenisDokumen,
@@ -34,8 +48,8 @@ class DocumentArchiveService
             'path_file' => $path,
             'disk' => $disk,
             'mime_type' => $file->getMimeType(),
-            'ukuran_file' => $file->getSize(),
-            'checksum' => hash_file('sha256', $file->getRealPath()),
+            'ukuran_file' => $ukuran,
+            'checksum' => $checksum,
             'uploaded_by' => $attributes['uploaded_by'] ?? auth()->id(),
             'uploaded_at' => now(),
             'keterangan' => $attributes['keterangan'] ?? null,

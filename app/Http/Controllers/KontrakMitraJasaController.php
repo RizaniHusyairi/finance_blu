@@ -6,6 +6,7 @@ use App\Models\KontrakMitraJasa;
 use App\Models\LayananJasa;
 use App\Models\MitraJasa;
 use App\Services\MitraLayananService;
+use App\Support\PdfCompressor;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -33,7 +34,11 @@ class KontrakMitraJasaController extends Controller
         $validated['updated_by'] = auth()->id();
 
         if ($request->hasFile('file_kontrak')) {
-            $validated['file_kontrak'] = $request->file('file_kontrak')->store('mitra-jasa/kontrak', 'local');
+            $validated['file_kontrak'] = PdfCompressor::storeCompressed(
+                $request->file('file_kontrak'),
+                'mitra-jasa/kontrak',
+                'local'
+            );
         }
 
         $kontrak = KontrakMitraJasa::create($validated);
@@ -75,11 +80,13 @@ class KontrakMitraJasaController extends Controller
         $validated['updated_by'] = auth()->id();
 
         if ($request->hasFile('file_kontrak')) {
-            if ($kontrak->file_kontrak) {
-                Storage::disk('public')->delete($kontrak->file_kontrak);
-            }
+            $this->deleteFileKontrak($kontrak->file_kontrak);
 
-            $validated['file_kontrak'] = $request->file('file_kontrak')->store('mitra-jasa/kontrak', 'local');
+            $validated['file_kontrak'] = PdfCompressor::storeCompressed(
+                $request->file('file_kontrak'),
+                'mitra-jasa/kontrak',
+                'local'
+            );
         }
 
         $kontrak->update($validated);
@@ -113,9 +120,7 @@ class KontrakMitraJasaController extends Controller
                 ->with('error', 'Kontrak tidak dapat dihapus karena sudah digunakan pada tagihan jasa.');
         }
 
-        if ($kontrak->file_kontrak) {
-            Storage::disk('public')->delete($kontrak->file_kontrak);
-        }
+        $this->deleteFileKontrak($kontrak->file_kontrak);
 
         $kontrak->delete();
 
@@ -125,6 +130,18 @@ class KontrakMitraJasaController extends Controller
         return redirect()
             ->route('jasa.mitra.show', $mitra)
             ->with('success', 'Kontrak Mitra Jasa berhasil dihapus.');
+    }
+
+    private function deleteFileKontrak(?string $path): void
+    {
+        if (! $path) {
+            return;
+        }
+
+        // INF-01: file kini tersimpan di disk privat `local` (fallback `public`
+        // untuk file lama yang belum dimigrasi). Resolusi disk selaras dengan download().
+        $disk = Storage::disk('local')->exists($path) ? 'local' : 'public';
+        Storage::disk($disk)->delete($path);
     }
 
     private function validateKontrak(Request $request, bool $isCreate): array

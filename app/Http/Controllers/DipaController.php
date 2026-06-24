@@ -6,6 +6,7 @@ use App\Models\MasterDipa;
 use App\Models\DetailDipa;
 use App\Models\MasterCoa;
 use App\Models\RiwayatRevisiDipa;
+use App\Support\PdfCompressor;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -94,7 +95,7 @@ class DipaController extends Controller
             ]);
 
             $filePath = $request->hasFile('file_dokumen_dipa')
-                ? $request->file('file_dokumen_dipa')->store('dipa/documents', 'local')
+                ? PdfCompressor::storeCompressed($request->file('file_dokumen_dipa'), 'dipa/documents', 'local')
                 : null;
 
             RiwayatRevisiDipa::create([
@@ -237,7 +238,7 @@ class DipaController extends Controller
 
         $newRevision = DB::transaction(function () use ($request, $validated, $dipa) {
             $filePath = $request->hasFile('file_dokumen_dipa')
-                ? $request->file('file_dokumen_dipa')->store('dipa/documents', 'local')
+                ? PdfCompressor::storeCompressed($request->file('file_dokumen_dipa'), 'dipa/documents', 'local')
                 : null;
 
             $revision = RiwayatRevisiDipa::create([
