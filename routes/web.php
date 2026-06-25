@@ -61,6 +61,7 @@ use App\Http\Controllers\MitraPortalController;
 use App\Http\Controllers\NomorTagihanJasaController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\NpiController;
+use App\Http\Controllers\PanduanController;
 use App\Http\Controllers\PengecekanPembayaranPiutangController;
 use App\Http\Controllers\PenyetoranPajakController;
 use App\Http\Controllers\PenyetoranPajakHonorController;
@@ -218,6 +219,11 @@ Route::middleware(['auth', 'account.active'])->group(function () use ($internalR
     Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password.update');
 
+    // Pusat Panduan — panduan penggunaan aplikasi yang menyesuaikan peran (khusus staf internal).
+    Route::get('/panduan', [PanduanController::class, 'index'])
+        ->middleware("role:$internalRoles")
+        ->name('panduan.index');
+
     // Unduh arsip keuangan sensitif (bukti setor pajak & bukti transfer SP2D) dari disk privat.
     // Otorisasi role (Bendahara Pengeluaran / Super Admin) dilakukan di dalam controller.
     Route::get('/arsip-sensitif/{arsip}/download', [DocumentController::class, 'downloadArsipSensitif'])
@@ -266,7 +272,8 @@ Route::middleware(['auth', 'account.active'])->group(function () use ($internalR
                 ->name('dashboard');
             Route::get('/mitra', [AdminJasaTagihanController::class, 'mitra'])
                 ->name('mitra');
-            Route::view('/panduan', 'admin_jasa.panduan')
+            // Panduan Admin Jasa kini terpusat di Pusat Panduan (/panduan); alihkan demi tautan lama.
+            Route::get('/panduan', fn () => redirect()->route('panduan.index', ['role' => 'Admin Jasa']))
                 ->name('panduan');
         });
 

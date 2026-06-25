@@ -771,6 +771,19 @@
         </li>
         @endhasrole
 
+        {{-- ════════════════════════════════════════════════════
+             BANTUAN
+             ════════════════════════════════════════════════════ --}}
+        @unlessrole('Mitra|Mitra Jasa')
+        <li class="menu-label">Bantuan</li>
+        <li>
+          <a href="{{ route('panduan.index') }}" class="{{ request()->routeIs('panduan.*') ? 'mm-active' : '' }}">
+            <div class="parent-icon"><i class="material-icons-outlined">menu_book</i></div>
+            <div class="menu-title">Panduan</div>
+          </a>
+        </li>
+        @endunlessrole
+
       @endauth
     </ul>
     <!--end navigation-->

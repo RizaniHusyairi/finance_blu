@@ -107,6 +107,15 @@
         </div>
       </div>
       <ul class="navbar-nav gap-1 nav-right-links align-items-center">
+
+        {{-- Pusat Panduan — akses cepat dari mana saja --}}
+        @unlessrole('Mitra|Mitra Jasa')
+        <li class="nav-item">
+          <a class="nav-link position-relative" href="{{ route('panduan.index') }}" title="Panduan penggunaan">
+            <i class="material-icons-outlined">help_outline</i>
+          </a>
+        </li>
+        @endunlessrole
         
 
         

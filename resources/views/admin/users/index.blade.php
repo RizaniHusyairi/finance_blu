@@ -4,6 +4,17 @@
 
 @push('css')
     @include('admin._partials.styles')
+    <style>
+        #user-results { transition: opacity .15s ease; }
+        #user-results.dn-loading { opacity: .45; pointer-events: none; }
+        #user-results.dn-loading::after {
+            content: ""; position: absolute; top: .5rem; right: .75rem;
+            width: 1.3rem; height: 1.3rem;
+            border: 2px solid #7c3aed; border-right-color: transparent; border-radius: 50%;
+            animation: uspin .6s linear infinite;
+        }
+        @keyframes uspin { to { transform: rotate(360deg); } }
+    </style>
 @endpush
 
 @section('content')
@@ -51,12 +62,13 @@
     {{-- Filter + Tabel --}}
     <div class="surface-card mb-4">
         <div class="card-header">
-            <form method="GET" class="row g-2 align-items-center">
+            <form method="GET" id="userFilterForm" class="row g-2 align-items-center">
                 <div class="col-md-5">
                     <div class="input-group">
                         <span class="input-group-text bg-white border-end-0"><i class="bi bi-search"></i></span>
-                        <input type="text" name="q" value="{{ request('q') }}" class="form-control border-start-0"
-                               placeholder="Cari email…">
+                        <input type="search" name="q" id="userSearch" value="{{ request('q') }}"
+                               class="form-control border-start-0" autocomplete="off"
+                               placeholder="Cari email, nama, NIP, atau kode mitra…">
                     </div>
                 </div>
                 <div class="col-md-3">
@@ -75,114 +87,102 @@
                         <option value="sistem" @selected(request('tipe') === 'sistem')>Sistem</option>
                     </select>
                 </div>
-                <div class="col-md-2 d-grid">
+                <div class="col-md-2 d-grid gap-2">
                     <button class="btn btn-gradient"><i class="bi bi-funnel me-1"></i> Filter</button>
+                    <a href="{{ route('admin.users.index') }}" data-user-reset class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-arrow-counterclockwise me-1"></i> Reset
+                    </a>
                 </div>
             </form>
         </div>
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead>
-                    <tr>
-                        <th class="ps-4">User</th>
-                        <th>Tipe</th>
-                        <th>Tautan Profil</th>
-                        <th>Roles</th>
-                        <th>Status</th>
-                        <th class="text-end pe-4">Aksi</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse ($users as $u)
-                        @php
-                            $tipe = is_null($u->profilable_type) ? 'sistem'
-                                : (str_contains($u->profilable_type, 'MitraJasa') ? 'mitra' : 'pegawai');
-                            $initial = strtoupper(mb_substr($u->name ?? $u->email, 0, 1));
-                        @endphp
-                        <tr>
-                            <td class="ps-4">
-                                <div class="d-flex align-items-center gap-2">
-                                    <div class="avatar-circle">{{ $initial }}</div>
-                                    <div>
-                                        <div class="fw-semibold text-dark">{{ $u->name ?? '—' }}</div>
-                                        <small class="text-muted">{{ $u->email }}</small>
-                                    </div>
-                                </div>
-                            </td>
-                            <td>
-                                <span class="tipe-pill {{ $tipe }}">
-                                    <i class="bi bi-{{ $tipe === 'sistem' ? 'shield-check' : ($tipe === 'mitra' ? 'shop' : 'person-badge') }}"></i>
-                                    {{ ucfirst($tipe) }}
-                                </span>
-                            </td>
-                            <td>
-                                @if ($u->profilable)
-                                    <span class="text-dark">{{ $u->profilable->nama_lengkap ?? $u->profilable->nama_mitra ?? '—' }}</span><br>
-                                    <small class="text-muted">
-                                        @if (isset($u->profilable->nip)) NIP {{ $u->profilable->nip ?: '—' }} @endif
-                                        @if (isset($u->profilable->kode_mitra)) {{ $u->profilable->kode_mitra }} @endif
-                                    </small>
-                                @else
-                                    <span class="text-muted fst-italic">akun sistem</span>
-                                @endif
-                            </td>
-                            <td>
-                                @forelse ($u->roles as $role)
-                                    @php
-                                        $cls = 'role-chip';
-                                        if ($role->name === 'Super Admin') $cls .= ' is-superadmin';
-                                        elseif (str_contains($role->name, 'Mitra')) $cls .= ' is-mitra';
-                                        elseif (str_contains($role->name, 'Jasa')) $cls .= ' is-jasa';
-                                        elseif (in_array($role->name, ['Admin Listrik', 'Admin Air'])) $cls .= ' is-utilitas';
-                                    @endphp
-                                    <span class="{{ $cls }}">{{ $role->name }}</span>
-                                @empty
-                                    <small class="text-muted">tanpa role</small>
-                                @endforelse
-                            </td>
-                            <td>
-                                @php $accountActive = $u->isAccountActive(); @endphp
-                                <span class="badge {{ $accountActive ? 'bg-success' : 'bg-secondary' }}">
-                                    {{ $accountActive ? 'Aktif' : 'Nonaktif' }}
-                                </span>
-                                @if ($u->active_until)
-                                    <small class="text-muted d-block mt-1">
-                                        s.d. {{ $u->active_until->format('d M Y') }}
-                                    </small>
-                                @endif
-                            </td>
-                            <td class="text-end pe-4">
-                                <div class="btn-group">
-                                    <a href="{{ route('admin.users.show', $u) }}" class="btn btn-sm btn-light text-primary" title="Detail">
-                                        <i class="bi bi-eye"></i>
-                                    </a>
-                                    <a href="{{ route('admin.users.edit', $u) }}" class="btn btn-sm btn-light text-warning" title="Edit">
-                                        <i class="bi bi-pencil"></i>
-                                    </a>
-                                    <form method="POST" action="{{ route('admin.users.destroy', $u) }}"
-                                          onsubmit="return confirm('Hapus akun {{ $u->email }}?');" class="d-inline">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button class="btn btn-sm btn-light text-danger" title="Hapus">
-                                            <i class="bi bi-trash"></i>
-                                        </button>
-                                    </form>
-                                </div>
-                            </td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="6" class="text-center text-muted py-5">
-                                <i class="bi bi-inbox fs-3 d-block mb-2"></i>
-                                Belum ada user yang cocok dengan filter.
-                            </td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
-        <div class="card-footer bg-white border-0 py-3">
-            {{ $users->onEachSide(1)->links() }}
+        <div id="user-results" class="position-relative">
+            @include('admin.users._table')
         </div>
     </div>
 @endsection
+
+@push('script')
+<script>
+    // ── Live-search AJAX Manajemen User: filter & paginasi tanpa reload ──
+    document.addEventListener('DOMContentLoaded', function () {
+        const form = document.getElementById('userFilterForm');
+        const container = document.getElementById('user-results');
+        if (!form || !container) return;
+
+        const baseUrl = "{{ route('admin.users.index') }}";
+        const search = document.getElementById('userSearch');
+        let debounce, controller;
+
+        function buildUrl() {
+            const params = new URLSearchParams();
+            new FormData(form).forEach(function (value, key) {
+                if (String(value).trim() !== '') params.append(key, value);
+            });
+            const qs = params.toString();
+            return qs ? (baseUrl + '?' + qs) : baseUrl;
+        }
+
+        function load(url) {
+            if (controller) controller.abort();
+            controller = new AbortController();
+            container.classList.add('dn-loading');
+
+            fetch(url, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'text/html' },
+                signal: controller.signal,
+            })
+                .then(function (res) { return res.text(); })
+                .then(function (html) {
+                    container.innerHTML = html;
+                    container.classList.remove('dn-loading');
+                    window.history.replaceState(null, '', url);
+                })
+                .catch(function (err) {
+                    if (err.name !== 'AbortError') container.classList.remove('dn-loading');
+                });
+        }
+
+        function refresh() { load(buildUrl()); }
+
+        // Ketik di kotak cari → debounce 300ms (form di luar #user-results → fokus tetap).
+        if (search) {
+            search.addEventListener('input', function () {
+                clearTimeout(debounce);
+                debounce = setTimeout(refresh, 300);
+            });
+        }
+
+        // Dropdown role/tipe → filter instan.
+        form.querySelectorAll('select').forEach(function (el) {
+            el.addEventListener('change', refresh);
+        });
+
+        // Tombol Filter / Enter → AJAX, bukan reload penuh.
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            clearTimeout(debounce);
+            refresh();
+        });
+
+        // Klik paginasi di dalam hasil → muat via AJAX.
+        container.addEventListener('click', function (e) {
+            const link = e.target.closest('.pagination a');
+            if (link && link.getAttribute('href')) {
+                e.preventDefault();
+                load(link.getAttribute('href'));
+            }
+        });
+
+        // Tombol Reset → kosongkan filter lalu muat ulang (tanpa reload).
+        document.addEventListener('click', function (e) {
+            if (!e.target.closest('[data-user-reset]')) return;
+            e.preventDefault();
+            if (search) search.value = '';
+            form.querySelectorAll('select').forEach(function (s) { s.selectedIndex = 0; });
+            clearTimeout(debounce);
+            refresh();
+            if (search) search.focus();
+        });
+    });
+</script>
+@endpush

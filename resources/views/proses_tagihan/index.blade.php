@@ -355,30 +355,21 @@
     .tg-card.dim { opacity: .35; filter: grayscale(.6); transform: scale(.99); }
     .pt-live-hint { display: none; font-size: .8rem; color: var(--pt-secondary); font-weight: 600; }
     .pt-live-hint.show { display: block; animation: ptFadeUp .35s both; }
+
+    /* ---------- Live AJAX loading ---------- */
+    #pt-results { position: relative; transition: opacity .15s ease; }
+    #pt-results.pt-loading { opacity: .5; pointer-events: none; }
+    #pt-results.pt-loading::after {
+        content: ""; position: absolute; left: calc(50% - 1.1rem); top: 80px;
+        width: 2.2rem; height: 2.2rem;
+        border: 3px solid var(--pt-primary); border-right-color: transparent; border-radius: 50%;
+        animation: ptSpin .7s linear infinite; z-index: 5;
+    }
+    @keyframes ptSpin { to { transform: rotate(360deg); } }
 </style>
 @endpush
 
 @section('content')
-@php
-    $fmt = fn ($n) => number_format((float) $n, 0, ',', '.');
-
-    $toneByTipe = [
-        'KONTRAK' => ['tone' => 'var(--tone-indigo)', 'soft' => 'var(--tone-indigo-soft)', 'icon' => 'bi-file-earmark-text'],
-        'PERJALDIN' => ['tone' => 'var(--tone-info)', 'soft' => 'var(--tone-info-soft)', 'icon' => 'bi-airplane'],
-        'HONORARIUM' => ['tone' => 'var(--tone-violet)', 'soft' => 'var(--tone-violet-soft)', 'icon' => 'bi-cash-coin'],
-    ];
-
-    // Pemetaan tahap → indeks stepper mini (0..4)
-    $stageMap = [
-        'Menunggu COA & KPA' => 0,
-        'Proses SPP/SPM/NPI' => 1,
-        'Proses Dokumen (Alur Lama)' => 1,
-        'Menunggu Penerbitan SP2D' => 2,
-        'SP2D Terbit' => 3,
-        'Selesai' => 4,
-    ];
-    $stageLabels = ['COA & KPA', 'SPP/SPM/NPI', 'SP2D', 'Terbit', 'Selesai'];
-@endphp
 
 <div class="pt-anim" id="ptRoot">
 
@@ -389,36 +380,34 @@
             <div>
                 <div class="d-flex flex-wrap gap-2">
                     <span class="pt-chip"><i class="bi bi-diagram-3"></i> SPP / SPM / NPI / SP2D</span>
-                    @if(($perluAksiCount ?? 0) > 0)
-                        <span class="pt-chip tone-warning" style="background: rgba(245,158,11,.3); border-color: rgba(253,230,138,.6);">
-                            <span class="dot"></span> {{ $perluAksiCount }} menunggu tindakan Anda
-                        </span>
-                    @endif
+                    <span class="pt-chip tone-warning" id="ptHeroChip" style="background: rgba(245,158,11,.3); border-color: rgba(253,230,138,.6); {{ ($perluAksiCount ?? 0) > 0 ? '' : 'display:none;' }}">
+                        <span class="dot"></span> <span id="ptHeroChipCount">{{ $perluAksiCount ?? 0 }}</span> menunggu tindakan Anda
+                    </span>
                 </div>
                 <h1>Proses Tagihan</h1>
                 <div class="sub">Pantau dan kerjakan seluruh rantai pencairan — dari COA &amp; KPA hingga SP2D terbit — dalam satu halaman.</div>
             </div>
             <div class="text-lg-end">
-                <div class="sub mb-1"><i class="bi bi-wallet2 me-1"></i>Total nominal ({{ $summary['total'] }} tagihan)</div>
-                <div class="pt-amount">Rp <span data-countup data-target="{{ (int) $summary['nominal'] }}">0</span></div>
+                <div class="sub mb-1"><i class="bi bi-wallet2 me-1"></i>Total nominal (<span id="ptHeroCount">{{ $summary['total'] }}</span> tagihan)</div>
+                <div class="pt-amount">Rp <span id="ptHeroNominal" data-countup data-target="{{ (int) $summary['nominal'] }}">0</span></div>
             </div>
         </div>
 
         {{-- search kaca --}}
         <form method="GET" class="pt-search" id="ptFilterForm">
-            <input type="hidden" name="tab" value="{{ $tab }}">
+            <input type="hidden" name="tab" id="ptTabInput" value="{{ $tab }}">
             <div class="grp">
                 <i class="bi bi-search"></i>
-                <input type="search" name="search" id="ptSearch" value="{{ $search }}" placeholder="Cari nomor tagihan, uraian, atau pihak… (mengetik = saring langsung, Enter = cari semua)" autocomplete="off">
+                <input type="search" name="search" id="ptSearch" value="{{ $search }}" placeholder="Cari nomor tagihan, uraian, atau pihak… (otomatis saat mengetik)" autocomplete="off">
             </div>
-            <select name="tipe" onchange="this.form.submit()">
+            <select name="tipe" id="ptTipe">
                 <option value="">Semua tipe</option>
                 @foreach(['KONTRAK' => 'Kontrak', 'PERJALDIN' => 'Perjaldin', 'HONORARIUM' => 'Honorarium'] as $value => $label)
                     <option value="{{ $value }}" @selected(strtoupper((string) $tipeFilter) === $value)>{{ $label }}</option>
                 @endforeach
             </select>
             <button class="btn-go" type="submit"><i class="bi bi-funnel-fill"></i>Filter</button>
-            <a href="{{ route('proses-tagihan.index') }}" class="btn-reset" title="Reset filter"><i class="bi bi-x-lg"></i></a>
+            <a href="{{ route('proses-tagihan.index') }}" class="btn-reset" data-pt-reset title="Reset filter"><i class="bi bi-x-lg"></i></a>
         </form>
     </div>
 
@@ -430,172 +419,9 @@
         <div class="alert alert-danger pt-alert" data-autohide><i class="bi bi-exclamation-triangle-fill fs-5"></i><div>{{ session('error') }}</div></div>
     @endif
 
-    {{-- ============ STAT CARDS ============ --}}
-    <div class="pt-stats">
-        <div class="pt-stat reveal" style="--tone: var(--tone-indigo); --tone-soft: var(--tone-indigo-soft); --d: .05s;">
-            <div class="ico"><i class="bi bi-collection"></i></div>
-            <div>
-                <div class="num" data-countup data-target="{{ $summary['total'] }}">0</div>
-                <div class="lbl">Total Tagihan</div>
-            </div>
-        </div>
-        <div class="pt-stat reveal" style="--tone: var(--tone-amber); --tone-soft: var(--tone-amber-soft); --d: .12s;">
-            <div class="ico"><i class="bi bi-hourglass-split"></i></div>
-            <div>
-                <div class="num" data-countup data-target="{{ $summary['proses'] }}">0</div>
-                <div class="lbl">Dalam Proses</div>
-            </div>
-        </div>
-        <div class="pt-stat reveal" style="--tone: var(--tone-emerald); --tone-soft: var(--tone-emerald-soft); --d: .19s;">
-            <div class="ico"><i class="bi bi-patch-check"></i></div>
-            <div>
-                <div class="num" data-countup data-target="{{ $summary['selesai'] }}">0</div>
-                <div class="lbl">Selesai</div>
-            </div>
-        </div>
-        <div class="pt-stat reveal" style="--tone: var(--tone-violet); --tone-soft: var(--tone-violet-soft); --d: .26s;">
-            <div class="ico"><i class="bi bi-lightning-charge"></i></div>
-            <div>
-                <div class="num" data-countup data-target="{{ $perluAksiCount ?? 0 }}">0</div>
-                <div class="lbl">Perlu Tindakan Saya</div>
-            </div>
-        </div>
+    <div id="pt-results">
+        @include('proses_tagihan._results')
     </div>
-
-    {{-- ============ TABS + INFO ============ --}}
-    <div class="pt-toolbar">
-        <div class="pt-seg">
-            <a class="{{ $tab === 'perlu-saya' ? 'active' : '' }}" href="{{ route('proses-tagihan.index', array_filter(['tab' => 'perlu-saya', 'search' => $search, 'tipe' => $tipeFilter])) }}">
-                <i class="bi bi-person-check"></i> Perlu Tindakan Saya
-                @if(($perluAksiCount ?? 0) > 0)<span class="cnt">{{ $perluAksiCount }}</span>@endif
-            </a>
-            <a class="{{ $tab !== 'perlu-saya' ? 'active' : '' }}" href="{{ route('proses-tagihan.index', array_filter(['tab' => 'semua', 'search' => $search, 'tipe' => $tipeFilter])) }}">
-                <i class="bi bi-grid"></i> Semua
-            </a>
-        </div>
-        <div class="pt-result-info">
-            <i class="bi bi-list-check me-1"></i>Menampilkan <strong>{{ $tagihans->count() }}</strong> dari <strong>{{ $tab === 'perlu-saya' ? $tagihans->count() : $tagihans->total() }}</strong> tagihan
-        </div>
-    </div>
-
-    <div class="pt-live-hint mb-2" id="ptLiveHint"><i class="bi bi-funnel me-1"></i>Saringan langsung aktif — tekan <kbd>Enter</kbd> untuk mencari di seluruh data.</div>
-
-    {{-- ============ DAFTAR TAGIHAN ============ --}}
-    <div class="tg-list" id="ptList">
-        @forelse($tagihans as $tagihan)
-            @php
-                $state = $tagihan->proses_state ?? [];
-                $tahap = data_get($state, 'tahap', '-');
-                $perluSaya = (bool) data_get($state, 'perluSaya');
-                $stageIdx = $stageMap[$tahap] ?? 0;
-                $isSelesai = $tahap === 'Selesai';
-
-                $pihak = $tagihan->detailKontrak?->kontrakTermin?->kontrak?->vendor?->nama_pihak
-                    ?? $tagihan->pihak?->nama_pihak
-                    ?? $tagihan->nama_supplier
-                    ?? '-';
-
-                $tone = $toneByTipe[$tagihan->tipe_tagihan] ?? ['tone' => 'var(--tone-slate)', 'soft' => 'var(--tone-slate-soft)', 'icon' => 'bi-receipt'];
-
-                $statusTone = match (true) {
-                    $tagihan->status === 'SELESAI' => 'success',
-                    str_contains((string) $tagihan->status, 'TOLAK') || str_contains((string) $tagihan->status, 'BATAL') => 'danger',
-                    str_contains((string) $tagihan->status, 'PROSES') => 'info',
-                    default => 'neutral',
-                };
-
-                $searchHaystack = strtolower($tagihan->nomor_tagihan . ' ' . $tagihan->deskripsi . ' ' . $pihak . ' ' . $tagihan->tipe_tagihan);
-            @endphp
-            <div class="tg-card reveal {{ $perluSaya ? 'attn' : '' }}"
-                 style="--tone: {{ $tone['tone'] }}; --tone-soft: {{ $tone['soft'] }}; --d: {{ min($loop->index * 0.07, 0.6) }}s;"
-                 data-search="{{ $searchHaystack }}">
-                <a class="stretched" href="{{ route('proses-tagihan.show', $tagihan->id) }}" aria-label="Buka {{ $tagihan->nomor_tagihan }}"></a>
-                <div class="tg-grid">
-                    {{-- identitas --}}
-                    <div class="tg-ident">
-                        <div class="tg-icon"><i class="bi {{ $tone['icon'] }}"></i></div>
-                        <div class="min-w-0">
-                            <div class="tg-no">{{ $tagihan->nomor_tagihan }}</div>
-                            <div class="tg-desc">{{ \Illuminate\Support\Str::limit($tagihan->deskripsi, 110) }}</div>
-                            <div class="d-flex flex-wrap align-items-center gap-2">
-                                <span class="tg-pihak"><i class="bi bi-building"></i>{{ $pihak }}</span>
-                                <span class="tg-tipe"><i class="bi {{ $tone['icon'] }}"></i>{{ $tagihan->tipe_tagihan }}</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    {{-- nominal --}}
-                    <div>
-                        <div class="tg-nominal-lbl">Nominal</div>
-                        <div class="tg-nominal">Rp {{ $fmt($tagihan->total_netto) }}</div>
-                        <div class="text-muted" style="font-size: .72rem;">
-                            <i class="bi bi-clock-history me-1"></i>{{ $tagihan->updated_at?->diffForHumans() }}
-                        </div>
-                    </div>
-
-                    {{-- mini pipeline --}}
-                    <div class="tg-steps">
-                        <div class="track">
-                            @foreach($stageLabels as $i => $lbl)
-                                @php
-                                    $cls = $isSelesai || $i < $stageIdx ? 'done' : ($i === $stageIdx ? 'current' : '');
-                                @endphp
-                                <span class="nd {{ $cls }}" title="{{ $lbl }}">
-                                    @if($cls === 'done')<i class="bi bi-check"></i>@else{{ $i + 1 }}@endif
-                                </span>
-                                @if(! $loop->last)
-                                    <span class="ln {{ $isSelesai || $i < $stageIdx ? 'fill' : '' }}" style="--ld: {{ .15 + $i * .12 }}s;"><i></i></span>
-                                @endif
-                            @endforeach
-                        </div>
-                        <span class="tahap {{ $isSelesai ? 'ok' : '' }}">
-                            <span class="spin"></span>{{ $tahap }}
-                        </span>
-                    </div>
-
-                    {{-- status + aksi --}}
-                    <div class="tg-actions">
-                        <div class="d-flex flex-wrap gap-1 justify-content-end">
-                            <span class="pt-status {{ $statusTone }}">{{ str_replace('_', ' ', $tagihan->status) }}</span>
-                            @if($perluSaya)
-                                <span class="pt-status warning shimmer"><i class="bi bi-bell-fill"></i>Perlu aksi</span>
-                            @endif
-                        </div>
-                        <a href="{{ route('proses-tagihan.show', $tagihan->id) }}" class="btn-pt-action" data-ripple>
-                            Buka <i class="bi bi-arrow-right"></i>
-                        </a>
-                    </div>
-                </div>
-            </div>
-        @empty
-            <div class="pt-empty reveal">
-                @if($tab === 'perlu-saya')
-                    <div class="big" style="background: var(--tone-emerald-soft); color: var(--pt-success);"><i class="bi bi-emoji-sunglasses"></i></div>
-                    <h5>Tidak ada yang menunggu Anda 🎉</h5>
-                    <p>Semua tagihan pada filter ini sudah ditindaklanjuti. Cek tab <strong>Semua</strong> untuk memantau progres keseluruhan.</p>
-                    <a href="{{ route('proses-tagihan.index', array_filter(['search' => $search, 'tipe' => $tipeFilter])) }}" class="btn-pt-action"><i class="bi bi-grid"></i> Lihat Semua Tagihan</a>
-                @else
-                    <div class="big"><i class="bi bi-inbox"></i></div>
-                    <h5>Belum ada tagihan</h5>
-                    <p>Tidak ditemukan tagihan pada filter ini. Coba ubah kata kunci pencarian atau reset filter.</p>
-                    <a href="{{ route('proses-tagihan.index') }}" class="btn-pt-action"><i class="bi bi-arrow-counterclockwise"></i> Reset Filter</a>
-                @endif
-            </div>
-        @endforelse
-
-        {{-- empty state khusus hasil saringan live (JS) --}}
-        <div class="pt-empty" id="ptLiveEmpty" style="display: none;">
-            <div class="big" style="background: var(--tone-amber-soft); color: var(--pt-warning);"><i class="bi bi-search"></i></div>
-            <h5>Tidak ada yang cocok di halaman ini</h5>
-            <p>Tekan <kbd>Enter</kbd> untuk mencari di seluruh data, bukan hanya halaman ini.</p>
-        </div>
-    </div>
-
-    @if($tagihans->hasPages())
-        <div class="pt-pagination">
-            {{ $tagihans->links() }}
-        </div>
-    @endif
 </div>
 @endsection
 
@@ -605,27 +431,17 @@
     'use strict';
 
     var root = document.getElementById('ptRoot');
+    if (!root) return;
+    var results = document.getElementById('pt-results');
+    var form = document.getElementById('ptFilterForm');
     var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-    /* ---------- Reveal on scroll ---------- */
-    var reveals = root.querySelectorAll('.reveal');
-    if ('IntersectionObserver' in window && !reduceMotion) {
-        var io = new IntersectionObserver(function (entries) {
-            entries.forEach(function (e) {
-                if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
-            });
-        }, { threshold: .12 });
-        reveals.forEach(function (el) { io.observe(el); });
-    } else {
-        root.classList.add('no-anim');
-        reveals.forEach(function (el) { el.classList.add('in'); });
-    }
+    var baseUrl = "{{ route('proses-tagihan.index') }}";
 
     /* ---------- Count-up angka ---------- */
     function countUp(el) {
         var target = parseInt(el.dataset.target || '0', 10);
         if (reduceMotion || target === 0) { el.textContent = target.toLocaleString('id-ID'); return; }
-        var dur = 1200, t0 = null;
+        var dur = 1100, t0 = null;
         function tick(t) {
             if (!t0) t0 = t;
             var p = Math.min((t - t0) / dur, 1);
@@ -635,9 +451,29 @@
         }
         requestAnimationFrame(tick);
     }
+
+    /* ---------- Reveal on scroll ---------- */
+    var io = null;
+    if ('IntersectionObserver' in window && !reduceMotion) {
+        io = new IntersectionObserver(function (entries) {
+            entries.forEach(function (e) {
+                if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
+            });
+        }, { threshold: .12 });
+    } else {
+        root.classList.add('no-anim');
+    }
+    function revealIn(scope) {
+        var els = scope.querySelectorAll('.reveal');
+        if (io) { els.forEach(function (el) { io.observe(el); }); }
+        else { els.forEach(function (el) { el.classList.add('in'); }); }
+    }
+
+    /* pass awal */
+    revealIn(root);
     document.querySelectorAll('[data-countup]').forEach(countUp);
 
-    /* ---------- Ripple tombol ---------- */
+    /* ---------- Ripple tombol (delegated, stabil walau konten diganti) ---------- */
     root.addEventListener('click', function (ev) {
         var btn = ev.target.closest('[data-ripple]');
         if (!btn) return;
@@ -653,37 +489,116 @@
         setTimeout(function () { r.remove(); }, 650);
     });
 
-    /* ---------- Saringan langsung (client-side, halaman ini) ---------- */
-    var input = document.getElementById('ptSearch');
-    var hint = document.getElementById('ptLiveHint');
-    var liveEmpty = document.getElementById('ptLiveEmpty');
-    var cards = Array.prototype.slice.call(root.querySelectorAll('.tg-card'));
-    var debounce;
-
-    if (input) {
-        input.addEventListener('input', function () {
-            clearTimeout(debounce);
-            var q = input.value.trim().toLowerCase();
-            debounce = setTimeout(function () {
-                var visible = 0;
-                cards.forEach(function (card) {
-                    var match = !q || (card.dataset.search || '').indexOf(q) !== -1;
-                    card.classList.toggle('dim', !match);
-                    card.style.display = match ? '' : 'none';
-                    if (match) visible++;
-                });
-                hint.classList.toggle('show', !!q);
-                if (liveEmpty) liveEmpty.style.display = (q && visible === 0 && cards.length > 0) ? '' : 'none';
-            }, 120);
-        });
-    }
-
     /* ---------- Auto-hide flash alert ---------- */
     document.querySelectorAll('[data-autohide]').forEach(function (el) {
         setTimeout(function () {
             el.classList.add('bye');
             setTimeout(function () { el.remove(); }, 550);
         }, 4500);
+    });
+
+    /* ====================================================
+       LIVE-SEARCH AJAX — search, tipe, tab & paginasi tanpa
+       reload. Form tetap di hero (di luar #pt-results) →
+       fokus & kursor input aman saat mengetik.
+       ==================================================== */
+    if (!results || !form) return;
+
+    var search = document.getElementById('ptSearch');
+    var tipe = document.getElementById('ptTipe');
+    var tabInput = document.getElementById('ptTabInput');
+    var heroNominal = document.getElementById('ptHeroNominal');
+    var heroCount = document.getElementById('ptHeroCount');
+    var heroChip = document.getElementById('ptHeroChip');
+    var heroChipCount = document.getElementById('ptHeroChipCount');
+    var debounce, controller;
+
+    function buildUrl() {
+        var params = new URLSearchParams();
+        new FormData(form).forEach(function (v, k) {
+            if (String(v).trim() !== '') params.append(k, v);
+        });
+        var qs = params.toString();
+        return qs ? (baseUrl + '?' + qs) : baseUrl;
+    }
+
+    function syncHero() {
+        var data = document.getElementById('ptResultsData');
+        if (!data) return;
+        if (heroNominal) { heroNominal.dataset.target = data.dataset.nominal || '0'; countUp(heroNominal); }
+        if (heroCount) { heroCount.textContent = parseInt(data.dataset.total || '0', 10).toLocaleString('id-ID'); }
+        var perlu = parseInt(data.dataset.perlu || '0', 10);
+        if (heroChip) { heroChip.style.display = perlu > 0 ? '' : 'none'; }
+        if (heroChipCount) { heroChipCount.textContent = perlu.toLocaleString('id-ID'); }
+    }
+
+    function afterSwap() {
+        revealIn(results);
+        results.querySelectorAll('[data-countup]').forEach(countUp);
+        syncHero();
+    }
+
+    function load(url) {
+        if (controller) controller.abort();
+        controller = new AbortController();
+        results.classList.add('pt-loading');
+        fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'text/html' }, signal: controller.signal })
+            .then(function (r) { return r.text(); })
+            .then(function (html) {
+                results.innerHTML = html;
+                results.classList.remove('pt-loading');
+                window.history.replaceState(null, '', url);
+                afterSwap();
+            })
+            .catch(function (err) { if (err.name !== 'AbortError') results.classList.remove('pt-loading'); });
+    }
+
+    function refresh() { load(buildUrl()); }
+
+    /* ketik di kotak cari → debounce 300ms (server-side, seluruh data) */
+    if (search) {
+        search.addEventListener('input', function () {
+            clearTimeout(debounce);
+            debounce = setTimeout(refresh, 300);
+        });
+    }
+
+    /* dropdown tipe → filter instan */
+    if (tipe) { tipe.addEventListener('change', refresh); }
+
+    /* tombol Filter / Enter → AJAX, bukan reload penuh */
+    form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        clearTimeout(debounce);
+        refresh();
+    });
+
+    /* klik tab / paginasi di dalam hasil → AJAX (delegated, konten bisa diganti) */
+    results.addEventListener('click', function (e) {
+        var tab = e.target.closest('[data-tab]');
+        if (tab) {
+            e.preventDefault();
+            if (tabInput) tabInput.value = tab.getAttribute('data-tab');
+            refresh();
+            return;
+        }
+        var page = e.target.closest('.pagination a');
+        if (page && page.getAttribute('href')) {
+            e.preventDefault();
+            load(page.getAttribute('href'));
+        }
+    });
+
+    /* tombol Reset (di hero & empty-state) → kosongkan filter lalu muat ulang */
+    document.addEventListener('click', function (e) {
+        if (!e.target.closest('[data-pt-reset]')) return;
+        e.preventDefault();
+        if (search) search.value = '';
+        if (tipe) tipe.value = '';
+        if (tabInput) tabInput.value = 'semua';
+        clearTimeout(debounce);
+        refresh();
+        if (search) search.focus();
     });
 })();
 </script>

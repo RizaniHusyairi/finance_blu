@@ -26,7 +26,18 @@ class UserManagementController extends Controller
             ->with(['roles', 'profilable'])
             ->when($request->filled('q'), function ($q) use ($request) {
                 $term = '%' . $request->string('q')->lower() . '%';
-                $q->whereRaw('LOWER(email) LIKE ?', [$term]);
+                // Cari di email + nama/NIP pegawai + nama/kode mitra (relasi polimorfik).
+                $q->where(function ($outer) use ($term) {
+                    $outer->whereRaw('LOWER(email) LIKE ?', [$term])
+                        ->orWhereHasMorph('profilable', [MasterPegawai::class], function ($pq) use ($term) {
+                            $pq->whereRaw('LOWER(nama_lengkap) LIKE ?', [$term])
+                                ->orWhereRaw('LOWER(nip) LIKE ?', [$term]);
+                        })
+                        ->orWhereHasMorph('profilable', [MitraJasa::class], function ($mq) use ($term) {
+                            $mq->whereRaw('LOWER(nama_mitra) LIKE ?', [$term])
+                                ->orWhereRaw('LOWER(kode_mitra) LIKE ?', [$term]);
+                        });
+                });
             })
             ->when($request->filled('role'), function ($q) use ($request) {
                 $q->whereHas('roles', fn ($r) => $r->where('name', $request->input('role')));
@@ -44,6 +55,11 @@ class UserManagementController extends Controller
             ->orderBy('email')
             ->paginate(15)
             ->withQueryString();
+
+        // Live-search AJAX: cukup kembalikan potongan tabel + paginasi.
+        if ($request->ajax()) {
+            return view('admin.users._table', compact('users'));
+        }
 
         $roleList = Role::orderBy('name')->pluck('name');
 

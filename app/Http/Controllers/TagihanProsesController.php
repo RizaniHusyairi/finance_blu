@@ -89,14 +89,21 @@ class TagihanProsesController extends Controller
                 ->values());
         }
 
-        return view('proses_tagihan.index', [
+        $viewData = [
             'tagihans' => $tagihans,
             'tipeFilter' => $request->input('tipe'),
             'search' => $request->input('search'),
             'tab' => $request->input('tab', 'semua'),
             'summary' => $summary,
             'perluAksiCount' => $perluAksiCount,
-        ]);
+        ];
+
+        // Live-search AJAX: cukup kembalikan potongan hasil (stat, tab, daftar, paginasi).
+        if ($request->ajax()) {
+            return view('proses_tagihan._results', $viewData);
+        }
+
+        return view('proses_tagihan.index', $viewData);
     }
 
     public function show($id)
