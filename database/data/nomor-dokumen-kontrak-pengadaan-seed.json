@@ -1,0 +1,4069 @@
+{
+    "tahun": 2026,
+    "sequence_group": "KONTRAK_PPK_BB_APTP",
+    "suffix_code": "PPK.BB/APTP",
+    "number_padding": 4,
+    "last_number": 595,
+    "entries": [
+        {
+            "no": 1,
+            "perihal": "Kontrak OS",
+            "jenis_belanja": "Belanja Jasa/Barang",
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 2,
+            "perihal": "Kontrak OS",
+            "jenis_belanja": "Belanja Jasa/Barang",
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 3,
+            "perihal": "Kontrak OS",
+            "jenis_belanja": "Belanja Jasa/Barang",
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 4,
+            "perihal": "Kontrak OS",
+            "jenis_belanja": "Belanja Jasa/Barang",
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 5,
+            "perihal": "IP Potong Rumput",
+            "jenis_belanja": "Belanja Jasa/Barang",
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 6,
+            "perihal": "SPPBJ Potong Rumput",
+            "jenis_belanja": "Belanja Jasa/Barang",
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 7,
+            "perihal": "SPK Potong Rumput",
+            "jenis_belanja": "Belanja Jasa/Barang",
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 8,
+            "perihal": "SPMK Potong RUmput",
+            "jenis_belanja": "Belanja Jasa/Barang",
+            "document_key": "SPMK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 9,
+            "perihal": "IP Pengolahan Air Bersih",
+            "jenis_belanja": "Belanja Jasa/Barang",
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 10,
+            "perihal": "SPPBJ Pengolahan Air Bersig",
+            "jenis_belanja": "Belanja Jasa/Barang",
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 11,
+            "perihal": "SPK Pengolahan Air Bersih",
+            "jenis_belanja": "Belanja Jasa/Barang",
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 12,
+            "perihal": "SPMK Pengolahan Air Bersih",
+            "jenis_belanja": "Belanja Jasa/Barang",
+            "document_key": "SPMK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 13,
+            "perihal": "KONTRAK MEKANIKAL LIFT DAN AXCALATOR",
+            "jenis_belanja": "Belanja Jasa/Barang",
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 14,
+            "perihal": "BAST Tagihan Listrik BUlan Januari",
+            "jenis_belanja": "Belanja Jasa/Barang",
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 15,
+            "perihal": "BAP Tagihan Listrik Bulan Januari",
+            "jenis_belanja": "Belanja Jasa/Barang",
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 16,
+            "perihal": "BAPP Obat air periode januari-mei 2026",
+            "jenis_belanja": "Belanja Jasa/Barang",
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 17,
+            "perihal": "BAST Obat air periode januari-mei 2026",
+            "jenis_belanja": "Belanja Jasa/Barang",
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 18,
+            "perihal": "BAP Obat air periode januari-mei 2026",
+            "jenis_belanja": "Belanja Jasa/Barang",
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 19,
+            "perihal": "Adenddum Kontrak",
+            "jenis_belanja": "Belanja Jasa/Barang",
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 20,
+            "perihal": "Adenddum Kontrak",
+            "jenis_belanja": "Belanja Jasa/Barang",
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 21,
+            "perihal": "Adenddum Kontrak",
+            "jenis_belanja": "Belanja Jasa/Barang",
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 22,
+            "perihal": "Adenddum Kontrak",
+            "jenis_belanja": "Belanja Jasa/Barang",
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 23,
+            "perihal": "BAPP Pemotongan Rumput Tahap I",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 24,
+            "perihal": "BAST Pemotongan Rumput Tahap I",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 25,
+            "perihal": "BAP Pemotongan Rumput Tahap I",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 26,
+            "perihal": "BAPP FSU",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 27,
+            "perihal": "BAST FSU",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 28,
+            "perihal": "BAP FSU",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 29,
+            "perihal": "BAPP limbah",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 30,
+            "perihal": "BAST limbah",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 31,
+            "perihal": "BAP limbah",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 32,
+            "perihal": "BAPP TATA UDARA",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 33,
+            "perihal": "BAST TATA UDARA",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 34,
+            "perihal": "BAP TATA UDARA",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 35,
+            "perihal": "BAPP sistem air bersih",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 36,
+            "perihal": "BAST sistem air bersih",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 37,
+            "perihal": "BAP sistem air bersih",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 38,
+            "perihal": "BAPP SOFA",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 39,
+            "perihal": "BAST SOFA",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 40,
+            "perihal": "BAP SOFA",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 41,
+            "perihal": "BAPP CONVEYOR",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 42,
+            "perihal": "BAST CONVEYOR",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 43,
+            "perihal": "BAP SOFA",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 44,
+            "perihal": "kontrak sewa mobil",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 45,
+            "perihal": "BAPP sampah",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 46,
+            "perihal": "BAST sampah",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 47,
+            "perihal": "BAP sampah",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 48,
+            "perihal": "BAPP AHU",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 49,
+            "perihal": "BAST AHU",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 50,
+            "perihal": "BAP AHU",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 51,
+            "perihal": "BAPP AVSEC JAN",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 52,
+            "perihal": "BAP AVSEC JAN",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 53,
+            "perihal": "BAPP OS OPS",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 54,
+            "perihal": "BAP OS OPS",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 55,
+            "perihal": "BAPP Landscape",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 56,
+            "perihal": "BAP Landscape",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 57,
+            "perihal": "BAPP OS Kantor",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 58,
+            "perihal": "BAP OS Kantor",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 59,
+            "perihal": "IP Pengadaan Solar tahap I",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 60,
+            "perihal": "SPPBJ Solar",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 61,
+            "perihal": "SPK Solar",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 62,
+            "perihal": "SPMK Solar",
+            "jenis_belanja": null,
+            "document_key": "SPMK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 63,
+            "perihal": "PO Solar",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 64,
+            "perihal": "BAPP SC LISTRIK",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 65,
+            "perihal": "BAST SC LISTRIK",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 66,
+            "perihal": "BAP SC LISTRIK",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 67,
+            "perihal": "BAPP SC LISTRIK TAHP 2",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 68,
+            "perihal": "BAST SC LISTRIK TAHAP 2",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 69,
+            "perihal": "BAP SC LISTRIK TAHAP 2",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 70,
+            "perihal": "BAPP ACC MOBIL",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 71,
+            "perihal": "BAST ACC MOBIL",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 72,
+            "perihal": "BAP ACC MOBIL",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 73,
+            "perihal": "BAPP CCTV",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 74,
+            "perihal": "BAST CCTV",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 75,
+            "perihal": "BAP CCTV",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 76,
+            "perihal": "BAPP PAS",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 77,
+            "perihal": "BAST PAS",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 78,
+            "perihal": "BAP PAS",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 79,
+            "perihal": "BAPP FIDS",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 80,
+            "perihal": "BAST FIDS",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 81,
+            "perihal": "BAP FIDS",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 82,
+            "perihal": "BAPP WEB",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 83,
+            "perihal": "BAST WEB",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 84,
+            "perihal": "BAP WEB",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 85,
+            "perihal": "BAPP SC ELBAND",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 86,
+            "perihal": "BAST SC ELBAND",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 87,
+            "perihal": "BAP SC ELBAND",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 88,
+            "perihal": "BAPP RT",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 89,
+            "perihal": "BAST RT",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 90,
+            "perihal": "BAP RT",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 91,
+            "perihal": "BAPP Solar Tahap I",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 92,
+            "perihal": "Bast Solar Tahap I",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 93,
+            "perihal": "BAP Solar tahap I",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 94,
+            "perihal": "dokumen kompetisi terminal",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 95,
+            "perihal": "BAPP LIMBAH 2",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 96,
+            "perihal": "BAST LIMBAH 2",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 97,
+            "perihal": "BAP LIMBAH 2",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 98,
+            "perihal": "BAPP SC LISTRIK TAHAP 3",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 99,
+            "perihal": "BAST SC LISTRIK TAHAP 3",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 100,
+            "perihal": "BAP SC LISRTRIK TAHAP 3",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 101,
+            "perihal": "BAPP SC LISTRIK TAHAP 4",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 102,
+            "perihal": "BAST SC LISTRIK TAHAP 4",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 103,
+            "perihal": "BAP SC LISRTRIK TAHAP 4",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 104,
+            "perihal": "BAPP KEROHANIAN",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 105,
+            "perihal": "BAST KEROHANIAN",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 106,
+            "perihal": "BAP KERIHANIAN",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 107,
+            "perihal": "BAPP MEKANIKAL",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 108,
+            "perihal": "BAST MEKANIKAL",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 109,
+            "perihal": "SPPBJ TEMINAL TAHAP 2",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 110,
+            "perihal": "KONTRAK TERMINAL TAHAP 2",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 111,
+            "perihal": "SPMK TERMINAL TAHAP 2",
+            "jenis_belanja": null,
+            "document_key": "SPMK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 112,
+            "perihal": "UNDANGAN TTD KONTRAK",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 113,
+            "perihal": "UNDANGAN PCM",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 114,
+            "perihal": "bapp sc mekanikal",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 115,
+            "perihal": "bast sc mekanikal",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 116,
+            "perihal": "bap sc mekanikal",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 117,
+            "perihal": "IP PEMELIHARAAN WSS",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 118,
+            "perihal": "SPPBJ PEMELIHARAAN WSS",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 119,
+            "perihal": "SPK PEMELIHARAAN WSS",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 120,
+            "perihal": "UND PCM",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 121,
+            "perihal": "SPMK PEMELIHARAAN WSS",
+            "jenis_belanja": null,
+            "document_key": "SPMK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 122,
+            "perihal": "BAPP PEMELIHARAAN WSS",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 123,
+            "perihal": "BAST PEMELIHARAAN WSS",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 124,
+            "perihal": "BAP PEMELIHARAAN WSS",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 125,
+            "perihal": "bapp kegaitan kerohanian",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 126,
+            "perihal": "bast kerohanian",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 127,
+            "perihal": "bap kerohanian",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 128,
+            "perihal": "IP Pemeliharaan marka taxi",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 129,
+            "perihal": "sppbj pemeliharaan marka taxi",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 130,
+            "perihal": "spk pemeliharaan marka taxi",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 131,
+            "perihal": "spmk pemeliharaan marka taxi",
+            "jenis_belanja": null,
+            "document_key": "SPMK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 132,
+            "perihal": "ip Pengawasan terminal tahap 2",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 133,
+            "perihal": "sppbj pengawasan terminal tahap 2",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 134,
+            "perihal": "spk pengawasan terminal tahap II",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 135,
+            "perihal": "spmk pengawasan terminal tahap II",
+            "jenis_belanja": null,
+            "document_key": "SPMK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 136,
+            "perihal": "bapp tagihan sparepart conveyor",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 137,
+            "perihal": "bast tagihan sparepart conveyor",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 138,
+            "perihal": "bap tagihan sparepart conveyor",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 139,
+            "perihal": "BAPP Pekerjaan Pemeliharaan Pagar Batas Lahan Sisi Darat",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 140,
+            "perihal": "BAST Pekerjaan Pemeliharaan Pagar Batas Lahan Sisi Darat",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 141,
+            "perihal": "BAP Pekerjaan Pemeliharaan Pagar Batas Lahan Sisi Darat",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 142,
+            "perihal": "BAPP Pemeliharaan Gedung Terminal",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 143,
+            "perihal": "BAST Pemeliharaan Gedung Terminal",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 144,
+            "perihal": "BAP Pemeliharaan Gedung Terminal",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 145,
+            "perihal": "po suku cadang x ray",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 146,
+            "perihal": "BAPP Internet Julia Januari",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 147,
+            "perihal": "BAST Internet Julia Januari",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 148,
+            "perihal": "BAP Internet Julia Januari",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 149,
+            "perihal": "BAPP Internet Julia Februari",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 150,
+            "perihal": "BAST Internet Julia Februari",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 151,
+            "perihal": "BAP Internet Julia Februari",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 152,
+            "perihal": "BAPP SPARE PART X RAY",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 153,
+            "perihal": "BAST SPARE PART X RAY",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 154,
+            "perihal": "BAP SPARE PART X RAY",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 155,
+            "perihal": "bapp Sewa Kendaraa Singgle Cabin",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 156,
+            "perihal": "bast Sewa Kendaraa Singgle Cabin",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 157,
+            "perihal": "bap Sewa Kendaraa Singgle Cabin",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 158,
+            "perihal": "bapp sewa kendaraan sc dan dc",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 159,
+            "perihal": "bast sewa kendaraan sc dan dc",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 160,
+            "perihal": "bap sewa kendaraan sc dan dc",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 161,
+            "perihal": "bapp SUV",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 162,
+            "perihal": "bast SUV",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 163,
+            "perihal": "Bap SUV",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 164,
+            "perihal": "bapp jasa os Kantor februari",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 165,
+            "perihal": "bap jasa os kantor februari",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 166,
+            "perihal": "ip PEMENUHAN STANDAR WARNA KENDARAAN PKP-PK 1 UNIT",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 167,
+            "perihal": "sppbj PEMENUHAN STANDAR WARNA KENDARAAN PKP-PK 1 UNIT",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 168,
+            "perihal": "spk PEMENUHAN STANDAR WARNA KENDARAAN PKP-PK 1 UNIT",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 169,
+            "perihal": "spmk PEMENUHAN STANDAR WARNA KENDARAAN PKP-PK 1 UNIT",
+            "jenis_belanja": null,
+            "document_key": "SPMK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 170,
+            "perihal": "bapp blet conveyor",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 171,
+            "perihal": "bast belt conveyor",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 172,
+            "perihal": "bap belt conveyor",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 173,
+            "perihal": "bapp backdrop ramadhan",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 174,
+            "perihal": "bast backdrop ramadhan",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 175,
+            "perihal": "bap backdrop ramadhan",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 176,
+            "perihal": "bapp AVSEC Februari 2026",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 177,
+            "perihal": "bap avsec fenruari 2026",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 178,
+            "perihal": "bapp OS OPS Februari",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 179,
+            "perihal": "bap OS OPS Februari",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 180,
+            "perihal": "bapp cs februari",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 181,
+            "perihal": "bap cs februari",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 182,
+            "perihal": "bapp Kegaitan kerohanian",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 183,
+            "perihal": "bast Kegaitan kerohanian",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 184,
+            "perihal": "bap Kegaitan kerohanian",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 185,
+            "perihal": "bapp pemeliharaan sistem air bersih foot valve",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 186,
+            "perihal": "bast pemeliharaan sistem air bersih",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 187,
+            "perihal": "bap pemeliharaan sistem air bersih",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 188,
+            "perihal": "bapp sampah februari",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 189,
+            "perihal": "bast sampah februari",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 190,
+            "perihal": "bap sampah februari",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 191,
+            "perihal": "bapp pemeliharaan sistem air bersih foot valve",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 192,
+            "perihal": "bast pemeliharaan sistem air bersih foot valve",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 193,
+            "perihal": "bap pemeliharaan sistem air bersih foot valve",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 194,
+            "perihal": "bap Uang Muka pengembangan terminal internasional tahap II",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 195,
+            "perihal": "bapp pengecatan marka taxiway",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 196,
+            "perihal": "bast pengecatan marka taxiway",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 197,
+            "perihal": "bap pengecatan marka taxiway",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 198,
+            "perihal": "ip Pemeliharaan Fasilitas Sisi Udara (Runway) : 1 (satu) Paket",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 199,
+            "perihal": "SPPBJ Pemeliharaan Fasilitas Sisi Udara (Runway) : 1 (satu) Paket",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 200,
+            "perihal": "SPK Pemeliharaan Fasilitas Sisi Udara (Runway) : 1 (satu) Paket",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 201,
+            "perihal": "SPMK pemeliharaan runway",
+            "jenis_belanja": null,
+            "document_key": "SPMK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 202,
+            "perihal": "bapp KAP 2026",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 203,
+            "perihal": "bast KAP 2026",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 204,
+            "perihal": "bap KAP 2026",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 205,
+            "perihal": "bapp pemeliharaan elevator",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 206,
+            "perihal": "bast pemeliharaan elevator",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 207,
+            "perihal": "bap pemeliharaan elevator",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 208,
+            "perihal": "IP Pembuatan Aplikasi Keuangan",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 209,
+            "perihal": "SPPBJ Pembuatan Aplikasi Keuangan",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 210,
+            "perihal": "SPK Pembuatan Aplikasi Keuangan",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 211,
+            "perihal": "SPMK Pembuatan Aplikasi Keuangan",
+            "jenis_belanja": null,
+            "document_key": "SPMK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 212,
+            "perihal": "bapp Pemeliharaan Sisi Udara (Runway)",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 213,
+            "perihal": "bast Pemeliharaan Sisi Udara (Runway)",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 214,
+            "perihal": "bap Pemeliharaan Sisi Udara (Runway)",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 215,
+            "perihal": "bapp kegiatan kerohanian",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 216,
+            "perihal": "bast kegiatan kerohanian",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 217,
+            "perihal": "bap kegiatan kerohanian",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 218,
+            "perihal": "bapp kegiatan keagamaan dan kerohanian",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 219,
+            "perihal": "bast kegiatan keagamaan dan kerohanian",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 220,
+            "perihal": "bap kegiatan keagamaan dan kerohanian",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 221,
+            "perihal": "bapp kegiatan keagamaan dan kerohanian",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 222,
+            "perihal": "bast kegiatan keagamaan dan kerohanian",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 223,
+            "perihal": "bap kegiatan keagamaan dan kerohanian",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 224,
+            "perihal": "SPK PEN",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 225,
+            "perihal": "SPMK PEN",
+            "jenis_belanja": null,
+            "document_key": "SPMK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 226,
+            "perihal": "SPK REHABILITASI FASUM",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 227,
+            "perihal": "SPMK REHABILITASI FASUM",
+            "jenis_belanja": null,
+            "document_key": "SPMK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 228,
+            "perihal": "BAPP Pemeliharaan Runway",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 229,
+            "perihal": "BAST Pemeliharaan Runway",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 230,
+            "perihal": "BAP Pemeliharaan Runway",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 231,
+            "perihal": "BAPP PEN",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 232,
+            "perihal": "BAST PEN",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 233,
+            "perihal": "BAPP PEN",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 234,
+            "perihal": "BAPP PEKERJAAN PEMELIHARAAN GEDUNG KANTOR",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 235,
+            "perihal": "BAST PEKERJAAN PEMELIHARAAN GEDUNG KANTOR",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 236,
+            "perihal": "BAP PEKERJAAN PEMELIHARAAN GEDUNG KANTOR",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 237,
+            "perihal": "BAPP PEMELIHARAN JALAN AKSES MASUK BADNARA",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 238,
+            "perihal": "BAST PEMELIHARAN JALAN AKSES MASUK BADNARA",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 239,
+            "perihal": "BAP PEMELIHARAN JALAN AKSES MASUK BADNARA",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 240,
+            "perihal": "IP PEMELIHARAAN GEDUNG OPERASIONAL",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 241,
+            "perihal": "SPPBJ  PEMELIHARAAN GEDUNG OPERASIONAL",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 242,
+            "perihal": "SPK  PEMELIHARAAN GEDUNG OPERASIONAL",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 243,
+            "perihal": "SPMK  PEMELIHARAAN GEDUNG OPERASIONAL",
+            "jenis_belanja": null,
+            "document_key": "SPMK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 244,
+            "perihal": "bapp keagamaan",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 245,
+            "perihal": "bast bapp keagamaan",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 246,
+            "perihal": "bap bapp keagamaan",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 247,
+            "perihal": "bapp pemeliharaan runway",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 248,
+            "perihal": "bast pemeliharaan runway",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 249,
+            "perihal": "bap pemeliharaan runway",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 250,
+            "perihal": "IP Pemeliharaan Genset",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 251,
+            "perihal": "SPPBJ Pemeliharaan Genset",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 252,
+            "perihal": "SPK Pemeliharaan Genset",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 253,
+            "perihal": "SPMK Pemeliharaan Genset",
+            "jenis_belanja": null,
+            "document_key": "SPMK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 254,
+            "perihal": "dokumen kompetisi",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 255,
+            "perihal": "dokumen kompetisi",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 256,
+            "perihal": "bapp gedung operasional",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 257,
+            "perihal": "bast gedung operasional",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 258,
+            "perihal": "bap gedung operasional",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 259,
+            "perihal": "ip pakaiaan dinas",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 260,
+            "perihal": "sppbj pakaiaan dinas",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 261,
+            "perihal": "bapp avsec maret",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 262,
+            "perihal": "bap avsec maret",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 263,
+            "perihal": "bapp os OPS maret",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 264,
+            "perihal": "bap os ops maret",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 265,
+            "perihal": "bapp os kantor",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 266,
+            "perihal": "bap os kantor",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 267,
+            "perihal": "bapp landscape",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 268,
+            "perihal": "bap landscape",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 269,
+            "perihal": "bapp limit switch",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 270,
+            "perihal": "bast imit switch",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 271,
+            "perihal": "bap imit switch",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 272,
+            "perihal": "bapp sewa suv",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 273,
+            "perihal": "bast sewa suv",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 274,
+            "perihal": "bap sewa suv",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 275,
+            "perihal": "bapp Sewa Kendaraan Single Cabin dan Double Cabin",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 276,
+            "perihal": "bast Sewa Kendaraan Single Cabin dan Double Cabin",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 277,
+            "perihal": "bap Sewa Kendaraan Single Cabin dan Double Cabin",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 278,
+            "perihal": "bapp single cabin",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 279,
+            "perihal": "bast single cabin",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 280,
+            "perihal": "bap single cabin",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 285,
+            "perihal": "bapp pemeliharaan genset",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 286,
+            "perihal": "bastpemeliharaan genset",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 287,
+            "perihal": "bap pemeliharaan genset",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 288,
+            "perihal": "bapp pengadaan baju dinas",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 289,
+            "perihal": "bast pengadaan baju dinas",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 290,
+            "perihal": "bap pengadaan baju dinas",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 291,
+            "perihal": "bapp termin I pengembangan terminal int tahap 2",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 292,
+            "perihal": "bap termin I pengembangan terminal int tahap 2",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 293,
+            "perihal": "bapp pengangkutan samaph maret",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 294,
+            "perihal": "bast pengangkutan samaph maret",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 295,
+            "perihal": "bap pengangkutan samaph maret",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 296,
+            "perihal": "SPPBJ CCTV",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 297,
+            "perihal": "ip potongan rumput",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 298,
+            "perihal": "sppbj potongan rumput",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 299,
+            "perihal": "spk potongan rumput",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 300,
+            "perihal": "spmk potongan rumput",
+            "jenis_belanja": null,
+            "document_key": "SPMK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 301,
+            "perihal": "BAPP Pemeliharaan Gedung Terminal",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 302,
+            "perihal": "bast Pemeliharaan Gedung Terminal",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 303,
+            "perihal": "bap Pemeliharaan Gedung Terminal",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 304,
+            "perihal": "bapp fasilitas sisi udara",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 305,
+            "perihal": "bast fasilitas sisi udara",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 306,
+            "perihal": "bap fasilitas sisi udara",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 307,
+            "perihal": "bapp potong rumput",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 308,
+            "perihal": "bast potong rumput",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 309,
+            "perihal": "bap potong rumput",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 310,
+            "perihal": "Bapp perawatan berkala elevator",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 311,
+            "perihal": "bast perawatan berkala elevator",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 312,
+            "perihal": "bap perawatan berkala elevator",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 313,
+            "perihal": "kontrak cctv",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 314,
+            "perihal": "spmk cctv",
+            "jenis_belanja": null,
+            "document_key": "SPMK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 315,
+            "perihal": "Penugasan Evaluasi usulan Perubahan Kontrak",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 316,
+            "perihal": "bapp pemeliharaan runway",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 317,
+            "perihal": "bast pemeliharaan runway",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 318,
+            "perihal": "bap pemeliharaan runway",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 319,
+            "perihal": "IP PEMELIHARAAN GEDUNG OPERASIONAL (firestation)",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 320,
+            "perihal": "sppbj PEMELIHARAAN GEDUNG OPERASIONAL (firestation)",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 321,
+            "perihal": "spk PEMELIHARAAN GEDUNG OPERASIONAL (firestation)",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 322,
+            "perihal": "spmk PEMELIHARAAN GEDUNG OPERASIONAL (firestation)",
+            "jenis_belanja": null,
+            "document_key": "SPMK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 323,
+            "perihal": "IP Pemeliharaan travo tahap I",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 324,
+            "perihal": "SPPPBJ Pemeliharaan travo tahap I",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 325,
+            "perihal": "SPK Pemeliharaan travo tahap I",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 326,
+            "perihal": "SPMK Pemeliharaan travo tahap I",
+            "jenis_belanja": null,
+            "document_key": "SPMK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 327,
+            "perihal": "IP Pemeliharaan travo tahap II",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 328,
+            "perihal": "SPPBJ IP Pemeliharaan travo tahap II",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 329,
+            "perihal": "SPK IP Pemeliharaan travo tahap II",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 330,
+            "perihal": "SPMK IP Pemeliharaan travo tahap II",
+            "jenis_belanja": null,
+            "document_key": "SPMK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 331,
+            "perihal": "ip pen sisi udara",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 332,
+            "perihal": "sppbj pen sisi udara",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 333,
+            "perihal": "spk pen sisi udara",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 334,
+            "perihal": "spmk pen sisi udara",
+            "jenis_belanja": null,
+            "document_key": "SPMK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 335,
+            "perihal": "Penyampaian Usulan Perubahan Kontrak",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 336,
+            "perihal": "Undangan Pembahasan Usulan Perubahan Kontrak",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 337,
+            "perihal": "Berita Acara Pembahasan Usulan Perubahan Kontrak 1",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 338,
+            "perihal": "Penyampaian Hasil Pembahasan Usulan Addendum",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 339,
+            "perihal": "Permohonan Persetujuan Perubahan Kontrak",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 340,
+            "perihal": "ersetujuan Perubahan Kontrak",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 341,
+            "perihal": "sppbj halaman parkir",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 342,
+            "perihal": "kontrak hal parkir",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 343,
+            "perihal": "spmk hal perkir",
+            "jenis_belanja": null,
+            "document_key": "SPMK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 344,
+            "perihal": "IP PEMELIHARAN FASILITAS SISI DARAT",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 345,
+            "perihal": "SPPBJ PEMELIHARAN FASILITAS SISI DARAT",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 346,
+            "perihal": "SPK PEMELIHARAN FASILITAS SISI DARAT",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 347,
+            "perihal": "Addendum kontrak terminal internasional tahp ii",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 348,
+            "perihal": "BAPP PEMENUHAN STANDAR WARNA PKP-PK",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 349,
+            "perihal": "BAST EMENUHAN STANDAR WARNA PKP-PK",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 350,
+            "perihal": "BAST EMENUHAN STANDAR WARNA PKP-PK",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 351,
+            "perihal": "BAP EMENUHAN STANDAR WARNA PKP-PK",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 352,
+            "perihal": "bapp pen sisi udara",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 353,
+            "perihal": "bast pen sisi udara",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 354,
+            "perihal": "bap pen sisi udara",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 355,
+            "perihal": "bap pembayaran uang muka CCTV",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 356,
+            "perihal": "bapp travo tahap I",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 357,
+            "perihal": "bast travo tahap I",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 358,
+            "perihal": "bap travo tahap I",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 359,
+            "perihal": "bapp travo tahap II",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 360,
+            "perihal": "bast travo tahap II",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 361,
+            "perihal": "bap travo tahap II",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 362,
+            "perihal": "po pak zaldy",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 363,
+            "perihal": "SPMK PEMELIHARAN FASILITAS SISI DARAT",
+            "jenis_belanja": null,
+            "document_key": "SPMK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 364,
+            "perihal": "pcm hal parkir",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 365,
+            "perihal": "IP PENGADAAN INVERTER",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 366,
+            "perihal": "SPPBJ PENGADAAN INVERTER",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 367,
+            "perihal": "SPK PENGADAAN INVERTER",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 368,
+            "perihal": "SPMK PENGADAAN INVERTER",
+            "jenis_belanja": null,
+            "document_key": "SPMK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 369,
+            "perihal": "addendum kontrak Pengawasan terminal internasional",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 372,
+            "perihal": "bapp inverter sigma",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 373,
+            "perihal": "bast inverter sigma",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 374,
+            "perihal": "bap inverter sigma",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 376,
+            "perihal": "SPPBJ PKD",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 377,
+            "perihal": "KONTRAK PKD",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 378,
+            "perihal": "SPMK PKD",
+            "jenis_belanja": null,
+            "document_key": "SPMK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 379,
+            "perihal": "bapp pemeliharan fasilitas sisi darat beserta komponennya",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 380,
+            "perihal": "bast pemeliharan fasilitas sisi darat beserta komponennya",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 381,
+            "perihal": "bap pemeliharan fasilitas sisi darat beserta komponennya",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 382,
+            "perihal": "SPPBJ XRAY CABIN",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 383,
+            "perihal": "SPPBJ XRAY BAGASI",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 384,
+            "perihal": "KONTRAK XRAY CABIN",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 385,
+            "perihal": "SPMK XRAY CABIN",
+            "jenis_belanja": null,
+            "document_key": "SPMK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 386,
+            "perihal": "KONTRAK XRAY BAGASI",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 387,
+            "perihal": "SPMK XRAY BAGASI",
+            "jenis_belanja": null,
+            "document_key": "SPMK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 388,
+            "perihal": "BAPP PEMELIHARAN GEDUNG OPERASIONAL",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 389,
+            "perihal": "BAST PEMELIHARAAN GEDUNG OPERASIONAL",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 390,
+            "perihal": "BAP PEMELIHARAAN GEDUNG OPERASIONAL",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 391,
+            "perihal": "BAP UANG MUKA PERLUASAN HALAMAN PARKIR PKP-PK",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 392,
+            "perihal": "BAP UANG MUKA PENGADAAN X-RAY CABIN",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 393,
+            "perihal": "BAP UANG MUKA PENGADAAN X-RAY BAGASI",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 394,
+            "perihal": "bapp pengadaan peralatan mekanikal",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 395,
+            "perihal": "bast pengadaan peralatan mekanikal",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 396,
+            "perihal": "bap pengadaan peralatan mekanikal",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 397,
+            "perihal": "bapp peralatan faskampen",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 398,
+            "perihal": "bast  peralatan faskampen",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 399,
+            "perihal": "bap  peralatan faskampen",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 400,
+            "perihal": "bapp avsec april",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 401,
+            "perihal": "bap avsec april",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 402,
+            "perihal": "bapp os april",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 403,
+            "perihal": "bap os april",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 404,
+            "perihal": "bapp Termin 1 CCTV",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 405,
+            "perihal": "bap termin 1 CCTV",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 406,
+            "perihal": "bapp termin iI pengembangan terminal tahap II",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 407,
+            "perihal": "bap termin iI pengembangan terminal tahap II",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 408,
+            "perihal": "bapp landscape april",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 409,
+            "perihal": "bap landscape april",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 410,
+            "perihal": "bapp jasa os kantor",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 411,
+            "perihal": "bap jasa os kantor",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 412,
+            "perihal": "bapp single cabin april",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 413,
+            "perihal": "bast single cabin",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 414,
+            "perihal": "bap single cabin",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 415,
+            "perihal": "bapp double cabin apri",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 416,
+            "perihal": "bastdouble cabin april",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 417,
+            "perihal": "bap double Cabin april",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 418,
+            "perihal": "bapp souvenir pelaksaan survey",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 419,
+            "perihal": "bast souvenir pelaksaan survey",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 420,
+            "perihal": "bap souvenir pelaksaan survey",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 421,
+            "perihal": "bapp pengadaan tinta PAS Bandara",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 422,
+            "perihal": "bast pengadaan tinta PAS Bandara",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 423,
+            "perihal": "bap pengadaan tinta PAS Bandara",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 424,
+            "perihal": "ip pemeliharaan fasilitas gedung termina",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 425,
+            "perihal": "sppbj pemeliharaan fasilitas gedung terminal",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 426,
+            "perihal": "spk pemeliharaan fasilitas gedung terminal",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 427,
+            "perihal": "bapp jasa pengangkuta sampah UPBU",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 428,
+            "perihal": "bastjasa pengaangkutan sampau upbu",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 429,
+            "perihal": "bap jasa sampah upbu",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 430,
+            "perihal": "bapp survei rencana pembukaan rute penerbangan",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 431,
+            "perihal": "bast survei rencana pembukaan rute penerbangan",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 432,
+            "perihal": "bap survei rencana pembukaan rute penerbangan",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 433,
+            "perihal": "bapp pembersihan semak pagar perimeter 22",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 434,
+            "perihal": "bast pembersihan semak pagar perimeter 22",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 435,
+            "perihal": "bap pembersihan semak pagar perimeter 22",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 436,
+            "perihal": "bapp internet mei",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 437,
+            "perihal": "bast internet mei",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 438,
+            "perihal": "bap internet mei",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 439,
+            "perihal": "IP E-Purchase Peralatan Penunjang Listrik",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 440,
+            "perihal": "SPPBJ  E-Purchase Peralatan Penunjang Listrik",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 441,
+            "perihal": "SPK  E-Purchase Peralatan Penunjang Listrik",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 442,
+            "perihal": "SPMK  E-Purchase Peralatan Penunjang Listrik",
+            "jenis_belanja": null,
+            "document_key": "SPMK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 443,
+            "perihal": "BAPP REINSTALASI PIPA AIR BERSIH",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 444,
+            "perihal": "BAST REINSTALASI PIPA AIR BERSIH",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 445,
+            "perihal": "BAP REINSTALASI PIPA AIR BERSIH",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 446,
+            "perihal": "bapp pemeliharaan fasilitas sisi darat",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 447,
+            "perihal": "bast pemeliharaan fasilitas sasa darat",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 448,
+            "perihal": "bap pemeliharaan fasilitas sisi darat dan Make up",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 449,
+            "perihal": "BAPP  E-Purchase Peralatan Penunjang Listrik",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 450,
+            "perihal": "BAST  E-Purchase Peralatan Penunjang Listrik",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 451,
+            "perihal": "BAP  E-Purchase Peralatan Penunjang Listrik",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 452,
+            "perihal": "bapp suku cadang peralatan keamanan",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 453,
+            "perihal": "bast suku cadang peralatan kemanan",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 454,
+            "perihal": "bap suku cadang peralatan kemanan",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 455,
+            "perihal": "BAPP PAGAR POS DKT",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 456,
+            "perihal": "BAST PAGAR POS DKT",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 457,
+            "perihal": "BAP PAGAR POS DKT",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 458,
+            "perihal": "bapp pembuatan area merokok",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 459,
+            "perihal": "bast pembuatan area merokok",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 460,
+            "perihal": "bap pembuatan area merokok",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 461,
+            "perihal": "bapp pembuatan sign",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 462,
+            "perihal": "baast pembuatan sign",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 463,
+            "perihal": "bap pembuatan sign",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 464,
+            "perihal": "bapp pemeliharaan elevator maret",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 465,
+            "perihal": "bast pemeliharaan elevator maret",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 466,
+            "perihal": "bao pemeliharaan elevator maret",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 467,
+            "perihal": "kontrak pkd kemananan",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 468,
+            "perihal": "bapp pemeriksaan kesehatan teknisi",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 469,
+            "perihal": "bastpemeriksaan kesehatan teknisi",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 470,
+            "perihal": "bap pemeriksaan kesehatan teknisi",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 471,
+            "perihal": "bapp kesehatan teknisi 2",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 472,
+            "perihal": "bast pemeriksana kesehatan teknisi 2",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 473,
+            "perihal": "bap pemeriksaan kesehatan teknisi 2",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 474,
+            "perihal": "sppbj PKD keamanan",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 475,
+            "perihal": "ip Pengelolahan air bersih tahap II",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 476,
+            "perihal": "sppbj Pengelolahan air bersih tahap II",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 477,
+            "perihal": "spk Pengelolahan air bersih tahap II",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 478,
+            "perihal": "spmk Pengelolahan air bersih tahap II",
+            "jenis_belanja": null,
+            "document_key": "SPMK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 479,
+            "perihal": "bapp sewa kendaraan single cabin",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 480,
+            "perihal": "bast sewa kendaraan single cabin",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 481,
+            "perihal": "bap sewa kendaraan single cabin",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 482,
+            "perihal": "bapp sewa kendaraan single cabin dan double cabin",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 483,
+            "perihal": "bast sewa kendaraan single cabin dan double cabin",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 484,
+            "perihal": "bap sewa kendaraan single cabin dan double cabin",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 485,
+            "perihal": "bapp air bersih tahap II",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 486,
+            "perihal": "bast air bersih tahap II",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 487,
+            "perihal": "bap air bersih tahap II",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 488,
+            "perihal": "bapp jasa os kantor",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 489,
+            "perihal": "bap jasa os kantor",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 490,
+            "perihal": "bapp jasa kebersihan dan landscape",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 491,
+            "perihal": "bap jasa kebersihan dan landscape",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 492,
+            "perihal": "BAPP Reinstalasi Sistem Air Bersih",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 493,
+            "perihal": "bast Reinstalasi Sistem Air Bersih",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 494,
+            "perihal": "bap Reinstalasi Sistem Air Bersih",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 495,
+            "perihal": "bapp avsec mei",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 496,
+            "perihal": "bap avsec mei",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 497,
+            "perihal": "bapp os ops mei",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 498,
+            "perihal": "bap os ops mei",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 499,
+            "perihal": "bapp pemeliharan fasilitas air bersih",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 500,
+            "perihal": "bast pemeliharan fasilitas air bersih",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 501,
+            "perihal": "bap pemeliharan fasilitas air bersih",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 502,
+            "perihal": "bapp pengangkutan sampah mei",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 503,
+            "perihal": "bast pengangkutan sampah mei",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 504,
+            "perihal": "bap pengangkutan sampah mei",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 505,
+            "perihal": "bapp Perbaikan Conveyor Kedatangan I",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 506,
+            "perihal": "bast Perbaikan Conveyor Kedatangan I",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 507,
+            "perihal": "bap Perbaikan Conveyor Kedatangan I",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 508,
+            "perihal": "bapp Perbaikan Conveyor Kedatangan II",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 509,
+            "perihal": "bast Perbaikan Conveyor Kedatangan II",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 510,
+            "perihal": "bap Perbaikan Conveyor Kedatangan II",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 511,
+            "perihal": "bapp pemeliharaan elevator mei",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 512,
+            "perihal": "bast pemeliharaan elevator mei",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 513,
+            "perihal": "bap pemeliharaan elevator mei",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 514,
+            "perihal": "IP PENGADAAN SOLAR TAHAP II",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 515,
+            "perihal": "SPPBJ PENGADAAN SOLAR TAHAP II",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 516,
+            "perihal": "SPK PENGADAAN SOLAR TAHAP II",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 517,
+            "perihal": "SPMK PENGADAAN SOLAR TAHAP II",
+            "jenis_belanja": null,
+            "document_key": "SPMK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 518,
+            "perihal": "PO PENGADAAN SOLAR TAHAP II",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 519,
+            "perihal": "IP PEMELIHARAAN ACCESS ROAD",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 520,
+            "perihal": "SPPBJ PEMELIHARAAN ACCESS ROAD",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 521,
+            "perihal": "SPK PEMELIHARAAN ACCESS ROAD",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 522,
+            "perihal": "SPMK Pemeliharaan Access Road",
+            "jenis_belanja": null,
+            "document_key": "SPMK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 523,
+            "perihal": "bapp perbaikan instalasi pompa intake",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 524,
+            "perihal": "bast perbaikan instalasi pompa intake",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 525,
+            "perihal": "bap perbaikan instalasi pompa intake",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 526,
+            "perihal": "bapp pemeliharaan acces road",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 527,
+            "perihal": "bast pemeliharaan access road",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 528,
+            "perihal": "bap pemeliharaan access road",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 529,
+            "perihal": "bapp Pemeliharaan Fasilitas Air Bersih GWT",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 530,
+            "perihal": "bast Pemeliharaan Fasilitas Air Bersih GWT",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 531,
+            "perihal": "bap Pemeliharaan Fasilitas Air Bersih GWT",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 532,
+            "perihal": "bapp pembayaran aplikasi",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 533,
+            "perihal": "bast pembayaran aplikasi",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 534,
+            "perihal": "bap pembayaran aplikasi",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 535,
+            "perihal": "bapp pemenuhan standar warna tangki",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 536,
+            "perihal": "bast pemenuhan standar warna tangki",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 537,
+            "perihal": "bap pemenuhan standar warna tangki",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 538,
+            "perihal": "baPp termin 3 internasional",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 539,
+            "perihal": "bap termin 3 internasional",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 540,
+            "perihal": "bapp pengadaan solar tahap II",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 541,
+            "perihal": "bast pengadaan solar tahap ii",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 542,
+            "perihal": "bap pengadaan solar tahap II",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 543,
+            "perihal": "ip rkl dan rpl",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 544,
+            "perihal": "sppbj rkl dan rpl",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 545,
+            "perihal": "spk rkl dan rpl",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 546,
+            "perihal": "spmk rkl dan rpl",
+            "jenis_belanja": null,
+            "document_key": "SPMK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 547,
+            "perihal": "bapp Pengelolaan Sistem Limbah",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 548,
+            "perihal": "bast Pengelolaan Sistem Limbah",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 549,
+            "perihal": "bap Pengelolaan Sistem Limbah",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 550,
+            "perihal": "bapp instalasi pengolahan sistem limbah",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 551,
+            "perihal": "bast instalasi pengolahan sistem limbah",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 552,
+            "perihal": "bap instalasi pengolahan sistem limbah",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 553,
+            "perihal": "bapp suku cadang kelistrikan tahap 3",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 554,
+            "perihal": "bast suku cadang kelistrikan tahap 3",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 555,
+            "perihal": "bap suku cadang kelistrikan tahap 3",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 556,
+            "perihal": "bapp suku cadang listrik tahap 4",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 557,
+            "perihal": "bast suku cadang listrik tahap 4",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 558,
+            "perihal": "bap suku cadang listrik tahap 4",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 559,
+            "perihal": "BAPP SUKU CADANG KELISTRIKAN TAHAP 5",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 560,
+            "perihal": "BAST SUKU CADANG KELISTRIKAN TAHAP 5",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 561,
+            "perihal": "BAP SUKU CADANG KELISTRIKAN TAHAP 5",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 562,
+            "perihal": "SPK Pengadaan Solar Tahap II (Perbaikan)",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 563,
+            "perihal": "SPMK Pengadaan Solar Tahap II (Perbaikan)",
+            "jenis_belanja": null,
+            "document_key": "SPMK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 564,
+            "perihal": "bapp pengadaan solar tahap II",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 565,
+            "perihal": "bast pengadaan solar tahap II",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 566,
+            "perihal": "bap pengadaan solar tahap II",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 567,
+            "perihal": "ip Pengadaan dan Pemasangan ACP",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 568,
+            "perihal": "SPPBJ Pengadaan dan Pemasangan ACP",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 569,
+            "perihal": "SPK Pengadaan dan Pemasangan ACP",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 570,
+            "perihal": "SPMK Pengadaan dan Pemasangan ACP",
+            "jenis_belanja": null,
+            "document_key": "SPMK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 571,
+            "perihal": "bapp pengadaan suku cadang elektronika",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 572,
+            "perihal": "bast pengadaan suku cadang elektronika",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 573,
+            "perihal": "bap pengadaan suku cadang elektronika",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 574,
+            "perihal": "bapp inventaris kebutuhan kantor",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 575,
+            "perihal": "bast inventaris kebutuhan kantor",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 576,
+            "perihal": "bap inventaris kebutuhan",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 577,
+            "perihal": "BAPP TERMINAL INTERNASIONAL TAHAP II",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 578,
+            "perihal": "PHO TERMONAL INTERNASIONAL TAHAP II",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        },
+        {
+            "no": 579,
+            "perihal": "bapp pengawasan terminal internasional tahap II",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 580,
+            "perihal": "bast pengawasan terminal internasional tahap II",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 581,
+            "perihal": "bap pengawasan terminal internasional tahap II",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 582,
+            "perihal": "bap pembayaran termin ke IV pengembangan terminal internasional tahap ii",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 583,
+            "perihal": "bap pembayaran retensi teminal internaional tahap ii",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 584,
+            "perihal": "bapp leveling",
+            "jenis_belanja": null,
+            "document_key": "BAPP",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 585,
+            "perihal": "bast leveling",
+            "jenis_belanja": null,
+            "document_key": "BAST",
+            "series_prefix": "PL.108"
+        },
+        {
+            "no": 586,
+            "perihal": "bap leveling",
+            "jenis_belanja": null,
+            "document_key": "BAP",
+            "series_prefix": "PL.109"
+        },
+        {
+            "no": 595,
+            "perihal": "Addendum Halaman Parkir PKP-PK",
+            "jenis_belanja": null,
+            "document_key": "SPK",
+            "series_prefix": "PL.107"
+        }
+    ]
+}

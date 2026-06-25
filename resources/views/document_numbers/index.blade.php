@@ -2,15 +2,6 @@
 
 @section('title', 'Manajemen Nomor Dokumen')
 
-@php
-    $statusClass = [
-        'AVAILABLE' => 'bg-success',
-        'RESERVED' => 'bg-warning text-dark',
-        'USED' => 'bg-primary',
-        'CANCELLED' => 'bg-secondary',
-    ];
-@endphp
-
 @push('css')
 <style>
     /* ── Catat Nomor Eksternal Card ── */
@@ -207,6 +198,17 @@
         opacity: .55;
         cursor: not-allowed;
     }
+
+    /* ── Live-search loading state ── */
+    #dn-results { transition: opacity .15s ease; }
+    #dn-results.dn-loading { opacity: .45; pointer-events: none; }
+    #dn-results.dn-loading::after {
+        content: ""; position: absolute; top: .25rem; right: .5rem;
+        width: 1.3rem; height: 1.3rem;
+        border: 2px solid #4361ee; border-right-color: transparent; border-radius: 50%;
+        animation: dnspin .6s linear infinite;
+    }
+    @keyframes dnspin { to { transform: rotate(360deg); } }
 </style>
 @endpush
 
@@ -390,11 +392,13 @@
 
     <div class="card shadow-sm border-0 rounded-4 mb-4">
         <div class="card-body p-4">
-            <form method="GET" action="{{ route('document-numbers.index') }}">
-                <div class="row g-3 align-items-end">
+            <form method="GET" action="{{ route('document-numbers.index') }}" id="filterForm">
+                <div class="row g-3 align-items-start">
                     <div class="col-md-3">
                         <label class="form-label fw-semibold">Cari Nomor</label>
-                        <input type="text" name="search" value="{{ request('search') }}" class="form-control" placeholder="PL.107 atau 0200">
+                        <input type="search" name="search" id="filterSearch" value="{{ request('search') }}"
+                               class="form-control" autocomplete="off" placeholder="PL.107 · 0205 · listrik">
+                        <div class="form-text small mt-1">Angka = nomor urut presisi · teks = prefix/catatan · bisa digabung (<code>PL.108 listrik</code>).</div>
                     </div>
                     <div class="col-md-3">
                         <label class="form-label fw-semibold">Jenis Dokumen</label>
@@ -419,9 +423,10 @@
                         <input type="number" name="tahun" value="{{ request('tahun') }}" class="form-control" min="2000" max="2100">
                     </div>
                     <div class="col-md-2">
+                        <label class="form-label fw-semibold d-none d-md-block">&nbsp;</label>
                         <div class="d-grid gap-2">
                             <button type="submit" class="btn btn-primary"><i class="bi bi-funnel me-1"></i> Filter</button>
-                            <a href="{{ route('document-numbers.index') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-counterclockwise me-1"></i> Reset</a>
+                            <a href="{{ route('document-numbers.index') }}" data-dn-reset class="btn btn-outline-secondary"><i class="bi bi-arrow-counterclockwise me-1"></i> Reset</a>
                         </div>
                     </div>
                 </div>
@@ -431,89 +436,9 @@
 
     <div class="card shadow-sm border-0 rounded-4">
         <div class="card-body p-4">
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th width="5%" class="text-center">No</th>
-                            <th width="14%">Jenis</th>
-                            <th width="25%">Nomor Dokumen</th>
-                            <th width="10%" class="text-center">Status</th>
-                            <th width="16%">Pemakaian</th>
-                            <th width="18%">Catatan</th>
-                            <th width="12%" class="text-center">Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse($numbers as $number)
-                            <tr>
-                                <td class="text-center">{{ $numbers->firstItem() + $loop->index }}</td>
-                                <td>
-                                    <div class="fw-bold">{{ str_replace('_', ' ', $number->document_key) }}</div>
-                                    <div class="small text-muted">{{ $number->series_prefix }}</div>
-                                </td>
-                                <td>
-                                    <div class="fw-bold font-monospace text-primary">{{ $number->full_number }}</div>
-                                    <div class="small text-muted">Nomor urut: {{ str_pad((string) $number->running_number, $number->number_padding, '0', STR_PAD_LEFT) }}</div>
-                                </td>
-                                <td class="text-center">
-                                    <span class="badge {{ $statusClass[$number->status] ?? 'bg-secondary' }}">{{ $number->status }}</span>
-                                </td>
-                                <td>
-                                    @if($number->status === 'RESERVED')
-                                        <div class="fw-semibold">{{ $number->reservedBy->name ?? '-' }}</div>
-                                        <div class="small text-muted">{{ optional($number->reserved_at)->translatedFormat('d M Y H:i') }}</div>
-                                    @elseif($number->status === 'USED')
-                                        <div class="fw-semibold">{{ $number->usedBy->name ?? '-' }}</div>
-                                        <div class="small text-muted">{{ $number->usage_source === 'EXTERNAL' ? 'Eksternal' : 'Sistem' }}</div>
-                                        <div class="small text-muted">{{ optional($number->used_at)->translatedFormat('d M Y H:i') }}</div>
-                                    @else
-                                        <span class="text-muted">-</span>
-                                    @endif
-                                </td>
-                                <td class="small text-muted">{{ $number->notes ?: '-' }}</td>
-                                <td class="text-center">
-                                    <div class="btn-group">
-                                        @if($number->status === 'RESERVED')
-                                            <form method="POST" action="{{ route('document-numbers.release', $number) }}">
-                                                @csrf
-                                                <button type="submit" class="btn btn-sm btn-outline-secondary">Lepas</button>
-                                            </form>
-                                        @endif
-                                        @if(in_array($number->status, ['AVAILABLE', 'RESERVED'], true))
-                                            <form method="POST" action="{{ route('document-numbers.mark-used', $number) }}">
-                                                @csrf
-                                                <button type="submit" class="btn btn-sm btn-outline-primary">Eksternal</button>
-                                            </form>
-                                            <form method="POST" action="{{ route('document-numbers.cancel', $number) }}" onsubmit="return confirm('Batalkan nomor ini?');">
-                                                @csrf
-                                                <button type="submit" class="btn btn-sm btn-outline-danger">Batal</button>
-                                            </form>
-                                        @elseif($number->status === 'USED' && $number->usage_source === 'EXTERNAL')
-                                            <form method="POST" action="{{ route('document-numbers.cancel', $number) }}" onsubmit="return confirm('Batalkan nomor eksternal ini?');">
-                                                @csrf
-                                                <button type="submit" class="btn btn-sm btn-outline-danger">Batal</button>
-                                            </form>
-                                        @else
-                                            <span class="text-muted small">Terkunci</span>
-                                        @endif
-                                    </div>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="7" class="text-center py-5 text-muted">Belum ada nomor dokumen pada filter ini.</td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
+            <div id="dn-results" class="position-relative">
+                @include('document_numbers._results')
             </div>
-
-            @if($numbers->hasPages())
-                <div class="mt-4 d-flex justify-content-end">
-                    {{ $numbers->withQueryString()->links() }}
-                </div>
-            @endif
         </div>
     </div>
 @endsection
@@ -687,6 +612,94 @@
 
         // Inisialisasi: input kosong → tombol submit disabled & beri petunjuk
         checkAvailability();
+    });
+</script>
+@endpush
+
+@push('script')
+<script>
+    // ── Live-search AJAX: filter & paginasi tanpa reload halaman ──
+    document.addEventListener('DOMContentLoaded', function () {
+        const form = document.getElementById('filterForm');
+        const container = document.getElementById('dn-results');
+        if (!form || !container) return;
+
+        const baseUrl = form.getAttribute('action');
+        const search = document.getElementById('filterSearch');
+        let debounce, controller;
+
+        function buildUrl() {
+            const params = new URLSearchParams();
+            new FormData(form).forEach(function (value, key) {
+                if (String(value).trim() !== '') params.append(key, value);
+            });
+            const qs = params.toString();
+            return qs ? (baseUrl + '?' + qs) : baseUrl;
+        }
+
+        function load(url) {
+            if (controller) controller.abort();
+            controller = new AbortController();
+            container.classList.add('dn-loading');
+
+            fetch(url, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'text/html' },
+                signal: controller.signal,
+            })
+                .then(function (res) { return res.text(); })
+                .then(function (html) {
+                    container.innerHTML = html;
+                    container.classList.remove('dn-loading');
+                    window.history.replaceState(null, '', url);
+                })
+                .catch(function (err) {
+                    if (err.name !== 'AbortError') container.classList.remove('dn-loading');
+                });
+        }
+
+        function refresh() { load(buildUrl()); }
+
+        // Ketik di kotak cari → debounce 300ms (form di luar #dn-results → fokus tetap).
+        if (search) {
+            search.addEventListener('input', function () {
+                clearTimeout(debounce);
+                debounce = setTimeout(refresh, 300);
+            });
+        }
+
+        // Dropdown (jenis/status) & tahun → filter instan.
+        form.querySelectorAll('select, input[name="tahun"]').forEach(function (el) {
+            el.addEventListener('change', refresh);
+        });
+
+        // Tombol Filter / tekan Enter → AJAX, bukan reload penuh.
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            clearTimeout(debounce);
+            refresh();
+        });
+
+        // Klik paginasi di dalam hasil → muat via AJAX.
+        container.addEventListener('click', function (e) {
+            const link = e.target.closest('.pagination a');
+            if (link && link.getAttribute('href')) {
+                e.preventDefault();
+                load(link.getAttribute('href'));
+            }
+        });
+
+        // Tombol Reset / "Hapus filter" → kosongkan filter lalu muat ulang (tanpa reload).
+        document.addEventListener('click', function (e) {
+            if (!e.target.closest('[data-dn-reset]')) return;
+            e.preventDefault();
+            if (search) search.value = '';
+            form.querySelectorAll('select').forEach(function (s) { s.selectedIndex = 0; });
+            const tahun = form.querySelector('input[name="tahun"]');
+            if (tahun) tahun.value = '';
+            clearTimeout(debounce);
+            refresh();
+            if (search) search.focus();
+        });
     });
 </script>
 @endpush

@@ -38,15 +38,7 @@ class DocumentNumberController extends Controller
             ->when($request->filled('status'), fn ($builder) => $builder->where('status', $request->status))
             ->when($request->filled('tahun'), fn ($builder) => $builder->where('tahun', (int) $request->tahun))
             ->when($request->filled('search'), function ($builder) use ($request) {
-                $search = trim((string) $request->search);
-
-                $builder->where(function ($query) use ($search) {
-                    $query->where('full_number', 'like', '%' . $search . '%')
-                        ->orWhere('series_prefix', 'like', '%' . $search . '%')
-                        ->orWhere('suffix_code', 'like', '%' . $search . '%')
-                        ->orWhere('usage_source', 'like', '%' . $search . '%')
-                        ->orWhere('notes', 'like', '%' . $search . '%');
-                });
+                $this->applySearch($builder, (string) $request->input('search'));
             });
 
         $summaryBase = DocumentNumber::query()->where('sequence_group', self::KONTRAK_GROUP);
@@ -64,7 +56,49 @@ class DocumentNumberController extends Controller
             ->paginate(15)
             ->withQueryString();
 
+        // Live-search AJAX: kembalikan hanya potongan tabel (count + tabel + paginasi).
+        if ($request->ajax()) {
+            return view('document_numbers._results', compact('numbers'));
+        }
+
         return view('document_numbers.index', compact('numbers', 'summary', 'documentKeys', 'statusOptions'));
+    }
+
+    /**
+     * Pencarian cerdas multi-token (di-AND antar-token):
+     *  - Token angka murni ("0205" / "205") → cocok PERSIS pada running_number
+     *    (leading zero diabaikan) → presisi & ramah indeks; tetap dukung cuplikan
+     *    pada full_number.
+     *  - Token lain → LIKE pada full_number, series_prefix, document_key, catatan.
+     *
+     * Contoh: "PL.108 listrik" → prefix PL.108 DAN catatan mengandung "listrik".
+     */
+    private function applySearch($builder, string $search): void
+    {
+        $tokens = preg_split('/\s+/', trim($search), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+
+        foreach ($tokens as $token) {
+            $builder->where(function ($query) use ($token) {
+                if (ctype_digit($token)) {
+                    $query->where('running_number', (int) $token)
+                        ->orWhere('full_number', 'like', '%' . $this->escapeLike($token) . '%');
+
+                    return;
+                }
+
+                $like = '%' . $this->escapeLike($token) . '%';
+                $query->where('full_number', 'like', $like)
+                    ->orWhere('series_prefix', 'like', $like)
+                    ->orWhere('document_key', 'like', $like)
+                    ->orWhere('notes', 'like', $like);
+            });
+        }
+    }
+
+    /** Escape wildcard LIKE (%, _, \) agar input pengguna diperlakukan literal. */
+    private function escapeLike(string $value): string
+    {
+        return str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $value);
     }
 
     public function store(Request $request, DocumentNumberService $service)
