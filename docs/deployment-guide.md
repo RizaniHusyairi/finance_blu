@@ -153,9 +153,12 @@ sudo chmod -R 775 storage bootstrap/cache
 ```
 
 ### Langkah 10 — Cron untuk Scheduler (WAJIB)
-Aplikasi memakai Laravel Scheduler (`routes/console.php`):
+Aplikasi memakai Laravel Scheduler (`routes/console.php`) — 5 job terjadwal:
 - `wa:reminder-due-date` — reminder WhatsApp tagihan jatuh tempo (tiap jam)
+- `jasa:reminder-pelaporan` — reminder pelaporan mitra jasa
 - `users:disable-expired-temporary` — nonaktifkan akun PLT/PLH kedaluwarsa (harian 00:05)
+- `db:backup` — backup database harian (mysqldump → gzip, retensi 14) [BR-01]
+- `monitor:health --quiet-ok` — pantau kesehatan sistem tiap jam [MON-01]
 
 Tambahkan crontab (`crontab -e` sebagai user www-data):
 ```cron
@@ -208,7 +211,7 @@ server {
 
     location ~ /\.(?!well-known).* { deny all; }
 
-    client_max_body_size 20M;   # cukup untuk upload PDF/scan (maks ~10MB)
+    client_max_body_size 25M;   # selaraskan dengan post_max_size PHP-FPM (lihat Langkah 13)
 }
 ```
 Aktifkan & reload:
@@ -217,7 +220,39 @@ sudo ln -s /etc/nginx/sites-available/sikeren /etc/nginx/sites-enabled/
 sudo nginx -t && sudo systemctl reload nginx
 ```
 
-### Langkah 13 — HTTPS (SSL)
+### Langkah 13 — Konfigurasi PHP-FPM (batas upload & tuning)
+
+> **WAJIB.** Default PHP Ubuntu/Debian membatasi upload pada `2M` — jauh di bawah
+> batas validasi aplikasi (5–20 MB). Bila tidak dinaikkan, upload file > 2 MB GAGAL:
+> PHP menolak berkas, validasi Laravel ikut gagal, dan form **balik (302) ke halaman
+> edit** tanpa pesan jelas. Menyetel `client_max_body_size` nginx saja TIDAK cukup —
+> batas PHP-FPM yang menggigit lebih dulu.
+
+Edit php.ini milik **FPM** (bukan CLI) — `/etc/php/8.2/fpm/php.ini`:
+```ini
+upload_max_filesize = 20M     ; >= batas validasi terbesar (import koran 20 MB)
+post_max_size = 25M           ; >= upload_max_filesize + ruang field & multi-berkas
+max_file_uploads = 60         ; form multi-berkas (peserta perjaldin, dll) bisa > 20
+memory_limit = 512M           ; render DomPDF / PhpSpreadsheet dokumen besar
+max_execution_time = 120      ; ekspor PDF/Excel besar
+```
+
+**Aturan tangga** (harus menurun; bila satu lapisan lebih kecil, ia yang memotong):
+```
+nginx client_max_body_size  >=  post_max_size  >=  upload_max_filesize  >=  validasi app
+        25M                        25M                20M                     5-20M
+```
+
+Reload agar berlaku (perubahan php.ini FPM tidak otomatis terbaca):
+```bash
+sudo systemctl reload php8.2-fpm
+```
+Verifikasi nilai pada SAPI FPM (nilai CLI `php -i` bisa berbeda):
+```bash
+grep -E 'upload_max_filesize|post_max_size|max_file_uploads' /etc/php/8.2/fpm/php.ini
+```
+
+### Langkah 14 — HTTPS (SSL)
 ```bash
 sudo apt install -y certbot python3-certbot-nginx
 sudo certbot --nginx -d sikeren.example.go.id
@@ -272,6 +307,13 @@ MAIL_PASSWORD=...
 MAIL_ENCRYPTION=tls
 MAIL_FROM_ADDRESS="noreply@example.go.id"
 MAIL_FROM_NAME="${APP_NAME}"
+
+# Backup database (BR-01) — dipakai command db:backup terjadwal harian
+DB_BACKUP_PATH=/var/backups/sikeren
+
+# Observability (MON-01/03) — token endpoint /health & ambang kesegaran backup
+MONITORING_HEALTH_TOKEN=isi_token_acak_kuat
+MONITORING_BACKUP_STALE_HOURS=26
 ```
 
 ---
@@ -305,8 +347,9 @@ php artisan up
 
 ---
 
-## 6. Verifikasi Pasca-Deploy (Checklist)
+## 6. Tugas & Verifikasi Pasca-Deploy
 
+### 6.1 Checklist verifikasi
 - [ ] `https://domain` membuka halaman login tanpa error
 - [ ] Login berhasil dengan akun seeder; menu sesuai role
 - [ ] `php artisan migrate:status` semua migrasi `Ran`
@@ -314,10 +357,55 @@ php artisan up
 - [ ] Generate PDF SPP/SPM/NPI/SP2D berhasil (uji DomPDF + GD)
 - [ ] QR TTE muncul pada dokumen final & halaman publik TTE terbuka
 - [ ] Import tarif layanan (Excel) berfungsi (uji PhpSpreadsheet)
-- [ ] `php artisan schedule:list` menampilkan job terjadwal
-- [ ] Queue worker jalan (`supervisorctl status`); kirim notifikasi uji
-- [ ] `APP_DEBUG=false` (cek halaman error tidak membocorkan stack trace)
+- [ ] **Upload PDF > 2 MB berhasil** (mis. kontrak mitra ~3–4 MB). Bila form malah
+      **balik (302) ke halaman edit** → batas PHP-FPM belum dinaikkan (Langkah 13)
+- [ ] `upload_max_filesize` ≥ 20M pada SAPI FPM
+      (`grep upload_max_filesize /etc/php/8.2/fpm/php.ini`)
+- [ ] `curl -fsS https://domain/health` → status `ok` (observability MON-03)
+- [ ] `php artisan schedule:list` menampilkan **5 job** (reminder ×2, disable-expired, backup, health)
+- [ ] Queue worker jalan (`sudo supervisorctl status`); kirim notifikasi uji
+- [ ] Backup harian aktif: `DB_BACKUP_PATH` terisi & disinkron off-site
+- [ ] Log bersih: `storage/logs/laravel.log` & `worker.log` tanpa error fatal
+- [ ] `APP_DEBUG=false` (halaman error tidak membocorkan stack trace)
 - [ ] `composer audit` bersih (tidak ada CVE)
+
+### 6.2 Operasional rutin & pemantauan
+**Scheduler** (dipicu cron `schedule:run`, Langkah 10) — 5 job:
+`wa:reminder-due-date`, `jasa:reminder-pelaporan`, `users:disable-expired-temporary`,
+`db:backup` (harian), `monitor:health --quiet-ok` (tiap jam). Cek: `php artisan schedule:list`.
+
+**Backup database (BR-01).** Command `db:backup` (mysqldump → gzip, retensi 14 berkas)
+menulis ke `DB_BACKUP_PATH`. **WAJIB** disinkron off-site & terenkripsi. Uji & prosedur
+pemulihan: [RUNBOOK-BACKUP-RESTORE.md](RUNBOOK-BACKUP-RESTORE.md).
+```bash
+php artisan db:backup            # backup manual
+ls -lh /var/backups/sikeren      # pastikan berkas .sql.gz terbentuk
+```
+
+**Health / observability (MON-01/03).** Endpoint `/health` memberi status agregat (publik);
+detail per-probe butuh header token `MONITORING_HEALTH_TOKEN`. `monitor:health` berjalan tiap
+jam & mengirim alert (log + WhatsApp) saat ada probe `critical`.
+```bash
+curl -fsS https://domain/health
+php artisan monitor:health       # laporan lengkap manual
+```
+
+**Lokasi log.**
+- Aplikasi: `storage/logs/laravel.log`
+- Queue worker: `storage/logs/worker.log`
+- Web server / PHP: `/var/log/nginx/error.log`, `/var/log/php8.2-fpm.log`
+
+### 6.3 Troubleshooting cepat
+| Gejala | Penyebab & solusi |
+|---|---|
+| Upload > 2 MB **balik (302) ke /edit** tanpa pesan | `upload_max_filesize` FPM masih 2M → naikkan (Langkah 13) lalu `sudo systemctl reload php8.2-fpm` |
+| `413 Request Entity Too Large` | `client_max_body_size` nginx atau `post_max_size` PHP < ukuran body → naikkan keduanya |
+| `419 Page Expired` saat upload besar | `post_max_size` terlampaui → `$_POST`/CSRF hilang → naikkan `post_max_size` |
+| Form multi-berkas hanya menyimpan sebagian | `max_file_uploads` < jumlah input file → naikkan (mis. 60) |
+| `500` saat generate PDF | ekstensi `php-gd` nonaktif atau `memory_limit` kecil → aktifkan / naikkan |
+| QR / arsip tidak tampil | `php artisan storage:link` belum jalan, atau permission `storage` salah |
+| Notifikasi WA tidak terkirim | queue worker mati (`supervisorctl status`) atau kredensial WA `.env` kosong |
+| Perubahan `.env` tidak berefek | cache lama → `php artisan optimize:clear && php artisan config:cache` |
 
 ---
 
