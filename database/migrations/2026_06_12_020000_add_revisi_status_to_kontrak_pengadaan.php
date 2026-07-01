@@ -12,6 +12,12 @@ return new class extends Migration
 {
     public function up(): void
     {
+        // ENUM lewat DDL mentah hanya didukung MySQL; di sqlite (test) kolom
+        // status_kontrak sudah berupa string sehingga langkah ini dilewati.
+        if (DB::getDriverName() !== 'mysql') {
+            return;
+        }
+
         DB::statement(
             "ALTER TABLE kontrak_pengadaan MODIFY status_kontrak " .
             "ENUM('DRAFT','PENDING_REVIEW','REVISI','AKTIF','SELESAI','DIBATALKAN') NOT NULL DEFAULT 'DRAFT'"
@@ -20,6 +26,10 @@ return new class extends Migration
 
     public function down(): void
     {
+        if (DB::getDriverName() !== 'mysql') {
+            return;
+        }
+
         // Kembalikan kontrak REVISI ke DRAFT sebelum menghapus nilai dari ENUM.
         DB::table('kontrak_pengadaan')->where('status_kontrak', 'REVISI')->update(['status_kontrak' => 'DRAFT']);
 

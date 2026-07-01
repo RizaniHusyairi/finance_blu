@@ -206,7 +206,7 @@
                 <label class="form-label">Provider</label>
                 <select name="whatsapp_provider" class="form-select" id="waProvider">
                     <option value="fonnte" @selected($settings['whatsapp_provider'] === 'fonnte')>Fonnte</option>
-                    <option value="wa_gateway" @selected($settings['whatsapp_provider'] === 'wa_gateway')>WA Gateway (Bearer)</option>
+                    <option value="wa_gateway" @selected($settings['whatsapp_provider'] === 'wa_gateway')>WA Gateway (X-API-Key)</option>
                 </select>
             </div>
             <div class="col-md-5 wa-fonnte-only">
@@ -224,17 +224,17 @@
 
             <div class="col-md-5 wa-gateway-only d-none">
                 <label class="form-label">Gateway URL</label>
-                <input type="url" name="whatsapp_gateway_url" class="form-control" value="{{ old('whatsapp_gateway_url', $settings['whatsapp_gateway_url']) }}" placeholder="https://wa.example.com">
-                <small class="text-muted">Endpoint dasar gateway. Sistem akan POST ke <code>/send/text</code>.</small>
+                <input type="url" name="whatsapp_gateway_url" class="form-control" value="{{ old('whatsapp_gateway_url', $settings['whatsapp_gateway_url']) }}" placeholder="https://wg.aptpairport.id">
+                <small class="text-muted">URL dasar gateway. Sistem akan POST ke <code>/api/v1/messages/send</code>.</small>
             </div>
             <div class="col-md-3 wa-gateway-only d-none">
-                <label class="form-label">API Key (Bearer)</label>
-                <input type="password" name="whatsapp_gateway_api_key" class="form-control" placeholder="{{ $settings['whatsapp_gateway_api_key_masked'] ?: 'Bearer API Key' }}">
+                <label class="form-label">API Key (X-API-Key)</label>
+                <input type="password" name="whatsapp_gateway_api_key" class="form-control" placeholder="{{ $settings['whatsapp_gateway_api_key_masked'] ?: 'wag_xxx.yyy' }}">
             </div>
             <div class="col-md-2 wa-gateway-only d-none">
-                <label class="form-label">Session</label>
-                <input type="text" name="whatsapp_gateway_session" class="form-control" value="{{ old('whatsapp_gateway_session', $settings['whatsapp_gateway_session']) }}" placeholder="opsional">
-                <small class="text-muted">Multi-akun. Kosongkan untuk default.</small>
+                <label class="form-label">Device ID</label>
+                <input type="number" min="1" name="whatsapp_device_id" class="form-control" value="{{ old('whatsapp_device_id', $settings['whatsapp_device_id']) }}" placeholder="1">
+                <small class="text-muted">ID perangkat di gateway.</small>
             </div>
 
             <div class="col-md-6">

@@ -17,10 +17,10 @@ class WhatsappService
      *
      * Mendukung dua provider yang dapat diganti via UI Integrasi (atau env):
      *  - "fonnte"      : layanan SaaS Fonnte (header Authorization: <token>).
-     *  - "wa_gateway"  : self-hosted gateway berbasis Bearer token, format
-     *                    "Authorization: Bearer <API_KEY>" + body JSON
-     *                    { target, message } yang masuk antrian worker
-     *                    (anti-ban). Mendukung multi-akun via session.
+     *  - "wa_gateway"  : self-hosted gateway berbasis header X-API-Key, endpoint
+     *                    "{URL}/api/v1/messages/send" + body JSON
+     *                    { deviceId, to, body } yang masuk antrian worker
+     *                    (anti-ban). Perangkat dipilih via deviceId.
      *
      * @param string $target Nomor tujuan (contoh: 08123456789 atau 628123456789)
      * @param string $message Isi pesan
@@ -120,12 +120,12 @@ class WhatsappService
     }
 
     /**
-     * Provider WhatsApp Gateway berbasis Bearer token.
+     * Provider WhatsApp Gateway (self-hosted, header X-API-Key).
      *
-     * Endpoint default: {GATEWAY_URL}/send/text
-     * Multi-akun: {GATEWAY_URL}/sessions/{session}/send/text
-     * Header: Authorization: Bearer <API_KEY>
-     * Body  : { target, message }
+     * Endpoint: {GATEWAY_URL}/api/v1/messages/send
+     * Header  : X-API-Key: <API_KEY>
+     * Body    : { deviceId, to, body }
+     * Sukses  : respons { "success": true, "data": { "status": "QUEUED", ... } }
      */
     private function sendViaGateway(WhatsappNotificationLog $log, string $target, string $message, ?TagihanJasa $tagihan): bool
     {
@@ -134,7 +134,7 @@ class WhatsappService
             '/'
         );
         $apiKey = IntegrationSetting::getValue('whatsapp.gateway_api_key') ?: env('WA_API_KEY');
-        $session = IntegrationSetting::getValue('whatsapp.gateway_session') ?: env('WA_GATEWAY_SESSION');
+        $deviceId = (int) (IntegrationSetting::getValue('whatsapp.gateway_device_id') ?: env('WA_DEVICE_ID'));
         $countryCode = (string) (IntegrationSetting::getValue('whatsapp.default_country_code', '62'));
 
         if (empty($baseUrl) || empty($apiKey)) {
@@ -142,18 +142,18 @@ class WhatsappService
             return true;
         }
 
-        $endpoint = $session
-            ? "{$baseUrl}/sessions/{$session}/send/text"
-            : "{$baseUrl}/send/text";
+        $endpoint = "{$baseUrl}/api/v1/messages/send";
 
-        $payload = [
-            'target' => $this->normalizePhone($target, $countryCode),
-            'message' => $message,
-        ];
+        $payload = [];
+        if ($deviceId > 0) {
+            $payload['deviceId'] = $deviceId;
+        }
+        $payload['to'] = $this->normalizePhone($target, $countryCode);
+        $payload['body'] = $message;
 
         try {
             $response = Http::withoutVerifying()
-                ->withToken($apiKey)
+                ->withHeaders(['X-API-Key' => $apiKey])
                 ->acceptJson()
                 ->asJson()
                 ->timeout(20)
@@ -161,7 +161,7 @@ class WhatsappService
 
             $result = $response->json() ?? [];
 
-            if ($response->successful() && ($result['queued'] ?? $result['status'] ?? false)) {
+            if ($response->successful() && ($result['success'] ?? false)) {
                 $log->update([
                     'status' => 'sent',
                     'sent_at' => now(),

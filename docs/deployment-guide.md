@@ -293,10 +293,11 @@ FILESYSTEM_DISK=local
 LOG_LEVEL=warning             # kurangi noise di produksi
 
 # WhatsApp (isi sesuai gateway yang dipakai)
+# WA Gateway menembak {WA_GATEWAY_URL}/api/v1/messages/send (header X-API-Key).
 FONNTE_TOKEN=
 WA_GATEWAY_URL=
 WA_API_KEY=
-WA_GATEWAY_SESSION=
+WA_DEVICE_ID=
 
 # Mail (jika dipakai untuk reset password, dsb)
 MAIL_MAILER=smtp
