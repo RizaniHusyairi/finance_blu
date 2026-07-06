@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Detail Kontrak: ' . Str::limit($kontrak->nama_pekerjaan, 30))
+@section('title', 'Detail SPK: ' . Str::limit($kontrak->nama_pekerjaan, 30))
 
 @push('css')
 @include('partials.modern-css')
@@ -93,7 +93,7 @@
             </a>
             @if(Auth::user()->hasAnyRole(['Super Admin', 'Pejabat Pengadaan']) && $kontrak->status_kontrak === 'DRAFT')
                 <a href="{{ route('contracts.edit', $kontrak->id) }}" class="btn-hero btn-hero-primary">
-                    <i class="bi bi-pencil-square"></i> Edit Kontrak
+                    <i class="bi bi-pencil-square"></i> Edit SPK
                 </a>
             @endif
             @if(Auth::user()->hasAnyRole(['Super Admin', 'Pejabat Pengadaan']) && in_array($kontrak->status_kontrak, ['DRAFT', 'REVISI'], true))
@@ -480,49 +480,190 @@
             </div>
         </div>
 
-        {{-- ═══ BAGIAN: KIRIM AKSES VENDOR (Portal Upload TTD Basah) ═══ --}}
+        {{-- ═══ BAGIAN: DOKUMEN FINAL BERTANDA TANGAN VENDOR (Portal / Manual) ═══ --}}
         @if($isContractTteApproved)
             @php
                 $vendorNoHp = $kontrak->vendor->no_telepon ?? null;
+                $arsipFinalVendor = [
+                    'SPK' => $spkFinalArsip ?? null,
+                    'SPMK' => $spmkFinalArsip ?? null,
+                    'Ringkasan Kontrak' => $ringkasanFinalArsip ?? null,
+                ];
+                $semuaFinalLengkap = $kontrak->hasVendorUploadedFinalDocs();
             @endphp
             <div class="modern-card" style="animation: secIn .55s cubic-bezier(.22,1,.36,1) .72s both;">
                 <div class="mc-head">
                     <div>
-                        <h6><i class="bi bi-whatsapp mc-h-icon" style="color:#25D366;"></i> Kirim Akses Upload ke Vendor</h6>
+                        <h6><i class="bi bi-vector-pen mc-h-icon" style="color:#2563eb;"></i> Dokumen Final Bertanda Tangan Vendor</h6>
                         <small class="text-muted d-block mt-1">
-                            Kirim link portal publik ke WhatsApp vendor untuk mengunggah <strong>SPK</strong>, <strong>SPMK</strong>, dan <strong>Ringkasan Kontrak</strong> yang sudah ditandatangani (TTD basah).
+                            <strong>SPK</strong>, <strong>SPMK</strong>, dan <strong>Ringkasan Kontrak</strong> ber-TTD basah vendor wajib lengkap
+                            sebelum tagihan dapat dibuat. Pilih metode: vendor mengunggah sendiri lewat portal, atau staf mengunggah manual.
                         </small>
+                    </div>
+                    <div class="d-flex flex-wrap align-items-center gap-2">
+                        @foreach($arsipFinalVendor as $labelDok => $arsipDok)
+                            @if($arsipDok)
+                                <span class="badge-doc badge-doc-success" title="{{ $arsipDok->uploaded_by ? 'Diunggah manual oleh staf' : 'Diunggah vendor via portal' }}">
+                                    <i class="bi bi-check-circle-fill"></i> {{ $labelDok }}{{ $arsipDok->uploaded_by ? ' · Manual' : ' · Vendor' }}
+                                </span>
+                            @else
+                                <span class="badge-doc badge-doc-danger"><i class="bi bi-clock"></i> {{ $labelDok }}</span>
+                            @endif
+                        @endforeach
                     </div>
                 </div>
                 <div class="mc-body">
-                    <div class="row g-3 align-items-center">
-                        <div class="col-md-8">
-                            <div class="doc-status-card">
-                                <div class="dsc-label"><i class="bi bi-telephone me-1"></i> Nomor WhatsApp Vendor</div>
-                                @if($vendorNoHp)
-                                    <div class="dsc-value">{{ $vendorNoHp }}</div>
-                                    <div class="dsc-meta">{{ $kontrak->vendor->nama_pihak ?? '-' }}</div>
-                                @else
-                                    <span class="badge-doc badge-doc-danger"><i class="bi bi-exclamation-triangle-fill"></i> Nomor Belum Diisi</span>
-                                    <div class="dsc-meta mt-2">Lengkapi nomor telepon vendor di Master Pihak terlebih dahulu.</div>
-                                @endif
+                    @unless($semuaFinalLengkap)
+                        <div class="row g-2 mb-3">
+                            <div class="col-md-6">
+                                <label class="border rounded p-3 d-flex gap-2 h-100 w-100 mb-0" style="cursor:pointer;background:#fff;">
+                                    <input type="radio" name="metode_final_vendor" value="portal" class="form-check-input flex-shrink-0 mt-1" checked onchange="gantiMetodeFinalVendor()">
+                                    <span>
+                                        <span class="fw-semibold d-flex align-items-center gap-2 flex-wrap">Portal Upload Vendor
+                                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle">Direkomendasikan</span>
+                                        </span>
+                                        <span class="small text-muted d-block mt-1">Sistem mengirim link portal ke WhatsApp vendor; vendor mengunggah sendiri dokumen yang telah ditandatangani &amp; distempel.</span>
+                                    </span>
+                                </label>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="border rounded p-3 d-flex gap-2 h-100 w-100 mb-0" style="cursor:pointer;background:#fff;">
+                                    <input type="radio" name="metode_final_vendor" value="manual" class="form-check-input flex-shrink-0 mt-1" onchange="gantiMetodeFinalVendor()">
+                                    <span>
+                                        <span class="fw-semibold">Unggah Manual oleh Staf</span>
+                                        <span class="small text-muted d-block mt-1">Staf mengunggah hasil scan dokumen ber-TTD basah atas nama vendor — tercatat di log audit dan berlencana “Manual”.</span>
+                                    </span>
+                                </label>
                             </div>
                         </div>
-                        <div class="col-md-4 text-md-end">
-                            <form action="{{ route('contracts.send-wa-vendor', $kontrak->id) }}" method="POST" class="d-inline">
-                                @csrf
-                                <button type="submit"
-                                        class="btn-act-modern"
-                                        style="{{ $vendorNoHp ? 'background-color:#25D366; color:white;' : 'background-color:#9ca3af; color:white; opacity:.6; cursor:not-allowed;' }} border:none; padding:.65rem 1.25rem; font-weight:600;"
-                                        onclick="return confirm('Kirim link portal upload ke WhatsApp vendor?')"
-                                        @disabled(!$vendorNoHp)>
-                                    <i class="bi bi-whatsapp"></i> Kirim Akses Vendor
-                                </button>
-                            </form>
+
+                        <div class="row g-3 align-items-center" id="aksiFinalPortal">
+                            <div class="col-md-8">
+                                <div class="doc-status-card">
+                                    <div class="dsc-label"><i class="bi bi-telephone me-1"></i> Nomor WhatsApp Vendor</div>
+                                    @if($vendorNoHp)
+                                        <div class="dsc-value">{{ $vendorNoHp }}</div>
+                                        <div class="dsc-meta">{{ $kontrak->vendor->nama_pihak ?? '-' }}</div>
+                                    @else
+                                        <span class="badge-doc badge-doc-danger"><i class="bi bi-exclamation-triangle-fill"></i> Nomor Belum Diisi</span>
+                                        <div class="dsc-meta mt-2">Lengkapi nomor telepon vendor di Master Pihak terlebih dahulu.</div>
+                                    @endif
+                                </div>
+                            </div>
+                            <div class="col-md-4 text-md-end">
+                                <form action="{{ route('contracts.send-wa-vendor', $kontrak->id) }}" method="POST" class="d-inline">
+                                    @csrf
+                                    <button type="submit"
+                                            class="btn-act-modern"
+                                            style="{{ $vendorNoHp ? 'background-color:#25D366; color:white;' : 'background-color:#9ca3af; color:white; opacity:.6; cursor:not-allowed;' }} border:none; padding:.65rem 1.25rem; font-weight:600;"
+                                            onclick="return confirm('Kirim link portal upload ke WhatsApp vendor?')"
+                                            @disabled(!$vendorNoHp)>
+                                        <i class="bi bi-whatsapp"></i> Kirim Akses Vendor
+                                    </button>
+                                </form>
+                            </div>
                         </div>
-                    </div>
+
+                        <div class="d-none" id="aksiFinalManual">
+                            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                                <span class="small text-muted">Membuka formulir unggah dengan pernyataan tanggung jawab — dokumen yang sudah diunggah vendor tidak perlu diunggah ulang.</span>
+                                <button type="button" class="btn-act-modern" style="background:#B45309;color:#fff;border:none;padding:.65rem 1.25rem;font-weight:600;" data-bs-toggle="modal" data-bs-target="#modalFinalManual">
+                                    <i class="bi bi-cloud-arrow-up-fill"></i> Unggah Dokumen Manual…
+                                </button>
+                            </div>
+                        </div>
+                    @else
+                        <div class="hint-banner mb-0">
+                            <i class="bi bi-check-circle-fill" style="color:#16a34a !important;"></i>
+                            <div>Seluruh dokumen final bertanda tangan vendor telah lengkap — tagihan dapat dibuat dari termin yang siap.</div>
+                        </div>
+                    @endunless
                 </div>
             </div>
+
+            {{-- Modal Unggah Manual Dokumen Final Vendor --}}
+            @include('partials.unggah-manual-assets')
+            <div class="modal fade um-modal" id="modalFinalManual" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <form action="{{ route('contracts.final-docs-manual', $kontrak->id) }}" method="POST" enctype="multipart/form-data" class="modal-content">
+                        @csrf
+                        <div class="modal-header">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="um-head-ic"><i class="bi bi-vector-pen"></i></div>
+                                <div>
+                                    <h6 class="modal-title mb-0">Unggah Manual — Dokumen Final Vendor</h6>
+                                    <small>{{ $kontrak->vendor->nama_pihak ?? '-' }} · {{ $kontrak->nomor_spk }}</small>
+                                </div>
+                            </div>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+                        </div>
+                        <div class="modal-body d-flex flex-column gap-3">
+                            @foreach([
+                                'file_spk_final' => ['label' => 'SPK', 'ikon' => 'bi-file-earmark-text', 'arsip' => $spkFinalArsip ?? null],
+                                'file_spmk_final' => ['label' => 'SPMK', 'ikon' => 'bi-file-earmark-ruled', 'arsip' => $spmkFinalArsip ?? null],
+                                'file_ringkasan_final' => ['label' => 'Ringkasan Kontrak', 'ikon' => 'bi-journal-text', 'arsip' => $ringkasanFinalArsip ?? null],
+                            ] as $field => $dok)
+                                <label class="um-doc">
+                                    <div class="um-doc-ic"><i class="bi {{ $dok['ikon'] }}"></i></div>
+                                    <div>
+                                        <div class="um-doc-name">
+                                            {{ $dok['label'] }}
+                                            @if($dok['arsip'])
+                                                <span class="badge bg-success-subtle text-success border border-success-subtle">Sudah ada · {{ $dok['arsip']->uploaded_by ? 'Manual' : 'Vendor' }}</span>
+                                            @endif
+                                        </div>
+                                        <div class="um-doc-sub">
+                                            {{ $dok['arsip'] ? 'Unggah hanya bila perlu mengganti versi sebelumnya.' : 'Scan PDF ber-TTD & stempel · maks 10 MB · bisa seret & lepas' }}
+                                        </div>
+                                        <span class="um-doc-file"><i class="bi bi-check-circle-fill"></i><span class="um-file-name"></span><span class="um-file-size text-muted fw-normal"></span></span>
+                                    </div>
+                                    <span class="um-doc-action">Pilih PDF</span>
+                                    <input type="file" name="{{ $field }}" accept="application/pdf,.pdf" hidden>
+                                </label>
+                            @endforeach
+
+                            <div class="row g-2">
+                                <div class="col-md-5">
+                                    <label class="form-label small fw-bold mb-1">Tanggal TTD vendor <span class="text-danger">*</span></label>
+                                    <input type="date" name="tanggal_ttd_vendor" class="form-control form-control-sm" required max="{{ now()->toDateString() }}">
+                                </div>
+                                <div class="col-md-7">
+                                    <label class="form-label small fw-bold mb-1">Keterangan <span class="text-muted fw-normal">(opsional)</span></label>
+                                    <input type="text" name="keterangan" class="form-control form-control-sm" maxlength="1000" placeholder="Contoh: diserahkan vendor saat penandatanganan kontrak.">
+                                </div>
+                            </div>
+
+                            <label class="um-declare">
+                                <input type="checkbox" name="pernyataan" value="1" id="pernyataanFinalManual">
+                                <span class="small">
+                                    <i class="bi bi-patch-check-fill um-declare-ic me-1"></i>
+                                    Saya menyatakan dokumen yang diunggah <strong>benar telah ditandatangani basah dan distempel oleh vendor</strong>, dan saya bertanggung jawab atas keasliannya.
+                                </span>
+                            </label>
+
+                            <div class="small text-muted d-flex gap-2">
+                                <i class="bi bi-shield-check flex-shrink-0"></i>
+                                <span>Tindakan ini dicatat di log audit (nama Anda, waktu, alamat IP) dan berlencana <strong>Manual</strong> di daftar dokumen.</span>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <span class="um-counter"><i class="bi bi-files"></i><span>0 dari 3 dokumen dipilih</span></span>
+                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
+                            <button type="submit" class="um-submit" id="btnSimpanFinalManual" disabled>
+                                <i class="bi bi-cloud-arrow-up-fill me-1"></i> Simpan Dokumen Manual
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <script>
+                function gantiMetodeFinalVendor() {
+                    var manual = document.querySelector('input[name="metode_final_vendor"]:checked')?.value === 'manual';
+                    document.getElementById('aksiFinalPortal')?.classList.toggle('d-none', manual);
+                    document.getElementById('aksiFinalManual')?.classList.toggle('d-none', !manual);
+                }
+            </script>
         @endif
 
         {{-- ═══ BAGIAN: TABS DETAIL ═══ --}}

@@ -4,46 +4,214 @@
 @push('css')
 @include('partials.modern-css')
 <style>
-    .verifikator-avatar {
-        width: 44px;
-        height: 44px;
-        border-radius: 50%;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        color: #fff;
-        font-weight: 700;
-        font-size: .9rem;
-        flex-shrink: 0;
-        text-shadow: 0 1px 1px rgba(0,0,0,.15);
-    }
-    .verifikator-card {
-        transition: all .15s ease;
-        border-left: 4px solid transparent;
+    /* ── Kartu Pejabat Penanda Tangan ─────────────────────────────── */
+    .pj-card {
+        --pj-color: #0d6efd;
         position: relative;
-    }
-    .verifikator-card.is-filled { border-left-color: var(--bs-success); }
-    .verifikator-card.is-empty  { border-left-color: var(--bs-warning); background: #fff8e1; }
-    .verifikator-step-no {
-        position: absolute;
-        top: -10px; left: -10px;
-        width: 26px; height: 26px;
-        border-radius: 50%;
         background: #fff;
-        border: 2px solid var(--bs-primary);
-        color: var(--bs-primary);
-        font-size: .75rem;
-        font-weight: 700;
-        display: flex; align-items: center; justify-content: center;
-        z-index: 2;
-        box-shadow: 0 2px 4px rgba(0,0,0,.08);
+        border: 1px solid #e8ecf3;
+        border-radius: 16px;
+        padding: 1.1rem 1.15rem 0;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
     }
-    .role-chip {
-        font-size: .68rem;
-        padding: 2px 8px;
+    .pj-card::before {
+        content: "";
+        position: absolute;
+        top: 0; left: 0; right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, var(--pj-color), color-mix(in srgb, var(--pj-color) 35%, #fff));
+    }
+    .pj-card:hover {
+        transform: translateY(-3px);
+        border-color: color-mix(in srgb, var(--pj-color) 35%, #e8ecf3);
+        box-shadow: 0 16px 32px -18px color-mix(in srgb, var(--pj-color) 55%, transparent);
+    }
+    .pj-card.is-empty {
+        border-style: dashed;
+        background: #fffdf5;
+    }
+    .pj-avatar {
+        width: 52px; height: 52px;
+        border-radius: 14px;
+        flex-shrink: 0;
+        display: flex; align-items: center; justify-content: center;
+        color: #fff;
+        font-weight: 800;
+        font-size: 1rem;
+        letter-spacing: .02em;
+        background: linear-gradient(135deg, var(--pj-color), color-mix(in srgb, var(--pj-color) 65%, #1e293b));
+        box-shadow: 0 8px 16px -8px color-mix(in srgb, var(--pj-color) 80%, transparent);
+        text-shadow: 0 1px 1px rgba(0,0,0,.18);
+    }
+    .pj-card.is-empty .pj-avatar {
+        background: #f1f5f9;
+        color: #94a3b8;
+        box-shadow: none;
+        border: 1.5px dashed #cbd5e1;
+    }
+    .pj-role {
+        display: inline-flex; align-items: center; gap: .3rem;
+        font-size: .66rem;
+        font-weight: 800;
+        letter-spacing: .07em;
+        text-transform: uppercase;
+        color: var(--pj-color);
+        background: color-mix(in srgb, var(--pj-color) 10%, #fff);
         border-radius: 999px;
+        padding: .18rem .6rem;
+    }
+    .pj-name {
+        font-weight: 700;
+        font-size: .95rem;
+        color: #0f172a;
+        line-height: 1.3;
+        overflow-wrap: anywhere;
+    }
+    .pj-nip {
+        display: inline-flex; align-items: center; gap: .35rem;
+        font-family: var(--bs-font-monospace);
+        font-size: .74rem;
+        color: #475569;
+        background: #f4f6fa;
+        border: 1px solid #e8ecf3;
+        border-radius: 7px;
+        padding: .14rem .5rem;
+        margin-top: .3rem;
+        overflow-wrap: anywhere;
+    }
+    .pj-jabatan {
+        font-size: .76rem;
+        color: #94a3b8;
+        margin-top: .35rem;
+        overflow-wrap: anywhere;
+    }
+    .pj-tasks {
+        margin-top: auto;
+        border-top: 1px dashed #e8ecf3;
+        padding: .7rem 0 .9rem;
+    }
+    .pj-card > .d-flex { margin-bottom: .85rem; }
+    .pj-tasks-label {
+        font-size: .62rem;
+        font-weight: 800;
+        letter-spacing: .1em;
+        text-transform: uppercase;
+        color: #94a3b8;
+        margin-bottom: .4rem;
+        display: flex; align-items: center; gap: .3rem;
+    }
+    .pj-task {
+        display: inline-flex; align-items: center; gap: .28rem;
+        font-size: .7rem;
         font-weight: 600;
-        letter-spacing: .3px;
+        color: #334155;
+        background: #f6f8fb;
+        border: 1px solid #e8ecf3;
+        border-radius: 999px;
+        padding: .18rem .55rem;
+        margin: 0 .3rem .3rem 0;
+        white-space: nowrap;
+    }
+    .pj-task i { color: var(--pj-color); font-size: .72rem; }
+    /* ── Blok Tanda Tangan Vendor ─────────────────────────────────── */
+    .ttv-card {
+        border: 1px solid #e8ecf3;
+        border-radius: 16px;
+        background: linear-gradient(180deg, #fbfcfe, #f5f7fb);
+        overflow: hidden;
+    }
+    .ttv-head-ic {
+        width: 46px; height: 46px;
+        border-radius: 13px;
+        flex-shrink: 0;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.25rem;
+        color: #fff;
+        background: linear-gradient(135deg, #2563eb, #1e40af);
+        box-shadow: 0 10px 20px -10px rgba(37, 99, 235, .7);
+    }
+    .ttv-doc {
+        display: inline-flex; align-items: center; gap: .35rem;
+        font-size: .72rem; font-weight: 700;
+        border-radius: 999px;
+        padding: .28rem .7rem;
+        border: 1px solid #e8ecf3;
+        background: #fff;
+        color: #64748b;
+    }
+    .ttv-doc.is-signed { background: #e8f5ec; border-color: #cbe7d3; color: #15803d; }
+    .ttv-doc.is-wajib { border-color: #f2caca; color: #b91c1c; background: #fdf1f1; }
+    .ttv-choice {
+        position: relative;
+        display: flex; gap: .9rem; align-items: flex-start;
+        width: 100%; height: 100%;
+        margin: 0;
+        padding: 1.05rem 2.4rem 1.05rem 1.05rem;
+        background: #fff;
+        border: 1.5px solid #e8ecf3;
+        border-radius: 14px;
+        cursor: pointer;
+        transition: border-color .2s, background .2s, transform .2s, box-shadow .2s;
+    }
+    .ttv-choice input { position: absolute; opacity: 0; pointer-events: none; }
+    .ttv-choice:hover { transform: translateY(-2px); box-shadow: 0 12px 26px -18px rgba(15, 23, 42, .45); }
+    .ttv-choice:focus-within { outline: 3px solid #bfd3fa; outline-offset: 2px; }
+    .ttv-choice-ic {
+        width: 42px; height: 42px;
+        border-radius: 12px;
+        flex-shrink: 0;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.15rem;
+        background: #eef4ff; color: #2563eb;
+        transition: background .2s, color .2s, transform .2s;
+    }
+    .ttv-choice.is-manual .ttv-choice-ic { background: #fdf3e3; color: #b45309; }
+    .ttv-choice:hover .ttv-choice-ic { transform: scale(1.08) rotate(-4deg); }
+    .ttv-check {
+        position: absolute;
+        top: .8rem; right: .8rem;
+        width: 21px; height: 21px;
+        border-radius: 50%;
+        border: 2px solid #d6dce7;
+        background: #fff;
+        display: flex; align-items: center; justify-content: center;
+        font-size: .7rem; color: transparent;
+        transition: all .2s;
+    }
+    .ttv-choice.sel { border-color: #2563eb; background: linear-gradient(180deg, #f5f9ff, #eef4ff); }
+    .ttv-choice.sel .ttv-check { border-color: #2563eb; background: #2563eb; color: #fff; }
+    .ttv-choice.sel.is-manual { border-color: #b45309; background: linear-gradient(180deg, #fefaf3, #fdf3e3); }
+    .ttv-choice.sel.is-manual .ttv-check { border-color: #b45309; background: #b45309; }
+    .ttv-actions {
+        border-top: 1px dashed #e2e8f0;
+        margin-top: 1rem;
+        padding-top: 1rem;
+    }
+    .btn-ttv-manual {
+        background: linear-gradient(120deg, #b45309, #d97706);
+        color: #fff;
+        border: 0;
+        box-shadow: 0 10px 20px -10px rgba(180, 83, 9, .65);
+    }
+    .btn-ttv-manual:hover { color: #fff; filter: brightness(1.06); transform: translateY(-1px); }
+    @media (prefers-reduced-motion: reduce) {
+        .ttv-choice, .ttv-choice:hover, .ttv-choice-ic { transition: none; transform: none; }
+    }
+    /* Bootstrap tidak punya utilitas .min-width-0 — tanpa ini anak flex tidak
+       boleh menyusut sehingga text-truncate gagal dan teks meluber keluar kartu. */
+    .min-width-0 { min-width: 0; }
+    /* Nomor dokumen (PL.108/...), NIP, dan string panjang tanpa spasi lainnya
+       dipatahkan hanya bila melebihi lebar kartunya. */
+    .mc-body .fw-bold,
+    .mc-body .font-monospace {
+        overflow-wrap: anywhere;
+    }
+    @media (prefers-reduced-motion: reduce) {
+        .pj-card, .pj-card:hover { transition: none; transform: none; }
     }
 </style>
 @endpush
@@ -64,7 +232,7 @@
         'DITOLAK_PPK', 'DITOLAK_PPSPM', 'DITOLAK_KOORDINATOR_KEUANGAN', 'DITOLAK_BENDAHARA_PENGELUARAN', 'DITOLAK_BENDAHARA_PENERIMAAN', 'DITOLAK_KASUBBAG'
                                          => ['class' => 'bg-danger text-white', 'icon' => 'x-octagon',             'label' => 'Ditolak'],
         'APPROVED', 'DISETUJUI_KONTRAK', 'READY_FOR_SPP'
-                                         => ['class' => 'bg-success text-white','icon' => 'check-circle',          'label' => 'Disetujui — Siap SPP'],
+                                         => ['class' => 'bg-success text-white','icon' => 'check-circle',          'label' => 'Siap Diproses — Menuju SPP'],
         default                          => ['class' => 'bg-secondary text-white', 'icon' => 'circle',             'label' => $tagihan->status],
     };
 
@@ -85,24 +253,6 @@
         'DITOLAK_PPK', 'DITOLAK_PPSPM', 'DITOLAK_KOORDINATOR_KEUANGAN', 'DITOLAK_BENDAHARA_PENGELUARAN', 'DITOLAK_BENDAHARA_PENERIMAAN', 'DITOLAK_KASUBBAG' => 'bi-x-octagon-fill',
         default => 'bi-info-circle-fill',
     };
-
-    // Ambil status approval per role_code dari workflow_approvals (untuk indikator visual)
-    $approvalStatusByRole = collect();
-    if ($tagihan->relationLoaded('workflowInstance') ? $tagihan->workflowInstance : ($tagihan->workflowInstance ?? null)) {
-        $instance = $tagihan->workflowInstance;
-        if ($instance) {
-            $approvalStatusByRole = $instance->approvals
-                ->keyBy(fn ($a) => strtoupper(str_replace([' ', '-'], '_', $a->role_code)));
-        }
-    }
-
-    $approvalMeta = [
-        'PENDING'  => ['cls' => 'pending',  'icon' => 'hourglass-split',         'label' => 'Menunggu',  'color' => 'warning'],
-        'APPROVED' => ['cls' => 'approved', 'icon' => 'check-circle-fill',       'label' => 'Disetujui', 'color' => 'success'],
-        'REVISION' => ['cls' => 'revision', 'icon' => 'arrow-counterclockwise',  'label' => 'Revisi',    'color' => 'danger'],
-        'REJECTED' => ['cls' => 'rejected', 'icon' => 'x-circle-fill',           'label' => 'Ditolak',   'color' => 'danger'],
-        'WAITING'  => ['cls' => 'waiting',  'icon' => 'clock-history',           'label' => 'Belum aktif','color' => 'secondary'],
-    ];
 
     // Daftar verifikator + meta untuk styling (urutan = alur tanda-tangan dokumen)
     $verifikatorList = [
@@ -148,6 +298,11 @@
                 </p>
             </div>
             <div class="d-flex gap-2 flex-wrap align-items-start">
+                @if($tagihan->status === 'DRAFT' || str_starts_with((string) $tagihan->status, 'REVISI_'))
+                    <a href="{{ route('tagihan.kontrak.edit', $tagihan->id) }}" class="btn-hero btn-hero-primary">
+                        <i class="bi bi-pencil-square"></i> Edit Tagihan
+                    </a>
+                @endif
                 <button type="button" class="btn-hero" data-bs-toggle="modal" data-bs-target="#modalAktivitasTagihan">
                     <i class="bi bi-activity"></i> Lihat Aktivitas
                 </button>
@@ -282,12 +437,12 @@
                 </div>
             </div>
 
-            {{-- Verifikator Penagihan (snapshot saat tagihan dibuat) --}}
+            {{-- Pejabat penanda tangan dokumen pencairan (snapshot saat tagihan dibuat) --}}
             <div class="modern-card" style="animation: secIn .55s cubic-bezier(.22,1,.36,1) .36s both;">
                 <div class="mc-head">
                     <div>
-                        <h6><i class="bi bi-people-fill mc-h-icon icon-primary"></i> Verifikator Penagihan</h6>
-                        <small class="text-muted d-block mt-1">Daftar pejabat penanda tangan dokumen — diurutkan sesuai alur verifikasi</small>
+                        <h6><i class="bi bi-people-fill mc-h-icon icon-primary"></i> Pejabat Penanda Tangan</h6>
+                        <small class="text-muted d-block mt-1">Daftar pejabat penanda tangan dokumen pencairan (SPP/SPM/NPI/SP2D)</small>
                     </div>
                     <div class="text-end">
                         <span class="badge {{ $verifikatorLengkap ? 'bg-success' : 'bg-warning text-dark' }} fs-6">
@@ -297,51 +452,70 @@
                     </div>
                 </div>
                 <div class="mc-body">
+                    @php
+                        // Peran nyata tiap pejabat pada rantai dokumen pencairan —
+                        // supaya jelas mengapa mereka tercantum di tagihan ini.
+                        $tugasMap = [
+                            'ppk' => [
+                                ['ikon' => 'bi-file-earmark-text', 'label' => 'Verifikasi SPP'],
+                                ['ikon' => 'bi-receipt', 'label' => 'Verifikasi NPI'],
+                                ['ikon' => 'bi-patch-check', 'label' => 'Terbit SP2D'],
+                            ],
+                            'ppspm' => [
+                                ['ikon' => 'bi-file-earmark-ruled', 'label' => 'Verifikasi SPM'],
+                            ],
+                            'bendahara_pengeluaran' => [
+                                ['ikon' => 'bi-send', 'label' => 'Ajukan NPI'],
+                                ['ikon' => 'bi-cash-coin', 'label' => 'Bukti Transfer SP2D'],
+                            ],
+                            'bendahara_penerimaan' => [
+                                ['ikon' => 'bi-receipt', 'label' => 'Verifikasi NPI'],
+                            ],
+                            'koordinator_keuangan' => [
+                                ['ikon' => 'bi-file-earmark-text', 'label' => 'Verifikasi SPP'],
+                                ['ikon' => 'bi-file-earmark-ruled', 'label' => 'Verifikasi SPM'],
+                                ['ikon' => 'bi-receipt', 'label' => 'Verifikasi NPI'],
+                            ],
+                            'kasubbag' => [
+                                ['ikon' => 'bi-file-earmark-text', 'label' => 'Verifikasi SPP'],
+                                ['ikon' => 'bi-file-earmark-ruled', 'label' => 'Verifikasi SPM'],
+                                ['ikon' => 'bi-receipt', 'label' => 'Verifikasi NPI'],
+                            ],
+                        ];
+                    @endphp
                     <div class="row g-3">
-                        @foreach($verifikatorList as $idx => $v)
-                            @php
-                                $filled = !empty($v['nama']);
-                                $approval = $approvalStatusByRole->get($v['role_code']);
-                                $apvMeta = $approval ? ($approvalMeta[$approval->status] ?? null) : null;
-                            @endphp
+                        @foreach($verifikatorList as $v)
+                            @php $filled = !empty($v['nama']); @endphp
                             <div class="col-md-6 col-xl-4">
-                                <div class="verifikator-card border rounded-3 p-3 h-100 {{ $filled ? 'is-filled' : 'is-empty' }}">
-                                    <span class="verifikator-step-no" style="border-color: {{ $v['color'] }}; color: {{ $v['color'] }};">{{ $idx + 1 }}</span>
-
-                                    @if($apvMeta)
-                                        <span class="badge bg-{{ $apvMeta['color'] }} position-absolute" style="top: -8px; right: 8px;">
-                                            <i class="bi bi-{{ $apvMeta['icon'] }} me-1"></i>{{ $apvMeta['label'] }}
-                                        </span>
-                                    @endif
-
+                                <div class="pj-card {{ $filled ? '' : 'is-empty' }}" style="--pj-color: {{ $v['color'] }};">
                                     <div class="d-flex align-items-start gap-3">
-                                        <div class="verifikator-avatar" style="background: {{ $v['color'] }};">
-                                            {{ $initials($v['nama']) }}
+                                        <div class="pj-avatar">
+                                            @if($filled)
+                                                {{ $initials($v['nama']) }}
+                                            @else
+                                                <i class="bi bi-person-dash"></i>
+                                            @endif
                                         </div>
                                         <div class="flex-grow-1 min-width-0">
                                             <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
-                                                <span class="role-chip" style="background: {{ $v['color'] }}1a; color: {{ $v['color'] }};">{{ $v['short'] }}</span>
-                                                @if($v['auto'])
-                                                    <span class="role-chip" style="background: #e9ecef; color: #495057;" title="Diambil otomatis dari kontrak">
-                                                        <i class="bi bi-link-45deg"></i> auto
-                                                    </span>
-                                                @endif
+                                                <span class="pj-role">{{ $v['short'] }}</span>
                                             </div>
-                                            <div class="fw-bold text-truncate" title="{{ $v['nama'] }}">{{ $v['nama'] ?: '— belum dipilih —' }}</div>
+                                            <div class="pj-name">{{ $v['nama'] ?: 'Belum dipilih' }}</div>
                                             @if($v['nip'])
-                                                <div class="small text-muted font-monospace">NIP: {{ $v['nip'] }}</div>
-                                            @else
-                                                <div class="small text-muted fst-italic">NIP belum tersedia</div>
+                                                <span class="pj-nip"><i class="bi bi-person-vcard"></i>{{ $v['nip'] }}</span>
+                                            @elseif($filled)
+                                                <span class="pj-nip fst-italic"><i class="bi bi-person-vcard"></i>NIP belum tersedia</span>
                                             @endif
-                                            <div class="small text-muted mt-1" title="{{ $v['label'] }}">{{ \Illuminate\Support\Str::limit($v['label'], 38) }}</div>
-                                            @if($approval && $approval->acted_at)
-                                                <div class="small text-muted mt-1">
-                                                    <i class="bi bi-clock me-1"></i>{{ $approval->acted_at->format('d M Y H:i') }}
-                                                    @if($approval->catatan)
-                                                        · <span class="fst-italic">"{{ \Illuminate\Support\Str::limit($approval->catatan, 40) }}"</span>
-                                                    @endif
-                                                </div>
-                                            @endif
+                                            <div class="pj-jabatan" title="{{ $v['label'] }}">{{ $v['label'] }}</div>
+                                        </div>
+                                    </div>
+
+                                    <div class="pj-tasks">
+                                        <div class="pj-tasks-label"><i class="bi bi-vector-pen"></i> Menandatangani</div>
+                                        <div>
+                                            @foreach($tugasMap[$v['key']] ?? [] as $tugas)
+                                                <span class="pj-task"><i class="bi {{ $tugas['ikon'] }}"></i>{{ $tugas['label'] }}</span>
+                                            @endforeach
                                         </div>
                                     </div>
                                 </div>
@@ -515,27 +689,93 @@
                         $pemeriksaSigned = $pemeriksaSigs->count() > 0 && $pemeriksaSigs->every(fn($s) => $s->status === 'signed');
                     @endphp
 
-                    @if(in_array($tagihan->status, ['APPROVED', 'DISETUJUI_KONTRAK', 'READY_FOR_SPP']))
-                        <div class="card border-0 shadow-sm mt-4" style="background:#f8f9fb;">
-                            <div class="card-body">
-                                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
-                                    <div>
-                                        <h6 class="fw-bold mb-1"><i class="bi bi-whatsapp text-success me-1"></i> Kirim Akses TTE via WhatsApp</h6>
-                                        <p class="small text-muted mb-0">
-                                            Satu pesan ke <strong>Vendor</strong> berisi tautan untuk menyetujui dokumen
-                                            <strong>{{ $wajibBast ? 'BAPP, BAP, BAST' : 'BAPP, BAP' }}</strong>, dan satu pesan ke
-                                            <strong>Pemeriksa</strong> berisi tautan untuk menyetujui dokumen <strong>BAPP</strong>.
-                                        </p>
+                    @if(in_array($tagihan->status, ['APPROVED', 'DISETUJUI_KONTRAK', 'READY_FOR_SPP', 'PROSES_SPP', 'SELESAI']))
+                        @php
+                            $sigByLabel = $vendorSigs->keyBy('document_label');
+                            $bapSignedVendor = optional($sigByLabel->get('BAP'))->status === 'signed';
+                            $vendorDocPlan = collect(['BAP', 'BAPP'])
+                                ->when($wajibBast, fn ($c) => $c->push('BAST'))
+                                ->map(fn ($label) => [
+                                    'label' => $label,
+                                    'sig' => $sigByLabel->get($label),
+                                    'wajib' => $label === 'BAP',
+                                ]);
+                        @endphp
+                        <div class="ttv-card shadow-sm mt-4">
+                            <div class="card-body p-4">
+                                <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+                                    <div class="d-flex align-items-start gap-3">
+                                        <div class="ttv-head-ic"><i class="bi bi-vector-pen"></i></div>
+                                        <div>
+                                            <h6 class="fw-bold mb-1">Tanda Tangan Vendor</h6>
+                                            <p class="small text-muted mb-0" style="max-width: 56ch;">
+                                                Draft dokumen pencairan (SPP) baru dibuat setelah <strong>BAP</strong> vendor terunggah;
+                                                BAPP{{ $wajibBast ? '/BAST' : '' }} dapat menyusul. Pada jalur TTE online, dokumen
+                                                <strong>BAPP</strong> menunggu persetujuan TTE <strong>Tim Pemeriksa</strong>;
+                                                pada unggah manual, scan BAPP harus sudah memuat TTD Pemeriksa.
+                                            </p>
+                                        </div>
                                     </div>
-                                    @unless($allTteSigned)
-                                        <form action="{{ route('tagihan.kontrak.send-tte', $tagihan->id) }}" method="POST">
-                                            @csrf
-                                            <button type="submit" class="btn {{ $isTteSent ? 'btn-outline-warning' : 'btn-success text-white' }}">
-                                                <i class="bi bi-whatsapp me-1"></i> {{ $isTteSent ? 'Kirim Ulang Akses TTE' : 'Kirim Akses TTE' }}
-                                            </button>
-                                        </form>
-                                    @endunless
+                                    <div class="d-flex flex-wrap gap-1 align-items-center">
+                                        @foreach($vendorDocPlan as $doc)
+                                            @php $docSigned = optional($doc['sig'])->status === 'signed'; @endphp
+                                            <span class="ttv-doc {{ $docSigned ? 'is-signed' : ($doc['wajib'] ? 'is-wajib' : '') }}"
+                                                  title="{{ $docSigned ? 'Sudah ditandatangani vendor' : ($doc['wajib'] ? 'Wajib sebelum draft SPP' : 'Dapat menyusul') }}">
+                                                <i class="bi {{ $docSigned ? 'bi-check-circle-fill' : ($doc['wajib'] ? 'bi-exclamation-circle-fill' : 'bi-clock-history') }}"></i>
+                                                {{ $doc['label'] }}{{ $docSigned ? '' : ($doc['wajib'] ? ' · wajib' : ' · menyusul') }}
+                                            </span>
+                                        @endforeach
+                                    </div>
                                 </div>
+
+                                @unless($vendorSigned)
+                                    <div class="row g-2">
+                                        <div class="col-md-6">
+                                            <label class="ttv-choice sel" id="pilihTteCard">
+                                                <input type="radio" name="metode_ttd" value="tte" checked onchange="gantiMetodeTtd()">
+                                                <span class="ttv-check"><i class="bi bi-check-lg"></i></span>
+                                                <span class="ttv-choice-ic"><i class="bi bi-whatsapp"></i></span>
+                                                <span>
+                                                    <span class="fw-bold d-flex align-items-center gap-2 flex-wrap">Vendor TTE Online
+                                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle">Direkomendasikan</span>
+                                                    </span>
+                                                    <span class="small text-muted d-block mt-1">Sistem mengirim tautan tanda tangan elektronik ke WhatsApp/email vendor. Vendor meninjau dokumen lalu menyetujui &amp; mengunggah sendiri.</span>
+                                                </span>
+                                            </label>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="ttv-choice is-manual" id="pilihManualCard">
+                                                <input type="radio" name="metode_ttd" value="manual" onchange="gantiMetodeTtd()">
+                                                <span class="ttv-check"><i class="bi bi-check-lg"></i></span>
+                                                <span class="ttv-choice-ic"><i class="bi bi-cloud-arrow-up-fill"></i></span>
+                                                <span>
+                                                    <span class="fw-bold">Unggah Manual oleh Staf</span>
+                                                    <span class="small text-muted d-block mt-1">Vendor sudah menandatangani basah &amp; menstempel dokumen fisik. Staf mengunggah hasil scan-nya atas nama vendor — tercatat di log audit.</span>
+                                                </span>
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    <div class="ttv-actions d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+                                        <span class="small text-muted d-flex align-items-center gap-2" style="max-width: 56ch;">
+                                            <i class="bi bi-info-circle flex-shrink-0"></i>
+                                            <span id="metodeTtdNote">Tautan berlaku 24 jam dan hanya bisa dibuka penerima. Metode dapat diganti selama dokumen belum selesai.</span>
+                                        </span>
+                                        <div id="aksiMetodeTte">
+                                            <form action="{{ route('tagihan.kontrak.send-tte', $tagihan->id) }}" method="POST" class="m-0">
+                                                @csrf
+                                                <button type="submit" class="btn px-4 fw-semibold {{ $isTteSent ? 'btn-outline-warning' : 'btn-success text-white' }}">
+                                                    <i class="bi bi-whatsapp me-1"></i> {{ $isTteSent ? 'Kirim Ulang Akses TTE' : 'Kirim Akses TTE' }}
+                                                </button>
+                                            </form>
+                                        </div>
+                                        <div id="aksiMetodeManual" class="d-none">
+                                            <button type="button" class="btn btn-ttv-manual px-4 fw-semibold" data-bs-toggle="modal" data-bs-target="#modalTtdManual">
+                                                <i class="bi bi-cloud-arrow-up-fill me-1"></i> Unggah Dokumen Manual…
+                                            </button>
+                                        </div>
+                                    </div>
+                                @endunless
 
                                 @if($isTteSent)
                                     <div class="row g-3">
@@ -552,7 +792,21 @@
                                                 </div>
                                                 <div class="small text-muted mb-1">{{ $vendorSigs->first()->signer_name ?? '-' }}</div>
                                                 <div class="small text-muted mb-2"><i class="bi bi-whatsapp me-1"></i>{{ $vendorSigs->first()->signer_phone ?? '-' }}</div>
-                                                <div class="small mb-2">Dokumen: <strong>{{ $vendorDocLabels ?: '-' }}</strong></div>
+                                                <div class="small mb-2 d-flex flex-wrap align-items-center gap-1">
+                                                    <span>Dokumen:</span>
+                                                    @foreach($vendorSigs as $vs)
+                                                        @if($vs->status === 'signed')
+                                                            <span class="badge bg-success-subtle text-success border border-success-subtle"><i class="bi bi-check-circle-fill me-1"></i>{{ $vs->document_label }}</span>
+                                                            @if($vs->signed_via === 'MANUAL')
+                                                                <span class="badge border" style="background:#FDF3E3;color:#B45309;border-color:#F1DFBB!important;" title="Diunggah manual oleh {{ $vs->signedByUser->name ?? 'staf' }}"><i class="bi bi-vector-pen me-1"></i>Manual</span>
+                                                            @else
+                                                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle"><i class="bi bi-link-45deg me-1"></i>TTE Online</span>
+                                                            @endif
+                                                        @else
+                                                            <span class="badge bg-warning-subtle text-dark border border-warning-subtle"><i class="bi bi-clock me-1"></i>{{ $vs->document_label }}{{ $vs->document_label === 'BAP' ? ' (wajib)' : ' (menyusul)' }}</span>
+                                                        @endif
+                                                    @endforeach
+                                                </div>
                                                 @if($vendorGroupToken)
                                                     <div class="small d-flex"><i class="bi bi-link-45deg me-1"></i>
                                                         <a href="{{ url('/public/tte/sign/' . $vendorGroupToken) }}" target="_blank" class="text-decoration-none text-truncate d-inline-block align-middle" style="max-width: 240px;" title="{{ url('/public/tte/sign/' . $vendorGroupToken) }}">{{ url('/public/tte/sign/' . $vendorGroupToken) }}</a>
@@ -567,16 +821,24 @@
                                                     <span class="fw-semibold"><i class="bi bi-person-badge me-1 text-primary"></i> Pemeriksa</span>
                                                     @if($pemeriksaSigned)
                                                         <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Selesai</span>
+                                                    @elseif($pemeriksaSigs->isEmpty())
+                                                        <span class="badge bg-secondary"><i class="bi bi-send-slash me-1"></i>Belum Dikirim</span>
                                                     @else
                                                         <span class="badge bg-warning text-dark"><i class="bi bi-clock me-1"></i>Menunggu</span>
                                                     @endif
                                                 </div>
-                                                <div class="small text-muted mb-1">{{ $pemeriksaSigs->first()->signer_name ?? '-' }}</div>
-                                                <div class="small text-muted mb-2"><i class="bi bi-whatsapp me-1"></i>{{ $pemeriksaSigs->first()->signer_phone ?? '-' }}</div>
+                                                {{-- Fallback ke data pemeriksa pada tagihan bila akses TTE
+                                                     belum pernah dikirim (mis. jalur unggah manual). --}}
+                                                <div class="small text-muted mb-1">{{ $pemeriksaSigs->first()->signer_name ?? $detailKontrak->nama_pemeriksa ?? '-' }}</div>
+                                                <div class="small text-muted mb-2"><i class="bi bi-whatsapp me-1"></i>{{ $pemeriksaSigs->first()->signer_phone ?? $detailKontrak->wa_pemeriksa ?? '-' }}</div>
                                                 <div class="small mb-2">Dokumen: <strong>BAPP</strong></div>
                                                 @if($pemeriksaGroupToken)
                                                     <div class="small d-flex"><i class="bi bi-link-45deg me-1"></i>
                                                         <a href="{{ url('/public/tte/sign/' . $pemeriksaGroupToken) }}" target="_blank" class="text-decoration-none text-truncate d-inline-block align-middle" style="max-width: 240px;" title="{{ url('/public/tte/sign/' . $pemeriksaGroupToken) }}">{{ url('/public/tte/sign/' . $pemeriksaGroupToken) }}</a>
+                                                    </div>
+                                                @elseif(! $pemeriksaSigned)
+                                                    <div class="small text-muted fst-italic">
+                                                        <i class="bi bi-info-circle me-1"></i>Kirim akses TTE untuk meminta persetujuan Pemeriksa, atau unggah BAPP manual (scan ber-TTD Pemeriksa).
                                                     </div>
                                                 @endif
                                             </div>
@@ -585,6 +847,117 @@
                                 @endif
                             </div>
                         </div>
+
+                        {{-- Modal Unggah Manual TTD Basah Vendor --}}
+                        @include('partials.unggah-manual-assets')
+                        <div class="modal fade um-modal" id="modalTtdManual" tabindex="-1" aria-hidden="true">
+                            <div class="modal-dialog modal-dialog-centered">
+                                <form action="{{ route('tagihan.kontrak.ttd-manual', $tagihan->id) }}" method="POST" enctype="multipart/form-data" class="modal-content">
+                                    @csrf
+                                    <div class="modal-header">
+                                        <div class="d-flex align-items-center gap-3">
+                                            <div class="um-head-ic"><i class="bi bi-vector-pen"></i></div>
+                                            <div>
+                                                <h6 class="modal-title mb-0">Unggah Manual — TTD Basah Vendor</h6>
+                                                <small>{{ $kontrak->vendor->nama_pihak ?? '-' }} · {{ $tagihan->nomor_tagihan }}</small>
+                                            </div>
+                                        </div>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+                                    </div>
+                                    <div class="modal-body d-flex flex-column gap-3">
+                                        @foreach($vendorDocPlan as $doc)
+                                            @php
+                                                $docSelesai = optional($doc['sig'])->status === 'signed';
+                                                $docIkon = ['BAP' => 'bi-file-earmark-check', 'BAPP' => 'bi-clipboard-check', 'BAST' => 'bi-box-seam'][$doc['label']] ?? 'bi-file-earmark';
+                                            @endphp
+                                            @if($docSelesai)
+                                                <div class="um-doc um-done">
+                                                    <div class="um-doc-ic"><i class="bi bi-check-circle-fill"></i></div>
+                                                    <div>
+                                                        <div class="um-doc-name">{{ $doc['label'] }}
+                                                            <span class="badge bg-success-subtle text-success border border-success-subtle">Selesai</span>
+                                                        </div>
+                                                        <div class="um-doc-sub">Sudah ditandatangani — tidak perlu diunggah lagi.</div>
+                                                    </div>
+                                                </div>
+                                            @else
+                                                <label class="um-doc">
+                                                    <div class="um-doc-ic"><i class="bi {{ $docIkon }}"></i></div>
+                                                    <div>
+                                                        <div class="um-doc-name">
+                                                            {{ $doc['label'] }}
+                                                            @if($doc['wajib'])
+                                                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Wajib</span>
+                                                            @else
+                                                                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">Dapat menyusul</span>
+                                                            @endif
+                                                        </div>
+                                                        <div class="um-doc-sub">
+                                                            @if($doc['label'] === 'BAPP')
+                                                                Scan PDF ber-TTD <strong>vendor &amp; Tim Pemeriksa</strong> + stempel · maks 10 MB · bisa seret &amp; lepas
+                                                            @else
+                                                                Scan PDF ber-TTD &amp; stempel · maks 10 MB · bisa seret &amp; lepas
+                                                            @endif
+                                                        </div>
+                                                        <span class="um-doc-file"><i class="bi bi-check-circle-fill"></i><span class="um-file-name"></span><span class="um-file-size text-muted fw-normal"></span></span>
+                                                    </div>
+                                                    <span class="um-doc-action">Pilih PDF</span>
+                                                    <input type="file" name="dokumen[{{ $doc['label'] }}_FINAL_TTD]" accept="application/pdf,.pdf" hidden class="{{ $doc['wajib'] ? 'um-wajib' : '' }}">
+                                                </label>
+                                            @endif
+                                        @endforeach
+
+                                        <div class="row g-2">
+                                            <div class="col-md-5">
+                                                <label class="form-label small fw-bold mb-1">Tanggal TTD vendor <span class="text-danger">*</span></label>
+                                                <input type="date" name="tanggal_ttd_vendor" class="form-control form-control-sm" required max="{{ now()->toDateString() }}">
+                                            </div>
+                                            <div class="col-md-7">
+                                                <label class="form-label small fw-bold mb-1">Keterangan <span class="text-muted fw-normal">(opsional)</span></label>
+                                                <input type="text" name="keterangan" class="form-control form-control-sm" maxlength="1000" placeholder="Contoh: ditandatangani saat serah terima di lokasi.">
+                                            </div>
+                                        </div>
+
+                                        <label class="um-declare">
+                                            <input type="checkbox" name="pernyataan" value="1" id="pernyataanTtdManual">
+                                            <span class="small">
+                                                <i class="bi bi-patch-check-fill um-declare-ic me-1"></i>
+                                                Saya menyatakan dokumen yang diunggah <strong>benar telah ditandatangani basah dan distempel oleh vendor</strong>
+                                                — untuk BAPP, <strong>termasuk TTD Tim Pemeriksa</strong> — dan saya bertanggung jawab atas keasliannya.
+                                            </span>
+                                        </label>
+
+                                        <div class="small text-muted d-flex gap-2">
+                                            <i class="bi bi-shield-check flex-shrink-0"></i>
+                                            <span>Tindakan ini dicatat di log audit (nama Anda, waktu, alamat IP) dan terlihat oleh seluruh verifikator sebagai unggahan <strong>Manual</strong>.</span>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <span class="um-counter"><i class="bi bi-files"></i><span>0 dari 0 dokumen dipilih</span></span>
+                                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
+                                        <button type="submit" class="um-submit" id="btnSimpanTtdManual" disabled>
+                                            <i class="bi bi-cloud-arrow-up-fill me-1"></i> Simpan &amp; Tandai Ditandatangani
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+
+                        <script>
+                            function gantiMetodeTtd() {
+                                var manual = document.querySelector('input[name="metode_ttd"]:checked')?.value === 'manual';
+                                document.getElementById('pilihTteCard')?.classList.toggle('sel', !manual);
+                                document.getElementById('pilihManualCard')?.classList.toggle('sel', manual);
+                                document.getElementById('aksiMetodeTte')?.classList.toggle('d-none', manual);
+                                document.getElementById('aksiMetodeManual')?.classList.toggle('d-none', !manual);
+                                var note = document.getElementById('metodeTtdNote');
+                                if (note) {
+                                    note.textContent = manual
+                                        ? 'Membuka formulir unggah dengan pernyataan tanggung jawab. Tindakan dicatat di log audit dan berlencana "Manual".'
+                                        : 'Tautan berlaku 24 jam dan hanya bisa dibuka penerima. Metode dapat diganti selama dokumen belum selesai.';
+                                }
+                            }
+                        </script>
                     @endif
                 </div>
             </div>
@@ -599,7 +972,7 @@
                 <div class="tl-body" style="padding: 1.25rem 1.5rem;">
                     @if($tagihan->status === 'DRAFT')
                         <h5 class="fw-bold mb-1">Syarat Pengajuan</h5>
-                        <p class="text-muted small mb-3">Pastikan seluruh checklist di bawah terpenuhi sebelum mengajukan tagihan ke PPK.</p>
+                        <p class="text-muted small mb-3">Pastikan seluruh checklist di bawah terpenuhi. Setelah diajukan, tagihan langsung siap diproses — tanpa tahap verifikasi — dan berlanjut ke dokumen Berita Acara (BAP wajib; BAPP/BAST dapat menyusul).</p>
 
                         {{-- Checklist Berita Acara --}}
                         <div class="text-uppercase text-muted small fw-bold mb-2" style="letter-spacing: .5px;">Kelengkapan Awal</div>
@@ -610,13 +983,13 @@
                             </li>
                         </ul>
 
-                        {{-- Checklist Verifikator --}}
-                        <div class="text-uppercase text-muted small fw-bold mb-2 mt-3" style="letter-spacing: .5px;">Verifikator</div>
+                        {{-- Checklist Pejabat Penanda Tangan --}}
+                        <div class="text-uppercase text-muted small fw-bold mb-2 mt-3" style="letter-spacing: .5px;">Pejabat Penanda Tangan</div>
                         <ul class="list-group mb-3">
                             @foreach($verifikatorList as $v)
-                                <li class="list-group-item d-flex justify-content-between align-items-center border-0 px-0 py-1">
-                                    <span class="text-truncate" style="max-width: 75%;">
-                                        <i class="bi bi-{{ !empty($v['nama']) ? 'check-circle-fill text-success' : 'circle text-secondary' }} me-2"></i>{{ $v['short'] }}
+                                <li class="list-group-item d-flex justify-content-between align-items-start gap-2 border-0 px-0 py-1">
+                                    <span style="max-width: 78%;">
+                                        <i class="bi bi-{{ !empty($v['nama']) ? 'check-circle-fill text-success' : 'circle text-secondary' }} me-2"></i>{{ $v['label'] }}
                                     </span>
                                     @if(!empty($v['nama']))
                                         <span class="badge bg-success-subtle text-success" title="{{ $v['nama'] }}">OK</span>
@@ -665,8 +1038,8 @@
 
                             @if($isApproved)
                                 <i class="bi bi-check-circle-fill text-success" style="font-size: 3rem;"></i>
-                                <h6 class="fw-bold mt-3 text-success">Tagihan Disetujui</h6>
-                                <p class="text-muted small">Seluruh verifikator menyetujui. Tagihan siap diproses ke pembuatan SPP.</p>
+                                <h6 class="fw-bold mt-3 text-success">Tagihan Siap Diproses</h6>
+                                <p class="text-muted small">Lengkapi tanda tangan vendor pada dokumen Berita Acara — BAP wajib sebelum draft SPP dibuat; BAPP/BAST dapat menyusul.</p>
                             @elseif($isInSpp)
                                 <i class="bi bi-arrow-right-circle-fill text-primary" style="font-size: 3rem;"></i>
                                 <h6 class="fw-bold mt-3 text-primary">

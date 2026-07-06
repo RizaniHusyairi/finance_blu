@@ -16,4 +16,10 @@ class DocumentSignature extends Model
     {
         return $this->morphTo();
     }
+
+    /** Staf yang mengunggah manual atas nama vendor (signed_via = MANUAL). */
+    public function signedByUser()
+    {
+        return $this->belongsTo(User::class, 'signed_by_user_id');
+    }
 }

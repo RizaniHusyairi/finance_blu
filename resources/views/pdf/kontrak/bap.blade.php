@@ -173,7 +173,7 @@
 
     <p>Kedua belah PIHAK berdasarkan :</p>
     <ol>
-        <li>DIPA Kantor UPBU Kelas I A.P.T. Pranoto Samarinda Nomor {{ $kontrak->dipa->nomor_dipa ?? '-' }} tanggal {{ optional($kontrak->dipa->tanggal_disahkan)->translatedFormat('d F Y') ?? '-' }};</li>
+        <li>DIPA Kantor UPBU Kelas I A.P.T. Pranoto Samarinda Nomor {{ $kontrak->dipa?->nomor_dipa ?? '-' }} tanggal {{ $kontrak->dipa?->tanggal_disahkan?->translatedFormat('d F Y') ?? '-' }};</li>
         <li>Surat Perintah Kerja (SPK) Nomor : {{ $kontrak->nomor_spk }} tanggal {{ optional($kontrak->tanggal_spk)->translatedFormat('d F Y') ?? '-' }};</li>
         <li>Berita Acara Pemeriksaan Pekerjaan Nomor : {{ $detail->nomor_bapp }} tanggal {{ optional($detail->tanggal_bapp)->translatedFormat('d F Y') ?? '-' }};</li>
         @if($termin->jenis_termin === 'PELUNASAN')

@@ -1,6 +1,6 @@
 @extends('layouts.app')
 @section('title')
-    Manajemen Kontrak
+    Manajemen SPK
 @endsection
 
 @push('css')
@@ -527,11 +527,11 @@
     <i class="bi bi-briefcase-fill briefcase-illust d-none d-md-block"></i>
     <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
         <div>
-            <h2><i class="bi bi-folder2-open me-2"></i>Manajemen Kontrak</h2>
-            <p>Pantau status pelaksanaan kontrak dan persetujuan addendum</p>
+            <h2><i class="bi bi-folder2-open me-2"></i>Manajemen SPK</h2>
+            <p>Pantau status pelaksanaan SPK dan persetujuan addendum</p>
         </div>
         <a href="{{ route('contracts.create') }}" class="btn-hero-primary">
-            <i class="bi bi-plus-circle-fill"></i> Tambah Kontrak
+            <i class="bi bi-plus-circle-fill"></i> Tambah SPK
         </a>
     </div>
 </div>

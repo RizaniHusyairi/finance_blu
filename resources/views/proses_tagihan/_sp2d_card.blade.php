@@ -13,7 +13,5 @@
         'spm' => $state['spm'] ? ['label' => 'SPM', 'nomor' => $state['spm']->nomor_spm] : null,
         'npi' => $state['npi'] ? ['label' => 'NPI', 'nomor' => $state['npi']->nomor_npi] : null,
     ]),
-    'canSubmit' => false,
-    'submitRoute' => null,
     'pdfRoute' => $state['sp2d'] ? route('sp2ds.cetak-pdf', $state['sp2d']->id) : null,
 ])

@@ -26,6 +26,11 @@ class RealisasiPenerimaanService
     {
         $rekeningId = $filters['rekening_bank_id'] ?? null;
 
+        // MONTH() hanya ada di MySQL; SQLite (dipakai suite test) memakai strftime.
+        $monthExpr = DB::connection()->getDriverName() === 'sqlite'
+            ? "CAST(strftime('%m', tanggal_transaksi) AS INTEGER)"
+            : 'MONTH(tanggal_transaksi)';
+
         // Agregasi SUM nominal per (akun_pendapatan_id, bulan).
         $rowsRaw = BukuKasUmum::query()
             ->where('peran', PeranBuku::PENERIMAAN->value)
@@ -33,8 +38,8 @@ class RealisasiPenerimaanService
             ->where('arus_kas', 'DEBIT_MASUK')
             ->whereYear('tanggal_transaksi', $tahun)
             ->when($rekeningId, fn (Builder $q) => $q->where('sumber_rekening_id', $rekeningId))
-            ->selectRaw('akun_pendapatan_id, MONTH(tanggal_transaksi) as bln, SUM(nominal) as total')
-            ->groupBy('akun_pendapatan_id', DB::raw('MONTH(tanggal_transaksi)'))
+            ->selectRaw("akun_pendapatan_id, {$monthExpr} as bln, SUM(nominal) as total")
+            ->groupBy('akun_pendapatan_id', DB::raw($monthExpr))
             ->get();
 
         // Master akun untuk label & urutan stabil.

@@ -437,17 +437,9 @@
                         <!-- Meta Chips -->
                         @php
                             $isVendor = ($signature->role === 'vendor');
-                            $allVendorDocsUploaded = true;
-                            if ($isVendor) {
-                                foreach($signatures as $docSig) {
-                                    $jenis = $docSig->document_label . '_FINAL_TTD';
-                                    $arsip = $tagihan->detailKontrak->arsipDokumen->where('jenis_dokumen', $jenis)->where('is_active', true)->first();
-                                    if (!$arsip) {
-                                        $allVendorDocsUploaded = false;
-                                        break;
-                                    }
-                                }
-                            }
+                            // BAP sudah disetujui vendor → mode "unggah menyusul":
+                            // BAPP/BAST diunggah satu per satu lewat tautan yang sama.
+                            $menyusulMode = $isVendor && ($bapVendorSigned ?? false);
                         @endphp
                         <div class="chip-grid mb-4 stagger-2">
                             <div class="meta-chip">
@@ -508,6 +500,7 @@
                         </div>
 
                         <!-- Agreement -->
+                        @if(!$menyusulMode)
                         <div class="agree-box mt-4 stagger-3">
                             <div class="form-check d-flex align-items-start gap-2 m-0">
                                 <input class="form-check-input flex-shrink-0" type="checkbox" id="agreeCheck">
@@ -517,15 +510,27 @@
                                     <strong>Tanda Tangan Elektronik</strong> secara sah dan sadar tanpa paksaan.
                                 </label>
                             </div>
-                            @if($isVendor && !$allVendorDocsUploaded)
+                            @if($isVendor)
                                 <div class="alert alert-warning border-0 small py-2 mt-3 mb-0 d-flex align-items-start">
                                     <i class="bi bi-exclamation-triangle-fill me-2 fs-5 text-warning"></i>
                                     <div>
-                                        <strong>Menunggu Dokumen Diunggah:</strong> Anda baru bisa menyetujui &amp; menyelesaikan proses ini setelah semua dokumen final ber-TTD &amp; stempel berhasil diunggah.
+                                        <strong>Scan BAP wajib diunggah sekarang</strong> untuk menyetujui dokumen.
+                                        Dokumen BAPP{{ $signatures->contains(fn($s) => $s->document_label === 'BAST') ? ' dan BAST' : '' }}
+                                        dapat diunggah menyusul melalui tautan yang sama.
                                     </div>
                                 </div>
                             @endif
                         </div>
+                        @else
+                        <div class="alert alert-success border-0 shadow-sm d-flex align-items-start gap-2 mt-4 stagger-3">
+                            <i class="bi bi-check-circle-fill fs-5"></i>
+                            <div>
+                                <strong>BAP telah Anda setujui.</strong>
+                                Silakan unggah dokumen yang tersisa di bawah ini — masing-masing akan tercatat
+                                sebagai disetujui begitu file-nya terunggah.
+                            </div>
+                        </div>
+                        @endif
 
                         <!-- Upload Area for Vendor -->
                         @if($signature->role === 'vendor')
@@ -542,21 +547,26 @@
                                 @php
                                     $jenis = $docSig->document_label . '_FINAL_TTD';
                                     $arsip = $tagihan->detailKontrak->arsipDokumen->where('jenis_dokumen', $jenis)->where('is_active', true)->first();
+                                    $isBap = $docSig->document_label === 'BAP';
                                     $isBapp = $docSig->document_label === 'BAPP';
+                                    // Persetujuan per dokumen mengikuti unggahan vendor — status
+                                    // signature (bukan keberadaan arsip, yang bisa berasal dari
+                                    // PDF yang di-generate sistem) yang menjadi acuan selesai.
+                                    $docSigned = $docSig->status === 'signed';
                                     $pemeriksaSigned = false;
                                     if($isBapp) {
                                         $pemeriksaSigs = $tagihan->documentSignatures->where('role', 'tim_pemeriksa');
                                         $pemeriksaSigned = $pemeriksaSigs->count() > 0 && $pemeriksaSigs->every(fn($s) => $s->status === 'signed');
                                     }
                                     $canUpload = !$isBapp || $pemeriksaSigned;
-                                    
-                                    $statusClass = $arsip ? 'status-uploaded' : ($canUpload ? 'status-pending' : 'status-locked');
+
+                                    $statusClass = $docSigned ? 'status-uploaded' : ($canUpload ? 'status-pending' : 'status-locked');
                                 @endphp
-                                
+
                                 <div class="upload-doc-card {{ $statusClass }}">
                                     <div class="udc-info">
                                         <div class="udc-icon">
-                                            @if($arsip)
+                                            @if($docSigned)
                                                 <i class="bi bi-file-earmark-check-fill"></i>
                                             @elseif(!$canUpload)
                                                 <i class="bi bi-file-earmark-lock-fill"></i>
@@ -567,8 +577,13 @@
                                         <div class="udc-details">
                                             <h6 class="udc-title">Berita Acara {{ $docSig->document_label }}</h6>
                                             <div class="udc-meta">
-                                                @if($arsip)
-                                                    <span class="badge bg-success-subtle text-success border border-success-subtle"><i class="bi bi-check-circle-fill me-1"></i>Sudah Diunggah</span>
+                                                @if($isBap)
+                                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle"><i class="bi bi-exclamation-circle-fill me-1"></i>Wajib Sekarang</span>
+                                                @else
+                                                    <span class="badge bg-info-subtle text-info border border-info-subtle"><i class="bi bi-clock-history me-1"></i>Dapat Menyusul</span>
+                                                @endif
+                                                @if($docSigned)
+                                                    <span class="badge bg-success-subtle text-success border border-success-subtle"><i class="bi bi-check-circle-fill me-1"></i>Disetujui &amp; Terunggah</span>
                                                 @else
                                                     @if(!$canUpload)
                                                         <span class="badge bg-warning-subtle text-dark border border-warning-subtle"><i class="bi bi-clock-fill me-1"></i>Menunggu Pemeriksa (TTE)</span>
@@ -579,17 +594,32 @@
                                             </div>
                                         </div>
                                     </div>
-                                    
+
                                     <div class="udc-action">
-                                        @if($arsip)
-                                            <a href="{{ Storage::disk($arsip->disk)->url($arsip->path_file) }}" target="_blank" class="btn btn-outline-success rounded-pill px-4 fw-bold">
-                                                <i class="bi bi-eye-fill me-1"></i> Lihat Berkas
-                                            </a>
+                                        @if($docSigned)
+                                            @if($arsip)
+                                                <a href="{{ Storage::disk($arsip->disk)->url($arsip->path_file) }}" target="_blank" class="btn btn-outline-success rounded-pill px-4 fw-bold">
+                                                    <i class="bi bi-eye-fill me-1"></i> Lihat Berkas
+                                                </a>
+                                            @endif
+                                        @elseif($canUpload && $menyusulMode)
+                                            {{-- BAP sudah disetujui — dokumen menyusul diunggah satu per satu --}}
+                                            <form action="{{ route('public.magic-link.upload', $token) }}" method="POST" enctype="multipart/form-data" class="modern-upload-form d-flex align-items-center gap-2 flex-wrap">
+                                                @csrf
+                                                <input type="hidden" name="jenis_dokumen" value="{{ $jenis }}">
+                                                <label class="modern-file-label" for="file-{{ $docSig->document_label }}">
+                                                    <input type="file" name="file" id="file-{{ $docSig->document_label }}" accept=".pdf" class="modern-file-input" required onchange="updateFileName(this)">
+                                                    <span class="mfl-text"><i class="bi bi-folder-symlink-fill me-2"></i>Pilih File PDF</span>
+                                                </label>
+                                                <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold">
+                                                    <i class="bi bi-cloud-arrow-up-fill me-1"></i>Unggah
+                                                </button>
+                                            </form>
                                         @elseif($canUpload)
                                             <div class="modern-upload-form">
                                                 <label class="modern-file-label" for="file-{{ $docSig->document_label }}">
-                                                    <input type="file" name="files[{{ $jenis }}]" id="file-{{ $docSig->document_label }}" accept=".pdf" class="modern-file-input required-doc" required form="signForm" onchange="updateFileName(this)">
-                                                    <span class="mfl-text"><i class="bi bi-folder-symlink-fill me-2"></i>Pilih File PDF</span>
+                                                    <input type="file" name="files[{{ $jenis }}]" id="file-{{ $docSig->document_label }}" accept=".pdf" class="modern-file-input {{ $isBap ? 'required-doc' : '' }}" {{ $isBap ? 'required' : '' }} form="signForm" onchange="updateFileName(this)">
+                                                    <span class="mfl-text"><i class="bi bi-folder-symlink-fill me-2"></i>Pilih File PDF{{ $isBap ? '' : ' (opsional)' }}</span>
                                                 </label>
                                             </div>
                                         @else
@@ -620,21 +650,36 @@
     </footer>
 
     <!-- Sticky Action Bar -->
+    @if(!$menyusulMode)
     <div class="action-bar">
         <div class="container action-bar-inner">
             <div class="progress-mini">
                 <i class="bi bi-collection me-1"></i>
-                {{ $documents->count() }} dokumen siap ditandatangani sekaligus
+                @if($isVendor)
+                    BAP wajib diunggah sekarang; dokumen lain dapat menyusul
+                @else
+                    {{ $documents->count() }} dokumen siap ditandatangani sekaligus
+                @endif
             </div>
             <form action="{{ route('public.magic-link.sign', $token) }}" method="POST" id="signForm" class="m-0" enctype="multipart/form-data">
                 @csrf
-                <button type="submit" class="btn-sign" id="signBtn" disabled data-is-vendor="{{ $isVendor ? '1' : '0' }}" data-all-uploaded="{{ $allVendorDocsUploaded ? '1' : '0' }}">
+                <button type="submit" class="btn-sign" id="signBtn" disabled data-is-vendor="{{ $isVendor ? '1' : '0' }}">
                     <i class="bi {{ $isVendor ? 'bi-cloud-arrow-up-fill' : 'bi-pen-fill' }} fs-5 icon-pulse"></i>
-                    <span>{{ $isVendor ? 'Upload Dokumen' : 'Setujui & Bubuhkan Tanda Tangan Elektronik (TTE)' }}</span>
+                    <span>{{ $isVendor ? 'Setujui & Unggah BAP' : 'Setujui & Bubuhkan Tanda Tangan Elektronik (TTE)' }}</span>
                 </button>
             </form>
         </div>
     </div>
+    @else
+    <div class="action-bar">
+        <div class="container action-bar-inner">
+            <div class="progress-mini">
+                <i class="bi bi-check-circle-fill me-1 text-success"></i>
+                BAP telah disetujui — unggah dokumen menyusul pada kartu di atas.
+            </div>
+        </div>
+    </div>
+    @endif
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
@@ -656,26 +701,16 @@
         var requiredDocs = document.querySelectorAll('.required-doc');
 
         function checkAllSelected() {
+            // Vendor cukup memilih file untuk dokumen wajib (BAP);
+            // BAPP/BAST opsional dan dapat menyusul lewat tautan yang sama.
             var allSelected = true;
             requiredDocs.forEach(function(input) {
                 if (!input.files || input.files.length === 0) {
                     allSelected = false;
                 }
             });
-            // If some files are already uploaded in previous sessions, they don't have a .required-doc input.
-            // If the role is vendor, the button should be active only if all needed files are selected.
-            // If some are locked (canUpload=false) they also don't have .required-doc but wait! 
-            // If they are locked, the user CANNOT submit. The PHP allVendorDocsUploaded check is strict.
-            // Let's rely on both JS and PHP state.
-            var allPreviouslyUploaded = signBtn.getAttribute('data-all-uploaded') === '1';
-            
-            // For vendor, they can submit IF everything is either previously uploaded or currently selected in the form.
-            // But wait, if something is locked, it's not previously uploaded and not in requiredDocs. 
-            // So they just can't submit at all.
-            var hasLockedDocs = document.querySelectorAll('.bi-file-earmark-lock-fill').length > 0;
-            if (hasLockedDocs) return false;
-            
-            return allPreviouslyUploaded || (requiredDocs.length > 0 ? allSelected : true);
+
+            return allSelected;
         }
 
         function updateBtnState() {

@@ -36,12 +36,12 @@ class ContractAddendumWorkflowTest extends TestCase
         $this->actingAs($pejabat)
             ->get(route('addendums.index', $contract))
             ->assertOk()
-            ->assertSee('Daftar Addendum Kontrak');
+            ->assertSee('Daftar Addendum SPK');
 
         $this->actingAs($pejabat)
             ->get(route('addendums.create', $contract))
             ->assertOk()
-            ->assertSee('Buat Addendum Kontrak');
+            ->assertSee('Buat Addendum SPK');
 
         $storeResponse = $this->actingAs($pejabat)->post(route('addendums.store', $contract), [
             'nomor_addendum' => 'ADD-001/SPK/2026',

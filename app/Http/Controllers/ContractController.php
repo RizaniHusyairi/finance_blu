@@ -974,6 +974,84 @@ class ContractController extends Controller
     }
 
     /**
+     * Unggah manual dokumen final ber-TTD basah vendor (SPK/SPMK/Ringkasan
+     * Kontrak) oleh staf dalam satu formulir — alternatif portal upload
+     * vendor. Wajib pernyataan tanggung jawab; asal unggahan terbaca dari
+     * uploaded_by (staf) vs null (portal vendor) dan dicatat di log audit.
+     */
+    public function uploadManualFinalDocs(Request $request, $id)
+    {
+        $kontrak = \App\Models\KontrakPengadaan::with('arsipDokumen')->findOrFail($id);
+
+        if (! ContractDocumentTte::isApproved($kontrak)) {
+            return back()->with('error', 'Kontrak belum disetujui PPK secara elektronik.');
+        }
+
+        $request->validate([
+            'file_spk_final' => 'nullable|file|mimes:pdf|max:10240',
+            'file_spmk_final' => 'nullable|file|mimes:pdf|max:10240',
+            'file_ringkasan_final' => 'nullable|file|mimes:pdf|max:10240',
+            'tanggal_ttd_vendor' => 'required|date|before_or_equal:today',
+            'keterangan' => 'nullable|string|max:1000',
+            'pernyataan' => 'required|accepted',
+        ], [
+            'pernyataan.required' => 'Centang pernyataan tanggung jawab terlebih dahulu.',
+            'pernyataan.accepted' => 'Centang pernyataan tanggung jawab terlebih dahulu.',
+            'mimes' => 'Hanya diperbolehkan format PDF.',
+            'max' => 'Ukuran file maksimal 10MB.',
+        ]);
+
+        $map = [
+            'file_spk_final' => ['jenis' => 'SPK_FINAL_TTD', 'dir' => 'kontrak/spk-final-ttd', 'label' => 'SPK'],
+            'file_spmk_final' => ['jenis' => 'SPMK_FINAL_TTD', 'dir' => 'kontrak/spmk-final-ttd', 'label' => 'SPMK'],
+            'file_ringkasan_final' => ['jenis' => 'RINGKASAN_KONTRAK_FINAL_TTD', 'dir' => 'kontrak/ringkasan-kontrak-final-ttd', 'label' => 'Ringkasan Kontrak'],
+        ];
+
+        $uploaded = [];
+
+        DB::transaction(function () use ($request, $kontrak, $map, &$uploaded) {
+            foreach ($map as $field => $cfg) {
+                if (! $request->hasFile($field)) {
+                    continue;
+                }
+
+                $this->replaceKontrakArsipAktif(
+                    $kontrak,
+                    $cfg['jenis'],
+                    $request->file($field)->store($cfg['dir'], 'local'),
+                    $request->file($field)->getClientOriginalName()
+                );
+                $uploaded[] = $cfg['label'];
+            }
+
+            if ($uploaded === []) {
+                return;
+            }
+
+            \App\Models\LogStatusDokumen::create([
+                'dokumen_type' => \App\Models\KontrakPengadaan::class,
+                'dokumen_id' => $kontrak->id,
+                'user_id' => Auth::id(),
+                'role_saat_itu' => Auth::user()?->getRoleNames()->first() ?? '-',
+                'status_sebelumnya' => $kontrak->status_kontrak,
+                'status_baru' => $kontrak->status_kontrak,
+                'aksi' => 'UPLOAD_MANUAL_TTD',
+                'catatan' => 'Unggah manual dokumen final TTD basah vendor: ' . implode(', ', $uploaded)
+                    . ' (tanggal TTD vendor: ' . $request->input('tanggal_ttd_vendor') . ').'
+                    . ($request->filled('keterangan') ? ' Keterangan: ' . $request->input('keterangan') : ''),
+                'ip_address' => $request->ip(),
+            ]);
+        });
+
+        if ($uploaded === []) {
+            return back()->with('error', 'Pilih minimal satu dokumen untuk diunggah.');
+        }
+
+        return back()->with('success', 'Dokumen ' . implode(', ', $uploaded)
+            . ' berhasil diunggah dan ditandai ditandatangani vendor (manual).');
+    }
+
+    /**
      * Kirim link portal upload dokumen final (TTD basah) ke nomor WhatsApp vendor.
      * Portal publik memuat form upload SPK, SPMK, dan Ringkasan Kontrak yang sudah ditandatangani.
      */

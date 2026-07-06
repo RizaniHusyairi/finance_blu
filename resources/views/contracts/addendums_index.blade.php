@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Daftar Addendum Kontrak')
+@section('title', 'Daftar Addendum SPK')
 
 @section('content')
 @php
@@ -26,12 +26,12 @@
 
 <div class="d-flex flex-column flex-lg-row justify-content-between gap-3 align-items-lg-center mb-4">
     <div>
-        <h4 class="fw-bold mb-1">Daftar Addendum Kontrak</h4>
-        <div class="text-muted">Riwayat perubahan terhadap kontrak pengadaan.</div>
+        <h4 class="fw-bold mb-1">Daftar Addendum SPK</h4>
+        <div class="text-muted">Riwayat perubahan terhadap SPK pengadaan.</div>
     </div>
     <div class="d-flex flex-wrap gap-2">
         <a href="{{ route('contracts.show', $contract) }}" class="btn btn-outline-secondary">
-            <i class="bi bi-arrow-left me-1"></i> Detail Kontrak
+            <i class="bi bi-arrow-left me-1"></i> Detail SPK
         </a>
         @if($canManageDraft)
             <a href="{{ route('addendums.create', $contract) }}" class="btn btn-primary fw-bold">

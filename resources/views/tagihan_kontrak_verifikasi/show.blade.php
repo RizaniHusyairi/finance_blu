@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Verifikasi Tagihan Kontrak — ' . $tagihan->nomor_tagihan)
+@section('title', 'Verifikasi Tagihan SPK — ' . $tagihan->nomor_tagihan)
 
 @push('css')
 <style>
@@ -502,7 +502,7 @@
                 </div>
                 <div>
                     <h4 class="fw-bold mb-1 text-dark d-flex align-items-center gap-2 flex-wrap">
-                        Verifikasi Tagihan Kontrak
+                        Verifikasi Tagihan SPK
                         @php
                             $statusColors = [
                                 'PROGRESS' => 'primary',

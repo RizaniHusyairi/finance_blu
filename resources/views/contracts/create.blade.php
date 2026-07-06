@@ -1,6 +1,6 @@
 @extends('layouts.app')
 @section('title')
-    Tambah Kontrak Pengadaan
+    Tambah SPK
 @endsection
 
 @push('css')
@@ -637,7 +637,7 @@
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
             <div>
                 <span class="hero-tag"><i class="bi bi-stars"></i> Form Pengadaan Baru</span>
-                <h2><i class="bi bi-folder-plus me-2"></i>Tambah Kontrak Pengadaan</h2>
+                <h2><i class="bi bi-folder-plus me-2"></i>Tambah SPK</h2>
                 <p>Lengkapi data kontrak, vendor, skema pembayaran, dan penandatangan untuk membuat draft pengadaan.</p>
             </div>
             <a href="{{ route('contracts.index') }}" class="btn-back-hero">

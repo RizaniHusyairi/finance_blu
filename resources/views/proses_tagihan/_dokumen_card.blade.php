@@ -9,12 +9,6 @@
 
     $status = $document?->status ?? null;
     $instanceStatus = $instance?->status;
-    $submittableStatuses = ['DRAFT', 'Revisi', 'REVISI', 'REVISI_PPK', 'REVISI_KASUBBAG', 'DITOLAK_PPK', 'DITOLAK_KASUBBAG'];
-    $awaitingSubmit = $document && in_array($document->status, $submittableStatuses, true);
-    $submittable = $awaitingSubmit && $canSubmit;
-
-    // Catatan penghalang pengajuan (mis. NPI menunggu SPP & SPM disetujui).
-    $lockedNote = $lockedNote ?? null;
 
     // Peta tone warna per kartu
     $tone = match ($color ?? 'indigo') {
@@ -133,7 +127,7 @@
                             @if(strtolower($jenis) === 'sp2d')
                                 Unggah ulang <strong>bukti transfer</strong> yang benar pada kartu Bukti Transfer — SP2D akan diajukan kembali ke PPK secara otomatis.
                             @else
-                                Perbaiki sesuai catatan lalu klik <strong>Ajukan {{ strtoupper($jenis) }}</strong> — verifikasi akan diulang dari awal.
+                                Perbaiki sesuai catatan — dokumen akan <strong>diajukan ulang otomatis</strong> setelah rantai dokumen dibuat kembali.
                             @endif
                         </div>
                     </div>
@@ -141,27 +135,11 @@
             @endif
 
             {{-- ===== Aksi dokumen ===== --}}
-            <div class="d-flex flex-wrap align-items-center gap-2 mt-3">
-                @if($pdfRoute)
+            @if($pdfRoute)
+                <div class="d-flex flex-wrap align-items-center gap-2 mt-3">
                     <a href="{{ $pdfRoute }}" target="_blank" class="btn btn-light bg-white border shadow-sm btn-pt-action text-dark btn-sm">
                         <i class="bi bi-file-earmark-pdf-fill text-danger"></i> Lihat PDF
                     </a>
-                @endif
-
-                @if($submittable && $submitRoute)
-                    <form method="POST" action="{{ $submitRoute }}" class="m-0 ms-auto">
-                        @csrf
-                        <button type="submit" class="btn btn-primary shadow btn-pt-action">
-                            <i class="bi bi-send-fill"></i> Ajukan {{ strtoupper($jenis) }}
-                        </button>
-                    </form>
-                @endif
-            </div>
-
-            @if($awaitingSubmit && $lockedNote)
-                <div class="pt-locked mt-3">
-                    <i class="bi bi-lock-fill fs-4"></i>
-                    <div class="small fw-semibold">{{ $lockedNote }}</div>
                 </div>
             @endif
 

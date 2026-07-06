@@ -313,6 +313,147 @@
         position: absolute; top: -4vh; width: 9px; height: 14px; border-radius: 2px;
         animation: ptConfetti linear forwards;
     }
+
+    /* ── Panel prasyarat draft (pw) ─────────────────────────────── */
+    .pw-panel {
+        border: 1px solid #f3e3bd;
+        border-radius: var(--pt-radius, 18px);
+        background: linear-gradient(180deg, #fffdf6, #fef8ec);
+        box-shadow: 0 14px 32px -24px rgba(180, 122, 9, .5);
+        overflow: hidden;
+    }
+    .pw-head {
+        display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
+        padding: 1.15rem 1.4rem;
+        border-bottom: 1px dashed #f0deb2;
+    }
+    .pw-ic {
+        width: 46px; height: 46px; border-radius: 13px; flex-shrink: 0;
+        display: flex; align-items: center; justify-content: center; font-size: 1.3rem; color: #fff;
+        background: linear-gradient(135deg, #d97706, #f59e0b);
+        box-shadow: 0 10px 20px -10px rgba(217, 119, 6, .8);
+        animation: pwPulse 2.4s ease-in-out infinite;
+    }
+    @keyframes pwPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.07); } }
+    .pw-count {
+        margin-left: auto;
+        font-size: .74rem; font-weight: 800; letter-spacing: .04em;
+        color: #92600a; background: #fdeec0; border: 1px solid #f0deb2; border-radius: 999px;
+        padding: .35rem .85rem; white-space: nowrap;
+    }
+    .pw-item {
+        display: flex; align-items: flex-start; gap: .85rem;
+        padding: .8rem 1.4rem;
+        opacity: 0; transform: translateX(-10px);
+        animation: pwIn .45s cubic-bezier(.22,1,.36,1) forwards;
+    }
+    .pw-item + .pw-item { border-top: 1px solid #faf0d8; }
+    .pw-item:nth-child(2) { animation-delay: .08s; }
+    .pw-item:nth-child(3) { animation-delay: .16s; }
+    .pw-item:nth-child(4) { animation-delay: .24s; }
+    .pw-item:nth-child(5) { animation-delay: .32s; }
+    .pw-item:nth-child(6) { animation-delay: .40s; }
+    @keyframes pwIn { to { opacity: 1; transform: translateX(0); } }
+    .pw-item-ic {
+        width: 34px; height: 34px; border-radius: 10px; flex-shrink: 0;
+        display: flex; align-items: center; justify-content: center; font-size: .95rem;
+        background: #fff; border: 1.5px dashed #ecd9a8; color: #b45309;
+    }
+    .pw-item-text { font-size: .86rem; color: #57534e; overflow-wrap: anywhere; }
+    .pw-role {
+        display: inline-flex; align-items: center; gap: .3rem;
+        font-size: .66rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase;
+        color: #92600a; background: #fdeec0; border-radius: 999px; padding: .18rem .6rem;
+        margin-top: .3rem;
+    }
+    @media (prefers-reduced-motion: reduce) {
+        .pw-ic { animation: none; }
+        .pw-item { animation: none; opacity: 1; transform: none; }
+    }
+
+    /* ── Ringkasan Tagihan (rk) ─────────────────────────────────── */
+    .rk-identity {
+        position: relative;
+        border: 1px solid #e7eaf3;
+        border-radius: 14px;
+        padding: 1.1rem 1.25rem;
+        background: linear-gradient(135deg, rgba(79,70,229,.05), rgba(124,58,237,.02) 55%, transparent);
+        overflow: hidden;
+    }
+    .rk-identity::before {
+        content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
+        background: linear-gradient(180deg, var(--pt-primary), var(--pt-primary-2));
+    }
+    .rk-job {
+        font-weight: 800; font-size: 1.15rem; color: #0f172a;
+        letter-spacing: -.01em; line-height: 1.35; overflow-wrap: anywhere;
+    }
+    .rk-desc { font-size: .82rem; color: #64748b; margin-top: .3rem; overflow-wrap: anywhere; }
+    .rk-chip {
+        display: inline-flex; align-items: center; gap: .35rem;
+        font-size: .74rem; font-weight: 700;
+        border-radius: 999px; padding: .3rem .75rem;
+        background: #fff; border: 1px solid #e7eaf3; color: #475569;
+        transition: transform .18s, box-shadow .18s, border-color .18s;
+    }
+    .rk-chip i { color: var(--pt-primary); }
+    .rk-chip.rk-copy { cursor: pointer; }
+    .rk-chip.rk-copy:hover { transform: translateY(-2px); border-color: var(--pt-primary); box-shadow: 0 8px 18px -12px rgba(79,70,229,.6); }
+    .rk-chip.rk-copied { background: #e8f5ec; border-color: #cbe7d3; color: #15803d; }
+    .rk-chip.rk-copied i { color: #15803d; }
+
+    .rk-stat {
+        position: relative;
+        border: 1px solid #e7eaf3;
+        border-radius: 14px;
+        padding: 1rem 1.15rem;
+        height: 100%;
+        background: #fff;
+        transition: transform .2s, box-shadow .2s, border-color .2s;
+        overflow: hidden;
+    }
+    .rk-stat:hover { transform: translateY(-3px); box-shadow: 0 14px 28px -18px rgba(15,23,42,.35); }
+    .rk-stat .rk-ic {
+        width: 34px; height: 34px; border-radius: 10px; flex-shrink: 0;
+        display: flex; align-items: center; justify-content: center; font-size: .95rem;
+        background: var(--tone-slate-soft); color: var(--tone-slate);
+    }
+    .rk-stat .rk-lbl { font-size: .7rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: #94a3b8; }
+    .rk-stat .rk-val { font-size: 1.25rem; font-weight: 800; color: #0f172a; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+    .rk-stat.rk-potongan .rk-ic { background: rgba(225,29,72,.10); color: #e11d48; }
+    .rk-stat.rk-potongan .rk-val { color: #e11d48; }
+    .rk-stat.rk-netto {
+        border-color: rgba(16,185,129,.35);
+        background: linear-gradient(135deg, rgba(16,185,129,.10), rgba(16,185,129,.02));
+    }
+    .rk-stat.rk-netto:hover { box-shadow: 0 16px 32px -18px rgba(16,185,129,.55); }
+    .rk-stat.rk-netto .rk-ic { background: rgba(16,185,129,.15); color: #059669; }
+    .rk-stat.rk-netto .rk-val { color: #047857; font-size: 1.6rem; }
+    .rk-stat.rk-netto::after {
+        content: ''; position: absolute; top: 0; bottom: 0; width: 40%; left: -60%;
+        background: linear-gradient(100deg, transparent, rgba(255,255,255,.55), transparent);
+        transform: skewX(-18deg);
+    }
+    .pt-anim .reveal.in .rk-stat.rk-netto::after { animation: rkShine 3.4s ease-in-out 1.2s infinite; }
+    @keyframes rkShine { 0%, 60% { left: -60%; } 90%, 100% { left: 130%; } }
+
+    .rk-bar-wrap { margin-top: .35rem; }
+    .rk-bar {
+        display: flex; height: 12px; border-radius: 999px; overflow: hidden;
+        background: #eef1f7; box-shadow: inset 0 1px 2px rgba(15,23,42,.06);
+    }
+    .rk-bar span { width: 0; transition: width 1.3s cubic-bezier(.16,1,.3,1) .35s; }
+    .rk-bar .rk-seg-netto { background: linear-gradient(90deg, #10b981, #34d399); }
+    .rk-bar .rk-seg-potongan { background: linear-gradient(90deg, #fb7185, #e11d48); }
+    .pt-anim .reveal.in .rk-bar span { width: var(--w); }
+    html:not(.pt-anim) .rk-bar span { width: var(--w); }
+    .rk-legend { display: flex; flex-wrap: wrap; gap: 1rem; font-size: .74rem; color: #64748b; margin-top: .45rem; }
+    .rk-legend .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: .3rem; }
+    @media (prefers-reduced-motion: reduce) {
+        .rk-bar span { transition: none; width: var(--w) !important; }
+        .rk-stat, .rk-stat:hover, .rk-chip.rk-copy:hover { transition: none; transform: none; }
+        .rk-stat.rk-netto::after { animation: none !important; }
+    }
 </style>
 @endpush
 
@@ -455,22 +596,86 @@
                     @endif
                 </div>
 
-                <div class="row g-4">
-                    <div class="col-12">
-                        <div class="process-muted mb-1">Uraian / Deskripsi</div>
-                        <div class="process-value bg-light p-3 rounded-3 border border-light-subtle fs-6">{{ $tagihan->deskripsi }}</div>
+                @php
+                    $kontrakSpk = $tagihan->detailKontrak?->kontrakTermin?->kontrak;
+                    $terminRingkas = $tagihan->detailKontrak?->kontrakTermin;
+                    $bruto = (float) $tagihan->total_bruto;
+                    $potongan = (float) $tagihan->total_potongan;
+                    $netto = (float) $tagihan->total_netto;
+                    $persenPotongan = $bruto > 0 ? round($potongan / $bruto * 100, 1) : 0;
+                    $persenNetto = $bruto > 0 ? round(100 - $persenPotongan, 1) : 0;
+                    $tipeLabelRingkas = ['KONTRAK' => 'Tagihan SPK', 'PERJALDIN' => 'Perjaldin', 'HONORARIUM' => 'Honorarium'][$tagihan->tipe_tagihan] ?? $tagihan->tipe_tagihan;
+                @endphp
+
+                {{-- Identitas pekerjaan --}}
+                <div class="rk-identity mb-4">
+                    <div class="rk-job">
+                        <i class="bi bi-briefcase-fill me-2" style="color: var(--pt-primary);"></i>{{ $kontrakSpk->nama_pekerjaan ?? $tagihan->deskripsi }}
                     </div>
-                    <div class="col-md-4">
-                        <div class="process-muted mb-1">Nilai Bruto</div>
-                        <div class="process-value fs-5">Rp <span data-countup="{{ (float) $tagihan->total_bruto }}">{{ number_format((float) $tagihan->total_bruto, 0, ',', '.') }}</span></div>
+                    @if($kontrakSpk)
+                        <div class="rk-desc">{{ $tagihan->deskripsi }}</div>
+                    @endif
+                    <div class="d-flex flex-wrap gap-2 mt-3">
+                        <span class="rk-chip"><i class="bi bi-tag-fill"></i> {{ $tipeLabelRingkas }}</span>
+                        @if($kontrakSpk)
+                            <span class="rk-chip rk-copy" data-copy="{{ $kontrakSpk->nomor_spk }}" title="Klik untuk menyalin nomor SPK">
+                                <i class="bi bi-hash"></i> <span class="rk-copy-text">{{ $kontrakSpk->nomor_spk }}</span> <i class="bi bi-copy" style="color:#94a3b8;font-size:.7rem;"></i>
+                            </span>
+                        @endif
+                        @if($terminRingkas)
+                            <span class="rk-chip"><i class="bi bi-collection-fill"></i> Termin {{ $terminRingkas->termin_ke }} · {{ str_replace('_', ' ', $terminRingkas->jenis_termin) }}</span>
+                        @endif
+                        <span class="rk-chip rk-copy" data-copy="{{ $tagihan->nomor_tagihan }}" title="Klik untuk menyalin nomor tagihan">
+                            <i class="bi bi-receipt"></i> <span class="rk-copy-text">{{ $tagihan->nomor_tagihan }}</span> <i class="bi bi-copy" style="color:#94a3b8;font-size:.7rem;"></i>
+                        </span>
                     </div>
-                    <div class="col-md-4">
-                        <div class="process-muted mb-1">Total Potongan</div>
-                        <div class="process-value fs-5 text-danger">- Rp <span data-countup="{{ (float) $tagihan->total_potongan }}">{{ number_format((float) $tagihan->total_potongan, 0, ',', '.') }}</span></div>
+                </div>
+
+                {{-- Rincian nilai --}}
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <div class="rk-stat">
+                            <div class="d-flex align-items-center gap-2 mb-2">
+                                <span class="rk-ic"><i class="bi bi-cash-stack"></i></span>
+                                <span class="rk-lbl">Nilai Bruto</span>
+                            </div>
+                            <div class="rk-val">Rp <span data-countup="{{ $bruto }}">{{ number_format($bruto, 0, ',', '.') }}</span></div>
+                        </div>
                     </div>
-                    <div class="col-md-4">
-                        <div class="process-muted mb-1">Netto Dibayarkan</div>
-                        <div class="process-value fs-5 text-success">Rp <span data-countup="{{ (float) $tagihan->total_netto }}">{{ number_format((float) $tagihan->total_netto, 0, ',', '.') }}</span></div>
+                    <div class="col-md-3">
+                        <div class="rk-stat rk-potongan">
+                            <div class="d-flex align-items-center gap-2 mb-2">
+                                <span class="rk-ic"><i class="bi bi-dash-circle"></i></span>
+                                <span class="rk-lbl">Total Potongan</span>
+                            </div>
+                            <div class="rk-val">- Rp <span data-countup="{{ $potongan }}">{{ number_format($potongan, 0, ',', '.') }}</span></div>
+                            <div class="small text-muted mt-1">{{ $persenPotongan }}% dari bruto</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="rk-stat rk-netto">
+                            <div class="d-flex align-items-center gap-2 mb-2">
+                                <span class="rk-ic"><i class="bi bi-wallet2"></i></span>
+                                <span class="rk-lbl" style="color:#059669;">Netto Dibayarkan ke Vendor</span>
+                            </div>
+                            <div class="rk-val">Rp <span data-countup="{{ $netto }}">{{ number_format($netto, 0, ',', '.') }}</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Komposisi bruto → netto + potongan --}}
+                <div class="rk-bar-wrap mt-3">
+                    <div class="rk-bar" role="img" aria-label="Komposisi nilai: netto {{ $persenNetto }}%, potongan {{ $persenPotongan }}%">
+                        <span class="rk-seg-netto" style="--w: {{ $persenNetto }}%;"></span>
+                        <span class="rk-seg-potongan" style="--w: {{ $persenPotongan }}%;"></span>
+                    </div>
+                    <div class="rk-legend">
+                        <span><span class="dot" style="background:#10b981;"></span>Netto dibayarkan · {{ $persenNetto }}%</span>
+                        @if($potongan > 0)
+                            <span><span class="dot" style="background:#e11d48;"></span>Potongan (pajak/angsuran) · {{ $persenPotongan }}%</span>
+                        @else
+                            <span><span class="dot" style="background:#cbd5e1;"></span>Tanpa potongan</span>
+                        @endif
                     </div>
                 </div>
             </div>
@@ -540,15 +745,46 @@
         </div>
 
         @if($state['missingPrereqs'] && ! $state['spp'])
-            <div class="alert alert-warning pt-alert d-flex align-items-start gap-3 reveal">
-                <i class="bi bi-exclamation-circle-fill fs-3 text-warning"></i>
+            @php
+                // Peta prasyarat → ikon & penanggung jawab (dibaca dari kalimatnya)
+                // agar tiap orang langsung tahu bagian siapa yang belum selesai.
+                $pwMeta = function (string $item): array {
+                    return match (true) {
+                        str_contains($item, 'COA') => ['bi-tag-fill', 'PPK'],
+                        str_contains($item, 'KPA') => ['bi-person-fill-check', 'PPK → KPA'],
+                        str_contains($item, 'pajak') => ['bi-percent', 'Operator BLU'],
+                        str_contains($item, 'BAP') || str_contains($item, 'Vendor') => ['bi-vector-pen', 'Vendor / Staf (manual)'],
+                        str_contains($item, 'Verifikator') => ['bi-person-plus-fill', 'Pejabat Pengadaan'],
+                        default => ['bi-exclamation-circle', null],
+                    };
+                };
+            @endphp
+            {{-- Panel inline (bukan .alert) sehingga tidak diubah menjadi popup toast oleh sky-alerts. --}}
+            <div class="pw-panel mb-4 reveal" role="alert">
+                <div class="pw-head">
+                    <div class="pw-ic"><i class="bi bi-exclamation-triangle-fill"></i></div>
+                    <div>
+                        <h6 class="fw-bolder text-dark mb-1">Draft Dokumen Belum Dapat Dibuat</h6>
+                        <div class="small text-secondary">
+                            Lengkapi prasyarat di bawah — draft SPP/SPM/NPI akan dibuat dan
+                            <strong>diajukan otomatis ke verifikator</strong> begitu semuanya terpenuhi.
+                        </div>
+                    </div>
+                    <span class="pw-count"><i class="bi bi-list-check me-1"></i>{{ count($state['missingPrereqs']) }} prasyarat tersisa</span>
+                </div>
                 <div>
-                    <div class="fw-bold mb-1 text-dark fs-6">Draft Dokumen Belum Dapat Dibuat</div>
-                    <ul class="mb-0 text-dark opacity-75 ps-3">
-                        @foreach($state['missingPrereqs'] as $item)
-                            <li>{{ $item }}</li>
-                        @endforeach
-                    </ul>
+                    @foreach($state['missingPrereqs'] as $item)
+                        @php [$pwIkon, $pwRole] = $pwMeta($item); @endphp
+                        <div class="pw-item">
+                            <span class="pw-item-ic"><i class="bi {{ $pwIkon }}"></i></span>
+                            <div>
+                                <div class="pw-item-text">{{ $item }}</div>
+                                @if($pwRole)
+                                    <span class="pw-role"><i class="bi bi-person-badge"></i> {{ $pwRole }}</span>
+                                @endif
+                            </div>
+                        </div>
+                    @endforeach
                 </div>
             </div>
         @endif
@@ -588,6 +824,9 @@
             @endif
         </div>
 
+        {{-- Verifikasi massal: satu tombol untuk semua dokumen milik user --}}
+        @include('proses_tagihan._verifikasi_massal_card')
+
         <div class="reveal">
             @include('proses_tagihan._dokumen_card', [
                 'tagihan' => $tagihan,
@@ -599,8 +838,6 @@
                 'instance' => $state['sppInstance'],
                 'myApprovals' => $state['myApprovals']['spp'],
                 'chainDocs' => $chainDocsForRevisi,
-                'canSubmit' => auth()->user()?->hasAnyRole(['Operator BLU', 'Super Admin']),
-                'submitRoute' => $state['spp'] ? route('proses-tagihan.spp.ajukan', $tagihan->id) : null,
                 'pdfRoute' => $state['spp'] ? route('spps.cetak-pdf', $state['spp']->id) : null,
             ])
         </div>
@@ -616,8 +853,6 @@
                 'instance' => $state['spmInstance'],
                 'myApprovals' => $state['myApprovals']['spm'],
                 'chainDocs' => $chainDocsForRevisi,
-                'canSubmit' => auth()->user()?->hasAnyRole(['Operator BLU', 'Super Admin']),
-                'submitRoute' => $state['spm'] ? route('proses-tagihan.spm.ajukan', $tagihan->id) : null,
                 'pdfRoute' => $state['spm'] ? route('spms.cetak-pdf', $state['spm']->id) : null,
             ])
         </div>
@@ -633,12 +868,6 @@
                 'instance' => $state['npiInstance'],
                 'myApprovals' => $state['myApprovals']['npi'],
                 'chainDocs' => $chainDocsForRevisi,
-                'canSubmit' => auth()->user()?->hasAnyRole(['Bendahara Pengeluaran', 'Super Admin'])
-                    && $state['sppApproved'] && $state['spmApproved'],
-                'lockedNote' => (! $state['sppApproved'] || ! $state['spmApproved'])
-                    ? 'NPI baru dapat diajukan setelah SPP dan SPM disetujui oleh verifikatornya.'
-                    : null,
-                'submitRoute' => $state['npi'] ? route('proses-tagihan.npi.ajukan', $tagihan->id) : null,
                 'pdfRoute' => $state['npi'] ? route('npis.cetak-pdf', $state['npi']->id) : null,
             ])
         </div>
@@ -718,6 +947,31 @@
         : null;
     document.querySelectorAll('[data-countup]').forEach(function (el) {
         cuObserver ? cuObserver.observe(el) : countUp(el);
+    });
+
+    /* ---------- Chip salin nomor (SPK / tagihan) ---------- */
+    document.querySelectorAll('.rk-copy[data-copy]').forEach(function (chip) {
+        chip.addEventListener('click', function () {
+            var text = chip.getAttribute('data-copy');
+            var label = chip.querySelector('.rk-copy-text');
+            var asli = label ? label.textContent : '';
+            var selesai = function () {
+                chip.classList.add('rk-copied');
+                if (label) label.textContent = 'Tersalin!';
+                setTimeout(function () {
+                    chip.classList.remove('rk-copied');
+                    if (label) label.textContent = asli;
+                }, 1400);
+            };
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(selesai);
+            } else {
+                var ta = document.createElement('textarea');
+                ta.value = text; document.body.appendChild(ta);
+                ta.select(); document.execCommand('copy'); ta.remove();
+                selesai();
+            }
+        });
     });
 
     /* ---------- Stepper: klik untuk scroll ---------- */

@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title') Verifikasi Tagihan Kontrak @endsection
+@section('title') Verifikasi Tagihan SPK @endsection
 @push('css')
     <link href="{{ URL::asset('build/plugins/datatable/css/dataTables.bootstrap5.min.css') }}" rel="stylesheet" />
     <style>
@@ -422,11 +422,11 @@
             <i class="bi bi-shield-check title-icon-animate"></i>
         </div>
         <div>
-            <h3 class="fw-bold mb-1 text-dark page-title-gradient" style="font-size: 1.55rem; letter-spacing: -0.02em;">Verifikasi Tagihan Kontrak</h3>
+            <h3 class="fw-bold mb-1 text-dark page-title-gradient" style="font-size: 1.55rem; letter-spacing: -0.02em;">Verifikasi Tagihan SPK</h3>
             <div class="d-flex align-items-center gap-2 text-muted small">
                 <a href="javascript:;" class="text-secondary text-decoration-none"><i class="bi bi-house-door"></i></a>
                 <span class="opacity-50">/</span>
-                <span class="text-secondary fw-medium">Daftar Pengajuan Tagihan Termin/BAST Kontrak</span>
+                <span class="text-secondary fw-medium">Daftar Pengajuan Tagihan Termin/BAST SPK</span>
             </div>
         </div>
     </div>

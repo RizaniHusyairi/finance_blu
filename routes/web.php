@@ -345,9 +345,7 @@ Route::middleware(['auth', 'account.active'])->group(function () use ($internalR
             Route::get('/{tagihan}', [TagihanProsesController::class, 'show'])->name('show');
             Route::post('/{tagihan}/coa', [TagihanProsesController::class, 'simpanCoa'])->name('coa');
             Route::post('/{tagihan}/pajak-kontrak', [TagihanProsesController::class, 'simpanPajak'])->name('pajak-kontrak');
-            Route::post('/{tagihan}/spp/ajukan', [TagihanProsesController::class, 'ajukanSpp'])->name('spp.ajukan');
-            Route::post('/{tagihan}/spm/ajukan', [TagihanProsesController::class, 'ajukanSpm'])->name('spm.ajukan');
-            Route::post('/{tagihan}/npi/ajukan', [TagihanProsesController::class, 'ajukanNpi'])->name('npi.ajukan');
+            Route::post('/{tagihan}/dokumen/setujui-semua', [TagihanProsesController::class, 'setujuiSemuaDokumen'])->name('dokumen.setujui-semua');
             Route::post('/{tagihan}/dokumen/{jenis}/aksi', [TagihanProsesController::class, 'aksiDokumen'])
                 ->whereIn('jenis', ['spp', 'spm', 'npi', 'sp2d'])
                 ->name('dokumen.aksi');
@@ -579,12 +577,15 @@ Route::middleware(['auth', 'account.active'])->group(function () use ($internalR
         Route::post('/jasa/mitra/{mitra}/penjualan/{penjualan}/reject', [MitraJasaPenjualanController::class, 'reject'])->name('jasa.mitra.penjualan.reject');
     });
 
-    // Manajemen Kontrak (Kontrak, Addendum, Termin)
+    // Manajemen SPK (Kontrak Pengadaan, Addendum, Termin)
     Route::middleware('role:Super Admin|Pejabat Pengadaan|PPK')->group(function () {
         Route::get('/tagihan/kontrak/create', [TagihanController::class, 'createKontrak'])->name('tagihan.kontrak.create');
         Route::post('/tagihan/kontrak/store', [TagihanController::class, 'storeKontrak'])->name('tagihan.kontrak.store');
+        Route::get('/tagihan/kontrak/{id}/edit', [TagihanController::class, 'editKontrak'])->name('tagihan.kontrak.edit');
+        Route::put('/tagihan/kontrak/{id}', [TagihanController::class, 'updateKontrak'])->name('tagihan.kontrak.update');
         Route::get('/tagihan/kontrak/{id}', [TagihanController::class, 'showKontrak'])->name('tagihan.kontrak.show');
         Route::post('/tagihan/kontrak/{id}/send-tte', [TagihanTteController::class, 'sendTte'])->name('tagihan.kontrak.send-tte');
+        Route::post('/tagihan/kontrak/{id}/ttd-manual', [TagihanTteController::class, 'uploadManualTtd'])->name('tagihan.kontrak.ttd-manual');
         Route::post('/tagihan/kontrak/{id}/submit', [TagihanController::class, 'submitKontrak'])->name('tagihan.kontrak.submit');
         Route::post('/tagihan/kontrak/{id}/arsip', [TagihanController::class, 'uploadArsipKontrak'])->name('tagihan.kontrak.upload-arsip');
         Route::get('/tagihan/kontrak/{id}/arsip/{arsipId}', [TagihanController::class, 'viewArsipKontrak'])->name('tagihan.kontrak.view-arsip');
@@ -674,6 +675,7 @@ Route::middleware(['auth', 'account.active'])->group(function () use ($internalR
         Route::post('/contracts/{contract}/spk/upload-final', [ContractController::class, 'uploadSpkFinal'])->name('contracts.spk.upload-final');
         Route::get('/contracts/{contract}/spmk/export-pdf', [ContractController::class, 'exportSpmkPdf'])->name('contracts.spmk.export-pdf');
         Route::post('/contracts/{contract}/send-wa-vendor', [ContractController::class, 'sendWaVendor'])->name('contracts.send-wa-vendor');
+        Route::post('/contracts/{contract}/final-docs-manual', [ContractController::class, 'uploadManualFinalDocs'])->name('contracts.final-docs-manual');
         Route::post('/contracts/{contract}/spmk/upload-final', [ContractController::class, 'uploadSpmkFinal'])->name('contracts.spmk.upload-final');
         Route::resource('contracts', ContractController::class);
 

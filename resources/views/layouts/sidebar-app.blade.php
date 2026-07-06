@@ -124,7 +124,7 @@
         {{-- ════════════════════════════════════════════════════
              AMC — Operasional Penerbangan
              ════════════════════════════════════════════════════ --}}
-        @hasanyrole('Super Admin|Super Admin Jasa|Admin Jasa|Koordinator Jasa|AMC|Operator BLU')
+        @hasanyrole('Super Admin|Super Admin Jasa|Admin Jasa|Koordinator Jasa|AMC')
         <li class="menu-label">AMC &mdash; Operasional</li>
         <li>
           <a href="{{ route('permohonan-non-schedule.index') }}">
@@ -149,7 +149,7 @@
         @endunless
         @endhasanyrole
 
-        @hasanyrole('Super Admin|Super Admin Jasa|Admin Jasa|Koordinator Jasa|Operator BLU')
+        @hasanyrole('Super Admin|Super Admin Jasa|Admin Jasa|Koordinator Jasa')
         <li>
           <a href="{{ route('pengajuan-penagihan-garbarata.index') }}">
             <div class="parent-icon"><i class="material-icons-outlined">request_quote</i></div>
@@ -180,7 +180,7 @@
           <a href="{{ route('contracts.verifikasi') }}">
             <div class="parent-icon"><i class="material-icons-outlined">verified</i>
             </div>
-            <div class="menu-title">Approve Kontrak</div>
+            <div class="menu-title">Approve SPK</div>
           </a>
         </li>
         @endhasrole
@@ -224,7 +224,7 @@
             @else
             <li>
               <a href="{{ route('verifikasi-tagihan-kontrak.index') }}">
-                <i class="material-icons-outlined">arrow_right</i>Kontrak
+                <i class="material-icons-outlined">arrow_right</i>SPK
               </a>
             </li>
             @if(count($perjaldinLinks) > 0)
@@ -377,7 +377,7 @@
           <a href="{{ route('contracts.index') }}">
             <div class="parent-icon"><i class="material-icons-outlined">description</i>
             </div>
-            <div class="menu-title">Manajemen Kontrak</div>
+            <div class="menu-title">Manajemen SPK</div>
           </a>
         </li>
         @endhasanyrole

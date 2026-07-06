@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Approve Kontrak')
+@section('title', 'Approve SPK')
 
 @push('css')
     <link href="{{ URL::asset('build/plugins/datatable/css/dataTables.bootstrap5.min.css') }}" rel="stylesheet" />
@@ -519,8 +519,8 @@
                         <i class="bi bi-shield-check"></i>
                     </div>
                     <div>
-                        <h4 class="mb-0">Approve Kontrak</h4>
-                        <p class="approve-subtitle">Daftar kontrak pengadaan yang masuk ke meja persetujuan PPK.</p>
+                        <h4 class="mb-0">Approve SPK</h4>
+                        <p class="approve-subtitle">Daftar SPK pengadaan yang masuk ke meja persetujuan PPK.</p>
                     </div>
                 </div>
 

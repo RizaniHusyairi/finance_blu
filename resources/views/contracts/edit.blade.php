@@ -1,6 +1,6 @@
 @extends('layouts.app')
 @section('title')
-    Edit Kontrak Pengadaan
+    Edit SPK
 @endsection
 @section('content')
     @php
@@ -15,7 +15,7 @@
     @endphp
     <div class="d-flex justify-content-between align-items-center mb-3">
         <div>
-            <h5 class="mb-0 fw-bold">Edit Kontrak Pengadaan</h5>
+            <h5 class="mb-0 fw-bold">Edit SPK</h5>
             <div class="small text-muted">Nomor SPK: {{ $kontrak->nomor_spk }}</div>
         </div>
         <a href="{{ route('contracts.index') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Kembali ke Daftar</a>

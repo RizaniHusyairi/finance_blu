@@ -154,7 +154,7 @@
         <tr>
             <td>Sumber Dana</td>
             <td>:</td>
-            <td>APBN DIPA Badan Layanan Umum Kantor UPBU Kelas I A.P.T. Pranoto Samarinda Nomor {{ $kontrak->dipa->nomor_dipa ?? '-' }} tanggal {{ optional($kontrak->dipa->tanggal_disahkan)->translatedFormat('d F Y') ?? '-' }}</td>
+            <td>APBN DIPA Badan Layanan Umum Kantor UPBU Kelas I A.P.T. Pranoto Samarinda Nomor {{ $kontrak->dipa?->nomor_dipa ?? '-' }} tanggal {{ $kontrak->dipa?->tanggal_disahkan?->translatedFormat('d F Y') ?? '-' }}</td>
         </tr>
     </table>
 

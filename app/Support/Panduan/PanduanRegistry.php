@@ -42,8 +42,8 @@ class PanduanRegistry
                         ['ikon' => 'space_dashboard', 'nama' => 'Dashboard Internal', 'guna' => 'Ringkasan tugas & status pekerjaan yang menunggu Anda.'],
                     ]],
                     ['grup' => 'Persetujuan & Verifikasi', 'items' => [
-                        ['ikon' => 'verified', 'nama' => 'Approve Kontrak', 'guna' => 'Menyetujui atau menolak kontrak pengadaan yang diajukan ke Anda.'],
-                        ['ikon' => 'fact_check', 'nama' => 'Verifikasi Tagihan', 'guna' => 'Memverifikasi tagihan Kontrak, Perjaldin, dan Honorarium.'],
+                        ['ikon' => 'verified', 'nama' => 'Approve SPK', 'guna' => 'Menyetujui atau menolak SPK pengadaan yang diajukan ke Anda.'],
+                        ['ikon' => 'fact_check', 'nama' => 'Verifikasi Tagihan', 'guna' => 'Memverifikasi tagihan Perjaldin dan Honorarium (tagihan SPK langsung diproses tanpa verifikasi).'],
                     ]],
                     ['grup' => 'Tagihan & Pencairan', 'items' => [
                         ['ikon' => 'account_tree', 'nama' => 'Proses Tagihan', 'guna' => 'Memantau posisi tiap tagihan sepanjang alur hingga cair.'],
@@ -117,7 +117,7 @@ class PanduanRegistry
                         ['ikon' => 'space_dashboard', 'nama' => 'Dashboard PPSPM', 'guna' => 'Ringkasan SPP/tagihan yang menunggu pengujian & penerbitan SPM.'],
                     ]],
                     ['grup' => 'Persetujuan & Verifikasi', 'items' => [
-                        ['ikon' => 'fact_check', 'nama' => 'Verifikasi Tagihan', 'guna' => 'Menguji tagihan (Kontrak/Perjaldin/Honorarium) dan menerbitkan SPM.'],
+                        ['ikon' => 'fact_check', 'nama' => 'Verifikasi Tagihan', 'guna' => 'Menguji tagihan (Perjaldin/Honorarium) dan menerbitkan SPM.'],
                     ]],
                     ['grup' => 'Tagihan & Pencairan', 'items' => [
                         ['ikon' => 'account_tree', 'nama' => 'Proses Tagihan', 'guna' => 'Memantau tagihan hingga terbit SP2D dan dibayar.'],
@@ -137,7 +137,7 @@ class PanduanRegistry
                     [
                         'ikon' => 'rule',
                         'judul' => 'Uji tagihan',
-                        'detail' => 'Buka Verifikasi Tagihan lalu uji kelengkapan dan kebenaran (Kontrak, Perjaldin, Honorarium).',
+                        'detail' => 'Buka Verifikasi Tagihan lalu uji kelengkapan dan kebenaran (Perjaldin, Honorarium).',
                         'menu' => 'Verifikasi Tagihan',
                         'tips' => 'Jangan terbitkan SPM bila kelengkapan SPP belum 100% — kembalikan dulu.',
                     ],
@@ -529,7 +529,7 @@ class PanduanRegistry
                         ['ikon' => 'space_dashboard', 'nama' => 'Dashboard Internal', 'guna' => 'Ringkasan proses pengadaan Anda.'],
                     ]],
                     ['grup' => 'Tagihan & Pencairan', 'items' => [
-                        ['ikon' => 'description', 'nama' => 'Manajemen Kontrak', 'guna' => 'Membuat & mengelola kontrak pengadaan barang/jasa.'],
+                        ['ikon' => 'description', 'nama' => 'Manajemen SPK', 'guna' => 'Membuat & mengelola SPK/kontrak pengadaan barang/jasa.'],
                     ]],
                     ['grup' => 'Master & Administrasi', 'items' => [
                         ['ikon' => 'store', 'nama' => 'Master Data › Vendor', 'guna' => 'Mengelola data penyedia/vendor untuk kontrak.'],
@@ -558,21 +558,21 @@ class PanduanRegistry
                         'ikon' => 'description',
                         'judul' => 'Buat kontrak',
                         'detail' => 'Susun kontrak pengadaan: penyedia, nilai, lingkup, dan masa berlaku.',
-                        'menu' => 'Manajemen Kontrak',
+                        'menu' => 'Manajemen SPK',
                         'tips' => 'Tetapkan masa berlaku & nilai dengan teliti — keduanya sulit diubah setelah disetujui.',
                     ],
                     [
                         'ikon' => 'upload_file',
                         'judul' => 'Lengkapi & kirim ke PPK',
                         'detail' => 'Unggah dokumen pendukung lalu kirim kontrak untuk persetujuan PPK.',
-                        'menu' => 'Manajemen Kontrak',
+                        'menu' => 'Manajemen SPK',
                         'tips' => 'Pastikan seluruh lampiran terunggah agar PPK tidak mengembalikan kontrak.',
                     ],
                     [
                         'ikon' => 'account_tree',
                         'judul' => 'Pantau status kontrak',
                         'detail' => 'Pantau kontrak hingga disetujui; perbaiki bila ada permintaan revisi.',
-                        'menu' => 'Manajemen Kontrak',
+                        'menu' => 'Manajemen SPK',
                         'tips' => 'Tanggapi permintaan revisi PPK segera agar proses tidak tertunda.',
                     ],
                 ],
@@ -583,7 +583,7 @@ class PanduanRegistry
                     ],
                     [
                         't' => 'Kontrak saya dikembalikan PPK. Apa langkahnya?',
-                        'j' => 'Baca catatan PPK, lengkapi atau koreksi pada menu Manajemen Kontrak (termasuk lampiran), lalu kirim ulang untuk persetujuan.',
+                        'j' => 'Baca catatan PPK, lengkapi atau koreksi pada menu Manajemen SPK (termasuk lampiran), lalu kirim ulang untuk persetujuan.',
                     ],
                 ],
             ],

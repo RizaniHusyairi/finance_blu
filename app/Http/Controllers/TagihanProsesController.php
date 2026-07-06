@@ -387,39 +387,8 @@ class TagihanProsesController extends Controller
     // Pengajuan dokumen (paralel)
     // ─────────────────────────────────────────────────────────────────
 
-    public function ajukanSpp($id)
-    {
-        $this->ensureRole(['Operator BLU', 'Super Admin']);
-
-        return $this->lakukanPengajuan($id, fn ($tagihan) => $this->chain->submitSpp($tagihan, Auth::user()), 'SPP');
-    }
-
-    public function ajukanSpm($id)
-    {
-        $this->ensureRole(['Operator BLU', 'Super Admin']);
-
-        return $this->lakukanPengajuan($id, fn ($tagihan) => $this->chain->submitSpm($tagihan, Auth::user()), 'SPM');
-    }
-
-    public function ajukanNpi($id)
-    {
-        $this->ensureRole(['Bendahara Pengeluaran', 'Super Admin']);
-
-        return $this->lakukanPengajuan($id, fn ($tagihan) => $this->chain->submitNpi($tagihan, Auth::user()), 'NPI');
-    }
-
-    private function lakukanPengajuan($id, \Closure $callback, string $label)
-    {
-        $tagihan = Tagihan::findOrFail($id);
-
-        try {
-            $callback($tagihan);
-        } catch (\RuntimeException $e) {
-            return back()->with('error', $e->getMessage());
-        }
-
-        return back()->with('success', "{$label} berhasil diajukan untuk verifikasi.");
-    }
+    // Pengajuan SPP/SPM/NPI kini otomatis & bersamaan saat draft rantai
+    // dibuat (DokumenChainService::submitAllDocuments) — tanpa tombol manual.
 
     // ─────────────────────────────────────────────────────────────────
     // Aksi verifikasi inline per dokumen
@@ -530,6 +499,68 @@ class TagihanProsesController extends Controller
         }
 
         return back()->with('success', $pesan);
+    }
+
+    /**
+     * Verifikasi massal: setujui sekaligus seluruh dokumen SPP/SPM/NPI yang
+     * menunggu persetujuan user saat ini pada tagihan ini — satu tombol untuk
+     * verifikator multi-dokumen (Kasubbag, Koordinator Keuangan, PPK).
+     *
+     * SP2D sengaja dikecualikan: penerbitannya memicu realisasi anggaran &
+     * posting BKU sehingga tetap menjadi aksi sadar tersendiri. Memakai mesin
+     * yang sama dengan persetujuan per-dokumen (approveCurrentStep +
+     * tandaiDokumenDisetujui) sehingga log, notifikasi, dan guard
+     * maker≠checker berlaku identik.
+     */
+    public function setujuiSemuaDokumen(Request $request, $id)
+    {
+        $request->validate(['catatan' => 'nullable|string|max:1000']);
+
+        $tagihan = Tagihan::findOrFail($id);
+        $catatan = $request->input('catatan') ?: 'Disetujui (verifikasi massal).';
+
+        $disetujui = [];
+        $gagal = [];
+
+        foreach (['spp', 'spm', 'npi'] as $jenis) {
+            $document = $this->resolveDokumen($tagihan, $jenis);
+            if (! $document) {
+                continue;
+            }
+
+            foreach ($this->pendingApprovalsUntukUser($document, Auth::user()) as $approval) {
+                try {
+                    $instance = $this->workflow->approveCurrentStep($document, Auth::id(), $catatan, $approval->id);
+
+                    if ($instance->status === 'APPROVED') {
+                        $this->tandaiDokumenDisetujui($document, $jenis);
+                    }
+
+                    $disetujui[] = strtoupper($jenis);
+                } catch (\Throwable $e) {
+                    // Satu dokumen gagal (mis. maker≠checker) tidak menggagalkan
+                    // dokumen lainnya — laporkan alasannya di ringkasan.
+                    $gagal[] = strtoupper($jenis) . ' (' . $e->getMessage() . ')';
+                }
+            }
+        }
+
+        if ($disetujui === [] && $gagal === []) {
+            return back()->with('error', 'Tidak ada dokumen yang menunggu persetujuan Anda pada tagihan ini.');
+        }
+
+        if ($disetujui !== []) {
+            session()->flash('bulk_approved', count($disetujui));
+        }
+
+        if ($gagal !== []) {
+            $pesan = ($disetujui !== [] ? implode(', ', array_unique($disetujui)) . ' disetujui. ' : '')
+                . 'Gagal: ' . implode('; ', $gagal);
+
+            return back()->with($disetujui !== [] ? 'warning' : 'error', $pesan);
+        }
+
+        return back()->with('success', implode(', ', array_unique($disetujui)) . ' berhasil disetujui sekaligus (verifikasi massal).');
     }
 
     // ─────────────────────────────────────────────────────────────────
@@ -660,13 +691,10 @@ class TagihanProsesController extends Controller
             ->contains(fn ($doc) => $this->pendingApprovalsUntukUser($doc, $user)->isNotEmpty());
 
         if (! $perluSaya && $user?->hasAnyRole(['Operator BLU', 'Super Admin'])) {
+            // SPP/SPM auto-submit; tugas Operator BLU tersisa hanya pajak &
+            // faktur pajak (kontrak) sebelum draft dibuat / saat diminta perbaikan.
             $perluSaya = $this->chain->isTagihanFullyApproved($tagihan)
-                && (in_array($spp?->status, ['DRAFT', 'Revisi', 'REVISI'], true)
-                    || in_array($spp?->spm?->status, [DokumenSpm::STATUS_DRAFT, DokumenSpm::STATUS_REVISI, 'Revisi'], true)
-                    // Verifikator meminta perbaikan pajak — tugas Operator BLU.
-                    || $tagihan->chain_correction_target === 'PAJAK'
-                    // Kontrak: tipe pajak & faktur pajak wajib diisi Operator BLU sebelum draft dibuat
-                    // (atau selagi rantai masih draft untuk tagihan lama).
+                && ($tagihan->chain_correction_target === 'PAJAK'
                     || ((! $spp || $this->chain->isChainStillDraft($tagihan))
                         && ! $this->chain->isPajakKontrakComplete($tagihan)));
         }
@@ -678,18 +706,16 @@ class TagihanProsesController extends Controller
         }
 
         if (! $perluSaya && $user?->hasAnyRole(['Bendahara Pengeluaran', 'Super Admin'])) {
-            // Pengajuan NPI baru menjadi tugas BP setelah SPP & SPM disetujui.
-            $sppSpmApproved = $spp && $spp->spm
+            // Tugas BP: unggah bukti transfer setelah SPP, SPM, NPI semua disetujui.
+            $semuaDisetujui = $spp && $spp->spm && $spp->spm->npi
                 && $this->chain->isDocumentApproved($spp)
-                && $this->chain->isDocumentApproved($spp->spm);
+                && $this->chain->isDocumentApproved($spp->spm)
+                && $this->chain->isDocumentApproved($spp->spm->npi);
 
-            $perluSaya = ($sppSpmApproved
-                    && in_array($spp?->spm?->npi?->status, [DokumenNpi::STATUS_DRAFT, DokumenNpi::STATUS_REVISI], true))
-                || ($sppSpmApproved && $spp?->spm?->npi
-                    && $this->chain->isDocumentApproved($spp->spm->npi)
-                    && (! $sp2d?->bukti_transfer
-                        // PPK meminta perbaikan bukti transfer pada SP2D.
-                        || $sp2d?->status === DokumenSp2d::STATUS_REVISI));
+            $perluSaya = $semuaDisetujui
+                && (! $sp2d?->bukti_transfer
+                    // PPK meminta perbaikan bukti transfer pada SP2D.
+                    || $sp2d?->status === DokumenSp2d::STATUS_REVISI);
         }
 
         return ['tahap' => $tahap, 'perluSaya' => $perluSaya];

@@ -1,6 +1,6 @@
 @extends('layouts.app')
 @section('title')
-    Buat Tagihan (Kontrak & BAST)
+    Edit Tagihan Termin — {{ $tagihan->nomor_tagihan }}
 @endsection
 
 @push('css')
@@ -8,41 +8,28 @@
 @endpush
 @section('content')
     @php
-        $isPresetTagihan = isset($selectedKontrak, $selectedTermin) && $selectedKontrak && $selectedTermin;
-        $initialPotonganAngsuran = old('potongan_angsuran_uang_muka', $selectedPotonganAngsuran ?? 0);
-        $kontrakTerminMap = [];
+        $wajibBast = $termin->jenis_termin === 'PELUNASAN';
+        $arsipAktif = $detailKontrak->arsipDokumen->where('is_active', true);
+        $arsipInvoice = $arsipAktif->firstWhere('jenis_dokumen', 'INVOICE');
+        $arsipRab = $arsipAktif->firstWhere('jenis_dokumen', 'BAPP_GAMBAR_RAB');
+        $arsipLampiran = $arsipAktif->firstWhere('jenis_dokumen', 'LAMPIRAN_LAINNYA');
 
-        foreach (($kontraks ?? collect()) as $kontrakItem) {
-            $terms = [];
+        $potonganAngsuran = (float) $tagihan->potonganTagihan
+            ->where('jenis_potongan', 'ANGSURAN_UANG_MUKA')
+            ->sum('nominal_potongan');
 
-            foreach ($kontrakItem->termin->where('status_termin', 'READY_TO_BILL') as $terminItem) {
-                $potongan = 0;
+        $verifikatorTerpilih = [
+            'ppspm'                 => $tagihan->ppspm_user_id,
+            'koordinator_keuangan'  => $tagihan->koordinator_keuangan_user_id,
+            'bendahara_pengeluaran' => $tagihan->bendahara_pengeluaran_user_id,
+            'bendahara_penerimaan'  => $tagihan->bendahara_penerimaan_user_id,
+            'kasubbag'              => $tagihan->kasubbag_user_id,
+        ];
 
-                if (
-                    $kontrakItem->ada_uang_muka &&
-                    (float) $kontrakItem->sisa_uang_muka_belum_lunas > 0 &&
-                    in_array($terminItem->jenis_termin, ['PROGRESS', 'PELUNASAN'], true)
-                ) {
-                    $potongan = min((float) $terminItem->potongan_angsuran_uang_muka, (float) $kontrakItem->sisa_uang_muka_belum_lunas);
-                }
-
-                $terms[] = [
-                    'id' => $terminItem->id,
-                    'keterangan_termin' => $terminItem->keterangan_termin,
-                    'persentase' => $terminItem->persentase,
-                    'nilai_bruto_termin' => $terminItem->nilai_bruto_termin,
-                    'jenis_termin' => $terminItem->jenis_termin,
-                    'potongan_angsuran_uang_muka' => round($potongan, 2),
-                ];
-            }
-
-            $kontrakTerminMap[$kontrakItem->id] = [
-                'vendor' => optional($kontrakItem->vendor)->nama_perusahaan ?? 'N/A',
-                'nama' => $kontrakItem->nama_pekerjaan,
-                'nilai' => $kontrakItem->nilai_total_kontrak,
-                'terms' => $terms,
-            ];
-        }
+        // Nama pemeriksa tersimpan mungkin tidak ada lagi di master pegawai —
+        // tetap tampilkan sebagai pilihan agar data tidak hilang saat disimpan.
+        $namaPemeriksaTersimpan = old('nama_pemeriksa', $detailKontrak->nama_pemeriksa);
+        $pemeriksaAdaDiMaster = $pegawaiList->contains(fn ($p) => $p->nama_lengkap === $namaPemeriksaTersimpan);
     @endphp
 
     {{-- HERO --}}
@@ -50,12 +37,12 @@
         <i class="bi bi-receipt-cutoff receipt-illust d-none d-md-block"></i>
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
             <div>
-                <span class="hero-tag"><i class="bi bi-stars"></i> Penagihan Kontrak</span>
-                <h2><i class="bi bi-cash-stack me-2"></i>Penagihan Termin / BAST</h2>
-                <p>Formulir pengajuan pembayaran berdasarkan prestasi pekerjaan SPK. Lengkapi data kontrak, BAST/BAP, verifikator, dan ringkasan nilai.</p>
+                <span class="hero-tag"><i class="bi bi-pencil-square"></i> Edit Penagihan Kontrak</span>
+                <h2><i class="bi bi-cash-stack me-2"></i>Edit Tagihan Termin</h2>
+                <p>{{ $tagihan->nomor_tagihan }} &middot; Perbarui data BA, pemeriksa, penanda tangan, dan arsip selama tagihan belum diajukan.</p>
             </div>
-            <a href="{{ url()->previous() }}" class="btn-back-hero">
-                <i class="bi bi-arrow-left"></i> Kembali
+            <a href="{{ route('tagihan.kontrak.show', $tagihan->id) }}" class="btn-back-hero">
+                <i class="bi bi-arrow-left"></i> Kembali ke Detail
             </a>
         </div>
     </div>
@@ -74,130 +61,76 @@
         </div>
     @endif
 
-    <form action="{{ route('tagihan.kontrak.store') }}" method="POST" enctype="multipart/form-data" id="formTagihan">
+    <form action="{{ route('tagihan.kontrak.update', $tagihan->id) }}" method="POST" enctype="multipart/form-data" id="formTagihan">
         @csrf
+        @method('PUT')
 
-        {{-- ============ A. Pemilihan Kontrak & Termin ============ --}}
+        {{-- ============ A. Kontrak & Termin (terkunci) ============ --}}
         <div class="sec-card">
             <div class="sec-head">
                 <span class="sec-icon si-primary"><i class="bi bi-file-earmark-text-fill"></i></span>
                 <div>
-                    <h6>Pemilihan Kontrak &amp; Termin</h6>
-                    <small>Tentukan SPK dan termin yang akan ditagih.</small>
+                    <h6>Kontrak &amp; Termin</h6>
+                    <small>Terkunci — mengikuti tagihan yang sudah dibuat.</small>
                 </div>
                 <span class="sec-letter">A</span>
             </div>
             <div class="sec-body">
                 <div class="row g-4">
                     <div class="col-md-6">
-                        @if($isPresetTagihan)
-                            <label class="form-label modern"><i class="bi bi-bookmark-check-fill text-primary"></i> Kontrak Terpilih</label>
-                            <input type="hidden" name="kontrak_pengadaan_id" id="kontrak_pengadaan_id" value="{{ $selectedKontrak->id }}">
-                            <div class="preset-card">
-                                <div class="pc-head">
-                                    <span class="pc-icon"><i class="bi bi-file-earmark-text-fill"></i></span>
-                                    <div>
-                                        <div class="pc-sub">Kontrak SPK</div>
-                                        <div class="pc-title">{{ $selectedKontrak->nomor_spk }}</div>
-                                    </div>
-                                </div>
-                                <div class="pc-body">
-                                    <div class="pc-row">
-                                        <div class="pc-label">Vendor</div>
-                                        <div class="pc-value">{{ $selectedKontrak->vendor->nama_perusahaan ?? '-' }}</div>
-                                    </div>
-                                    <div class="pc-row">
-                                        <div class="pc-label">Pekerjaan</div>
-                                        <div class="pc-value" style="font-weight:500;">{{ $selectedKontrak->nama_pekerjaan }}</div>
-                                    </div>
-                                </div>
-                                <div class="pc-foot">
-                                    <span class="pc-foot-label"><i class="bi bi-cash-stack me-1"></i>Nilai Total Kontrak</span>
-                                    <span class="pc-money">Rp {{ number_format($selectedKontrak->nilai_total_kontrak, 0, ',', '.') }}</span>
+                        <label class="form-label modern"><i class="bi bi-bookmark-check-fill text-primary"></i> Kontrak Terpilih</label>
+                        <div class="preset-card">
+                            <div class="pc-head">
+                                <span class="pc-icon"><i class="bi bi-file-earmark-text-fill"></i></span>
+                                <div>
+                                    <div class="pc-sub">Kontrak SPK</div>
+                                    <div class="pc-title">{{ $kontrak->nomor_spk }}</div>
                                 </div>
                             </div>
-                        @else
-                            <label class="form-label modern" for="kontrak_pengadaan_id">
-                                <i class="bi bi-search text-primary"></i> Pilih Kontrak (Nomor SPK)
-                                <span class="text-danger ms-1">*</span>
-                            </label>
-                            <select class="form-select select2" name="kontrak_pengadaan_id" id="kontrak_pengadaan_id" required onchange="getDetailKontrak(this.value)">
-                                <option value="">-- Cari atau ketik Nomor SPK --</option>
-                                @foreach($kontraks ?? [] as $k)
-                                    <option value="{{ $k->id }}" data-vendor="{{ $k->vendor->nama_perusahaan ?? 'N/A' }}" data-nama="{{ $k->nama_pekerjaan }}" data-nilai="{{ $k->nilai_total_kontrak }}">
-                                        {{ $k->nomor_spk }} - {{ Str::limit($k->nama_pekerjaan, 40) }}
-                                    </option>
-                                @endforeach
-                            </select>
-
-                            <div id="panel_info_kontrak" class="preset-card mt-3" style="display: none;">
-                                <div class="pc-head">
-                                    <span class="pc-icon"><i class="bi bi-file-earmark-text-fill"></i></span>
-                                    <div>
-                                        <div class="pc-sub">Detail Kontrak</div>
-                                        <div class="pc-title">Ringkasan Vendor &amp; Pekerjaan</div>
-                                    </div>
+                            <div class="pc-body">
+                                <div class="pc-row">
+                                    <div class="pc-label">Vendor</div>
+                                    <div class="pc-value">{{ $kontrak->vendor->nama_perusahaan ?? '-' }}</div>
                                 </div>
-                                <div class="pc-body">
-                                    <div class="pc-row">
-                                        <div class="pc-label">Vendor</div>
-                                        <div class="pc-value" id="info_vendor">-</div>
-                                    </div>
-                                    <div class="pc-row">
-                                        <div class="pc-label">Pekerjaan</div>
-                                        <div class="pc-value" style="font-weight:500;" id="info_pekerjaan">-</div>
-                                    </div>
-                                </div>
-                                <div class="pc-foot">
-                                    <span class="pc-foot-label"><i class="bi bi-cash-stack me-1"></i>Nilai Total Kontrak</span>
-                                    <span class="pc-money" id="info_nilai">-</span>
+                                <div class="pc-row">
+                                    <div class="pc-label">Pekerjaan</div>
+                                    <div class="pc-value" style="font-weight:500;">{{ $kontrak->nama_pekerjaan }}</div>
                                 </div>
                             </div>
-                        @endif
+                            <div class="pc-foot">
+                                <span class="pc-foot-label"><i class="bi bi-cash-stack me-1"></i>Nilai Total Kontrak</span>
+                                <span class="pc-money">Rp {{ number_format($kontrak->nilai_total_kontrak, 0, ',', '.') }}</span>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="col-md-6">
-                        @if($isPresetTagihan)
-                            <label class="form-label modern"><i class="bi bi-collection-fill text-success"></i> Termin yang Akan Ditagih</label>
-                            <input type="hidden" name="kontrak_termin_id" id="kontrak_termin_id" value="{{ $selectedTermin->id }}">
-                            <div class="preset-card is-success">
-                                <div class="pc-head">
-                                    <span class="pc-icon"><i class="bi bi-collection-fill"></i></span>
-                                    <div>
-                                        <div class="pc-sub">Termin Aktif</div>
-                                        <div class="pc-title">Termin {{ $selectedTermin->termin_ke }} &middot; {{ str_replace('_', ' ', $selectedTermin->jenis_termin) }}</div>
-                                    </div>
+                        <label class="form-label modern"><i class="bi bi-collection-fill text-success"></i> Termin yang Ditagih</label>
+                        <div class="preset-card is-success">
+                            <div class="pc-head">
+                                <span class="pc-icon"><i class="bi bi-collection-fill"></i></span>
+                                <div>
+                                    <div class="pc-sub">Termin Aktif</div>
+                                    <div class="pc-title">Termin {{ $termin->termin_ke }} &middot; {{ str_replace('_', ' ', $termin->jenis_termin) }}</div>
                                 </div>
-                                <div class="pc-body">
+                            </div>
+                            <div class="pc-body">
+                                <div class="pc-row">
+                                    <div class="pc-label">Keterangan</div>
+                                    <div class="pc-value" style="font-weight:500;">{{ $termin->keterangan_termin }}</div>
+                                </div>
+                                @if(!is_null($termin->persentase ?? null))
                                     <div class="pc-row">
-                                        <div class="pc-label">Keterangan</div>
-                                        <div class="pc-value" style="font-weight:500;">{{ $selectedTermin->keterangan_termin }}</div>
+                                        <div class="pc-label">Persentase</div>
+                                        <div class="pc-value pc-mono">{{ rtrim(rtrim(number_format($termin->persentase, 2, ',', '.'), '0'), ',') }}%</div>
                                     </div>
-                                    @if(!is_null($selectedTermin->persentase ?? null))
-                                        <div class="pc-row">
-                                            <div class="pc-label">Persentase</div>
-                                            <div class="pc-value pc-mono">{{ rtrim(rtrim(number_format($selectedTermin->persentase, 2, ',', '.'), '0'), ',') }}%</div>
-                                        </div>
-                                    @endif
-                                </div>
-                                <div class="pc-foot">
-                                    <span class="pc-foot-label"><i class="bi bi-cash-stack me-1"></i>Nilai Bruto Termin</span>
-                                    <span class="pc-money">Rp {{ number_format($selectedTermin->nilai_bruto_termin, 0, ',', '.') }}</span>
-                                </div>
+                                @endif
                             </div>
-                        @else
-                            <label class="form-label modern" for="kontrak_termin_id">
-                                <i class="bi bi-collection-fill text-success"></i> Pilih Termin Tagihan
-                                <span class="text-danger ms-1">*</span>
-                            </label>
-                            <select class="form-select select2" name="kontrak_termin_id" id="kontrak_termin_id" required disabled onchange="setBrutoFromTermin()">
-                                <option value="">-- Pilih Kontrak Terlebih Dahulu --</option>
-                            </select>
-                            <div class="info-banner banner-info mt-3">
-                                <i class="bi bi-info-circle-fill"></i>
-                                <span>Hanya termin dengan status <strong>READY_TO_BILL</strong> yang akan tampil dalam daftar.</span>
+                            <div class="pc-foot">
+                                <span class="pc-foot-label"><i class="bi bi-cash-stack me-1"></i>Nilai Bruto Termin</span>
+                                <span class="pc-money">Rp {{ number_format($termin->nilai_bruto_termin, 0, ',', '.') }}</span>
                             </div>
-                        @endif
+                        </div>
                     </div>
                 </div>
             </div>
@@ -218,18 +151,18 @@
                     <div class="col-md-4">
                         <label class="form-label modern"><i class="bi bi-clipboard2-check text-info"></i> Nomor BAPP <span class="text-muted fw-normal">(Pemeriksaan)</span></label>
                         <div class="auto-gen mb-2">
-                            <i class="bi bi-magic"></i>
-                            <span>Akan digenerate:</span>
-                            <strong>{{ $previewBapp }}</strong>
+                            <i class="bi bi-lock-fill"></i>
+                            <span>Nomor tetap:</span>
+                            <strong>{{ $detailKontrak->nomor_bapp ?? '-' }}</strong>
                         </div>
                         <label class="form-label modern" style="font-size:.7rem;color:#94a3b8;">Tanggal BAPP</label>
-                        <input type="date" class="form-control modern" name="tanggal_bapp" value="{{ old('tanggal_bapp', now()->format('Y-m-d')) }}">
+                        <input type="date" class="form-control modern" name="tanggal_bapp" value="{{ old('tanggal_bapp', optional($detailKontrak->tanggal_bapp)->format('Y-m-d')) }}">
                         <label class="form-label modern mt-3" for="gambar_rab_bapp">
                             <i class="bi bi-file-earmark-image text-success"></i> Gambar RAB
-                            <span class="text-danger ms-1">*</span>
+                            <span class="text-muted fw-normal ms-1">(kosongkan bila tidak diganti)</span>
                         </label>
-                        <label class="file-drop" data-accept=".jpg,.jpeg,.png" data-max-mb="5" data-target="gambar_rab_bapp">
-                            <input type="file" id="gambar_rab_bapp" name="gambar_rab_bapp" accept=".jpg,.jpeg,.png" required>
+                        <label class="file-drop {{ $arsipRab ? 'is-filled' : '' }}" data-accept=".jpg,.jpeg,.png" data-max-mb="5" data-target="gambar_rab_bapp">
+                            <input type="file" id="gambar_rab_bapp" name="gambar_rab_bapp" accept=".jpg,.jpeg,.png">
                             <div class="fd-default">
                                 <div class="fd-icon"><i class="bi bi-cloud-arrow-up-fill"></i></div>
                                 <div class="fd-title">Tarik &amp; lepaskan, atau <strong>klik untuk memilih</strong></div>
@@ -239,9 +172,9 @@
                             <div class="fd-preview">
                                 <div class="fp-icon is-img"><i class="bi bi-file-earmark-image-fill"></i></div>
                                 <div class="fp-info">
-                                    <div class="fp-name">-</div>
+                                    <div class="fp-name">{{ $arsipRab->nama_file_asli ?? '-' }}</div>
                                     <div class="fp-detail">
-                                        <span class="fp-size">0 KB</span>
+                                        <span class="fp-size">{{ $arsipRab ? 'Tersimpan' : '0 KB' }}</span>
                                         <span class="fp-type text-muted">Gambar</span>
                                     </div>
                                     <div class="fp-bar"><span style="width:0%"></span></div>
@@ -250,25 +183,27 @@
                             </div>
                         </label>
                     </div>
-                    <div class="col-md-4" id="wrapper_bast_fields" style="display: none;">
-                        <label class="form-label modern"><i class="bi bi-truck text-warning"></i> Nomor BAST <span class="text-danger ms-1">*</span> <span class="text-muted fw-normal ms-1">(Serah Terima)</span></label>
-                        <div class="auto-gen mb-2">
-                            <i class="bi bi-magic"></i>
-                            <span>Akan digenerate:</span>
-                            <strong>{{ $previewBast }}</strong>
+                    @if($wajibBast)
+                        <div class="col-md-4" id="wrapper_bast_fields">
+                            <label class="form-label modern"><i class="bi bi-truck text-warning"></i> Nomor BAST <span class="text-danger ms-1">*</span> <span class="text-muted fw-normal ms-1">(Serah Terima)</span></label>
+                            <div class="auto-gen mb-2">
+                                <i class="bi bi-lock-fill"></i>
+                                <span>Nomor tetap:</span>
+                                <strong>{{ $detailKontrak->nomor_bast ?? '-' }}</strong>
+                            </div>
+                            <label class="form-label modern" style="font-size:.7rem;color:#94a3b8;">Tanggal BAST</label>
+                            <input type="date" class="form-control modern" name="tanggal_bast" id="tanggal_bast" required value="{{ old('tanggal_bast', optional($detailKontrak->tanggal_bast)->format('Y-m-d')) }}">
                         </div>
-                        <label class="form-label modern" style="font-size:.7rem;color:#94a3b8;">Tanggal BAST</label>
-                        <input type="date" class="form-control modern" name="tanggal_bast" id="tanggal_bast" value="{{ old('tanggal_bast', now()->format('Y-m-d')) }}">
-                    </div>
+                    @endif
                     <div class="col-md-4" id="wrapper_bap_fields">
                         <label class="form-label modern"><i class="bi bi-cash-coin text-success"></i> Nomor BAP <span class="text-danger ms-1">*</span> <span class="text-muted fw-normal ms-1">(Pembayaran)</span></label>
                         <div class="auto-gen mb-2">
-                            <i class="bi bi-magic"></i>
-                            <span>Akan digenerate:</span>
-                            <strong>{{ $previewBap }}</strong>
+                            <i class="bi bi-lock-fill"></i>
+                            <span>Nomor tetap:</span>
+                            <strong>{{ $detailKontrak->nomor_bap ?? '-' }}</strong>
                         </div>
                         <label class="form-label modern" style="font-size:.7rem;color:#94a3b8;">Tanggal BAP</label>
-                        <input type="date" class="form-control modern" name="tanggal_bap" value="{{ old('tanggal_bap', now()->format('Y-m-d')) }}" required>
+                        <input type="date" class="form-control modern" name="tanggal_bap" required value="{{ old('tanggal_bap', optional($detailKontrak->tanggal_bap)->format('Y-m-d')) }}">
                     </div>
 
                     <div class="col-12">
@@ -285,29 +220,36 @@
                                 </label>
                                 <select class="form-select select2" name="nama_pemeriksa" id="namaPemeriksaSelect" required>
                                     <option value="">-- Pilih Pegawai --</option>
+                                    @if($namaPemeriksaTersimpan && ! $pemeriksaAdaDiMaster)
+                                        <option value="{{ $namaPemeriksaTersimpan }}" selected
+                                            data-nip="{{ $detailKontrak->nip_pemeriksa }}"
+                                            data-jabatan="{{ $detailKontrak->jabatan_pemeriksa }}"
+                                            data-wa="{{ $detailKontrak->wa_pemeriksa }}"
+                                        >{{ $namaPemeriksaTersimpan }}</option>
+                                    @endif
                                     @foreach($pegawaiList as $peg)
                                         <option
                                             value="{{ $peg->nama_lengkap }}"
                                             data-nip="{{ $peg->nip }}"
                                             data-jabatan="{{ $peg->jabatan }}"
                                             data-wa="{{ $peg->nomor_hp }}"
-                                            @selected(old('nama_pemeriksa') === $peg->nama_lengkap)
+                                            @selected($namaPemeriksaTersimpan === $peg->nama_lengkap)
                                         >{{ $peg->nama_lengkap }}</option>
                                     @endforeach
                                 </select>
-                                <small class="text-muted d-block mt-1" style="font-size:.74rem;"><i class="bi bi-magic me-1"></i>NIP &amp; Jabatan otomatis.</small>
+                                <small class="text-muted d-block mt-1" style="font-size:.74rem;"><i class="bi bi-magic me-1"></i>NIP &amp; Jabatan otomatis saat memilih nama baru.</small>
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label modern"><i class="bi bi-hash text-secondary"></i> NIP Pemeriksa</label>
-                                <input type="text" class="form-control modern" name="nip_pemeriksa" id="nipPemeriksaInput" placeholder="Akan terisi setelah memilih nama" value="{{ old('nip_pemeriksa') }}" readonly>
+                                <input type="text" class="form-control modern" name="nip_pemeriksa" id="nipPemeriksaInput" value="{{ old('nip_pemeriksa', $detailKontrak->nip_pemeriksa) }}" readonly>
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label modern"><i class="bi bi-briefcase text-secondary"></i> Jabatan Pemeriksa <span class="text-danger ms-1">*</span></label>
-                                <input type="text" class="form-control modern" name="jabatan_pemeriksa" id="jabatanPemeriksaInput" placeholder="Akan terisi setelah memilih nama" value="{{ old('jabatan_pemeriksa') }}" required readonly>
+                                <input type="text" class="form-control modern" name="jabatan_pemeriksa" id="jabatanPemeriksaInput" value="{{ old('jabatan_pemeriksa', $detailKontrak->jabatan_pemeriksa) }}" required readonly>
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label modern"><i class="bi bi-whatsapp text-success"></i> No. WA Pemeriksa <span class="text-danger ms-1">*</span></label>
-                                <input type="text" class="form-control modern" name="wa_pemeriksa" id="waPemeriksaInput" placeholder="Contoh: 0812..." value="{{ old('wa_pemeriksa') }}" required>
+                                <input type="text" class="form-control modern" name="wa_pemeriksa" id="waPemeriksaInput" value="{{ old('wa_pemeriksa', $detailKontrak->wa_pemeriksa) }}" required>
                                 <small class="text-muted d-block mt-1" style="font-size:.74rem;">Digunakan untuk link TTE BAPP.</small>
                             </div>
                         </div>
@@ -316,13 +258,13 @@
             </div>
         </div>
 
-        {{-- ============ C. Verifikator Penagihan ============ --}}
+        {{-- ============ C. Verifikator / Penanda Tangan ============ --}}
         <div class="sec-card">
             <div class="sec-head">
                 <span class="sec-icon si-success"><i class="bi bi-people-fill"></i></span>
                 <div>
-                    <h6>Verifikator Penagihan</h6>
-                    <small>Penanda tangan dokumen tagihan ini.</small>
+                    <h6>Pejabat Penanda Tangan</h6>
+                    <small>Penanda tangan dokumen pencairan tagihan ini.</small>
                 </div>
                 <span class="sec-letter">C</span>
             </div>
@@ -330,9 +272,8 @@
                 <div class="info-banner banner-info mb-4">
                     <i class="bi bi-info-circle-fill"></i>
                     <span>
-                        Pilih pejabat yang akan menjadi verifikator/penanda tangan untuk tagihan ini.
-                        <strong>PPK</strong> ditentukan otomatis dari kontrak yang dipilih.
-                        Nama &amp; NIP akan dipotret (snapshot) dan ditampilkan pada dokumen yang dicetak.
+                        <strong>PPK</strong> ditentukan otomatis dari kontrak: <strong>{{ $tagihan->ppk_nama_snapshot ?? '-' }}</strong>.
+                        Nama &amp; NIP pejabat akan dipotret ulang (snapshot) saat perubahan disimpan.
                     </span>
                 </div>
 
@@ -367,7 +308,7 @@
                                         data-name="{{ $opt['name'] }}"
                                         data-nip="{{ $opt['nip'] }}"
                                         data-jabatan="{{ $opt['jabatan'] }}"
-                                        @selected(old($vf['key'].'_user_id') == $opt['id'])
+                                        @selected((int) old($vf['key'].'_user_id', $verifikatorTerpilih[$vf['key']]) === (int) $opt['id'])
                                     >{{ $opt['name'] }} {{ $opt['nip'] !== '-' ? '— NIP: '.$opt['nip'] : '' }}</option>
                                 @endforeach
                             </select>
@@ -384,7 +325,7 @@
                 <span class="sec-icon si-warning"><i class="bi bi-calculator-fill"></i></span>
                 <div>
                     <h6>Dokumen Vendor &amp; Ringkasan Nilai</h6>
-                    <small>Detail invoice dan perhitungan netto.</small>
+                    <small>Detail invoice — nilai bruto/netto terkunci mengikuti termin.</small>
                 </div>
                 <span class="sec-letter">D</span>
             </div>
@@ -395,47 +336,39 @@
                             <i class="bi bi-receipt text-warning"></i> Nomor Invoice / Permohonan
                             <span class="text-danger ms-1">*</span>
                         </label>
-                        <input type="text" id="nomor_invoice" class="form-control modern" name="nomor_invoice" placeholder="Contoh: INV/2026/001" required>
+                        <input type="text" id="nomor_invoice" class="form-control modern" name="nomor_invoice" required value="{{ old('nomor_invoice', $detailKontrak->nomor_invoice) }}">
                     </div>
                     <div class="col-md-4">
                         <label class="form-label modern" for="tanggal_invoice">
                             <i class="bi bi-calendar-event text-warning"></i> Tanggal Invoice
                             <span class="text-danger ms-1">*</span>
                         </label>
-                        <input type="date" id="tanggal_invoice" class="form-control modern" name="tanggal_invoice" required>
+                        <input type="date" id="tanggal_invoice" class="form-control modern" name="tanggal_invoice" required value="{{ old('tanggal_invoice', optional($detailKontrak->tanggal_invoice)->format('Y-m-d')) }}">
                     </div>
                     <div class="col-md-4">
                         <label class="form-label modern"><i class="bi bi-cash-stack text-success"></i> Nilai Bruto (DPP + PPN)</label>
-                        <input type="text" class="form-control modern fw-bold fs-5" id="total_bruto_display" value="{{ $isPresetTagihan ? 'Rp ' . number_format($selectedTermin->nilai_bruto_termin, 0, ',', '.') : 'Rp 0' }}" readonly>
-                        <input type="hidden" name="total_bruto" id="total_bruto" value="{{ $isPresetTagihan ? $selectedTermin->nilai_bruto_termin : 0 }}">
-                        <small class="text-muted d-block mt-1" style="font-size:.74rem;"><i class="bi bi-magic me-1"></i>Terisi otomatis dari Termin.</small>
+                        <input type="text" class="form-control modern fw-bold fs-5" value="Rp {{ number_format((float) $tagihan->total_bruto, 0, ',', '.') }}" readonly>
+                        <small class="text-muted d-block mt-1" style="font-size:.74rem;"><i class="bi bi-lock-fill me-1"></i>Terkunci — mengikuti Termin.</small>
                     </div>
-                </div>
-
-                <div class="info-banner banner-warning mt-4 d-none" id="info_potongan_um">
-                    <i class="bi bi-exclamation-triangle-fill"></i>
-                    <span>Kontrak ini masih memiliki <strong>sisa uang muka</strong>. Potongan angsuran uang muka akan otomatis diperhitungkan pada termin ini.</span>
                 </div>
 
                 <div class="row g-3 mt-4 pt-4" style="border-top:1px dashed #e2e8f0;">
                     <div class="col-md-4">
                         <div class="nominal-card" style="border-color:rgba(99,102,241,.20);">
                             <div class="nc-label" style="color:#4338ca;"><i class="bi bi-cash me-1"></i>Nilai Bruto</div>
-                            <div class="fw-bold fs-5 mb-0" id="summary_bruto_display" style="color:#0f172a;font-variant-numeric:tabular-nums;">{{ $isPresetTagihan ? 'Rp ' . number_format($selectedTermin->nilai_bruto_termin, 0, ',', '.') : 'Rp 0' }}</div>
+                            <div class="fw-bold fs-5 mb-0" style="color:#0f172a;font-variant-numeric:tabular-nums;">Rp {{ number_format((float) $tagihan->total_bruto, 0, ',', '.') }}</div>
                         </div>
                     </div>
                     <div class="col-md-4">
                         <div class="nominal-card" style="border-color:rgba(245,158,11,.30);">
                             <div class="nc-label" style="color:#b45309;"><i class="bi bi-dash-circle me-1"></i>Potongan Angsuran UM</div>
-                            <div class="fw-bold fs-5 mb-0" id="potongan_um_display" style="color:#b45309;font-variant-numeric:tabular-nums;">Rp {{ number_format($initialPotonganAngsuran, 0, ',', '.') }}</div>
-                            <input type="hidden" name="potongan_angsuran_uang_muka" id="potongan_angsuran_uang_muka" value="{{ $initialPotonganAngsuran }}">
+                            <div class="fw-bold fs-5 mb-0" style="color:#b45309;font-variant-numeric:tabular-nums;">Rp {{ number_format($potonganAngsuran, 0, ',', '.') }}</div>
                         </div>
                     </div>
                     <div class="col-md-4">
                         <div class="nominal-card" style="background:linear-gradient(135deg,rgba(16,185,129,.08),rgba(16,185,129,.02));">
                             <div class="nc-label"><i class="bi bi-check-circle-fill me-1"></i>Nilai Netto</div>
-                            <div class="fw-bold fs-3 mb-0" id="total_netto_display" style="color:#047857;font-variant-numeric:tabular-nums;letter-spacing:-.01em;">Rp 0</div>
-                            <input type="hidden" name="total_netto" id="total_netto" value="0">
+                            <div class="fw-bold fs-3 mb-0" style="color:#047857;font-variant-numeric:tabular-nums;letter-spacing:-.01em;">Rp {{ number_format((float) $tagihan->total_netto, 0, ',', '.') }}</div>
                         </div>
                     </div>
                 </div>
@@ -448,23 +381,23 @@
                 <span class="sec-icon si-danger"><i class="bi bi-cloud-arrow-up-fill"></i></span>
                 <div>
                     <h6>Arsip Digital Pekerjaan</h6>
-                    <small>Format .PDF / .ZIP, maksimal 5MB per berkas.</small>
+                    <small>Kosongkan bila tidak mengganti berkas yang sudah ada.</small>
                 </div>
                 <span class="sec-letter">E</span>
             </div>
             <div class="sec-body">
                 <div class="info-banner banner-info mb-4">
                     <i class="bi bi-info-circle-fill"></i>
-                    <span><strong>Pemberitahuan:</strong> Dokumen final bertandatangan untuk BAPP, BAST, dan BAP dikelola nanti melalui halaman <strong>Detail Tagihan (Working Hub)</strong> setelah draft ini tersimpan.</span>
+                    <span><strong>Pemberitahuan:</strong> Mengunggah berkas baru akan menggantikan berkas sebelumnya; versi lama tetap tercatat di arsip.</span>
                 </div>
                 <div class="row g-4">
                     <div class="col-md-6">
                         <label class="form-label modern" for="file_invoice">
                             <i class="bi bi-file-earmark-pdf-fill text-danger"></i> Surat Permohonan / Invoice
-                            <span class="text-danger ms-1">*</span>
+                            <span class="text-muted fw-normal ms-1">(kosongkan bila tidak diganti)</span>
                         </label>
-                        <label class="file-drop" data-accept=".pdf" data-max-mb="5" data-target="file_invoice">
-                            <input type="file" id="file_invoice" name="file_invoice" accept=".pdf" required>
+                        <label class="file-drop {{ $arsipInvoice ? 'is-filled' : '' }}" data-accept=".pdf" data-max-mb="5" data-target="file_invoice">
+                            <input type="file" id="file_invoice" name="file_invoice" accept=".pdf">
                             <div class="fd-default">
                                 <div class="fd-icon"><i class="bi bi-cloud-arrow-up-fill"></i></div>
                                 <div class="fd-title">Tarik &amp; lepaskan, atau <strong>klik untuk memilih</strong></div>
@@ -474,9 +407,9 @@
                             <div class="fd-preview">
                                 <div class="fp-icon"><i class="bi bi-file-earmark-pdf-fill"></i></div>
                                 <div class="fp-info">
-                                    <div class="fp-name">-</div>
+                                    <div class="fp-name">{{ $arsipInvoice->nama_file_asli ?? '-' }}</div>
                                     <div class="fp-detail">
-                                        <span class="fp-size">0 KB</span>
+                                        <span class="fp-size">{{ $arsipInvoice ? 'Tersimpan' : '0 KB' }}</span>
                                         <span class="fp-type text-muted">PDF</span>
                                     </div>
                                     <div class="fp-bar"><span style="width:0%"></span></div>
@@ -490,7 +423,7 @@
                             <i class="bi bi-images text-secondary"></i> Lampiran Laporan (Foto/Dokumentasi)
                             <span class="text-muted fw-normal ms-1">(Opsional)</span>
                         </label>
-                        <label class="file-drop" data-accept=".pdf,.zip" data-max-mb="5" data-target="file_lampiran_lainnya">
+                        <label class="file-drop {{ $arsipLampiran ? 'is-filled' : '' }}" data-accept=".pdf,.zip" data-max-mb="5" data-target="file_lampiran_lainnya">
                             <input type="file" id="file_lampiran_lainnya" name="file_lampiran_lainnya" accept=".pdf,.zip">
                             <div class="fd-default">
                                 <div class="fd-icon"><i class="bi bi-cloud-arrow-up-fill"></i></div>
@@ -501,9 +434,9 @@
                             <div class="fd-preview">
                                 <div class="fp-icon"><i class="bi bi-file-earmark-zip-fill"></i></div>
                                 <div class="fp-info">
-                                    <div class="fp-name">-</div>
+                                    <div class="fp-name">{{ $arsipLampiran->nama_file_asli ?? '-' }}</div>
                                     <div class="fp-detail">
-                                        <span class="fp-size">0 KB</span>
+                                        <span class="fp-size">{{ $arsipLampiran ? 'Tersimpan' : '0 KB' }}</span>
                                         <span class="fp-type text-muted">-</span>
                                     </div>
                                     <div class="fp-bar"><span style="width:0%"></span></div>
@@ -520,13 +453,13 @@
         <div class="submit-bar">
             <div class="me-auto d-none d-md-flex align-items-center gap-2 text-muted" style="font-size:.82rem;">
                 <i class="bi bi-shield-lock"></i>
-                <span>Pastikan seluruh data telah diisi dengan benar sebelum menyimpan draft.</span>
+                <span>Perubahan hanya dapat disimpan selama tagihan belum diajukan.</span>
             </div>
-            <button type="reset" class="btn-cancel-submit">
-                <i class="bi bi-arrow-counterclockwise me-1"></i> Reset
-            </button>
+            <a href="{{ route('tagihan.kontrak.show', $tagihan->id) }}" class="btn-cancel-submit text-decoration-none">
+                <i class="bi bi-x-lg me-1"></i> Batal
+            </a>
             <button type="submit" class="btn-submit-primary">
-                <i class="bi bi-save2-fill"></i> Buat Draft Tagihan
+                <i class="bi bi-save2-fill"></i> Simpan Perubahan
             </button>
         </div>
     </form>
@@ -535,13 +468,6 @@
 @push('script')
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
-    const isPresetTagihan = @json($isPresetTagihan);
-    const kontrakTerminMap = @json($kontrakTerminMap);
-    const selectedTerminMeta = @json($selectedTermin ? [
-        'jenis_termin' => $selectedTermin->jenis_termin,
-        'potongan_angsuran_uang_muka' => (float) $initialPotonganAngsuran,
-    ] : null);
-    
     $(document).ready(function() {
         $('.select2').select2({
             theme: 'default',
@@ -556,136 +482,8 @@
                 return $(this).find('option:first').text();
             },
         });
-
-        if (isPresetTagihan) {
-            toggleBastFields(selectedTerminMeta?.jenis_termin ?? null);
-            updatePotonganAngsuranDisplay(selectedTerminMeta?.potongan_angsuran_uang_muka ?? 0);
-            hitungTotalNetto();
-        }
     });
 
-    function getDetailKontrak(idKontrak) {
-        if(!idKontrak) {
-            $('#panel_info_kontrak').hide();
-            let $termin0 = $('#kontrak_termin_id');
-            if ($termin0.hasClass('select2-hidden-accessible')) { $termin0.select2('destroy'); }
-            $termin0.html('<option value="">-- Pilih Kontrak Terlebih Dahulu --</option>').prop('disabled', true);
-            $termin0.select2({ theme: 'default', width: '100%' });
-            toggleBastFields(null);
-            updatePotonganAngsuranDisplay(0);
-            $('#total_bruto').val(0);
-            $('#total_bruto_display').val('Rp 0');
-            $('#summary_bruto_display').text('Rp 0');
-            hitungTotalNetto();
-            return;
-        }
-
-        let kontrakData = kontrakTerminMap[idKontrak];
-        if (!kontrakData) {
-            return;
-        }
-
-        $('#info_vendor').text(kontrakData.vendor);
-        $('#info_pekerjaan').text(kontrakData.nama);
-        $('#info_nilai').text(formatRupiah(kontrakData.nilai.toString()));
-        $('#panel_info_kontrak').fadeIn();
-
-        let html = '<option value="">-- Pilih Termin / Tagihan --</option>';
-        kontrakData.terms.forEach(t => {
-            html += `<option value="${t.id}" data-bruto="${t.nilai_bruto_termin}" data-jenis="${t.jenis_termin}" data-potongan-um="${t.potongan_angsuran_uang_muka}">${t.keterangan_termin} - ${t.persentase}% (Rp ${formatRupiahCustom(t.nilai_bruto_termin)})</option>`;
-        });
-        if (kontrakData.terms.length === 0) {
-            html = '<option value="">Tidak ada Termin berstatus READY_TO_BILL</option>';
-        }
-        let $termin = $('#kontrak_termin_id');
-        if ($termin.hasClass('select2-hidden-accessible')) {
-            $termin.select2('destroy');
-        }
-        $termin.html(html).prop('disabled', false);
-        $termin.select2({ theme: 'default', width: '100%' });
-        toggleBastFields(null);
-        updatePotonganAngsuranDisplay(0);
-    }
-
-    function setBrutoFromTermin() {
-        let opt = $('#kontrak_termin_id').find(':selected');
-        let brutoVal = opt.data('bruto') || 0;
-        let jenisTermin = opt.data('jenis') || null;
-        let potonganUm = parseFloat(opt.data('potongan-um')) || 0;
-        
-        $('#total_bruto').val(brutoVal);
-        $('#total_bruto_display').val('Rp ' + formatRupiahCustom(brutoVal));
-        $('#summary_bruto_display').text('Rp ' + formatRupiahCustom(brutoVal));
-        toggleBastFields(jenisTermin);
-        updatePotonganAngsuranDisplay(potonganUm);
-        hitungTotalNetto();
-    }
-
-    function toggleBastFields(jenisTermin) {
-        const isPelunasan = jenisTermin === 'PELUNASAN';
-        const bastWrapper = document.getElementById('wrapper_bast_fields');
-        const bastFileWrapper = document.getElementById('wrapper_file_bast');
-        const tanggalBast = document.getElementById('tanggal_bast');
-        const fileBast = document.getElementById('file_bast');
-
-        if (bastWrapper) bastWrapper.style.display = isPelunasan ? 'block' : 'none';
-        if (bastFileWrapper) bastFileWrapper.style.display = isPelunasan ? 'block' : 'none';
-        if (tanggalBast) tanggalBast.required = isPelunasan;
-        if (fileBast) fileBast.required = isPelunasan;
-
-        if (!isPelunasan) {
-            if (tanggalBast) tanggalBast.value = '';
-            if (fileBast) fileBast.value = '';
-        }
-    }
-
-    function updatePotonganAngsuranDisplay(nominal) {
-        const normalized = parseFloat(nominal) || 0;
-        document.getElementById('potongan_angsuran_uang_muka').value = normalized;
-        document.getElementById('potongan_um_display').textContent = 'Rp ' + formatRupiahCustom(Math.round(normalized));
-        document.getElementById('info_potongan_um').classList.toggle('d-none', normalized <= 0);
-    }
-
-    function formatRupiah(numberStr) {
-        let nStr = numberStr.toString();
-        let split = nStr.split('.');
-        let sisa = split[0].length % 3;
-        let rupiah = split[0].substr(0, sisa);
-        let ribuan = split[0].substr(sisa).match(/\d{3}/gi);
-        if (ribuan) {
-            let separator = sisa ? '.' : '';
-            rupiah += separator + ribuan.join('.');
-        }
-        return 'Rp ' + rupiah;
-    }
-
-    function formatRupiahCustom(angka) {
-        let number_string = angka.toString().replace(/[^,\d]/g, ''),
-        split   		= number_string.split(','),
-        sisa     		= split[0].length % 3,
-        rupiah     		= split[0].substr(0, sisa),
-        ribuan     		= split[0].substr(sisa).match(/\d{3}/gi);
-
-        if(ribuan){
-            let separator = sisa ? '.' : '';
-            rupiah += separator + ribuan.join('.');
-        }
-
-        rupiah = split[1] != undefined ? rupiah + ',' + split[1] : rupiah;
-        return rupiah;
-    }
-
-    function hitungTotalNetto() {
-        let bruto = parseFloat($('#total_bruto').val()) || 0;
-        let potonganAngsuranUangMuka = parseFloat($('#potongan_angsuran_uang_muka').val()) || 0;
-
-        let netto = bruto - potonganAngsuranUangMuka;
-        
-        $('#total_netto').val(netto);
-        $('#total_netto_display').text('Rp ' + formatRupiahCustom(Math.round(netto)));
-    }
-
-    // Verifikator info preview (NIP & Jabatan)
     document.addEventListener('DOMContentLoaded', function () {
         // ============ File Drop Zones ============
         document.querySelectorAll('.file-drop').forEach(function (zone) {
@@ -797,7 +595,6 @@
                 try {
                     input.files = dt.files;
                 } catch (err) {
-                    // Fallback for browsers that don't allow direct assignment
                     const dataTransfer = new DataTransfer();
                     dataTransfer.items.add(dt.files[0]);
                     input.files = dataTransfer.files;
@@ -806,6 +603,7 @@
             });
         });
 
+        // Verifikator info preview (NIP & Jabatan)
         document.querySelectorAll('.verifikator-select').forEach(function (sel) {
             const key = sel.dataset.key;
             const info = document.getElementById('info_' + key);
@@ -824,16 +622,17 @@
         });
     });
 
-    // Auto-fill NIP, Jabatan & WA saat memilih Nama Pemeriksa dari dropdown pegawai
+    // Auto-fill NIP, Jabatan & WA saat MENGGANTI Nama Pemeriksa. Nilai tersimpan
+    // dipertahankan saat halaman dibuka (tidak ditimpa data master).
     $(document).ready(function () {
         const $namaSelect = $('#namaPemeriksaSelect');
         const $nipInput = $('#nipPemeriksaInput');
         const $jabatanInput = $('#jabatanPemeriksaInput');
         const $waInput = $('#waPemeriksaInput');
 
-        if (!$namaSelect.length || !$nipInput.length || !$jabatanInput.length || !$waInput.length) return;
+        if (!$namaSelect.length) return;
 
-        function syncPemeriksa() {
+        $namaSelect.on('change', function () {
             const $opt = $namaSelect.find(':selected');
             if (!$opt.val()) {
                 $nipInput.val('');
@@ -844,12 +643,7 @@
             $nipInput.val($opt.data('nip') || '');
             $jabatanInput.val($opt.data('jabatan') || '');
             $waInput.val($opt.data('wa') || '');
-        }
-
-        $namaSelect.on('change', syncPemeriksa);
-
-        // Inisialisasi (mis. setelah validasi gagal & old() mengembalikan pilihan)
-        if ($namaSelect.val()) syncPemeriksa();
+        });
     });
 </script>
 @endpush

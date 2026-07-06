@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use App\Services\EmailNotificationService;
 use App\Services\WorkflowService;
+use App\Support\PdfCompressor;
 
 class TagihanController extends Controller
 {
@@ -54,7 +55,7 @@ class TagihanController extends Controller
         // Pegawai aktif untuk dropdown Pemeriksa Hasil Pekerjaan (BAPP)
         $pegawaiList = \App\Models\MasterPegawai::where('status_aktif', true)
             ->orderBy('nama_lengkap')
-            ->get(['id', 'nama_lengkap', 'nip', 'jabatan']);
+            ->get(['id', 'nama_lengkap', 'nip', 'jabatan', 'nomor_hp']);
 
         // User per role untuk dropdown Verifikator (PPK ditentukan otomatis dari kontrak)
         $verifikatorRoles = [
@@ -419,14 +420,15 @@ class TagihanController extends Controller
     {
         $tagihan = Tagihan::with('detailKontrak.termin.kontrak')->findOrFail($id);
 
-        // Pengajuan ulang setelah revisi (REVISI_*) memakai jalur yang sama —
-        // workflow service akan mereset approvals dan mengulang verifikasi dari awal.
+        // Pengajuan ulang setelah revisi (REVISI_* dari verifikator dokumen
+        // pencairan) memakai jalur yang sama — status kembali READY_FOR_SPP.
         if ($tagihan->status !== 'DRAFT' && ! str_starts_with((string) $tagihan->status, 'REVISI_')) {
             return back()->withErrors(['error' => 'Tagihan tidak dalam status DRAFT/REVISI.']);
         }
 
-        // Dokumen fisik (BAPP/BAST/BAP ber-TTE) kini tidak diwajibkan di awal.
-        // TTE dan upload dilakukan oleh Vendor SETELAH tagihan disetujui Verifikator.
+        // Dokumen fisik (BAPP/BAST/BAP ber-TTE) tidak diwajibkan di awal:
+        // BAP wajib diunggah vendor SETELAH pengajuan (gate draft SPP),
+        // BAPP/BAST dapat menyusul.
 
         // Pastikan semua verifikator sudah terisi
         $missingVerif = collect([
@@ -452,14 +454,40 @@ class TagihanController extends Controller
                 $tagihan->detailKontrak->termin->update(['status_termin' => 'SUDAH_DITAGIH']);
             }
 
-            // === Workflow baru: TAGIHAN_KONTRAK_VERIFIKATOR (5 paralel + Kasubbag final) ===
-            // Service akan resolve assignee tiap step dari kolom *_user_id pada tagihan.
-            $workflow = app(\App\Services\TagihanKontrakWorkflowService::class);
-            $workflow->submit($tagihan, Auth::user(), $request->ip());
+            // === Tanpa verifikasi 6 verifikator: tagihan termin langsung siap
+            // diproses (READY_FOR_SPP). Verifikator yang dipilih tetap dipakai
+            // sebagai penanda tangan dokumen pencairan (SPP/SPM/NPI/SP2D).
+            // Tahap berikutnya adalah dokumen Berita Acara: BAP wajib diunggah
+            // vendor (TTE online / manual) sebelum draft SPP dibuat; BAPP/BAST
+            // dapat menyusul.
+            $tagihan->update(['status' => 'READY_FOR_SPP']);
 
-            // syncTagihanStatus sudah dijalankan di dalam submit() — status akan
-            // terset ke PENDING_VERIFIKASI_KONTRAK secara otomatis.
-            $tagihan->refresh();
+            // Generate PDF final BAPP/BAP (dan BAST untuk termin pelunasan)
+            // sebagai arsip awal — vendor menggantinya dengan scan ber-TTD.
+            $types = ['BAPP', 'BAP'];
+            if ($tagihan->detailKontrak?->termin?->jenis_termin === 'PELUNASAN') {
+                $types[] = 'BAST';
+            }
+            foreach ($types as $type) {
+                $html = $this->exportPdfKontrakHtml($tagihan->id, $type, false);
+                if (! $html) {
+                    continue;
+                }
+
+                $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML($html)->setPaper('a4', 'portrait');
+                $fileName = 'tagihan_final_' . strtolower($type) . '_' . time() . '.pdf';
+                $path = 'arsip/tagihan/' . $tagihan->id . '/' . $fileName;
+                Storage::disk('public')->put($path, $pdf->output());
+
+                $tagihan->detailKontrak->arsipDokumen()->where('jenis_dokumen', $type . '_FINAL_TTD')->update(['is_active' => false]);
+                $tagihan->detailKontrak->arsipDokumen()->create([
+                    'jenis_dokumen' => $type . '_FINAL_TTD',
+                    'path_file' => $path,
+                    'nama_file_asli' => $fileName,
+                    'is_active' => true,
+                    'disk' => 'public',
+                ]);
+            }
 
             LogStatusDokumen::create([
                 'dokumen_type' => Tagihan::class,
@@ -467,78 +495,209 @@ class TagihanController extends Controller
                 'user_id' => Auth::id(),
                 'role_saat_itu' => Auth::user()->getRoleNames()->first() ?? 'Pejabat Pengadaan',
                 'status_sebelumnya' => $statusSebelumSubmit,
-                'status_baru' => $tagihan->status,
+                'status_baru' => 'READY_FOR_SPP',
                 'aksi' => 'DIAJUKAN',
-                'catatan' => 'Tagihan diajukan ke 5 verifikator paralel (PPK, PPSPM, Koor.Keu, Bend.Keluar, Bend.Terima) lalu Kasubbag.',
+                'catatan' => 'Tagihan termin diajukan tanpa tahap verifikasi — langsung siap diproses. Menunggu dokumen BAP vendor (wajib); BAPP/BAST dapat menyusul.',
                 'ip_address' => request()->ip(),
             ]);
 
-            // Notifikasi paralel ke semua 5 verifikator step 1
-            $waService = app(\App\Services\WhatsappService::class);
-            $emailService = app(EmailNotificationService::class);
-            $baseUrl = config('app.url');
-            $waEnabled = (bool) \App\Models\IntegrationSetting::getValue('whatsapp.pengajuan_tagihan.enabled', true);
-            $emailEnabled = (bool) \App\Models\IntegrationSetting::getValue('email.pengajuan_tagihan.enabled', true);
-
-            foreach ([
-                $tagihan->ppk_user_id,
-                $tagihan->ppspm_user_id,
-                $tagihan->koordinator_keuangan_user_id,
-                $tagihan->bendahara_pengeluaran_user_id,
-                $tagihan->bendahara_penerimaan_user_id,
-            ] as $uid) {
-                if (! $uid) continue;
-                $u = User::find($uid);
-                if (! $u) continue;
-                
-                $message = "Tagihan {$tagihan->nomor_tagihan} menunggu verifikasi Anda.";
-                $url = route('verifikasi-tagihan-kontrak.show', $tagihan->id);
-
-                Notification::send($u, new WorkflowNotification([
-                    'title' => 'Tagihan Kontrak Menunggu Verifikasi',
-                    'message' => $message,
-                    'url' => $url,
+            // Kabari pemroses berikutnya: PPK (pilih COA) — Operator BLU
+            // dinotifikasi oleh TagihanReadyForSppNotificationService.
+            if ($tagihan->ppk_user_id && ($ppkUser = User::find($tagihan->ppk_user_id))) {
+                Notification::send($ppkUser, new WorkflowNotification([
+                    'title' => 'Tagihan SPK Siap Diproses',
+                    'message' => "Tagihan {$tagihan->nomor_tagihan} siap diproses — silakan pilih COA pada halaman Proses Tagihan.",
+                    'url' => route('proses-tagihan.show', $tagihan->id),
                     'icon' => 'receipt_long',
                     'color' => 'primary',
                 ]));
-
-                // Kirim notifikasi WA jika profilable adalah MasterPegawai, punya nomor_hp, dan setting diaktifkan
-                if ($waEnabled && $u->profilable instanceof \App\Models\MasterPegawai && $u->profilable->nomor_hp) {
-                    $waPhone = preg_replace('/\D+/', '', $u->profilable->nomor_hp);
-                    if (strlen($waPhone) >= 9) {
-                        $waMsg = "*Notifikasi SIKEREN*\n\n" . $message . "\n\nSilakan cek di aplikasi melalui link berikut:\n" . $url;
-                        $waService->queueMessage($waPhone, $waMsg);
-                    }
-                }
-
-                if ($emailEnabled && filter_var($u->email, FILTER_VALIDATE_EMAIL)) {
-                    $emailBody = "Yth. {$u->name},\n\n"
-                        . "Dengan hormat,\n\n"
-                        . "Terdapat tagihan kontrak yang memerlukan verifikasi Anda melalui aplikasi SIKEREN-BLU.\n\n"
-                        . "Nomor Tagihan : {$tagihan->nomor_tagihan}\n"
-                        . "Status Proses : Menunggu verifikasi\n\n"
-                        . "Silakan meninjau detail tagihan dan memberikan tindak lanjut melalui tautan berikut:\n"
-                        . "{$url}\n\n"
-                        . "Mohon email ini ditindaklanjuti sesuai kewenangan dan alur verifikasi yang berlaku.\n\n"
-                        . "Hormat kami,\n"
-                        . "SIKEREN-BLU";
-
-                    $emailService->sendNotification(
-                        $u->email,
-                        'Permohonan Verifikasi Tagihan Kontrak ' . $tagihan->nomor_tagihan,
-                        $emailBody,
-                        $tagihan,
-                        'send_contract_verification_email'
-                    );
-                }
             }
+            app(\App\Services\TagihanReadyForSppNotificationService::class)
+                ->notifyIfNewlyReady($tagihan->fresh(), $statusSebelumSubmit);
 
             DB::commit();
-            return redirect()->route('contracts.index')->with('success', 'Tagihan berhasil diajukan. Menunggu verifikasi 5 pejabat paralel, lalu finalisasi Kasubbag.');
+            return redirect()->route('tagihan.kontrak.show', $tagihan->id)
+                ->with('success', 'Tagihan berhasil diajukan dan langsung siap diproses. Lanjutkan dengan dokumen Berita Acara: BAP wajib ditandatangani/diunggah vendor, BAPP' . ($tagihan->detailKontrak?->termin?->jenis_termin === 'PELUNASAN' ? '/BAST' : '') . ' dapat menyusul.');
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->withErrors(['error' => 'Gagal mengajukan tagihan: ' . $e->getMessage()]);
         }
+    }
+
+    /**
+     * Form edit tagihan termin — hanya selama belum diajukan (DRAFT) atau
+     * sedang dikembalikan untuk revisi (REVISI_*). Nilai bruto & nomor BA
+     * terkunci (mengikuti termin / penomoran otomatis).
+     */
+    public function editKontrak($id)
+    {
+        $tagihan = Tagihan::with(['detailKontrak.termin.kontrak.vendor', 'detailKontrak.arsipDokumen', 'potonganTagihan'])->findOrFail($id);
+        abort_unless($tagihan->tipe_tagihan === 'KONTRAK', 404);
+
+        if (! $this->isKontrakEditable($tagihan)) {
+            return redirect()->route('tagihan.kontrak.show', $tagihan->id)
+                ->with('error', 'Tagihan sudah diajukan dan tidak dapat diedit lagi.');
+        }
+
+        $verifikatorRoles = [
+            'ppspm'                => 'PPSPM',
+            'koordinator_keuangan' => 'Koordinator Keuangan',
+            'bendahara_pengeluaran'=> 'Bendahara Pengeluaran',
+            'bendahara_penerimaan' => 'Bendahara Penerimaan',
+            'kasubbag'             => 'Kepala Subbagian Keuangan dan Tata Usaha',
+        ];
+        $verifikatorOptions = [];
+        foreach ($verifikatorRoles as $key => $roleName) {
+            $verifikatorOptions[$key] = User::role($roleName)
+                ->with('profilable')
+                ->orderByDisplayName()
+                ->get()
+                ->map(fn ($u) => [
+                    'id'      => $u->id,
+                    'name'    => $u->name,
+                    'nip'     => optional($u->profilable)->nip ?? '-',
+                    'jabatan' => optional($u->profilable)->jabatan ?? $roleName,
+                ])
+                ->values();
+        }
+
+        $pegawaiList = \App\Models\MasterPegawai::where('status_aktif', true)
+            ->orderBy('nama_lengkap')
+            ->get(['id', 'nama_lengkap', 'nip', 'jabatan', 'nomor_hp']);
+
+        return view('tagihan.edit_kontrak', [
+            'tagihan' => $tagihan,
+            'detailKontrak' => $tagihan->detailKontrak,
+            'termin' => $tagihan->detailKontrak->termin,
+            'kontrak' => $tagihan->detailKontrak->termin->kontrak,
+            'verifikatorOptions' => $verifikatorOptions,
+            'pegawaiList' => $pegawaiList,
+        ]);
+    }
+
+    /** Simpan perubahan tagihan termin (hanya DRAFT / REVISI_*). */
+    public function updateKontrak(Request $request, $id)
+    {
+        $tagihan = Tagihan::with(['detailKontrak.termin.kontrak', 'detailKontrak.arsipDokumen'])->findOrFail($id);
+        abort_unless($tagihan->tipe_tagihan === 'KONTRAK', 404);
+
+        if (! $this->isKontrakEditable($tagihan)) {
+            return redirect()->route('tagihan.kontrak.show', $tagihan->id)
+                ->with('error', 'Tagihan sudah diajukan dan tidak dapat diedit lagi.');
+        }
+
+        $detail = $tagihan->detailKontrak;
+        $termin = $detail?->termin;
+        if (! $detail || ! $termin) {
+            return back()->withErrors(['error' => 'Detail kontrak tidak ditemukan pada tagihan ini.']);
+        }
+
+        $wajibBast = $termin->jenis_termin === 'PELUNASAN';
+
+        $validated = $request->validate([
+            'tanggal_bapp' => 'nullable|date',
+            'tanggal_bast' => ($wajibBast ? 'required' : 'nullable') . '|date',
+            'tanggal_bap' => 'required|date',
+            'nomor_invoice' => 'required|string|max:100',
+            'tanggal_invoice' => 'required|date',
+            'nama_pemeriksa' => 'required|string|max:150',
+            'nip_pemeriksa' => 'nullable|string|max:50',
+            'jabatan_pemeriksa' => 'required|string|max:150',
+            'wa_pemeriksa' => 'required|string|max:30',
+            'gambar_rab_bapp' => 'nullable|file|mimes:jpg,jpeg,png|max:5120',
+            'file_invoice' => 'nullable|file|mimes:pdf|max:5120',
+            'file_lampiran_lainnya' => 'nullable|file|mimes:pdf,zip|max:5120',
+            'ppspm_user_id'                 => 'required|exists:users,id',
+            'koordinator_keuangan_user_id'  => 'required|exists:users,id',
+            'bendahara_pengeluaran_user_id' => 'required|exists:users,id',
+            'bendahara_penerimaan_user_id'  => 'required|exists:users,id',
+            'kasubbag_user_id'              => 'required|exists:users,id',
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            // Snapshot ulang verifikator (PPK tetap mengikuti kontrak).
+            $verifikatorSnapshots = $this->buildVerifikatorSnapshots([
+                'ppk'                  => (int) ($termin->kontrak->ppk_user_id ?? $tagihan->ppk_user_id ?? 0),
+                'ppspm'                => (int) $validated['ppspm_user_id'],
+                'koordinator_keuangan' => (int) $validated['koordinator_keuangan_user_id'],
+                'bendahara_pengeluaran'=> (int) $validated['bendahara_pengeluaran_user_id'],
+                'bendahara_penerimaan' => (int) $validated['bendahara_penerimaan_user_id'],
+                'kasubbag'             => (int) $validated['kasubbag_user_id'],
+            ]);
+
+            $tagihan->update($verifikatorSnapshots);
+
+            $detail->update([
+                'tanggal_bapp' => $validated['tanggal_bapp'] ?? null,
+                'tanggal_bast' => $validated['tanggal_bast'] ?? null,
+                'tanggal_bap' => $validated['tanggal_bap'],
+                'nomor_invoice' => $validated['nomor_invoice'],
+                'tanggal_invoice' => $validated['tanggal_invoice'],
+                'nama_pemeriksa' => $validated['nama_pemeriksa'],
+                'nip_pemeriksa' => $validated['nip_pemeriksa'] ?? null,
+                'jabatan_pemeriksa' => $validated['jabatan_pemeriksa'],
+                'wa_pemeriksa' => $validated['wa_pemeriksa'],
+            ]);
+
+            // Ganti berkas hanya bila diunggah ulang.
+            $fileMap = [
+                'file_invoice' => ['jenis' => 'INVOICE', 'dir' => 'tagihan/invoice', 'compress' => true],
+                'gambar_rab_bapp' => ['jenis' => 'BAPP_GAMBAR_RAB', 'dir' => 'tagihan/bapp_gambar_rab', 'compress' => false],
+                'file_lampiran_lainnya' => ['jenis' => 'LAMPIRAN_LAINNYA', 'dir' => 'tagihan/lampiran', 'compress' => false],
+            ];
+            foreach ($fileMap as $field => $cfg) {
+                if (! $request->hasFile($field)) {
+                    continue;
+                }
+
+                $file = $request->file($field);
+                $path = $cfg['compress']
+                    ? PdfCompressor::storeCompressed($file, $cfg['dir'], 'local')
+                    : $file->store($cfg['dir'], 'local');
+
+                $detail->arsipDokumen()->where('jenis_dokumen', $cfg['jenis'])->update(['is_active' => false]);
+                $detail->arsipDokumen()->create([
+                    'jenis_dokumen' => $cfg['jenis'],
+                    'nama_file_asli' => $file->getClientOriginalName(),
+                    'path_file' => $path,
+                    'disk' => 'local',
+                    'mime_type' => $file->getMimeType(),
+                    'ukuran_file' => Storage::disk('local')->size($path),
+                    'uploaded_by' => Auth::id(),
+                    'uploaded_at' => now(),
+                    'is_active' => true,
+                ]);
+            }
+
+            LogStatusDokumen::create([
+                'dokumen_type' => Tagihan::class,
+                'dokumen_id' => $tagihan->id,
+                'user_id' => Auth::id(),
+                'role_saat_itu' => Auth::user()->getRoleNames()->first() ?? 'Pejabat Pengadaan',
+                'status_sebelumnya' => $tagihan->status,
+                'status_baru' => $tagihan->status,
+                'aksi' => 'DIPERBARUI',
+                'catatan' => 'Data tagihan termin diperbarui sebelum diajukan.',
+                'ip_address' => $request->ip(),
+            ]);
+
+            DB::commit();
+
+            return redirect()->route('tagihan.kontrak.show', $tagihan->id)
+                ->with('success', 'Data tagihan berhasil diperbarui.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withInput()->withErrors(['error' => 'Gagal memperbarui tagihan: ' . $e->getMessage()]);
+        }
+    }
+
+    /** Tagihan termin hanya dapat diedit selama DRAFT atau dikembalikan untuk revisi. */
+    private function isKontrakEditable(Tagihan $tagihan): bool
+    {
+        return $tagihan->status === 'DRAFT'
+            || str_starts_with((string) $tagihan->status, 'REVISI_');
     }
 
     public function exportPdfKontrak($id, $type)

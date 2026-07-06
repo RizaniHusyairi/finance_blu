@@ -152,6 +152,28 @@ class DokumenChainService
     }
 
     /**
+     * Khusus tagihan KONTRAK: vendor wajib menyetujui (TTE) sekaligus
+     * mengunggah scan BAP final ber-TTD sebelum draft rantai pencairan dibuat.
+     * BAPP/BAST boleh menyusul dan tidak menghalangi rantai.
+     *
+     * Dicek lewat DocumentSignature (bukan arsip BAP_FINAL_TTD) karena arsip
+     * itu juga dibuat otomatis oleh sistem saat PPK menyetujui tagihan —
+     * hanya signature vendor yang menandakan BAP benar-benar dari vendor.
+     */
+    public function isBapVendorSigned(Tagihan $tagihan): bool
+    {
+        if ($tagihan->tipe_tagihan !== 'KONTRAK') {
+            return true;
+        }
+
+        return $tagihan->documentSignatures()
+            ->where('document_label', 'BAP')
+            ->where('role', 'vendor')
+            ->where('status', 'signed')
+            ->exists();
+    }
+
+    /**
      * Rantai dokumen masih sepenuhnya berupa draft/revisi (belum ada yang
      * diajukan/diverifikasi), sehingga nominalnya masih aman disesuaikan.
      */
@@ -195,6 +217,9 @@ class DokumenChainService
         }
         if (! $this->hasFakturPajak($tagihan)) {
             $missing[] = 'Faktur pajak belum diunggah oleh Operator BLU untuk tagihan kontrak ini.';
+        }
+        if (! $this->isBapVendorSigned($tagihan)) {
+            $missing[] = 'Vendor belum menandatangani (TTE) dan mengunggah scan BAP final untuk tagihan kontrak ini.';
         }
 
         foreach ($this->missingVerifierColumns($tagihan) as $label) {
@@ -325,15 +350,41 @@ class DokumenChainService
             $this->log($tagihan, $actor, 'GENERATE_DRAFT_CHAIN',
                 "Draft SPP/SPM/NPI/SP2D ({$nomorSpp}) di-generate otomatis setelah COA & persetujuan KPA terpenuhi.");
 
+            // SPP, SPM, dan NPI langsung diajukan bersamaan ke verifikator —
+            // tanpa tombol "Ajukan" manual. SP2D tetap menunggu ketiganya
+            // disetujui (submitSp2d).
+            $this->submitAllDocuments($tagihan, $actor);
+
             return $spp->fresh('spm.npi.sp2d');
         });
+    }
+
+    /**
+     * Ajukan SPP, SPM, dan NPI sekaligus ke verifikator masing-masing.
+     * Best-effort: kegagalan satu dokumen tidak menggagalkan lainnya —
+     * dokumen yang gagal tetap DRAFT dan dapat diajukan ulang saat rantai
+     * di-generate kembali.
+     */
+    public function submitAllDocuments(Tagihan $tagihan, ?User $actor): void
+    {
+        foreach (['submitSpp', 'submitSpm', 'submitNpi'] as $method) {
+            try {
+                $this->{$method}($tagihan, $actor);
+            } catch (\RuntimeException $e) {
+                \Illuminate\Support\Facades\Log::warning('Auto-submit dokumen rantai gagal.', [
+                    'tagihan_id' => $tagihan->id,
+                    'method' => $method,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────
     // Pengajuan SPP / SPM (paralel) dan NPI (setelah SPP & SPM disetujui)
     // ─────────────────────────────────────────────────────────────────
 
-    public function submitSpp(Tagihan $tagihan, User $actor): void
+    public function submitSpp(Tagihan $tagihan, ?User $actor): void
     {
         $spp = $this->chainSpp($tagihan);
         $this->assertSubmittable($spp, 'SPP');
@@ -350,7 +401,7 @@ class DokumenChainService
         });
     }
 
-    public function submitSpm(Tagihan $tagihan, User $actor): void
+    public function submitSpm(Tagihan $tagihan, ?User $actor): void
     {
         $spm = $this->chainSpp($tagihan)?->spm;
         $this->assertSubmittable($spm, 'SPM');
@@ -367,17 +418,15 @@ class DokumenChainService
         });
     }
 
-    public function submitNpi(Tagihan $tagihan, User $actor): void
+    public function submitNpi(Tagihan $tagihan, ?User $actor): void
     {
         $spp = $this->chainSpp($tagihan);
         $spm = $spp?->spm;
         $npi = $spm?->npi;
         $this->assertSubmittable($npi, 'NPI');
 
-        // NPI menunggu SPP & SPM selesai diverifikasi terlebih dahulu.
-        if (! $this->isDocumentApproved($spp) || ! $this->isDocumentApproved($spm)) {
-            throw new \RuntimeException('NPI baru dapat diajukan setelah SPP dan SPM disetujui oleh verifikatornya.');
-        }
+        // NPI diajukan bersamaan dengan SPP & SPM (verifikasi independen).
+        // Pencairan SP2D tetap menunggu ketiganya disetujui (submitSp2d).
 
         DB::transaction(function () use ($tagihan, $npi, $actor) {
             $npi->update(['status' => DokumenNpi::STATUS_MENUNGGU_VERIFIKASI]);
