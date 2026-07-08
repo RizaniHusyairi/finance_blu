@@ -35,15 +35,35 @@ class NpiController extends Controller
         $jumlahUang = (float) ($spp?->nominal_spp ?? 0);
         $terbilang = terbilang_rupiah($jumlahUang);
 
-        $bendaharaPengeluaran = User::role('Bendahara Pengeluaran')->with('profilable')->first();
-        $bendaharaPenerimaan = $npi->bendaharaPenerimaan ?: User::role('Bendahara Penerimaan')->with('profilable')->first();
-        $ppk = User::role('PPK')->with('profilable')->first();
+        // Penanda tangan NPI = pejabat yang ditunjuk pada tagihan (snapshot
+        // nama+NIP saat tagihan dibuat), bukan sembarang user pemilik role.
+        $tagihan = $spp?->tagihan;
 
-        $penandatanganPengeluaran = $bendaharaPengeluaran->name ?? 'BENDAHARA PENGELUARAN';
-        $nipPengeluaran = $bendaharaPengeluaran?->pegawai?->nip ?: '-';
-        $penandatanganPenerimaan = $bendaharaPenerimaan->name ?? 'BENDAHARA PENERIMAAN';
-        $nipPenerimaan = $bendaharaPenerimaan?->pegawai?->nip ?: '-';
-        $nipPpk = $ppk?->pegawai?->nip ?: '-';
+        $resolveUser = static function (?int $userId, string $role): ?User {
+            if ($userId) {
+                return User::with('profilable')->find($userId);
+            }
+
+            return User::role($role)->with('profilable')->first();
+        };
+
+        $bendaharaPengeluaran = $resolveUser($tagihan?->bendahara_pengeluaran_user_id, 'Bendahara Pengeluaran');
+        $bendaharaPenerimaan = $npi->bendaharaPenerimaan
+            ?: $resolveUser($tagihan?->bendahara_penerimaan_user_id, 'Bendahara Penerimaan');
+        $ppk = $resolveUser($tagihan?->ppk_user_id, 'PPK');
+
+        $penandatanganPengeluaran = $tagihan?->bendahara_pengeluaran_nama_snapshot
+            ?: ($bendaharaPengeluaran?->profilable?->nama_lengkap ?? $bendaharaPengeluaran?->name ?? 'BENDAHARA PENGELUARAN');
+        $nipPengeluaran = $tagihan?->bendahara_pengeluaran_nip_snapshot
+            ?: ($bendaharaPengeluaran?->profilable?->nip ?: '-');
+        $penandatanganPenerimaan = $tagihan?->bendahara_penerimaan_nama_snapshot
+            ?: ($bendaharaPenerimaan?->profilable?->nama_lengkap ?? $bendaharaPenerimaan?->name ?? 'BENDAHARA PENERIMAAN');
+        $nipPenerimaan = $tagihan?->bendahara_penerimaan_nip_snapshot
+            ?: ($bendaharaPenerimaan?->profilable?->nip ?: '-');
+        $penandatanganPpk = $tagihan?->ppk_nama_snapshot
+            ?: ($ppk?->profilable?->nama_lengkap ?? $ppk?->name ?? 'PEJABAT PEMBUAT KOMITMEN');
+        $nipPpk = $tagihan?->ppk_nip_snapshot
+            ?: ($ppk?->profilable?->nip ?: '-');
 
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('npis.pdf', compact(
             'spp',
@@ -56,6 +76,7 @@ class NpiController extends Controller
             'penandatanganPenerimaan',
             'nipPenerimaan',
             'ppk',
+            'penandatanganPpk',
             'nipPpk'
         ));
         $pdf->setPaper('a4', 'portrait');

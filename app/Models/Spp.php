@@ -25,7 +25,7 @@ class Spp extends DokumenSpp
 
     public function getUraianAttribute()
     {
-        if ($this->tagihan?->tipe_tagihan === 'KONTRAK') {
+        if (in_array($this->tagihan?->tipe_tagihan, ['KONTRAK', 'KONTRAK_EKSTERNAL'], true)) {
             return PaymentPdfReference::uraianForTagihan($this->tagihan, $this->attributes['uraian'] ?? null);
         }
 

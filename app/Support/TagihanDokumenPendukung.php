@@ -125,6 +125,30 @@ class TagihanDokumenPendukung
             }
         }
 
+        if ($tagihan->detailKontrakEksternal) {
+            $detail = $tagihan->detailKontrakEksternal;
+            $eksternalFiles = [
+                'file_surat_pesanan' => 'Surat Pesanan / Kontrak ber-TTE',
+                'file_invoice' => 'Invoice Tagihan',
+                'file_kwitansi' => 'Kwitansi Pembayaran',
+                'file_bast' => 'BAST / Bukti Serah Terima',
+                'file_faktur_pajak' => 'Faktur Pajak',
+            ];
+
+            foreach ($eksternalFiles as $field => $title) {
+                $path = $detail->$field;
+                if (filled($path)) {
+                    $items->push([
+                        'title' => $title,
+                        'path' => $path,
+                        'url' => route('secure-file', ['tagihan-kontrak-eksternal', $detail->id, $field]),
+                        'source' => 'Kontrak Eksternal',
+                        'is_generated' => false,
+                    ]);
+                }
+            }
+        }
+
         foreach ($tagihan->detailPerjaldin ?? collect() as $detail) {
             $nama = $detail->nama_pegawai ?? $detail->pegawai?->nama_lengkap ?? 'Peserta';
             // INF-01: bukti perjaldin disajikan via route terproteksi `secure-file`.

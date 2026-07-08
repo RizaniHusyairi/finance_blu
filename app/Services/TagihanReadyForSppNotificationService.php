@@ -35,7 +35,7 @@ class TagihanReadyForSppNotificationService
     private function readyStatusFor(Tagihan $tagihan): ?string
     {
         return match ($tagihan->tipe_tagihan) {
-            'KONTRAK' => 'READY_FOR_SPP',
+            'KONTRAK', 'KONTRAK_EKSTERNAL' => 'READY_FOR_SPP',
             'PERJALDIN' => 'DISETUJUI_PERJALDIN',
             'HONORARIUM' => 'DISETUJUI',
             default => null,
@@ -60,6 +60,7 @@ class TagihanReadyForSppNotificationService
     {
         return match ($tagihan->tipe_tagihan) {
             'KONTRAK' => 'Tagihan Kontrak',
+            'KONTRAK_EKSTERNAL' => 'Tagihan Kontrak Eksternal',
             'PERJALDIN' => 'Tagihan Perjaldin',
             'HONORARIUM' => 'Tagihan Honorarium',
             default => 'Tagihan',
@@ -68,6 +69,11 @@ class TagihanReadyForSppNotificationService
 
     private function urlFor(Tagihan $tagihan): string
     {
+        // Kontrak eksternal langsung diproses di halaman Proses Tagihan.
+        if ($tagihan->tipe_tagihan === 'KONTRAK_EKSTERNAL' && Route::has('proses-tagihan.show')) {
+            return route('proses-tagihan.show', $tagihan->id);
+        }
+
         $route = match ($tagihan->tipe_tagihan) {
             'KONTRAK' => 'spps.kontrak.detail',
             'PERJALDIN' => 'spps.perjaldin.detail',

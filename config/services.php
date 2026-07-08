@@ -35,4 +35,12 @@ return [
         ],
     ],
 
+    // Google Gemini (free tier) — merangkum daftar produk Surat Pesanan
+    // menjadi judul "nama pekerjaan" pada auto-isi form kontrak eksternal.
+    // Kosongkan GEMINI_API_KEY untuk menonaktifkan (fallback heuristik).
+    'gemini' => [
+        'key' => env('GEMINI_API_KEY'),
+        'model' => env('GEMINI_MODEL', 'gemini-flash-latest'),
+    ],
+
 ];

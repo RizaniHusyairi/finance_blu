@@ -604,15 +604,16 @@
                     $netto = (float) $tagihan->total_netto;
                     $persenPotongan = $bruto > 0 ? round($potongan / $bruto * 100, 1) : 0;
                     $persenNetto = $bruto > 0 ? round(100 - $persenPotongan, 1) : 0;
-                    $tipeLabelRingkas = ['KONTRAK' => 'Tagihan SPK', 'PERJALDIN' => 'Perjaldin', 'HONORARIUM' => 'Honorarium'][$tagihan->tipe_tagihan] ?? $tagihan->tipe_tagihan;
+                    $tipeLabelRingkas = ['KONTRAK' => 'Tagihan SPK', 'KONTRAK_EKSTERNAL' => 'Kontrak Eksternal', 'PERJALDIN' => 'Perjaldin', 'HONORARIUM' => 'Honorarium'][$tagihan->tipe_tagihan] ?? $tagihan->tipe_tagihan;
+                    $detailEksternal = $tagihan->detailKontrakEksternal;
                 @endphp
 
                 {{-- Identitas pekerjaan --}}
                 <div class="rk-identity mb-4">
                     <div class="rk-job">
-                        <i class="bi bi-briefcase-fill me-2" style="color: var(--pt-primary);"></i>{{ $kontrakSpk->nama_pekerjaan ?? $tagihan->deskripsi }}
+                        <i class="bi bi-briefcase-fill me-2" style="color: var(--pt-primary);"></i>{{ $kontrakSpk->nama_pekerjaan ?? $detailEksternal?->nama_pekerjaan ?? $tagihan->deskripsi }}
                     </div>
-                    @if($kontrakSpk)
+                    @if($kontrakSpk || $detailEksternal)
                         <div class="rk-desc">{{ $tagihan->deskripsi }}</div>
                     @endif
                     <div class="d-flex flex-wrap gap-2 mt-3">
@@ -621,6 +622,14 @@
                             <span class="rk-chip rk-copy" data-copy="{{ $kontrakSpk->nomor_spk }}" title="Klik untuk menyalin nomor SPK">
                                 <i class="bi bi-hash"></i> <span class="rk-copy-text">{{ $kontrakSpk->nomor_spk }}</span> <i class="bi bi-copy" style="color:#94a3b8;font-size:.7rem;"></i>
                             </span>
+                        @endif
+                        @if($detailEksternal)
+                            <span class="rk-chip rk-copy" data-copy="{{ $detailEksternal->nomor_surat_pesanan }}" title="Klik untuk menyalin nomor Surat Pesanan">
+                                <i class="bi bi-hash"></i> <span class="rk-copy-text">{{ $detailEksternal->nomor_surat_pesanan }}</span> <i class="bi bi-copy" style="color:#94a3b8;font-size:.7rem;"></i>
+                            </span>
+                            @if($detailEksternal->termin_ke)
+                                <span class="rk-chip"><i class="bi bi-collection-fill"></i> Termin {{ $detailEksternal->termin_ke }}{{ $detailEksternal->total_termin ? ' / ' . $detailEksternal->total_termin : '' }}</span>
+                            @endif
                         @endif
                         @if($terminRingkas)
                             <span class="rk-chip"><i class="bi bi-collection-fill"></i> Termin {{ $terminRingkas->termin_ke }} · {{ str_replace('_', ' ', $terminRingkas->jenis_termin) }}</span>

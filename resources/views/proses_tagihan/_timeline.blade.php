@@ -1,4 +1,9 @@
 @php
+    // SPP/SPM/NPI diverifikasi paralel — di progres ditampilkan sebagai satu
+    // tahap gabungan dengan penghitung dokumen yang sudah disetujui.
+    $dokumenDisetujui = collect([$state['sppApproved'], $state['spmApproved'], $state['npiApproved']])
+        ->filter()->count();
+
     $items = [
         ['label' => 'Tagihan diverifikasi',  'done' => $state['tagihanApproved']],
         ['label' => 'COA dibebankan',        'done' => $state['coaDone']],
@@ -7,9 +12,7 @@
             ['label' => 'Pajak & faktur diisi', 'done' => $state['pajakKontrakDone'] || (bool) $state['spp']],
         ] : []),
         ['label' => 'Draft dokumen terbit',  'done' => (bool) $state['spp']],
-        ['label' => 'SPP disetujui',         'done' => $state['sppApproved']],
-        ['label' => 'SPM disetujui',         'done' => $state['spmApproved']],
-        ['label' => 'NPI disetujui',         'done' => $state['npiApproved']],
+        ['label' => 'SPP, SPM & NPI disetujui', 'done' => $state['dokumenSiapBayar'], 'sub' => $dokumenDisetujui . '/3'],
         ['label' => 'Bukti transfer',        'done' => (bool) $state['buktiTransfer']],
         ['label' => 'SP2D terbit',           'done' => $state['sp2dTerbit']],
         ['label' => 'Tercatat di BKU',       'done' => $state['bkuPosted']],
@@ -76,9 +79,14 @@
                         @endif
                     </span>
                     <span class="txt">{{ $item['label'] }}</span>
-                    @if($isNext)
-                        <span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle rounded-pill fs-8 ms-auto">Saat ini</span>
-                    @endif
+                    <span class="ms-auto d-inline-flex align-items-center gap-1">
+                        @if(! $item['done'] && ($item['sub'] ?? null))
+                            <span class="badge bg-light text-secondary border rounded-pill fs-8 font-monospace">{{ $item['sub'] }}</span>
+                        @endif
+                        @if($isNext)
+                            <span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle rounded-pill fs-8">Saat ini</span>
+                        @endif
+                    </span>
                 </div>
             @endforeach
         </div>

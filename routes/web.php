@@ -592,6 +592,19 @@ Route::middleware(['auth', 'account.active'])->group(function () use ($internalR
         Route::get('/tagihan/kontrak/{id}/export/{type}', [TagihanController::class, 'exportPdfKontrak'])->name('tagihan.kontrak.export-pdf');
     });
 
+    // Tagihan Kontrak Eksternal — kontrak dibuat & ber-TTE di luar sistem
+    // (mis. Surat Pesanan e-Purchasing/INAPROC). Dibuat oleh PPK.
+    Route::middleware('role:Super Admin|PPK')->prefix('tagihan-kontrak-eksternal')->name('tagihan-kontrak-eksternal.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\TagihanKontrakEksternalController::class, 'index'])->name('index');
+        Route::get('/create', [\App\Http\Controllers\TagihanKontrakEksternalController::class, 'create'])->name('create');
+        Route::post('/parse-surat-pesanan', [\App\Http\Controllers\TagihanKontrakEksternalController::class, 'parseSuratPesanan'])->name('parse');
+        Route::post('/', [\App\Http\Controllers\TagihanKontrakEksternalController::class, 'store'])->name('store');
+        Route::get('/{id}/edit', [\App\Http\Controllers\TagihanKontrakEksternalController::class, 'edit'])->name('edit');
+        Route::put('/{id}', [\App\Http\Controllers\TagihanKontrakEksternalController::class, 'update'])->name('update');
+        Route::post('/{id}/submit', [\App\Http\Controllers\TagihanKontrakEksternalController::class, 'submit'])->name('submit');
+        Route::get('/{id}', [\App\Http\Controllers\TagihanKontrakEksternalController::class, 'show'])->name('show');
+    });
+
     // Tagihan Jasa (PNBP) — pembuatan tagihan dibatasi ke role pembuat (admin),
     // verifikator jasa hanya boleh melihat/approve.
     Route::middleware('role:Super Admin|Admin Jasa|Admin Konsesi')->group(function () {

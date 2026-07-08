@@ -43,26 +43,32 @@ class DokumenChainService
         'npi' => 'NPI',
     ];
 
+    // KONTRAK_EKSTERNAL memakai definisi workflow yang sama dengan KONTRAK:
+    // verifikatornya 6 role yang sama dan di-assign dari kolom tagihan.
     private const WORKFLOW_SPP = [
         'KONTRAK' => 'SPP_KONTRAK_PPK',
+        'KONTRAK_EKSTERNAL' => 'SPP_KONTRAK_PPK',
         'HONORARIUM' => 'SPP_HONORARIUM_PPK',
         'PERJALDIN' => 'SPP_PERJALDIN',
     ];
 
     private const WORKFLOW_SPM = [
         'KONTRAK' => 'SPM_KONTRAK_PPSPM',
+        'KONTRAK_EKSTERNAL' => 'SPM_KONTRAK_PPSPM',
         'HONORARIUM' => 'SPM_HONORARIUM_PPSPM',
         'PERJALDIN' => 'SPM_PERJALDIN_PPSPM',
     ];
 
     private const WORKFLOW_NPI = [
         'KONTRAK' => 'NPI_KONTRAK',
+        'KONTRAK_EKSTERNAL' => 'NPI_KONTRAK',
         'HONORARIUM' => 'NPI_HONORARIUM',
         'PERJALDIN' => 'NPI_PERJALDIN',
     ];
 
     private const WORKFLOW_SP2D = [
         'KONTRAK' => 'SP2D_KONTRAK',
+        'KONTRAK_EKSTERNAL' => 'SP2D_KONTRAK',
         'HONORARIUM' => 'SP2D_HONORARIUM',
         'PERJALDIN' => 'SP2D_PERJALDIN',
     ];
@@ -129,7 +135,7 @@ class DokumenChainService
      */
     public function isPajakTipeDipilih(Tagihan $tagihan): bool
     {
-        if ($tagihan->tipe_tagihan !== 'KONTRAK') {
+        if (! in_array($tagihan->tipe_tagihan, ['KONTRAK', 'KONTRAK_EKSTERNAL'], true)) {
             return true;
         }
 
@@ -139,11 +145,15 @@ class DokumenChainService
     /** Khusus tagihan KONTRAK: faktur pajak wajib diunggah sebelum draft rantai dibuat. */
     public function hasFakturPajak(Tagihan $tagihan): bool
     {
-        if ($tagihan->tipe_tagihan !== 'KONTRAK') {
-            return true;
+        if ($tagihan->tipe_tagihan === 'KONTRAK') {
+            return (bool) $tagihan->detailKontrak?->file_faktur_pajak;
         }
 
-        return (bool) $tagihan->detailKontrak?->file_faktur_pajak;
+        if ($tagihan->tipe_tagihan === 'KONTRAK_EKSTERNAL') {
+            return (bool) $tagihan->detailKontrakEksternal?->file_faktur_pajak;
+        }
+
+        return true;
     }
 
     public function isPajakKontrakComplete(Tagihan $tagihan): bool
@@ -220,6 +230,11 @@ class DokumenChainService
         }
         if (! $this->isBapVendorSigned($tagihan)) {
             $missing[] = 'Vendor belum menandatangani (TTE) dan mengunggah scan BAP final untuk tagihan kontrak ini.';
+        }
+        if ($tagihan->tipe_tagihan === 'KONTRAK_EKSTERNAL'
+            && ! $tagihan->detailKontrakEksternal?->file_surat_pesanan
+        ) {
+            $missing[] = 'PDF Surat Pesanan bertanda tangan belum diunggah untuk tagihan kontrak eksternal ini.';
         }
 
         foreach ($this->missingVerifierColumns($tagihan) as $label) {
@@ -534,7 +549,7 @@ class DokumenChainService
                 $tagihan->update(['status' => 'SELESAI']);
                 $this->log($tagihan, $actor, 'SP2D_FINAL', 'Tagihan diselesaikan setelah SP2D terbit.', $statusTagihanSebelumnya, 'SELESAI');
 
-                $hasTax = in_array($tagihan->tipe_tagihan, ['KONTRAK', 'HONORARIUM'], true)
+                $hasTax = in_array($tagihan->tipe_tagihan, ['KONTRAK', 'KONTRAK_EKSTERNAL', 'HONORARIUM'], true)
                     && $tagihan->potonganTagihan()
                         ->where('jenis_potongan', 'PAJAK')
                         ->where('nominal_potongan', '>', 0)
@@ -1024,6 +1039,7 @@ class DokumenChainService
 
         $role = match ($tagihan->tipe_tagihan) {
             'KONTRAK' => 'Pejabat Pengadaan',
+            'KONTRAK_EKSTERNAL' => 'PPK',
             'PERJALDIN' => 'Operator Perjaldin',
             default => 'Operator BLU',
         };
@@ -1041,6 +1057,7 @@ class DokumenChainService
         try {
             return match ($tagihan->tipe_tagihan) {
                 'KONTRAK' => route('tagihan.kontrak.show', $tagihan->id),
+                'KONTRAK_EKSTERNAL' => route('tagihan-kontrak-eksternal.show', $tagihan->id),
                 'HONORARIUM' => route('honorarium.show', $tagihan->id),
                 'PERJALDIN' => route('perjaldins.show', $tagihan->id),
                 default => null,

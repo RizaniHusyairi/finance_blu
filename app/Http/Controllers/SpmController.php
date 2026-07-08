@@ -55,6 +55,13 @@ class SpmController extends Controller
             $spm->tanggal_spm = now()->toDateString();
         }
 
+        // Penanda tangan SPM = PPSPM yang ditugaskan pada tagihan (snapshot
+        // nama+NIP saat tagihan dibuat; fallback ke akun PPSPM pada SPM).
+        $penandatanganSpm = $sppable?->ppspm_nama_snapshot
+            ?: ($spm->ppspm?->profilable?->nama_lengkap ?? $spm->ppspm?->name ?? '-');
+        $nipSpm = $sppable?->ppspm_nip_snapshot
+            ?: ($spm->ppspm?->profilable?->nip ?? '-');
+
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView(
             'spms.pdf',
             compact(
@@ -69,7 +76,9 @@ class SpmController extends Controller
                 'jumlahPotonganPajak',
                 'pdfReference',
                 'dipaInfo',
-                'supplierInfo'
+                'supplierInfo',
+                'penandatanganSpm',
+                'nipSpm'
             )
         );
         $pdf->setPaper('a4', 'portrait');

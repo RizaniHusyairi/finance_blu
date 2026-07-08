@@ -186,7 +186,7 @@
                                     ->map(fn ($b) => $b['label'] . (empty($b['nomor']) ? '' : ' ' . $b['nomor']))
                                     ->implode(', ');
                                 $isSp2dCard = strtolower($jenis) === 'sp2d';
-                                $adaPajakKontrak = $tagihan->tipe_tagihan === 'KONTRAK';
+                                $adaPajakKontrak = in_array($tagihan->tipe_tagihan, ['KONTRAK', 'KONTRAK_EKSTERNAL'], true);
                             @endphp
                             <div class="modal fade js-pt-revisi-modal" id="modalRevisi{{ $approval->id }}" tabindex="-1" aria-hidden="true">
                                 <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">

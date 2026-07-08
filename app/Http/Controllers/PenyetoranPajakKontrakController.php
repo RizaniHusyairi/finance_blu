@@ -30,7 +30,7 @@ class PenyetoranPajakKontrakController extends Controller
             'akunPotongan',
         ])
             ->where('jenis_potongan', 'PAJAK')
-            ->whereHas('tagihan', fn ($q) => $q->where('tipe_tagihan', 'KONTRAK'))
+            ->whereHas('tagihan', fn ($q) => $q->whereIn('tipe_tagihan', ['KONTRAK', 'KONTRAK_EKSTERNAL']))
             ->whereHas('tagihan.spps.spm.npi.sp2d', function ($q) {
                 $q->where('status', DokumenSp2d::STATUS_EXECUTED);
             })
@@ -68,7 +68,7 @@ class PenyetoranPajakKontrakController extends Controller
         $potonganList = $query->latest()->get();
 
         // Summary dari total data (tanpa filter status)
-        $allForSummary = PotonganTagihan::whereHas('tagihan', fn ($q) => $q->where('tipe_tagihan', 'KONTRAK'))
+        $allForSummary = PotonganTagihan::whereHas('tagihan', fn ($q) => $q->whereIn('tipe_tagihan', ['KONTRAK', 'KONTRAK_EKSTERNAL']))
             ->where('jenis_potongan', 'PAJAK')
             ->whereHas('tagihan', fn ($q) => $q->where('status', 'SELESAI'))
             ->whereHas('tagihan.spps.spm.npi.sp2d', fn ($q) => $q->where('status', DokumenSp2d::STATUS_EXECUTED))
@@ -91,6 +91,7 @@ class PenyetoranPajakKontrakController extends Controller
         $potongan = PotonganTagihan::with([
             'tagihan.detailKontrak.kontrakTermin.kontrak.vendor',
             'tagihan.detailKontrak.kontrakTermin.kontrak.dipaRevisionItem.coa',
+            'tagihan.detailKontrakEksternal',
             'tagihan.dipaRevisionItem.coa',
             'tagihan.spps.standingInstruction',
             'tagihan.spps.spm.npi.sp2d.arsipDokumen',
@@ -101,17 +102,18 @@ class PenyetoranPajakKontrakController extends Controller
         ])->findOrFail($id);
 
         $tagihan = $potongan->tagihan;
-        abort_if($tagihan?->tipe_tagihan !== 'KONTRAK', 404, 'Potongan ini bukan tipe kontrak.');
+        abort_if(! in_array($tagihan?->tipe_tagihan, ['KONTRAK', 'KONTRAK_EKSTERNAL'], true), 404, 'Potongan ini bukan tipe kontrak.');
         abort_if($potongan->jenis_potongan !== 'PAJAK', 404, 'Potongan ini bukan potongan pajak kontrak.');
 
         $detailKontrak = $tagihan?->detailKontrak;
+        $detailEksternal = $tagihan?->detailKontrakEksternal;
         $kontrakTermin = $detailKontrak?->kontrakTermin;
         $kontrak = $kontrakTermin?->kontrak;
         $vendor = $kontrak?->vendor ?? $tagihan?->pihak;
         $coa = $kontrak?->dipaRevisionItem?->coa ?? $tagihan?->dipaRevisionItem?->coa ?? $potongan->akunPotongan;
 
-        $nomorKontrak = $kontrak?->nomor_spk ?? $kontrak?->nomor_kontrak ?? '-';
-        $judulKontrak = $kontrak?->nama_pekerjaan ?? $kontrak?->judul_kontrak ?? '-';
+        $nomorKontrak = $kontrak?->nomor_spk ?? $kontrak?->nomor_kontrak ?? $detailEksternal?->nomor_surat_pesanan ?? '-';
+        $judulKontrak = $kontrak?->nama_pekerjaan ?? $kontrak?->judul_kontrak ?? $detailEksternal?->nama_pekerjaan ?? '-';
         $vendorName = $vendor?->nama_pihak ?? $vendor?->nama ?? $vendor?->nama_perusahaan ?? '-';
         $terminText = $kontrakTermin?->nama_termin ?? $kontrakTermin?->keterangan_termin;
         if (! $terminText && ($kontrakTermin?->termin_ke || $kontrakTermin?->jenis_termin)) {
@@ -329,7 +331,7 @@ class PenyetoranPajakKontrakController extends Controller
             'tagihan.potonganTagihan',
         ])
             ->where('jenis_potongan', 'PAJAK')
-            ->whereHas('tagihan', fn ($q) => $q->where('tipe_tagihan', 'KONTRAK'))
+            ->whereHas('tagihan', fn ($q) => $q->whereIn('tipe_tagihan', ['KONTRAK', 'KONTRAK_EKSTERNAL']))
             ->findOrFail($id);
     }
 

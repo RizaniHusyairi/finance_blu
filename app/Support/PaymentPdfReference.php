@@ -18,6 +18,7 @@ class PaymentPdfReference
 
         return match ($tagihan->tipe_tagihan) {
             'KONTRAK' => self::contractReference($tagihan),
+            'KONTRAK_EKSTERNAL' => self::externalContractReference($tagihan),
             'PERJALDIN' => self::singleReference(
                 'No. Perjaldin',
                 $tagihan->nomor_tagihan,
@@ -73,6 +74,7 @@ class PaymentPdfReference
 
         return match ($tagihan->tipe_tagihan) {
             'KONTRAK' => self::contractSupplier($tagihan, $fallbackUraian),
+            'KONTRAK_EKSTERNAL' => self::externalContractSupplier($tagihan, $fallbackUraian),
             'HONORARIUM' => self::attachedSupplier(
                 self::firstFilled($tagihan->deskripsi, $fallbackUraian),
                 self::firstFilled($tagihan->getAttribute('nama_supplier'), self::DEFAULT_SUPPLIER_NAME)
@@ -89,6 +91,14 @@ class PaymentPdfReference
 
         if ($tagihan->tipe_tagihan === 'KONTRAK') {
             return self::contractUraian($tagihan, $fallbackUraian);
+        }
+
+        if ($tagihan->tipe_tagihan === 'KONTRAK_EKSTERNAL') {
+            return self::valueOrDash(self::firstFilled(
+                $tagihan->detailKontrakEksternal?->nama_pekerjaan,
+                $fallbackUraian,
+                $tagihan->deskripsi
+            ));
         }
 
         return self::valueOrDash(self::firstFilled($tagihan->deskripsi, $fallbackUraian));
@@ -114,6 +124,38 @@ class PaymentPdfReference
             'secondary_date_value' => self::formatDate(
                 $isPelunasan ? $detail?->tanggal_bast : $detail?->tanggal_bapp
             ),
+        ];
+    }
+
+    private static function externalContractReference(Tagihan $tagihan): array
+    {
+        $detail = $tagihan->detailKontrakEksternal;
+
+        return [
+            'primary_label' => 'No. Kontrak',
+            'primary_value' => $detail?->nomor_surat_pesanan ?? $tagihan->nomor_tagihan,
+            'primary_date_label' => 'Tgl. Kontrak',
+            'primary_date_value' => self::formatDate($detail?->tanggal_surat_pesanan),
+            'secondary_label' => 'No. Tagihan',
+            'secondary_value' => $tagihan->nomor_tagihan,
+            'secondary_date_label' => 'Tgl. Tagihan',
+            'secondary_date_value' => self::formatDate($tagihan->created_at),
+        ];
+    }
+
+    private static function externalContractSupplier(Tagihan $tagihan, ?string $fallbackUraian): array
+    {
+        $vendor = $tagihan->pihak;
+        $rekening = self::defaultRekening($vendor);
+
+        return [
+            'nama_supplier' => self::valueOrDash($vendor?->nama_pihak),
+            'npwp' => self::valueOrDash($vendor?->npwp),
+            'bank_pos' => self::valueOrDash($rekening?->nama_bank),
+            'rekening' => self::valueOrDash($rekening?->nomor_rekening),
+            'alamat' => self::valueOrDash($vendor?->alamat),
+            'nama_rekening' => self::valueOrDash($rekening?->nama_rekening ?? $vendor?->nama_pihak),
+            'uraian' => self::uraianForTagihan($tagihan, $fallbackUraian),
         ];
     }
 

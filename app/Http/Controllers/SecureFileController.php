@@ -43,6 +43,7 @@ class SecureFileController extends Controller
         // Dokumen internal (tanpa mitra_jasa_id) → hanya staf internal.
         'kontrak-pengadaan' => [KontrakPengadaan::class, ['file_spk_final_ttd', 'file_gambar_rab', 'file_jaminan_uang_muka'], 'mitra'],
         'tagihan-kontrak'  => [DetailKontrak::class, ['file_bapp', 'file_bast', 'file_bap', 'file_invoice', 'file_kwitansi', 'file_faktur_pajak', 'file_lampiran_lainnya'], 'internal'],
+        'tagihan-kontrak-eksternal' => [\App\Models\DetailKontrakEksternal::class, ['file_surat_pesanan', 'file_faktur_pajak', 'file_invoice', 'file_kwitansi', 'file_bast'], 'internal'],
         'tagihan-perjaldin' => [DetailPerjaldin::class, ['spt_file_path', 'tiket_file_path', 'transport_file_path', 'penginapan_file_path', 'uang_harian_file_path'], 'internal'],
         'dipa-revision'    => [RiwayatRevisiDipa::class, ['file_dokumen_dipa'], 'internal'],
     ];

@@ -313,7 +313,7 @@
                 @endif
             </td>
             <td colspan="2" style="padding: 10px; width: 40%; vertical-align: top; text-align: center;">
-                Samarinda, {{ $spp->tanggal_spm ? \Carbon\Carbon::parse($spp->tanggal_spm)->locale('id')->isoFormat('D MMMM Y') : \Carbon\Carbon::now()->locale('id')->isoFormat('D MMMM Y') }} <br>
+                Samarinda, {{ $spm->tanggal_spm ? \Carbon\Carbon::parse($spm->tanggal_spm)->locale('id')->isoFormat('D MMMM Y') : \Carbon\Carbon::now()->locale('id')->isoFormat('D MMMM Y') }} <br>
                 A.n. Kuasa Pengguna Anggaran <br>
                 Pejabat Penandatangan SPM <br>
                 @if($tteQrFilePath)
@@ -324,8 +324,8 @@
                 @else
                     <br><br><br><br><br><br>
                 @endif
-                <span style="text-decoration: underline; font-weight: bold;">{{ strtoupper($spp->penandatangan_spm_nama) }}</span> <br>
-                NIP {{ $spp->penandatangan_spm_nip }}
+                <span style="text-decoration: underline; font-weight: bold;">{{ strtoupper($penandatanganSpm ?? '-') }}</span> <br>
+                NIP {{ $nipSpm ?? '-' }}
             </td>
         </tr>
 

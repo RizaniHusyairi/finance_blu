@@ -122,6 +122,100 @@
         </li>
 
         {{-- ════════════════════════════════════════════════════
+             MASTER & ADMINISTRASI — selalu di atas, tepat di bawah Dashboard
+             ════════════════════════════════════════════════════ --}}
+        @hasanyrole('Super Admin|KPA|PLT/PLH|Kepala Subbagian Keuangan dan Tata Usaha|Pejabat Pengadaan|Operator BLU|PPK|Koordinator Keuangan|Operator Perjaldin')
+        <li class="menu-label">Master &amp; Administrasi</li>
+        @endhasanyrole
+
+        @hasanyrole('Super Admin|KPA|PLT/PLH|Kepala Subbagian Keuangan dan Tata Usaha|Pejabat Pengadaan|Operator BLU|PPK')
+        <li>
+          <a href="javascript:;" class="has-arrow">
+            <div class="parent-icon"><i class="material-icons-outlined">folder</i>
+            </div>
+            <div class="menu-title">Master Data</div>
+          </a>
+          <ul>
+            @hasanyrole('Super Admin|Pejabat Pengadaan')
+            <li><a href="{{ route('suppliers.index') }}"><i class="material-icons-outlined">arrow_right</i>Vendor</a>
+            </li>
+            @endhasanyrole
+            @hasanyrole('Super Admin|KPA|PLT/PLH|Operator BLU|PPK|Kepala Subbagian Keuangan dan Tata Usaha')
+            <li><a href="{{ route('dipas.index') }}"><i class="material-icons-outlined">arrow_right</i>DIPA</a>
+            </li>
+            <li><a href="{{ route('coas.index') }}"><i class="material-icons-outlined">arrow_right</i>COA</a>
+            </li>
+            @endhasanyrole
+            @hasanyrole('Super Admin|KPA|PLT/PLH|Operator BLU|Kepala Subbagian Keuangan dan Tata Usaha')
+            <li><a href="{{ route('master-pajak.index') }}"><i class="material-icons-outlined">arrow_right</i>Pajak</a>
+            </li>
+            @endhasanyrole
+          </ul>
+        </li>
+        @endhasanyrole
+
+        @hasrole('Operator Perjaldin')
+        <li>
+          <a href="javascript:;" class="has-arrow">
+            <div class="parent-icon"><i class="material-icons-outlined">folder</i></div>
+            <div class="menu-title">Master Data</div>
+          </a>
+          <ul>
+            <li>
+              <a href="{{ route('master-uang-harian-perjaldin.index') }}">
+                <i class="material-icons-outlined">arrow_right</i>Uang Harian
+              </a>
+            </li>
+          </ul>
+        </li>
+        @endhasrole
+
+        @hasanyrole('Super Admin|Pejabat Pengadaan')
+        <li>
+          <a href="{{ route('document-numbers.index') }}">
+            <div class="parent-icon"><i class="material-icons-outlined">confirmation_number</i>
+            </div>
+            <div class="menu-title">Nomor Dokumen</div>
+          </a>
+        </li>
+        @endhasanyrole
+
+        @hasanyrole('Super Admin|Koordinator Keuangan')
+        <li>
+          <a href="{{ route('surat-numbers.index') }}">
+            <div class="parent-icon"><i class="material-icons-outlined">tag</i>
+            </div>
+            <div class="menu-title">Nomor Surat</div>
+          </a>
+        </li>
+        @endhasanyrole
+
+        @hasrole('Super Admin')
+        <li>
+          <a href="javascript:;" class="has-arrow">
+            <div class="parent-icon"><i class="material-icons-outlined">admin_panel_settings</i></div>
+            <div class="menu-title">Administrasi</div>
+          </a>
+          <ul>
+            <li><a href="{{ route('admin.users.index') }}"><i class="material-icons-outlined">arrow_right</i>Manajemen User</a></li>
+            <li><a href="{{ route('admin.roles.index') }}"><i class="material-icons-outlined">arrow_right</i>Manajemen Role</a></li>
+            <li><a href="{{ route('admin.pegawai.index') }}"><i class="material-icons-outlined">arrow_right</i>Data Pegawai</a></li>
+          </ul>
+        </li>
+
+        <li>
+          <a href="javascript:;" class="has-arrow">
+            <div class="parent-icon"><i class="material-icons-outlined">hub</i></div>
+            <div class="menu-title">Integrasi & Notifikasi</div>
+          </a>
+          <ul>
+            <li><a href="{{ route('admin.notifikasi-wa.index') }}"><i class="material-icons-outlined">arrow_right</i>Notifikasi WhatsApp</a></li>
+            <li><a href="{{ route('jasa.integrasi.index') }}"><i class="material-icons-outlined">arrow_right</i>Integrasi API</a></li>
+          </ul>
+        </li>
+        @endhasrole
+
+        {{-- ════════════════════════════════════════════════════
              AMC — Operasional Penerbangan
              ════════════════════════════════════════════════════ --}}
         @hasanyrole('Super Admin|Super Admin Jasa|Admin Jasa|Koordinator Jasa|AMC')
@@ -357,19 +451,10 @@
         @endhasrole
 
         {{-- ════════════════════════════════════════════════════
-             TAGIHAN & PENCAIRAN
+             TAGIHAN (pembuatan & pengelolaan tagihan)
              ════════════════════════════════════════════════════ --}}
-        @hasanyrole('Super Admin|Super Admin Jasa|Operator BLU|PPK|PPSPM|Bendahara Pengeluaran|Bendahara Penerimaan|Koordinator Keuangan|Kepala Subbagian Keuangan dan Tata Usaha|KPA|PLT/PLH|Pejabat Pengadaan|Operator Perjaldin|PPABP|Admin Jasa|Admin Konsesi|Koordinator Jasa|Kepala Seksi Pelayanan dan Kerjasama|Admin Listrik|Admin Air')
-        <li class="menu-label">Tagihan &amp; Pencairan</li>
-        @endhasanyrole
-
-        @hasanyrole('Super Admin|Operator BLU|PPK|PPSPM|Bendahara Pengeluaran|Bendahara Penerimaan|Koordinator Keuangan|Kepala Subbagian Keuangan dan Tata Usaha|KPA')
-        <li>
-          <a href="{{ route('proses-tagihan.index') }}">
-            <div class="parent-icon"><i class="material-icons-outlined">account_tree</i></div>
-            <div class="menu-title">Proses Tagihan</div>
-          </a>
-        </li>
+        @hasanyrole('Super Admin|Super Admin Jasa|Pejabat Pengadaan|PPK|Operator Perjaldin|PPABP|Admin Jasa|Admin Konsesi|Koordinator Jasa|Kepala Seksi Pelayanan dan Kerjasama|KPA|PLT/PLH|Admin Listrik|Admin Air')
+        <li class="menu-label">Tagihan</li>
         @endhasanyrole
 
         @hasanyrole('Super Admin|Pejabat Pengadaan')
@@ -378,6 +463,16 @@
             <div class="parent-icon"><i class="material-icons-outlined">description</i>
             </div>
             <div class="menu-title">Manajemen SPK</div>
+          </a>
+        </li>
+        @endhasanyrole
+
+        @hasanyrole('Super Admin|PPK')
+        <li>
+          <a href="{{ route('tagihan-kontrak-eksternal.index') }}">
+            <div class="parent-icon"><i class="material-icons-outlined">receipt</i>
+            </div>
+            <div class="menu-title">Tagihan Kontrak Eksternal</div>
           </a>
         </li>
         @endhasanyrole
@@ -530,6 +625,19 @@
         @endhasanyrole
 
         {{-- ════════════════════════════════════════════════════
+             PENCAIRAN (proses SPP/SPM/NPI/SP2D sampai BKU)
+             ════════════════════════════════════════════════════ --}}
+        @hasanyrole('Super Admin|Operator BLU|PPK|PPSPM|Bendahara Pengeluaran|Bendahara Penerimaan|Koordinator Keuangan|Kepala Subbagian Keuangan dan Tata Usaha|KPA')
+        <li class="menu-label">Pencairan</li>
+        <li>
+          <a href="{{ route('proses-tagihan.index') }}">
+            <div class="parent-icon"><i class="material-icons-outlined">account_tree</i></div>
+            <div class="menu-title">Proses Tagihan</div>
+          </a>
+        </li>
+        @endhasanyrole
+
+        {{-- ════════════════════════════════════════════════════
              KELOLA LAYANAN JASA
              ════════════════════════════════════════════════════ --}}
         @hasanyrole('Super Admin|Super Admin Jasa|Admin Jasa')
@@ -676,100 +784,6 @@
           </ul>
         </li>
         @endhasanyrole
-
-        {{-- ════════════════════════════════════════════════════
-             MASTER & ADMINISTRASI
-             ════════════════════════════════════════════════════ --}}
-        @hasanyrole('Super Admin|KPA|PLT/PLH|Kepala Subbagian Keuangan dan Tata Usaha|Pejabat Pengadaan|Operator BLU|PPK|Koordinator Keuangan|Operator Perjaldin')
-        <li class="menu-label">Master &amp; Administrasi</li>
-        @endhasanyrole
-
-        @hasanyrole('Super Admin|KPA|PLT/PLH|Kepala Subbagian Keuangan dan Tata Usaha|Pejabat Pengadaan|Operator BLU|PPK')
-        <li>
-          <a href="javascript:;" class="has-arrow">
-            <div class="parent-icon"><i class="material-icons-outlined">folder</i>
-            </div>
-            <div class="menu-title">Master Data</div>
-          </a>
-          <ul>
-            @hasanyrole('Super Admin|Pejabat Pengadaan')
-            <li><a href="{{ route('suppliers.index') }}"><i class="material-icons-outlined">arrow_right</i>Vendor</a>
-            </li>
-            @endhasanyrole
-            @hasanyrole('Super Admin|KPA|PLT/PLH|Operator BLU|PPK|Kepala Subbagian Keuangan dan Tata Usaha')
-            <li><a href="{{ route('dipas.index') }}"><i class="material-icons-outlined">arrow_right</i>DIPA</a>
-            </li>
-            <li><a href="{{ route('coas.index') }}"><i class="material-icons-outlined">arrow_right</i>COA</a>
-            </li>
-            @endhasanyrole
-            @hasanyrole('Super Admin|KPA|PLT/PLH|Operator BLU|Kepala Subbagian Keuangan dan Tata Usaha')
-            <li><a href="{{ route('master-pajak.index') }}"><i class="material-icons-outlined">arrow_right</i>Pajak</a>
-            </li>
-            @endhasanyrole
-          </ul>
-        </li>
-        @endhasanyrole
-
-        @hasrole('Operator Perjaldin')
-        <li>
-          <a href="javascript:;" class="has-arrow">
-            <div class="parent-icon"><i class="material-icons-outlined">folder</i></div>
-            <div class="menu-title">Master Data</div>
-          </a>
-          <ul>
-            <li>
-              <a href="{{ route('master-uang-harian-perjaldin.index') }}">
-                <i class="material-icons-outlined">arrow_right</i>Uang Harian
-              </a>
-            </li>
-          </ul>
-        </li>
-        @endhasrole
-
-        @hasanyrole('Super Admin|Pejabat Pengadaan')
-        <li>
-          <a href="{{ route('document-numbers.index') }}">
-            <div class="parent-icon"><i class="material-icons-outlined">confirmation_number</i>
-            </div>
-            <div class="menu-title">Nomor Dokumen</div>
-          </a>
-        </li>
-        @endhasanyrole
-
-        @hasanyrole('Super Admin|Koordinator Keuangan')
-        <li>
-          <a href="{{ route('surat-numbers.index') }}">
-            <div class="parent-icon"><i class="material-icons-outlined">tag</i>
-            </div>
-            <div class="menu-title">Nomor Surat</div>
-          </a>
-        </li>
-        @endhasanyrole
-
-        @hasrole('Super Admin')
-        <li>
-          <a href="javascript:;" class="has-arrow">
-            <div class="parent-icon"><i class="material-icons-outlined">admin_panel_settings</i></div>
-            <div class="menu-title">Administrasi</div>
-          </a>
-          <ul>
-            <li><a href="{{ route('admin.users.index') }}"><i class="material-icons-outlined">arrow_right</i>Manajemen User</a></li>
-            <li><a href="{{ route('admin.roles.index') }}"><i class="material-icons-outlined">arrow_right</i>Manajemen Role</a></li>
-            <li><a href="{{ route('admin.pegawai.index') }}"><i class="material-icons-outlined">arrow_right</i>Data Pegawai</a></li>
-          </ul>
-        </li>
-
-        <li>
-          <a href="javascript:;" class="has-arrow">
-            <div class="parent-icon"><i class="material-icons-outlined">hub</i></div>
-            <div class="menu-title">Integrasi & Notifikasi</div>
-          </a>
-          <ul>
-            <li><a href="{{ route('admin.notifikasi-wa.index') }}"><i class="material-icons-outlined">arrow_right</i>Notifikasi WhatsApp</a></li>
-            <li><a href="{{ route('jasa.integrasi.index') }}"><i class="material-icons-outlined">arrow_right</i>Integrasi API</a></li>
-          </ul>
-        </li>
-        @endhasrole
 
         {{-- ════════════════════════════════════════════════════
              BANTUAN

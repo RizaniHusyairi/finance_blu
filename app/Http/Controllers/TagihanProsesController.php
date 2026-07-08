@@ -43,6 +43,7 @@ class TagihanProsesController extends Controller
             ->with([
                 'pihak',
                 'detailKontrak.kontrakTermin.kontrak.vendor',
+                'detailKontrakEksternal',
                 'spps' => fn ($q) => $q->latest('id'),
                 'spps.spm.npi.sp2d',
             ]);
@@ -113,6 +114,7 @@ class TagihanProsesController extends Controller
             'arsipDokumen',
             'detailKontrak.kontrakTermin.kontrak.vendor',
             'detailKontrak.arsipDokumen',
+            'detailKontrakEksternal.arsipDokumen',
             'potonganTagihan.pajak',
             'potonganTagihan.arsipDokumen',
             'detailPerjaldin.pegawai',
@@ -137,7 +139,7 @@ class TagihanProsesController extends Controller
             ->values();
 
         // PPh 21 (honor per golongan) tidak relevan untuk potongan kontrak.
-        $pajakOptions = $tagihan->tipe_tagihan === 'KONTRAK'
+        $pajakOptions = in_array($tagihan->tipe_tagihan, ['KONTRAK', 'KONTRAK_EKSTERNAL'], true)
             ? MasterTarifPajak::where('status_aktif', true)
                 ->where('kode_pajak', 'not like', 'PPH21%')
                 ->orderBy('jenis_pajak')
@@ -220,8 +222,8 @@ class TagihanProsesController extends Controller
     {
         $this->ensureRole(['Operator BLU', 'Super Admin']);
 
-        $tagihan = Tagihan::with(['potonganTagihan', 'detailKontrak.arsipDokumen'])->findOrFail($id);
-        abort_unless($tagihan->tipe_tagihan === 'KONTRAK', 404);
+        $tagihan = Tagihan::with(['potonganTagihan', 'detailKontrak.arsipDokumen', 'detailKontrakEksternal.arsipDokumen'])->findOrFail($id);
+        abort_unless(in_array($tagihan->tipe_tagihan, ['KONTRAK', 'KONTRAK_EKSTERNAL'], true), 404);
 
         if (! $this->chain->isTagihanFullyApproved($tagihan)) {
             return back()->with('error', 'Pajak baru dapat diatur setelah tagihan disetujui seluruh verifikator.');
@@ -241,11 +243,15 @@ class TagihanProsesController extends Controller
             return back()->with('error', 'Pajak tidak dapat diubah karena sudah memasuki tahap billing/penyetoran.');
         }
 
-        if (! $tagihan->detailKontrak) {
+        $detailPajak = $tagihan->tipe_tagihan === 'KONTRAK_EKSTERNAL'
+            ? $tagihan->detailKontrakEksternal
+            : $tagihan->detailKontrak;
+
+        if (! $detailPajak) {
             return back()->with('error', 'Detail kontrak tidak ditemukan pada tagihan ini.');
         }
 
-        $fakturLama = $tagihan->detailKontrak->file_faktur_pajak;
+        $fakturLama = $detailPajak->file_faktur_pajak;
 
         $request->validate([
             'pajak' => 'required|array|min:1',
@@ -261,7 +267,7 @@ class TagihanProsesController extends Controller
         ]);
 
         try {
-            DB::transaction(function () use ($request, $tagihan, $sppChain) {
+            DB::transaction(function () use ($request, $tagihan, $sppChain, $detailPajak) {
                 // Ganti seluruh baris pajak lama (aman: belum ada billing/NTPN).
                 $tagihan->potonganTagihan()->where('jenis_potongan', 'PAJAK')->get()->each->delete();
 
@@ -325,7 +331,7 @@ class TagihanProsesController extends Controller
                 }
 
                 if ($request->hasFile('faktur_pajak')) {
-                    $detail = $tagihan->detailKontrak;
+                    $detail = $detailPajak;
                     $detail->arsipDokumen()
                         ->where('jenis_dokumen', 'FAKTUR_PAJAK')
                         ->where('is_active', true)
@@ -427,7 +433,7 @@ class TagihanProsesController extends Controller
             return back()->with('error', 'Dokumen tidak ditemukan pada rantai tagihan ini.');
         }
 
-        if ($isRevisi && $target === 'pajak' && $tagihan->tipe_tagihan !== 'KONTRAK') {
+        if ($isRevisi && $target === 'pajak' && ! in_array($tagihan->tipe_tagihan, ['KONTRAK', 'KONTRAK_EKSTERNAL'], true)) {
             return back()->with('error', 'Perbaikan pajak hanya berlaku untuk tagihan kontrak.');
         }
 
@@ -635,9 +641,13 @@ class TagihanProsesController extends Controller
             'tagihanApproved' => $this->chain->isTagihanFullyApproved($tagihan),
             'coaDone' => $this->chain->isCoaComplete($tagihan),
             'kpaDone' => $this->chain->isKpaApproved($tagihan),
-            'pajakKontrak' => $tagihan->tipe_tagihan === 'KONTRAK',
+            'pajakKontrak' => in_array($tagihan->tipe_tagihan, ['KONTRAK', 'KONTRAK_EKSTERNAL'], true),
             'pajakTipeDone' => $this->chain->isPajakTipeDipilih($tagihan),
-            'fakturPajak' => $tagihan->tipe_tagihan === 'KONTRAK' ? $tagihan->detailKontrak?->file_faktur_pajak : null,
+            'fakturPajak' => match ($tagihan->tipe_tagihan) {
+                'KONTRAK' => $tagihan->detailKontrak?->file_faktur_pajak,
+                'KONTRAK_EKSTERNAL' => $tagihan->detailKontrakEksternal?->file_faktur_pajak,
+                default => null,
+            },
             'pajakKontrakDone' => $this->chain->isPajakKontrakComplete($tagihan),
             'chainStillDraft' => $this->chain->isChainStillDraft($tagihan),
             'missingPrereqs' => $this->chain->missingDraftPrerequisites($tagihan),

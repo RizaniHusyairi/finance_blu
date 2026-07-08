@@ -9,9 +9,21 @@
         'npi' => ['label' => 'NPI', 'ikon' => 'bi-file-earmark-ruled-fill', 'nomor' => $state['npi']?->nomor_npi],
     ])->filter(fn ($d, $jenis) => $state['myApprovals'][$jenis]->isNotEmpty());
 
+    // Nama peran ringkas untuk label (role_code approval bisa berupa nama panjang).
+    $vmPeran = fn ($rc) => match ($rc) {
+        'Kepala Subbagian Keuangan dan Tata Usaha', 'KASUBBAG' => 'Kasubbag',
+        'Koordinator Keuangan', 'KOORDINATOR_KEUANGAN' => 'Koor. Keuangan',
+        'Bendahara Penerimaan', 'BENDAHARA_PENERIMAAN' => 'Bend. Penerimaan',
+        'Bendahara Pengeluaran', 'BENDAHARA_PENGELUARAN' => 'Bend. Pengeluaran',
+        default => $rc,
+    };
+
+    // SEMUA peran yang akan dicatat (user multi-role bisa memegang beberapa
+    // approval pada satu dokumen — semuanya disetujui sekali klik).
+    $vmTotalApproval = $vmDocs->keys()->sum(fn ($jenis) => $state['myApprovals'][$jenis]->count());
     $vmRole = $vmDocs->keys()
-        ->map(fn ($jenis) => $state['myApprovals'][$jenis]->first()?->role_code)
-        ->filter()->unique()->implode(' / ');
+        ->flatMap(fn ($jenis) => $state['myApprovals'][$jenis]->pluck('role_code'))
+        ->map($vmPeran)->unique()->implode(', ');
 @endphp
 
 @if(session('bulk_approved'))
@@ -104,20 +116,24 @@
                     <div>
                         <h6 class="fw-bolder text-dark mb-1">Giliran Anda — Verifikasi Massal</h6>
                         <div class="small text-secondary">
-                            <strong>{{ $vmDocs->count() }} dokumen</strong> menunggu persetujuan Anda sebagai <strong>{{ $vmRole }}</strong> — setujui semuanya sekali klik, atau tinjau satu per satu pada kartu di bawah.
+                            <strong>{{ $vmDocs->count() }} dokumen ({{ $vmTotalApproval }} persetujuan)</strong> menunggu Anda sebagai
+                            <strong>{{ $vmRole }}</strong> — setujui semuanya sekali klik, atau tinjau satu per satu pada kartu di bawah.
                         </div>
                         <div class="d-flex flex-wrap gap-2 mt-2">
-                            @foreach($vmDocs as $doc)
+                            @foreach($vmDocs as $jenis => $doc)
                                 <span class="vm-doc">
                                     <i class="bi {{ $doc['ikon'] }}"></i> {{ $doc['label'] }}
                                     @if($doc['nomor'])<span class="vm-nomor">{{ $doc['nomor'] }}</span>@endif
+                                    @if($state['myApprovals'][$jenis]->count() > 1)
+                                        <span class="badge bg-primary-subtle text-primary rounded-pill" style="font-size:.62rem;">{{ $state['myApprovals'][$jenis]->count() }} peran</span>
+                                    @endif
                                 </span>
                             @endforeach
                         </div>
                     </div>
                 </div>
                 <button type="button" class="vm-btn" data-bs-toggle="modal" data-bs-target="#modalVerifikasiMassal">
-                    <i class="bi bi-check2-all me-1"></i> Setujui Semua ({{ $vmDocs->count() }} Dokumen)
+                    <i class="bi bi-check2-all me-1"></i> Setujui Semua ({{ $vmTotalApproval }} Persetujuan)
                 </button>
             </div>
         </div>
@@ -134,16 +150,22 @@
                 </div>
                 <div class="modal-body d-flex flex-column gap-2 p-4">
                     <p class="small text-secondary mb-1">
-                        Anda akan menyetujui <strong>{{ $vmDocs->count() }} dokumen</strong> berikut sekaligus sebagai <strong>{{ $vmRole }}</strong>:
+                        Anda akan mencatat <strong>{{ $vmTotalApproval }} persetujuan</strong> pada <strong>{{ $vmDocs->count() }} dokumen</strong> berikut sekaligus:
                     </p>
-                    @foreach($vmDocs as $doc)
+                    @foreach($vmDocs as $jenis => $doc)
                         <div class="vm-modal-doc">
                             <span class="vm-modal-ic"><i class="bi {{ $doc['ikon'] }}"></i></span>
-                            <div>
-                                <div class="fw-bold small">{{ $doc['label'] }}</div>
-                                <div class="text-secondary" style="font-size: .74rem;">{{ $doc['nomor'] ?? '—' }}</div>
+                            <div style="min-width: 0;">
+                                <div class="fw-bold small">{{ $doc['label'] }} <span class="fw-normal text-secondary">{{ $doc['nomor'] ?? '' }}</span></div>
+                                <div class="d-flex flex-wrap gap-1 mt-1">
+                                    @foreach($state['myApprovals'][$jenis] as $vmApproval)
+                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill" style="font-size:.64rem;">
+                                            <i class="bi bi-person-badge me-1"></i>{{ $vmPeran($vmApproval->role_code) }}
+                                        </span>
+                                    @endforeach
+                                </div>
                             </div>
-                            <i class="bi bi-check-circle text-success ms-auto"></i>
+                            <i class="bi bi-check-circle text-success ms-auto flex-shrink-0"></i>
                         </div>
                     @endforeach
 

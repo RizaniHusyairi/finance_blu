@@ -539,6 +539,272 @@ class ProsesTagihanSampaiBkuTest extends TestCase
     }
 
     // ─────────────────────────────────────────────────────────────────
+    // KONTRAK EKSTERNAL (Surat Pesanan e-Purchasing/INAPROC)
+    // ─────────────────────────────────────────────────────────────────
+
+    public function test_tagihan_kontrak_eksternal_sampai_masuk_bku(): void
+    {
+        $ppn = MasterTarifPajak::create([
+            'kode_pajak' => 'PPN-12',
+            'jenis_pajak' => 'PPN',
+            'persentase' => 12,
+            'status_aktif' => true,
+        ]);
+
+        // 1. PPK membuat draft tagihan dari Surat Pesanan eksternal (vendor
+        //    baru + rekening didaftarkan sekaligus dari form).
+        $this->actingAs($this->users['ppk'])
+            ->get(route('tagihan-kontrak-eksternal.create'))
+            ->assertOk();
+
+        $this->ok($this->actingAs($this->users['ppk'])->post(route('tagihan-kontrak-eksternal.store'), [
+            'nomor_surat_pesanan' => 'EP-01KNNRTK-UJI',
+            'tanggal_surat_pesanan' => now()->toDateString(),
+            'sumber' => 'INAPROC',
+            'nama_pekerjaan' => 'Pengadaan CCTV Uji',
+            'metode_pembayaran' => 'LUMPSUM',
+            'nilai_total_kontrak' => 11_100_000,
+            'vendor_nama' => 'PT Vendor Eksternal Uji',
+            'vendor_npwp' => '71.740.860.3-411.000',
+            'vendor_penanggung_jawab' => 'Direktur Uji',
+            'vendor_alamat' => 'Tangerang Selatan',
+            'vendor_nama_bank' => 'Bank Uji Eksternal',
+            'vendor_nomor_rekening' => '9988776655',
+            'vendor_nama_rekening' => 'PT Vendor Eksternal Uji',
+            'file_surat_pesanan' => UploadedFile::fake()->create('surat_pesanan.pdf', 120, 'application/pdf'),
+            'ppk_user_id' => $this->users['ppk']->id,
+            'ppspm_user_id' => $this->users['ppspm']->id,
+            'koordinator_keuangan_user_id' => $this->users['koordinator']->id,
+            'bendahara_pengeluaran_user_id' => $this->users['bp']->id,
+            'bendahara_penerimaan_user_id' => $this->users['bpn']->id,
+            'kasubbag_user_id' => $this->users['kasubbag']->id,
+        ]));
+
+        $tagihan = Tagihan::where('tipe_tagihan', 'KONTRAK_EKSTERNAL')->latest('id')->firstOrFail();
+        $this->assertSame('DRAFT', $tagihan->status);
+        $this->assertSame('EP-01KNNRTK-UJI', $tagihan->detailKontrakEksternal->nomor_surat_pesanan);
+        $this->assertNotNull($tagihan->detailKontrakEksternal->file_surat_pesanan,
+            'PDF Surat Pesanan harus tercatat sebagai arsip detail.');
+        $this->assertNotNull($tagihan->pihak, 'Vendor baru harus terdaftar sebagai MasterPihak.');
+        $this->assertSame('9988776655', $tagihan->pihak->rekening()->first()?->nomor_rekening);
+
+        // Halaman daftar ter-render dengan identitas tagihan.
+        $this->actingAs($this->users['ppk'])
+            ->get(route('tagihan-kontrak-eksternal.index'))
+            ->assertOk()
+            ->assertSee('Pengadaan CCTV Uji')
+            ->assertSee('PT Vendor Eksternal Uji')
+            ->assertSee('EP-01KNNRTK-UJI');
+
+        // Halaman detail ter-render: identitas, vendor + rekening, penanda tangan.
+        $this->actingAs($this->users['ppk'])
+            ->get(route('tagihan-kontrak-eksternal.show', $tagihan->id))
+            ->assertOk()
+            ->assertSee('Pengadaan CCTV Uji')
+            ->assertSee('PT Vendor Eksternal Uji')
+            ->assertSee('9988776655')
+            ->assertSee('Ajukan Tagihan');
+
+        // 1b. Masih dapat diedit selama DRAFT.
+        $this->actingAs($this->users['ppk'])
+            ->get(route('tagihan-kontrak-eksternal.edit', $tagihan->id))
+            ->assertOk();
+
+        $this->ok($this->actingAs($this->users['ppk'])->put(route('tagihan-kontrak-eksternal.update', $tagihan->id), [
+            'nomor_surat_pesanan' => 'EP-01KNNRTK-UJI',
+            'tanggal_surat_pesanan' => now()->toDateString(),
+            'sumber' => 'INAPROC',
+            'nama_pekerjaan' => 'Pengadaan CCTV dan Jaringan Uji',
+            'pihak_id' => $tagihan->pihak_id,
+            'ppk_user_id' => $this->users['ppk']->id,
+            'ppspm_user_id' => $this->users['ppspm']->id,
+            'koordinator_keuangan_user_id' => $this->users['koordinator']->id,
+            'bendahara_pengeluaran_user_id' => $this->users['bp']->id,
+            'bendahara_penerimaan_user_id' => $this->users['bpn']->id,
+            'kasubbag_user_id' => $this->users['kasubbag']->id,
+        ]));
+        $this->assertSame('Pengadaan CCTV dan Jaringan Uji', $tagihan->fresh()->detailKontrakEksternal->nama_pekerjaan);
+
+        // 2. Diajukan — langsung READY_FOR_SPP tanpa tahap verifikasi tagihan.
+        $this->ok($this->actingAs($this->users['ppk'])
+            ->post(route('tagihan-kontrak-eksternal.submit', $tagihan->id)));
+        $this->assertSame('READY_FOR_SPP', $tagihan->fresh()->status);
+
+        // Setelah diajukan, terkunci dari pengeditan.
+        $this->actingAs($this->users['ppk'])
+            ->put(route('tagihan-kontrak-eksternal.update', $tagihan->id), ['nama_pekerjaan' => 'ILEGAL'])
+            ->assertRedirect(route('tagihan-kontrak-eksternal.show', $tagihan->id));
+        $this->assertSame('Pengadaan CCTV dan Jaringan Uji', $tagihan->fresh()->detailKontrakEksternal->nama_pekerjaan);
+
+        // 3. PPK memilih COA; Operator BLU mengisi pajak PPN + faktur.
+        $this->ok($this->actingAs($this->users['ppk'])->post(route('proses-tagihan.coa', $tagihan->id), [
+            'dipa_revision_item_id' => $this->budget->id,
+        ]));
+
+        $this->ok($this->actingAs($this->users['operator_blu'])->post(route('proses-tagihan.pajak-kontrak', $tagihan->id), [
+            'pajak' => [$ppn->id],
+            'faktur_pajak' => UploadedFile::fake()->create('faktur.pdf', 50, 'application/pdf'),
+        ]));
+
+        $tagihan->refresh();
+        $this->assertTrue($tagihan->potonganTagihan()->where('jenis_potongan', 'PAJAK')->exists());
+        $this->assertGreaterThan(0, (float) $tagihan->total_potongan);
+
+        // Rantai belum boleh terbit sebelum KPA — dan pesan prasyaratnya TIDAK
+        // menyebut BAP vendor (gate TTE internal tidak berlaku untuk tipe ini).
+        $this->assertNull($this->chainSpp($tagihan->fresh()));
+        $missing = app(\App\Services\DokumenChainService::class)->missingDraftPrerequisites($tagihan->fresh());
+        $this->assertContains('Standing Instruction belum disetujui KPA.', $missing);
+        $this->assertNotContains(
+            'Vendor belum menandatangani (TTE) dan mengunggah scan BAP final untuk tagihan kontrak ini.',
+            $missing,
+            'Tagihan kontrak eksternal tidak boleh terkena gate BAP vendor.'
+        );
+
+        // 4. KPA menyetujui → rantai SPP/SPM/NPI/SP2D langsung ter-draft.
+        $this->approveKpa($tagihan);
+        $this->assertChainDrafted($tagihan);
+        $this->assertSame('PROSES_SPP', $tagihan->fresh()->status);
+
+        // Halaman Proses Tagihan menampilkan identitas kontrak eksternal.
+        $this->actingAs($this->users['operator_blu'])
+            ->get(route('proses-tagihan.show', $tagihan->id))
+            ->assertOk()
+            ->assertSee('Pengadaan CCTV dan Jaringan Uji')
+            ->assertSee('Kontrak Eksternal')
+            ->assertSee('EP-01KNNRTK-UJI')
+            ->assertSee('PT Vendor Eksternal Uji');
+
+        // 5. Verifikasi SPP/SPM/NPI (bulk + per dokumen) sampai siap bayar.
+        $this->runChainUntilSiapBayar($tagihan);
+
+        // 6. Bukti transfer → SP2D terbit. Ada PPN belum NTPN → BKU ditunda.
+        $this->ok($this->actingAs($this->users['bp'])->post(route('proses-tagihan.bukti-transfer', $tagihan->id), [
+            'bukti_transfer' => UploadedFile::fake()->create('bukti.pdf', 50, 'application/pdf'),
+        ]));
+        $this->approveChainDocument($tagihan, 'sp2d', ['ppk']);
+
+        $tagihan->refresh();
+        $this->assertSame('SELESAI', $tagihan->status);
+        $this->assertSame(DokumenSp2d::STATUS_EXECUTED, $this->sp2d($tagihan)->status);
+        $this->assertSame(0, BukuKasUmum::where('referensi_pengeluaran_id', $tagihan->id)->count(),
+            'BKU kontrak eksternal seharusnya ditunda sampai pajak disetor (NTPN).');
+
+        // 7. Setor PPN (billing + NTPN) via jalur penyetoran pajak kontrak → BKU terbit.
+        $potongan = $tagihan->potonganTagihan()->where('jenis_potongan', 'PAJAK')->firstOrFail();
+
+        $this->ok($this->actingAs($this->users['bp'])->post(route('pajak-potongan.kontrak.billing', $potongan->id), [
+            'kode_billing' => '1122334455',
+            'file_billing' => UploadedFile::fake()->create('billing.pdf', 20, 'application/pdf'),
+        ]));
+
+        $this->ok($this->actingAs($this->users['bp'])->post(route('pajak-potongan.kontrak.ntpn', $potongan->id), [
+            'ntpn' => 'NTPN0003',
+            'file_bukti_setor' => UploadedFile::fake()->create('bpn.pdf', 20, 'application/pdf'),
+        ]));
+
+        $this->assertBkuPosted($tagihan, (float) $tagihan->fresh()->total_bruto);
+        $this->assertRealisasiTercatat($tagihan, (float) $tagihan->fresh()->total_netto);
+    }
+
+    public function test_kontrak_eksternal_termin_menghasilkan_beberapa_tagihan_dengan_uang_muka(): void
+    {
+        // Kontrak 100 jt: progress 40% + 30% → pelunasan 25% + retensi 5%;
+        // uang muka 20 jt (20%) dipotong proporsional dari progress+pelunasan.
+        $this->ok($this->actingAs($this->users['ppk'])->post(route('tagihan-kontrak-eksternal.store'), [
+            'nomor_surat_pesanan' => 'EP-TERMIN-UJI',
+            'tanggal_surat_pesanan' => now()->toDateString(),
+            'sumber' => 'INAPROC',
+            'nama_pekerjaan' => 'Pengadaan Server Bertermin',
+            'metode_pembayaran' => 'TERMIN',
+            'nilai_total_kontrak' => 100_000_000,
+            'ada_uang_muka' => 1,
+            'nilai_uang_muka' => 20_000_000,
+            'progress_persentase' => [40, 30],
+            'progress_keterangan' => ['Termin 1', 'Termin 2'],
+            'gunakan_retensi' => 1,
+            'retensi_persentase' => 5,
+            'retensi_keterangan' => 'Retensi Pemeliharaan',
+            'vendor_nama' => 'PT Vendor Termin',
+            'vendor_npwp' => '01.111.222.3-444.000',
+            'vendor_nama_bank' => 'Bank Termin',
+            'vendor_nomor_rekening' => '5566778899',
+            'vendor_nama_rekening' => 'PT Vendor Termin',
+            'file_surat_pesanan' => UploadedFile::fake()->create('sp.pdf', 100, 'application/pdf'),
+            'ppk_user_id' => $this->users['ppk']->id,
+            'ppspm_user_id' => $this->users['ppspm']->id,
+            'koordinator_keuangan_user_id' => $this->users['koordinator']->id,
+            'bendahara_pengeluaran_user_id' => $this->users['bp']->id,
+            'bendahara_penerimaan_user_id' => $this->users['bpn']->id,
+            'kasubbag_user_id' => $this->users['kasubbag']->id,
+        ]));
+
+        $tagihans = Tagihan::where('tipe_tagihan', 'KONTRAK_EKSTERNAL')
+            ->whereHas('detailKontrakEksternal', fn ($q) => $q->where('nomor_surat_pesanan', 'EP-TERMIN-UJI'))
+            ->with('detailKontrakEksternal', 'potonganTagihan')
+            ->orderBy('id')
+            ->get();
+
+        // 2 progress + pelunasan + retensi = 4 tagihan termin.
+        $this->assertCount(4, $tagihans);
+        $this->assertSame(['PROGRESS', 'PROGRESS', 'PELUNASAN', 'RETENSI'],
+            $tagihans->map(fn ($t) => $t->detailKontrakEksternal->jenis_termin)->all());
+
+        // Σ bruto = nilai total kontrak; tiap tagihan punya arsip Surat Pesanan.
+        $this->assertSame(100_000_000.0, (float) $tagihans->sum('total_bruto'));
+        foreach ($tagihans as $t) {
+            $this->assertNotNull($t->detailKontrakEksternal->file_surat_pesanan, 'Tiap termin wajib punya arsip Surat Pesanan.');
+            $this->assertSame(4, (int) $t->detailKontrakEksternal->total_termin);
+        }
+
+        // Uang muka hanya di PROGRESS/PELUNASAN, total = nilai uang muka.
+        $retensi = $tagihans->firstWhere('detailKontrakEksternal.jenis_termin', 'RETENSI');
+        $this->assertSame(0.0, (float) $retensi->total_potongan);
+        $this->assertFalse($retensi->potonganTagihan()->where('jenis_potongan', 'ANGSURAN_UANG_MUKA')->exists());
+
+        $totalUm = $tagihans->sum(fn ($t) => (float) $t->potonganTagihan()->where('jenis_potongan', 'ANGSURAN_UANG_MUKA')->sum('nominal_potongan'));
+        $this->assertEqualsWithDelta(20_000_000, $totalUm, 1);
+
+        // Termin pertama (progress 40jt) dapat potongan UM proporsional (~8.9jt dari 90jt eligible).
+        $termin1 = $tagihans->first();
+        $this->assertGreaterThan(0, (float) $termin1->total_potongan);
+        $this->assertSame(round(40_000_000 - (float) $termin1->total_potongan, 2), (float) $termin1->total_netto);
+    }
+
+    public function test_kontrak_eksternal_lumpsum_satu_tagihan_tanpa_uang_muka(): void
+    {
+        $this->ok($this->actingAs($this->users['ppk'])->post(route('tagihan-kontrak-eksternal.store'), [
+            'nomor_surat_pesanan' => 'EP-LUMPSUM-UJI',
+            'tanggal_surat_pesanan' => now()->toDateString(),
+            'nama_pekerjaan' => 'Pengadaan Lumpsum',
+            'metode_pembayaran' => 'LUMPSUM',
+            'nilai_total_kontrak' => 50_000_000,
+            'vendor_nama' => 'PT Vendor Lumpsum',
+            'vendor_nama_bank' => 'Bank Lumpsum',
+            'vendor_nomor_rekening' => '111222333',
+            'vendor_nama_rekening' => 'PT Vendor Lumpsum',
+            'file_surat_pesanan' => UploadedFile::fake()->create('sp.pdf', 100, 'application/pdf'),
+            'ppk_user_id' => $this->users['ppk']->id,
+            'ppspm_user_id' => $this->users['ppspm']->id,
+            'koordinator_keuangan_user_id' => $this->users['koordinator']->id,
+            'bendahara_pengeluaran_user_id' => $this->users['bp']->id,
+            'bendahara_penerimaan_user_id' => $this->users['bpn']->id,
+            'kasubbag_user_id' => $this->users['kasubbag']->id,
+        ]));
+
+        $tagihans = Tagihan::where('tipe_tagihan', 'KONTRAK_EKSTERNAL')
+            ->whereHas('detailKontrakEksternal', fn ($q) => $q->where('nomor_surat_pesanan', 'EP-LUMPSUM-UJI'))
+            ->get();
+
+        $this->assertCount(1, $tagihans);
+        $t = $tagihans->first();
+        $this->assertSame(50_000_000.0, (float) $t->total_bruto);
+        $this->assertSame(0.0, (float) $t->total_potongan);
+        $this->assertSame(50_000_000.0, (float) $t->total_netto);
+        $this->assertSame('PELUNASAN', $t->detailKontrakEksternal->jenis_termin);
+    }
+
+    // ─────────────────────────────────────────────────────────────────
     // Helpers
     // ─────────────────────────────────────────────────────────────────
 
@@ -630,6 +896,15 @@ class ProsesTagihanSampaiBkuTest extends TestCase
         $this->approveChainDocument($tagihan, 'npi', ['bpn', 'ppk']);
         $this->approveChainDocument($tagihan, 'spp', ['ppk']);
         $this->approveChainDocument($tagihan, 'spm', ['ppspm']);
+
+        // Smoke: PDF SPM & NPI harus ter-render (penanda tangan dari snapshot tagihan).
+        $spp = $this->chainSpp($tagihan->fresh());
+        $this->actingAs($this->users['ppspm'])
+            ->get(route('spms.cetak-pdf', $spp->spm->id))
+            ->assertOk();
+        $this->actingAs($this->users['ppk'])
+            ->get(route('npis.cetak-pdf', $spp->spm->npi->id))
+            ->assertOk();
     }
 
     /** Setujui satu dokumen rantai oleh sederet role melalui endpoint aksi terpadu. */

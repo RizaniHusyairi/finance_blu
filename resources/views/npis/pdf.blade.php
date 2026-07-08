@@ -161,7 +161,7 @@
                         @else
                             <div style="height: 60px;"></div>
                         @endif
-                        <p style="margin: 0;"><span style="text-decoration: underline; font-weight: bold;">{{ strtoupper($ppk->name ?? 'PPK') }}</span></p>
+                        <p style="margin: 0;"><span style="text-decoration: underline; font-weight: bold;">{{ strtoupper($penandatanganPpk ?? 'PPK') }}</span></p>
                         <p style="margin: 2px 0;">NIP {{ $nipPpk ?? '-' }}</p>
                     </td>
                 </tr>

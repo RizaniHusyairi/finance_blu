@@ -89,6 +89,11 @@ class Tagihan extends Model
         return $this->hasOne(DetailKontrak::class, 'tagihan_id');
     }
 
+    public function detailKontrakEksternal()
+    {
+        return $this->hasOne(DetailKontrakEksternal::class, 'tagihan_id');
+    }
+
     public function logs()
     {
         return $this->morphMany(LogStatusDokumen::class, 'dokumen');

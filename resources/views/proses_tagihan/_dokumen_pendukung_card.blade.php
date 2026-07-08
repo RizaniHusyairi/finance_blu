@@ -155,27 +155,71 @@
                     @if($isPerjaldin)
                         <div class="text-secondary fs-8 fw-bold text-uppercase letter-spacing-1 mt-1">Dokumen Lainnya</div>
                     @endif
-                    @foreach($dokumenUmum as $dok)
-                        <div class="d-flex align-items-center gap-3 border border-light-subtle rounded-3 p-2 px-3" style="background: #fcfcfe;">
-                            <i class="bi {{ $dok['is_generated'] ? 'bi-file-earmark-code-fill text-info' : 'bi-file-earmark-arrow-up-fill text-primary' }} fs-4 flex-shrink-0"></i>
-                            <div class="flex-grow-1" style="min-width: 0;">
-                                <div class="fw-semibold text-dark fs-7 text-truncate" title="{{ $dok['title'] }}">{{ $dok['title'] }}</div>
-                                <div class="d-flex flex-wrap align-items-center gap-1 mt-1">
-                                    @if($dok['source'])
-                                        <span class="badge bg-light text-secondary border rounded-pill fs-8">{{ $dok['source'] }}</span>
-                                    @endif
-                                    <span class="badge rounded-pill fs-8 {{ $dok['is_generated'] ? 'bg-info-subtle text-info border border-info-subtle' : 'bg-success-subtle text-success border border-success-subtle' }}">
-                                        <i class="bi {{ $dok['is_generated'] ? 'bi-cpu' : 'bi-upload' }} me-1"></i>{{ $dok['is_generated'] ? 'Generate Sistem' : 'Diunggah' }}
+                    <style>
+                        .dt-tile {
+                            display: flex; align-items: center; gap: .7rem;
+                            height: 100%; padding: .7rem .85rem;
+                            border: 1px solid #eceef5; border-radius: 12px;
+                            background: #fcfcfe; text-decoration: none;
+                            transition: transform .18s, box-shadow .18s, border-color .18s;
+                        }
+                        a.dt-tile:hover {
+                            transform: translateY(-2px);
+                            border-color: var(--pt-primary, #4f46e5);
+                            box-shadow: 0 12px 24px -16px rgba(79, 70, 229, .5);
+                        }
+                        a.dt-tile:hover .dt-open { opacity: 1; transform: translateX(0); }
+                        .dt-ic {
+                            width: 38px; height: 38px; border-radius: 10px; flex-shrink: 0;
+                            display: flex; align-items: center; justify-content: center; font-size: 1.05rem;
+                            background: var(--tone-indigo-soft, rgba(79,70,229,.1)); color: var(--pt-primary, #4f46e5);
+                        }
+                        .dt-ic.is-gen { background: var(--tone-info-soft, rgba(6,182,212,.1)); color: var(--tone-info, #06b6d4); }
+                        .dt-name {
+                            display: block; font-size: .8rem; font-weight: 600; color: #1e293b; line-height: 1.3;
+                            display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+                            overflow-wrap: anywhere;
+                        }
+                        .dt-meta { display: block; font-size: .68rem; color: #94a3b8; margin-top: .15rem; }
+                        .dt-meta .dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; vertical-align: middle; margin: 0 .25rem 1px .05rem; }
+                        .dt-open {
+                            margin-left: auto; flex-shrink: 0; color: var(--pt-primary, #4f46e5); font-size: .85rem;
+                            opacity: 0; transform: translateX(-4px); transition: opacity .18s, transform .18s;
+                        }
+                        @media (prefers-reduced-motion: reduce) {
+                            .dt-tile, a.dt-tile:hover, .dt-open { transition: none; transform: none; }
+                            .dt-open { opacity: .6; }
+                        }
+                    </style>
+                    <div class="row g-2">
+                        @foreach($dokumenUmum as $dok)
+                            <div class="col-sm-6 col-xl-4 d-flex">
+                                @if($dok['url'])
+                                    <a href="{{ $dok['url'] }}" target="_blank" class="dt-tile w-100" title="Lihat: {{ $dok['title'] }}">
+                                @else
+                                    <div class="dt-tile w-100" title="{{ $dok['title'] }}">
+                                @endif
+                                    <span class="dt-ic {{ $dok['is_generated'] ? 'is-gen' : '' }}">
+                                        <i class="bi {{ $dok['is_generated'] ? 'bi-file-earmark-code-fill' : 'bi-file-earmark-arrow-up-fill' }}"></i>
                                     </span>
-                                </div>
+                                    <span style="min-width: 0;">
+                                        <span class="dt-name">{{ $dok['title'] }}</span>
+                                        <span class="dt-meta">
+                                            {{ $dok['source'] ?: '—' }}
+                                            <span class="dot" style="background: {{ $dok['is_generated'] ? '#06b6d4' : '#10b981' }};"></span>{{ $dok['is_generated'] ? 'Generate Sistem' : 'Diunggah' }}
+                                        </span>
+                                    </span>
+                                    @if($dok['url'])
+                                        <i class="bi bi-box-arrow-up-right dt-open"></i>
+                                    @endif
+                                @if($dok['url'])
+                                    </a>
+                                @else
+                                    </div>
+                                @endif
                             </div>
-                            @if($dok['url'])
-                                <a href="{{ $dok['url'] }}" target="_blank" class="btn btn-sm btn-light border rounded-pill fw-bold btn-pt-action flex-shrink-0">
-                                    <i class="bi bi-eye"></i> Lihat
-                                </a>
-                            @endif
-                        </div>
-                    @endforeach
+                        @endforeach
+                    </div>
                 @endif
             </div>
             <div class="text-muted fs-8 mt-2">

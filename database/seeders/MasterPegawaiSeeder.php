@@ -1457,8 +1457,13 @@ class MasterPegawaiSeeder extends Seeder
             return $digits;
         };
 
+        // Semua pegawai memakai satu nomor HP yang sama (untuk pengujian
+        // notifikasi WhatsApp). Nomor lokal 089657180600 dinormalisasi ke
+        // format 62 seperti data lain.
+        $nomorHpSeragam = $normalizePhone('089657180600');
+
         foreach ($data as $item) {
-            $item['nomor_hp'] = $normalizePhone($item['nomor_hp'] ?? null);
+            $item['nomor_hp'] = $nomorHpSeragam;
 
             MasterPegawai::updateOrCreate(
                 ['nip' => $item['nip']],
