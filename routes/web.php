@@ -472,6 +472,7 @@ Route::middleware(['auth', 'account.active'])->group(function () use ($internalR
         Route::delete('/coas/{coa}', [CoaController::class, 'destroy'])->name('coas.destroy');
         Route::get('/dipas/{dipa}', [DipaController::class, 'show'])->name('dipas.show');
         Route::get('/dipas/{dipa}/edit', [DipaController::class, 'edit'])->name('dipas.edit');
+        Route::put('/dipas/{dipa}', [DipaController::class, 'update'])->name('dipas.update');
         Route::get('/dipas/{dipa}/revisions', [DipaController::class, 'revisions'])->name('dipas.revisions');
         Route::get('/dipas/{dipa}/revisions/create', [DipaController::class, 'createRevision'])->name('dipas.revisions.create');
         Route::post('/dipas/{dipa}/revisions', [DipaController::class, 'storeRevision'])->name('dipas.revisions.store');

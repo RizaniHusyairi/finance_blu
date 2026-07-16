@@ -3,11 +3,40 @@
 @section('title', 'Form Revisi DIPA')
 
 @php
-    $paguSebelumnya = old('total_pagu', $summary['total_pagu_revisi_aktif']);
+    $paguAktif = (float) $summary['total_pagu_revisi_aktif'];
+    $paguSebelumnya = old('total_pagu', $paguAktif);
 @endphp
 
+@push('css')
+@include('dipas._form_styles')
+<style>
+/* Tambahan khusus form revisi (tile ringkasan + pembanding pagu) */
+.df-tile { display:flex; align-items:center; gap:.8rem; border:1px solid #e8ecf5; border-radius:.9rem;
+    padding:.8rem .95rem; background:linear-gradient(180deg,#fff,#fafbff); height:100%;
+    transition:transform .2s ease, box-shadow .2s ease, border-color .2s ease; }
+.df-tile:hover { transform:translateY(-2px); border-color:#dfe3f6; box-shadow:0 10px 22px -14px rgba(79,70,229,.45); }
+.df-tile .t-ic { width:36px; height:36px; flex-shrink:0; border-radius:10px; display:grid; place-items:center;
+    font-size:.95rem; color:var(--t,#4f46e5); background:var(--ts,#eef2ff); }
+.df-tile .t-lbl { font-size:.62rem; font-weight:800; text-transform:uppercase; letter-spacing:.07em; color:#94a3b8; }
+.df-tile .t-val { font-size:.9rem; font-weight:800; color:#0f172a; overflow-wrap:anywhere; }
+
+.df-switch { border:1px solid #e8ecf5; border-radius:1rem; padding:.9rem 1.1rem;
+    background:linear-gradient(180deg,#fff,#fafbff); transition:border-color .2s ease, background .2s ease; }
+.df-switch.on { border-color:#a7f3d0; background:linear-gradient(180deg,#f0fdf4,#ecfdf5); }
+.df-switch .form-check-input { width:2.6em; height:1.4em; cursor:pointer; }
+.df-switch .form-check-input:checked { background-color:#10b981; border-color:#10b981; }
+
+.df-delta { display:inline-flex; align-items:center; gap:.4rem; font-size:.78rem; font-weight:800;
+    padding:.32rem .8rem; border-radius:999px; transition:transform .25s cubic-bezier(.34,1.56,.64,1); }
+.df-delta.pop { transform:scale(1.12); }
+.df-delta.up   { background:rgba(52,211,153,.22); border:1px solid rgba(110,231,183,.5); color:#a7f3d0; }
+.df-delta.down { background:rgba(251,113,133,.22); border:1px solid rgba(253,164,175,.5); color:#fecdd3; }
+.df-delta.flat { background:rgba(148,163,184,.22); border:1px solid rgba(203,213,225,.4); color:#e2e8f0; }
+</style>
+@endpush
+
 @section('content')
-    <x-page-title title="Form Revisi DIPA" subtitle="Buat revisi baru tanpa langsung mengubah revisi aktif yang sedang berjalan" />
+<div class="dipa-form">
 
     @if ($errors->any())
         <div class="alert alert-danger border-0 bg-danger alert-dismissible fade show shadow-sm">
@@ -20,198 +49,367 @@
         </div>
     @endif
 
-    <form action="{{ route('dipas.revisions.store', $dipa) }}" method="POST" enctype="multipart/form-data">
+    {{-- ════════ HERO ════════ --}}
+    <div class="df-hero">
+        <div class="mesh"></div>
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 position-relative" style="z-index:1;">
+            <div>
+                <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                    <span class="df-chip"><i class="bi bi-hash"></i> {{ $dipa->nomor_dipa }}</span>
+                    <span class="df-chip"><i class="bi bi-arrow-repeat"></i> REVISI AKTIF: {{ $summary['revisi_aktif_saat_ini'] }}</span>
+                </div>
+                <h4>Buat Revisi {{ $nextRevisionNumber }} 🔄</h4>
+                <div class="sub">Revisi baru dibuat sebagai <strong>draft nonaktif</strong> — revisi lama tetap berjalan sampai revisi baru diaktifkan manual dari halaman detail DIPA.</div>
+            </div>
+            <a href="{{ route('dipas.show', $dipa) }}" class="df-btn-back"><i class="bi bi-arrow-left"></i> Batal</a>
+        </div>
+    </div>
+
+    <form action="{{ route('dipas.revisions.store', $dipa) }}" method="POST" enctype="multipart/form-data" id="dipaRevisiForm">
         @csrf
         <input type="hidden" name="nomor_revisi" value="{{ $nextRevisionNumber }}">
 
-        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
-            <div>
-                <h5 class="mb-1 fw-bold">Revisi Baru untuk {{ $dipa->nomor_dipa }}</h5>
-                <p class="text-muted mb-0">Revisi baru akan dibuat sebagai draft nonaktif sampai diaktifkan manual dari halaman detail DIPA.</p>
-            </div>
-            <a href="{{ route('dipas.show', $dipa) }}" class="btn btn-outline-secondary">
-                <i class="bi bi-arrow-left me-1"></i> Batal
-            </a>
-        </div>
+        <div class="row g-4">
+            {{-- ════════ KOLOM FORM ════════ --}}
+            <div class="col-lg-8">
 
-        <div class="card shadow-sm border-0 rounded-4 mb-4">
-            <div class="card-header bg-white border-bottom-0 pt-4 px-4">
-                <h5 class="mb-1 fw-bold">Ringkasan DIPA Induk</h5>
-                <p class="text-muted small mb-0">Informasi dasar DIPA yang sedang direvisi.</p>
-            </div>
-            <div class="card-body px-4 pb-4">
-                <div class="row g-3">
-                    <div class="col-md-4">
-                        <div class="border rounded-4 p-3 h-100">
-                            <div class="small text-muted mb-1">Nomor DIPA</div>
-                            <div class="fw-bold fs-6">{{ $dipa->nomor_dipa }}</div>
+                {{-- Step 1: Ringkasan induk --}}
+                <div class="df-card mb-4" style="--d:.05s; --t:#0891b2; --t2:#22d3ee;">
+                    <div class="df-card-head">
+                        <span class="df-step">01</span>
+                        <div>
+                            <h6 class="df-card-title">Ringkasan DIPA Induk</h6>
+                            <div class="df-card-sub">Kondisi DIPA yang sedang direvisi saat ini.</div>
                         </div>
                     </div>
-                    <div class="col-md-2">
-                        <div class="border rounded-4 p-3 h-100">
-                            <div class="small text-muted mb-1">Tahun Anggaran</div>
-                            <div class="fw-bold">{{ $dipa->tahun_anggaran }}</div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="border rounded-4 p-3 h-100">
-                            <div class="small text-muted mb-1">Tanggal Disahkan</div>
-                            <div class="fw-bold">{{ optional($dipa->tanggal_disahkan)->format('d M Y') ?? '-' }}</div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="border rounded-4 p-3 h-100">
-                            <div class="small text-muted mb-1">Status Aktif</div>
-                            <span class="badge {{ $dipa->status_aktif ? 'bg-success' : 'bg-secondary' }}">{{ $dipa->status_aktif ? 'Aktif' : 'Nonaktif' }}</span>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="border rounded-4 p-3 h-100 bg-light-primary">
-                            <div class="small text-muted mb-1">Revisi Aktif Saat Ini</div>
-                            <div class="fw-bold fs-5">Revisi {{ $summary['revisi_aktif_saat_ini'] }}</div>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="border rounded-4 p-3 h-100 bg-light-info">
-                            <div class="small text-muted mb-1">Total Pagu Revisi Aktif</div>
-                            <div class="fw-bold fs-5">Rp {{ number_format($summary['total_pagu_revisi_aktif'], 0, ',', '.') }}</div>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="border rounded-4 p-3 h-100 bg-light-success">
-                            <div class="small text-muted mb-1">Jumlah Item Anggaran Revisi Aktif</div>
-                            <div class="fw-bold fs-5">{{ number_format($summary['jumlah_item_anggaran_revisi_aktif']) }} Item</div>
-                            <div class="small text-muted mt-1">{{ number_format($summary['jumlah_item_anggaran_aktif']) }} item berstatus aktif</div>
+                    <div class="px-4 pb-4 pt-1">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="df-tile" style="--t:#4f46e5; --ts:#eef2ff;">
+                                    <span class="t-ic"><i class="bi bi-journal-bookmark-fill"></i></span>
+                                    <div>
+                                        <div class="t-lbl">Nomor DIPA · TA {{ $dipa->tahun_anggaran }}</div>
+                                        <div class="t-val font-monospace">{{ $dipa->nomor_dipa }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3 col-6">
+                                <div class="df-tile" style="--t:#0891b2; --ts:#ecfeff;">
+                                    <span class="t-ic"><i class="bi bi-calendar3"></i></span>
+                                    <div>
+                                        <div class="t-lbl">Disahkan</div>
+                                        <div class="t-val">{{ optional($dipa->tanggal_disahkan)->translatedFormat('d M Y') ?? '-' }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3 col-6">
+                                <div class="df-tile" style="--t:{{ $dipa->status_aktif ? '#047857' : '#64748b' }}; --ts:{{ $dipa->status_aktif ? '#ecfdf5' : '#f1f5f9' }};">
+                                    <span class="t-ic"><i class="bi {{ $dipa->status_aktif ? 'bi-check-circle' : 'bi-pause-circle' }}"></i></span>
+                                    <div>
+                                        <div class="t-lbl">Status DIPA</div>
+                                        <div class="t-val" style="color:{{ $dipa->status_aktif ? '#047857' : '#64748b' }};">{{ $dipa->status_aktif ? 'Aktif' : 'Nonaktif' }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4 col-6">
+                                <div class="df-tile" style="--t:#7c3aed; --ts:#f5f3ff;">
+                                    <span class="t-ic"><i class="bi bi-arrow-repeat"></i></span>
+                                    <div>
+                                        <div class="t-lbl">Revisi Aktif Saat Ini</div>
+                                        <div class="t-val">Revisi {{ $summary['revisi_aktif_saat_ini'] }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4 col-6">
+                                <div class="df-tile" style="--t:#047857; --ts:#ecfdf5;">
+                                    <span class="t-ic"><i class="bi bi-cash-stack"></i></span>
+                                    <div>
+                                        <div class="t-lbl">Pagu Revisi Aktif</div>
+                                        <div class="t-val" style="color:#047857;">Rp {{ number_format($paguAktif, 0, ',', '.') }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="df-tile" style="--t:#b45309; --ts:#fffbeb;">
+                                    <span class="t-ic"><i class="bi bi-list-ol"></i></span>
+                                    <div>
+                                        <div class="t-lbl">Item Anggaran</div>
+                                        <div class="t-val">{{ number_format($summary['jumlah_item_anggaran_revisi_aktif']) }} item</div>
+                                        <div class="df-hint">{{ number_format($summary['jumlah_item_anggaran_aktif']) }} berstatus aktif</div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-        </div>
 
-        <div class="card shadow-sm border-0 rounded-4 mb-4">
-            <div class="card-header bg-white border-bottom-0 pt-4 px-4">
-                <h5 class="mb-1 fw-bold">Form Revisi Baru</h5>
-                <p class="text-muted small mb-0">Isi detail revisi baru. Revisi lama tetap aktif sampai Anda mengaktifkan revisi baru secara manual.</p>
-            </div>
-            <div class="card-body px-4 pb-4">
-                <div class="row g-3">
-                    <div class="col-md-3">
-                        <label class="form-label fw-semibold">Nomor Revisi Baru</label>
-                        <input type="text" class="form-control" value="{{ $nextRevisionNumber }}" readonly>
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label fw-semibold">Status Revisi</label>
-                        <input type="text" class="form-control" value="Draft Nonaktif" readonly>
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label fw-semibold">Tanggal Revisi</label>
-                        <input type="date" name="tanggal_revisi" class="form-control" value="{{ old('tanggal_revisi', now()->format('Y-m-d')) }}" required>
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label fw-semibold">Total Pagu Revisi</label>
-                        <input type="number" step="0.01" min="0" name="total_pagu" id="total_pagu_revisi_baru" class="form-control" value="{{ old('total_pagu', $summary['total_pagu_revisi_aktif']) }}" required>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label fw-semibold">Dokumen Revisi DIPA (PDF)</label>
-                        <input type="file" name="file_dokumen_dipa" class="form-control" accept=".pdf,application/pdf">
-                        <div class="form-text">Opsional, format PDF maksimal 5MB.</div>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label fw-semibold d-block">Salin Item Anggaran</label>
-                        <div class="form-check form-switch border rounded-4 px-3 py-3 mt-1">
-                            <label class="form-check-label" for="salin_item_anggaran">
-                                Salin item anggaran dari revisi aktif sebelumnya
-                            </label>
-                            <input class="form-check-input" type="checkbox" role="switch" id="salin_item_anggaran" name="salin_item_anggaran" value="1" {{ old('salin_item_anggaran', '1') ? 'checked' : '' }} style="float:right;">
-                            <div class="small text-muted mt-1">Jika dicentang, semua item anggaran dari revisi aktif saat ini akan dikloning ke revisi baru.</div>
+                {{-- Step 2: Form revisi --}}
+                <div class="df-card mb-4" style="--d:.12s; --t:#7c3aed; --t2:#a855f7;">
+                    <div class="df-card-head">
+                        <span class="df-step">02</span>
+                        <div>
+                            <h6 class="df-card-title">Detail Revisi Baru</h6>
+                            <div class="df-card-sub">Revisi lama tetap aktif sampai Anda mengaktifkan revisi baru secara manual.</div>
                         </div>
                     </div>
-                    <div class="col-12">
-                        <label class="form-label fw-semibold">Keterangan Revisi</label>
-                        <textarea name="keterangan" class="form-control" rows="4" placeholder="Tambahkan alasan atau ringkasan perubahan revisi ini">{{ old('keterangan') }}</textarea>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="card shadow-sm border-0 rounded-4 mb-4">
-            <div class="card-body p-4">
-                <div class="row g-3 align-items-stretch">
-                    <div class="col-md-4">
-                        <div class="border rounded-4 p-3 h-100">
-                            <div class="small text-muted mb-1">Total Pagu Revisi Sebelumnya</div>
-                            <div class="fw-bold fs-5">Rp {{ number_format($summary['total_pagu_revisi_aktif'], 0, ',', '.') }}</div>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="border rounded-4 p-3 h-100">
-                            <div class="small text-muted mb-1">Total Pagu Revisi Baru</div>
-                            <div class="fw-bold fs-5 text-primary" id="preview_total_pagu_baru">Rp {{ number_format($paguSebelumnya, 0, ',', '.') }}</div>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="border rounded-4 p-3 h-100">
-                            <div class="small text-muted mb-1">Selisih Pagu</div>
-                            <div class="fw-bold fs-5" id="preview_selisih_pagu">Rp 0</div>
-                            <div class="small text-muted mt-1">Selisih dihitung dari pagu revisi baru terhadap revisi aktif saat ini.</div>
+                    <div class="px-4 pb-4 pt-1">
+                        <div class="row g-3">
+                            <div class="col-md-3 col-6">
+                                <label class="form-label">Nomor Revisi Baru</label>
+                                <input type="text" class="form-control" value="{{ $nextRevisionNumber }}" readonly>
+                            </div>
+                            <div class="col-md-3 col-6">
+                                <label class="form-label">Status Revisi</label>
+                                <input type="text" class="form-control" value="Draft Nonaktif" readonly>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Tanggal Revisi</label>
+                                <input type="date" name="tanggal_revisi" id="dfTanggalRevisi" class="form-control"
+                                       value="{{ old('tanggal_revisi', now()->format('Y-m-d')) }}" required>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Total Pagu Revisi</label>
+                                <div class="input-group">
+                                    <span class="input-group-text fw-bold">Rp</span>
+                                    <input type="text" inputmode="decimal" autocomplete="off" name="total_pagu" id="dfPagu"
+                                           class="form-control fw-bold" placeholder="0"
+                                           value="{{ $paguSebelumnya !== '' ? number_format((float) $paguSebelumnya, 0, ',', '.') : '' }}" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Dokumen Revisi DIPA (PDF)</label>
+                                <div class="df-drop" id="dfDrop">
+                                    <input type="file" name="file_dokumen_dipa" id="dfFile" accept=".pdf,application/pdf">
+                                    <div class="df-drop-ic"><i class="bi bi-cloud-arrow-up-fill" id="dfDropIcon"></i></div>
+                                    <div class="fw-bold small" id="dfDropText">Seret file ke sini atau klik untuk memilih</div>
+                                    <div class="df-hint" id="dfDropHint">Opsional · PDF · maks. 5 MB</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label d-block">Salin Item Anggaran</label>
+                                <div class="df-switch {{ old('salin_item_anggaran', '1') ? 'on' : '' }}" id="dfSwitchWrap">
+                                    <div class="form-check form-switch d-flex align-items-center gap-2 ps-0 mb-1">
+                                        <input class="form-check-input ms-0 flex-shrink-0" type="checkbox" role="switch"
+                                               id="salin_item_anggaran" name="salin_item_anggaran" value="1"
+                                               {{ old('salin_item_anggaran', '1') ? 'checked' : '' }}>
+                                        <label class="form-check-label fw-bold small" for="salin_item_anggaran" style="cursor:pointer;">
+                                            Salin item anggaran dari revisi aktif sebelumnya
+                                        </label>
+                                    </div>
+                                    <div class="df-hint">Jika aktif, {{ number_format($summary['jumlah_item_anggaran_revisi_aktif']) }} item anggaran dari revisi aktif saat ini akan dikloning ke revisi baru.</div>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Keterangan Revisi</label>
+                                <textarea name="keterangan" class="form-control" rows="4"
+                                          placeholder="Tambahkan alasan atau ringkasan perubahan revisi ini">{{ old('keterangan') }}</textarea>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-        </div>
 
-        <div class="card shadow-sm border-0 rounded-4">
-            <div class="card-body p-4 d-flex justify-content-end flex-wrap gap-2">
-                <a href="{{ route('dipas.show', $dipa) }}" class="btn btn-outline-secondary px-4">Batal</a>
-                <button type="submit" name="redirect_action" value="save" class="btn btn-primary px-4">
-                    <i class="bi bi-save me-1"></i> Simpan Revisi
-                </button>
-                <button type="submit" name="redirect_action" value="save_and_manage" class="btn btn-success px-4">
-                    <i class="bi bi-arrow-right-circle me-1"></i> Simpan &amp; Kelola Item Anggaran
-                </button>
+                {{-- Aksi --}}
+                <div class="df-card" style="--d:.18s;">
+                    <div class="p-4 df-actions">
+                        <a href="{{ route('dipas.show', $dipa) }}" class="df-btn df-btn-ghost text-decoration-none">Batal</a>
+                        <button type="submit" name="redirect_action" value="save" class="df-btn df-btn-primary js-df-submit">
+                            <i class="bi bi-save"></i> Simpan Revisi
+                        </button>
+                        <button type="submit" name="redirect_action" value="save_and_manage" class="df-btn df-btn-success js-df-submit">
+                            <i class="bi bi-arrow-right-circle"></i> Simpan &amp; Kelola Item Anggaran
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            {{-- ════════ PRATINJAU LIVE ════════ --}}
+            <div class="col-lg-4">
+                <div class="df-preview">
+                    <div class="df-doc">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="bi bi-arrow-repeat fs-4" style="color:#a5b4fc;"></i>
+                                <span class="fw-bold" style="letter-spacing:.08em; font-size:.78rem;">PRATINJAU REVISI {{ $nextRevisionNumber }}</span>
+                            </div>
+                            <span class="df-doc-badge off"><i class="bi bi-pencil"></i> DRAFT</span>
+                        </div>
+
+                        <div class="df-doc-lbl">Nomor DIPA</div>
+                        <div class="df-doc-val mono mb-2">{{ $dipa->nomor_dipa }}</div>
+
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <div class="df-doc-lbl">Tanggal Revisi</div>
+                                <div class="df-doc-val" id="pvTanggal">—</div>
+                            </div>
+                            <div class="col-6">
+                                <div class="df-doc-lbl">Item Disalin</div>
+                                <div class="df-doc-val" id="pvSalin">{{ number_format($summary['jumlah_item_anggaran_revisi_aktif']) }} item</div>
+                            </div>
+                        </div>
+
+                        <div class="df-doc-sep"></div>
+
+                        <div class="df-doc-lbl">Pagu Revisi {{ $summary['revisi_aktif_saat_ini'] }} (aktif)</div>
+                        <div class="df-doc-val" style="color:rgba(255,255,255,.75);">Rp {{ number_format($paguAktif, 0, ',', '.') }}</div>
+
+                        <div class="d-flex align-items-center gap-2 my-1" style="color:#a5b4fc;">
+                            <i class="bi bi-arrow-down-short fs-5"></i>
+                            <span class="df-delta flat" id="pvDelta"><i class="bi bi-dash-lg"></i> Tetap</span>
+                        </div>
+
+                        <div class="df-doc-lbl">Pagu Revisi {{ $nextRevisionNumber }} (baru)</div>
+                        <div class="df-pagu" id="pvPagu">Rp {{ number_format((float) $paguSebelumnya, 0, ',', '.') }}</div>
+
+                        <div class="d-flex align-items-center gap-2 mt-3 small" style="color:rgba(255,255,255,.75);" id="pvFile">
+                            <i class="bi bi-paperclip"></i> Tanpa lampiran dokumen
+                        </div>
+                    </div>
+                    <div class="df-hint mt-3 text-center">
+                        <i class="bi bi-magic me-1"></i>Pratinjau &amp; selisih pagu terhitung otomatis saat Anda mengetik.
+                    </div>
+                </div>
             </div>
         </div>
     </form>
+</div>
 @endsection
 
 @push('script')
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const totalPaguInput = document.getElementById('total_pagu_revisi_baru');
-        const totalBaruTarget = document.getElementById('preview_total_pagu_baru');
-        const selisihTarget = document.getElementById('preview_selisih_pagu');
-        const paguSebelumnya = {{ (float) $summary['total_pagu_revisi_aktif'] }};
+document.addEventListener('DOMContentLoaded', function () {
+    'use strict';
+    var form = document.getElementById('dipaRevisiForm');
+    if (!form) return;
 
-        if (!totalPaguInput || !totalBaruTarget || !selisihTarget) {
-            return;
+    var paguAktif = {{ $paguAktif }};
+    var fmt = new Intl.NumberFormat('id-ID', { maximumFractionDigits: 0 });
+    var bulan = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+    var pagu = document.getElementById('dfPagu');
+
+    function parseRp(v) {
+        v = String(v || '').trim();
+        if (!v) return 0;
+        return parseFloat(v.replace(/\./g, '').replace(',', '.')) || 0;
+    }
+    function liveFormat(input) {
+        var raw = input.value;
+        var caretDigits = raw.slice(0, input.selectionStart || 0).replace(/[^\d,]/g, '').length;
+        var clean = raw.replace(/[^\d,]/g, '');
+        var firstComma = clean.indexOf(',');
+        if (firstComma !== -1) clean = clean.slice(0, firstComma + 1) + clean.slice(firstComma + 1).replace(/,/g, '');
+        var parts = clean.split(',');
+        var grouped = parts[0].replace(/^0+(?=\d)/, '').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+        var out = grouped + (parts.length > 1 ? ',' + parts[1].slice(0, 2) : '');
+        input.value = out;
+        var pos = 0, seen = 0;
+        while (pos < out.length && seen < caretDigits) {
+            if (/[\d,]/.test(out[pos])) seen++;
+            pos++;
+        }
+        try { input.setSelectionRange(pos, pos); } catch (e) { /* tidak fokus */ }
+    }
+
+    /* ── Pratinjau + selisih live ── */
+    function syncPreview() {
+        var paguBaru = parseRp(pagu.value);
+        document.getElementById('pvPagu').textContent = 'Rp ' + fmt.format(Math.round(paguBaru));
+
+        var selisih = paguBaru - paguAktif;
+        var delta = document.getElementById('pvDelta');
+        delta.classList.remove('up', 'down', 'flat');
+        if (Math.round(selisih) > 0) {
+            delta.classList.add('up');
+            delta.innerHTML = '<i class="bi bi-arrow-up-right"></i> Naik Rp ' + fmt.format(Math.round(selisih));
+        } else if (Math.round(selisih) < 0) {
+            delta.classList.add('down');
+            delta.innerHTML = '<i class="bi bi-arrow-down-right"></i> Turun Rp ' + fmt.format(Math.abs(Math.round(selisih)));
+        } else {
+            delta.classList.add('flat');
+            delta.innerHTML = '<i class="bi bi-dash-lg"></i> Tetap (tanpa perubahan pagu)';
+        }
+        delta.classList.remove('pop');
+        void delta.offsetWidth;
+        delta.classList.add('pop');
+        setTimeout(function () { delta.classList.remove('pop'); }, 260);
+
+        var tgl = document.getElementById('dfTanggalRevisi').value;
+        if (tgl) {
+            var d = new Date(tgl + 'T00:00:00');
+            document.getElementById('pvTanggal').textContent = d.getDate() + ' ' + bulan[d.getMonth()] + ' ' + d.getFullYear();
+        } else {
+            document.getElementById('pvTanggal').textContent = '—';
         }
 
-        const formatRupiah = (value) => {
-            return 'Rp ' + new Intl.NumberFormat('id-ID', {
-                minimumFractionDigits: 0,
-                maximumFractionDigits: 0,
-            }).format(value || 0);
-        };
+        var salin = document.getElementById('salin_item_anggaran');
+        document.getElementById('pvSalin').textContent = salin.checked
+            ? '{{ number_format($summary['jumlah_item_anggaran_revisi_aktif']) }} item'
+            : 'Tidak disalin';
+        document.getElementById('dfSwitchWrap').classList.toggle('on', salin.checked);
+    }
 
-        const renderComparison = () => {
-            const paguBaru = parseFloat(totalPaguInput.value) || 0;
-            const selisih = paguBaru - paguSebelumnya;
+    pagu.addEventListener('input', function () { liveFormat(pagu); syncPreview(); });
+    document.getElementById('dfTanggalRevisi').addEventListener('change', syncPreview);
+    document.getElementById('salin_item_anggaran').addEventListener('change', syncPreview);
+    syncPreview();
 
-            totalBaruTarget.textContent = formatRupiah(paguBaru);
-            selisihTarget.textContent = formatRupiah(selisih);
-            selisihTarget.classList.remove('text-success', 'text-danger', 'text-dark');
-
-            if (selisih > 0) {
-                selisihTarget.classList.add('text-success');
-            } else if (selisih < 0) {
-                selisihTarget.classList.add('text-danger');
-            } else {
-                selisihTarget.classList.add('text-dark');
-            }
-        };
-
-        totalPaguInput.addEventListener('input', renderComparison);
-        renderComparison();
+    /* ── Dropzone dokumen ── */
+    var drop = document.getElementById('dfDrop');
+    var file = document.getElementById('dfFile');
+    ['dragenter', 'dragover'].forEach(function (ev) {
+        drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.add('dragover'); });
     });
+    ['dragleave', 'drop'].forEach(function (ev) {
+        drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.remove('dragover'); });
+    });
+    file.addEventListener('change', function () {
+        var f = file.files[0];
+        var text = document.getElementById('dfDropText');
+        var hint = document.getElementById('dfDropHint');
+        var icon = document.getElementById('dfDropIcon');
+        var pv = document.getElementById('pvFile');
+        function esc(s) {
+            return s.replace(/[&<>"']/g, function (c) {
+                return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
+            });
+        }
+        if (f) {
+            drop.classList.add('has-file');
+            icon.className = 'bi bi-file-earmark-check-fill';
+            text.textContent = f.name;
+            hint.textContent = (f.size / 1024 / 1024).toFixed(2).replace('.', ',') + ' MB · klik untuk mengganti';
+            pv.innerHTML = '<i class="bi bi-file-earmark-pdf-fill"></i> ' + esc(f.name);
+        } else {
+            drop.classList.remove('has-file');
+            icon.className = 'bi bi-cloud-arrow-up-fill';
+            text.textContent = 'Seret file ke sini atau klik untuk memilih';
+            hint.textContent = 'Opsional · PDF · maks. 5 MB';
+            pv.innerHTML = '<i class="bi bi-paperclip"></i> Tanpa lampiran dokumen';
+        }
+    });
+
+    /* ── Submit: un-format pagu + amankan redirect_action + loading ── */
+    form.addEventListener('submit', function (e) {
+        pagu.value = String(parseRp(pagu.value));
+
+        var btn = e.submitter && e.submitter.classList.contains('js-df-submit') ? e.submitter : null;
+        if (btn && btn.name) {
+            var hidden = form.querySelector('input[type=hidden][name=redirect_action]');
+            if (!hidden) {
+                hidden = document.createElement('input');
+                hidden.type = 'hidden';
+                hidden.name = 'redirect_action';
+                form.appendChild(hidden);
+            }
+            hidden.value = btn.value;
+        }
+
+        form.querySelectorAll('.js-df-submit').forEach(function (b) { b.disabled = true; });
+        if (btn) {
+            btn.style.minWidth = Math.ceil(btn.getBoundingClientRect().width) + 'px';
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Menyimpan…';
+        }
+    });
+});
 </script>
 @endpush

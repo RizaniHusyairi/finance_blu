@@ -17,8 +17,11 @@
         background: rgba(255,255,255,.18); display: flex; align-items: center; justify-content: center;
     }
     .pd-hero .pd-hero-icon i { font-size: 32px; }
-    .pd-hero h1 { font-size: 1.5rem; font-weight: 700; margin: 0; }
-    .pd-hero p { margin: .15rem 0 0; opacity: .9; font-size: .95rem; }
+    /* Warna eksplisit + !important: tema (semi-dark/dark) menimpa warna heading
+       global sehingga judul bisa gelap di atas banner gelap. */
+    .pd-hero h1 { font-size: 1.5rem; font-weight: 700; margin: 0; color: #fff !important; }
+    .pd-hero p { margin: .15rem 0 0; opacity: .9; font-size: .95rem; color: #fff !important; }
+    .pd-hero .pd-hero-icon i { color: #fff; }
 
     .pd-switch { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin-bottom: 1.5rem; }
     .pd-switch .pd-switch-label { font-size: .85rem; color: #64748b; margin-right: .25rem; }

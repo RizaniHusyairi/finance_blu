@@ -290,9 +290,30 @@ class DipaController extends Controller
 
     public function edit(MasterDipa $dipa)
     {
+        $dipa->load('activeRevision');
+
+        return view('dipas.edit', compact('dipa'));
+    }
+
+    public function update(Request $request, MasterDipa $dipa)
+    {
+        $validated = $request->validate([
+            'nomor_dipa' => ['required', 'string', 'max:255', Rule::unique('master_dipas', 'nomor_dipa')->ignore($dipa->id)],
+            'tahun_anggaran' => 'required|integer|min:2000|max:2100',
+            'tanggal_disahkan' => 'required|date',
+            'status_aktif' => 'required|boolean',
+        ]);
+
+        $dipa->update([
+            'nomor_dipa' => $validated['nomor_dipa'],
+            'tahun_anggaran' => $validated['tahun_anggaran'],
+            'tanggal_disahkan' => $validated['tanggal_disahkan'],
+            'status_aktif' => (bool) $validated['status_aktif'],
+        ]);
+
         return redirect()
             ->route('dipas.index')
-            ->with('info', 'Form edit header DIPA untuk ' . $dipa->nomor_dipa . ' akan disiapkan pada tahap berikutnya.');
+            ->with('success', 'Header DIPA ' . $dipa->nomor_dipa . ' berhasil diperbarui.');
     }
 
     public function revisions(MasterDipa $dipa)
