@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Detail Tagihan Kontrak Eksternal')
+@section('title', 'Detail Tagihan Kontrak')
 
 @push('css')
 <style>
@@ -439,13 +439,18 @@
         str_contains($aksi, 'REVISI') || str_contains($aksi, 'DITOLAK') => '#ffb020',
         default => '#94a3b8',
     };
+
+    // Data kontrak & termin milik master Kontrak Eksternal.
+    $terminM = $detail?->kontrakEksternalTermin;
+    $kontrakM = $terminM?->kontrak;
+    $metodeM = $kontrakM->metode_pembayaran ?? 'LUMPSUM';
 @endphp
 
 <div class="kx-page kx-focus">
 
     {{-- Breadcrumb --}}
     <div class="kx-crumb mb-3 kx-up" style="--d:.01s;">
-        <a href="{{ route('tagihan-kontrak-eksternal.index') }}"><i class="bi bi-receipt"></i> Tagihan Kontrak Eksternal</a>
+        <a href="{{ route('tagihan-kontrak-eksternal.index') }}"><i class="bi bi-receipt"></i> Tagihan Kontrak</a>
         <span class="sep">/</span>
         <span class="now">{{ $tagihan->nomor_tagihan }}</span>
     </div>
@@ -463,17 +468,20 @@
                     </div>
                     <div class="kx-hero-sub mb-2">{{ $detail?->nama_pekerjaan ?? $tagihan->deskripsi }}</div>
                     <div class="d-flex flex-wrap gap-2">
-                        <span class="kx-chip"><i class="bi bi-tag-fill"></i> Kontrak Eksternal</span>
+                        <span class="kx-chip"><i class="bi bi-tag-fill"></i> Kontrak</span>
                         @if($detail?->sumber)<span class="kx-chip"><i class="bi bi-cart-check"></i> {{ $detail->sumber }}</span>@endif
                         @if($detail?->nomor_surat_pesanan)
                             <span class="kx-chip copyable" data-copy="{{ $detail->nomor_surat_pesanan }}" title="Klik untuk menyalin nomor Surat Pesanan" role="button" tabindex="0">
                                 <i class="bi bi-hash"></i> <span class="txt">{{ $detail->nomor_surat_pesanan }}</span> <i class="bi bi-copy" style="opacity:.6; font-size:.66rem;"></i>
                             </span>
                         @endif
-                        @if(($detail?->metode_pembayaran ?? 'LUMPSUM') === 'TERMIN')
-                            <span class="kx-chip"><i class="bi bi-layers-half"></i> Termin {{ $detail->termin_ke }}{{ $detail->total_termin ? ' / ' . $detail->total_termin : '' }}{{ $detail->jenis_termin ? ' · ' . ucfirst(strtolower($detail->jenis_termin)) : '' }}</span>
+                        @if($metodeM === 'TERMIN')
+                            <span class="kx-chip"><i class="bi bi-layers-half"></i> Termin {{ $detail->termin_ke }}{{ $detail->total_termin ? ' / ' . $detail->total_termin : '' }}{{ $terminM?->jenis_termin ? ' · ' . ucfirst(strtolower($terminM->jenis_termin)) : '' }}</span>
                         @else
                             <span class="kx-chip"><i class="bi bi-cash"></i> Lumpsum</span>
+                        @endif
+                        @if($kontrakM)
+                            <a href="{{ route('kontrak-eksternal.show', $kontrakM->id) }}" class="kx-chip text-decoration-none" style="color:inherit;"><i class="bi bi-box-arrow-up-right"></i> Lihat Kontrak</a>
                         @endif
                         @if($detail?->tanggal_surat_pesanan)<span class="kx-chip"><i class="bi bi-calendar-event"></i> {{ $detail->tanggal_surat_pesanan->translatedFormat('d F Y') }}</span>@endif
                     </div>
@@ -580,11 +588,11 @@
                     <div class="row g-1">
                         <div class="col-md-6"><div class="kx-info"><span class="mi"><i class="bi bi-hash"></i></span><div><div class="k">Nomor Surat Pesanan</div><div class="v font-monospace">{{ $detail?->nomor_surat_pesanan ?? '-' }}</div></div></div></div>
                         <div class="col-md-3 col-6"><div class="kx-info"><span class="mi"><i class="bi bi-calendar-event"></i></span><div><div class="k">Tanggal</div><div class="v">{{ optional($detail?->tanggal_surat_pesanan)->translatedFormat('d M Y') ?? '-' }}</div></div></div></div>
-                        <div class="col-md-3 col-6"><div class="kx-info"><span class="mi"><i class="bi bi-collection"></i></span><div><div class="k">Termin</div><div class="v">{{ $detail?->termin_ke ?? '-' }} dari {{ $detail?->total_termin ?? '-' }}{{ $detail?->jenis_termin ? ' · ' . ucfirst(strtolower($detail->jenis_termin)) : '' }}</div></div></div></div>
-                        <div class="col-md-6"><div class="kx-info"><span class="mi"><i class="bi bi-cash-stack"></i></span><div><div class="k">Metode Pembayaran</div><div class="v">{{ ($detail?->metode_pembayaran ?? 'LUMPSUM') === 'TERMIN' ? 'Termin (Bertahap)' : 'Lumpsum (Sekaligus)' }}@if((float) ($detail?->nilai_total_kontrak ?? 0) > 0) · Total Rp {{ number_format((float) $detail->nilai_total_kontrak, 0, ',', '.') }}@endif</div></div></div></div>
+                        <div class="col-md-3 col-6"><div class="kx-info"><span class="mi"><i class="bi bi-collection"></i></span><div><div class="k">Termin</div><div class="v">{{ $detail?->termin_ke ?? '-' }} dari {{ $detail?->total_termin ?? '-' }}{{ $terminM?->jenis_termin ? ' · ' . ucfirst(strtolower($terminM->jenis_termin)) : '' }}</div></div></div></div>
+                        <div class="col-md-6"><div class="kx-info"><span class="mi"><i class="bi bi-cash-stack"></i></span><div><div class="k">Metode Pembayaran</div><div class="v">{{ $metodeM === 'TERMIN' ? 'Termin (Bertahap)' : 'Lumpsum (Sekaligus)' }}@if((float) ($kontrakM?->nilai_total_kontrak ?? 0) > 0) · Total Rp {{ number_format((float) $kontrakM->nilai_total_kontrak, 0, ',', '.') }}@endif</div></div></div></div>
                         <div class="col-md-6"><div class="kx-info"><span class="mi"><i class="bi bi-cart-check"></i></span><div><div class="k">Metode Pengadaan</div><div class="v">e-Purchasing · {{ $detail?->sumber ?? 'Katalog Elektronik' }}</div></div></div></div>
-                        @if((float) ($detail?->nilai_uang_muka ?? 0) > 0)
-                            <div class="col-md-6"><div class="kx-info"><span class="mi"><i class="bi bi-cash-coin"></i></span><div><div class="k">Uang Muka Kontrak</div><div class="v">Rp {{ number_format((float) $detail->nilai_uang_muka, 0, ',', '.') }} · dipotong bertahap</div></div></div></div>
+                        @if((float) ($kontrakM?->nilai_uang_muka ?? 0) > 0)
+                            <div class="col-md-6"><div class="kx-info"><span class="mi"><i class="bi bi-cash-coin"></i></span><div><div class="k">Uang Muka Kontrak</div><div class="v">Rp {{ number_format((float) $kontrakM->nilai_uang_muka, 0, ',', '.') }} · dipotong bertahap</div></div></div></div>
                         @endif
                         <div class="col-12"><div class="kx-info"><span class="mi"><i class="bi bi-briefcase"></i></span><div><div class="k">Nama Pekerjaan</div><div class="v">{{ $detail?->nama_pekerjaan ?? '-' }}</div></div></div></div>
                         <div class="col-12"><div class="kx-info"><span class="mi"><i class="bi bi-card-text"></i></span><div><div class="k">Deskripsi</div><div class="v fw-normal text-secondary">{{ $tagihan->deskripsi }}</div></div></div></div>
@@ -602,21 +610,21 @@
                     </div>
                 </div>
                 <div class="kx-card-body">
-                    @if(($detail?->metode_pembayaran ?? 'LUMPSUM') === 'TERMIN')
+                    @if($metodeM === 'TERMIN')
                         <div class="kx-brk">
                             <div class="nm text-secondary">Nilai Total Kontrak</div>
                             <div class="track"></div>
-                            <div class="amt text-secondary">Rp {{ number_format((float) ($detail->nilai_total_kontrak ?? $bruto), 0, ',', '.') }}</div>
+                            <div class="amt text-secondary">Rp {{ number_format((float) ($kontrakM?->nilai_total_kontrak ?? $bruto), 0, ',', '.') }}</div>
                         </div>
                     @endif
                     <div class="kx-brk">
-                        <div class="nm">Bruto Termin{{ ($detail?->metode_pembayaran ?? 'LUMPSUM') === 'TERMIN' ? ' (' . rtrim(rtrim(number_format((float) ($detail->persentase ?? 100), 4, '.', ''), '0'), '.') . '%)' : '' }}</div>
+                        <div class="nm">Bruto Termin{{ $metodeM === 'TERMIN' ? ' (' . rtrim(rtrim(number_format((float) ($terminM?->persentase ?? 100), 4, '.', ''), '0'), '.') . '%)' : '' }}</div>
                         <div class="track"><div class="fillb" style="--w:100%; --bc:#5b4dff; --bc2:#845ef7;"></div></div>
                         <div class="amt">Rp {{ number_format($bruto, 0, ',', '.') }}</div>
                     </div>
                     @php $iBar = 0; @endphp
-                    @if((float) ($detail?->potongan_angsuran_uang_muka ?? 0) > 0)
-                        @php $um = (float) $detail->potongan_angsuran_uang_muka; $pw = $bruto > 0 ? max(round($um / $bruto * 100, 1), 2) : 0; $iBar++; @endphp
+                    @if((float) ($terminM?->potongan_angsuran_uang_muka ?? 0) > 0)
+                        @php $um = (float) $terminM->potongan_angsuran_uang_muka; $pw = $bruto > 0 ? max(round($um / $bruto * 100, 1), 2) : 0; $iBar++; @endphp
                         <div class="kx-brk">
                             <div class="nm">Angsuran Uang Muka</div>
                             <div class="track"><div class="fillb" style="--w:{{ $pw }}%; --bc:#d97706; --bc2:#fbbf24; --bd:.15s;"></div></div>

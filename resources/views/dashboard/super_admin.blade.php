@@ -199,6 +199,21 @@ body { background: radial-gradient(1200px 600px at 80% -10%, #eef2ff 0%, transpa
 [data-cu] { font-variant-numeric: tabular-nums; }
 .sa-section-title { font-weight: 800; color: var(--sa-ink); letter-spacing: -.3px; display: flex; align-items: center; gap: .6rem; }
 .sa-section-title .glyph { width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; color: #fff; font-size: .85rem; }
+
+/* ---------- Tombol Audit Command Center (TV mode) ---------- */
+.sa-cc-btn {
+    display: inline-flex; align-items: center; gap: .6rem;
+    background: linear-gradient(135deg, #0ea5e9, #22d3ee);
+    color: #fff; font-weight: 800; font-size: .88rem; letter-spacing: .02em;
+    padding: .65rem 1.35rem; border-radius: 999px; text-decoration: none;
+    border: 1px solid rgba(255,255,255,.35);
+    box-shadow: 0 10px 26px -8px rgba(14,165,233,.75), 0 0 0 0 rgba(34,211,238,.5);
+    animation: saPulse 2.6s infinite;
+    transition: transform .25s ease, box-shadow .25s ease;
+}
+.sa-cc-btn:hover { color: #fff; transform: translateY(-3px) scale(1.02); box-shadow: 0 16px 34px -10px rgba(14,165,233,.9); }
+.sa-cc-btn i { font-size: 1.05rem; }
+.sa-cc-btn-hint { font-weight: 600; font-size: .68rem; opacity: .85; border-left: 1px solid rgba(255,255,255,.4); padding-left: .6rem; }
 </style>
 @endpush
 
@@ -218,6 +233,10 @@ body { background: radial-gradient(1200px 600px at 80% -10%, #eef2ff 0%, transpa
             </div>
             <h2>Command Center 🛰️</h2>
             <div class="opacity-75 fw-semibold mt-1">Selamat datang kembali, {{ $user->name }} — pantau seluruh denyut keuangan BLU APTP.</div>
+            <a href="{{ route('command-center.index') }}" class="sa-cc-btn mt-3">
+                <i class="bi bi-broadcast"></i> Buka Audit Command Center
+                <span class="sa-cc-btn-hint">mode layar penuh · TV display</span>
+            </a>
         </div>
         <div class="text-md-end">
             <div class="sa-clock" id="saClock">--:--:--</div>

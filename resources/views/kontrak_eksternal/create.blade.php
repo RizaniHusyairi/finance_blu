@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Buat Tagihan Kontrak Eksternal')
+@section('title', 'Daftarkan Kontrak')
 
 @push('css')
 <style>
@@ -38,17 +38,17 @@
             <div class="d-flex align-items-center gap-3">
                 <span class="kf-page-icon"><i class="bi bi-file-earmark-plus"></i></span>
                 <div>
-                    <h5 class="fw-bold mb-1" style="letter-spacing:-.3px;">Buat Tagihan Kontrak Eksternal</h5>
+                    <h5 class="fw-bold mb-1" style="letter-spacing:-.3px; color:#fff;">Daftarkan Kontrak</h5>
                     <div style="color:rgba(255,255,255,.82); font-size:.85rem;">
-                        Empat langkah singkat — unggah PDF Surat Pesanan dan biarkan sistem mengisi sebagian besar kolom.
+                        Master kontrak + skema termin dibuat sekali — setelah diaktifkan, tiap termin ditagih dari halaman kontrak.
                     </div>
                     <div class="d-flex flex-wrap gap-2 mt-2">
                         <span class="kf-head-chip"><i class="bi bi-magic"></i> Auto-isi dari PDF</span>
-                        <span class="kf-head-chip"><i class="bi bi-stars"></i> Judul pekerjaan by AI</span>
+                        <span class="kf-head-chip"><i class="bi bi-list-ol"></i> Skema termin otomatis</span>
                     </div>
                 </div>
             </div>
-            <a href="{{ route('tagihan-kontrak-eksternal.index') }}" class="btn btn-light rounded-3 fw-bold">
+            <a href="{{ route('kontrak-eksternal.index') }}" class="btn btn-light rounded-3 fw-bold">
                 <i class="bi bi-arrow-left"></i> Kembali
             </a>
         </div>
@@ -63,9 +63,9 @@
         </div>
     @endif
 
-    <form method="POST" action="{{ route('tagihan-kontrak-eksternal.store') }}" enctype="multipart/form-data" data-kf-form>
+    <form method="POST" action="{{ route('kontrak-eksternal.store') }}" enctype="multipart/form-data" data-kf-form>
         @csrf
-        @include('tagihan_kontrak_eksternal._form_fields')
+        @include('kontrak_eksternal._form_fields')
 
         <div class="kf-submitbar mb-4 kf-reveal" style="--d:.3s;">
             <div class="kf-progress" id="kfProgress">
@@ -73,8 +73,8 @@
                 <div class="track"><div class="fill" id="kfProgressFill"></div></div>
             </div>
             <div class="d-flex gap-2 ms-auto">
-                <a href="{{ route('tagihan-kontrak-eksternal.index') }}" class="btn btn-light border rounded-3">Batal</a>
-                <button type="submit" class="btn kf-btn-submit"><i class="bi bi-save me-1"></i> Simpan Draft</button>
+                <a href="{{ route('kontrak-eksternal.index') }}" class="btn btn-light border rounded-3">Batal</a>
+                <button type="submit" class="btn kf-btn-submit"><i class="bi bi-save me-1"></i> Simpan Draft Kontrak</button>
             </div>
         </div>
     </form>

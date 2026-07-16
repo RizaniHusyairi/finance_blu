@@ -9,6 +9,7 @@ use App\Models\BukuKasUmum;
 use App\Models\PembukuanSaldoAwal;
 use App\Models\PembukuanSetup;
 use App\Models\RekeningBank;
+use App\Models\User;
 use Illuminate\Http\Request;
 
 /** Identitas satker (kop dokumen BKU) + saldo awal per rekening — singleton kop. */
@@ -17,7 +18,7 @@ class PembukuanSetupController extends Controller
     public function edit()
     {
         return view('pembukuan.setup.edit', [
-            'setup' => PembukuanSetup::current() ?? new PembukuanSetup(),
+            'setup' => PembukuanSetup::current() ?? new PembukuanSetup,
             'rekeningSaldo' => $this->rekeningSaldoAwal(),
         ]);
     }
@@ -67,21 +68,37 @@ class PembukuanSetupController extends Controller
         $allowed = $this->allowedPerans();
         $affected = [];
         $renamed = 0;
+        $created = 0;
         $conflicts = [];
 
         foreach ($validated['saldo'] ?? [] as $rekeningId => $data) {
-            $rekening = RekeningBank::find($rekeningId);
-            if (! $rekening) {
-                continue;
-            }
+            // Baris "new_{PERAN}": rekening peran tsb belum ada — buat langsung
+            // dari tabel ini (identitas rekening wajib lengkap).
+            if (str_starts_with((string) $rekeningId, 'new_')) {
+                $peran = substr((string) $rekeningId, 4);
+                if (! in_array($peran, $allowed, true)) {
+                    continue;
+                }
 
-            $peran = $rekening->jenis_rekening === JenisRekening::PENERIMAAN
-                ? PeranBuku::PENERIMAAN->value
-                : PeranBuku::PENGELUARAN->value;
+                $rekening = $this->createRekeningForPeran($peran, $data, $conflicts);
+                if (! $rekening) {
+                    continue;
+                }
+                $created++;
+            } else {
+                $rekening = RekeningBank::find($rekeningId);
+                if (! $rekening) {
+                    continue;
+                }
 
-            // Batasi sesuai wewenang role: Bendahara hanya boleh kelola peran-nya sendiri.
-            if (! in_array($peran, $allowed, true)) {
-                continue;
+                $peran = $rekening->jenis_rekening === JenisRekening::PENERIMAAN
+                    ? PeranBuku::PENERIMAAN->value
+                    : PeranBuku::PENGELUARAN->value;
+
+                // Batasi sesuai wewenang role: Bendahara hanya boleh kelola peran-nya sendiri.
+                if (! in_array($peran, $allowed, true)) {
+                    continue;
+                }
             }
 
             // Ubah identitas rekening (Nama Bank / Nomor / Atas Nama) bila diisi & berbeda.
@@ -145,21 +162,64 @@ class PembukuanSetupController extends Controller
         }
 
         $pesan = [];
+        if ($created) {
+            $pesan[] = "{$created} rekening baru didaftarkan";
+        }
         if ($renamed) {
             $pesan[] = "{$renamed} data rekening diperbarui";
         }
         if ($affected) {
-            $pesan[] = count($affected) . ' saldo awal disimpan & saldo berjalan dihitung ulang';
+            $pesan[] = count($affected).' saldo awal disimpan & saldo berjalan dihitung ulang';
         }
 
         $redirect = redirect()->route('pembukuan.setup.edit')
-            ->with('success', $pesan ? (ucfirst(implode('; ', $pesan)) . '.') : 'Tidak ada perubahan disimpan.');
+            ->with('success', $pesan ? (ucfirst(implode('; ', $pesan)).'.') : 'Tidak ada perubahan disimpan.');
 
         if ($conflicts) {
-            $redirect->with('error', 'Nomor rekening sudah dipakai, gagal diubah: ' . implode(', ', $conflicts) . '.');
+            $redirect->with('error', 'Nomor rekening sudah dipakai, gagal diubah: '.implode(', ', $conflicts).'.');
         }
 
         return $redirect;
+    }
+
+    /**
+     * Buat rekening bank baru untuk peran (PENERIMAAN/PENGELUARAN) dari baris
+     * tabel saldo awal. Identitas wajib lengkap; pemilik = user bendahara
+     * dengan role sesuai peran (fallback: user yang sedang login).
+     */
+    private function createRekeningForPeran(string $peran, array $data, array &$conflicts): ?RekeningBank
+    {
+        $namaBank = trim((string) ($data['nama_bank'] ?? ''));
+        $nomor = trim((string) ($data['nomor_rekening'] ?? ''));
+        $nama = trim((string) ($data['nama_rekening'] ?? ''));
+
+        if ($namaBank === '' || $nomor === '' || $nama === '') {
+            return null; // baris baru dibiarkan kosong — bukan error
+        }
+
+        if (RekeningBank::where('nomor_rekening', $nomor)->exists()) {
+            $conflicts[] = $nomor;
+
+            return null;
+        }
+
+        $roleName = $peran === PeranBuku::PENERIMAAN->value ? 'Bendahara Penerimaan' : 'Bendahara Pengeluaran';
+        $pemilik = User::role($roleName)->first() ?? auth()->user();
+
+        $jenis = $peran === PeranBuku::PENERIMAAN->value
+            ? JenisRekening::PENERIMAAN
+            : JenisRekening::PENGELUARAN;
+
+        return RekeningBank::create([
+            'pemilik_type' => User::class,
+            'pemilik_id' => $pemilik->id,
+            'nama_bank' => $namaBank,
+            'nomor_rekening' => $nomor,
+            'nama_rekening' => $nama,
+            'jenis_rekening' => $jenis->value,
+            'is_default' => ! RekeningBank::where('jenis_rekening', $jenis->value)->where('status_aktif', true)->exists(),
+            'status_aktif' => true,
+        ]);
     }
 
     /**
@@ -187,15 +247,21 @@ class PembukuanSetupController extends Controller
         return $perans;
     }
 
-    /** Rekening (sesuai wewenang role) aktif + saldo awal BKU yang tersimpan. */
+    /**
+     * Baris tabel saldo awal: SELALU menampilkan kedua peran (Penerimaan &
+     * Pengeluaran). Rekening yang belum ada tampil sebagai baris input baru.
+     * Tiap baris hanya bisa diedit oleh role pemilik peran-nya (flag `editable`).
+     */
     private function rekeningSaldoAwal()
     {
-        return RekeningBank::query()
+        $allowed = $this->allowedPerans();
+
+        $rows = RekeningBank::query()
             ->where('status_aktif', true)
-            ->whereIn('jenis_rekening', $this->allowedPerans() ?: ['__none__'])
+            ->whereIn('jenis_rekening', [JenisRekening::PENERIMAAN->value, JenisRekening::PENGELUARAN->value])
             ->orderBy('jenis_rekening')->orderBy('nama_bank')
             ->get()
-            ->map(function (RekeningBank $r) {
+            ->map(function (RekeningBank $r) use ($allowed) {
                 $peran = $r->jenis_rekening === JenisRekening::PENERIMAAN
                     ? PeranBuku::PENERIMAAN->value
                     : PeranBuku::PENGELUARAN->value;
@@ -208,10 +274,30 @@ class PembukuanSetupController extends Controller
                     ->first();
 
                 $r->setAttribute('peran_bku', $peran);
+                $r->setAttribute('form_key', (string) $r->id);
+                $r->setAttribute('editable', in_array($peran, $allowed, true));
                 $r->setAttribute('saldo_awal_nominal', $sa?->nominal);
                 $r->setAttribute('saldo_awal_tanggal', optional($sa?->tanggal_berlaku)->toDateString());
 
                 return $r;
             });
+
+        // Peran yang belum punya rekening aktif → baris input pembuatan rekening.
+        foreach ([PeranBuku::PENERIMAAN->value, PeranBuku::PENGELUARAN->value] as $peran) {
+            if ($rows->contains(fn ($r) => $r->peran_bku === $peran)) {
+                continue;
+            }
+
+            $baru = new RekeningBank;
+            $baru->setAttribute('peran_bku', $peran);
+            $baru->setAttribute('form_key', 'new_'.$peran);
+            $baru->setAttribute('editable', in_array($peran, $allowed, true));
+            $baru->setAttribute('saldo_awal_nominal', null);
+            $baru->setAttribute('saldo_awal_tanggal', null);
+
+            $rows->push($baru);
+        }
+
+        return $rows->sortBy('peran_bku')->values();
     }
 }

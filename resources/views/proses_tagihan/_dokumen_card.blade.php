@@ -18,21 +18,44 @@
         default => ['var(--tone-indigo)', 'var(--tone-indigo-soft)'],
     };
 
-    // Peta status → gaya chip
-    $statusUpper = strtoupper((string) $status);
+    // Peta status → gaya chip. Normalisasi spasi → underscore karena format
+    // status berbeda antar dokumen (SPP/NPI: 'DISETUJUI_FINAL', SPM: 'Disetujui Final'),
+    // dan label chip diseragamkan uppercase agar tampil konsisten antar kartu.
+    $statusUpper = strtoupper(str_replace(' ', '_', trim((string) $status)));
+    $statusLabel = str_replace('_', ' ', $statusUpper);
     [$chipClass, $chipIcon, $chipText] = match (true) {
-        $status === null => ['neutral', 'bi-slash-circle', 'Belum Dibuat'],
+        $status === null => ['neutral', 'bi-slash-circle', 'BELUM DIBUAT'],
         in_array($statusUpper, ['DISETUJUI_FINAL', 'EXECUTED', 'SELESAI', 'SPP_TERBIT', 'SPM_TERBIT', 'NPI_TERBIT', 'SP2D_TERBIT', 'APPROVED'], true)
-            => ['success', 'bi-check-circle-fill', str_replace('_', ' ', $statusUpper === 'EXECUTED' ? 'TERBIT' : $status)],
-        str_contains($statusUpper, 'MENUNGGU') => ['warning shimmer', 'bi-hourglass-split', $status],
-        str_contains($statusUpper, 'DITOLAK') => ['danger', 'bi-x-circle-fill', str_replace('_', ' ', $status)],
-        str_contains($statusUpper, 'REVISI') => ['warning', 'bi-arrow-counterclockwise', str_replace('_', ' ', $status)],
+            => ['success', 'bi-check-circle-fill', $statusUpper === 'EXECUTED' ? 'TERBIT' : $statusLabel],
+        str_contains($statusUpper, 'MENUNGGU') => ['warning shimmer', 'bi-hourglass-split', $statusLabel],
+        str_contains($statusUpper, 'DITOLAK') => ['danger', 'bi-x-circle-fill', $statusLabel],
+        str_contains($statusUpper, 'REVISI') => ['warning', 'bi-arrow-counterclockwise', $statusLabel],
         $statusUpper === 'DRAFT' => ['info', 'bi-pencil-square', 'DRAFT'],
-        default => ['neutral', 'bi-circle', str_replace('_', ' ', $status)],
+        default => ['neutral', 'bi-circle', $statusLabel],
     };
 
     $isWaiting = $myApprovals->isNotEmpty();
     $approvals = $instance ? $instance->approvals->sortBy([['urutan_step', 'asc'], ['id', 'asc']]) : collect();
+
+    // Status alur verifikasi dalam bahasa yang mudah dipahami user.
+    [$instanceLabel, $instanceBadge] = match ($instanceStatus) {
+        'IN_PROGRESS' => ['Proses Verifikasi Berjalan', 'bg-primary-subtle text-primary border-primary-subtle'],
+        'APPROVED'    => ['Verifikasi Selesai', 'bg-success-subtle text-success border-success-subtle'],
+        'REVISION'    => ['Menunggu Perbaikan', 'bg-warning-subtle text-warning border-warning-subtle'],
+        'REJECTED'    => ['Ditolak', 'bg-danger-subtle text-danger border-danger-subtle'],
+        'DRAFT'       => ['Draft', 'bg-light text-secondary border'],
+        default       => [$instanceStatus ? ucwords(strtolower(str_replace('_', ' ', $instanceStatus))) : null, 'bg-light text-secondary border'],
+    };
+
+    // Status per-verifikator untuk tooltip chip.
+    $approvalStatusLabel = fn ($s) => match ($s) {
+        'APPROVED' => 'Sudah menyetujui',
+        'PENDING'  => 'Giliran saat ini — menunggu persetujuan',
+        'WAITING'  => 'Belum mendapat giliran',
+        'REVISION' => 'Meminta revisi',
+        'REJECTED' => 'Menolak',
+        default    => $s,
+    };
 
     // Catatan revisi terakhir (ditampilkan ke pengaju selama dokumen berstatus revisi).
     $revisionApproval = str_contains($statusUpper, 'REVISI')
@@ -97,14 +120,14 @@
                                 default => ['idle', 'bi-dash'],
                             };
                         @endphp
-                        <span class="pt-approver {{ $apprState[0] }} mt-2" title="{{ $appr->nama_step }} — {{ $appr->status }}">
+                        <span class="pt-approver {{ $apprState[0] }} mt-2" title="{{ $appr->nama_step }} — {{ $approvalStatusLabel($appr->status) }}">
                             <span class="ava"><i class="bi {{ $apprState[1] }}"></i></span>
                             {{ $appr->role_code }}
                         </span>
                     @endforeach
-                    @if($instanceStatus)
-                        <span class="badge bg-light text-secondary border rounded-pill fs-8 mt-2 ms-auto">
-                            <i class="bi bi-diagram-3 me-1"></i>{{ $instanceStatus }}
+                    @if($instanceLabel)
+                        <span class="badge {{ $instanceBadge }} border rounded-pill fs-8 mt-2 ms-auto">
+                            <i class="bi bi-diagram-3 me-1"></i>{{ $instanceLabel }}
                         </span>
                     @endif
                 </div>
@@ -153,7 +176,7 @@
                         </div>
 
                         @foreach($myApprovals as $approval)
-                            <form method="POST" action="{{ route('proses-tagihan.dokumen.aksi', [$tagihan->id, $jenis]) }}" class="bg-white p-3 rounded-4 shadow-sm border mb-2">
+                            <form method="POST" action="{{ route('proses-tagihan.dokumen.aksi', [$tagihan->id, $jenis]) }}" class="bg-white p-3 rounded-4 shadow-sm border mb-2 js-async-form">
                                 @csrf
                                 <input type="hidden" name="approval_id" value="{{ $approval->id }}">
                                 <input type="hidden" name="dokumen_id" value="{{ $documentId }}">
@@ -190,7 +213,7 @@
                             @endphp
                             <div class="modal fade js-pt-revisi-modal" id="modalRevisi{{ $approval->id }}" tabindex="-1" aria-hidden="true">
                                 <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-                                    <form method="POST" action="{{ route('proses-tagihan.dokumen.aksi', [$tagihan->id, $jenis]) }}" class="modal-content">
+                                    <form method="POST" action="{{ route('proses-tagihan.dokumen.aksi', [$tagihan->id, $jenis]) }}" class="modal-content js-async-form">
                                         @csrf
                                         <input type="hidden" name="aksi" value="revisi">
                                         <input type="hidden" name="approval_id" value="{{ $approval->id }}">
@@ -328,55 +351,6 @@
     </div>
 </div>
 
-@once
-    @push('script')
-    <script>
-    (function () {
-        'use strict';
-
-        // Pindahkan modal revisi ke <body> agar backdrop tidak terjebak
-        // di dalam kartu yang memakai transform (animasi .reveal).
-        document.querySelectorAll('.js-pt-revisi-modal').forEach(function (m) {
-            document.body.appendChild(m);
-        });
-
-        function syncRevisiModal(modal) {
-            var checked = modal.querySelector('.js-revisi-target:checked');
-            var target = checked ? checked.value : 'tagihan';
-
-            modal.querySelectorAll('.js-target-section').forEach(function (section) {
-                // Seksi 'tagihan' = checklist per bagian; seksi 'catatan'
-                // dipakai bersama untuk target pajak/coa/bukti.
-                var active = section.dataset.section === 'tagihan'
-                    ? target === 'tagihan'
-                    : target !== 'tagihan';
-                section.classList.toggle('d-none', !active);
-
-                section.querySelectorAll('textarea[name="catatan"]').forEach(function (el) {
-                    el.disabled = !active;
-                    el.required = active;
-                });
-
-                section.querySelectorAll('.js-revisi-item').forEach(function (item) {
-                    var cb = item.querySelector('.js-revisi-doc');
-                    var note = item.querySelector('.js-revisi-catatan');
-                    cb.disabled = !active;
-                    var on = active && cb.checked;
-                    note.classList.toggle('d-none', !cb.checked);
-                    note.disabled = !on;
-                    note.required = on;
-                });
-            });
-        }
-
-        document.addEventListener('change', function (e) {
-            if (!e.target.classList.contains('js-revisi-target') && !e.target.classList.contains('js-revisi-doc')) return;
-            var modal = e.target.closest('.js-pt-revisi-modal');
-            if (modal) syncRevisiModal(modal);
-        });
-
-        document.querySelectorAll('.js-pt-revisi-modal').forEach(syncRevisiModal);
-    })();
-    </script>
-    @endpush
-@endonce
+{{-- Script modal revisi (pindah ke body + sinkron field wajib) kini hidup di
+     window.PT (_page_scripts.blade.php) agar tetap berfungsi setelah konten
+     di-swap oleh form async. --}}

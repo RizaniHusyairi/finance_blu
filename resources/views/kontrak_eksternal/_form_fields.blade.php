@@ -1,12 +1,26 @@
 {{--
-    Field bersama form create/edit tagihan kontrak eksternal (desain kf-*).
-    Variabel: $verifikatorOptions, $vendorOptions, opsional $tagihan & $detail (mode edit).
+    Field bersama form create/edit MASTER Kontrak Eksternal (desain kf-*).
+    Variabel: $verifikatorOptions, $vendorOptions, opsional $kontrak (mode edit).
+    Skema termin dapat diubah selama master DRAFT — builder aktif di kedua mode.
     PENTING: name/id input dipakai oleh JS auto-isi Surat Pesanan & test — jangan diubah.
 --}}
 @php
-    $isEdit = isset($tagihan);
+    $isEdit = isset($kontrak);
     $old = fn ($key, $default = null) => old($key, $default);
-    $spSudahAda = $isEdit && ($detail->file_surat_pesanan ?? null);
+    $spSudahAda = $isEdit && $kontrak->file_surat_pesanan;
+
+    // Prefill builder termin dari baris termin master (mode edit).
+    $terminProgress = $isEdit ? $kontrak->termin->where('jenis_termin', 'PROGRESS')->values() : collect();
+    $terminRetensi = $isEdit ? $kontrak->termin->firstWhere('jenis_termin', 'RETENSI') : null;
+    $oldPct = $old('progress_persentase', $terminProgress->isNotEmpty()
+        ? $terminProgress->map(fn ($t) => rtrim(rtrim(number_format((float) $t->persentase, 4, '.', ''), '0'), '.'))->all()
+        : ['']);
+    $oldKet = $old('progress_keterangan', $terminProgress->isNotEmpty()
+        ? $terminProgress->pluck('keterangan_termin')->all()
+        : ['']);
+    $defaultMetode = $old('metode_pembayaran', $kontrak->metode_pembayaran ?? 'LUMPSUM');
+    $defaultAdaUm = (bool) $old('ada_uang_muka', $kontrak->ada_uang_muka ?? false);
+    $defaultGunakanRetensi = (bool) $old('gunakan_retensi', $terminRetensi !== null);
 @endphp
 
 @push('css')
@@ -100,37 +114,6 @@
     .kf-num { text-align: right; font-variant-numeric: tabular-nums; }
     .kf-warn { color: #b45309; font-weight: 700; font-size: .74rem; }
 
-    /* ===== Ringkasan termin read-only (edit) ===== */
-    .kf-ro { display: flex; flex-wrap: wrap; gap: .6rem; }
-    .kf-ro-item { flex: 1 1 140px; border: 1px solid #eef0f4; border-radius: .9rem; padding: .6rem .8rem; background: #f8fafc; }
-    .kf-ro-item .k { font-size: .62rem; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: #94a3b8; }
-    .kf-ro-item .v { font-weight: 800; color: var(--kf-ink); font-variant-numeric: tabular-nums; }
-
-    /* ===== Dropzone file ===== */
-    .kf-drop {
-        position: relative; border: 2px dashed #dbe3f0; border-radius: 1rem; background: #fbfcff;
-        padding: 1.05rem 1rem; display: flex; align-items: center; gap: .85rem;
-        transition: border-color .2s ease, background .2s ease, transform .2s ease; min-height: 86px;
-    }
-    .kf-drop:hover { border-color: var(--kf-primary); background: #f5f6ff; }
-    .kf-drop.dragover { border-color: var(--kf-primary); background: #eef2ff; transform: scale(1.01); }
-    .kf-drop.picked { border-style: solid; border-color: #10b981; background: #f0fdf9; }
-    .kf-drop input[type="file"] { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
-    .kf-drop .ic {
-        width: 44px; height: 44px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center;
-        border-radius: .85rem; font-size: 1.25rem; color: var(--kf-primary); background: #eef2ff; transition: transform .25s ease;
-    }
-    .kf-drop.picked .ic { color: #059669; background: #d1fae5; }
-    .kf-drop:hover .ic { transform: translateY(-2px); }
-    .kf-drop .t { font-weight: 700; font-size: .84rem; color: var(--kf-ink); margin-bottom: .1rem; }
-    .kf-drop .s { font-size: .72rem; color: #94a3b8; overflow-wrap: anywhere; }
-    .kf-drop.picked .s { color: #059669; font-weight: 600; }
-    .kf-badge-ai {
-        display: inline-flex; align-items: center; gap: .3rem; padding: .18rem .55rem; border-radius: 999px;
-        font-size: .64rem; font-weight: 800; letter-spacing: .04em; color: #7c3aed; background: #f3e8ff; border: 1px solid #e9d5ff;
-        animation: kfFloat 3.5s ease-in-out infinite;
-    }
-
     /* ===== Chip role penanda tangan ===== */
     .kf-role { display: inline-flex; align-items: center; gap: .45rem; font-weight: 700; font-size: .8rem; color: #334155; }
     .kf-role .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--rt, var(--kf-primary)); box-shadow: 0 0 0 3px color-mix(in srgb, var(--rt, var(--kf-primary)) 18%, #fff); }
@@ -170,24 +153,169 @@
         content: ''; position: absolute; inset: 0; width: 45%;
         background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .35), transparent); animation: kfShine 3s ease-in-out infinite;
     }
+    .kf-badge-ai {
+        display: inline-flex; align-items: center; gap: .3rem; padding: .18rem .55rem; border-radius: 999px;
+        font-size: .64rem; font-weight: 800; letter-spacing: .04em; color: #7c3aed; background: #f3e8ff; border: 1px solid #e9d5ff;
+        animation: kfFloat 3.5s ease-in-out infinite;
+    }
+
+    /* ===== Hero upload Surat Pesanan (paling atas) ===== */
+    @keyframes kfHeroGlow { 0%, 100% { box-shadow: 0 18px 45px -18px rgba(79, 70, 229, .45); } 50% { box-shadow: 0 18px 55px -14px rgba(168, 85, 247, .55); } }
+    @keyframes kfDashMove { to { background-position: 100% 0, -100% 100%, 0 -100%, 100% 200%; } }
+    @keyframes kfScanBeam { 0% { top: -14%; } 100% { top: 108%; } }
+    @keyframes kfPopIn { 0% { transform: scale(.4); opacity: 0; } 70% { transform: scale(1.12); } 100% { transform: scale(1); opacity: 1; } }
+    @keyframes kfSparkle { 0%, 100% { opacity: .35; transform: scale(.8) rotate(0deg); } 50% { opacity: 1; transform: scale(1.15) rotate(18deg); } }
+    @keyframes kfArrowGo { 0%, 100% { transform: translateX(0); opacity: .6; } 50% { transform: translateX(4px); opacity: 1; } }
+
+    .kf-hero {
+        position: relative; border-radius: 1.4rem; overflow: hidden;
+        background: linear-gradient(130deg, #312e81 0%, #4f46e5 45%, #7c3aed 100%);
+        color: #fff;
+        animation: kfIn .55s cubic-bezier(.22, 1, .36, 1) forwards, kfHeroGlow 5s ease-in-out .6s infinite;
+    }
+    .kf-hero::before {
+        content: ''; position: absolute; inset: 0; pointer-events: none; opacity: .5;
+        background:
+            radial-gradient(420px 200px at 88% -20%, rgba(255, 255, 255, .18), transparent 70%),
+            radial-gradient(300px 180px at 8% 115%, rgba(56, 189, 248, .22), transparent 70%);
+    }
+    .kf-hero-inner { position: relative; padding: 1.35rem 1.5rem 1.5rem; }
+    .kf-hero-eyebrow {
+        display: inline-flex; align-items: center; gap: .4rem; padding: .25rem .7rem; border-radius: 999px;
+        font-size: .64rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase;
+        background: rgba(255, 255, 255, .14); border: 1px solid rgba(255, 255, 255, .22); color: #e0e7ff;
+    }
+    .kf-hero-title { font-weight: 800; letter-spacing: -.3px; margin: .55rem 0 .15rem; color: #fff !important; }
+    .kf-hero-sub { font-size: .8rem; color: #c7d2fe; max-width: 560px; }
+
+    .kf-hero-steps { display: flex; flex-wrap: wrap; align-items: center; gap: .45rem .6rem; margin-top: .85rem; }
+    .kf-hero-step {
+        display: inline-flex; align-items: center; gap: .45rem; padding: .4rem .75rem; border-radius: .8rem;
+        background: rgba(255, 255, 255, .10); border: 1px solid rgba(255, 255, 255, .16);
+        font-size: .72rem; font-weight: 700; color: #eef2ff; backdrop-filter: blur(4px);
+    }
+    .kf-hero-step .n {
+        width: 20px; height: 20px; display: inline-grid; place-items: center; border-radius: 50%;
+        font-size: .62rem; font-weight: 800; background: rgba(255, 255, 255, .9); color: #4f46e5;
+    }
+    .kf-hero-steps .arrow { color: #a5b4fc; animation: kfArrowGo 1.6s ease-in-out infinite; }
+
+    .kf-hero-drop {
+        position: relative; margin-top: 1.05rem; border-radius: 1.1rem; overflow: hidden;
+        background: rgba(255, 255, 255, .07); cursor: pointer; min-height: 118px;
+        display: flex; align-items: center; gap: 1rem; padding: 1.1rem 1.25rem;
+        background-image:
+            linear-gradient(90deg, rgba(255,255,255,.55) 55%, transparent 45%),
+            linear-gradient(90deg, rgba(255,255,255,.55) 55%, transparent 45%),
+            linear-gradient(0deg, rgba(255,255,255,.55) 55%, transparent 45%),
+            linear-gradient(0deg, rgba(255,255,255,.55) 55%, transparent 45%);
+        background-repeat: repeat-x, repeat-x, repeat-y, repeat-y;
+        background-size: 16px 2px, 16px 2px, 2px 16px, 2px 16px;
+        background-position: 0 0, 0 100%, 0 0, 100% 0;
+        animation: kfDashMove 24s linear infinite;
+        transition: background-color .25s ease, transform .2s ease;
+    }
+    .kf-hero-drop:hover { background-color: rgba(255, 255, 255, .13); transform: translateY(-2px); }
+    .kf-hero-drop.dragover { background-color: rgba(255, 255, 255, .2); transform: scale(1.012); }
+    .kf-hero-drop input[type="file"] { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; z-index: 3; }
+    .kf-hero-drop .hicon {
+        width: 62px; height: 62px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center;
+        border-radius: 1.05rem; font-size: 1.7rem; color: #fff;
+        background: linear-gradient(135deg, rgba(255,255,255,.28), rgba(255,255,255,.10));
+        border: 1px solid rgba(255, 255, 255, .3); animation: kfFloat 3.2s ease-in-out infinite;
+    }
+    .kf-hero-drop .ht { font-weight: 800; font-size: .95rem; }
+    .kf-hero-drop .hs { font-size: .74rem; color: #c7d2fe; overflow-wrap: anywhere; }
+    .kf-hero-drop .kf-badge-ai { background: rgba(255,255,255,.92); border-color: transparent; }
+
+    .kf-hero-drop.scanning { pointer-events: none; }
+    .kf-hero-drop.scanning::after {
+        content: ''; position: absolute; left: 4%; right: 4%; height: 30px; top: -14%; z-index: 2;
+        background: linear-gradient(180deg, transparent, rgba(103, 232, 249, .45), rgba(255, 255, 255, .8), rgba(103, 232, 249, .45), transparent);
+        filter: blur(1px); animation: kfScanBeam 1.15s cubic-bezier(.45, 0, .55, 1) infinite alternate;
+    }
+    .kf-hero-drop.success { background-color: rgba(16, 185, 129, .18); animation: none;
+        background-image:
+            linear-gradient(90deg, rgba(110,231,183,.9) 100%, transparent 0),
+            linear-gradient(90deg, rgba(110,231,183,.9) 100%, transparent 0),
+            linear-gradient(0deg, rgba(110,231,183,.9) 100%, transparent 0),
+            linear-gradient(0deg, rgba(110,231,183,.9) 100%, transparent 0);
+    }
+    .kf-hero-drop.success .hicon { color: #d1fae5; background: linear-gradient(135deg, rgba(16,185,129,.85), rgba(52,211,153,.55)); animation: kfPopIn .5s cubic-bezier(.22, 1, .36, 1); }
+    .kf-hero-drop .spark { position: absolute; font-size: .95rem; color: #fde68a; z-index: 1; animation: kfSparkle 2.6s ease-in-out infinite; }
+    .kf-hero-drop .spark.s2 { animation-delay: .9s; }
+    .kf-hero-drop .spark.s3 { animation-delay: 1.7s; }
+
+    .kf-hero-status {
+        position: relative; margin-top: .7rem; border-radius: .85rem; padding: .6rem .9rem;
+        font-size: .78rem; font-weight: 600; display: none; align-items: center; gap: .5rem;
+        background: rgba(255, 255, 255, .12); border: 1px solid rgba(255, 255, 255, .18); color: #eef2ff;
+    }
+    .kf-hero-status.show { display: flex; animation: kfIn .4s ease both; }
+    .kf-hero-status.ok { background: rgba(16, 185, 129, .22); border-color: rgba(110, 231, 183, .45); color: #d1fae5; }
+    .kf-hero-status.warn { background: rgba(251, 191, 36, .16); border-color: rgba(253, 230, 138, .4); color: #fef3c7; }
 
     @media (max-width: 575.98px) { .kf-metode { grid-template-columns: 1fr; } }
     @media (prefers-reduced-motion: reduce) {
         .kf-reveal { animation: none; opacity: 1; }
         .ke-autofilled, .kf-btn-submit::after, .kf-badge-ai { animation: none; }
-        .kf-card, .kf-step, .kf-drop, .kf-drop .ic, .kf-btn-submit, .kf-progress .fill, #keVendorBaru { transition: none; }
+        .kf-hero, .kf-hero-drop, .kf-hero-drop .hicon, .kf-hero-drop .spark, .kf-hero-drop.scanning::after, .kf-hero-steps .arrow, .kf-hero-status.show { animation: none; opacity: 1; }
+        .kf-card, .kf-step, .kf-btn-submit, .kf-progress .fill, #keVendorBaru { transition: none; }
     }
 </style>
 @endpush
 
-{{-- ══════════ 01 · Data Surat Pesanan ══════════ --}}
-<div class="kf-card mb-4 kf-reveal" style="--d:.03s; --tone:#4f46e5; --tone-2:#818cf8;">
+{{-- ══════════ 01 · HERO: Unggah Surat Pesanan (auto-isi form) ══════════ --}}
+<div class="kf-hero mb-4 kf-reveal" style="--d:.01s;">
+    <div class="kf-hero-inner">
+        <span class="kf-hero-eyebrow"><i class="bi bi-stars"></i> Langkah 01 · Isi Otomatis</span>
+        <h5 class="kf-hero-title">Mulai dengan mengunggah PDF Surat Pesanan</h5>
+        <div class="kf-hero-sub">Sistem membaca dokumen INAPROC / e-Katalog Anda: nomor &amp; tanggal SP, nilai kontrak, skema termin, dan data vendor langsung mengisi form di bawah — nama pekerjaan dirangkum oleh AI.</div>
+
+        <div class="kf-hero-steps">
+            <span class="kf-hero-step"><span class="n">1</span> Unggah PDF</span>
+            <i class="bi bi-arrow-right arrow"></i>
+            <span class="kf-hero-step"><span class="n">2</span> Sistem &amp; AI membaca <i class="bi bi-robot"></i></span>
+            <i class="bi bi-arrow-right arrow"></i>
+            <span class="kf-hero-step"><span class="n">3</span> Form terisi otomatis <i class="bi bi-magic"></i></span>
+        </div>
+
+        <label class="kf-hero-drop {{ $spSudahAda ? 'success' : '' }}" id="kfHeroDrop" data-kf-drop>
+            <input type="file" name="file_surat_pesanan" id="keFileSuratPesanan" accept="application/pdf" @if(! $isEdit) required @endif>
+            <i class="bi bi-stars spark" style="top:12px; right:22px;"></i>
+            <i class="bi bi-stars spark s2" style="bottom:14px; right:70px; font-size:.7rem;"></i>
+            <i class="bi bi-stars spark s3" style="top:20px; left:46%; font-size:.75rem;"></i>
+            <span class="hicon" id="kfHeroIcon"><i class="bi {{ $spSudahAda ? 'bi-file-earmark-check' : 'bi-cloud-arrow-up' }}"></i></span>
+            <div class="flex-grow-1" style="position:relative; z-index:1;">
+                <div class="ht">Surat Pesanan / Kontrak ber-TTE @if(! $isEdit)<span style="color:#fca5a5;">*</span>@endif
+                    <span class="kf-badge-ai ms-1"><i class="bi bi-magic"></i> Auto-isi + AI</span>
+                </div>
+                <div class="hs" data-kf-filename>
+                    @if($spSudahAda)
+                        <i class="bi bi-check-circle"></i> Sudah terunggah — pilih file baru hanya bila ingin mengganti.
+                    @else
+                        Klik atau tarik file PDF ke sini — PDF ditandatangani kedua pihak (TTE BSrE/Privy atau basah).
+                    @endif
+                </div>
+            </div>
+            <span class="d-none d-md-inline-flex align-items-center gap-1 px-3 py-2 rounded-3 fw-bold"
+                  style="background:rgba(255,255,255,.92); color:#4f46e5; font-size:.76rem; position:relative; z-index:1;">
+                <i class="bi bi-folder2-open"></i> Pilih File
+            </span>
+        </label>
+        @error('file_surat_pesanan')<div class="kf-hero-status show warn"><i class="bi bi-exclamation-triangle-fill"></i> {{ $message }}</div>@enderror
+        <div id="keParseStatus" class="kf-hero-status"></div>
+    </div>
+</div>
+
+{{-- ══════════ 02 · Data Surat Pesanan ══════════ --}}
+<div class="kf-card mb-4 kf-reveal" style="--d:.06s; --tone:#4f46e5; --tone-2:#818cf8;">
     <div class="kf-card-head">
         <span class="kf-step"><i class="bi bi-file-earmark-text"></i></span>
         <div>
-            <div class="kf-step-no">Langkah 01</div>
-            <h6 class="kf-card-title">Data Surat Pesanan / Kontrak Eksternal</h6>
-            <div class="kf-card-sub">Unggah PDF Surat Pesanan di Langkah 05 — kolom di sini akan terisi otomatis.</div>
+            <div class="kf-step-no">Langkah 02</div>
+            <h6 class="kf-card-title">Data Surat Pesanan / Kontrak</h6>
+            <div class="kf-card-sub">Terisi otomatis dari PDF di Langkah 01 — periksa &amp; lengkapi bila perlu.</div>
         </div>
     </div>
     <div class="kf-card-body">
@@ -195,209 +323,184 @@
             <div class="col-md-6">
                 <label class="form-label">Nomor Surat Pesanan <span class="text-danger">*</span></label>
                 <input type="text" name="nomor_surat_pesanan" class="form-control @error('nomor_surat_pesanan') is-invalid @enderror"
-                       value="{{ $old('nomor_surat_pesanan', $detail->nomor_surat_pesanan ?? '') }}" placeholder="EP-01KNNRTK5Z59..." required>
+                       value="{{ $old('nomor_surat_pesanan', $kontrak->nomor_surat_pesanan ?? '') }}" placeholder="EP-01KNNRTK5Z59..." required>
                 @error('nomor_surat_pesanan')<div class="invalid-feedback">{{ $message }}</div>@enderror
             </div>
             <div class="col-md-3">
                 <label class="form-label">Tanggal Surat Pesanan <span class="text-danger">*</span></label>
                 <input type="date" name="tanggal_surat_pesanan" class="form-control @error('tanggal_surat_pesanan') is-invalid @enderror"
-                       value="{{ $old('tanggal_surat_pesanan', isset($detail) ? optional($detail->tanggal_surat_pesanan)->format('Y-m-d') : '') }}" required>
+                       value="{{ $old('tanggal_surat_pesanan', isset($kontrak) ? optional($kontrak->tanggal_surat_pesanan)->format('Y-m-d') : '') }}" required>
                 @error('tanggal_surat_pesanan')<div class="invalid-feedback">{{ $message }}</div>@enderror
             </div>
             <div class="col-md-3">
                 <label class="form-label">Sumber</label>
-                <input type="text" name="sumber" class="form-control" value="{{ $old('sumber', $detail->sumber ?? 'INAPROC') }}" placeholder="INAPROC / e-Katalog">
+                <input type="text" name="sumber" class="form-control" value="{{ $old('sumber', $kontrak->sumber ?? 'INAPROC') }}" placeholder="INAPROC / e-Katalog">
             </div>
             <div class="col-md-12">
                 <label class="form-label">Nama Pekerjaan / Paket <span class="text-danger">*</span>
                     <span class="kf-badge-ai ms-1"><i class="bi bi-stars"></i> Diisi AI dari PDF</span>
                 </label>
                 <input type="text" name="nama_pekerjaan" class="form-control @error('nama_pekerjaan') is-invalid @enderror"
-                       value="{{ $old('nama_pekerjaan', $detail->nama_pekerjaan ?? '') }}" placeholder="Pengadaan CCTV dan Perangkat Jaringan" required>
+                       value="{{ $old('nama_pekerjaan', $kontrak->nama_pekerjaan ?? '') }}" placeholder="Pengadaan CCTV dan Perangkat Jaringan" required>
                 @error('nama_pekerjaan')<div class="invalid-feedback">{{ $message }}</div>@enderror
-            </div>
-            <div class="col-md-12">
-                <label class="form-label">Deskripsi (opsional)</label>
-                <textarea name="deskripsi" rows="2" class="form-control" placeholder="Uraian singkat pembayaran">{{ $old('deskripsi', $tagihan->deskripsi ?? '') }}</textarea>
             </div>
         </div>
     </div>
 </div>
 
-{{-- ══════════ 02 · Metode Pembayaran & Termin ══════════ --}}
-<div class="kf-card mb-4 kf-reveal" style="--d:.09s; --tone:#7c3aed; --tone-2:#a855f7;">
+{{-- ══════════ 03 · Metode Pembayaran & Termin ══════════ --}}
+<div class="kf-card mb-4 kf-reveal" style="--d:.11s; --tone:#7c3aed; --tone-2:#a855f7;">
     <div class="kf-card-head">
         <span class="kf-step"><i class="bi bi-cash-stack"></i></span>
         <div>
-            <div class="kf-step-no" style="color:#7c3aed;">Langkah 02</div>
+            <div class="kf-step-no" style="color:#7c3aed;">Langkah 03</div>
             <h6 class="kf-card-title">Metode Pembayaran &amp; Termin</h6>
-            <div class="kf-card-sub">
-                @if($isEdit) Skema termin dikunci saat pembuatan — hanya data deskriptif yang dapat diubah.
-                @else Lumpsum = 1 pembayaran. Termin = sistem membuat beberapa tagihan sekaligus (satu per termin). @endif
-            </div>
+            <div class="kf-card-sub">Lumpsum = 1 pembayaran. Termin = beberapa tagihan bertahap — tiap termin ditagih dari halaman kontrak.</div>
         </div>
     </div>
     <div class="kf-card-body">
-        @if($isEdit)
-            {{-- Read-only: ringkasan termin milik tagihan ini --}}
-            @php
-                $labelMetode = ['LUMPSUM' => 'Lumpsum', 'TERMIN' => 'Termin'][$detail->metode_pembayaran ?? 'LUMPSUM'] ?? $detail->metode_pembayaran;
-            @endphp
-            <div class="kf-ro">
-                <div class="kf-ro-item"><div class="k">Metode</div><div class="v">{{ $labelMetode }}</div></div>
-                <div class="kf-ro-item"><div class="k">Nilai Total Kontrak</div><div class="v">Rp {{ number_format((float) ($detail->nilai_total_kontrak ?? $tagihan->total_bruto), 0, ',', '.') }}</div></div>
-                <div class="kf-ro-item"><div class="k">Termin</div><div class="v">{{ $detail->termin_ke ?? 1 }} / {{ $detail->total_termin ?? 1 }} · {{ $detail->jenis_termin ?? 'PELUNASAN' }}</div></div>
-                <div class="kf-ro-item"><div class="k">Persentase Termin</div><div class="v">{{ rtrim(rtrim(number_format((float) ($detail->persentase ?? 100), 4, '.', ''), '0'), '.') }}%</div></div>
-                <div class="kf-ro-item"><div class="k">Nilai Bruto Termin</div><div class="v">Rp {{ number_format((float) $tagihan->total_bruto, 0, ',', '.') }}</div></div>
-                @if((float) ($detail->potongan_angsuran_uang_muka ?? 0) > 0)
-                    <div class="kf-ro-item"><div class="k">Angsuran Uang Muka</div><div class="v" style="color:#b45309;">− Rp {{ number_format((float) $detail->potongan_angsuran_uang_muka, 0, ',', '.') }}</div></div>
-                @endif
+        <div class="row g-3">
+            <div class="col-md-5">
+                <label class="form-label">Nilai Total Kontrak (termasuk PPN) <span class="text-danger">*</span></label>
+                <div class="input-group">
+                    <span class="input-group-text">Rp</span>
+                    <input type="text" name="nilai_total_kontrak" id="kfNilaiTotal" class="form-control fw-bold kf-rupiah @error('nilai_total_kontrak') is-invalid @enderror"
+                           value="{{ $old('nilai_total_kontrak', isset($kontrak) ? number_format((float) $kontrak->nilai_total_kontrak, 0, '.', ',') : '') }}" inputmode="numeric" placeholder="435,675,000" required>
+                    @error('nilai_total_kontrak')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                </div>
             </div>
-        @else
-            {{-- CREATE: builder termin --}}
-            <div class="row g-3">
-                <div class="col-md-5">
-                    <label class="form-label">Nilai Total Kontrak (termasuk PPN) <span class="text-danger">*</span></label>
-                    <div class="input-group">
-                        <span class="input-group-text">Rp</span>
-                        <input type="text" name="nilai_total_kontrak" id="kfNilaiTotal" class="form-control fw-bold kf-rupiah @error('nilai_total_kontrak') is-invalid @enderror"
-                               value="{{ $old('nilai_total_kontrak') }}" inputmode="numeric" placeholder="435,675,000" required>
-                        @error('nilai_total_kontrak')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                    </div>
+            <div class="col-md-7">
+                <label class="form-label">Metode Pembayaran <span class="text-danger">*</span></label>
+                <div class="kf-metode">
+                    <label>
+                        <input type="radio" name="metode_pembayaran" value="LUMPSUM" id="kfMetodeLumpsum" {{ $defaultMetode === 'LUMPSUM' ? 'checked' : '' }}>
+                        <span class="kf-metode-txt"><span class="t">Lumpsum</span><span class="s d-block">Dibayar sekaligus (1 tagihan).</span></span>
+                    </label>
+                    <label>
+                        <input type="radio" name="metode_pembayaran" value="TERMIN" id="kfMetodeTermin" {{ $defaultMetode === 'TERMIN' ? 'checked' : '' }}>
+                        <span class="kf-metode-txt"><span class="t">Termin</span><span class="s d-block">Bertahap (beberapa tagihan).</span></span>
+                    </label>
                 </div>
-                <div class="col-md-7">
-                    <label class="form-label">Metode Pembayaran <span class="text-danger">*</span></label>
-                    <div class="kf-metode">
-                        <label>
-                            <input type="radio" name="metode_pembayaran" value="LUMPSUM" id="kfMetodeLumpsum" {{ $old('metode_pembayaran', 'LUMPSUM') === 'LUMPSUM' ? 'checked' : '' }}>
-                            <span class="kf-metode-txt"><span class="t">Lumpsum</span><span class="s d-block">Dibayar sekaligus (1 tagihan).</span></span>
-                        </label>
-                        <label>
-                            <input type="radio" name="metode_pembayaran" value="TERMIN" id="kfMetodeTermin" {{ $old('metode_pembayaran') === 'TERMIN' ? 'checked' : '' }}>
-                            <span class="kf-metode-txt"><span class="t">Termin</span><span class="s d-block">Bertahap (beberapa tagihan).</span></span>
-                        </label>
-                    </div>
-                </div>
+            </div>
 
-                {{-- Uang muka --}}
-                <div class="col-12">
-                    <div class="kf-switch">
-                        <div class="form-check form-switch mb-0">
-                            <input class="form-check-input" type="checkbox" id="kfAdaUm" name="ada_uang_muka" value="1" {{ $old('ada_uang_muka') ? 'checked' : '' }}>
-                            <label class="form-check-label fw-bold" for="kfAdaUm">Kontrak menerapkan Uang Muka (DP)?</label>
-                        </div>
-                        <div id="kfUmWrap" class="mt-3 {{ $old('ada_uang_muka') ? '' : 'kf-hide' }}">
-                            <div class="row g-2 align-items-end">
-                                <div class="col-md-5">
-                                    <label class="form-label">Nilai Uang Muka (Rp)</label>
-                                    <div class="input-group">
-                                        <span class="input-group-text">Rp</span>
-                                        <input type="text" name="nilai_uang_muka" id="kfNilaiUm" class="form-control fw-bold kf-rupiah @error('nilai_uang_muka') is-invalid @enderror"
-                                               value="{{ $old('nilai_uang_muka') }}" inputmode="numeric" placeholder="0">
-                                        @error('nilai_uang_muka')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                                    </div>
+            {{-- Uang muka --}}
+            <div class="col-12">
+                <div class="kf-switch">
+                    <div class="form-check form-switch mb-0">
+                        <input class="form-check-input" type="checkbox" id="kfAdaUm" name="ada_uang_muka" value="1" {{ $defaultAdaUm ? 'checked' : '' }}>
+                        <label class="form-check-label fw-bold" for="kfAdaUm">Kontrak menerapkan Uang Muka (DP)?</label>
+                    </div>
+                    <div id="kfUmWrap" class="mt-3 {{ $defaultAdaUm ? '' : 'kf-hide' }}">
+                        <div class="row g-2 align-items-end">
+                            <div class="col-md-5">
+                                <label class="form-label">Nilai Uang Muka (Rp)</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">Rp</span>
+                                    <input type="text" name="nilai_uang_muka" id="kfNilaiUm" class="form-control fw-bold kf-rupiah @error('nilai_uang_muka') is-invalid @enderror"
+                                           value="{{ $old('nilai_uang_muka', isset($kontrak) && (float) $kontrak->nilai_uang_muka > 0 ? number_format((float) $kontrak->nilai_uang_muka, 0, '.', ',') : '') }}" inputmode="numeric" placeholder="0">
+                                    @error('nilai_uang_muka')<div class="invalid-feedback">{{ $message }}</div>@enderror
                                 </div>
-                                <div class="col-md-7">
-                                    <div class="form-text"><i class="bi bi-info-circle"></i> Uang muka dianggap sudah dibayar di luar sistem; nilainya dipotong proporsional (Angsuran Uang Muka) dari tiap termin progress/pelunasan.</div>
-                                </div>
+                            </div>
+                            <div class="col-md-7">
+                                <div class="form-text"><i class="bi bi-info-circle"></i> Uang muka dianggap sudah dibayar di luar sistem; nilainya dipotong proporsional (Angsuran Uang Muka) dari tiap termin progress/pelunasan.</div>
                             </div>
                         </div>
                     </div>
                 </div>
+            </div>
 
-                {{-- Skema termin (hanya saat TERMIN) --}}
-                <div class="col-12 {{ $old('metode_pembayaran') === 'TERMIN' ? '' : 'kf-hide' }}" id="kfTerminWrap">
-                    <div class="border rounded-4 p-3" style="border-color:#eef0f4 !important;">
-                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
-                            <div>
-                                <div class="fw-bold"><i class="bi bi-list-columns-reverse text-primary"></i> Rincian Termin Progress</div>
-                                <div class="kf-card-sub">Baris Pelunasan (= 100% − Σprogress − retensi) ditambahkan otomatis.</div>
-                            </div>
-                            <button type="button" class="kf-btn-addrow" id="kfAddRow"><i class="bi bi-plus-lg"></i> Tambah Progress</button>
+            {{-- Skema termin (hanya saat TERMIN) --}}
+            <div class="col-12 {{ $defaultMetode === 'TERMIN' ? '' : 'kf-hide' }}" id="kfTerminWrap">
+                <div class="border rounded-4 p-3" style="border-color:#eef0f4 !important;">
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+                        <div>
+                            <div class="fw-bold"><i class="bi bi-list-columns-reverse text-primary"></i> Rincian Termin Progress</div>
+                            <div class="kf-card-sub">Baris Pelunasan (= 100% − Σprogress − retensi) ditambahkan otomatis.</div>
                         </div>
-                        <div class="table-responsive">
-                            <table class="kf-termin-table">
-                                <thead>
-                                    <tr>
-                                        <th style="width:46px;">#</th>
-                                        <th>Keterangan Progress</th>
-                                        <th style="width:130px;">Persentase</th>
-                                        <th style="width:150px;" class="kf-num">Nilai Bruto</th>
-                                        <th style="width:150px;" class="kf-num">Angsuran UM</th>
-                                        <th style="width:44px;"></th>
+                        <button type="button" class="kf-btn-addrow" id="kfAddRow"><i class="bi bi-plus-lg"></i> Tambah Progress</button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="kf-termin-table">
+                            <thead>
+                                <tr>
+                                    <th style="width:46px;">#</th>
+                                    <th>Keterangan Progress</th>
+                                    <th style="width:130px;">Persentase</th>
+                                    <th style="width:150px;" class="kf-num">Nilai Bruto</th>
+                                    <th style="width:150px;" class="kf-num">Angsuran UM</th>
+                                    <th style="width:44px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="kfTerminBody">
+                                @foreach($oldPct as $i => $pct)
+                                    <tr class="kf-termin-row">
+                                        <td><span class="idx">{{ $i + 1 }}</span></td>
+                                        <td><input type="text" name="progress_keterangan[]" class="form-control" placeholder="Contoh: Progress Tahap {{ $i + 1 }}" value="{{ $oldKet[$i] ?? '' }}"></td>
+                                        <td>
+                                            <div class="input-group">
+                                                <input type="number" name="progress_persentase[]" class="form-control text-center kf-pct" min="0" max="100" step="0.0001" placeholder="0" value="{{ $pct }}">
+                                                <span class="input-group-text">%</span>
+                                            </div>
+                                        </td>
+                                        <td class="kf-num fw-bold text-success kf-cell-val">Rp 0</td>
+                                        <td class="kf-num fw-bold kf-cell-um" style="color:#b45309;">Rp 0</td>
+                                        <td class="text-center"><button type="button" class="kf-btn-delrow kf-del"><i class="bi bi-trash3"></i></button></td>
                                     </tr>
-                                </thead>
-                                <tbody id="kfTerminBody">
-                                    @php $oldPct = $old('progress_persentase', ['']); $oldKet = $old('progress_keterangan', ['']); @endphp
-                                    @foreach($oldPct as $i => $pct)
-                                        <tr class="kf-termin-row">
-                                            <td><span class="idx">{{ $i + 1 }}</span></td>
-                                            <td><input type="text" name="progress_keterangan[]" class="form-control" placeholder="Contoh: Progress Tahap {{ $i + 1 }}" value="{{ $oldKet[$i] ?? '' }}"></td>
-                                            <td>
-                                                <div class="input-group">
-                                                    <input type="number" name="progress_persentase[]" class="form-control text-center kf-pct" min="0" max="100" step="0.0001" placeholder="0" value="{{ $pct }}">
-                                                    <span class="input-group-text">%</span>
-                                                </div>
-                                            </td>
-                                            <td class="kf-num fw-bold text-success kf-cell-val">Rp 0</td>
-                                            <td class="kf-num fw-bold kf-cell-um" style="color:#b45309;">Rp 0</td>
-                                            <td class="text-center"><button type="button" class="kf-btn-delrow kf-del"><i class="bi bi-trash3"></i></button></td>
-                                        </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
-                        </div>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
 
-                        {{-- Preview baris otomatis --}}
-                        <div class="kf-preview-row mt-2 d-flex flex-wrap justify-content-between align-items-center gap-2">
-                            <div>
-                                <div class="fw-bold"><i class="bi bi-flag-fill text-primary"></i> Pelunasan (otomatis) — <span id="kfPelunasanPct">100</span>%</div>
-                                <div class="kf-card-sub">Sisa persentase setelah progress &amp; retensi.</div>
-                            </div>
-                            <div class="text-end">
-                                <div class="fw-bold text-success">Rp <span id="kfPelunasanVal">0</span></div>
-                                <div class="kf-card-sub">Angsuran UM: <span id="kfPelunasanUm" style="color:#b45309;">Rp 0</span></div>
-                            </div>
+                    {{-- Preview baris otomatis --}}
+                    <div class="kf-preview-row mt-2 d-flex flex-wrap justify-content-between align-items-center gap-2">
+                        <div>
+                            <div class="fw-bold"><i class="bi bi-flag-fill text-primary"></i> Pelunasan (otomatis) — <span id="kfPelunasanPct">100</span>%</div>
+                            <div class="kf-card-sub">Sisa persentase setelah progress &amp; retensi.</div>
                         </div>
-                        <div id="kfTerminWarn" class="kf-warn mt-2 kf-hide"><i class="bi bi-exclamation-triangle-fill"></i> Total progress + retensi tidak boleh melebihi 100%.</div>
+                        <div class="text-end">
+                            <div class="fw-bold text-success">Rp <span id="kfPelunasanVal">0</span></div>
+                            <div class="kf-card-sub">Angsuran UM: <span id="kfPelunasanUm" style="color:#b45309;">Rp 0</span></div>
+                        </div>
+                    </div>
+                    <div id="kfTerminWarn" class="kf-warn mt-2 kf-hide"><i class="bi bi-exclamation-triangle-fill"></i> Total progress + retensi tidak boleh melebihi 100%.</div>
 
-                        {{-- Retensi --}}
-                        <div class="kf-switch mt-3">
-                            <div class="form-check form-switch mb-0">
-                                <input class="form-check-input" type="checkbox" id="kfGunakanRetensi" name="gunakan_retensi" value="1" {{ $old('gunakan_retensi') ? 'checked' : '' }}>
-                                <label class="form-check-label fw-bold" for="kfGunakanRetensi">Gunakan retensi? <span class="text-muted fw-normal">(ditahan sampai masa pemeliharaan)</span></label>
+                    {{-- Retensi --}}
+                    <div class="kf-switch mt-3">
+                        <div class="form-check form-switch mb-0">
+                            <input class="form-check-input" type="checkbox" id="kfGunakanRetensi" name="gunakan_retensi" value="1" {{ $defaultGunakanRetensi ? 'checked' : '' }}>
+                            <label class="form-check-label fw-bold" for="kfGunakanRetensi">Gunakan retensi? <span class="text-muted fw-normal">(ditahan sampai masa pemeliharaan)</span></label>
+                        </div>
+                        <div id="kfRetensiWrap" class="row g-2 mt-1 {{ $defaultGunakanRetensi ? '' : 'kf-hide' }}">
+                            <div class="col-md-5">
+                                <label class="form-label">Keterangan Retensi</label>
+                                <input type="text" name="retensi_keterangan" class="form-control" value="{{ $old('retensi_keterangan', $terminRetensi->keterangan_termin ?? 'Retensi Masa Pemeliharaan') }}">
                             </div>
-                            <div id="kfRetensiWrap" class="row g-2 mt-1 {{ $old('gunakan_retensi') ? '' : 'kf-hide' }}">
-                                <div class="col-md-5">
-                                    <label class="form-label">Keterangan Retensi</label>
-                                    <input type="text" name="retensi_keterangan" class="form-control" value="{{ $old('retensi_keterangan', 'Retensi Masa Pemeliharaan') }}">
+                            <div class="col-md-3">
+                                <label class="form-label">Retensi (%)</label>
+                                <div class="input-group">
+                                    <input type="number" name="retensi_persentase" id="kfRetensiPct" class="form-control text-center" min="0" max="100" step="0.0001" placeholder="5"
+                                           value="{{ $old('retensi_persentase', $terminRetensi ? rtrim(rtrim(number_format((float) $terminRetensi->persentase, 4, '.', ''), '0'), '.') : '') }}">
+                                    <span class="input-group-text">%</span>
                                 </div>
-                                <div class="col-md-3">
-                                    <label class="form-label">Retensi (%)</label>
-                                    <div class="input-group">
-                                        <input type="number" name="retensi_persentase" id="kfRetensiPct" class="form-control text-center" min="0" max="100" step="0.0001" placeholder="5" value="{{ $old('retensi_persentase') }}">
-                                        <span class="input-group-text">%</span>
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label">Nilai Retensi</label>
-                                    <input type="text" class="form-control bg-light fw-bold" id="kfRetensiVal" value="Rp 0" readonly style="color:#b91c1c;">
-                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Nilai Retensi</label>
+                                <input type="text" class="form-control bg-light fw-bold" id="kfRetensiVal" value="Rp 0" readonly style="color:#b91c1c;">
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-        @endif
+        </div>
     </div>
 </div>
 
-{{-- ══════════ 03 · Penyedia / Vendor ══════════ --}}
-<div class="kf-card mb-4 kf-reveal" style="--d:.15s; --tone:#059669; --tone-2:#34d399;">
+{{-- ══════════ 04 · Penyedia / Vendor ══════════ --}}
+<div class="kf-card mb-4 kf-reveal" style="--d:.16s; --tone:#059669; --tone-2:#34d399;">
     <div class="kf-card-head">
         <span class="kf-step"><i class="bi bi-shop"></i></span>
         <div>
-            <div class="kf-step-no" style="color:#059669;">Langkah 03</div>
+            <div class="kf-step-no" style="color:#059669;">Langkah 04</div>
             <h6 class="kf-card-title">Penyedia / Vendor</h6>
             <div class="kf-card-sub">Bila NPWP di PDF cocok dengan vendor terdaftar, dropdown terpilih otomatis.</div>
         </div>
@@ -409,7 +512,7 @@
                 <select name="pihak_id" id="keVendorSelect" class="form-select">
                     <option value="">— Vendor baru (isi data di bawah) —</option>
                     @foreach($vendorOptions as $v)
-                        <option value="{{ $v['id'] }}" @selected((string) $old('pihak_id', $tagihan->pihak_id ?? '') === (string) $v['id'])>
+                        <option value="{{ $v['id'] }}" @selected((string) $old('pihak_id', $kontrak->vendor_id ?? '') === (string) $v['id'])>
                             {{ $v['nama'] }}{{ $v['npwp'] ? ' — NPWP ' . $v['npwp'] : '' }}
                         </option>
                     @endforeach
@@ -460,14 +563,14 @@
     </div>
 </div>
 
-{{-- ══════════ 04 · Penanda Tangan ══════════ --}}
+{{-- ══════════ 05 · Penanda Tangan ══════════ --}}
 <div class="kf-card mb-4 kf-reveal" style="--d:.21s; --tone:#d97706; --tone-2:#fbbf24;">
     <div class="kf-card-head">
         <span class="kf-step"><i class="bi bi-pen"></i></span>
         <div>
-            <div class="kf-step-no" style="color:#d97706;">Langkah 04</div>
+            <div class="kf-step-no" style="color:#d97706;">Langkah 05</div>
             <h6 class="kf-card-title">Pejabat Penanda Tangan / Verifikator</h6>
-            <div class="kf-card-sub">Menandatangani &amp; memverifikasi dokumen pencairan SPP · SPM · NPI · SP2D.</div>
+            <div class="kf-card-sub">Menandatangani &amp; memverifikasi dokumen pencairan SPP · SPM · NPI · SP2D untuk seluruh tagihan termin kontrak ini.</div>
         </div>
     </div>
     <div class="kf-card-body">
@@ -488,7 +591,7 @@
                     <select name="{{ $cfg['field'] }}" class="form-select @error($cfg['field']) is-invalid @enderror" required>
                         <option value="">— Pilih —</option>
                         @foreach(($verifikatorOptions[$key] ?? []) as $u)
-                            <option value="{{ $u['id'] }}" @selected((string) $old($cfg['field'], $tagihan->{$cfg['field']} ?? '') === (string) $u['id'])>
+                            <option value="{{ $u['id'] }}" @selected((string) $old($cfg['field'], $kontrak->{$cfg['field']} ?? '') === (string) $u['id'])>
                                 {{ $u['name'] }} ({{ $u['nip'] }})
                             </option>
                         @endforeach
@@ -496,72 +599,6 @@
                     @error($cfg['field'])<div class="invalid-feedback">{{ $message }}</div>@enderror
                 </div>
             @endforeach
-        </div>
-    </div>
-</div>
-
-{{-- ══════════ 05 · Dokumen ══════════ --}}
-<div class="kf-card mb-4 kf-reveal" style="--d:.27s; --tone:#0891b2; --tone-2:#38bdf8;">
-    <div class="kf-card-head">
-        <span class="kf-step"><i class="bi bi-cloud-arrow-up"></i></span>
-        <div>
-            <div class="kf-step-no" style="color:#0891b2;">Langkah 05</div>
-            <h6 class="kf-card-title">Dokumen</h6>
-            <div class="kf-card-sub">Klik atau tarik file PDF ke dalam kotak. Surat Pesanan otomatis dibaca sistem.</div>
-        </div>
-    </div>
-    <div class="kf-card-body">
-        <div class="row g-3">
-            <div class="col-md-6">
-                <div class="kf-drop @if($spSudahAda) picked @endif" data-kf-drop>
-                    <input type="file" name="file_surat_pesanan" id="keFileSuratPesanan" accept="application/pdf" @if(! $isEdit) required @endif>
-                    <span class="ic"><i class="bi bi-file-earmark-pdf"></i></span>
-                    <div class="flex-grow-1">
-                        <div class="t">Surat Pesanan / Kontrak ber-TTE @if(! $isEdit)<span class="text-danger">*</span>@endif
-                            <span class="kf-badge-ai ms-1"><i class="bi bi-magic"></i> Auto-isi</span>
-                        </div>
-                        <div class="s" data-kf-filename>
-                            @if($spSudahAda)
-                                <i class="bi bi-check-circle"></i> Sudah terunggah — pilih file baru hanya bila ingin mengganti.
-                            @else
-                                PDF ditandatangani kedua pihak (TTE BSrE/Privy atau basah).
-                            @endif
-                        </div>
-                    </div>
-                </div>
-                @error('file_surat_pesanan')<div class="text-danger fs-8 fw-semibold mt-1">{{ $message }}</div>@enderror
-                <div id="keParseStatus" class="form-text d-none mt-2"></div>
-            </div>
-            <div class="col-md-6">
-                <div class="kf-drop" data-kf-drop>
-                    <input type="file" name="file_invoice" accept="application/pdf">
-                    <span class="ic"><i class="bi bi-receipt"></i></span>
-                    <div class="flex-grow-1">
-                        <div class="t">Invoice <span class="text-secondary fw-normal">(opsional)</span></div>
-                        <div class="s" data-kf-filename>PDF invoice dari penyedia.</div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="kf-drop" data-kf-drop>
-                    <input type="file" name="file_kwitansi" accept="application/pdf">
-                    <span class="ic"><i class="bi bi-cash-coin"></i></span>
-                    <div class="flex-grow-1">
-                        <div class="t">Kwitansi <span class="text-secondary fw-normal">(opsional)</span></div>
-                        <div class="s" data-kf-filename>PDF kwitansi pembayaran.</div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="kf-drop" data-kf-drop>
-                    <input type="file" name="file_bast" accept="application/pdf">
-                    <span class="ic"><i class="bi bi-box-seam"></i></span>
-                    <div class="flex-grow-1">
-                        <div class="t">BAST / Serah Terima <span class="text-secondary fw-normal">(opsional)</span></div>
-                        <div class="s" data-kf-filename>PDF bukti serah terima barang.</div>
-                    </div>
-                </div>
-            </div>
         </div>
     </div>
 </div>
@@ -625,7 +662,7 @@
     (function () {
         const wrap = document.getElementById('kfTerminWrap');
         const nilaiEl = document.getElementById('kfNilaiTotal');
-        if (!nilaiEl) return; // mode edit: tidak ada builder
+        if (!nilaiEl) return;
 
         const digits = (el) => el ? (parseFloat((el.value || '0').replace(/[^\d.]/g, '')) || 0) : 0;
         const rupiah = (n) => Math.round(n).toLocaleString('id-ID');
@@ -672,7 +709,7 @@
 
             const rows = Array.from(body.querySelectorAll('.kf-termin-row'));
             let sumProgress = 0;
-            const eligible = []; // {nilai, cell, cellUm}
+            const eligible = [];
 
             rows.forEach((row) => {
                 const pct = digits(row.querySelector('.kf-pct'));
@@ -725,6 +762,20 @@
             if (e.target.matches('.kf-pct, #kfNilaiTotal, #kfNilaiUm, #kfRetensiPct')) recalc();
         });
         document.addEventListener('kf-num-change', recalc);
+
+        // Terapkan skema termin hasil pembacaan PDF (dari autofill):
+        // pindah ke mode TERMIN, isi baris progress; termin terakhir menjadi
+        // baris Pelunasan otomatis (sisa persentase).
+        document.addEventListener('kf-apply-termin', (e) => {
+            const pcts = e.detail && e.detail.persentase;
+            if (!Array.isArray(pcts) || pcts.length < 2 || !metodeTermin) return;
+            metodeTermin.checked = true;
+            toggleMetode();
+            body.innerHTML = '';
+            pcts.slice(0, -1).forEach((pct, i) => addRow(pct, 'Termin ' + (i + 1)));
+            renumber();
+            recalc();
+        });
 
         renumber(); toggleMetode(); toggleUm(); if (retensiWrap) retensiWrap.classList.toggle('kf-hide', !(gunakanRetensi && gunakanRetensi.checked)); recalc();
     })();
@@ -779,11 +830,23 @@
 
         const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
         const field = (name) => form.querySelector('[name="' + name + '"]');
+        const hero = document.getElementById('kfHeroDrop');
+        const heroIcon = document.getElementById('kfHeroIcon');
 
         const showStatus = (html, tone) => {
-            status.classList.remove('d-none', 'text-success', 'text-danger', 'text-secondary');
-            status.classList.add(tone);
+            status.classList.remove('show', 'ok', 'warn');
+            status.classList.add('show');
+            if (tone === 'text-success') status.classList.add('ok');
+            else if (tone !== 'text-secondary') status.classList.add('warn');
             status.innerHTML = html;
+        };
+        const heroState = (state) => {
+            if (!hero) return;
+            hero.classList.remove('scanning', 'success');
+            if (state) hero.classList.add(state);
+            if (heroIcon) heroIcon.innerHTML = state === 'scanning'
+                ? '<span class="spinner-border" style="width:1.5rem;height:1.5rem;border-width:.2em;"></span>'
+                : '<i class="bi ' + (state === 'success' ? 'bi-file-earmark-check' : 'bi-cloud-arrow-up') + '"></i>';
         };
 
         const setValue = (name, value) => {
@@ -800,31 +863,44 @@
         fileInput.addEventListener('change', async function () {
             const file = this.files && this.files[0];
             if (!file || file.type !== 'application/pdf') return;
-            showStatus('<span class="spinner-border spinner-border-sm me-1"></span> Membaca Surat Pesanan…', 'text-secondary');
+            heroState('scanning');
+            showStatus('<span class="spinner-border spinner-border-sm me-1"></span> Membaca Surat Pesanan &amp; merangkum nama pekerjaan dengan AI…', 'text-secondary');
 
             const body = new FormData();
             body.append('file', file);
             let payload;
             try {
-                const res = await fetch(@json(route('tagihan-kontrak-eksternal.parse')), {
+                const res = await fetch(@json(route('kontrak-eksternal.parse')), {
                     method: 'POST', headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' }, body,
                 });
                 payload = await res.json();
             } catch (e) {
-                showStatus('<i class="bi bi-info-circle"></i> PDF tidak dapat dibaca otomatis. Silakan isi form secara manual.', 'text-secondary');
+                heroState('success');
+                showStatus('<i class="bi bi-info-circle"></i> PDF terunggah, tetapi tidak dapat dibaca otomatis. Silakan isi form secara manual.', 'text-secondary');
                 return;
             }
             if (!payload || !payload.ok) {
-                showStatus('<i class="bi bi-info-circle"></i> ' + ((payload && payload.message) || 'PDF tidak dapat dibaca otomatis. Silakan isi form secara manual.'), 'text-secondary');
+                heroState('success');
+                showStatus('<i class="bi bi-info-circle"></i> ' + ((payload && payload.message) || 'PDF terunggah, tetapi tidak dapat dibaca otomatis. Silakan isi form secara manual.'), 'text-secondary');
                 return;
             }
 
             const d = payload.data || {};
             let filled = 0;
+            let terminDiterapkan = 0;
             if (setValue('nomor_surat_pesanan', d.nomor_surat_pesanan)) filled++;
             if (setValue('tanggal_surat_pesanan', d.tanggal_surat_pesanan)) filled++;
             if (setValue('sumber', 'INAPROC')) filled++;
             if (d.total_bruto && setValue('nilai_total_kontrak', Number(d.total_bruto).toLocaleString('en-US'))) filled++;
+
+            // Skema termin terdeteksi dari SSKK → susun baris termin otomatis.
+            if (Array.isArray(d.skema_termin) && d.skema_termin.length > 1) {
+                document.dispatchEvent(new CustomEvent('kf-apply-termin', {
+                    detail: { persentase: d.skema_termin.map(t => t.persentase) },
+                }));
+                terminDiterapkan = d.skema_termin.length;
+                filled++;
+            }
 
             const namaPekerjaan = field('nama_pekerjaan');
             if (namaPekerjaan && !namaPekerjaan.value && d.nama_pekerjaan_saran) {
@@ -848,10 +924,14 @@
                 }
             }
 
+            heroState('success');
             if (filled > 0) {
-                showStatus('<i class="bi bi-magic"></i> <strong>' + filled + ' kolom terisi otomatis</strong> dari Surat Pesanan — periksa kembali sebelum menyimpan.', 'text-success');
+                const infoTermin = terminDiterapkan > 1
+                    ? ' Skema <strong>' + terminDiterapkan + ' termin</strong> dari kontrak ikut diterapkan.'
+                    : '';
+                showStatus('<i class="bi bi-magic"></i> <strong>' + filled + ' kolom terisi otomatis</strong> dari Surat Pesanan.' + infoTermin + ' Gulir ke bawah &amp; periksa kembali sebelum menyimpan.', 'text-success');
             } else {
-                showStatus('<i class="bi bi-info-circle"></i> Tidak ada kolom yang dapat diisi otomatis. Silakan isi manual.', 'text-secondary');
+                showStatus('<i class="bi bi-info-circle"></i> PDF terunggah, tetapi tidak ada kolom yang dapat diisi otomatis. Silakan isi manual.', 'text-secondary');
             }
         });
     })();

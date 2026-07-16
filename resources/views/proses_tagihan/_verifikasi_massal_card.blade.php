@@ -142,7 +142,7 @@
     {{-- Modal konfirmasi verifikasi massal --}}
     <div class="modal fade" id="modalVerifikasiMassal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
-            <form method="POST" action="{{ route('proses-tagihan.dokumen.setujui-semua', $tagihan->id) }}" class="modal-content" style="border: 0; border-radius: 1rem; overflow: hidden;">
+            <form method="POST" action="{{ route('proses-tagihan.dokumen.setujui-semua', $tagihan->id) }}" class="modal-content js-async-form" style="border: 0; border-radius: 1rem; overflow: hidden;">
                 @csrf
                 <div class="modal-header text-white" style="background: linear-gradient(120deg, var(--pt-primary), var(--pt-primary-2)); border: 0;">
                     <h6 class="modal-title fw-bold mb-0"><i class="bi bi-check2-all me-2"></i>Konfirmasi Verifikasi Massal</h6>
@@ -189,45 +189,6 @@
     </div>
 @endif
 
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-        // Modal keluar dari kartu beranimasi agar backdrop tidak menutupinya
-        // (stacking context pada elemen ber-transform).
-        var modal = document.getElementById('modalVerifikasiMassal');
-        if (modal && modal.parentElement !== document.body) {
-            document.body.appendChild(modal);
-        }
-
-        // Cegah klik ganda saat submit.
-        var form = modal ? modal.querySelector('form') : null;
-        if (form) {
-            form.addEventListener('submit', function () {
-                var btn = form.querySelector('button[type=submit]');
-                if (btn) {
-                    btn.disabled = true;
-                    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Memproses…';
-                }
-            });
-        }
-
-        // Confetti perayaan setelah verifikasi massal berhasil.
-        var conf = document.getElementById('vmConfetti');
-        if (conf && !reduced) {
-            var colors = ['#4f46e5', '#10b981', '#f59e0b', '#06b6d4', '#8b5cf6', '#f43f5e'];
-            for (var i = 0; i < 70; i++) {
-                var s = document.createElement('span');
-                s.style.left = Math.random() * 100 + 'vw';
-                s.style.background = colors[i % colors.length];
-                s.style.animationDuration = (2.2 + Math.random() * 2) + 's';
-                s.style.animationDelay = (Math.random() * 1) + 's';
-                s.style.transform = 'rotate(' + Math.random() * 360 + 'deg)';
-                conf.appendChild(s);
-            }
-            setTimeout(function () { conf.remove(); }, 6000);
-        } else if (conf) {
-            conf.remove();
-        }
-    });
-</script>
+{{-- Script kartu ini (pemindahan modal ke body, guard klik ganda, confetti)
+     kini ditangani window.PT + interceptor form async — lihat
+     _page_scripts.blade.php dan _async_forms.blade.php. --}}

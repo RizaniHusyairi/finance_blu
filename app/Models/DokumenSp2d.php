@@ -11,6 +11,7 @@ class DokumenSp2d extends Model
     use Blameable, SoftDeletes;
 
     protected $table = 'dokumen_sp2d';
+
     protected $guarded = ['id'];
 
     protected $casts = [
@@ -18,12 +19,19 @@ class DokumenSp2d extends Model
     ];
 
     public const STATUS_DRAFT = 'DRAFT';
+
     public const STATUS_MENUNGGU_VERIFIKASI = 'MENUNGGU_VERIFIKASI';
+
     public const STATUS_DISETUJUI_FINAL = 'DISETUJUI_FINAL';
+
     public const STATUS_MENUNGGU_UPLOAD = 'MENUNGGU_UPLOAD';
+
     public const STATUS_SP2D_TERBIT = 'SP2D_TERBIT';
+
     public const STATUS_REVISI = 'REVISI';
+
     public const STATUS_APPROVED = 'APPROVED'; // Legacy
+
     public const STATUS_EXECUTED = 'EXECUTED';
 
     public const SP2D_SIGNED_ARCHIVE_TYPE = 'SP2D_BERTANDATANGAN';
@@ -57,7 +65,6 @@ class DokumenSp2d extends Model
     {
         return $this->morphOne(WorkflowInstance::class, 'workflowable')->latestOfMany();
     }
-
 
     public function getSppIdAttribute()
     {
@@ -131,16 +138,45 @@ class DokumenSp2d extends Model
     public function unlockNextTerminKontrak()
     {
         $terminInfo = $this->npi?->spm?->spp?->tagihan?->detailKontrak?->kontrakTermin;
-        
+
         if ($terminInfo) {
-            $nextTermin = \App\Models\KontrakTermin::where('kontrak_pengadaan_id', $terminInfo->kontrak_pengadaan_id)
+            $nextTermin = KontrakTermin::where('kontrak_pengadaan_id', $terminInfo->kontrak_pengadaan_id)
                 ->where('termin_ke', '>', $terminInfo->termin_ke)
                 ->orderBy('termin_ke', 'asc')
                 ->first();
-                
+
             if ($nextTermin && $nextTermin->status_termin === 'LOCKED') {
                 $nextTermin->update(['status_termin' => 'READY_TO_BILL']);
             }
+        }
+    }
+
+    /**
+     * SP2D selesai → buka termin berikutnya pada master Kontrak Eksternal;
+     * bila seluruh termin sudah tertagih, master otomatis SELESAI.
+     */
+    public function unlockNextTerminKontrakEksternal(): void
+    {
+        $termin = $this->npi?->spm?->spp?->tagihan?->detailKontrakEksternal?->kontrakEksternalTermin;
+        if (! $termin) {
+            return;
+        }
+
+        $nextTermin = KontrakEksternalTermin::where('kontrak_eksternal_id', $termin->kontrak_eksternal_id)
+            ->where('termin_ke', '>', $termin->termin_ke)
+            ->orderBy('termin_ke')
+            ->first();
+
+        if ($nextTermin && $nextTermin->status_termin === 'LOCKED') {
+            $nextTermin->update(['status_termin' => 'READY_TO_BILL']);
+
+            return;
+        }
+
+        $kontrak = $termin->kontrak;
+        if ($kontrak && $kontrak->status_kontrak === 'AKTIF'
+            && ! $kontrak->termin()->where('status_termin', '!=', 'SUDAH_DITAGIH')->exists()) {
+            $kontrak->update(['status_kontrak' => 'SELESAI']);
         }
     }
 }

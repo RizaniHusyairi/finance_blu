@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Tagihan Kontrak Eksternal')
+@section('title', 'Tagihan Kontrak')
 
 @push('css')
 <style>
@@ -57,7 +57,7 @@
         backdrop-filter: blur(4px);
         animation: keFloat 5.5s ease-in-out infinite;
     }
-    .ke-hero-title { font-weight: 800; letter-spacing: -.5px; margin-bottom: .2rem; }
+    .ke-hero-title { font-weight: 800; letter-spacing: -.5px; margin-bottom: .2rem; color: #fff !important; }
     .ke-hero-sub { color: rgba(255, 255, 255, .82); font-size: .87rem; max-width: 620px; }
     .ke-hero-chip {
         display: inline-flex; align-items: center; gap: .4rem;
@@ -260,7 +260,7 @@
             <div class="d-flex align-items-center gap-3">
                 <span class="ke-hero-icon"><i class="bi bi-file-earmark-check"></i></span>
                 <div>
-                    <h4 class="ke-hero-title mb-1">Tagihan Kontrak Eksternal</h4>
+                    <h4 class="ke-hero-title mb-1">Tagihan Kontrak</h4>
                     <div class="ke-hero-sub">
                         Penagihan kontrak yang dibuat &amp; ditandatangani di luar sistem — cukup unggah
                         PDF Surat Pesanan ber-TTE, tagihan langsung siap diproses sampai SP2D &amp; BKU.
@@ -272,8 +272,8 @@
                     </div>
                 </div>
             </div>
-            <a href="{{ route('tagihan-kontrak-eksternal.create') }}" class="btn ke-btn-create">
-                <i class="bi bi-plus-lg me-1"></i> Buat Tagihan
+            <a href="{{ route('kontrak-eksternal.index') }}" class="btn ke-btn-create">
+                <i class="bi bi-journal-bookmark me-1"></i> Kelola Kontrak
             </a>
         </div>
     </div>
@@ -297,7 +297,7 @@
                     <div>
                         <div class="lbl">Total Tagihan</div>
                         <div class="val"><span data-ke-count="{{ $tagihans->count() }}">0</span></div>
-                        <div class="sub">seluruh kontrak eksternal</div>
+                        <div class="sub">seluruh tagihan kontrak</div>
                     </div>
                     <span class="ic"><i class="bi bi-collection"></i></span>
                 </div>
@@ -422,10 +422,10 @@
             @empty
                 <div class="ke-empty">
                     <div class="bubble"><i class="bi bi-file-earmark-plus"></i></div>
-                    <h6 class="fw-bold mb-1">Belum ada tagihan kontrak eksternal</h6>
-                    <div class="text-secondary fs-7 mb-3">Mulai dari Surat Pesanan e-Purchasing/INAPROC yang sudah ditandatangani kedua pihak.</div>
-                    <a href="{{ route('tagihan-kontrak-eksternal.create') }}" class="btn btn-primary rounded-3">
-                        <i class="bi bi-plus-lg"></i> Buat Tagihan Pertama
+                    <h6 class="fw-bold mb-1">Belum ada tagihan kontrak</h6>
+                    <div class="text-secondary fs-7 mb-3">Daftarkan master Kontrak terlebih dahulu, lalu tagih tiap termin dari halaman kontrak.</div>
+                    <a href="{{ route('kontrak-eksternal.index') }}" class="btn btn-primary rounded-3">
+                        <i class="bi bi-journal-bookmark"></i> Buka Halaman Kontrak
                     </a>
                 </div>
             @endforelse

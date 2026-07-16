@@ -15,10 +15,12 @@ class DashboardTest extends TestCase
 
     public function test_internal_dashboard_renders_with_current_budget_and_transaction_schema(): void
     {
-        Role::findOrCreate('Operator BLU', 'web');
+        // Kasubbag masih memakai dashboard internal generik. (Operator BLU kini
+        // dialihkan ke dashboard khususnya sendiri — lihat DashboardOperatorBluTest.)
+        Role::findOrCreate('Kepala Subbagian Keuangan dan Tata Usaha', 'web');
 
         $user = User::factory()->create();
-        $user->assignRole('Operator BLU');
+        $user->assignRole('Kepala Subbagian Keuangan dan Tata Usaha');
 
         $budget = Budget::create([
             'coa' => '524111',

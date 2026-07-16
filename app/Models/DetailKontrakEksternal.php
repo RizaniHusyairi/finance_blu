@@ -16,21 +16,27 @@ class DetailKontrakEksternal extends Model
     use SoftDeletes;
 
     protected $table = 'detail_kontrak_eksternal';
+
     protected $guarded = ['id'];
 
     protected $casts = [
         'tanggal_surat_pesanan' => 'date',
-        'nilai_total_kontrak' => 'decimal:2',
-        'ada_uang_muka' => 'boolean',
-        'nilai_uang_muka' => 'decimal:2',
-        'persentase' => 'float',
-        'potongan_angsuran_uang_muka' => 'decimal:2',
-        'nilai_retensi' => 'decimal:2',
     ];
 
     public function tagihan()
     {
         return $this->belongsTo(Tagihan::class, 'tagihan_id');
+    }
+
+    public function kontrakEksternalTermin()
+    {
+        return $this->belongsTo(KontrakEksternalTermin::class, 'kontrak_eksternal_termin_id');
+    }
+
+    /** Master kontrak eksternal (via termin). */
+    public function kontrakEksternal(): ?KontrakEksternal
+    {
+        return $this->kontrakEksternalTermin?->kontrak;
     }
 
     public function arsipDokumen()
@@ -55,7 +61,10 @@ class DetailKontrakEksternal extends Model
 
     public function getFileSuratPesananAttribute()
     {
-        return $this->resolveDocumentPath(['SURAT_PESANAN']);
+        // Arsip Surat Pesanan hidup di master kontrak eksternal; fallback ke
+        // arsip milik detail (tagihan lama sebelum era master).
+        return $this->kontrakEksternal()?->file_surat_pesanan
+            ?? $this->resolveDocumentPath(['SURAT_PESANAN']);
     }
 
     public function getFileFakturPajakAttribute()

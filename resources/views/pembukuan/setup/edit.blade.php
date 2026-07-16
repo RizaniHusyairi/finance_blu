@@ -71,34 +71,51 @@
                             <tr><th style="width:240px;">Rekening</th><th style="width:240px;">Atas Nama (Nama Rekening)</th><th>Peran / Buku</th><th style="width:150px;">Tanggal Berlaku</th><th style="width:180px;" class="text-end">Saldo Awal (Rp)</th></tr>
                         </thead>
                         <tbody>
-                            @forelse($rekeningSaldo as $r)
-                                <tr>
+                            @foreach($rekeningSaldo as $r)
+                                @php
+                                    $key = $r->form_key;
+                                    $bisaEdit = (bool) $r->editable;
+                                    $barisBaru = ! $r->exists;
+                                    $roleLabel = $r->peran_bku === 'PENERIMAAN' ? 'Bendahara Penerimaan' : 'Bendahara Pengeluaran';
+                                @endphp
+                                <tr @class(['opacity-75' => ! $bisaEdit])>
                                     <td>
-                                        <input type="text" name="saldo[{{ $r->id }}][nama_bank]" value="{{ $r->nama_bank }}" maxlength="100" class="form-control form-control-sm mb-1" placeholder="Nama bank">
-                                        <input type="text" name="saldo[{{ $r->id }}][nomor_rekening]" value="{{ $r->nomor_rekening }}" maxlength="50" class="form-control form-control-sm" placeholder="Nomor rekening">
+                                        <input type="text" name="saldo[{{ $key }}][nama_bank]" value="{{ $r->nama_bank }}" maxlength="100"
+                                               class="form-control form-control-sm mb-1" placeholder="Nama bank" @disabled(! $bisaEdit)>
+                                        <input type="text" name="saldo[{{ $key }}][nomor_rekening]" value="{{ $r->nomor_rekening }}" maxlength="50"
+                                               class="form-control form-control-sm" placeholder="Nomor rekening" @disabled(! $bisaEdit)>
                                     </td>
-                                    <td><input type="text" name="saldo[{{ $r->id }}][nama_rekening]" value="{{ $r->nama_rekening }}" maxlength="150" class="form-control form-control-sm" placeholder="Atas nama rekening"></td>
-                                    <td><span class="badge {{ $r->peran_bku === 'PENERIMAAN' ? 'bg-success' : 'bg-primary' }}">{{ $r->peran_bku }}</span> <span class="text-muted small">/ BKU</span></td>
-                                    <td><input type="date" name="saldo[{{ $r->id }}][tanggal]" value="{{ $r->saldo_awal_tanggal }}" class="form-control form-control-sm"></td>
+                                    <td><input type="text" name="saldo[{{ $key }}][nama_rekening]" value="{{ $r->nama_rekening }}" maxlength="150"
+                                               class="form-control form-control-sm" placeholder="Atas nama rekening" @disabled(! $bisaEdit)></td>
+                                    <td>
+                                        <span class="badge {{ $r->peran_bku === 'PENERIMAAN' ? 'bg-success' : 'bg-primary' }}">{{ $r->peran_bku }}</span>
+                                        <span class="text-muted small">/ BKU</span>
+                                        @if($barisBaru)
+                                            <div class="small text-warning-emphasis mt-1"><i class="bi bi-plus-circle"></i> Belum terdaftar — isi data rekening lalu simpan.</div>
+                                        @endif
+                                        @unless($bisaEdit)
+                                            <div class="small text-muted mt-1"><i class="bi bi-lock-fill"></i> Hanya {{ $roleLabel }}</div>
+                                        @endunless
+                                    </td>
+                                    <td><input type="date" name="saldo[{{ $key }}][tanggal]" value="{{ $r->saldo_awal_tanggal }}"
+                                               class="form-control form-control-sm" @disabled(! $bisaEdit)></td>
                                     <td>
                                         <div class="input-group input-group-sm">
                                             <span class="input-group-text">Rp</span>
                                             <input type="text" inputmode="numeric" autocomplete="off"
                                                    class="form-control text-end js-rupiah"
-                                                   data-target="sa_nom_{{ $r->id }}"
+                                                   data-target="sa_nom_{{ $key }}"
                                                    value="{{ ($r->saldo_awal_nominal !== null && $r->saldo_awal_nominal !== '') ? number_format((float) $r->saldo_awal_nominal, 0, ',', '.') : '' }}"
-                                                   placeholder="0">
+                                                   placeholder="0" @disabled(! $bisaEdit)>
                                         </div>
-                                        <input type="hidden" name="saldo[{{ $r->id }}][nominal]" id="sa_nom_{{ $r->id }}" value="{{ $r->saldo_awal_nominal !== null ? (int) $r->saldo_awal_nominal : '' }}">
+                                        <input type="hidden" name="saldo[{{ $key }}][nominal]" id="sa_nom_{{ $key }}" value="{{ $r->saldo_awal_nominal !== null ? (int) $r->saldo_awal_nominal : '' }}" @disabled(! $bisaEdit)>
                                     </td>
                                 </tr>
-                            @empty
-                                <tr><td colspan="5" class="text-center text-muted py-3">Belum ada rekening Penerimaan/Pengeluaran aktif.</td></tr>
-                            @endforelse
+                            @endforeach
                         </tbody>
                     </table>
                 </div>
-                @if($rekeningSaldo->isNotEmpty())
+                @if($rekeningSaldo->contains(fn ($r) => $r->editable))
                     <button class="btn btn-success btn-sm"><i class="bi bi-save me-1"></i> Simpan Rekening &amp; Saldo Awal</button>
                 @endif
             </form>

@@ -2,13 +2,16 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\IntegrationSetting;
+use App\Models\LogStatusDokumen;
 use App\Models\Tagihan;
 use App\Models\User;
 use App\Services\DokumenChainService;
 use App\Services\EmailNotificationService;
 use App\Services\WhatsappService;
-use Illuminate\Support\Collection;
+use App\Support\TagihanDokumenPendukung;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\URL;
@@ -45,12 +48,12 @@ class KpaApprovalController extends Controller
 
         // Cari user KPA
         $kpaUser = User::role('KPA')->first();
-        if (!$kpaUser) {
+        if (! $kpaUser) {
             return back()->with('error', 'User dengan role KPA tidak ditemukan dalam sistem.');
         }
 
         $noHp = $kpaUser->profilable->nomor_hp ?? null;
-        if (!$noHp) {
+        if (! $noHp) {
             return back()->with('error', 'User KPA belum memiliki nomor HP yang terdaftar.');
         }
 
@@ -64,7 +67,7 @@ class KpaApprovalController extends Controller
         $vendorName = $tagihan->detailKontrak?->kontrakTermin?->kontrak?->vendor?->nama_pihak
             ?? $tagihan->pihak?->nama_pihak
             ?? '-';
-        $nominal = 'Rp ' . number_format($tagihan->total_netto, 0, ',', '.');
+        $nominal = 'Rp '.number_format($tagihan->total_netto, 0, ',', '.');
 
         $message = "*PENGAJUAN PERSETUJUAN TAGIHAN (KPA)*\n\n";
         $message .= "Yth. KPA,\n";
@@ -73,28 +76,28 @@ class KpaApprovalController extends Controller
         $message .= "*Vendor/Rekanan:* {$vendorName}\n";
         $message .= "*Nominal:* {$nominal}\n\n";
         $message .= "Silakan klik tautan di bawah ini untuk melihat detail dan memberikan persetujuan:\n";
-        $message .= $url . "\n\n";
-        $message .= "_Tautan ini valid selama 24 jam dan akan otomatis mengarahkan Anda ke sistem tanpa perlu login ulang._";
+        $message .= $url."\n\n";
+        $message .= '_Tautan ini valid selama 24 jam dan akan otomatis mengarahkan Anda ke sistem tanpa perlu login ulang._';
 
         $emailMessage = "Yth. KPA,\n\n"
-            . "Dengan hormat,\n\n"
-            . "Terdapat pengajuan persetujuan tagihan yang memerlukan tindak lanjut Bapak/Ibu sebelum diproses lebih lanjut.\n\n"
-            . "Nomor Tagihan : {$tagihan->nomor_tagihan}\n"
-            . "Vendor/Rekanan : {$vendorName}\n"
-            . "Nominal : {$nominal}\n\n"
-            . "Silakan meninjau detail dan memberikan persetujuan melalui tautan berikut:\n"
-            . $url . "\n\n"
-            . "Tautan ini berlaku selama 24 jam dan akan mengarahkan Bapak/Ibu ke sistem untuk proses persetujuan.\n\n"
-            . "Hormat kami,\n"
-            . "SIKEREN-BLU";
+            ."Dengan hormat,\n\n"
+            ."Terdapat pengajuan persetujuan tagihan yang memerlukan tindak lanjut Bapak/Ibu sebelum diproses lebih lanjut.\n\n"
+            ."Nomor Tagihan : {$tagihan->nomor_tagihan}\n"
+            ."Vendor/Rekanan : {$vendorName}\n"
+            ."Nominal : {$nominal}\n\n"
+            ."Silakan meninjau detail dan memberikan persetujuan melalui tautan berikut:\n"
+            .$url."\n\n"
+            ."Tautan ini berlaku selama 24 jam dan akan mengarahkan Bapak/Ibu ke sistem untuk proses persetujuan.\n\n"
+            ."Hormat kami,\n"
+            .'SIKEREN-BLU';
 
         try {
             $sent = $whatsappService->sendMessage($noHp, $message);
             if ($sent) {
-                if ((bool) \App\Models\IntegrationSetting::getValue('email.kpa_approval.enabled', true)) {
+                if ((bool) IntegrationSetting::getValue('email.kpa_approval.enabled', true)) {
                     $emailNotificationService->sendNotification(
                         (string) $kpaUser->email,
-                        'Permohonan Persetujuan Tagihan KPA - ' . $tagihan->nomor_tagihan,
+                        'Permohonan Persetujuan Tagihan KPA - '.$tagihan->nomor_tagihan,
                         $emailMessage,
                         $tagihan,
                         'send_kpa_approval_email'
@@ -107,12 +110,19 @@ class KpaApprovalController extends Controller
                     'kpa_approved_by' => null,
                     'kpa_approval_notes' => null,
                 ]);
+
+                $this->catatLogKpa($tagihan, 'KIRIM_WA_KPA',
+                    "Permohonan persetujuan dikirim via WA ke KPA {$kpaUser->name}.",
+                    $tagihan->status, $tagihan->status);
+
                 return back()->with('success', 'Pesan WA pengajuan persetujuan berhasil dikirim ke KPA dan email diproses.');
             }
+
             return back()->with('error', 'Gagal mengirim pesan WA ke KPA. Silakan cek pengaturan integrasi WA.');
         } catch (\Exception $e) {
-            Log::error('KPA Approval WA Send Error: ' . $e->getMessage());
-            return back()->with('error', 'Terjadi kesalahan saat mengirim pesan WA: ' . $e->getMessage());
+            Log::error('KPA Approval WA Send Error: '.$e->getMessage());
+
+            return back()->with('error', 'Terjadi kesalahan saat mengirim pesan WA: '.$e->getMessage());
         }
     }
 
@@ -121,8 +131,8 @@ class KpaApprovalController extends Controller
      */
     public function showApproval(Request $request, $tagihanId)
     {
-        if (!Auth::check() || !Auth::user()->hasAnyRole(['KPA', 'PLT/PLH', 'Super Admin'])) {
-            if (!$request->hasValidSignature()) {
+        if (! Auth::check() || ! Auth::user()->hasAnyRole(['KPA', 'PLT/PLH', 'Super Admin'])) {
+            if (! $request->hasValidSignature()) {
                 abort(403, 'Tautan tidak valid atau sudah kedaluwarsa.');
             }
 
@@ -183,7 +193,7 @@ class KpaApprovalController extends Controller
 
         $request->validate([
             'action' => 'required|in:approve,reject',
-            'notes' => 'nullable|string'
+            'notes' => 'nullable|string',
         ]);
 
         $tagihan = Tagihan::findOrFail($tagihanId);
@@ -205,6 +215,9 @@ class KpaApprovalController extends Controller
                 'kpa_approved_by' => Auth::id(),
                 'kpa_approval_notes' => $request->notes,
             ]);
+            $this->catatLogKpa($tagihan, 'KPA_SETUJU',
+                'Tagihan disetujui KPA.'.($request->notes ? " Catatan: {$request->notes}" : ''),
+                'PENDING_KPA', 'APPROVED');
             $msg = 'Anda telah menyetujui tagihan ini.';
             try {
                 $chainService->maybeGenerateDraftChain($tagihan->fresh(), Auth::user());
@@ -222,16 +235,35 @@ class KpaApprovalController extends Controller
                 'kpa_approved_by' => Auth::id(),
                 'kpa_approval_notes' => $request->notes,
             ]);
+            $this->catatLogKpa($tagihan, 'KPA_TOLAK',
+                'Tagihan ditolak KPA.'.($request->notes ? " Catatan: {$request->notes}" : ''),
+                'PENDING_KPA', 'REJECTED');
             $msg = 'Anda telah menolak tagihan ini.';
         }
 
         return redirect()->route('dashboard')->with('success', $msg);
     }
 
+    /** Jejak timeline Proses Tagihan untuk aksi seputar persetujuan KPA. */
+    private function catatLogKpa(Tagihan $tagihan, string $aksi, string $catatan, ?string $statusLama, string $statusBaru): void
+    {
+        LogStatusDokumen::create([
+            'dokumen_type' => Tagihan::class,
+            'dokumen_id' => $tagihan->id,
+            'user_id' => Auth::id(),
+            'role_saat_itu' => Auth::user()?->getRoleNames()->first() ?? 'SYSTEM',
+            'status_sebelumnya' => $statusLama,
+            'status_baru' => $statusBaru,
+            'aksi' => $aksi,
+            'catatan' => $catatan,
+            'ip_address' => request()->ip(),
+        ]);
+    }
+
     private function buildDokumenPendukung(Tagihan $tagihan): Collection
     {
         // Logika dipindah ke support class agar bisa dipakai halaman lain
         // (mis. detail Proses Tagihan).
-        return \App\Support\TagihanDokumenPendukung::collect($tagihan);
+        return TagihanDokumenPendukung::collect($tagihan);
     }
 }

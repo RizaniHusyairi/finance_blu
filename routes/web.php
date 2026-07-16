@@ -9,29 +9,23 @@ use App\Http\Controllers\AdminJasaDashboardController;
 use App\Http\Controllers\AdminJasaLayananController;
 use App\Http\Controllers\AdminJasaTagihanController;
 use App\Http\Controllers\AdminJasaUtilitasController;
-use App\Http\Controllers\MonitoringPelaporanController;
 use App\Http\Controllers\BendaharaHonorariumVerifikasiController;
 use App\Http\Controllers\BendaharaPenerimaanDashboardController;
-use App\Http\Controllers\ManajemenPnbpController;
 use App\Http\Controllers\BendaharaPengeluaranDashboardController;
-use App\Http\Controllers\BtnPaymentCallbackController;
-use App\Http\Controllers\BukuKasUmumController;
 use App\Http\Controllers\BkuPenerimaanController;
 use App\Http\Controllers\BkuPenerimaanManualController;
 use App\Http\Controllers\BkuPengeluaranController;
-use App\Http\Controllers\TransaksiPembukuanController;
+use App\Http\Controllers\BtnPaymentCallbackController;
+use App\Http\Controllers\BukuKasUmumController;
 use App\Http\Controllers\BukuPembantuBankController;
-use App\Http\Controllers\BukuPembantuPartisiController;
-use App\Http\Controllers\KlasifikasiPenerimaanController;
-use App\Http\Controllers\PembukuanSetupController;
-use App\Http\Controllers\RealisasiPenerimaanController;
 use App\Http\Controllers\BukuPembantuBendaharaController;
 use App\Http\Controllers\BukuPembantuBungaController;
 use App\Http\Controllers\BukuPembantuPajakController;
+use App\Http\Controllers\BukuPembantuPartisiController;
 use App\Http\Controllers\BukuPengesahanBelanjaController;
 use App\Http\Controllers\BukuPengesahanPendapatanController;
 use App\Http\Controllers\CoaController;
-use App\Http\Controllers\RekeningBankController;
+use App\Http\Controllers\CommandCenterController;
 use App\Http\Controllers\ContractAddendumController;
 use App\Http\Controllers\ContractController;
 use App\Http\Controllers\DashboardController;
@@ -42,26 +36,30 @@ use App\Http\Controllers\HealthController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\HonorariumController;
 use App\Http\Controllers\JasaIntegrationSettingController;
+use App\Http\Controllers\KlasifikasiPenerimaanController;
+use App\Http\Controllers\KontrakEksternalController;
 use App\Http\Controllers\KontrakMitraJasaController;
 use App\Http\Controllers\KpaApprovalController;
 use App\Http\Controllers\LogPerubahanTarifPjp2uController;
+use App\Http\Controllers\ManajemenPnbpController;
 use App\Http\Controllers\MasterLayananJasaController;
 use App\Http\Controllers\MasterTarifPajakController;
 use App\Http\Controllers\MasterUangHarianPerjaldinController;
 use App\Http\Controllers\MitraAccountController;
 use App\Http\Controllers\MitraJasaController;
-use App\Http\Controllers\PemakaianGarbarataController;
-use App\Http\Controllers\PengajuanPenagihanGarbarataController;
-use App\Http\Controllers\PermohonanNonScheduleController;
 use App\Http\Controllers\MitraJasaKonsesiController;
 use App\Http\Controllers\MitraJasaPenjualanController;
 use App\Http\Controllers\MitraJasaPjp2uController;
 use App\Http\Controllers\MitraLayananController;
 use App\Http\Controllers\MitraPortalController;
+use App\Http\Controllers\MonitoringPelaporanController;
 use App\Http\Controllers\NomorTagihanJasaController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\NpiController;
 use App\Http\Controllers\PanduanController;
+use App\Http\Controllers\PemakaianGarbarataController;
+use App\Http\Controllers\PembukuanSetupController;
+use App\Http\Controllers\PengajuanPenagihanGarbarataController;
 use App\Http\Controllers\PengecekanPembayaranPiutangController;
 use App\Http\Controllers\PenyetoranPajakController;
 use App\Http\Controllers\PenyetoranPajakHonorController;
@@ -70,6 +68,7 @@ use App\Http\Controllers\PerjaldinBluController;
 use App\Http\Controllers\PerjaldinController;
 use App\Http\Controllers\PerjaldinVerifikasiController;
 use App\Http\Controllers\PerjaldinWorkflowController;
+use App\Http\Controllers\PermohonanNonScheduleController;
 use App\Http\Controllers\PpkHonorariumVerifikasiController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PublicContractSignatureController;
@@ -81,24 +80,28 @@ use App\Http\Controllers\PublicTagihanActivityController;
 use App\Http\Controllers\PublicTagihanJasaController;
 use App\Http\Controllers\PublicTagihanJasaVerificationController;
 use App\Http\Controllers\PublicTagihanSignatureController;
+use App\Http\Controllers\RealisasiPenerimaanController;
+use App\Http\Controllers\RekeningBankController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SecureFileController;
 use App\Http\Controllers\ShortLinkController;
 use App\Http\Controllers\SpmController;
 use App\Http\Controllers\SppController;
 use App\Http\Controllers\StandingInstructionKpaController;
-use App\Http\Controllers\SuratNumberController;
 use App\Http\Controllers\SuperAdminJasaDashboardController;
 use App\Http\Controllers\SuperAdminJasaLaporanController;
 use App\Http\Controllers\SupplierController;
+use App\Http\Controllers\SuratNumberController;
 use App\Http\Controllers\TagihanController;
 use App\Http\Controllers\TagihanHonorariumVerifikasiController;
 use App\Http\Controllers\TagihanJasaController;
 use App\Http\Controllers\TagihanJasaVerifikasiController;
+use App\Http\Controllers\TagihanKontrakEksternalController;
 use App\Http\Controllers\TagihanKontrakVerifikasiController;
 use App\Http\Controllers\TagihanProsesController;
 use App\Http\Controllers\TagihanTteController;
 use App\Http\Controllers\TarifLayananController;
+use App\Http\Controllers\TransaksiPembukuanController;
 use App\Http\Controllers\UtilitasController;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Support\Facades\Auth;
@@ -210,9 +213,12 @@ Route::get('/', function () {
 });
 
 $internalRoles = 'Super Admin|Super Admin Jasa|KPA|PLT/PLH|Kepala Subbagian Keuangan dan Tata Usaha|Kepala Seksi Pelayanan dan Kerjasama|PPK|PPSPM|Bendahara Pengeluaran|Bendahara Penerimaan|Pejabat Pengadaan|Operator BLU|PPABP|Operator Perjaldin|Koordinator Keuangan|Admin Jasa|Admin Konsesi|Koordinator Jasa';
-$dashboardRoles = $internalRoles . '|AMC';
+$dashboardRoles = $internalRoles.'|AMC';
+// Pusat Panduan terbuka untuk semua staf non-Mitra — termasuk AMC & admin utilitas
+// yang tidak masuk $internalRoles (sidebar menampilkan link Panduan ke mereka).
+$panduanRoles = $dashboardRoles.'|Admin Listrik|Admin Air';
 
-Route::middleware(['auth', 'account.active'])->group(function () use ($internalRoles, $dashboardRoles) {
+Route::middleware(['auth', 'account.active'])->group(function () use ($internalRoles, $dashboardRoles, $panduanRoles) {
 
     // Universal Profile
     Route::get('/profile', [ProfileController::class, 'index'])->name('profile.index');
@@ -221,8 +227,13 @@ Route::middleware(['auth', 'account.active'])->group(function () use ($internalR
 
     // Pusat Panduan — panduan penggunaan aplikasi yang menyesuaikan peran (khusus staf internal).
     Route::get('/panduan', [PanduanController::class, 'index'])
-        ->middleware("role:$internalRoles")
+        ->middleware("role:$panduanRoles")
         ->name('panduan.index');
+
+    // Unduh SOP resmi (PDF) per peran, dirender dari konten Pusat Panduan.
+    Route::get('/panduan/sop/{slug}', [PanduanController::class, 'sopPdf'])
+        ->middleware("role:$panduanRoles")
+        ->name('panduan.sop.download');
 
     // Unduh arsip keuangan sensitif (bukti setor pajak & bukti transfer SP2D) dari disk privat.
     // Otorisasi role (Bendahara Pengeluaran / Super Admin) dilakukan di dalam controller.
@@ -250,12 +261,24 @@ Route::middleware(['auth', 'account.active'])->group(function () use ($internalR
         ->middleware("role:$dashboardRoles")
         ->name('dashboard');
 
+    // Command Center — pusat audit seluruh aktivitas user, khusus Super Admin.
+    Route::middleware('role:Super Admin')
+        ->prefix('command-center')
+        ->name('command-center.')
+        ->group(function () {
+            Route::get('/', [CommandCenterController::class, 'index'])->name('index');
+            Route::get('/feed', [CommandCenterController::class, 'feed'])->name('feed');
+        });
+
     // Internal Dashboard — dashboard spesifik untuk role internal.
     Route::middleware("role:$internalRoles")->group(function () {
         Route::get('/dashboard/bendahara-penerimaan', [BendaharaPenerimaanDashboardController::class, 'index'])->name('dashboard.bendahara-penerimaan');
         Route::get('/dashboard/bendahara-pengeluaran', [BendaharaPengeluaranDashboardController::class, 'index'])->name('dashboard.bendahara-pengeluaran');
         Route::get('/dashboard/ppspm', [DashboardController::class, 'ppspmDashboard'])->name('dashboard.ppspm');
         Route::get('/dashboard/koordinator-keuangan', [DashboardController::class, 'koordinatorKeuanganDashboard'])->name('dashboard.koordinator-keuangan');
+        Route::get('/dashboard/operator-blu', [DashboardController::class, 'operatorBlu'])
+            ->middleware('role:Super Admin|Operator BLU')
+            ->name('dashboard.operator-blu');
         Route::get('/super-admin-jasa/dashboard', [SuperAdminJasaDashboardController::class, 'index'])
             ->middleware('role:Super Admin|Super Admin Jasa')
             ->name('super-admin-jasa.dashboard');
@@ -331,7 +354,6 @@ Route::middleware(['auth', 'account.active'])->group(function () use ($internalR
 
     // Workflow Engine General Routes
 
-
     // Notification Endpoints (AJAX Polling)
     Route::get('/notifications/fetch', [NotificationController::class, 'fetch'])->name('notifications.fetch');
     Route::post('/notifications/mark-read', [NotificationController::class, 'markAsRead'])->name('notifications.mark-read');
@@ -406,7 +428,7 @@ Route::middleware(['auth', 'account.active'])->group(function () use ($internalR
         Route::post('/document-numbers/{documentNumber}/mark-used', [DocumentNumberController::class, 'markUsed'])->name('document-numbers.mark-used');
         Route::post('/document-numbers/{documentNumber}/cancel', [DocumentNumberController::class, 'cancel'])->name('document-numbers.cancel');
         Route::get('/document-numbers/check', [DocumentNumberController::class, 'check'])->name('document-numbers.check');
-    }); 
+    });
 
     // Cek ketersediaan nomor urut KU (AJAX) — dipakai form Honorarium (PPABP)
     // dan Perjaldin (Operator Perjaldin) saat user mengetik nomor urut manual.
@@ -592,17 +614,29 @@ Route::middleware(['auth', 'account.active'])->group(function () use ($internalR
         Route::get('/tagihan/kontrak/{id}/export/{type}', [TagihanController::class, 'exportPdfKontrak'])->name('tagihan.kontrak.export-pdf');
     });
 
-    // Tagihan Kontrak Eksternal — kontrak dibuat & ber-TTE di luar sistem
-    // (mis. Surat Pesanan e-Purchasing/INAPROC). Dibuat oleh PPK.
+    // Master Kontrak Eksternal — kontrak dibuat & ber-TTE di luar sistem
+    // (mis. Surat Pesanan e-Purchasing/INAPROC) didaftarkan sebagai master
+    // + skema termin (pola Manajemen SPK); tiap termin ditagih dari master.
+    Route::middleware('role:Super Admin|PPK')->prefix('kontrak-eksternal')->name('kontrak-eksternal.')->group(function () {
+        Route::get('/', [KontrakEksternalController::class, 'index'])->name('index');
+        Route::get('/create', [KontrakEksternalController::class, 'create'])->name('create');
+        Route::post('/parse-surat-pesanan', [KontrakEksternalController::class, 'parseSuratPesanan'])->name('parse');
+        Route::post('/', [KontrakEksternalController::class, 'store'])->name('store');
+        Route::get('/{id}/edit', [KontrakEksternalController::class, 'edit'])->name('edit');
+        Route::put('/{id}', [KontrakEksternalController::class, 'update'])->name('update');
+        Route::post('/{id}/activate', [KontrakEksternalController::class, 'activate'])->name('activate');
+        Route::get('/{kontrak}/termin/{termin}/tagihan/create', [KontrakEksternalController::class, 'billTermin'])->name('termin.bill');
+        Route::post('/{kontrak}/termin/{termin}/tagihan', [KontrakEksternalController::class, 'storeTagihanTermin'])->name('termin.store-tagihan');
+        Route::get('/{id}', [KontrakEksternalController::class, 'show'])->name('show');
+    });
+
+    // Tagihan Kontrak Eksternal — tagihan per termin hasil billing dari master.
     Route::middleware('role:Super Admin|PPK')->prefix('tagihan-kontrak-eksternal')->name('tagihan-kontrak-eksternal.')->group(function () {
-        Route::get('/', [\App\Http\Controllers\TagihanKontrakEksternalController::class, 'index'])->name('index');
-        Route::get('/create', [\App\Http\Controllers\TagihanKontrakEksternalController::class, 'create'])->name('create');
-        Route::post('/parse-surat-pesanan', [\App\Http\Controllers\TagihanKontrakEksternalController::class, 'parseSuratPesanan'])->name('parse');
-        Route::post('/', [\App\Http\Controllers\TagihanKontrakEksternalController::class, 'store'])->name('store');
-        Route::get('/{id}/edit', [\App\Http\Controllers\TagihanKontrakEksternalController::class, 'edit'])->name('edit');
-        Route::put('/{id}', [\App\Http\Controllers\TagihanKontrakEksternalController::class, 'update'])->name('update');
-        Route::post('/{id}/submit', [\App\Http\Controllers\TagihanKontrakEksternalController::class, 'submit'])->name('submit');
-        Route::get('/{id}', [\App\Http\Controllers\TagihanKontrakEksternalController::class, 'show'])->name('show');
+        Route::get('/', [TagihanKontrakEksternalController::class, 'index'])->name('index');
+        Route::get('/{id}/edit', [TagihanKontrakEksternalController::class, 'edit'])->name('edit');
+        Route::put('/{id}', [TagihanKontrakEksternalController::class, 'update'])->name('update');
+        Route::post('/{id}/submit', [TagihanKontrakEksternalController::class, 'submit'])->name('submit');
+        Route::get('/{id}', [TagihanKontrakEksternalController::class, 'show'])->name('show');
     });
 
     // Tagihan Jasa (PNBP) — pembuatan tagihan dibatasi ke role pembuat (admin),

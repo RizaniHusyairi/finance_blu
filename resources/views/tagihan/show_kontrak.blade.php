@@ -347,7 +347,7 @@
                             <div class="fw-bold">{{ $tagihan->nomor_tagihan }}</div>
                         </div>
                         <div class="col-md-6">
-                            <div class="text-muted small mb-1">Nomor SPK / Kontrak</div>
+                            <div class="text-muted small mb-1">Nomor SPK</div>
                             <div class="fw-bold">{{ $kontrak->nomor_spk ?? '-' }}</div>
                         </div>
                         <div class="col-md-6">

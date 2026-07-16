@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Support\Panduan\PanduanRegistry;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 
 /**
@@ -62,5 +63,26 @@ class PanduanController extends Controller
             'userRoles' => $userRoles,
             'isSuperAdmin' => $isSuperAdmin,
         ]);
+    }
+
+    /**
+     * Unduh SOP resmi (PDF) satu peran — dirender dari konten registry yang sama
+     * dengan halaman Pusat Panduan. Panduan bersifat bantuan lintas peran, jadi
+     * setiap staf internal boleh mengunduh SOP peran mana pun (selaras index()).
+     */
+    public function sopPdf(string $slug)
+    {
+        $role = PanduanRegistry::findBySlug($slug);
+        abort_unless($role, 404);
+
+        $guide = PanduanRegistry::forRole($role);
+        abort_if(empty($guide['alur']), 404);
+
+        return Pdf::loadView('panduan.sop-pdf', [
+            'role' => $role,
+            'guide' => $guide,
+        ])
+            ->setPaper('a4', 'portrait')
+            ->download('SOP-SIKEREN-'.PanduanRegistry::slugFor($role).'.pdf');
     }
 }

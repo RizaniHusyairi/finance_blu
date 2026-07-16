@@ -62,6 +62,8 @@
     }
     .pd-tour-btn:hover { background: var(--pd-accent); color: #fff; }
     .pd-tour-btn i { font-size: 18px; }
+    .pd-head-actions { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
+    a.pd-tour-btn { text-decoration: none; }
 
     .pd-steps { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: .85rem; margin-bottom: 1.75rem; }
     .pd-step { position: relative; background: #fff; border: 1px solid #e9edf3; border-radius: .9rem; padding: 1rem 1.1rem; }
@@ -182,9 +184,14 @@
             @if(!empty($guide['alur']))
                 <div class="pd-section-head">
                     <h3>Alur kerja saya</h3>
-                    <button type="button" id="pdTourBtn" class="pd-tour-btn">
-                        <i class="material-icons-outlined">play_circle</i> Mulai tur
-                    </button>
+                    <div class="pd-head-actions">
+                        <a href="{{ route('panduan.sop.download', ['slug' => \App\Support\Panduan\PanduanRegistry::slugFor($activeRole)]) }}" class="pd-tour-btn">
+                            <i class="material-icons-outlined">download</i> Unduh SOP (PDF)
+                        </a>
+                        <button type="button" id="pdTourBtn" class="pd-tour-btn">
+                            <i class="material-icons-outlined">play_circle</i> Mulai tur
+                        </button>
+                    </div>
                 </div>
                 <div class="pd-steps">
                     @foreach($guide['alur'] as $i => $s)

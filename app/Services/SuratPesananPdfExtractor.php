@@ -19,8 +19,11 @@ use Smalot\PdfParser\Parser;
  */
 class SuratPesananPdfExtractor
 {
-    /** Batas halaman yang dibaca — data inti selalu di halaman-halaman awal. */
+    /** Banyak halaman yang dibaca sejak halaman awal blok Surat Pesanan. */
     private const MAX_PAGES = 4;
+
+    /** Batas pencarian anchor "No. Surat Pesanan" pada dokumen gabungan. */
+    private const MAX_SCAN_PAGES = 30;
 
     private const MONTHS = [
         'jan' => 1, 'feb' => 2, 'mar' => 3, 'apr' => 4,
@@ -56,18 +59,43 @@ class SuratPesananPdfExtractor
             'total_termin' => null,
             'termin_ke' => null,
             'nama_pekerjaan_saran' => null,
+            // Deret nilai termin dari SSKK/Skema Pembayaran (null bila tidak
+            // ditemukan deret yang jumlahnya cocok dengan total kontrak).
+            'skema_termin' => null,
             // Potongan teks daftar produk — bahan ringkasan judul via LLM
             // (internal; tidak dikirim ke respons endpoint).
             'ringkasan_produk' => null,
         ];
 
         try {
-            $document = (new Parser())->parseContent($rawPdfBytes);
-            $pages = array_slice($document->getPages(), 0, self::MAX_PAGES);
-            $text = '';
-            foreach ($pages as $page) {
-                $text .= "\n" . $page->getText();
+            $document = (new Parser)->parseContent($rawPdfBytes);
+            $allPages = $document->getPages();
+
+            // Dokumen bisa berupa gabungan Kontrak/SPK hasil scan + Surat
+            // Pesanan INAPROC digital: blok SP tidak selalu di halaman awal.
+            // Cari halaman pertama yang memuat label "No. Surat Pesanan"
+            // (halaman scan tanpa layer teks otomatis terlewati).
+            $texts = [];
+            foreach ($allPages as $page) {
+                try {
+                    $texts[] = $page->getText();
+                } catch (\Throwable) {
+                    $texts[] = '';
+                }
             }
+
+            $startIdx = 0;
+            foreach (array_slice($texts, 0, self::MAX_SCAN_PAGES) as $i => $pageText) {
+                if (preg_match('/No\.?\s*Surat\s*Pesanan/iu', $pageText)) {
+                    $startIdx = $i;
+                    break;
+                }
+            }
+
+            $text = implode("\n", array_slice($texts, $startIdx, self::MAX_PAGES));
+            // Seluruh teks dokumen — rincian termin SSKK bisa berada jauh
+            // setelah blok Surat Pesanan pada dokumen gabungan Kontrak+SP.
+            $fullFlat = trim(preg_replace('/\s+/u', ' ', implode("\n", $texts)) ?? '');
         } catch (\Throwable) {
             return $empty;
         }
@@ -97,7 +125,10 @@ class SuratPesananPdfExtractor
 
         // Blok Penyedia: nama = teks antara heading "Penyedia" dan label
         // "Nama Penanggung Jawab". Badge kualifikasi (UMKK/UMK/PKP) dibuang.
-        if (preg_match('/\bPenyedia\s*(.{3,120}?)\s*Nama\s*Penanggung\s*Jawab/iu', $flat, $m)) {
+        // Tanpa \b: teks parser kerap menempel ("...TimurPenyediaGARUDA...").
+        // Nama wajib diawali huruf kapital & bebas ":" agar label lain
+        // ("NPWP Penyedia:", "Alamat Penyedia:") tidak ikut tertangkap.
+        if (preg_match('/Penyedia\s*([A-Z][^:]{2,119}?)\s*Nama\s*Penanggung\s*Jawab/u', $flat, $m)) {
             // Badge kualifikasi bisa menempel di ujung nama ("...INDONESIAUMKK").
             $nama = trim(preg_replace('/\s*(UMKK|UMK|PKP)\s*$/u', '', trim($m[1])) ?? '');
             $out['vendor_nama'] = $nama !== '' ? $nama : null;
@@ -139,15 +170,15 @@ class SuratPesananPdfExtractor
         }
 
         // Saran nama pekerjaan: nama produk pertama pada Ringkasan Pesanan —
-        // baris setelah badge "Barang PDN/Import" pertama di bawah heading.
+        // baris setelah badge "Barang/Jasa PDN/Import" pertama di bawah heading.
         // Beberapa nama produk bisa ter-garble oleh font CID pada PDF — ambil
         // kandidat pertama yang tampak wajar (multi-kata & dominan huruf/angka).
-        if (preg_match_all('/Barang\s*(?:PDN|Import)?\s*(.{5,150}?)\s*\d+,\d{2}\s*(?:paket|unit|roll|buah|set|lot)/iu', $flat, $mm)) {
+        if (preg_match_all('/(?:Barang|Jasa)\s*(?:PDN|Import)?\s*(.{5,150}?)\s*\d+,\d{2}\s*(?:paket|unit|roll|buah|set|lot)/iu', $flat, $mm)) {
             foreach ($mm[1] as $kandidat) {
                 $kandidat = trim($kandidat);
                 $huruf = preg_match_all('/[A-Za-z0-9 ]/u', $kandidat);
                 if (str_contains($kandidat, ' ') && $huruf >= mb_strlen($kandidat) * 0.85) {
-                    $out['nama_pekerjaan_saran'] = 'Pengadaan ' . $kandidat;
+                    $out['nama_pekerjaan_saran'] = 'Pengadaan '.$kandidat;
                     break;
                 }
             }
@@ -158,12 +189,76 @@ class SuratPesananPdfExtractor
         if (preg_match('/Ringkasan\s*Pesanan\s*(.{20,}?)\s*(?:Ringkasan\s*Pembayaran|Detail\s*Informasi\s*Pembayaran)/iu', $flat, $m)
             || preg_match('/Ringkasan\s*Pesanan\s*(.{20,}?)\s*Halaman\s*\d/iu', $flat, $m)
         ) {
-            $produk = preg_replace('/https?:\/\/\S+(?:\s+\S+){0,8}?(?=Barang|Ringkasan|Halaman|$)/iu', ' ', $m[1]) ?? $m[1];
+            $produk = preg_replace('/https?:\/\/\S+(?:\s+\S+){0,8}?(?=Barang|Jasa|Ringkasan|Halaman|$)/iu', ' ', $m[1]) ?? $m[1];
             $produk = trim(preg_replace('/\s+/u', ' ', $produk) ?? '');
             $out['ringkasan_produk'] = $produk !== '' ? mb_substr($produk, 0, 2000) : null;
         }
 
+        $out['skema_termin'] = $this->extractSkemaTermin($fullFlat, $out['total_bruto']);
+
         return $out;
+    }
+
+    /**
+     * Deret nilai termin dari rincian SSKK ("Termin Pertama sebesar Rp...")
+     * atau blok Skema Pembayaran ("Termin 3: Rp ..."). Dokumen bisa memuat
+     * beberapa deret (mis. placeholder "Contoh" INAPROC vs rincian SSKK asli)
+     * — hanya deret yang jumlah nilainya = total kontrak yang dipakai.
+     *
+     * @return ?list<float>
+     */
+    private function extractSkemaTermin(string $flat, ?float $totalBruto): ?array
+    {
+        if (! $totalBruto || $totalBruto <= 0) {
+            return null;
+        }
+
+        $ordinals = 'kesebelas|keduabelas|kedua\s*belas|ketigabelas|ketiga\s*belas|keempatbelas|keempat\s*belas|kelimabelas|kelima\s*belas|pertama|kedua|ketiga|keempat|kelima|keenam|ketujuh|kedelapan|kesembilan|kesepuluh';
+        $pattern = '/Termin\s*(?:ke-?\s*)?(\d{1,2}|'.$ordinals.')\s*(?:sebesar|:)\s*Rp\s*\.?\s*([\d.,]+)/iu';
+        if (! preg_match_all($pattern, $flat, $mm, PREG_SET_ORDER)) {
+            return null;
+        }
+
+        $ordinalMap = [
+            'pertama' => 1, 'kedua' => 2, 'ketiga' => 3, 'keempat' => 4, 'kelima' => 5,
+            'keenam' => 6, 'ketujuh' => 7, 'kedelapan' => 8, 'kesembilan' => 9, 'kesepuluh' => 10,
+            'kesebelas' => 11, 'keduabelas' => 12, 'ketigabelas' => 13, 'keempatbelas' => 14, 'kelimabelas' => 15,
+        ];
+
+        // Pecah kemunculan menjadi deret-deret: deret baru dimulai setiap kali
+        // nomor termin kembali ke 1 / tidak berurutan.
+        $sequences = [];
+        $current = [];
+        $lastKe = 0;
+        foreach ($mm as $m) {
+            $keRaw = strtolower(preg_replace('/\s+/u', '', $m[1]) ?? '');
+            $ke = ctype_digit($keRaw) ? (int) $keRaw : ($ordinalMap[$keRaw] ?? 0);
+            $nilai = self::parseRupiah($m[2]);
+            if ($ke < 1 || $nilai === null || $nilai <= 0) {
+                continue;
+            }
+            if ($ke !== $lastKe + 1) {
+                if (count($current) >= 2) {
+                    $sequences[] = $current;
+                }
+                $current = [];
+            }
+            $current[] = $nilai;
+            $lastKe = $ke;
+        }
+        if (count($current) >= 2) {
+            $sequences[] = $current;
+        }
+
+        // Deret valid = jumlah nilainya cocok dengan total kontrak (toleransi
+        // Rp1 per termin untuk pembulatan) — menyaring blok contoh/placeholder.
+        foreach ($sequences as $seq) {
+            if (abs(array_sum($seq) - $totalBruto) <= count($seq)) {
+                return $seq;
+            }
+        }
+
+        return null;
     }
 
     /** Ada minimal satu field inti yang terbaca? */
@@ -177,7 +272,7 @@ class SuratPesananPdfExtractor
     /** "435.675.000,00" / "435,675,000.00" → 435675000.0 */
     private static function parseRupiah(string $raw): ?float
     {
-        $raw = trim($raw, " .,");
+        $raw = trim($raw, ' .,');
         if ($raw === '') {
             return null;
         }

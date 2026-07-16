@@ -37,7 +37,7 @@
         <i class="bi bi-receipt-cutoff receipt-illust d-none d-md-block"></i>
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
             <div>
-                <span class="hero-tag"><i class="bi bi-pencil-square"></i> Edit Penagihan Kontrak</span>
+                <span class="hero-tag"><i class="bi bi-pencil-square"></i> Edit Penagihan SPK</span>
                 <h2><i class="bi bi-cash-stack me-2"></i>Edit Tagihan Termin</h2>
                 <p>{{ $tagihan->nomor_tagihan }} &middot; Perbarui data BA, pemeriksa, penanda tangan, dan arsip selama tagihan belum diajukan.</p>
             </div>
@@ -70,7 +70,7 @@
             <div class="sec-head">
                 <span class="sec-icon si-primary"><i class="bi bi-file-earmark-text-fill"></i></span>
                 <div>
-                    <h6>Kontrak &amp; Termin</h6>
+                    <h6>SPK &amp; Termin</h6>
                     <small>Terkunci — mengikuti tagihan yang sudah dibuat.</small>
                 </div>
                 <span class="sec-letter">A</span>
@@ -78,12 +78,12 @@
             <div class="sec-body">
                 <div class="row g-4">
                     <div class="col-md-6">
-                        <label class="form-label modern"><i class="bi bi-bookmark-check-fill text-primary"></i> Kontrak Terpilih</label>
+                        <label class="form-label modern"><i class="bi bi-bookmark-check-fill text-primary"></i> SPK Terpilih</label>
                         <div class="preset-card">
                             <div class="pc-head">
                                 <span class="pc-icon"><i class="bi bi-file-earmark-text-fill"></i></span>
                                 <div>
-                                    <div class="pc-sub">Kontrak SPK</div>
+                                    <div class="pc-sub">SPK</div>
                                     <div class="pc-title">{{ $kontrak->nomor_spk }}</div>
                                 </div>
                             </div>

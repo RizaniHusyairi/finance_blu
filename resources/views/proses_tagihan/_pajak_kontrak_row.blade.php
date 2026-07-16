@@ -8,6 +8,12 @@
     $selectedTarifId = $selectedTarifId ?? null;
     $dppVal = $dppVal ?? null;
     $nominalVal = $nominalVal ?? null;
+
+    // Tampilkan angka berformat rupiah (1.234.567,89) — JS mem-parse balik
+    // format ini saat menghitung dan mengembalikannya ke angka mentah saat submit.
+    $fmtRp = fn ($v) => $v === null || $v === ''
+        ? ''
+        : number_format((float) $v, fmod((float) $v, 1) == 0 ? 0 : 2, ',', '.');
 @endphp
 <div class="border rounded-4 p-3 pjk-row border-light-subtle" style="background: #fcfcfe;">
     <div class="row g-2">
@@ -32,16 +38,18 @@
             <label class="form-label fs-8 fw-bold text-secondary text-uppercase mb-1">DPP (Dasar Pengenaan)</label>
             <div class="input-group input-group-sm">
                 <span class="input-group-text">Rp</span>
-                <input type="number" step="any" min="0" class="form-control pjk-dpp"
-                       @if($selectedTarifId) name="dpp[{{ $selectedTarifId }}]" value="{{ $dppVal }}" data-manual="1" @else disabled @endif>
+                <input type="text" inputmode="decimal" autocomplete="off" class="form-control pjk-dpp"
+                       placeholder="0"
+                       @if($selectedTarifId) name="dpp[{{ $selectedTarifId }}]" value="{{ $fmtRp($dppVal) }}" data-manual="1" @else disabled @endif>
             </div>
         </div>
         <div class="col-sm-6 col-lg-3">
             <label class="form-label fs-8 fw-bold text-secondary text-uppercase mb-1">Nominal Potongan</label>
             <div class="input-group input-group-sm">
                 <span class="input-group-text">Rp</span>
-                <input type="number" step="any" min="0" class="form-control pjk-nominal fw-bold"
-                       @if($selectedTarifId) name="nominal[{{ $selectedTarifId }}]" value="{{ $nominalVal }}" data-manual="1" @else disabled @endif>
+                <input type="text" inputmode="decimal" autocomplete="off" class="form-control pjk-nominal fw-bold"
+                       placeholder="0"
+                       @if($selectedTarifId) name="nominal[{{ $selectedTarifId }}]" value="{{ $fmtRp($nominalVal) }}" data-manual="1" @else disabled @endif>
             </div>
         </div>
         <div class="col-lg-1 d-flex align-items-end justify-content-lg-end">

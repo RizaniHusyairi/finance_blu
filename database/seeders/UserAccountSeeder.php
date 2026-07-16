@@ -52,7 +52,7 @@ class UserAccountSeeder extends Seeder
             ['199604172019022006', 'operator@sikeren.id',              ['Operator BLU']],
             // Akun multi-peran keuangan (uji alur). Pertimbangkan HAPUS untuk
             // produksi — melanggar pemisahan tugas (SoD: maker ≠ checker).
-            ['199303112022031008', 'demo.keuangan@sikeren.id',         ['PPK', 'PPSPM', 'Koordinator Keuangan', 'Bendahara Pengeluaran', 'Bendahara Penerimaan']],
+            ['199303112022031008', 'demo.keuangan@sikeren.id',         ['Kepala Subbagian Keuangan dan Tata Usaha', 'PPK', 'PPSPM', 'Koordinator Keuangan', 'Bendahara Pengeluaran', 'Bendahara Penerimaan']],
 
             // — Penandatangan (Plt./Plh. Kepala BLU) —
             ['197803192000121001', 'kasito@sikeren.id',                ['PLT/PLH'], 'password123'],
@@ -100,6 +100,7 @@ class UserAccountSeeder extends Seeder
         $pegawai = MasterPegawai::where('nip', $nip)->first();
         if (! $pegawai) {
             $this->command?->warn("⚠ Pegawai NIP {$nip} tidak ditemukan di master_pegawai. {$email} dilewati.");
+
             return;
         }
 
@@ -130,7 +131,7 @@ class UserAccountSeeder extends Seeder
             limitActivePeriod: false, // permanen aktif (PLT/PLH tanpa batas, sesuai data produksi)
         );
         $this->markAccountActive($user);
-        $this->command?->info("✓ {$pegawai->nama_lengkap} → {$email} [" . implode(', ', $roles) . ']');
+        $this->command?->info("✓ {$pegawai->nama_lengkap} → {$email} [".implode(', ', $roles).']');
     }
 
     private function upsertSystemAccount(UserProvisioningService $provisioner, string $email, array $roles, string $label): void
@@ -146,7 +147,7 @@ class UserAccountSeeder extends Seeder
 
         $user = $provisioner->createSystemAccount($email, $roles, password: self::DEFAULT_PASSWORD);
         $this->markAccountActive($user);
-        $this->command?->info("✓ {$label} → {$email} [" . implode(', ', $roles) . ']');
+        $this->command?->info("✓ {$label} → {$email} [".implode(', ', $roles).']');
     }
 
     private function markAccountActive(User $user): void

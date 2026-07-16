@@ -2,31 +2,38 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\MasterDipa;
-use App\Models\RiwayatRevisiDipa;
-use App\Models\MasterCoa;
+use App\Models\BukuKasUmum;
 use App\Models\DetailDipa;
+use App\Models\DokumenNpi;
+use App\Models\DokumenSp2d;
+use App\Models\DokumenSpm;
+use App\Models\DokumenSpp;
 use App\Models\KontrakPengadaan;
-use App\Models\Tagihan;
-use App\Models\TagihanJasa;
 use App\Models\LayananJasa;
-use App\Models\DetailPerjaldin;
+use App\Models\LogStatusDokumen;
+use App\Models\MasterCoa;
+use App\Models\MasterDipa;
 use App\Models\MasterMitraVendor;
+use App\Models\MasterPegawai;
 use App\Models\MasterPihak;
+use App\Models\MasterTarifPajak;
 use App\Models\MitraJasa;
 use App\Models\PemakaianGarbarata;
 use App\Models\PermohonanNonSchedule;
-use App\Models\TagihanJasaPaymentProof;
-use App\Models\DokumenSpp;
-use App\Models\DokumenSpm;
-use App\Models\DokumenNpi;
-use App\Models\DokumenSp2d;
-use App\Models\BukuKasUmum;
 use App\Models\PotonganTagihan;
-use App\Models\LogStatusDokumen;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
+use App\Models\RekeningBank;
+use App\Models\RiwayatRevisiDipa;
+use App\Models\Tagihan;
+use App\Models\TagihanJasa;
+use App\Models\TagihanJasaPaymentProof;
+use App\Models\WorkflowApproval;
+use App\Services\DokumenChainService;
+use App\Services\WorkflowService;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
@@ -36,13 +43,13 @@ class DashboardController extends Controller
     public function pltPlh()
     {
         $user = Auth::user();
-        $workflowService = app(\App\Services\WorkflowService::class);
-        
+        $workflowService = app(WorkflowService::class);
+
         $userRoles = $user->getRoleNames()->toArray();
-        if (in_array('PLT/PLH', $userRoles, true) && !in_array('KPA', $userRoles, true)) {
+        if (in_array('PLT/PLH', $userRoles, true) && ! in_array('KPA', $userRoles, true)) {
             $userRoles[] = 'KPA';
         }
-        if (in_array('KPA', $userRoles, true) && !in_array('PLT/PLH', $userRoles, true)) {
+        if (in_array('KPA', $userRoles, true) && ! in_array('PLT/PLH', $userRoles, true)) {
             $userRoles[] = 'PLT/PLH';
         }
 
@@ -50,15 +57,15 @@ class DashboardController extends Controller
         $tagihans = TagihanJasa::with(['mitra', 'creator', 'workflowInstance.approvals'])
             ->whereHas('workflowInstance', function ($q) use ($userRoles) {
                 $q->where('status', 'IN_PROGRESS')
-                  ->whereHas('approvals', function ($q2) use ($userRoles) {
-                      $q2->where('status', 'PENDING')
-                         ->whereIn('role_code', $userRoles);
-                  });
+                    ->whereHas('approvals', function ($q2) use ($userRoles) {
+                        $q2->where('status', 'PENDING')
+                            ->whereIn('role_code', $userRoles);
+                    });
             })
             ->latest()
             ->get();
-            
-        $pendingTagihan = $tagihans->filter(function($tagihan) use ($workflowService, $user) {
+
+        $pendingTagihan = $tagihans->filter(function ($tagihan) use ($workflowService, $user) {
             return $workflowService->hasPendingApprovalForUser($tagihan, $user->id);
         });
 
@@ -66,19 +73,19 @@ class DashboardController extends Controller
         $approvedTagihan = TagihanJasa::with(['mitra', 'creator'])
             ->whereHas('workflowInstance.approvals', function ($q) use ($userRoles, $user) {
                 $q->where('status', 'APPROVED')
-                  ->where('acted_by_user_id', $user->id)
-                  ->whereIn('role_code', $userRoles);
+                    ->where('acted_by_user_id', $user->id)
+                    ->whereIn('role_code', $userRoles);
             })
             ->latest()
             ->take(5)
             ->get();
-            
+
         $totalPending = $pendingTagihan->count();
         $totalApproved = TagihanJasa::whereHas('workflowInstance.approvals', function ($q) use ($userRoles, $user) {
-                $q->where('status', 'APPROVED')
-                  ->where('acted_by_user_id', $user->id)
-                  ->whereIn('role_code', $userRoles);
-            })->count();
+            $q->where('status', 'APPROVED')
+                ->where('acted_by_user_id', $user->id)
+                ->whereIn('role_code', $userRoles);
+        })->count();
 
         return view('dashboard.plt_plh', compact('pendingTagihan', 'approvedTagihan', 'totalPending', 'totalApproved'));
     }
@@ -213,8 +220,8 @@ class DashboardController extends Controller
         $siapPemakaianCount = $pemakaian()->where('status', PemakaianGarbarata::STATUS_SIAP)->count();
 
         $amcBriefing = [
-            'storage_key' => 'amc_briefing_seen_' . ($user?->id ?? 'guest') . '_' . $today,
-            'checklist_key' => 'amc_briefing_checklist_' . ($user?->id ?? 'guest') . '_' . $today,
+            'storage_key' => 'amc_briefing_seen_'.($user?->id ?? 'guest').'_'.$today,
+            'checklist_key' => 'amc_briefing_checklist_'.($user?->id ?? 'guest').'_'.$today,
             'date_label' => $now->isoFormat('dddd, D MMMM Y'),
             'today_pemakaian_count' => $todayPemakaianCount,
             'today_rentang' => (int) (clone $todayPemakaian)->sum('jumlah_rentang'),
@@ -256,10 +263,10 @@ class DashboardController extends Controller
             return $this->superAdmin();
         }
         if (Auth::user()->hasRole('Pejabat Pengadaan')) {
-            return $this->pejabatPengadaan();   
+            return $this->pejabatPengadaan();
         }
         if (Auth::user()->hasRole('PPK')) {
-            return $this->ppk();   
+            return $this->ppk();
         }
         if (Auth::user()->hasRole('PPABP')) {
             return $this->ppabp();
@@ -294,6 +301,9 @@ class DashboardController extends Controller
         if (Auth::user()->hasRole('PLT/PLH')) {
             return $this->pltPlh();
         }
+        if (Auth::user()->hasRole('Operator BLU')) {
+            return $this->operatorBlu();
+        }
 
         $now = now();
 
@@ -310,12 +320,12 @@ class DashboardController extends Controller
 
         // Tagihan pipeline summary
         $tagihanPending = Tagihan::whereIn('status', ['DRAFT', 'PENDING_REVIEW', 'PENDING_BENDAHARA'])->count();
-        $tagihanRevisi  = Tagihan::whereIn('status', ['DITOLAK_PPK', 'REVISI_BENDAHARA', 'REVISI'])->count();
+        $tagihanRevisi = Tagihan::whereIn('status', ['DITOLAK_PPK', 'REVISI_BENDAHARA', 'REVISI'])->count();
 
         // SPP yang sudah diproses bulan ini
         $sppBulanIni = DokumenSpp::whereMonth('tanggal_spp', $now->month)
-                        ->whereYear('tanggal_spp', $now->year)
-                        ->count();
+            ->whereYear('tanggal_spp', $now->year)
+            ->count();
 
         // ============================================================
         // CHART: Serapan per Jenis Belanja (51, 52, 53, BLU)
@@ -334,15 +344,15 @@ class DashboardController extends Controller
         foreach ($jenisAkun as $ja) {
             $pagu = DB::table('dipa_revision_items')
                 ->join('master_coas', 'dipa_revision_items.coa_id', '=', 'master_coas.id')
-                ->where('master_coas.kd_akun', 'like', $ja['pattern'] . '%')
+                ->where('master_coas.kd_akun', 'like', $ja['pattern'].'%')
                 ->sum('dipa_revision_items.nilai_pagu');
-            
+
             $realisasi = DB::table('realisasi_anggaran')
                 ->join('dipa_revision_items', 'realisasi_anggaran.dipa_revision_item_id', '=', 'dipa_revision_items.id')
                 ->join('master_coas', 'dipa_revision_items.coa_id', '=', 'master_coas.id')
-                ->where('master_coas.kd_akun', 'like', $ja['pattern'] . '%')
+                ->where('master_coas.kd_akun', 'like', $ja['pattern'].'%')
                 ->sum('realisasi_anggaran.nominal_cair');
-            
+
             $chartBarLabels[] = $ja['label'];
             $chartBarPagu[] = (float) $pagu;
             $chartBarRealisasi[] = (float) $realisasi;
@@ -452,7 +462,9 @@ class DashboardController extends Controller
             ->whereNotNull('ntpn')->where('ntpn', '!=', '')->sum('nominal_potongan');
         $pajakBelum = max(0, $pajakTotal - $pajakDisetor);
         $pajakBelumCount = PotonganTagihan::where('jenis_potongan', 'PAJAK')
-            ->where(function ($q) { $q->whereNull('ntpn')->orWhere('ntpn', ''); })->count();
+            ->where(function ($q) {
+                $q->whereNull('ntpn')->orWhere('ntpn', '');
+            })->count();
         $persenPajak = $pajakTotal > 0 ? round($pajakDisetor / $pajakTotal * 100, 1) : 0;
 
         // ===================== KAS / BKU =====================
@@ -486,12 +498,12 @@ class DashboardController extends Controller
         foreach ($jenisAkun as $ja) {
             $pagu = DB::table('dipa_revision_items')
                 ->join('master_coas', 'dipa_revision_items.coa_id', '=', 'master_coas.id')
-                ->where('master_coas.kd_akun', 'like', $ja['pattern'] . '%')
+                ->where('master_coas.kd_akun', 'like', $ja['pattern'].'%')
                 ->sum('dipa_revision_items.nilai_pagu');
             $realisasi = DB::table('realisasi_anggaran')
                 ->join('dipa_revision_items', 'realisasi_anggaran.dipa_revision_item_id', '=', 'dipa_revision_items.id')
                 ->join('master_coas', 'dipa_revision_items.coa_id', '=', 'master_coas.id')
-                ->where('master_coas.kd_akun', 'like', $ja['pattern'] . '%')
+                ->where('master_coas.kd_akun', 'like', $ja['pattern'].'%')
                 ->sum('realisasi_anggaran.nominal_cair');
             $chartBarLabels[] = $ja['label'];
             $chartBarPagu[] = (float) $pagu;
@@ -538,6 +550,160 @@ class DashboardController extends Controller
             'chartBarLabels', 'chartBarPagu', 'chartBarRealisasi',
             'statusCounts', 'trenLabels', 'trenTagihan', 'trenRealisasi',
             'activeContracts', 'jatuhTempo', 'recentTagihan', 'recentActivity'
+        ));
+    }
+
+    /**
+     * Dashboard Operator BLU — pusat kendali master data anggaran (DIPA, COA,
+     * pajak, rekening bank) dan pengawalan pipeline pencairan SPP→SPM→NPI→SP2D.
+     * Tugas khas peran ini: melengkapi COA & pajak tagihan sebelum rantai
+     * dokumen dibuat, lalu mengawal dokumen sampai cair.
+     */
+    public function operatorBlu()
+    {
+        $user = Auth::user();
+        $now = now();
+
+        // ===================== ANGGARAN (DIPA) =====================
+        $totalPagu = (float) RiwayatRevisiDipa::where('is_active', true)->sum('total_pagu');
+        $totalRealisasi = (float) DB::table('realisasi_anggaran')->sum('nominal_cair');
+        $sisaAnggaran = max(0, $totalPagu - $totalRealisasi);
+        $persenRealisasi = $totalPagu > 0 ? round($totalRealisasi / $totalPagu * 100, 1) : 0;
+
+        // ===================== ANTREAN AKSI OPERATOR =====================
+        $readyStatuses = DokumenChainService::TAGIHAN_READY_STATUSES;
+        $menungguCoa = Tagihan::whereIn('status', $readyStatuses)
+            ->whereNull('dipa_revision_item_id')->count();
+        $menungguRantai = Tagihan::whereIn('status', $readyStatuses)
+            ->whereNotNull('dipa_revision_item_id')
+            ->whereDoesntHave('spps')->count();
+        $perluAksi = $menungguCoa + $menungguRantai;
+
+        $antreanAksi = Tagihan::whereIn('status', $readyStatuses)
+            ->whereDoesntHave('spps')
+            ->latest()->take(6)->get();
+
+        // ===================== PIPELINE PENCAIRAN =====================
+        $sp2dCair = DokumenSp2d::where('status', DokumenSp2d::STATUS_EXECUTED)->count();
+        $pipeline = [
+            ['label' => 'Tagihan', 'icon' => 'bi-receipt-cutoff',        'count' => Tagihan::count(),     'hint' => 'Seluruh tagihan terdaftar'],
+            ['label' => 'SPP',     'icon' => 'bi-file-earmark-arrow-up', 'count' => DokumenSpp::count(),  'hint' => 'Surat Permintaan Pembayaran'],
+            ['label' => 'SPM',     'icon' => 'bi-file-earmark-check',    'count' => DokumenSpm::count(),  'hint' => 'Surat Perintah Membayar'],
+            ['label' => 'NPI',     'icon' => 'bi-file-earmark-ruled',    'count' => DokumenNpi::count(),  'hint' => 'Nota Permintaan Injeksi'],
+            ['label' => 'SP2D',    'icon' => 'bi-bank2',                 'count' => DokumenSp2d::count(), 'hint' => 'Surat Perintah Pencairan Dana'],
+            ['label' => 'Cair',    'icon' => 'bi-patch-check-fill',      'count' => $sp2dCair,            'hint' => 'SP2D tereksekusi (dana cair)'],
+        ];
+
+        $sppBulanIni = DokumenSpp::whereYear('tanggal_spp', $now->year)
+            ->whereMonth('tanggal_spp', $now->month)->count();
+
+        // ===================== KESEHATAN MASTER DATA =====================
+        $dipaAktifCount = MasterDipa::where('status_aktif', true)->count();
+        $tahunDipaAktif = MasterDipa::where('status_aktif', true)->max('tahun_anggaran');
+        $coaAktifCount = MasterCoa::where('status_aktif', true)->count();
+        $pajakAktifCount = MasterTarifPajak::where('status_aktif', true)->count();
+        $pajakSegeraHabis = MasterTarifPajak::where('status_aktif', true)
+            ->whereNotNull('berlaku_sampai')
+            ->whereBetween('berlaku_sampai', [$now->toDateString(), $now->copy()->addDays(30)->toDateString()])
+            ->count();
+        $rekeningAktifCount = RekeningBank::where('status_aktif', true)->count();
+
+        $masterHealth = [
+            [
+                'label' => 'DIPA Aktif',
+                'icon' => 'bi-safe2',
+                'count' => $dipaAktifCount,
+                'route' => route('dipas.index'),
+                'ok' => $dipaAktifCount > 0,
+                'note' => $dipaAktifCount > 0
+                    ? 'Tahun anggaran '.$tahunDipaAktif
+                    : 'Belum ada DIPA berstatus aktif',
+            ],
+            [
+                'label' => 'COA Aktif',
+                'icon' => 'bi-diagram-3',
+                'count' => $coaAktifCount,
+                'route' => route('coas.index'),
+                'ok' => $coaAktifCount > 0,
+                'note' => $coaAktifCount > 0
+                    ? 'Bagan akun siap dipakai tagihan'
+                    : 'Belum ada akun aktif',
+            ],
+            [
+                'label' => 'Tarif Pajak',
+                'icon' => 'bi-percent',
+                'count' => $pajakAktifCount,
+                'route' => route('master-pajak.index'),
+                'ok' => $pajakAktifCount > 0 && $pajakSegeraHabis === 0,
+                'note' => $pajakSegeraHabis > 0
+                    ? $pajakSegeraHabis.' tarif habis masa berlaku ≤ 30 hari'
+                    : 'Semua tarif dalam masa berlaku',
+            ],
+            [
+                'label' => 'Rekening Bank',
+                'icon' => 'bi-credit-card-2-front',
+                'count' => $rekeningAktifCount,
+                'route' => route('rekening-bank.index'),
+                'ok' => $rekeningAktifCount > 0,
+                'note' => $rekeningAktifCount > 0
+                    ? 'Rekening aktif untuk pencairan'
+                    : 'Belum ada rekening aktif',
+            ],
+        ];
+
+        // ===================== CHART: Serapan per Jenis Belanja =====================
+        $jenisAkun = [
+            ['label' => 'Pegawai (51)', 'pattern' => '51'],
+            ['label' => 'Barang (52)', 'pattern' => '52'],
+            ['label' => 'Modal (53)', 'pattern' => '53'],
+            ['label' => 'BLU (525)', 'pattern' => '525'],
+        ];
+        $chartBarLabels = [];
+        $chartBarPagu = [];
+        $chartBarRealisasi = [];
+        foreach ($jenisAkun as $ja) {
+            $chartBarLabels[] = $ja['label'];
+            $chartBarPagu[] = (float) DB::table('dipa_revision_items')
+                ->join('master_coas', 'dipa_revision_items.coa_id', '=', 'master_coas.id')
+                ->where('master_coas.kd_akun', 'like', $ja['pattern'].'%')
+                ->sum('dipa_revision_items.nilai_pagu');
+            $chartBarRealisasi[] = (float) DB::table('realisasi_anggaran')
+                ->join('dipa_revision_items', 'realisasi_anggaran.dipa_revision_item_id', '=', 'dipa_revision_items.id')
+                ->join('master_coas', 'dipa_revision_items.coa_id', '=', 'master_coas.id')
+                ->where('master_coas.kd_akun', 'like', $ja['pattern'].'%')
+                ->sum('realisasi_anggaran.nominal_cair');
+        }
+
+        // ===================== TREN 6 BULAN =====================
+        $trenLabels = [];
+        $trenTagihan = [];
+        $trenRealisasi = [];
+        for ($i = 5; $i >= 0; $i--) {
+            $m = $now->copy()->subMonths($i);
+            $trenLabels[] = $m->translatedFormat('M y');
+            $trenTagihan[] = Tagihan::whereYear('created_at', $m->year)
+                ->whereMonth('created_at', $m->month)->count();
+            $trenRealisasi[] = (float) DB::table('realisasi_anggaran')
+                ->whereYear('tanggal_pencairan', $m->year)
+                ->whereMonth('tanggal_pencairan', $m->month)
+                ->sum('nominal_cair');
+        }
+
+        // ===================== TABEL: Tagihan dalam pipeline =====================
+        $tagihanTerbaru = Tagihan::where(function ($q) use ($readyStatuses) {
+            $q->whereIn('status', array_merge($readyStatuses, ['SELESAI']))
+                ->orWhereHas('spps');
+        })->latest('updated_at')->take(7)->get();
+
+        return view('dashboard.operator_blu', compact(
+            'user', 'now',
+            'totalPagu', 'totalRealisasi', 'sisaAnggaran', 'persenRealisasi',
+            'menungguCoa', 'menungguRantai', 'perluAksi', 'antreanAksi',
+            'pipeline', 'sppBulanIni',
+            'masterHealth',
+            'chartBarLabels', 'chartBarPagu', 'chartBarRealisasi',
+            'trenLabels', 'trenTagihan', 'trenRealisasi',
+            'tagihanTerbaru'
         ));
     }
 
@@ -596,8 +762,8 @@ class DashboardController extends Controller
             // Tagihan terkait kontrak mitra ini (via detail_kontrak)
             $tagihan = Tagihan::where('tipe_tagihan', 'KONTRAK')
                 ->with('potonganTagihan')
-                ->whereHas('detailKontrak', function($q) use ($contractIds) {
-                    $q->whereHas('kontrakTermin', function($q2) use ($contractIds) {
+                ->whereHas('detailKontrak', function ($q) use ($contractIds) {
+                    $q->whereHas('kontrakTermin', function ($q2) use ($contractIds) {
                         $q2->whereIn('kontrak_pengadaan_id', $contractIds);
                     });
                 })
@@ -607,7 +773,7 @@ class DashboardController extends Controller
 
         $today = now()->toDateString();
         $mitraActivity = [
-            'storage_key' => 'mitra_activity_seen_' . ($user?->id ?? 'guest') . '_' . $today,
+            'storage_key' => 'mitra_activity_seen_'.($user?->id ?? 'guest').'_'.$today,
             'date_label' => now()->isoFormat('dddd, D MMMM Y'),
             'unpaid_count' => 0,
             'unpaid_nominal' => 0.0,
@@ -703,7 +869,7 @@ class DashboardController extends Controller
                     ? ($t->tanggal_tagihan ?? $t->created_at)
                     : ($t->tanggal_tagihan ?? $t->created_at);
                 if ($tgl) {
-                    $tglC = \Illuminate\Support\Carbon::parse($tgl);
+                    $tglC = Carbon::parse($tgl);
                     $diffM = ($tglC->year - $start->year) * 12 + ($tglC->month - $start->month);
                     if ($diffM >= 0 && $diffM < 12) {
                         $bulanJumlah[$diffM] += 1;
@@ -741,7 +907,7 @@ class DashboardController extends Controller
                 $nomor = $t->nomor_tagihan ?? '-';
 
                 if ($tgl) {
-                    $c = \Illuminate\Support\Carbon::parse($tgl);
+                    $c = Carbon::parse($tgl);
                     if ($c->month === $calMonth && $c->year === $calYear) {
                         $calendar['events'][(int) $c->day][] = [
                             'type' => 'terbit',
@@ -752,7 +918,7 @@ class DashboardController extends Controller
                     }
                 }
                 if ($tempo) {
-                    $c = \Illuminate\Support\Carbon::parse($tempo);
+                    $c = Carbon::parse($tempo);
                     if ($c->month === $calMonth && $c->year === $calYear) {
                         $calendar['events'][(int) $c->day][] = [
                             'type' => $st === 'LUNAS' ? 'lunas' : 'jatuh_tempo',
@@ -801,53 +967,54 @@ class DashboardController extends Controller
 
         return $visibleIds->unique()->values()->all();
     }
+
     /**
      * Dashboard khusus Role Pejabat Pengadaan
      */
     private function pejabatPengadaan()
     {
-        $data = \Illuminate\Support\Facades\Cache::remember('dash_pejabat_pengadaan_' . auth()->id(), 60, function () {
+        $data = Cache::remember('dash_pejabat_pengadaan_'.auth()->id(), 60, function () {
             $now = now();
             $tahun = $now->year;
 
             // ============================================================
             // KPI METRICS
             // ============================================================
-            $kontrakAktif = \App\Models\KontrakPengadaan::where('status_kontrak', 'AKTIF')->count();
-            $kontrakDraft = \App\Models\KontrakPengadaan::where('status_kontrak', 'DRAFT')->count();
-            $kontrakPending = \App\Models\KontrakPengadaan::where('status_kontrak', 'PENDING_REVIEW')->count();
-            $kontrakSelesai = \App\Models\KontrakPengadaan::where('status_kontrak', 'SELESAI')->count();
-            $kontrakDibatalkan = \App\Models\KontrakPengadaan::where('status_kontrak', 'DIBATALKAN')->count();
+            $kontrakAktif = KontrakPengadaan::where('status_kontrak', 'AKTIF')->count();
+            $kontrakDraft = KontrakPengadaan::where('status_kontrak', 'DRAFT')->count();
+            $kontrakPending = KontrakPengadaan::where('status_kontrak', 'PENDING_REVIEW')->count();
+            $kontrakSelesai = KontrakPengadaan::where('status_kontrak', 'SELESAI')->count();
+            $kontrakDibatalkan = KontrakPengadaan::where('status_kontrak', 'DIBATALKAN')->count();
             $kontrakTotal = $kontrakAktif + $kontrakDraft + $kontrakPending + $kontrakSelesai + $kontrakDibatalkan;
 
-            $selesaiBulanIni = \App\Models\KontrakPengadaan::where('status_kontrak', 'SELESAI')
+            $selesaiBulanIni = KontrakPengadaan::where('status_kontrak', 'SELESAI')
                 ->whereMonth('tanggal_selesai', $now->month)
                 ->whereYear('tanggal_selesai', $now->year)
                 ->count();
 
-            $nilaiKontrakAktif = \App\Models\KontrakPengadaan::where('status_kontrak', 'AKTIF')->sum('nilai_total_kontrak');
-            $nilaiKontrakSelesai = \App\Models\KontrakPengadaan::where('status_kontrak', 'SELESAI')->sum('nilai_total_kontrak');
-            $nilaiKontrakDraft = \App\Models\KontrakPengadaan::where('status_kontrak', 'DRAFT')->sum('nilai_total_kontrak');
+            $nilaiKontrakAktif = KontrakPengadaan::where('status_kontrak', 'AKTIF')->sum('nilai_total_kontrak');
+            $nilaiKontrakSelesai = KontrakPengadaan::where('status_kontrak', 'SELESAI')->sum('nilai_total_kontrak');
+            $nilaiKontrakDraft = KontrakPengadaan::where('status_kontrak', 'DRAFT')->sum('nilai_total_kontrak');
             $totalNilaiSemua = $nilaiKontrakAktif + $nilaiKontrakSelesai + $nilaiKontrakDraft;
 
             // Vendor / Mitra
-            $totalVendor = \App\Models\MasterMitraVendor::count();
-            $vendorAktifIds = \App\Models\KontrakPengadaan::whereIn('status_kontrak', ['AKTIF', 'PENDING_REVIEW'])
+            $totalVendor = MasterMitraVendor::count();
+            $vendorAktifIds = KontrakPengadaan::whereIn('status_kontrak', ['AKTIF', 'PENDING_REVIEW'])
                 ->pluck('vendor_id')->unique();
-            $vendorAktif = \App\Models\MasterMitraVendor::whereIn('id', $vendorAktifIds)->count();
+            $vendorAktif = MasterMitraVendor::whereIn('id', $vendorAktifIds)->count();
 
             // Tagihan kontrak
-            $tagihanMenunggu = \App\Models\Tagihan::whereIn('status', ['PENDING_REVIEW', 'PENDING_BENDAHARA'])->count();
-            $tagihanRevisi = \App\Models\Tagihan::whereIn('status', ['DITOLAK_PPK', 'REVISI_BENDAHARA', 'REVISI'])->count();
+            $tagihanMenunggu = Tagihan::whereIn('status', ['PENDING_REVIEW', 'PENDING_BENDAHARA'])->count();
+            $tagihanRevisi = Tagihan::whereIn('status', ['DITOLAK_PPK', 'REVISI_BENDAHARA', 'REVISI'])->count();
 
             // ============================================================
             // CHART: Serapan Anggaran Kontrak
             // ============================================================
-            $totalPaguDipa = \App\Models\RiwayatRevisiDipa::where('is_active', true)->sum('total_pagu');
-            $totalKontrakNonBatal = \App\Models\KontrakPengadaan::where('status_kontrak', '!=', 'DIBATALKAN')->sum('nilai_total_kontrak');
+            $totalPaguDipa = RiwayatRevisiDipa::where('is_active', true)->sum('total_pagu');
+            $totalKontrakNonBatal = KontrakPengadaan::where('status_kontrak', '!=', 'DIBATALKAN')->sum('nilai_total_kontrak');
             $chartSerapan = [
                 'Terpakai Kontrak' => $totalKontrakNonBatal,
-                'Sisa Pagu DIPA'    => max(0, $totalPaguDipa - $totalKontrakNonBatal),
+                'Sisa Pagu DIPA' => max(0, $totalPaguDipa - $totalKontrakNonBatal),
             ];
 
             // ============================================================
@@ -859,10 +1026,10 @@ class DashboardController extends Controller
             for ($i = 5; $i >= 0; $i--) {
                 $month = $now->copy()->subMonths($i);
                 $trenLabels[] = $month->isoFormat('MMM YY');
-                $jumlah = \App\Models\KontrakPengadaan::whereYear('created_at', $month->year)
+                $jumlah = KontrakPengadaan::whereYear('created_at', $month->year)
                     ->whereMonth('created_at', $month->month)
                     ->count();
-                $nilai = (float) \App\Models\KontrakPengadaan::whereYear('created_at', $month->year)
+                $nilai = (float) KontrakPengadaan::whereYear('created_at', $month->year)
                     ->whereMonth('created_at', $month->month)
                     ->sum('nilai_total_kontrak');
                 $trenJumlah[] = $jumlah;
@@ -883,7 +1050,7 @@ class DashboardController extends Controller
             // ============================================================
             // TABEL: Jatuh Tempo H-14 + Terlambat
             // ============================================================
-            $jatuhTempo = \App\Models\KontrakPengadaan::where('status_kontrak', 'AKTIF')
+            $jatuhTempo = KontrakPengadaan::where('status_kontrak', 'AKTIF')
                 ->where('tanggal_selesai', '<=', $now->copy()->addDays(14))
                 ->with('vendor')
                 ->orderBy('tanggal_selesai', 'asc')
@@ -893,7 +1060,7 @@ class DashboardController extends Controller
             // ============================================================
             // TABEL: Kontrak Pending (Butuh tindakan PPK/Anda)
             // ============================================================
-            $kontrakPendingList = \App\Models\KontrakPengadaan::whereIn('status_kontrak', ['DRAFT', 'PENDING_REVIEW'])
+            $kontrakPendingList = KontrakPengadaan::whereIn('status_kontrak', ['DRAFT', 'PENDING_REVIEW'])
                 ->with('vendor')
                 ->latest('updated_at')
                 ->take(6)
@@ -902,7 +1069,7 @@ class DashboardController extends Controller
             // ============================================================
             // TABEL: Kontrak Aktif Terbaru
             // ============================================================
-            $kontrakAktifTerbaru = \App\Models\KontrakPengadaan::where('status_kontrak', 'AKTIF')
+            $kontrakAktifTerbaru = KontrakPengadaan::where('status_kontrak', 'AKTIF')
                 ->with('vendor')
                 ->latest('tanggal_spk')
                 ->take(5)
@@ -911,7 +1078,7 @@ class DashboardController extends Controller
             // ============================================================
             // TABEL: Top Vendor by jumlah kontrak
             // ============================================================
-            $topVendorRows = \App\Models\KontrakPengadaan::query()
+            $topVendorRows = KontrakPengadaan::query()
                 ->where('status_kontrak', '!=', 'DIBATALKAN')
                 ->select('vendor_id', \DB::raw('COUNT(*) as total_kontrak'), \DB::raw('SUM(nilai_total_kontrak) as total_nilai_kontrak'))
                 ->groupBy('vendor_id')
@@ -919,16 +1086,17 @@ class DashboardController extends Controller
                 ->take(5)
                 ->get();
             $vendorIds = $topVendorRows->pluck('vendor_id');
-            $vendorMap = \App\Models\MasterMitraVendor::whereIn('id', $vendorIds)->get()->keyBy('id');
+            $vendorMap = MasterMitraVendor::whereIn('id', $vendorIds)->get()->keyBy('id');
             $topVendor = $topVendorRows->map(function ($row) use ($vendorMap) {
                 $row->vendor = $vendorMap->get($row->vendor_id);
+
                 return $row;
             });
 
             // ============================================================
             // TABEL: Tagihan Bermasalah
             // ============================================================
-            $tagihanBermasalah = \App\Models\Tagihan::whereIn('status', ['DITOLAK_PPK', 'REVISI_BENDAHARA', 'REVISI'])
+            $tagihanBermasalah = Tagihan::whereIn('status', ['DITOLAK_PPK', 'REVISI_BENDAHARA', 'REVISI'])
                 ->with(['logs' => fn ($q) => $q->latest()->limit(1)])
                 ->latest()
                 ->take(5)
@@ -976,15 +1144,15 @@ class DashboardController extends Controller
      */
     private function ppk()
     {
-        $data = \Illuminate\Support\Facades\Cache::remember('dash_ppk_' . auth()->id(), 60, function() {
+        $data = Cache::remember('dash_ppk_'.auth()->id(), 60, function () {
             $now = now();
-            
+
             // KPI 1: SPK Baru
-            $kpi_kontrak_baru = \App\Models\KontrakPengadaan::where('status_kontrak', 'PENDING_REVIEW')->count();
-            
+            $kpi_kontrak_baru = KontrakPengadaan::where('status_kontrak', 'PENDING_REVIEW')->count();
+
             // KPI 2: Tagihan BAST
-            $kpi_tagihan_bast = \App\Models\Tagihan::where('status', 'PENDING_REVIEW')->count();
-            
+            $kpi_tagihan_bast = Tagihan::where('status', 'PENDING_REVIEW')->count();
+
             // KPI 3: Pencairan
             $spp = DB::table('dokumen_spp')->where('status', 'DRAFT')->count();
             $npi = DB::table('dokumen_npi')->where('status', 'DRAFT')->count();
@@ -1006,13 +1174,13 @@ class DashboardController extends Controller
                 ->join('master_coas', 'dipa_revision_items.coa_id', '=', 'master_coas.id')
                 ->where('master_coas.kode_mak_lengkap', 'like', '%53%')
                 ->sum('realisasi_anggaran.nominal_cair');
-                
+
             $alertModal = null;
             if ($pagu53 > 0) {
                 $sisa53 = $pagu53 - $realisasi53;
                 $persen53 = ($sisa53 / $pagu53) * 100;
                 if ($persen53 < 10) {
-                    $alertModal = "Peringatan: Pagu DIPA untuk Belanja Modal (MAK 53) tersisa kurang dari 10% (Sisa " . number_format($persen53, 1) . "%)!";
+                    $alertModal = 'Peringatan: Pagu DIPA untuk Belanja Modal (MAK 53) tersisa kurang dari 10% (Sisa '.number_format($persen53, 1).'%)!';
                 }
             }
 
@@ -1020,13 +1188,13 @@ class DashboardController extends Controller
             // Doughnut: Serapan DIPA
             $chartSerapan = [
                 'Terserap (SP2D)' => $totalRealisasi,
-                'Sisa Pagu' => $sisaPagu
+                'Sisa Pagu' => $sisaPagu,
             ];
 
             // Bar: Serapan 51, 52, 53
             $pagu51 = DB::table('dipa_revision_items')->join('master_coas', 'dipa_revision_items.coa_id', '=', 'master_coas.id')->where('master_coas.kode_mak_lengkap', 'like', '%51%')->sum('dipa_revision_items.nilai_pagu');
             $pagu52 = DB::table('dipa_revision_items')->join('master_coas', 'dipa_revision_items.coa_id', '=', 'master_coas.id')->where('master_coas.kode_mak_lengkap', 'like', '%52%')->sum('dipa_revision_items.nilai_pagu');
-            
+
             $realisasi51 = DB::table('realisasi_anggaran')->join('dipa_revision_items', 'realisasi_anggaran.dipa_revision_item_id', '=', 'dipa_revision_items.id')->join('master_coas', 'dipa_revision_items.coa_id', '=', 'master_coas.id')->where('master_coas.kode_mak_lengkap', 'like', '%51%')->sum('realisasi_anggaran.nominal_cair');
             $realisasi52 = DB::table('realisasi_anggaran')->join('dipa_revision_items', 'realisasi_anggaran.dipa_revision_item_id', '=', 'dipa_revision_items.id')->join('master_coas', 'dipa_revision_items.coa_id', '=', 'master_coas.id')->where('master_coas.kode_mak_lengkap', 'like', '%52%')->sum('realisasi_anggaran.nominal_cair');
 
@@ -1036,20 +1204,20 @@ class DashboardController extends Controller
 
             // Tabs Data
             // Kontrak Baru
-            $tabKontrak = \App\Models\KontrakPengadaan::where('status_kontrak', 'PENDING_REVIEW')->latest()->get();
+            $tabKontrak = KontrakPengadaan::where('status_kontrak', 'PENDING_REVIEW')->latest()->get();
             // Tagihan
-            $tabTagihan = \App\Models\Tagihan::where('status', 'PENDING_REVIEW')->latest()->get();
-            
+            $tabTagihan = Tagihan::where('status', 'PENDING_REVIEW')->latest()->get();
+
             // Pencairan (Union of SPP, NPI, SP2D)
             $pembuatJoin = function ($query) {
                 $query
                     ->leftJoin('master_pegawai', function ($join) {
                         $join->on('master_pegawai.id', '=', 'users.profilable_id')
-                            ->where('users.profilable_type', '=', \App\Models\MasterPegawai::class);
+                            ->where('users.profilable_type', '=', MasterPegawai::class);
                     })
                     ->leftJoin('master_pihak', function ($join) {
                         $join->on('master_pihak.id', '=', 'users.profilable_id')
-                            ->whereIn('users.profilable_type', [\App\Models\MasterPihak::class, \App\Models\MasterMitraVendor::class]);
+                            ->whereIn('users.profilable_type', [MasterPihak::class, MasterMitraVendor::class]);
                     });
             };
             $pembuatExpr = DB::raw('COALESCE(master_pegawai.nama_lengkap, master_pihak.nama_pihak, users.email) as pembuat');
@@ -1059,7 +1227,13 @@ class DashboardController extends Controller
                 ->tap($pembuatJoin)
                 ->select('dokumen_spp.id', 'dokumen_spp.tagihan_id', 'dokumen_spp.nomor_spp as nomor', 'dokumen_spp.nominal_spp as nilai', $pembuatExpr)
                 ->where('dokumen_spp.status', 'DRAFT')
-                ->get()->map(function($i) { $i->jenis = 'SPP'; $i->prioritas = 'Sedang'; $i->url_proses = $i->tagihan_id ? route('proses-tagihan.show', $i->tagihan_id) : '#'; return $i; });
+                ->get()->map(function ($i) {
+                    $i->jenis = 'SPP';
+                    $i->prioritas = 'Sedang';
+                    $i->url_proses = $i->tagihan_id ? route('proses-tagihan.show', $i->tagihan_id) : '#';
+
+                    return $i;
+                });
 
             $listNpi = DB::table('dokumen_npi')
                 ->join('users', 'dokumen_npi.bendahara_penerimaan_id', '=', 'users.id')
@@ -1068,7 +1242,13 @@ class DashboardController extends Controller
                 ->join('dokumen_spp', 'dokumen_spm.spp_id', '=', 'dokumen_spp.id')
                 ->select('dokumen_npi.id', 'dokumen_spp.tagihan_id', 'dokumen_npi.nomor_npi as nomor', 'dokumen_spp.nominal_spp as nilai', $pembuatExpr)
                 ->where('dokumen_npi.status', 'DRAFT')
-                ->get()->map(function($i) { $i->jenis = 'NPI'; $i->prioritas = 'Sedang'; $i->url_proses = $i->tagihan_id ? route('proses-tagihan.show', $i->tagihan_id) : '#'; return $i; });
+                ->get()->map(function ($i) {
+                    $i->jenis = 'NPI';
+                    $i->prioritas = 'Sedang';
+                    $i->url_proses = $i->tagihan_id ? route('proses-tagihan.show', $i->tagihan_id) : '#';
+
+                    return $i;
+                });
 
             $listSp2d = DB::table('dokumen_sp2d')
                 ->join('users', 'dokumen_sp2d.bendahara_pengeluaran_id', '=', 'users.id')
@@ -1078,7 +1258,13 @@ class DashboardController extends Controller
                 ->join('dokumen_spp', 'dokumen_spm.spp_id', '=', 'dokumen_spp.id')
                 ->select('dokumen_sp2d.id', 'dokumen_spp.tagihan_id', 'dokumen_sp2d.nomor_sp2d as nomor', 'dokumen_spp.nominal_spp as nilai', $pembuatExpr)
                 ->where('dokumen_sp2d.status', 'DRAFT')
-                ->get()->map(function($i) { $i->jenis = 'SP2D'; $i->prioritas = 'Tinggi'; $i->url_proses = $i->tagihan_id ? route('proses-tagihan.show', $i->tagihan_id) : '#'; return $i; });
+                ->get()->map(function ($i) {
+                    $i->jenis = 'SP2D';
+                    $i->prioritas = 'Tinggi';
+                    $i->url_proses = $i->tagihan_id ? route('proses-tagihan.show', $i->tagihan_id) : '#';
+
+                    return $i;
+                });
 
             $tabPencairan = $listSpp->concat($listNpi)->concat($listSp2d);
 
@@ -1113,7 +1299,7 @@ class DashboardController extends Controller
     {
         $userId = Auth::id();
 
-        $data = \Illuminate\Support\Facades\Cache::remember('dash_ppabp_' . $userId, 60, function () use ($userId) {
+        $data = Cache::remember('dash_ppabp_'.$userId, 60, function () {
             $now = now();
             $tahun = $now->year;
             $bulan = $now->month;
@@ -1260,7 +1446,7 @@ class DashboardController extends Controller
     {
         $userId = Auth::id();
 
-        $data = \Illuminate\Support\Facades\Cache::remember('dash_operator_perjaldin_' . $userId, 60, function () use ($userId) {
+        $data = Cache::remember('dash_operator_perjaldin_'.$userId, 60, function () {
             $now = now();
             $tahun = $now->year;
             $bulan = $now->month;
@@ -1337,7 +1523,7 @@ class DashboardController extends Controller
                     DB::raw('SUM(detail_perjaldin.biaya_tiket) as tiket'),
                     DB::raw('SUM(detail_perjaldin.biaya_transport) as transport'),
                     DB::raw('SUM(detail_perjaldin.biaya_penginapan) as penginapan'),
-                    DB::raw('SUM(detail_perjaldin.uang_harian + detail_perjaldin.uang_representasi + detail_perjaldin.uang_rapat) as uang_harian_representasi_rapat')
+                    DB::raw('SUM(detail_perjaldin.uang_harian + detail_perjaldin.uang_representasi + detail_perjaldin.uang_rapat) as uang_harian_representasi_rapat'),
                 ])
                 ->first();
 
@@ -1418,7 +1604,6 @@ class DashboardController extends Controller
      *
      * @param  class-string  $modelClass  Model dokumen (DokumenSpm::class, dll)
      * @param  array  $roleCodes  Role yang dimiliki user
-     * @return int
      */
     private function countPendingApprovals(string $modelClass, array $roleCodes, ?int $userId = null): int
     {
@@ -1444,16 +1629,14 @@ class DashboardController extends Controller
     /**
      * Ambil daftar approval PENDING terbaru milik user lintas dokumen,
      * dikemas jadi array task seragam untuk ditampilkan di dashboard.
-     *
-     * @return \Illuminate\Support\Collection
      */
-    private function pendingApprovalTasks(array $roleCodes, int $userId, int $limit = 12): \Illuminate\Support\Collection
+    private function pendingApprovalTasks(array $roleCodes, int $userId, int $limit = 12): Collection
     {
         if (empty($roleCodes)) {
             return collect();
         }
 
-        $approvals = \App\Models\WorkflowApproval::with(['instance.workflowable'])
+        $approvals = WorkflowApproval::with(['instance.workflowable'])
             ->whereIn('role_code', $roleCodes)
             ->where('status', 'PENDING')
             ->where(function ($w) use ($userId) {
@@ -1465,11 +1648,11 @@ class DashboardController extends Controller
             ->get();
 
         $meta = [
-            \App\Models\DokumenSpp::class  => ['label' => 'SPP',  'no' => 'nomor_spp',  'icon' => 'bi-file-earmark-text',     'tone' => 'indigo'],
-            \App\Models\DokumenSpm::class  => ['label' => 'SPM',  'no' => 'nomor_spm',  'icon' => 'bi-file-earmark-check',    'tone' => 'violet'],
-            \App\Models\DokumenNpi::class  => ['label' => 'NPI',  'no' => 'nomor_npi',  'icon' => 'bi-file-earmark-ruled',    'tone' => 'amber'],
-            \App\Models\DokumenSp2d::class => ['label' => 'SP2D', 'no' => 'nomor_sp2d', 'icon' => 'bi-cash-coin',             'tone' => 'emerald'],
-            \App\Models\Tagihan::class     => ['label' => 'Tagihan', 'no' => 'nomor_tagihan', 'icon' => 'bi-receipt',        'tone' => 'rose'],
+            DokumenSpp::class => ['label' => 'SPP',  'no' => 'nomor_spp',  'icon' => 'bi-file-earmark-text',     'tone' => 'indigo'],
+            DokumenSpm::class => ['label' => 'SPM',  'no' => 'nomor_spm',  'icon' => 'bi-file-earmark-check',    'tone' => 'violet'],
+            DokumenNpi::class => ['label' => 'NPI',  'no' => 'nomor_npi',  'icon' => 'bi-file-earmark-ruled',    'tone' => 'amber'],
+            DokumenSp2d::class => ['label' => 'SP2D', 'no' => 'nomor_sp2d', 'icon' => 'bi-cash-coin',             'tone' => 'emerald'],
+            Tagihan::class => ['label' => 'Tagihan', 'no' => 'nomor_tagihan', 'icon' => 'bi-receipt',        'tone' => 'rose'],
         ];
 
         return $approvals
@@ -1482,16 +1665,16 @@ class DashboardController extends Controller
                 $m = $meta[$type] ?? ['label' => 'Dokumen', 'no' => 'id', 'icon' => 'bi-file-earmark', 'tone' => 'indigo'];
 
                 return (object) [
-                    'jenis'   => $m['label'],
-                    'icon'    => $m['icon'],
-                    'tone'    => $m['tone'],
-                    'nomor'   => $doc->{$m['no']} ?? ('#' . $doc->id),
+                    'jenis' => $m['label'],
+                    'icon' => $m['icon'],
+                    'tone' => $m['tone'],
+                    'nomor' => $doc->{$m['no']} ?? ('#'.$doc->id),
                     'tanggal' => $app->created_at,
-                    'doc_id'  => $doc->id,
+                    'doc_id' => $doc->id,
                 ];
             })
             ->filter()
-            ->unique(fn ($t) => $t->jenis . $t->nomor)
+            ->unique(fn ($t) => $t->jenis.$t->nomor)
             ->take($limit)
             ->values();
     }
@@ -1522,34 +1705,34 @@ class DashboardController extends Controller
         $userId = $user->id;
         $roleCodes = ['PPSPM'];
 
-        $data = \Illuminate\Support\Facades\Cache::remember('dash_ppspm_' . $userId, 60, function () use ($roleCodes, $userId) {
+        $data = Cache::remember('dash_ppspm_'.$userId, 60, function () use ($roleCodes, $userId) {
             $now = now();
 
             // ===== KPI: tugas verifikasi PPSPM per jenis dokumen =====
-            $spmPending  = $this->countPendingApprovals(\App\Models\DokumenSpm::class, $roleCodes, $userId);
-            $sp2dPending = $this->countPendingApprovals(\App\Models\DokumenSp2d::class, $roleCodes, $userId);
-            $tagihanPending = $this->countPendingApprovals(\App\Models\Tagihan::class, $roleCodes, $userId);
+            $spmPending = $this->countPendingApprovals(DokumenSpm::class, $roleCodes, $userId);
+            $sp2dPending = $this->countPendingApprovals(DokumenSp2d::class, $roleCodes, $userId);
+            $tagihanPending = $this->countPendingApprovals(Tagihan::class, $roleCodes, $userId);
             $totalTugas = $spmPending + $sp2dPending + $tagihanPending;
 
             // ===== Riwayat tindakan PPSPM =====
-            $sudahDisetujui = \App\Models\WorkflowApproval::whereIn('role_code', $roleCodes)
+            $sudahDisetujui = WorkflowApproval::whereIn('role_code', $roleCodes)
                 ->where('status', 'APPROVED')
                 ->where('acted_by_user_id', $userId)
                 ->count();
-            $diRevisi = \App\Models\WorkflowApproval::whereIn('role_code', $roleCodes)
+            $diRevisi = WorkflowApproval::whereIn('role_code', $roleCodes)
                 ->whereIn('status', ['REVISION', 'REJECTED'])
                 ->where('acted_by_user_id', $userId)
                 ->count();
 
             // SPM & SP2D terbit (output utama PPSPM)
-            $spmTerbit = \App\Models\DokumenSpm::whereIn('status', [
-                \App\Models\DokumenSpm::STATUS_DISETUJUI_FINAL ?? 'DISETUJUI_FINAL',
+            $spmTerbit = DokumenSpm::whereIn('status', [
+                DokumenSpm::STATUS_DISETUJUI_FINAL ?? 'DISETUJUI_FINAL',
                 'SPM_TERBIT',
             ])->count();
-            $sp2dTerbit = \App\Models\DokumenSp2d::whereIn('status', ['DISETUJUI_FINAL', 'SP2D_TERBIT', 'EXECUTED'])->count();
+            $sp2dTerbit = DokumenSp2d::whereIn('status', ['DISETUJUI_FINAL', 'SP2D_TERBIT', 'EXECUTED'])->count();
 
             // ===== Nominal SPM yang sedang menunggu PPSPM =====
-            $nominalSpmPending = \App\Models\DokumenSpm::whereHas('workflowInstances', function ($q) use ($roleCodes, $userId) {
+            $nominalSpmPending = DokumenSpm::whereHas('workflowInstances', function ($q) use ($roleCodes, $userId) {
                 $q->where('status', '!=', 'DRAFT')->whereHas('approvals', function ($a) use ($roleCodes, $userId) {
                     $a->whereIn('role_code', $roleCodes)->where('status', 'PENDING')
                         ->where(fn ($w) => $w->whereNull('assigned_user_id')->orWhere('assigned_user_id', $userId));
@@ -1562,7 +1745,7 @@ class DashboardController extends Controller
             for ($i = 5; $i >= 0; $i--) {
                 $m = $now->copy()->subMonths($i);
                 $trenLabels[] = $m->isoFormat('MMM YY');
-                $trenApprove[] = \App\Models\WorkflowApproval::whereIn('role_code', $roleCodes)
+                $trenApprove[] = WorkflowApproval::whereIn('role_code', $roleCodes)
                     ->where('status', 'APPROVED')
                     ->where('acted_by_user_id', $userId)
                     ->whereYear('acted_at', $m->year)
@@ -1572,8 +1755,8 @@ class DashboardController extends Controller
 
             // ===== Donut: komposisi tugas =====
             $chartTugas = [
-                'SPM'     => $spmPending,
-                'SP2D'    => $sp2dPending,
+                'SPM' => $spmPending,
+                'SP2D' => $sp2dPending,
                 'Tagihan' => $tagihanPending,
             ];
 
@@ -1582,20 +1765,20 @@ class DashboardController extends Controller
 
             return [
                 'kpi' => [
-                    'total_tugas'     => $totalTugas,
-                    'spm_pending'     => $spmPending,
-                    'sp2d_pending'    => $sp2dPending,
+                    'total_tugas' => $totalTugas,
+                    'spm_pending' => $spmPending,
+                    'sp2d_pending' => $sp2dPending,
                     'tagihan_pending' => $tagihanPending,
                     'sudah_disetujui' => $sudahDisetujui,
-                    'di_revisi'       => $diRevisi,
-                    'spm_terbit'      => $spmTerbit,
-                    'sp2d_terbit'     => $sp2dTerbit,
+                    'di_revisi' => $diRevisi,
+                    'spm_terbit' => $spmTerbit,
+                    'sp2d_terbit' => $sp2dTerbit,
                     'nominal_spm_pending' => (float) $nominalSpmPending,
                 ],
-                'tren_labels'   => $trenLabels,
-                'tren_approve'  => $trenApprove,
+                'tren_labels' => $trenLabels,
+                'tren_approve' => $trenApprove,
                 'chart_tugas_labels' => array_keys($chartTugas),
-                'chart_tugas_data'   => array_values($chartTugas),
+                'chart_tugas_data' => array_values($chartTugas),
                 'tasks' => $tasks,
                 'tahun' => $now->year,
             ];
@@ -1615,23 +1798,23 @@ class DashboardController extends Controller
         $userId = $user->id;
         $roleCodes = ['Koordinator Keuangan'];
 
-        $data = \Illuminate\Support\Facades\Cache::remember('dash_koorkeu_' . $userId, 60, function () use ($roleCodes, $userId) {
+        $data = Cache::remember('dash_koorkeu_'.$userId, 60, function () use ($roleCodes, $userId) {
             $now = now();
 
             // ===== KPI: tugas verifikasi per tahap dokumen =====
-            $sppPending  = $this->countPendingApprovals(\App\Models\DokumenSpp::class, $roleCodes, $userId);
-            $spmPending  = $this->countPendingApprovals(\App\Models\DokumenSpm::class, $roleCodes, $userId);
-            $npiPending  = $this->countPendingApprovals(\App\Models\DokumenNpi::class, $roleCodes, $userId);
-            $sp2dPending = $this->countPendingApprovals(\App\Models\DokumenSp2d::class, $roleCodes, $userId);
-            $tagihanPending = $this->countPendingApprovals(\App\Models\Tagihan::class, $roleCodes, $userId);
+            $sppPending = $this->countPendingApprovals(DokumenSpp::class, $roleCodes, $userId);
+            $spmPending = $this->countPendingApprovals(DokumenSpm::class, $roleCodes, $userId);
+            $npiPending = $this->countPendingApprovals(DokumenNpi::class, $roleCodes, $userId);
+            $sp2dPending = $this->countPendingApprovals(DokumenSp2d::class, $roleCodes, $userId);
+            $tagihanPending = $this->countPendingApprovals(Tagihan::class, $roleCodes, $userId);
             $totalTugas = $sppPending + $spmPending + $npiPending + $sp2dPending + $tagihanPending;
 
             // ===== Riwayat tindakan =====
-            $sudahDisetujui = \App\Models\WorkflowApproval::whereIn('role_code', $roleCodes)
+            $sudahDisetujui = WorkflowApproval::whereIn('role_code', $roleCodes)
                 ->where('status', 'APPROVED')
                 ->where('acted_by_user_id', $userId)
                 ->count();
-            $diRevisi = \App\Models\WorkflowApproval::whereIn('role_code', $roleCodes)
+            $diRevisi = WorkflowApproval::whereIn('role_code', $roleCodes)
                 ->whereIn('status', ['REVISION', 'REJECTED'])
                 ->where('acted_by_user_id', $userId)
                 ->count();
@@ -1652,7 +1835,7 @@ class DashboardController extends Controller
             for ($i = 5; $i >= 0; $i--) {
                 $m = $now->copy()->subMonths($i);
                 $trenLabels[] = $m->isoFormat('MMM YY');
-                $trenApprove[] = \App\Models\WorkflowApproval::whereIn('role_code', $roleCodes)
+                $trenApprove[] = WorkflowApproval::whereIn('role_code', $roleCodes)
                     ->where('status', 'APPROVED')
                     ->where('acted_by_user_id', $userId)
                     ->whereYear('acted_at', $m->year)
@@ -1665,22 +1848,22 @@ class DashboardController extends Controller
 
             return [
                 'kpi' => [
-                    'total_tugas'     => $totalTugas,
-                    'spp_pending'     => $sppPending,
-                    'spm_pending'     => $spmPending,
-                    'npi_pending'     => $npiPending,
-                    'sp2d_pending'    => $sp2dPending,
+                    'total_tugas' => $totalTugas,
+                    'spp_pending' => $sppPending,
+                    'spm_pending' => $spmPending,
+                    'npi_pending' => $npiPending,
+                    'sp2d_pending' => $sp2dPending,
                     'tagihan_pending' => $tagihanPending,
                     'sudah_disetujui' => $sudahDisetujui,
-                    'di_revisi'       => $diRevisi,
-                    'total_pagu'      => (float) $totalPagu,
+                    'di_revisi' => $diRevisi,
+                    'total_pagu' => (float) $totalPagu,
                     'total_realisasi' => (float) $totalRealisasi,
-                    'sisa_pagu'       => (float) $sisaPagu,
-                    'persen_realisasi'=> $persenRealisasi,
+                    'sisa_pagu' => (float) $sisaPagu,
+                    'persen_realisasi' => $persenRealisasi,
                 ],
                 'chart_funnel_labels' => $chartFunnelLabels,
-                'chart_funnel_data'   => $chartFunnelData,
-                'tren_labels'  => $trenLabels,
+                'chart_funnel_data' => $chartFunnelData,
+                'tren_labels' => $trenLabels,
                 'tren_approve' => $trenApprove,
                 'tasks' => $tasks,
                 'tahun' => $now->year,

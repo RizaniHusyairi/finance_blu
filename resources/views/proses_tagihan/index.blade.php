@@ -402,7 +402,7 @@
             </div>
             <select name="tipe" id="ptTipe">
                 <option value="">Semua tipe</option>
-                @foreach(['KONTRAK' => 'Kontrak', 'PERJALDIN' => 'Perjaldin', 'HONORARIUM' => 'Honorarium'] as $value => $label)
+                @foreach(['KONTRAK' => 'SPK', 'KONTRAK_EKSTERNAL' => 'Kontrak', 'PERJALDIN' => 'Perjaldin', 'HONORARIUM' => 'Honorarium'] as $value => $label)
                     <option value="{{ $value }}" @selected(strtoupper((string) $tipeFilter) === $value)>{{ $label }}</option>
                 @endforeach
             </select>

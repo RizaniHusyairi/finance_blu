@@ -1,6 +1,6 @@
 @extends('layouts.app')
 @section('title')
-    Buat Tagihan (Kontrak & BAST)
+    Buat Tagihan SPK (Termin & BAST)
 @endsection
 
 @push('css')
@@ -50,7 +50,7 @@
         <i class="bi bi-receipt-cutoff receipt-illust d-none d-md-block"></i>
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
             <div>
-                <span class="hero-tag"><i class="bi bi-stars"></i> Penagihan Kontrak</span>
+                <span class="hero-tag"><i class="bi bi-stars"></i> Penagihan SPK</span>
                 <h2><i class="bi bi-cash-stack me-2"></i>Penagihan Termin / BAST</h2>
                 <p>Formulir pengajuan pembayaran berdasarkan prestasi pekerjaan SPK. Lengkapi data kontrak, BAST/BAP, verifikator, dan ringkasan nilai.</p>
             </div>
@@ -82,7 +82,7 @@
             <div class="sec-head">
                 <span class="sec-icon si-primary"><i class="bi bi-file-earmark-text-fill"></i></span>
                 <div>
-                    <h6>Pemilihan Kontrak &amp; Termin</h6>
+                    <h6>Pemilihan SPK &amp; Termin</h6>
                     <small>Tentukan SPK dan termin yang akan ditagih.</small>
                 </div>
                 <span class="sec-letter">A</span>
@@ -91,13 +91,13 @@
                 <div class="row g-4">
                     <div class="col-md-6">
                         @if($isPresetTagihan)
-                            <label class="form-label modern"><i class="bi bi-bookmark-check-fill text-primary"></i> Kontrak Terpilih</label>
+                            <label class="form-label modern"><i class="bi bi-bookmark-check-fill text-primary"></i> SPK Terpilih</label>
                             <input type="hidden" name="kontrak_pengadaan_id" id="kontrak_pengadaan_id" value="{{ $selectedKontrak->id }}">
                             <div class="preset-card">
                                 <div class="pc-head">
                                     <span class="pc-icon"><i class="bi bi-file-earmark-text-fill"></i></span>
                                     <div>
-                                        <div class="pc-sub">Kontrak SPK</div>
+                                        <div class="pc-sub">SPK</div>
                                         <div class="pc-title">{{ $selectedKontrak->nomor_spk }}</div>
                                     </div>
                                 </div>
@@ -118,7 +118,7 @@
                             </div>
                         @else
                             <label class="form-label modern" for="kontrak_pengadaan_id">
-                                <i class="bi bi-search text-primary"></i> Pilih Kontrak (Nomor SPK)
+                                <i class="bi bi-search text-primary"></i> Pilih SPK (Nomor SPK)
                                 <span class="text-danger ms-1">*</span>
                             </label>
                             <select class="form-select select2" name="kontrak_pengadaan_id" id="kontrak_pengadaan_id" required onchange="getDetailKontrak(this.value)">
@@ -134,7 +134,7 @@
                                 <div class="pc-head">
                                     <span class="pc-icon"><i class="bi bi-file-earmark-text-fill"></i></span>
                                     <div>
-                                        <div class="pc-sub">Detail Kontrak</div>
+                                        <div class="pc-sub">Detail SPK</div>
                                         <div class="pc-title">Ringkasan Vendor &amp; Pekerjaan</div>
                                     </div>
                                 </div>
@@ -191,7 +191,7 @@
                                 <span class="text-danger ms-1">*</span>
                             </label>
                             <select class="form-select select2" name="kontrak_termin_id" id="kontrak_termin_id" required disabled onchange="setBrutoFromTermin()">
-                                <option value="">-- Pilih Kontrak Terlebih Dahulu --</option>
+                                <option value="">-- Pilih SPK Terlebih Dahulu --</option>
                             </select>
                             <div class="info-banner banner-info mt-3">
                                 <i class="bi bi-info-circle-fill"></i>
@@ -569,7 +569,7 @@
             $('#panel_info_kontrak').hide();
             let $termin0 = $('#kontrak_termin_id');
             if ($termin0.hasClass('select2-hidden-accessible')) { $termin0.select2('destroy'); }
-            $termin0.html('<option value="">-- Pilih Kontrak Terlebih Dahulu --</option>').prop('disabled', true);
+            $termin0.html('<option value="">-- Pilih SPK Terlebih Dahulu --</option>').prop('disabled', true);
             $termin0.select2({ theme: 'default', width: '100%' });
             toggleBastFields(null);
             updatePotonganAngsuranDisplay(0);

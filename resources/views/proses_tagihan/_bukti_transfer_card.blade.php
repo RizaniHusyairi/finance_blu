@@ -59,7 +59,7 @@
                     <div class="small fw-semibold">PPK meminta perbaikan bukti transfer — unggah file pengganti di bawah (lihat catatan revisi pada kartu SP2D).</div>
                 </div>
             @endif
-            <form method="POST" action="{{ route('proses-tagihan.bukti-transfer', $tagihan->id) }}" enctype="multipart/form-data" class="pt-upload">
+            <form method="POST" action="{{ route('proses-tagihan.bukti-transfer', $tagihan->id) }}" enctype="multipart/form-data" class="pt-upload js-async-form">
                 @csrf
                 <div class="d-flex align-items-center gap-2 mb-3">
                     <i class="bi bi-cloud-arrow-up-fill text-primary fs-4"></i>

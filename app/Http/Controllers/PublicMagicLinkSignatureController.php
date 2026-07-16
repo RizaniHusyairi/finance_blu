@@ -2,10 +2,16 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-
-use Illuminate\Support\Facades\DB;
 use App\Models\DocumentSignature;
+use App\Models\LogStatusDokumen;
+use App\Models\Tagihan;
+use App\Models\User;
+use App\Services\DokumenChainService;
+use App\Support\ContractBaTte;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class PublicMagicLinkSignatureController extends Controller
 {
@@ -26,6 +32,7 @@ class PublicMagicLinkSignatureController extends Controller
 
         // Fallback tautan lama (per-dokumen)
         $single = DocumentSignature::with('documentable')->where('magic_token', $token)->first();
+
         return $single ? collect([$single]) : collect();
     }
 
@@ -35,8 +42,9 @@ class PublicMagicLinkSignatureController extends Controller
         abort_if($signatures->isEmpty(), 404);
 
         // Jika seluruh dokumen sudah disetujui, tampilkan halaman konfirmasi
-        if ($signatures->every(fn($s) => $s->status === 'signed')) {
+        if ($signatures->every(fn ($s) => $s->status === 'signed')) {
             $signature = $signatures->first();
+
             return view('public.magic-link-signed', compact('signature', 'signatures'));
         }
 
@@ -45,7 +53,7 @@ class PublicMagicLinkSignatureController extends Controller
         $detailKontrak = $tagihan->detailKontrak;
 
         // Setiap dokumen punya pratinjau PDF tersendiri (memakai magic_token-nya)
-        $documents = $signatures->map(fn($s) => [
+        $documents = $signatures->map(fn ($s) => [
             'signature' => $s,
             'pdfUrl' => route('public.magic-link.document', $s->magic_token),
         ]);
@@ -63,7 +71,7 @@ class PublicMagicLinkSignatureController extends Controller
         $signatures = $this->resolveGroup($token);
         abort_if($signatures->isEmpty(), 404);
 
-        if ($signatures->every(fn($s) => $s->status === 'signed')) {
+        if ($signatures->every(fn ($s) => $s->status === 'signed')) {
             return redirect()->route('public.magic-link.signed', $token)->with('error', 'Dokumen sudah disetujui sebelumnya.');
         }
 
@@ -86,7 +94,7 @@ class PublicMagicLinkSignatureController extends Controller
             if ($request->hasFile('files.BAPP_FINAL_TTD')) {
                 $tagihan = $signatures->first()->documentable;
                 $pemeriksaSigs = $tagihan->documentSignatures->where('role', 'tim_pemeriksa');
-                $pemeriksaSigned = $pemeriksaSigs->count() > 0 && $pemeriksaSigs->every(fn($s) => $s->status === 'signed');
+                $pemeriksaSigned = $pemeriksaSigs->count() > 0 && $pemeriksaSigs->every(fn ($s) => $s->status === 'signed');
                 if (! $pemeriksaSigned) {
                     return back()->with('error', 'Dokumen BAPP Final belum dapat diunggah karena Pemeriksa belum memberikan persetujuan (TTE).');
                 }
@@ -94,8 +102,9 @@ class PublicMagicLinkSignatureController extends Controller
         }
 
         $bapBaruSigned = false;
+        $labelTtd = [];
 
-        DB::transaction(function () use ($signatures, $request, $isVendor, &$bapBaruSigned) {
+        DB::transaction(function () use ($signatures, $request, $isVendor, &$bapBaruSigned, &$labelTtd) {
             $tagihan = $signatures->first()->documentable;
 
             // Handle simultaneous file uploads (khusus vendor)
@@ -131,6 +140,7 @@ class PublicMagicLinkSignatureController extends Controller
                                     'ip_address' => $request->ip(),
                                     'user_agent' => $request->userAgent(),
                                 ]);
+                                $labelTtd[] = $label;
                                 if ($label === 'BAP') {
                                     $bapBaruSigned = true;
                                 }
@@ -154,7 +164,13 @@ class PublicMagicLinkSignatureController extends Controller
                         'ip_address' => $request->ip(),
                         'user_agent' => $request->userAgent(),
                     ]);
+                    $labelTtd[] = $signature->document_label;
                 }
+            }
+
+            // Jejak timeline Proses Tagihan: satu entri per request penandatanganan.
+            if ($labelTtd !== [] && $tagihan instanceof Tagihan) {
+                $this->catatLogTtd($tagihan, $isVendor, $labelTtd, $request);
             }
         });
 
@@ -164,12 +180,33 @@ class PublicMagicLinkSignatureController extends Controller
             $this->maybeGenerateChainAfterBap($signatures->first()->documentable);
         }
 
-        if ($signatures->map->fresh()->every(fn($s) => $s->status === 'signed')) {
+        if ($signatures->map->fresh()->every(fn ($s) => $s->status === 'signed')) {
             return redirect()->route('public.magic-link.signed', $token)->with('success', 'Terima kasih, Anda telah menyetujui seluruh dokumen.');
         }
 
         return redirect()->route('public.magic-link.show', $token)
             ->with('success', 'Terima kasih, persetujuan BAP Anda telah tercatat. Dokumen yang tersisa dapat diunggah menyusul melalui tautan yang sama.');
+    }
+
+    /**
+     * Jejak timeline Proses Tagihan untuk penandatanganan elektronik (TTE)
+     * via magic link publik — tanpa user login, aktor dicatat lewat
+     * role_saat_itu (Vendor / Tim Pemeriksa).
+     */
+    private function catatLogTtd(Tagihan $tagihan, bool $isVendor, array $labels, Request $request): void
+    {
+        LogStatusDokumen::create([
+            'dokumen_type' => Tagihan::class,
+            'dokumen_id' => $tagihan->id,
+            'user_id' => null,
+            'role_saat_itu' => $isVendor ? 'Vendor' : 'Tim Pemeriksa',
+            'status_sebelumnya' => $tagihan->status,
+            'status_baru' => $tagihan->status,
+            'aksi' => $isVendor ? 'TTD_VENDOR' : 'TTD_PEMERIKSA',
+            'catatan' => ($isVendor ? 'Vendor' : 'Tim Pemeriksa')
+                .' menandatangani secara elektronik (TTE): '.implode(', ', array_unique($labels)).'.',
+            'ip_address' => $request->ip(),
+        ]);
     }
 
     /**
@@ -188,10 +225,10 @@ class PublicMagicLinkSignatureController extends Controller
         }
 
         try {
-            $actor = \App\Models\User::find($tagihan->created_by);
-            app(\App\Services\DokumenChainService::class)->maybeGenerateDraftChain($tagihan->fresh(), $actor);
+            $actor = User::find($tagihan->created_by);
+            app(DokumenChainService::class)->maybeGenerateDraftChain($tagihan->fresh(), $actor);
         } catch (\RuntimeException $e) {
-            \Illuminate\Support\Facades\Log::warning('Draft chain generation after vendor BAP sign failed.', [
+            Log::warning('Draft chain generation after vendor BAP sign failed.', [
                 'tagihan_id' => $tagihan->id,
                 'error' => $e->getMessage(),
             ]);
@@ -203,12 +240,13 @@ class PublicMagicLinkSignatureController extends Controller
         $signatures = $this->resolveGroup($token);
         abort_if($signatures->isEmpty(), 404);
         $signature = $signatures->first();
+
         return view('public.magic-link-signed', compact('signature', 'signatures'));
     }
 
     public function verifyQr(Request $request, $id, $type)
     {
-        $tagihan = \App\Models\Tagihan::with([
+        $tagihan = Tagihan::with([
             'detailKontrak.termin.kontrak.vendor',
             'detailKontrak.termin.kontrak.ppkUser.profilable',
             'detailKontrak.arsipDokumen',
@@ -217,14 +255,14 @@ class PublicMagicLinkSignatureController extends Controller
 
         $signatures = $tagihan->documentSignatures->where('document_label', $type);
 
-        $documentHash = \App\Support\ContractBaTte::hash($tagihan, $type);
+        $documentHash = ContractBaTte::hash($tagihan, $type);
         $qrHash = $request->query('hash');
         // Tautan lama tanpa hash dianggap valid (legacy); bila hash dikirim, harus cocok.
         $hashStatus = ! $qrHash || hash_equals($documentHash, (string) $qrHash) ? 'cocok' : 'tidak_cocok';
 
         $ppkUser = $tagihan->detailKontrak->termin->kontrak->ppkUser;
         $ppkProfil = $ppkUser?->profilable;
-        $finalArsip = $tagihan->detailKontrak->arsipDokumen->firstWhere('jenis_dokumen', $type . '_FINAL_TTD');
+        $finalArsip = $tagihan->detailKontrak->arsipDokumen->firstWhere('jenis_dokumen', $type.'_FINAL_TTD');
 
         $signerInfo = [
             'nama' => $ppkProfil?->nama_lengkap ?? $ppkUser?->name ?? 'PPK',
@@ -233,7 +271,7 @@ class PublicMagicLinkSignatureController extends Controller
             'unit_kerja' => 'Kantor UPBU Aji Pangeran Tumenggung Pranoto',
             'instansi' => 'Kementerian Perhubungan',
             'signed_at' => $finalArsip ? $finalArsip->created_at : null,
-            'role' => 'PPK'
+            'role' => 'PPK',
         ];
 
         return view('public.tagihan-document-tte-verify', compact(
@@ -252,17 +290,18 @@ class PublicMagicLinkSignatureController extends Controller
         $tagihan = $signature->documentable;
         $type = $signature->document_label;
 
-        $html = app(\App\Http\Controllers\TagihanController::class)->exportPdfKontrakHtml($tagihan->id, $type, false);
+        $html = app(TagihanController::class)->exportPdfKontrakHtml($tagihan->id, $type, false);
 
         // BAPP mengembalikan null bila Gambar RAB belum diunggah pada tagihan.
         if ($html === null) {
             abort(422, $type === 'BAPP'
                 ? 'Pratinjau BAPP belum dapat dibuat karena Gambar RAB BAPP belum diunggah pada tagihan. Hubungi pembuat tagihan untuk mengunggahnya terlebih dahulu.'
-                : 'Pratinjau dokumen ' . $type . ' belum dapat dibuat.');
+                : 'Pratinjau dokumen '.$type.' belum dapat dibuat.');
         }
 
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML($html)->setPaper('a4', 'portrait');
-        return $pdf->stream('preview_dokumen_' . $type . '.pdf');
+        $pdf = Pdf::loadHTML($html)->setPaper('a4', 'portrait');
+
+        return $pdf->stream('preview_dokumen_'.$type.'.pdf');
     }
 
     public function uploadArsip(Request $request, $token)
@@ -279,7 +318,7 @@ class PublicMagicLinkSignatureController extends Controller
         $detailKontrak = $tagihan->detailKontrak;
 
         $jenis = $request->input('jenis_dokumen');
-        
+
         $request->validate([
             'jenis_dokumen' => 'required|in:BAPP_FINAL_TTD,BAST_FINAL_TTD,BAP_FINAL_TTD',
             'file' => 'required|file|mimes:pdf|max:10240',
@@ -287,15 +326,15 @@ class PublicMagicLinkSignatureController extends Controller
 
         if ($jenis === 'BAPP_FINAL_TTD') {
             $pemeriksaSigs = $tagihan->documentSignatures->where('role', 'tim_pemeriksa');
-            $pemeriksaSigned = $pemeriksaSigs->count() > 0 && $pemeriksaSigs->every(fn($s) => $s->status === 'signed');
-            if (!$pemeriksaSigned) {
+            $pemeriksaSigned = $pemeriksaSigs->count() > 0 && $pemeriksaSigs->every(fn ($s) => $s->status === 'signed');
+            if (! $pemeriksaSigned) {
                 return back()->with('error', 'Dokumen BAPP Final belum dapat diunggah karena Pemeriksa belum memberikan persetujuan (TTE).');
             }
         }
 
         $bapBaruSigned = false;
 
-        DB::transaction(function () use ($request, $detailKontrak, $signatures, $jenis, &$bapBaruSigned) {
+        DB::transaction(function () use ($request, $detailKontrak, $signatures, $jenis, $tagihan, &$bapBaruSigned) {
             // Nonaktifkan dokumen lama jika ada
             $detailKontrak->arsipDokumen()->where('jenis_dokumen', $jenis)->update(['is_active' => false]);
             $path = $request->file('file')->store('tagihan/final_docs', 'public');
@@ -327,6 +366,10 @@ class PublicMagicLinkSignatureController extends Controller
                 if ($label === 'BAP') {
                     $bapBaruSigned = true;
                 }
+
+                if ($tagihan instanceof Tagihan) {
+                    $this->catatLogTtd($tagihan, true, [$label], $request);
+                }
             }
         });
 
@@ -334,11 +377,11 @@ class PublicMagicLinkSignatureController extends Controller
             $this->maybeGenerateChainAfterBap($tagihan);
         }
 
-        if ($signatures->map->fresh()->every(fn($s) => $s->status === 'signed')) {
+        if ($signatures->map->fresh()->every(fn ($s) => $s->status === 'signed')) {
             return redirect()->route('public.magic-link.signed', $token)
                 ->with('success', 'Seluruh dokumen telah lengkap dan disetujui. Terima kasih.');
         }
 
-        return back()->with('success', 'Dokumen ' . str_replace('_FINAL_TTD', '', $jenis) . ' Final berhasil diunggah.');
+        return back()->with('success', 'Dokumen '.str_replace('_FINAL_TTD', '', $jenis).' Final berhasil diunggah.');
     }
 }

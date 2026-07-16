@@ -79,7 +79,7 @@
             <div class="d-flex gap-2 align-items-center mb-2 flex-wrap">
                 <span class="hero-status-pill"><i class="bi {{ $heroIcon }}"></i> {{ str_replace('_',' ',$statusKontrak) }}</span>
                 <span class="hero-status-pill" style="opacity:.85;">
-                    <i class="bi bi-folder2-open"></i> Kontrak Pengadaan
+                    <i class="bi bi-folder2-open"></i> SPK Pengadaan
                 </span>
             </div>
             <h2 class="hero-title">{{ $kontrak->nama_pekerjaan }}</h2>

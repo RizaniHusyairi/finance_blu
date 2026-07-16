@@ -202,7 +202,7 @@
     $status = $tagihan->kpa_approval_status;
     $sudahDiputus = in_array($status, ['APPROVED', 'REJECTED'], true);
     $tipe = $tagihan->tipe_tagihan;
-    $tipeLabel = ['KONTRAK' => 'Kontrak Pengadaan', 'PERJALDIN' => 'Perjalanan Dinas', 'HONORARIUM' => 'Honorarium'][$tipe] ?? $tipe;
+    $tipeLabel = ['KONTRAK' => 'SPK', 'KONTRAK_EKSTERNAL' => 'Kontrak', 'PERJALDIN' => 'Perjalanan Dinas', 'HONORARIUM' => 'Honorarium'][$tipe] ?? $tipe;
 
     $potonganPajak = $tagihan->potonganTagihan ?? collect();
     $netto = (float) ($tagihan->total_netto ?? 0);

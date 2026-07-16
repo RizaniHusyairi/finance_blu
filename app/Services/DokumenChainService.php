@@ -8,12 +8,14 @@ use App\Models\DokumenSp2d;
 use App\Models\DokumenSpm;
 use App\Models\DokumenSpp;
 use App\Models\LogStatusDokumen;
+use App\Models\MasterPegawai;
 use App\Models\Tagihan;
 use App\Models\User;
 use App\Models\WorkflowInstance;
 use App\Notifications\WorkflowNotification;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 
 /**
@@ -77,8 +79,7 @@ class DokumenChainService
         private WorkflowService $workflowService,
         private BudgetRealizationService $budgetRealizationService,
         private BkuPostingService $bkuPostingService,
-    ) {
-    }
+    ) {}
 
     // ─────────────────────────────────────────────────────────────────
     // Pembacaan state rantai
@@ -386,7 +387,7 @@ class DokumenChainService
             try {
                 $this->{$method}($tagihan, $actor);
             } catch (\RuntimeException $e) {
-                \Illuminate\Support\Facades\Log::warning('Auto-submit dokumen rantai gagal.', [
+                Log::warning('Auto-submit dokumen rantai gagal.', [
                     'tagihan_id' => $tagihan->id,
                     'method' => $method,
                     'error' => $e->getMessage(),
@@ -580,6 +581,10 @@ class DokumenChainService
                     $sp2d->unlockNextTerminKontrak();
                 }
 
+                if ($tagihan->tipe_tagihan === 'KONTRAK_EKSTERNAL') {
+                    $sp2d->unlockNextTerminKontrakEksternal();
+                }
+
                 if ($tagihan->tipe_tagihan === 'PERJALDIN') {
                     $tagihan->komponenPerjaldin->each->syncStatusFromDocuments();
                 }
@@ -649,7 +654,7 @@ class DokumenChainService
      * kembali ke status REVISI_{role} agar pembuat dapat memperbaiki data
      * lalu mengajukan ulang lewat alur verifikasi tagihan yang sudah ada.
      *
-     * @param array<string,string> $catatanPerBagian key dari RETURNABLE_PARTS => catatan revisi
+     * @param  array<string,string>  $catatanPerBagian  key dari RETURNABLE_PARTS => catatan revisi
      */
     public function returnChainToCreator(Tagihan $tagihan, User $actor, array $catatanPerBagian, ?string $catatanUmum = null): void
     {
@@ -702,12 +707,12 @@ class DokumenChainService
                         ->first();
 
                 $approval?->update([
-                        'status' => 'REVISION',
-                        'acted_by_user_id' => $actor->id,
-                        'acted_at' => now(),
-                        'catatan' => $ringkasan,
-                        'ip_address' => request()->ip(),
-                    ]);
+                    'status' => 'REVISION',
+                    'acted_by_user_id' => $actor->id,
+                    'acted_at' => now(),
+                    'catatan' => $ringkasan,
+                    'ip_address' => request()->ip(),
+                ]);
                 $instance->update(['status' => 'REVISION']);
             }
 
@@ -792,7 +797,7 @@ class DokumenChainService
                 $tagihan->komponenPerjaldin->each->syncStatusFromDocuments();
             }
 
-            $this->log($tagihan, $actor, 'REVISI_' . $info['marker'],
+            $this->log($tagihan, $actor, 'REVISI_'.$info['marker'],
                 "Rantai dokumen pencairan dibatalkan untuk perbaikan {$info['label']} oleh {$info['role']}.\n{$catatan}",
                 $statusLama, $tagihan->status);
 
@@ -850,7 +855,7 @@ class DokumenChainService
 
             foreach ($recipients as $user) {
                 try {
-                    if ($user->profilable instanceof \App\Models\MasterPegawai && $user->profilable->nomor_hp) {
+                    if ($user->profilable instanceof MasterPegawai && $user->profilable->nomor_hp) {
                         $phone = preg_replace('/\D+/', '', $user->profilable->nomor_hp);
                         if (strlen($phone) >= 9) {
                             app(WhatsappService::class)->queueMessage($phone,
@@ -858,7 +863,7 @@ class DokumenChainService
                         }
                     }
                 } catch (\Throwable $e) {
-                    \Illuminate\Support\Facades\Log::warning('Gagal kirim WA permintaan perbaikan rantai.', [
+                    Log::warning('Gagal kirim WA permintaan perbaikan rantai.', [
                         'tagihan_id' => $tagihan->id,
                         'user_id' => $user->id,
                         'error' => $e->getMessage(),
@@ -988,7 +993,7 @@ class DokumenChainService
             $parts[] = "[{$label}] {$catatan}";
         }
 
-        return trim(($catatanUmum ? trim($catatanUmum) . "\n" : '') . implode("\n", $parts));
+        return trim(($catatanUmum ? trim($catatanUmum)."\n" : '').implode("\n", $parts));
     }
 
     /** Notifikasi in-app + WA best-effort ke pembuat tagihan setelah commit. */
@@ -1004,7 +1009,7 @@ class DokumenChainService
 
             Notification::send($recipients, new WorkflowNotification([
                 'title' => 'Tagihan Dikembalikan untuk Revisi',
-                'message' => "Tagihan {$tagihan->nomor_tagihan} dikembalikan dari proses pencairan untuk diperbaiki. " . str_replace("\n", ' • ', $ringkasan),
+                'message' => "Tagihan {$tagihan->nomor_tagihan} dikembalikan dari proses pencairan untuk diperbaiki. ".str_replace("\n", ' • ', $ringkasan),
                 'url' => $url,
                 'icon' => 'assignment_return',
                 'color' => 'warning',
@@ -1012,7 +1017,7 @@ class DokumenChainService
 
             foreach ($recipients as $user) {
                 try {
-                    if ($user->profilable instanceof \App\Models\MasterPegawai && $user->profilable->nomor_hp) {
+                    if ($user->profilable instanceof MasterPegawai && $user->profilable->nomor_hp) {
                         $phone = preg_replace('/\D+/', '', $user->profilable->nomor_hp);
                         if (strlen($phone) >= 9) {
                             app(WhatsappService::class)->queueMessage($phone,
@@ -1020,7 +1025,7 @@ class DokumenChainService
                         }
                     }
                 } catch (\Throwable $e) {
-                    \Illuminate\Support\Facades\Log::warning('Gagal kirim WA pengembalian tagihan.', [
+                    Log::warning('Gagal kirim WA pengembalian tagihan.', [
                         'tagihan_id' => $tagihan->id,
                         'user_id' => $user->id,
                         'error' => $e->getMessage(),

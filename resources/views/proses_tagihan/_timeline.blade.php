@@ -26,7 +26,10 @@
     $circ = round(2 * M_PI * $radius, 2);
     $offset = round($circ * (1 - $progress / 100), 2);
 
-    $logs = $tagihan->logs->sortByDesc('created_at')->values();
+    // Union log: aktivitas Tagihan + dokumen rantai (SPP/SPM/NPI/SP2D) +
+    // potongan pajak — dibangun TagihanProsesController::timelineLogs().
+    // Fallback ke relasi lama bila partial dirender tanpa variabel itu.
+    $logs = ($timelineLogs ?? $tagihan->logs->sortByDesc('created_at'))->values();
 @endphp
 
 {{-- ===== Ring Progres ===== --}}
@@ -111,41 +114,15 @@
         @else
             <div class="pt-log">
                 @foreach($logs->take(6) as $log)
-                    <div class="pt-log-item">
-                        <div class="d-flex justify-content-between align-items-center gap-2">
-                            <span class="fw-bold fs-7 text-dark">{{ str_replace('_', ' ', $log->aksi) }}</span>
-                            <span class="text-muted fs-8 text-nowrap">{{ optional($log->created_at)->diffForHumans(short: true) }}</span>
-                        </div>
-                        <div class="text-secondary fs-8 d-flex align-items-center gap-1 mt-1">
-                            <i class="bi bi-person-circle"></i> {{ $log->user?->name ?? 'Sistem' }}
-                        </div>
-                        @if($log->catatan)
-                            <div class="bg-light rounded-3 p-2 fs-8 text-dark fst-italic mt-1 border-start border-2 border-primary-subtle">
-                                "{{ \Illuminate\Support\Str::limit($log->catatan, 140) }}"
-                            </div>
-                        @endif
-                    </div>
+                    @include('proses_tagihan._timeline_item', ['log' => $log])
                 @endforeach
             </div>
 
             @if($logs->count() > 6)
                 <div class="collapse" id="ptLogMore">
                     <div class="pt-log">
-                        @foreach($logs->slice(6, 20) as $log)
-                            <div class="pt-log-item">
-                                <div class="d-flex justify-content-between align-items-center gap-2">
-                                    <span class="fw-bold fs-7 text-dark">{{ str_replace('_', ' ', $log->aksi) }}</span>
-                                    <span class="text-muted fs-8 text-nowrap">{{ optional($log->created_at)->diffForHumans(short: true) }}</span>
-                                </div>
-                                <div class="text-secondary fs-8 d-flex align-items-center gap-1 mt-1">
-                                    <i class="bi bi-person-circle"></i> {{ $log->user?->name ?? 'Sistem' }}
-                                </div>
-                                @if($log->catatan)
-                                    <div class="bg-light rounded-3 p-2 fs-8 text-dark fst-italic mt-1 border-start border-2 border-primary-subtle">
-                                        "{{ \Illuminate\Support\Str::limit($log->catatan, 140) }}"
-                                    </div>
-                                @endif
-                            </div>
+                        @foreach($logs->slice(6, 44) as $log)
+                            @include('proses_tagihan._timeline_item', ['log' => $log])
                         @endforeach
                     </div>
                 </div>

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ArsipDokumen;
 use App\Models\DokumenSp2d;
 use App\Models\PotonganTagihan;
+use App\Services\BkuPostingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -159,7 +160,9 @@ class PenyetoranPajakController extends Controller
             return back()->withErrors('Tidak dapat menginput NTPN sebelum Kode Billing diisi.');
         }
 
-        DB::transaction(function () use ($request, $potongan) {
+        $postedToBku = false;
+
+        DB::transaction(function () use ($request, $potongan, &$postedToBku) {
             $potongan->update([
                 'ntpn' => $request->ntpn,
             ]);
@@ -182,9 +185,53 @@ class PenyetoranPajakController extends Controller
                     'keterangan' => 'Dokumen Bukti Setor Pajak (NTPN)',
                 ]);
             }
+
+            $postedToBku = $this->postBkuIfAllPajakSettled($potongan);
         });
 
-        return back()->with('success', 'NTPN beserta Bukti Setor berhasil disimpan. Status telah menjadi Sudah Setor.');
+        return back()->with('success', $postedToBku
+            ? 'NTPN beserta Bukti Setor berhasil disimpan. Status telah menjadi Sudah Setor. Tagihan sudah masuk BKU Pengeluaran.'
+            : 'NTPN beserta Bukti Setor berhasil disimpan. Status telah menjadi Sudah Setor.');
+    }
+
+    /**
+     * Tagihan bertipe pajak-tertunda (KONTRAK/KONTRAK_EKSTERNAL/HONORARIUM)
+     * baru masuk BKU setelah SELURUH potongan pajaknya ber-NTPN — cermin
+     * penundaan pada DokumenChainService::finalizeSp2d. Tanpa ini, NTPN yang
+     * diinput lewat halaman Penyetoran Pajak generik tidak pernah memposting BKU.
+     */
+    private function postBkuIfAllPajakSettled(PotonganTagihan $potongan): bool
+    {
+        $tagihan = $potongan->tagihan;
+
+        if (! $tagihan
+            || ! in_array($tagihan->tipe_tagihan, ['KONTRAK', 'KONTRAK_EKSTERNAL', 'HONORARIUM'], true)
+            || $tagihan->status !== 'SELESAI'
+        ) {
+            return false;
+        }
+
+        $hasUnsettledTax = $tagihan->potonganTagihan()
+            ->where('jenis_potongan', 'PAJAK')
+            ->where('nominal_potongan', '>', 0)
+            ->where(function ($q) {
+                $q->whereNull('ntpn')->orWhere('ntpn', '');
+            })
+            ->exists();
+
+        if ($hasUnsettledTax) {
+            return false;
+        }
+
+        // Idempoten: BkuPostingService mengembalikan baris BKU existing bila sudah pernah diposting.
+        app(BkuPostingService::class)->postTagihanPengeluaran(
+            $tagihan,
+            null,
+            'Pembayaran tagihan setelah bukti transfer SP2D dan seluruh setoran pajak lengkap.',
+            (float) ($tagihan->total_bruto ?? $tagihan->total_netto ?? 0)
+        );
+
+        return true;
     }
 
     /**

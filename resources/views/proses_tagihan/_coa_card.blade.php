@@ -52,7 +52,7 @@
         </div>
 
         @if($tagihan->tipe_tagihan === 'PERJALDIN')
-            <form method="POST" action="{{ route('proses-tagihan.coa', $tagihan->id) }}">
+            <form method="POST" action="{{ route('proses-tagihan.coa', $tagihan->id) }}" class="js-async-form">
                 @csrf
                 <div class="table-responsive mb-4 rounded-3 border border-light-subtle">
                     <table class="table table-hover align-middle mb-0">
@@ -114,7 +114,7 @@
                 @endif
             </form>
         @else
-            <form method="POST" action="{{ route('proses-tagihan.coa', $tagihan->id) }}">
+            <form method="POST" action="{{ route('proses-tagihan.coa', $tagihan->id) }}" class="js-async-form">
                 @csrf
                 @if($canEditCoa)
                     <div class="p-4 bg-light rounded-4 border border-light-subtle mb-4">

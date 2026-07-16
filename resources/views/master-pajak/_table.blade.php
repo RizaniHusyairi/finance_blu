@@ -1,16 +1,16 @@
 <div class="table-responsive">
-    <table class="table table-hover align-middle mb-0">
-        <thead class="table-light">
+    <table class="table align-middle mb-0">
+        <thead>
             <tr>
-                <th class="text-center" width="5%">No</th>
-                <th width="11%">Kode Pajak</th>
-                <th width="17%">Jenis Pajak</th>
-                <th width="8%" class="text-center">Persentase</th>
-                <th width="10%" class="text-center">KAP / KJS</th>
-                <th width="15%">Rumus</th>
-                <th width="14%">Periode Berlaku</th>
-                <th width="10%" class="text-center">Status</th>
-                <th width="10%" class="text-center">Aksi</th>
+                <th class="text-center px-3" width="4%">No</th>
+                <th width="12%">Kode Pajak</th>
+                <th width="16%">Jenis Pajak</th>
+                <th width="9%" class="text-center">Persentase</th>
+                <th width="11%" class="text-center">KAP / KJS</th>
+                <th width="17%">Rumus</th>
+                <th width="15%">Periode Berlaku</th>
+                <th width="8%" class="text-center">Status</th>
+                <th width="8%" class="text-center px-3">Aksi</th>
             </tr>
         </thead>
         <tbody>
@@ -19,82 +19,111 @@
                     $mulai = $pajak->berlaku_mulai ? \Carbon\Carbon::parse($pajak->berlaku_mulai) : null;
                     $sampai = $pajak->berlaku_sampai ? \Carbon\Carbon::parse($pajak->berlaku_sampai) : null;
 
-                    $periodLabel = '-';
+                    $periodLabel = 'Tanpa batas waktu';
                     if ($mulai && $sampai) {
                         $periodLabel = $mulai->format('d-m-Y') . ' s/d ' . $sampai->format('d-m-Y');
                     } elseif ($mulai && !$sampai) {
                         $periodLabel = 'Mulai ' . $mulai->format('d-m-Y');
                     }
 
-                    $validityBadge = null;
+                    // Badge masa berlaku: berlaku (hijau), segera berakhir ≤30 hari (kuning
+                    // berdenyut), belum berlaku, atau expired.
+                    $validity = null;
                     if ($pajak->status_aktif) {
                         if ($mulai && $mulai->gt($today)) {
-                            $validityBadge = ['label' => 'Belum Berlaku', 'class' => 'bg-warning text-dark'];
+                            $validity = ['label' => 'Belum berlaku', 'class' => 'tp-badge-belum', 'icon' => 'bi-hourglass-top'];
                         } elseif ($sampai && $sampai->lt($today)) {
-                            $validityBadge = ['label' => 'Expired', 'class' => 'bg-danger'];
+                            $validity = ['label' => 'Expired', 'class' => 'tp-badge-expired', 'icon' => 'bi-x-octagon'];
+                        } elseif ($sampai && $today->diffInDays($sampai) <= 30) {
+                            $sisaHari = (int) ceil($today->diffInDays($sampai));
+                            $validity = ['label' => $sisaHari <= 0 ? 'Berakhir hari ini' : 'Berakhir ' . $sisaHari . ' hari lagi', 'class' => 'tp-badge-segera', 'icon' => 'bi-alarm'];
                         } else {
-                            $validityBadge = ['label' => 'Berlaku', 'class' => 'bg-info text-dark'];
+                            $validity = ['label' => 'Berlaku', 'class' => 'tp-badge-berlaku', 'dot' => true];
                         }
                     }
+
+                    $persenLabel = rtrim(rtrim(number_format($pajak->persentase, 4, ',', '.'), '0'), ',');
                 @endphp
-                <tr>
-                    <td class="text-center">{{ $pajaks->firstItem() + $loop->index }}</td>
+                <tr style="--i: {{ $loop->index }};">
+                    <td class="text-center px-3 text-muted fw-semibold">{{ $pajaks->firstItem() + $loop->index }}</td>
                     <td>
-                        <span class="badge bg-light text-dark border fw-semibold">{{ $pajak->kode_pajak ?? '-' }}</span>
+                        @if($pajak->kode_pajak)
+                            <span class="tp-kode" data-copy="{{ $pajak->kode_pajak }}" title="Klik untuk menyalin kode">
+                                <span class="tp-kode-text">{{ $pajak->kode_pajak }}</span>
+                                <i class="bi bi-copy"></i>
+                            </span>
+                        @else
+                            <span class="text-muted">—</span>
+                        @endif
                     </td>
-                    <td class="fw-semibold">{{ $pajak->jenis_pajak }}</td>
+                    <td><span class="tp-badge tp-badge-jenis"><i class="bi bi-tag"></i>{{ $pajak->jenis_pajak }}</span></td>
                     <td class="text-center">
-                        <span class="fw-bold text-primary">{{ rtrim(rtrim(number_format($pajak->persentase, 4, ',', '.'), '0'), ',') }}%</span>
+                        <span class="tp-persen">{{ $persenLabel }}<small>%</small></span>
                     </td>
                     <td class="text-center">
                         @if($pajak->kode_akun_pajak || $pajak->kode_jenis_setoran)
-                            <span class="badge bg-light text-dark border font-monospace">{{ $pajak->kode_akun_pajak ?? '—' }}</span>
-                            <span class="badge bg-light text-dark border font-monospace">{{ $pajak->kode_jenis_setoran ?? '—' }}</span>
+                            <span class="tp-badge tp-badge-kap" title="Kode Akun Pajak">{{ $pajak->kode_akun_pajak ?? '—' }}</span>
+                            <span class="tp-badge tp-badge-kap" title="Kode Jenis Setoran">{{ $pajak->kode_jenis_setoran ?? '—' }}</span>
                         @else
-                            <span class="text-muted">-</span>
+                            <span class="text-muted">—</span>
                         @endif
                     </td>
                     <td>
                         @if($pajak->rumus)
-                            <span class="text-muted" title="{{ $pajak->rumus }}">{{ \Illuminate\Support\Str::limit($pajak->rumus, 40) }}</span>
+                            <span class="tp-rumus" title="{{ $pajak->rumus }}">{{ $pajak->rumus }}</span>
                         @else
-                            <span class="text-muted">-</span>
+                            <span class="text-muted">—</span>
                         @endif
                     </td>
                     <td>
-                        <div>{{ $periodLabel }}</div>
-                        @if($validityBadge)
-                            <span class="badge {{ $validityBadge['class'] }} mt-1" style="font-size: 10px;">{{ $validityBadge['label'] }}</span>
+                        <div class="small fw-semibold" style="color:#334155;">{{ $periodLabel }}</div>
+                        @if($validity)
+                            <span class="tp-badge {{ $validity['class'] }} mt-1">
+                                @if(!empty($validity['dot']))<span class="dot"></span>@else<i class="bi {{ $validity['icon'] }}"></i>@endif
+                                {{ $validity['label'] }}
+                            </span>
                         @endif
                     </td>
                     <td class="text-center">
-                        <span class="badge {{ $pajak->status_aktif ? 'bg-success' : 'bg-secondary' }}">
-                            {{ $pajak->status_aktif ? 'Aktif' : 'Nonaktif' }}
-                        </span>
+                        @if($pajak->status_aktif)
+                            <span class="tp-badge tp-badge-aktif"><span class="dot"></span>Aktif</span>
+                        @else
+                            <span class="tp-badge tp-badge-nonaktif"><i class="bi bi-pause-circle"></i>Nonaktif</span>
+                        @endif
                     </td>
-                    <td class="text-center">
-                        <div class="btn-group">
-                            <a href="{{ route('master-pajak.show', $pajak) }}" class="btn btn-sm btn-primary">Detail</a>
-                            <button type="button" class="btn btn-sm btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
-                                <span class="visually-hidden">Toggle Dropdown</span>
-                            </button>
-                            <ul class="dropdown-menu dropdown-menu-end shadow-sm">
-                                <li><a class="dropdown-item" href="{{ route('master-pajak.edit', $pajak) }}">Edit</a></li>
-                                <li>
-                                    <form action="{{ route('master-pajak.toggle', $pajak) }}" method="POST">
-                                        @csrf
-                                        <button type="submit" class="dropdown-item">
-                                            {{ $pajak->status_aktif ? 'Nonaktifkan' : 'Aktifkan' }}
-                                        </button>
-                                    </form>
-                                </li>
-                            </ul>
+                    <td class="text-center px-3">
+                        <div class="d-inline-flex align-items-center justify-content-center gap-1 flex-wrap">
+                            <a href="{{ route('master-pajak.show', $pajak) }}"
+                               class="tp-act tp-act-view"
+                               title="Lihat detail" aria-label="Lihat detail">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            <a href="{{ route('master-pajak.edit', $pajak) }}"
+                               class="tp-act tp-act-edit"
+                               title="Edit tarif pajak" aria-label="Edit tarif pajak">
+                                <i class="bi bi-pencil-square"></i>
+                            </a>
+                            <form action="{{ route('master-pajak.toggle', $pajak) }}" method="POST" class="d-inline">
+                                @csrf
+                                <button type="submit"
+                                        class="tp-act {{ $pajak->status_aktif ? 'tp-act-on' : 'tp-act-off' }}"
+                                        title="{{ $pajak->status_aktif ? 'Nonaktifkan tarif' : 'Aktifkan tarif' }}"
+                                        aria-label="{{ $pajak->status_aktif ? 'Nonaktifkan tarif' : 'Aktifkan tarif' }}">
+                                    <i class="bi {{ $pajak->status_aktif ? 'bi-toggle-on' : 'bi-toggle-off' }}"></i>
+                                </button>
+                            </form>
                         </div>
                     </td>
                 </tr>
             @empty
                 <tr>
-                    <td colspan="9" class="text-center py-5 text-muted">Belum ada data tarif pajak yang sesuai dengan filter.</td>
+                    <td colspan="9">
+                        <div class="tp-empty">
+                            <div class="glyph"><i class="bi bi-receipt"></i></div>
+                            <div class="fw-bold mb-1" style="color:#334155;">Tidak ada tarif pajak ditemukan</div>
+                            <div class="small">Belum ada data yang sesuai dengan filter. Coba ubah kata kunci atau reset filter.</div>
+                        </div>
+                    </td>
                 </tr>
             @endforelse
         </tbody>
@@ -102,7 +131,7 @@
 </div>
 
 @if($pajaks->hasPages())
-    <div class="mt-4 d-flex justify-content-end">
+    <div class="px-4 py-3 d-flex justify-content-end border-top" style="border-color:#e6efec !important;">
         {{ $pajaks->withQueryString()->links() }}
     </div>
 @endif

@@ -2,6 +2,8 @@
 
 namespace App\Support\Panduan;
 
+use Illuminate\Support\Str;
+
 /**
  * Sumber konten Pusat Panduan (panduan penggunaan aplikasi) per peran.
  *
@@ -22,8 +24,9 @@ namespace App\Support\Panduan;
  *  - 'faq'       : tanya-jawab singkat [t, j]
  *  - 'menus'     : daftar menu sidebar peran + kegunaannya, dikelompokkan per grup
  *
- * Catatan: hanya peran PPK yang ditulis lengkap sebagai contoh (prototipe).
- * Peran lain berisi ringkasan + penanda "sedang disiapkan" sampai dilengkapi.
+ * Catatan: seluruh peran internal (termasuk AMC dan admin utilitas) sudah
+ * ditulis lengkap. Entri yang sama juga dirender menjadi dokumen SOP PDF
+ * per peran oleh PanduanController::sopPdf().
  */
 class PanduanRegistry
 {
@@ -35,6 +38,85 @@ class PanduanRegistry
     public static function all(): array
     {
         return [
+            'Super Admin' => [
+                'label' => 'Super Admin',
+                'menus' => [
+                    ['grup' => 'Utama', 'items' => [
+                        ['ikon' => 'space_dashboard', 'nama' => 'Dashboard Internal', 'guna' => 'Ringkasan kondisi sistem & pekerjaan yang menunggu.'],
+                    ]],
+                    ['grup' => 'Master & Administrasi', 'items' => [
+                        ['ikon' => 'manage_accounts', 'nama' => 'Administrasi › Manajemen User', 'guna' => 'Membuat akun, mengatur role, reset password, dan menonaktifkan user.'],
+                        ['ikon' => 'admin_panel_settings', 'nama' => 'Administrasi › Manajemen Role', 'guna' => 'Melihat & menata peran (role) beserta haknya.'],
+                        ['ikon' => 'badge', 'nama' => 'Administrasi › Data Pegawai', 'guna' => 'Master data pegawai sebagai sumber akun & dokumen keuangan.'],
+                    ]],
+                    ['grup' => 'Integrasi & Notifikasi', 'items' => [
+                        ['ikon' => 'sms', 'nama' => 'Notifikasi WhatsApp', 'guna' => 'Mengatur & menguji template notifikasi WA ke user/mitra.'],
+                        ['ikon' => 'hub', 'nama' => 'Integrasi API', 'guna' => 'Konfigurasi integrasi eksternal (Virtual Account, WA gateway).'],
+                    ]],
+                    ['grup' => 'Pengawasan', 'items' => [
+                        ['ikon' => 'travel_explore', 'nama' => 'Command Center', 'guna' => 'Pusat audit seluruh aktivitas user di sistem.'],
+                    ]],
+                ],
+                'ikon' => 'admin_panel_settings',
+                'warna' => '15,23,42',
+                'ringkasan' => 'Mengelola akun, peran, dan konfigurasi sistem; mengawasi seluruh aktivitas; serta mendampingi peran lain — Super Admin memiliki akses ke semua modul aplikasi.',
+                'alur' => [
+                    [
+                        'ikon' => 'manage_accounts',
+                        'judul' => 'Kelola akun & peran',
+                        'detail' => 'Buat user baru, tetapkan role sesuai tugas, reset password bila diminta, dan nonaktifkan akun pegawai yang pindah/purna tugas.',
+                        'menu' => 'Administrasi › Manajemen User',
+                        'tips' => 'Berikan role seminimal yang dibutuhkan — kelebihan hak akses menyulitkan audit.',
+                    ],
+                    [
+                        'ikon' => 'badge',
+                        'judul' => 'Mutakhirkan Data Pegawai',
+                        'detail' => 'Data Pegawai adalah master SDM yang dipakai akun user dan dokumen keuangan (mis. honor). Pastikan NIP, jabatan, dan status selalu terkini.',
+                        'menu' => 'Administrasi › Data Pegawai',
+                        'tips' => 'Perbarui data pegawai dulu sebelum membuat akun agar tidak input dua kali.',
+                    ],
+                    [
+                        'ikon' => 'hub',
+                        'judul' => 'Konfigurasi integrasi & notifikasi',
+                        'detail' => 'Atur koneksi API (Virtual Account BTN, WhatsApp gateway) dan template Notifikasi WhatsApp. Gunakan tombol uji kirim sebelum dipakai massal.',
+                        'menu' => 'Integrasi & Notifikasi',
+                        'tips' => 'Uji kirim ke nomor sendiri dulu setiap selesai mengubah template atau token API.',
+                    ],
+                    [
+                        'ikon' => 'travel_explore',
+                        'judul' => 'Audit lewat Command Center',
+                        'detail' => 'Command Center merekam jejak aktivitas seluruh user. Gunakan untuk menelusuri siapa mengubah apa dan kapan.',
+                        'menu' => 'Command Center',
+                        'tips' => 'Saat ada data janggal, telusuri Command Center dulu sebelum mengubah apa pun.',
+                    ],
+                    [
+                        'ikon' => 'menu_book',
+                        'judul' => 'Dampingi peran lain',
+                        'detail' => 'Super Admin dapat membuka seluruh modul dan membaca panduan semua peran lewat pemilih peran di Pusat Panduan — berguna saat membantu user lain.',
+                        'menu' => 'Bantuan › Panduan',
+                        'tips' => 'Saat membantu user, buka panduan peran user tersebut agar arahan sesuai menunya.',
+                    ],
+                ],
+                'faq' => [
+                    [
+                        't' => 'Bagaimana cara reset password user?',
+                        'j' => 'Buka Administrasi › Manajemen User, cari user yang bersangkutan, lalu gunakan aksi reset password. Sampaikan password baru lewat jalur yang aman.',
+                    ],
+                    [
+                        't' => 'Bagaimana menambah atau mengganti role seorang user?',
+                        'j' => 'Atur dari Manajemen User pada bagian role user tersebut. Daftar peran dan cakupannya dapat dilihat di Manajemen Role.',
+                    ],
+                    [
+                        't' => 'Di mana melihat jejak aktivitas user?',
+                        'j' => 'Di Command Center — pusat audit yang merekam aktivitas seluruh user. Hanya Super Admin yang dapat membukanya.',
+                    ],
+                    [
+                        't' => 'Kenapa saya bisa membuka panduan semua peran?',
+                        'j' => 'Agar Super Admin dapat menyusun, meninjau, dan mendampingi peran lain. Pilih peran pada pemilih di atas halaman Pusat Panduan.',
+                    ],
+                ],
+            ],
+
             'PPK' => [
                 'label' => 'Pejabat Pembuat Komitmen (PPK)',
                 'menus' => [
@@ -96,7 +178,7 @@ class PanduanRegistry
                 ],
                 'faq' => [
                     [
-                        't' => "Apa beda \"Setujui\" dan \"Minta revisi\"?",
+                        't' => 'Apa beda "Setujui" dan "Minta revisi"?',
                         'j' => '"Setujui" meneruskan dokumen ke tahap berikutnya (mis. PPSPM). "Minta revisi" mengembalikannya ke pengaju beserta catatan agar diperbaiki — dokumen dan datanya tetap tersimpan, tidak dihapus.',
                     ],
                     [
@@ -588,6 +670,70 @@ class PanduanRegistry
                 ],
             ],
 
+            'Operator BLU' => [
+                'label' => 'Operator BLU',
+                'menus' => [
+                    ['grup' => 'Utama', 'items' => [
+                        ['ikon' => 'space_dashboard', 'nama' => 'Dashboard Internal', 'guna' => 'Ringkasan tugas & status pekerjaan Anda.'],
+                    ]],
+                    ['grup' => 'Master & Administrasi', 'items' => [
+                        ['ikon' => 'account_balance', 'nama' => 'Master Data › DIPA', 'guna' => 'Mengelola pagu anggaran (DIPA) sebagai dasar pembebanan.'],
+                        ['ikon' => 'list_alt', 'nama' => 'Master Data › COA', 'guna' => 'Mengelola bagan akun (COA) untuk klasifikasi anggaran.'],
+                        ['ikon' => 'receipt_long', 'nama' => 'Master Data › Pajak', 'guna' => 'Mengelola master tarif pajak untuk potongan tagihan.'],
+                    ]],
+                    ['grup' => 'Tagihan & Pencairan', 'items' => [
+                        ['ikon' => 'account_tree', 'nama' => 'Proses Tagihan', 'guna' => 'Mengawal tagihan: COA, pajak, dan dokumen pencairan hingga dibayar.'],
+                    ]],
+                ],
+                'ikon' => 'support_agent',
+                'warna' => '71,85,105',
+                'ringkasan' => 'Menatausahakan master data anggaran (DIPA, COA, pajak) dan mengawal kelengkapan tagihan pada proses pencairan.',
+                'alur' => [
+                    [
+                        'ikon' => 'account_balance',
+                        'judul' => 'Mutakhirkan master data',
+                        'detail' => 'Pastikan DIPA, COA, dan master Pajak selalu sesuai dokumen anggaran terbaru — semuanya menjadi acuan seluruh tagihan.',
+                        'menu' => 'Master Data',
+                        'tips' => 'Setiap ada revisi DIPA/POK, perbarui pagu di aplikasi hari itu juga agar sisa pagu akurat.',
+                    ],
+                    [
+                        'ikon' => 'list_alt',
+                        'judul' => 'Lengkapi COA & pajak tagihan',
+                        'detail' => 'Pada Proses Tagihan, bantu memastikan pembebanan COA dan potongan pajak tiap tagihan sudah benar sebelum dokumen pencairan dibuat.',
+                        'menu' => 'Proses Tagihan',
+                        'tips' => 'COA yang salah membebani akun keliru dan merusak laporan — cek sebelum SPP dibuat.',
+                    ],
+                    [
+                        'ikon' => 'account_tree',
+                        'judul' => 'Kawal dokumen pencairan',
+                        'detail' => 'Ikuti tahapan dokumen SPP → SPM → NPI → SP2D pada Proses Tagihan sesuai penugasan, sampai tagihan dibayar.',
+                        'menu' => 'Proses Tagihan',
+                        'tips' => 'Bila satu tahap macet, cek kartu tahapan pada detail tagihan untuk tahu siapa penanggung jawabnya.',
+                    ],
+                    [
+                        'ikon' => 'print',
+                        'judul' => 'Cetak dokumen pendukung',
+                        'detail' => 'Anda dapat membuka & mencetak PDF pendukung (mis. rekap/nominatif honor dan perjaldin) untuk kelengkapan berkas.',
+                        'menu' => 'Proses Tagihan › Detail',
+                        'tips' => 'Cetak dari aplikasi (bukan salinan lama) agar nomor & nilai selalu versi terbaru.',
+                    ],
+                ],
+                'faq' => [
+                    [
+                        't' => 'Apa dampaknya bila salah memilih COA?',
+                        'j' => 'Belanja terbebani ke akun yang keliru sehingga realisasi dan laporan tidak akurat. Koreksi segera sebelum SPM diterbitkan — setelah itu perbaikannya jauh lebih rumit.',
+                    ],
+                    [
+                        't' => 'Kapan master Pajak dipakai?',
+                        'j' => 'Saat menetapkan potongan pajak pada tagihan/kontrak di Proses Tagihan. Pastikan tarif pada master sesuai ketentuan terbaru.',
+                    ],
+                    [
+                        't' => 'Ada revisi DIPA. Apa yang harus saya lakukan?',
+                        'j' => 'Perbarui data DIPA pada Master Data agar pagu dan sisa anggaran di aplikasi cocok dengan dokumen revisi.',
+                    ],
+                ],
+            ],
+
             'Kepala Subbagian Keuangan dan Tata Usaha' => [
                 'label' => 'Kasubbag Keuangan & Tata Usaha',
                 'menus' => [
@@ -648,6 +794,69 @@ class PanduanRegistry
                     [
                         't' => 'Untuk apa menu Monitoring Pelaporan?',
                         'j' => 'Untuk mengawasi laporan jasa/keuangan secara read-only — berguna mendeteksi laporan yang belum masuk lebih awal.',
+                    ],
+                ],
+            ],
+
+            'Kepala Seksi Pelayanan dan Kerjasama' => [
+                'label' => 'Kasi Pelayanan & Kerjasama',
+                'menus' => [
+                    ['grup' => 'Utama', 'items' => [
+                        ['ikon' => 'space_dashboard', 'nama' => 'Dashboard Internal', 'guna' => 'Ringkasan tagihan jasa yang menunggu tindakan Anda.'],
+                    ]],
+                    ['grup' => 'Persetujuan & Verifikasi', 'items' => [
+                        ['ikon' => 'fact_check', 'nama' => 'Verifikasi Tagihan Jasa', 'guna' => 'Memeriksa & menyetujui tagihan jasa pada tahap Anda.'],
+                        ['ikon' => 'monitoring', 'nama' => 'Verifikasi Laporan › Monitoring Pelaporan', 'guna' => 'Mengawasi kepatuhan pelaporan mitra (read-only).'],
+                    ]],
+                    ['grup' => 'Tagihan & Pencairan', 'items' => [
+                        ['ikon' => 'event_note', 'nama' => 'Riwayat Tagihan Jasa › Log Tagihan Bulanan', 'guna' => 'Memantau rekap & status tagihan jasa per bulan.'],
+                    ]],
+                ],
+                'ikon' => 'handshake',
+                'warna' => '147,51,234',
+                'ringkasan' => 'Memverifikasi tagihan jasa dari sisi pelayanan & kerjasama serta mengawasi kepatuhan pelaporan mitra.',
+                'alur' => [
+                    [
+                        'ikon' => 'space_dashboard',
+                        'judul' => 'Pantau tugas masuk',
+                        'detail' => 'Dashboard dan lonceng notifikasi menampilkan tagihan jasa yang menunggu verifikasi Anda.',
+                        'menu' => 'Dashboard',
+                        'tips' => 'Dahulukan tagihan yang mendekati jadwal terbit agar mitra menerima tagihan tepat waktu.',
+                    ],
+                    [
+                        'ikon' => 'fact_check',
+                        'judul' => 'Verifikasi tagihan jasa',
+                        'detail' => 'Periksa dasar tagihan (laporan/kontrak), nilai, dan surat pengantar. Setujui untuk meneruskan, atau minta revisi dengan catatan yang jelas.',
+                        'menu' => 'Verifikasi Tagihan Jasa',
+                        'tips' => 'Tulis catatan revisi yang spesifik agar Admin Jasa tidak bolak-balik memperbaiki.',
+                    ],
+                    [
+                        'ikon' => 'event_note',
+                        'judul' => 'Pantau log tagihan bulanan',
+                        'detail' => 'Gunakan Log Tagihan Bulanan untuk melihat posisi seluruh tagihan jasa: menunggu verifikasi, terbit, atau sudah dibayar.',
+                        'menu' => 'Riwayat Tagihan Jasa › Log Tagihan Bulanan',
+                        'tips' => 'Cek rekap menjelang akhir bulan agar tidak ada tagihan yang tertahan di satu tahap.',
+                    ],
+                    [
+                        'ikon' => 'monitoring',
+                        'judul' => 'Awasi pelaporan mitra',
+                        'detail' => 'Monitoring Pelaporan menunjukkan mitra yang belum/terlambat menyampaikan laporan — dasar tagihan bulan berikutnya.',
+                        'menu' => 'Verifikasi Laporan › Monitoring Pelaporan',
+                        'tips' => 'Laporan yang terlambat berarti tagihan ikut terlambat — ingatkan mitra lebih awal.',
+                    ],
+                ],
+                'faq' => [
+                    [
+                        't' => 'Apa yang saya periksa saat verifikasi tagihan jasa?',
+                        'j' => 'Kesesuaian dasar tagihan (laporan terverifikasi/kontrak), kebenaran nilai dan tarif, serta kelengkapan surat pengantar sebelum tagihan diteruskan ke tahap berikutnya.',
+                    ],
+                    [
+                        't' => 'Kenapa saya tidak bisa mengedit isi tagihan?',
+                        'j' => 'Verifikator hanya menyetujui atau meminta revisi. Perbaikan data dilakukan Admin Jasa berdasarkan catatan revisi Anda.',
+                    ],
+                    [
+                        't' => 'Ke mana tagihan setelah saya setujui?',
+                        'j' => 'Lanjut ke verifikator berikutnya sesuai urutan workflow sampai final, lalu Admin Jasa menerbitkan surat final dan mem-publish tagihan ke mitra.',
                     ],
                 ],
             ],
@@ -868,6 +1077,430 @@ class PanduanRegistry
                     ],
                 ],
             ],
+
+            'Super Admin Jasa' => [
+                'label' => 'Super Admin Jasa',
+                'menus' => [
+                    ['grup' => 'Utama', 'items' => [
+                        ['ikon' => 'space_dashboard', 'nama' => 'Dashboard Jasa', 'guna' => 'Ringkasan tagihan, pembayaran, dan pelaporan modul jasa.'],
+                    ]],
+                    ['grup' => 'Layanan Jasa', 'items' => [
+                        ['ikon' => 'storefront', 'nama' => 'Kelola Jasa › Mitra Jasa', 'guna' => 'Mendaftarkan mitra, kontrak, layanan aktif, dan akun portal.'],
+                        ['ikon' => 'group_add', 'nama' => 'Kelola Jasa › Admin Jasa', 'guna' => 'Menugaskan Admin Jasa ke layanan yang dikelolanya.'],
+                        ['ikon' => 'tune', 'nama' => 'Kelola Jasa › Layanan Jasa', 'guna' => 'Master layanan, tarif, dan kode akun.'],
+                    ]],
+                    ['grup' => 'Persetujuan & Verifikasi', 'items' => [
+                        ['ikon' => 'fact_check', 'nama' => 'Verifikasi Laporan (Konsesi/PAX PJP2U/Utilitas)', 'guna' => 'Memverifikasi laporan mitra sebagai dasar tagihan.'],
+                        ['ikon' => 'monitoring', 'nama' => 'Monitoring Pelaporan', 'guna' => 'Memantau kepatuhan pelaporan seluruh mitra.'],
+                    ]],
+                    ['grup' => 'Tagihan & Pencairan', 'items' => [
+                        ['ikon' => 'event_note', 'nama' => 'Tagihan Jasa › Log Tagihan Bulanan', 'guna' => 'Memantau rekap & status tagihan per bulan.'],
+                        ['ikon' => 'schedule', 'nama' => 'Tagihan Jasa › Jatuh Tempo', 'guna' => 'Memantau tagihan mendekati/lewat jatuh tempo beserta denda.'],
+                        ['ikon' => 'pin', 'nama' => 'Tagihan Jasa › Nomor Tagihan', 'guna' => 'Mengatur penomoran tagihan jasa.'],
+                    ]],
+                    ['grup' => 'AMC — Operasional', 'items' => [
+                        ['ikon' => 'flight_takeoff', 'nama' => 'Permohonan Non-Schedule & Garbarata', 'guna' => 'Memantau operasional AMC dan rekap tagihan garbarata.'],
+                    ]],
+                    ['grup' => 'Pembukuan & Laporan', 'items' => [
+                        ['ikon' => 'assessment', 'nama' => 'Laporan', 'guna' => 'Rekap tagihan, per layanan, terima-setor, pembayaran, piutang, performa mitra, dan log tarif PJP2U.'],
+                    ]],
+                ],
+                'ikon' => 'settings_suggest',
+                'warna' => '8,145,178',
+                'ringkasan' => 'Menyiapkan master modul jasa (layanan, tarif, mitra, penugasan admin), memverifikasi laporan mitra, dan mengawasi seluruh penagihan jasa.',
+                'alur' => [
+                    [
+                        'ikon' => 'tune',
+                        'judul' => 'Siapkan layanan & tarif',
+                        'detail' => 'Pastikan master Layanan Jasa lengkap: nama layanan, tarif aktif, satuan, dan kode akun pendapatan.',
+                        'menu' => 'Kelola Jasa › Layanan Jasa',
+                        'tips' => 'Layanan tanpa tarif atau kode akun tidak bisa ditagihkan — lengkapi dulu sebelum musim penagihan.',
+                    ],
+                    [
+                        'ikon' => 'storefront',
+                        'judul' => 'Daftarkan mitra & aktifkan layanan',
+                        'detail' => 'Buat data mitra, kaitkan kontrak, aktifkan layanan yang disewa, dan terbitkan akun portal mitra.',
+                        'menu' => 'Kelola Jasa › Mitra Jasa',
+                        'rincian' => [
+                            'Isi identitas mitra: NPWP, alamat, email, dan nomor WhatsApp.',
+                            'Kaitkan kontrak sebagai dasar layanan — layanan tanpa kontrak tidak bisa diaktifkan.',
+                            'Aktifkan layanan yang disewa mitra beserta tarifnya.',
+                            'Terbitkan akun portal agar mitra bisa lapor & melihat tagihannya sendiri.',
+                        ],
+                        'tips' => 'Pastikan nomor WhatsApp mitra aktif — notifikasi tagihan dan link pembayaran dikirim ke sana.',
+                    ],
+                    [
+                        'ikon' => 'group_add',
+                        'judul' => 'Tugaskan Admin Jasa',
+                        'detail' => 'Tetapkan Admin Jasa penanggung jawab tiap layanan. Hanya layanan yang ditugaskan yang muncul di menu mereka.',
+                        'menu' => 'Kelola Jasa › Admin Jasa',
+                        'tips' => 'Tinjau ulang penugasan saat ada rotasi pegawai agar tidak ada layanan tanpa pengampu.',
+                    ],
+                    [
+                        'ikon' => 'pin',
+                        'judul' => 'Atur nomor tagihan',
+                        'detail' => 'Set nomor awal/format penomoran tagihan jasa agar nomor terbit runtut sepanjang tahun.',
+                        'menu' => 'Tagihan Jasa › Nomor Tagihan',
+                        'tips' => 'Set nomor awal di awal tahun anggaran, jangan diubah di tengah periode berjalan.',
+                    ],
+                    [
+                        'ikon' => 'fact_check',
+                        'judul' => 'Verifikasi laporan mitra',
+                        'detail' => 'Periksa laporan Konsesi, PAX PJP2U, dan Utilitas (listrik/air). Laporan yang Anda verifikasi menjadi dasar nilai tagihan.',
+                        'menu' => 'Verifikasi Laporan',
+                        'tips' => 'Bandingkan angka laporan dengan tren bulan-bulan sebelumnya — lonjakan/penurunan tajam perlu dicek ke mitra.',
+                    ],
+                    [
+                        'ikon' => 'schedule',
+                        'judul' => 'Awasi tagihan & jatuh tempo',
+                        'detail' => 'Pantau Log Tagihan Bulanan dan Jatuh Tempo, serta Monitoring Pelaporan untuk mitra yang belum lapor.',
+                        'menu' => 'Tagihan Jasa',
+                        'tips' => 'Tagihan lewat jatuh tempo terkena denda 2% per 30 hari — ingatkan mitra sebelum terlambat.',
+                    ],
+                    [
+                        'ikon' => 'assessment',
+                        'judul' => 'Susun laporan',
+                        'detail' => 'Gunakan menu Laporan untuk rekap tagihan, pembayaran, piutang, performa mitra, hingga log perubahan tarif PJP2U. Semua bisa diekspor.',
+                        'menu' => 'Laporan',
+                        'tips' => 'Ekspor rekap bulanan sebelum rapat evaluasi agar pembahasan berbasis data yang sama.',
+                    ],
+                ],
+                'faq' => [
+                    [
+                        't' => 'Apa beda saya dengan Admin Jasa?',
+                        'j' => 'Super Admin Jasa menyiapkan master (layanan, tarif, mitra, penugasan) dan mengawasi; Admin Jasa menjalankan operasional harian — membuat tagihan, mengurus surat, dan publish ke mitra.',
+                    ],
+                    [
+                        't' => 'Kenapa layanan mitra belum bisa ditagih?',
+                        'j' => 'Umumnya karena kontrak belum dikaitkan, layanan belum diaktifkan, atau tarif/kode akun belum diisi. Lengkapi lewat Kelola Jasa.',
+                    ],
+                    [
+                        't' => 'Siapa yang memverifikasi laporan utilitas (listrik/air)?',
+                        'j' => 'Super Admin Jasa atau Admin Jasa lewat menu Verifikasi Laporan › Utilitas. Laporan berasal dari catatan meter Admin Listrik/Admin Air.',
+                    ],
+                    [
+                        't' => 'Bagaimana mengubah tarif PJP2U dan melihat riwayatnya?',
+                        'j' => 'Ubah tarif pada master Layanan Jasa. Setiap perubahan tercatat dan dapat ditelusuri di Laporan › Log Perubahan Tarif PJP2U.',
+                    ],
+                ],
+            ],
+
+            'Koordinator Jasa' => [
+                'label' => 'Koordinator Jasa',
+                'menus' => [
+                    ['grup' => 'Utama', 'items' => [
+                        ['ikon' => 'space_dashboard', 'nama' => 'Dashboard Koordinator Jasa', 'guna' => 'Ringkasan tagihan & pelaporan jasa yang perlu dikoordinasikan.'],
+                    ]],
+                    ['grup' => 'Persetujuan & Verifikasi', 'items' => [
+                        ['ikon' => 'fact_check', 'nama' => 'Verifikasi Tagihan Jasa', 'guna' => 'Memverifikasi tagihan jasa pada tahap koordinator.'],
+                        ['ikon' => 'rule', 'nama' => 'Verifikasi Laporan (Konsesi/PAX PJP2U)', 'guna' => 'Memverifikasi laporan penjualan mitra.'],
+                        ['ikon' => 'monitoring', 'nama' => 'Monitoring Pelaporan', 'guna' => 'Memantau kepatuhan pelaporan mitra.'],
+                    ]],
+                    ['grup' => 'Tagihan & Pencairan', 'items' => [
+                        ['ikon' => 'event_note', 'nama' => 'Tagihan Jasa › Log Tagihan Bulanan', 'guna' => 'Memantau rekap & status tagihan per bulan.'],
+                        ['ikon' => 'schedule', 'nama' => 'Tagihan Jasa › Jatuh Tempo', 'guna' => 'Memantau tagihan mendekati/lewat jatuh tempo.'],
+                    ]],
+                    ['grup' => 'AMC — Operasional', 'items' => [
+                        ['ikon' => 'airline_seat_recline_normal', 'nama' => 'Pemakaian & Rekap Garbarata', 'guna' => 'Melihat operasional garbarata dan rekap tagihannya.'],
+                    ]],
+                ],
+                'ikon' => 'lan',
+                'warna' => '2,132,199',
+                'ringkasan' => 'Mengoordinasikan penagihan jasa: memverifikasi laporan mitra dan tagihan jasa pada tahapnya, serta memantau jatuh tempo dan kepatuhan pelaporan.',
+                'alur' => [
+                    [
+                        'ikon' => 'space_dashboard',
+                        'judul' => 'Pantau dashboard',
+                        'detail' => 'Dashboard Koordinator Jasa menampilkan tagihan dan laporan yang menunggu tindakan Anda.',
+                        'menu' => 'Dashboard Koordinator Jasa',
+                        'tips' => 'Cek dashboard tiap pagi agar antrean verifikasi tidak menumpuk.',
+                    ],
+                    [
+                        'ikon' => 'rule',
+                        'judul' => 'Verifikasi laporan mitra',
+                        'detail' => 'Periksa laporan penjualan Konsesi dan PAX PJP2U yang disampaikan mitra — laporan ini menjadi dasar nilai tagihan.',
+                        'menu' => 'Verifikasi Laporan',
+                        'tips' => 'Cocokkan laporan dengan lampiran/bukti pendukungnya sebelum menyetujui.',
+                    ],
+                    [
+                        'ikon' => 'fact_check',
+                        'judul' => 'Verifikasi tagihan jasa',
+                        'detail' => 'Pada tahap koordinator, periksa dasar tagihan, nilai, dan surat pengantar. Setujui atau minta revisi dengan catatan.',
+                        'menu' => 'Verifikasi Tagihan Jasa',
+                        'tips' => 'Catatan revisi yang jelas mempercepat perbaikan oleh Admin Jasa.',
+                    ],
+                    [
+                        'ikon' => 'schedule',
+                        'judul' => 'Pantau log & jatuh tempo',
+                        'detail' => 'Gunakan Log Tagihan Bulanan dan Jatuh Tempo untuk memantau posisi tagihan dan menagih yang mendekati batas waktu.',
+                        'menu' => 'Tagihan Jasa',
+                        'tips' => 'Tagihan lewat jatuh tempo dikenai denda 2% per 30 hari — koordinasikan penagihan lebih awal.',
+                    ],
+                    [
+                        'ikon' => 'monitoring',
+                        'judul' => 'Awasi kepatuhan pelaporan',
+                        'detail' => 'Monitoring Pelaporan menunjukkan mitra yang belum/terlambat lapor. Koordinasikan pengingat agar siklus tagihan tidak molor.',
+                        'menu' => 'Monitoring Pelaporan',
+                        'tips' => 'Mitra yang terlambat lapor bulan ini berarti tagihannya ikut mundur bulan depan.',
+                    ],
+                ],
+                'faq' => [
+                    [
+                        't' => 'Di mana posisi saya dalam rantai verifikasi tagihan jasa?',
+                        'j' => 'Tagihan dibuat Admin Jasa lalu diverifikasi berjenjang; tahap koordinator memeriksa substansi sebelum diteruskan ke pejabat berikutnya hingga final dan dipublish.',
+                    ],
+                    [
+                        't' => 'Apa beda verifikasi laporan dan verifikasi tagihan?',
+                        'j' => 'Verifikasi laporan memeriksa data penjualan/produksi mitra sebagai dasar tagihan; verifikasi tagihan memeriksa dokumen penagihannya (nilai, tarif, surat pengantar).',
+                    ],
+                    [
+                        't' => 'Apa yang terjadi saat saya memilih revisi?',
+                        'j' => 'Tagihan berstatus REVISI dan kembali ke Admin Jasa beserta catatan Anda. Setelah diperbaiki dan dikirim ulang, workflow verifikasi berjalan lagi.',
+                    ],
+                ],
+            ],
+
+            'Admin Konsesi' => [
+                'label' => 'Admin Konsesi',
+                'menus' => [
+                    ['grup' => 'Persetujuan & Verifikasi', 'items' => [
+                        ['ikon' => 'rule', 'nama' => 'Laporan Mitra (Konsesi/PAX PJP2U)', 'guna' => 'Memverifikasi laporan penjualan mitra konsesi.'],
+                    ]],
+                    ['grup' => 'Tagihan & Pencairan', 'items' => [
+                        ['ikon' => 'receipt_long', 'nama' => 'Tagihan Konsesi', 'guna' => 'Membuat & memantau tagihan konsesi dari laporan terverifikasi.'],
+                    ]],
+                ],
+                'ikon' => 'storefront',
+                'warna' => '101,163,13',
+                'ringkasan' => 'Peran lama pengelola tagihan konsesi. Saat ini tugas konsesi dijalankan oleh Admin Jasa; panduan ini dipertahankan sebagai arsip alur kerja konsesi.',
+                'alur' => [
+                    [
+                        'ikon' => 'rule',
+                        'judul' => 'Verifikasi laporan konsesi',
+                        'detail' => 'Periksa laporan penjualan yang disampaikan mitra konsesi beserta bukti pendukungnya.',
+                        'menu' => 'Laporan Mitra › Konsesi',
+                        'tips' => 'Cocokkan omzet laporan dengan tren bulan sebelumnya sebelum menyetujui.',
+                    ],
+                    [
+                        'ikon' => 'receipt_long',
+                        'judul' => 'Buat tagihan konsesi',
+                        'detail' => 'Terbitkan tagihan dari laporan terverifikasi — nilai mengikuti tarif/persentase pada kontrak konsesi.',
+                        'menu' => 'Tagihan Konsesi',
+                        'tips' => 'Pastikan periode tagihan sesuai periode laporan agar tidak dobel tagih.',
+                    ],
+                    [
+                        'ikon' => 'account_tree',
+                        'judul' => 'Ikuti workflow verifikasi',
+                        'detail' => 'Tagihan masuk verifikasi berjenjang. Bila diminta revisi, perbaiki lalu kirim ulang.',
+                        'menu' => 'Tagihan Konsesi',
+                        'tips' => 'Selesaikan seluruh catatan revisi sebelum mengirim ulang.',
+                    ],
+                    [
+                        'ikon' => 'payments',
+                        'judul' => 'Pantau pembayaran',
+                        'detail' => 'Setelah dipublish, pantau status pembayaran dan jatuh tempo tagihan konsesi.',
+                        'menu' => 'Tagihan Konsesi',
+                        'tips' => 'Ingatkan mitra sebelum jatuh tempo agar terhindar dari denda.',
+                    ],
+                ],
+                'faq' => [
+                    [
+                        't' => 'Dari mana nilai tagihan konsesi dihitung?',
+                        'j' => 'Dari laporan penjualan mitra yang sudah diverifikasi, dikalikan tarif/persentase konsesi sesuai kontrak.',
+                    ],
+                    [
+                        't' => 'Apakah peran ini masih dipakai?',
+                        'j' => 'Peran Admin Konsesi sudah dilebur — pengelolaan konsesi kini dijalankan Admin Jasa. Panduan ini dipertahankan sebagai arsip alur kerja konsesi.',
+                    ],
+                ],
+            ],
+
+            'Admin Listrik' => [
+                'label' => 'Admin Listrik',
+                'menus' => [
+                    ['grup' => 'Tagihan & Pencairan', 'items' => [
+                        ['ikon' => 'speed', 'nama' => 'Catat Meter Utilitas', 'guna' => 'Mencatat stan meter listrik per mitra/lokasi dan mengirim laporannya.'],
+                    ]],
+                ],
+                'ikon' => 'bolt',
+                'warna' => '234,179,8',
+                'ringkasan' => 'Mencatat stan meter listrik tiap mitra/lokasi per periode dan mengirim laporan pemakaian sebagai dasar tagihan listrik.',
+                'alur' => [
+                    [
+                        'ikon' => 'speed',
+                        'judul' => 'Buka Catat Meter Utilitas',
+                        'detail' => 'Seluruh pekerjaan Anda ada di satu halaman: daftar mitra/lokasi, riwayat laporan, dan form pencatatan meter listrik.',
+                        'menu' => 'Catat Meter Utilitas',
+                        'tips' => 'Catat meter pada tanggal yang sama tiap bulan agar periode pemakaian konsisten.',
+                    ],
+                    [
+                        'ikon' => 'edit_note',
+                        'judul' => 'Catat stan meter',
+                        'detail' => 'Pilih mitra/lokasi lalu isi stan akhir. Stan awal terisi otomatis dari stan akhir periode sebelumnya.',
+                        'menu' => 'Catat Meter Utilitas',
+                        'tips' => 'Foto angka meter di lapangan sebagai bukti bila mitra mempertanyakan tagihan.',
+                    ],
+                    [
+                        'ikon' => 'calculate',
+                        'judul' => 'Periksa hasil hitung',
+                        'detail' => 'Sistem menghitung pemakaian (kWh) dari selisih stan. Periksa kewajaran angkanya selagi masih draf — draf masih bisa diedit atau dihapus.',
+                        'menu' => 'Catat Meter Utilitas',
+                        'tips' => 'Pemakaian yang melonjak jauh dari biasanya biasanya salah catat — cek ulang sebelum submit.',
+                    ],
+                    [
+                        'ikon' => 'send',
+                        'judul' => 'Submit laporan',
+                        'detail' => 'Kirim laporan agar diverifikasi Admin Jasa/Super Admin Jasa sebagai dasar tagihan listrik. Setelah submit, laporan tidak bisa diedit.',
+                        'menu' => 'Catat Meter Utilitas',
+                        'tips' => 'Pastikan semua lokasi mitra sudah tercatat sebelum submit agar tidak ada susulan.',
+                    ],
+                    [
+                        'ikon' => 'assignment_return',
+                        'judul' => 'Tindak lanjuti penolakan',
+                        'detail' => 'Bila laporan ditolak verifikator, baca alasannya, perbaiki catatan meter, lalu submit ulang.',
+                        'menu' => 'Catat Meter Utilitas',
+                        'tips' => 'Tanggapi penolakan segera agar tagihan mitra tidak mundur ke bulan berikutnya.',
+                    ],
+                ],
+                'faq' => [
+                    [
+                        't' => 'Kapan laporan masih bisa diedit atau dihapus?',
+                        'j' => 'Selama masih berstatus draf (belum di-submit). Setelah submit, laporan terkunci dan masuk antrean verifikasi.',
+                    ],
+                    [
+                        't' => 'Siapa yang membuat tagihan dari laporan saya?',
+                        'j' => 'Admin Jasa/Super Admin Jasa — setelah memverifikasi laporan Anda, mereka menerbitkan tagihan listrik dari data pemakaian tersebut.',
+                    ],
+                    [
+                        't' => 'Stan awal tidak cocok dengan kondisi lapangan. Apa yang dicek?',
+                        'j' => 'Stan awal diambil otomatis dari stan akhir laporan periode sebelumnya. Cek laporan terakhir mitra tersebut — bila salah catat, koordinasikan dengan verifikator untuk koreksi.',
+                    ],
+                ],
+            ],
+
+            'Admin Air' => [
+                'label' => 'Admin Air',
+                'menus' => [
+                    ['grup' => 'Tagihan & Pencairan', 'items' => [
+                        ['ikon' => 'speed', 'nama' => 'Catat Meter Utilitas', 'guna' => 'Mencatat stan meter air per mitra/lokasi dan mengirim laporannya.'],
+                    ]],
+                ],
+                'ikon' => 'water_drop',
+                'warna' => '6,182,212',
+                'ringkasan' => 'Mencatat stan meter air tiap mitra/lokasi per periode dan mengirim laporan pemakaian sebagai dasar tagihan air.',
+                'alur' => [
+                    [
+                        'ikon' => 'speed',
+                        'judul' => 'Buka Catat Meter Utilitas',
+                        'detail' => 'Seluruh pekerjaan Anda ada di satu halaman: daftar mitra/lokasi, riwayat laporan, dan form pencatatan meter air.',
+                        'menu' => 'Catat Meter Utilitas',
+                        'tips' => 'Catat meter pada tanggal yang sama tiap bulan agar periode pemakaian konsisten.',
+                    ],
+                    [
+                        'ikon' => 'edit_note',
+                        'judul' => 'Catat stan meter',
+                        'detail' => 'Pilih mitra/lokasi lalu isi stan akhir. Stan awal terisi otomatis dari stan akhir periode sebelumnya.',
+                        'menu' => 'Catat Meter Utilitas',
+                        'tips' => 'Foto angka meter di lapangan sebagai bukti bila mitra mempertanyakan tagihan.',
+                    ],
+                    [
+                        'ikon' => 'calculate',
+                        'judul' => 'Periksa hasil hitung',
+                        'detail' => 'Sistem menghitung pemakaian (m³) dari selisih stan. Periksa kewajaran angkanya selagi masih draf — draf masih bisa diedit atau dihapus.',
+                        'menu' => 'Catat Meter Utilitas',
+                        'tips' => 'Pemakaian yang melonjak jauh dari biasanya biasanya salah catat — cek ulang sebelum submit.',
+                    ],
+                    [
+                        'ikon' => 'send',
+                        'judul' => 'Submit laporan',
+                        'detail' => 'Kirim laporan agar diverifikasi Admin Jasa/Super Admin Jasa sebagai dasar tagihan air. Setelah submit, laporan tidak bisa diedit.',
+                        'menu' => 'Catat Meter Utilitas',
+                        'tips' => 'Pastikan semua lokasi mitra sudah tercatat sebelum submit agar tidak ada susulan.',
+                    ],
+                    [
+                        'ikon' => 'assignment_return',
+                        'judul' => 'Tindak lanjuti penolakan',
+                        'detail' => 'Bila laporan ditolak verifikator, baca alasannya, perbaiki catatan meter, lalu submit ulang.',
+                        'menu' => 'Catat Meter Utilitas',
+                        'tips' => 'Tanggapi penolakan segera agar tagihan mitra tidak mundur ke bulan berikutnya.',
+                    ],
+                ],
+                'faq' => [
+                    [
+                        't' => 'Kapan laporan masih bisa diedit atau dihapus?',
+                        'j' => 'Selama masih berstatus draf (belum di-submit). Setelah submit, laporan terkunci dan masuk antrean verifikasi.',
+                    ],
+                    [
+                        't' => 'Siapa yang membuat tagihan dari laporan saya?',
+                        'j' => 'Admin Jasa/Super Admin Jasa — setelah memverifikasi laporan Anda, mereka menerbitkan tagihan air dari data pemakaian tersebut.',
+                    ],
+                    [
+                        't' => 'Stan awal tidak cocok dengan kondisi lapangan. Apa yang dicek?',
+                        'j' => 'Stan awal diambil otomatis dari stan akhir laporan periode sebelumnya. Cek laporan terakhir mitra tersebut — bila salah catat, koordinasikan dengan verifikator untuk koreksi.',
+                    ],
+                ],
+            ],
+
+            'AMC' => [
+                'label' => 'AMC (Apron Movement Control)',
+                'menus' => [
+                    ['grup' => 'Utama', 'items' => [
+                        ['ikon' => 'space_dashboard', 'nama' => 'Dashboard AMC', 'guna' => 'Ringkasan operasional apron & checklist harian (tanpa nominal tagihan).'],
+                    ]],
+                    ['grup' => 'AMC — Operasional', 'items' => [
+                        ['ikon' => 'flight_takeoff', 'nama' => 'Permohonan Non-Schedule', 'guna' => 'Mencatat permohonan penerbangan non-schedule beserta lampirannya.'],
+                        ['ikon' => 'airline_seat_recline_normal', 'nama' => 'Pemakaian Garbarata', 'guna' => 'Mencatat pemakaian garbarata per penerbangan.'],
+                        ['ikon' => 'calendar_view_week', 'nama' => 'Rekap Harian Garbarata', 'guna' => 'Meninjau rekap pemakaian garbarata per hari.'],
+                    ]],
+                ],
+                'ikon' => 'connecting_airports',
+                'warna' => '3,105,161',
+                'ringkasan' => 'Mencatat operasional apron — penerbangan non-schedule dan pemakaian garbarata — sebagai sumber data penagihan oleh Admin Jasa.',
+                'alur' => [
+                    [
+                        'ikon' => 'space_dashboard',
+                        'judul' => 'Mulai dari Dashboard AMC',
+                        'detail' => 'Dashboard menampilkan ringkasan operasional dan checklist harian. Fokusnya operasional — nominal tagihan memang tidak ditampilkan.',
+                        'menu' => 'Dashboard AMC',
+                        'tips' => 'Jalankan checklist harian di awal shift agar tidak ada pencatatan yang terlewat.',
+                    ],
+                    [
+                        'ikon' => 'flight_takeoff',
+                        'judul' => 'Catat permohonan non-schedule',
+                        'detail' => 'Rekam permohonan penerbangan non-schedule lengkap dengan data operator dan lampiran pendukungnya.',
+                        'menu' => 'Permohonan Non-Schedule',
+                        'tips' => 'Unggah lampiran permohonan saat itu juga — menyusulkan dokumen belakangan sering terlupa.',
+                    ],
+                    [
+                        'ikon' => 'airline_seat_recline_normal',
+                        'judul' => 'Catat pemakaian garbarata',
+                        'detail' => 'Catat pemakaian garbarata per penerbangan: cari jadwalnya, lalu isi jam pasang dan jam lepas dengan akurat.',
+                        'menu' => 'Pemakaian Garbarata',
+                        'tips' => 'Jam pasang/lepas menentukan volume blok 2 jam — selisih beberapa menit bisa mengubah tagihan.',
+                    ],
+                    [
+                        'ikon' => 'calendar_view_week',
+                        'judul' => 'Tinjau rekap harian',
+                        'detail' => 'Periksa Rekap Harian Garbarata dan koreksi kekeliruan sebelum data diambil Admin Jasa untuk rekap tagihan.',
+                        'menu' => 'Rekap Harian Garbarata',
+                        'tips' => 'Tutup hari dengan meninjau rekap — koreksi setelah data ditarik ke penagihan harus lewat Admin Jasa.',
+                    ],
+                ],
+                'faq' => [
+                    [
+                        't' => 'Kenapa dashboard saya tidak menampilkan nominal tagihan?',
+                        'j' => 'Memang dirancang begitu — AMC fokus pada operasional apron. Penagihan garbarata/non-schedule dikerjakan Admin Jasa dari data yang Anda catat.',
+                    ],
+                    [
+                        't' => 'Bagaimana volume garbarata dihitung?',
+                        'j' => 'Dari jam pasang sampai jam lepas, dibulatkan ke atas per blok 2 jam. Karena itu ketepatan jam pencatatan sangat penting.',
+                    ],
+                    [
+                        't' => 'Data pemakaian saya sudah terkunci. Bagaimana mengoreksinya?',
+                        'j' => 'Data yang sudah ditarik Admin Jasa ke Rekap Tagihan Garbarata tidak bisa Anda ubah sendiri — hubungi Admin Jasa agar koreksi dilakukan dari sisi penagihan.',
+                    ],
+                ],
+            ],
         ];
     }
 
@@ -879,5 +1512,27 @@ class PanduanRegistry
     public static function forRole(string $role): ?array
     {
         return static::all()[$role] ?? null;
+    }
+
+    /**
+     * Slug URL-aman untuk sebuah peran (nama role mengandung spasi/karakter khusus).
+     */
+    public static function slugFor(string $role): string
+    {
+        return Str::slug($role);
+    }
+
+    /**
+     * Cari nama role dari slug-nya; null bila tidak terdaftar.
+     */
+    public static function findBySlug(string $slug): ?string
+    {
+        foreach (array_keys(static::all()) as $role) {
+            if (static::slugFor($role) === $slug) {
+                return $role;
+            }
+        }
+
+        return null;
     }
 }

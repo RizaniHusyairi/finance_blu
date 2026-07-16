@@ -1,4 +1,4 @@
-{{--
+﻿{{--
     Kartu Pajak & Faktur Pajak — khusus tagihan KONTRAK.
     Operator BLU memilih tipe pajak (potongan) dan mengunggah faktur pajak.
     Keduanya prasyarat sebelum draft SPP/SPM/NPI/SP2D dibuat.
@@ -7,9 +7,14 @@
     $potonganPajakRows = $tagihan->potonganTagihan->where('jenis_potongan', 'PAJAK')->values();
     $sudahBilling = $potonganPajakRows->first(fn ($p) => filled($p->kode_billing) || filled($p->ntpn)) !== null;
 
-    $fakturArsip = $tagihan->detailKontrak?->arsipDokumen
+    // Faktur pajak menempel pada detail sesuai tipe tagihan:
+    // KONTRAK â†’ detailKontrak, KONTRAK_EKSTERNAL â†’ detailKontrakEksternal.
+    $detailFaktur = $tagihan->tipe_tagihan === 'KONTRAK_EKSTERNAL'
+        ? $tagihan->detailKontrakEksternal
+        : $tagihan->detailKontrak;
+    $fakturArsip = $detailFaktur?->arsipDokumen
         ?->first(fn ($a) => $a->jenis_dokumen === 'FAKTUR_PAJAK' && $a->is_active)
-        ?? $tagihan->detailKontrak?->arsipDokumen?->first(fn ($a) => $a->jenis_dokumen === 'FAKTUR_PAJAK');
+        ?? $detailFaktur?->arsipDokumen?->first(fn ($a) => $a->jenis_dokumen === 'FAKTUR_PAJAK');
     // INF-01: faktur pajak kini di disk privat — disajikan via route terproteksi
     // (auth + role internal), bukan tautan publik /storage.
     $fakturUrl = $fakturArsip
@@ -86,7 +91,10 @@
         </div>
 
         @if($canEditPajak)
-            <form method="POST" action="{{ route('proses-tagihan.pajak-kontrak', $tagihan->id) }}" enctype="multipart/form-data" id="formPajakKontrak">
+            <form method="POST" action="{{ route('proses-tagihan.pajak-kontrak', $tagihan->id) }}" enctype="multipart/form-data" id="formPajakKontrak"
+                  class="js-async-form"
+                  data-bruto="{{ (float) $tagihan->total_bruto }}"
+                  data-non-pajak="{{ (float) $tagihan->potonganTagihan->where('jenis_potongan', '!=', 'PAJAK')->sum('nominal_potongan') }}">
                 @csrf
 
                 {{-- Pilihan tipe pajak --}}
@@ -179,7 +187,7 @@
                                 <li>Isi tipe pajak dan unggah faktur pajak.</li>
                                 <li>Draft dokumen dibuat ulang otomatis dengan nominal netto setelah pajak.</li>
                             </ol>
-                            <form method="POST" action="{{ route('proses-tagihan.batalkan-rantai', $tagihan->id) }}"
+                            <form method="POST" action="{{ route('proses-tagihan.batalkan-rantai', $tagihan->id) }}" class="js-async-form"
                                   onsubmit="return confirm('Batalkan seluruh rantai dokumen (SPP/SPM/NPI/SP2D) tagihan ini? Draft baru akan dibuat ulang setelah pajak diisi.');">
                                 @csrf
                                 <input type="hidden" name="alasan" value="Rantai dibatalkan untuk melengkapi tipe pajak & faktur pajak kontrak.">
@@ -260,147 +268,3 @@
     </div>
 </div>
 
-@if($canEditPajak)
-@push('script')
-<script>
-(function () {
-    'use strict';
-    var form = document.getElementById('formPajakKontrak');
-    if (!form) return;
-
-    var rowsBox = document.getElementById('pjkRows');
-    var tpl = document.getElementById('pjkRowTemplate');
-    var bruto = {{ (float) $tagihan->total_bruto }};
-    var nonPajak = {{ (float) $tagihan->potonganTagihan->where('jenis_potongan', '!=', 'PAJAK')->sum('nominal_potongan') }};
-    var fmt = new Intl.NumberFormat('id-ID');
-
-    function selectedOpt(sel) {
-        return sel.value ? sel.options[sel.selectedIndex] : null;
-    }
-
-    // Sesuai kalkulator pajak: DPP = bruto × 100/(100+PPN); nominal = ROUNDUP(DPP × tarif, -2).
-    function ppnRate() {
-        var rate = 11;
-        rowsBox.querySelectorAll('.pjk-select').forEach(function (sel) {
-            var o = selectedOpt(sel);
-            if (o && (o.dataset.kode || '').toUpperCase().indexOf('PPN') === 0) {
-                rate = parseFloat(o.dataset.persen) || rate;
-            }
-        });
-        return rate;
-    }
-    function dppDefault() { return bruto * 100 / (100 + ppnRate()); }
-    function roundUp100(x) { return Math.ceil(x / 100) * 100; }
-
-    // Aktifkan/namai input sesuai tarif terpilih + tampilkan info KAP/rumus.
-    function syncRow(row, recompute) {
-        var sel = row.querySelector('.pjk-select');
-        var dpp = row.querySelector('.pjk-dpp');
-        var nom = row.querySelector('.pjk-nominal');
-        var info = row.querySelector('.pjk-info');
-        var o = selectedOpt(sel);
-
-        if (!o) {
-            dpp.disabled = nom.disabled = true;
-            dpp.removeAttribute('name');
-            nom.removeAttribute('name');
-            info.classList.add('d-none');
-            info.textContent = '';
-            return;
-        }
-
-        dpp.disabled = nom.disabled = false;
-        dpp.name = 'dpp[' + sel.value + ']';
-        nom.name = 'nominal[' + sel.value + ']';
-
-        var infoParts = [];
-        if (o.dataset.kap) infoParts.push(o.dataset.kap);
-        if (o.dataset.rumus) infoParts.push(o.dataset.rumus);
-        info.textContent = infoParts.join(' — ');
-        info.classList.toggle('d-none', infoParts.length === 0);
-
-        if (recompute) {
-            if (dpp.dataset.manual !== '1') {
-                dpp.value = Math.round(dppDefault() * 100) / 100;
-            }
-            if (nom.dataset.manual !== '1') {
-                nom.value = roundUp100((parseFloat(dpp.value) || 0) * (parseFloat(o.dataset.persen) || 0) / 100);
-            }
-        }
-    }
-
-    // Tarif yang sudah dipakai baris lain dinonaktifkan agar tidak dipilih ganda.
-    function syncOptionDisabling() {
-        var chosen = [];
-        rowsBox.querySelectorAll('.pjk-select').forEach(function (s) { if (s.value) chosen.push(s.value); });
-        rowsBox.querySelectorAll('.pjk-select').forEach(function (s) {
-            Array.prototype.forEach.call(s.options, function (o) {
-                if (!o.value) return;
-                o.disabled = chosen.indexOf(o.value) !== -1 && o.value !== s.value;
-            });
-        });
-    }
-
-    function refreshAll(recompute) {
-        rowsBox.querySelectorAll('.pjk-row').forEach(function (row) { syncRow(row, recompute); });
-        syncOptionDisabling();
-
-        var total = 0;
-        rowsBox.querySelectorAll('.pjk-row').forEach(function (row) {
-            if (!row.querySelector('.pjk-select').value) return;
-            total += parseFloat(row.querySelector('.pjk-nominal').value) || 0;
-        });
-        document.getElementById('pjkTotal').textContent = fmt.format(Math.round(total + nonPajak));
-        document.getElementById('pjkNetto').textContent = fmt.format(Math.round(Math.max(0, bruto - total - nonPajak)));
-    }
-
-    function addRow() {
-        var node = tpl.content.firstElementChild.cloneNode(true);
-        rowsBox.appendChild(node);
-        refreshAll(false);
-        return node;
-    }
-
-    document.getElementById('pjkAddRow').addEventListener('click', function () { addRow(); });
-
-    rowsBox.addEventListener('change', function (e) {
-        if (!e.target.classList.contains('pjk-select')) return;
-        var row = e.target.closest('.pjk-row');
-        // Ganti tipe pajak = hitung ulang default baris ini.
-        row.querySelector('.pjk-dpp').dataset.manual = '';
-        row.querySelector('.pjk-nominal').dataset.manual = '';
-        // Pilihan PPN mengubah faktor ekstraksi DPP semua baris non-manual.
-        refreshAll(true);
-    });
-
-    rowsBox.addEventListener('input', function (e) {
-        var row = e.target.closest('.pjk-row');
-        if (!row) return;
-        if (e.target.classList.contains('pjk-dpp')) {
-            e.target.dataset.manual = '1';
-            var nom = row.querySelector('.pjk-nominal');
-            var o = selectedOpt(row.querySelector('.pjk-select'));
-            if (o && nom.dataset.manual !== '1') {
-                nom.value = roundUp100((parseFloat(e.target.value) || 0) * (parseFloat(o.dataset.persen) || 0) / 100);
-            }
-            refreshAll(false);
-        } else if (e.target.classList.contains('pjk-nominal')) {
-            e.target.dataset.manual = '1';
-            refreshAll(false);
-        }
-    });
-
-    rowsBox.addEventListener('click', function (e) {
-        var btn = e.target.closest('.pjk-remove');
-        if (!btn) return;
-        btn.closest('.pjk-row').remove();
-        if (!rowsBox.querySelector('.pjk-row')) addRow(); // minimal satu baris
-        refreshAll(true); // menghapus baris PPN mengubah default DPP baris lain
-    });
-
-    if (!rowsBox.querySelector('.pjk-row')) addRow();
-    refreshAll(true);
-})();
-</script>
-@endpush
-@endif

@@ -46,6 +46,10 @@
             <li><a href="{{ route('dashboard.koordinator-keuangan') }}"><i class="material-icons-outlined">arrow_right</i>Dashboard Koordinator Keuangan</a>
             </li>
             @endhasrole
+            @hasrole('Operator BLU')
+            <li><a href="{{ route('dashboard.operator-blu') }}"><i class="material-icons-outlined">arrow_right</i>Dashboard Operator BLU</a>
+            </li>
+            @endhasrole
             @hasanyrole('Super Admin|Super Admin Jasa')
             <li><a href="{{ route('super-admin-jasa.dashboard') }}"><i class="material-icons-outlined">arrow_right</i>Dashboard Jasa</a>
             </li>
@@ -469,10 +473,17 @@
 
         @hasanyrole('Super Admin|PPK')
         <li>
+          <a href="{{ route('kontrak-eksternal.index') }}">
+            <div class="parent-icon"><i class="material-icons-outlined">history_edu</i>
+            </div>
+            <div class="menu-title">Kontrak</div>
+          </a>
+        </li>
+        <li>
           <a href="{{ route('tagihan-kontrak-eksternal.index') }}">
             <div class="parent-icon"><i class="material-icons-outlined">receipt</i>
             </div>
-            <div class="menu-title">Tagihan Kontrak Eksternal</div>
+            <div class="menu-title">Tagihan Kontrak</div>
           </a>
         </li>
         @endhasanyrole

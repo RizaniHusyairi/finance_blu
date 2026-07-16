@@ -80,7 +80,7 @@
                             {{-- Kode Billing --}}
                             <div class="col-md-6">
                                 @if($canEditPajak && !$stepNtpn && Route::has($billingRoute))
-                                    <form method="POST" action="{{ route($billingRoute, $potongan->id) }}" enctype="multipart/form-data" class="bg-white p-3 rounded-3 border h-100 d-flex flex-column">
+                                    <form method="POST" action="{{ route($billingRoute, $potongan->id) }}" enctype="multipart/form-data" class="bg-white p-3 rounded-3 border h-100 d-flex flex-column js-async-form">
                                         @csrf
                                         <div class="fw-bold fs-7 text-secondary text-uppercase mb-2"><i class="bi bi-upc-scan me-1 text-primary"></i>Kode Billing</div>
                                         <input type="text" name="kode_billing" class="form-control form-control-sm border-primary-subtle font-monospace fw-bold mb-2" value="{{ $potongan->kode_billing }}" placeholder="Masukkan kode billing...">
@@ -121,7 +121,7 @@
                             {{-- NTPN --}}
                             <div class="col-md-6">
                                 @if($canEditPajak && !$stepNtpn && Route::has($ntpnRoute))
-                                    <form method="POST" action="{{ route($ntpnRoute, $potongan->id) }}" enctype="multipart/form-data" class="bg-white p-3 rounded-3 border h-100 d-flex flex-column {{ !$stepBilling ? 'opacity-50' : '' }}">
+                                    <form method="POST" action="{{ route($ntpnRoute, $potongan->id) }}" enctype="multipart/form-data" class="bg-white p-3 rounded-3 border h-100 d-flex flex-column js-async-form {{ !$stepBilling ? 'opacity-50' : '' }}">
                                         @csrf
                                         <div class="fw-bold fs-7 text-secondary text-uppercase mb-2"><i class="bi bi-patch-check me-1 text-success"></i>NTPN & Bukti Setor</div>
                                         <input type="text" name="ntpn" class="form-control form-control-sm border-success-subtle font-monospace fw-bold mb-2" value="{{ $potongan->ntpn }}" placeholder="Masukkan NTPN..." {{ !$stepBilling ? 'disabled' : '' }}>

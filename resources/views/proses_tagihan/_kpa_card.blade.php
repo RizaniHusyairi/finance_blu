@@ -86,7 +86,7 @@
                         <i class="bi bi-whatsapp"></i> Ajukan Persetujuan ke KPA via WA
                     </button>
                 @else
-                    <form action="{{ route('kpa.approval.send-wa', $tagihan->id) }}" method="POST" class="m-0">
+                    <form action="{{ route('kpa.approval.send-wa', $tagihan->id) }}" method="POST" class="m-0 js-async-form">
                         @csrf
                         <button type="submit" class="btn btn-primary w-100 btn-pt-action justify-content-center py-2 shadow">
                             <i class="bi bi-whatsapp fs-5"></i> {{ $kpaStatus === 'REJECTED' ? 'Ajukan Ulang' : 'Ajukan Persetujuan' }} ke KPA via WA
@@ -128,7 +128,7 @@
             </div>
 
             @if($isPpk)
-                <form action="{{ route('kpa.approval.send-wa', $tagihan->id) }}" method="POST" class="m-0">
+                <form action="{{ route('kpa.approval.send-wa', $tagihan->id) }}" method="POST" class="m-0 js-async-form">
                     @csrf
                     <button type="submit" class="btn btn-outline-primary w-100 btn-pt-action justify-content-center">
                         <i class="bi bi-arrow-clockwise"></i> Kirim Ulang Pesan WA

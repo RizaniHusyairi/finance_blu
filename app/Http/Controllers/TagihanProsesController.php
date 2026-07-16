@@ -2,21 +2,26 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\BukuKasUmum;
 use App\Models\DetailDipa;
 use App\Models\DokumenNpi;
 use App\Models\DokumenSp2d;
 use App\Models\DokumenSpm;
 use App\Models\DokumenSpp;
+use App\Models\LogStatusDokumen;
 use App\Models\MasterTarifPajak;
 use App\Models\PotonganTagihan;
+use App\Models\Spp;
 use App\Models\Tagihan;
 use App\Models\WorkflowApproval;
 use App\Services\DokumenChainService;
 use App\Services\PerjaldinKomponenService;
 use App\Services\WorkflowService;
+use App\Support\TagihanDokumenPendukung;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 /**
  * Halaman Proses Tagihan terpadu: seluruh rantai SPP/SPM/NPI/SP2D
@@ -28,8 +33,7 @@ class TagihanProsesController extends Controller
     public function __construct(
         private DokumenChainService $chain,
         private WorkflowService $workflow,
-    ) {
-    }
+    ) {}
 
     public function index(Request $request)
     {
@@ -147,9 +151,81 @@ class TagihanProsesController extends Controller
             : collect();
 
         // Daftar dokumen yang diunggah/di-generate saat pembuatan tagihan.
-        $dokumenPendukung = \App\Support\TagihanDokumenPendukung::collect($tagihan);
+        $dokumenPendukung = TagihanDokumenPendukung::collect($tagihan);
 
-        return view('proses_tagihan.show', compact('tagihan', 'state', 'coaOptions', 'pajakOptions', 'dokumenPendukung'));
+        $data = compact('tagihan', 'state', 'coaOptions', 'pajakOptions', 'dokumenPendukung')
+            + ['timelineLogs' => $this->timelineLogs($tagihan)];
+
+        // Refresh tanpa reload (form async): kembalikan fragment konten saja.
+        if (request()->boolean('partial')) {
+            return view('proses_tagihan._show_content', $data);
+        }
+
+        return view('proses_tagihan.show', $data);
+    }
+
+    /**
+     * Union log timeline: aktivitas Tagihan + seluruh dokumen rantai
+     * (SPP/SPM/NPI/SP2D) + potongan pajak — termasuk rantai yang sudah
+     * dibatalkan (soft-deleted) agar riwayat tetap utuh. Log SPP punya dua
+     * varian FQCN: relasi lama menghasilkan App\Models\Spp (subclass),
+     * sementara jalur lain memakai App\Models\DokumenSpp.
+     */
+    private function timelineLogs(Tagihan $tagihan)
+    {
+        $sppIds = DokumenSpp::withTrashed()->where('tagihan_id', $tagihan->id)->pluck('id');
+        $spmIds = DokumenSpm::withTrashed()->whereIn('spp_id', $sppIds)->pluck('id');
+        $npiIds = DokumenNpi::withTrashed()->whereIn('spm_id', $spmIds)->pluck('id');
+        $sp2dIds = DokumenSp2d::withTrashed()->whereIn('npi_id', $npiIds)->pluck('id');
+        $potonganIds = PotonganTagihan::withTrashed()->where('tagihan_id', $tagihan->id)->pluck('id');
+
+        $groups = [
+            [[Tagihan::class], collect([$tagihan->id])],
+            [[DokumenSpp::class, Spp::class], $sppIds],
+            [[DokumenSpm::class], $spmIds],
+            [[DokumenNpi::class], $npiIds],
+            [[DokumenSp2d::class], $sp2dIds],
+            [[PotonganTagihan::class], $potonganIds],
+        ];
+
+        return LogStatusDokumen::with('user')
+            ->where(function ($q) use ($groups) {
+                foreach ($groups as [$types, $ids]) {
+                    if ($ids->isEmpty()) {
+                        continue;
+                    }
+                    $q->orWhere(fn ($qq) => $qq->whereIn('dokumen_type', $types)->whereIn('dokumen_id', $ids));
+                }
+            })
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->limit(100)
+            ->get();
+    }
+
+    /**
+     * Tulis satu entri log timeline. Subjek bisa Tagihan maupun dokumen
+     * rantai (SPP/SPM/NPI/SP2D) — timeline membaca union keduanya.
+     */
+    private function catatLog(
+        $subjek,
+        string $aksi,
+        ?string $catatan,
+        ?string $roleOverride = null,
+        ?string $statusLama = null,
+        ?string $statusBaru = null,
+    ): void {
+        LogStatusDokumen::create([
+            'dokumen_type' => $subjek->getMorphClass(),
+            'dokumen_id' => $subjek->getKey(),
+            'user_id' => Auth::id(),
+            'role_saat_itu' => $roleOverride ?? Auth::user()?->getRoleNames()->first() ?? 'SYSTEM',
+            'status_sebelumnya' => $statusLama ?? $subjek->getOriginal('status'),
+            'status_baru' => $statusBaru ?? $subjek->status,
+            'aksi' => $aksi,
+            'catatan' => $catatan,
+            'ip_address' => request()->ip(),
+        ]);
     }
 
     // ─────────────────────────────────────────────────────────────────
@@ -178,6 +254,11 @@ class TagihanProsesController extends Controller
                     $komponen = $tagihan->komponenPerjaldin()->findOrFail($komponenId);
                     $komponenService->updateKomponenCoa($komponen, (int) $itemId);
                 }
+
+                $rincianCoa = $tagihan->komponenPerjaldin()->with('dipaRevisionItem.coa')->get()
+                    ->map(fn ($k) => ($k->nama_komponen ?? 'Komponen').': '.($k->dipaRevisionItem?->coa?->kode_mak_lengkap ?? '-'))
+                    ->implode('; ');
+                $this->catatLog($tagihan, 'SET_COA', "COA per komponen dibebankan oleh PPK — {$rincianCoa}.");
             } else {
                 $request->validate(['dipa_revision_item_id' => 'required|integer|exists:dipa_revision_items,id']);
 
@@ -199,6 +280,14 @@ class TagihanProsesController extends Controller
                     // tidak lagi memilih COA di awal.
                     'master_dipa_id' => $item->dipaRevision?->master_dipa_id ?? $tagihan->master_dipa_id,
                 ]);
+
+                $this->catatLog($tagihan, 'SET_COA', sprintf(
+                    'COA dibebankan: %s — %s (DIPA %s). Nominal tagihan Rp %s.',
+                    $item->coa?->kode_mak_lengkap ?? '-',
+                    Str::limit((string) $item->coa?->uraian, 60),
+                    $item->dipaRevision?->masterDipa?->nomor_dipa ?? '-',
+                    number_format((float) $tagihan->total_netto, 0, ',', '.')
+                ));
             }
 
             $this->chain->clearChainCorrection($tagihan->fresh(), 'coa');
@@ -260,7 +349,7 @@ class TagihanProsesController extends Controller
             'dpp.*' => 'nullable|numeric|min:0',
             'nominal' => 'array',
             'nominal.*' => 'nullable|numeric|min:0',
-            'faktur_pajak' => ($fakturLama ? 'nullable' : 'required') . '|file|mimes:pdf,jpg,jpeg,png|max:5120',
+            'faktur_pajak' => ($fakturLama ? 'nullable' : 'required').'|file|mimes:pdf,jpg,jpeg,png|max:5120',
         ], [
             'pajak.required' => 'Pilih minimal satu tipe pajak untuk tagihan kontrak ini.',
             'faktur_pajak.required' => 'Faktur pajak wajib diunggah untuk tagihan kontrak.',
@@ -352,7 +441,7 @@ class TagihanProsesController extends Controller
                     ]);
                 }
 
-                \App\Models\LogStatusDokumen::create([
+                LogStatusDokumen::create([
                     'dokumen_type' => Tagihan::class,
                     'dokumen_id' => $tagihan->id,
                     'user_id' => Auth::id(),
@@ -360,7 +449,7 @@ class TagihanProsesController extends Controller
                     'status_sebelumnya' => $tagihan->status,
                     'status_baru' => $tagihan->status,
                     'aksi' => 'SET_PAJAK_KONTRAK',
-                    'catatan' => 'Tipe pajak dipilih' . ($request->hasFile('faktur_pajak') ? ' dan faktur pajak diunggah' : '') . ' oleh Operator BLU.',
+                    'catatan' => 'Tipe pajak dipilih'.($request->hasFile('faktur_pajak') ? ' dan faktur pajak diunggah' : '').' oleh Operator BLU.',
                     'ip_address' => $request->ip(),
                 ]);
             });
@@ -417,7 +506,7 @@ class TagihanProsesController extends Controller
             'target' => $isRevisi ? 'required|in:tagihan,pajak,coa,bukti' : 'nullable',
             'catatan' => $isRevisi && $target !== 'tagihan' ? 'required|string|max:1000' : 'nullable|string|max:1000',
             'revisi_doc' => $isRevisi && $target === 'tagihan' ? 'required|array|min:1' : 'nullable|array',
-            'revisi_doc.*' => 'in:' . implode(',', array_keys(DokumenChainService::RETURNABLE_PARTS)),
+            'revisi_doc.*' => 'in:'.implode(',', array_keys(DokumenChainService::RETURNABLE_PARTS)),
             'revisi_catatan' => 'nullable|array',
             'revisi_catatan.*' => 'nullable|string|max:1000',
         ], [
@@ -457,11 +546,18 @@ class TagihanProsesController extends Controller
             if ($aksi === 'approve') {
                 $instance = $this->workflow->approveCurrentStep($document, Auth::id(), $catatan ?: 'Disetujui.', $approval->id);
 
+                $this->catatLog(
+                    $document,
+                    'APPROVE_'.strtoupper($jenis),
+                    ($catatan ?: 'Disetujui.')." (langkah: {$approval->nama_step})",
+                    $approval->role_code
+                );
+
                 if ($instance->status === 'APPROVED') {
                     $this->tandaiDokumenDisetujui($document, strtolower($jenis));
                 }
 
-                $pesan = strtoupper($jenis) . ' berhasil disetujui.';
+                $pesan = strtoupper($jenis).' berhasil disetujui.';
             } elseif ($target === 'tagihan') {
                 // Catatan wajib per bagian yang dicentang verifikator.
                 $items = [];
@@ -488,6 +584,15 @@ class TagihanProsesController extends Controller
                 $this->workflow->requestRevision($document, Auth::id(), $catatan, $approval->id);
                 $document->update(['status' => DokumenSp2d::STATUS_REVISI]);
                 $this->chain->notifyDocumentRevisionRequested($tagihan, $jenis, $catatan, Auth::user());
+
+                $this->catatLog(
+                    $tagihan,
+                    'REVISI_BUKTI_TRANSFER',
+                    'SP2D dikembalikan ke Bendahara Pengeluaran untuk penggantian bukti transfer. Catatan: '.$catatan,
+                    null,
+                    $tagihan->status,
+                    $tagihan->status
+                );
 
                 $pesan = 'SP2D dikembalikan ke Bendahara Pengeluaran untuk perbaikan bukti transfer.';
             } else {
@@ -538,6 +643,13 @@ class TagihanProsesController extends Controller
                 try {
                     $instance = $this->workflow->approveCurrentStep($document, Auth::id(), $catatan, $approval->id);
 
+                    $this->catatLog(
+                        $document,
+                        'APPROVE_'.strtoupper($jenis),
+                        $catatan." (langkah: {$approval->nama_step})",
+                        $approval->role_code
+                    );
+
                     if ($instance->status === 'APPROVED') {
                         $this->tandaiDokumenDisetujui($document, $jenis);
                     }
@@ -546,7 +658,7 @@ class TagihanProsesController extends Controller
                 } catch (\Throwable $e) {
                     // Satu dokumen gagal (mis. maker≠checker) tidak menggagalkan
                     // dokumen lainnya — laporkan alasannya di ringkasan.
-                    $gagal[] = strtoupper($jenis) . ' (' . $e->getMessage() . ')';
+                    $gagal[] = strtoupper($jenis).' ('.$e->getMessage().')';
                 }
             }
         }
@@ -560,13 +672,13 @@ class TagihanProsesController extends Controller
         }
 
         if ($gagal !== []) {
-            $pesan = ($disetujui !== [] ? implode(', ', array_unique($disetujui)) . ' disetujui. ' : '')
-                . 'Gagal: ' . implode('; ', $gagal);
+            $pesan = ($disetujui !== [] ? implode(', ', array_unique($disetujui)).' disetujui. ' : '')
+                .'Gagal: '.implode('; ', $gagal);
 
             return back()->with($disetujui !== [] ? 'warning' : 'error', $pesan);
         }
 
-        return back()->with('success', implode(', ', array_unique($disetujui)) . ' berhasil disetujui sekaligus (verifikasi massal).');
+        return back()->with('success', implode(', ', array_unique($disetujui)).' berhasil disetujui sekaligus (verifikasi massal).');
     }
 
     // ─────────────────────────────────────────────────────────────────
@@ -628,7 +740,7 @@ class TagihanProsesController extends Controller
         $potonganPajak = $tagihan->potonganTagihan->where('jenis_potongan', 'PAJAK')->where('nominal_potongan', '>', 0)->values();
         $pajakSettled = $potonganPajak->isNotEmpty() && $potonganPajak->every(fn ($p) => trim((string) $p->ntpn) !== '');
 
-        $bkuPosted = \App\Models\BukuKasUmum::where('referensi_pengeluaran_id', $tagihan->id)->exists();
+        $bkuPosted = BukuKasUmum::where('referensi_pengeluaran_id', $tagihan->id)->exists();
 
         // Rantai per-komponen alur lama (perjaldin) — render read/act-only.
         $legacySpps = $this->chain->hasLegacyKomponenChain($tagihan)
@@ -799,6 +911,15 @@ class TagihanProsesController extends Controller
         };
 
         $document->update(['status' => $status]);
+
+        $this->catatLog(
+            $document,
+            'FINAL_'.strtoupper($jenis),
+            strtoupper($jenis).' telah disetujui seluruh verifikator (status final).',
+            null,
+            null,
+            $status
+        );
 
         if ($jenis === 'spp') {
             $tagihan = $document->tagihan;
