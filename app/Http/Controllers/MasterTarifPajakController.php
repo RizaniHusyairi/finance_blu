@@ -141,7 +141,7 @@ class MasterTarifPajakController extends Controller
             'persentase' => $validated['persentase'],
             'kode_akun_pajak' => $validated['kode_akun_pajak'] ?? null,
             'kode_jenis_setoran' => $validated['kode_jenis_setoran'] ?? null,
-            'rumus' => $validated['rumus'] ? trim($validated['rumus']) : null,
+            'rumus' => isset($validated['rumus']) && $validated['rumus'] !== null ? trim($validated['rumus']) : null,
             'berlaku_mulai' => $validated['berlaku_mulai'] ?? null,
             'berlaku_sampai' => $validated['berlaku_sampai'] ?? null,
             'status_aktif' => $request->has('status_aktif'),
