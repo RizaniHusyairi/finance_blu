@@ -77,6 +77,23 @@
                                     <i class="bi {{ $dipa->status_aktif ? 'bi-toggle-on' : 'bi-toggle-off' }}"></i>
                                 </button>
                             </form>
+                            @if($activeItems->isEmpty())
+                                <form action="{{ route('dipas.destroy', $dipa) }}" method="POST" class="d-inline"
+                                      onsubmit="return confirm('Hapus DIPA ini beserta seluruh revisinya secara permanen?');">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="dp-act dp-act-del"
+                                            title="Hapus DIPA" aria-label="Hapus DIPA">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            @else
+                                <button type="button" class="dp-act dp-act-del" disabled
+                                        title="Tidak bisa dihapus — sudah memiliki item anggaran. Gunakan Nonaktifkan."
+                                        aria-label="Tidak bisa dihapus">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            @endif
                         </div>
                     </td>
                 </tr>

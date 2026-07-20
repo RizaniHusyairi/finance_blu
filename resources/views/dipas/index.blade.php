@@ -146,6 +146,8 @@ tr:hover .dp-doc-tile { transform:scale(1.08) rotate(-4deg); }
 .dp-act-on:hover     { background:#10b981; border-color:#10b981; color:#fff; box-shadow:0 8px 18px -6px rgba(16,185,129,.55); }
 .dp-act-off          { color:#94a3b8; }
 .dp-act-off:hover    { background:#64748b; border-color:#64748b; color:#fff; }
+.dp-act-del:hover:not(:disabled) { background:#e11d48; border-color:#e11d48; color:#fff; box-shadow:0 8px 18px -6px rgba(225,29,72,.55); }
+.dp-act:disabled     { opacity:.4; cursor:not-allowed; transform:none !important; }
 
 /* Empty state */
 .dp-empty { padding:3.5rem 1rem; text-align:center; color:var(--dp-muted); }

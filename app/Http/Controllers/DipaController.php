@@ -2,10 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\KontrakPengadaan;
 use App\Models\MasterDipa;
 use App\Models\DetailDipa;
 use App\Models\MasterCoa;
 use App\Models\RiwayatRevisiDipa;
+use App\Models\Tagihan;
+use Illuminate\Support\Facades\Storage;
 use App\Support\PdfCompressor;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
@@ -314,6 +317,49 @@ class DipaController extends Controller
         return redirect()
             ->route('dipas.index')
             ->with('success', 'Header DIPA ' . $dipa->nomor_dipa . ' berhasil diperbarui.');
+    }
+
+    /**
+     * Hapus terjaga: DIPA hanya boleh dihapus bila benar-benar kosong —
+     * tanpa item anggaran dan tanpa rujukan tagihan/kontrak. DIPA yang
+     * pernah dipakai cukup dinonaktifkan agar jejak audit anggaran utuh.
+     * (Pola sama dengan CoaController::destroy.)
+     */
+    public function destroy(MasterDipa $dipa)
+    {
+        $dipa->load('revisions.items');
+
+        $itemIds = $dipa->revisions->flatMap->items->pluck('id');
+
+        $adaItem = $itemIds->isNotEmpty();
+        $adaTagihan = Tagihan::where('master_dipa_id', $dipa->id)->exists()
+            || ($itemIds->isNotEmpty() && Tagihan::whereIn('dipa_revision_item_id', $itemIds)->exists());
+        $adaKontrak = KontrakPengadaan::where('master_dipa_id', $dipa->id)->exists();
+
+        if ($adaItem || $adaTagihan || $adaKontrak) {
+            return redirect()
+                ->route('dipas.show', $dipa)
+                ->with('error', 'DIPA tidak dapat dihapus karena sudah memiliki item anggaran atau dipakai transaksi. Gunakan status Nonaktif.');
+        }
+
+        $label = $dipa->nomor_dipa;
+
+        // forceDelete (bukan soft delete): DIPA dijamin kosong oleh guard di
+        // atas, dan baris soft-deleted akan menyandera unique nomor_dipa —
+        // padahal kasus utama fitur ini justru salah ketik nomor.
+        DB::transaction(function () use ($dipa) {
+            foreach ($dipa->revisions as $revision) {
+                if ($revision->file_dokumen_dipa) {
+                    Storage::disk('local')->delete($revision->file_dokumen_dipa);
+                }
+                $revision->forceDelete();
+            }
+            $dipa->forceDelete();
+        });
+
+        return redirect()
+            ->route('dipas.index')
+            ->with('success', 'DIPA ' . $label . ' berhasil dihapus.');
     }
 
     public function revisions(MasterDipa $dipa)

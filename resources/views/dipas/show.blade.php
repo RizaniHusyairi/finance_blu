@@ -65,6 +65,8 @@
 .dv-btn.solid { background:#fff; color:#4338ca; border-color:transparent;
     box-shadow:0 10px 24px -10px rgba(0,0,0,.5); font-weight:800; }
 .dv-btn.solid:hover { color:#4338ca; }
+.dv-btn.danger { background:rgba(225,29,72,.85); border-color:transparent; }
+.dv-btn.danger:hover { background:#e11d48; }
 
 /* ---------- STAT TILES ---------- */
 .dv-stats { display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:.8rem; }
@@ -256,6 +258,14 @@
                 </button>
                 <a href="{{ route('dipas.revisions.create', $dipa) }}" class="dv-btn"><i class="bi bi-files"></i> Tambah Revisi</a>
                 <a href="{{ route('dipas.edit', $dipa) }}" class="dv-btn"><i class="bi bi-pencil-square"></i> Edit Header</a>
+                @if($dipa->revisions->flatMap->items->isEmpty())
+                    <form action="{{ route('dipas.destroy', $dipa) }}" method="POST" class="d-inline"
+                          onsubmit="return confirm('Hapus DIPA ini beserta seluruh revisinya secara permanen?');">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="dv-btn danger border-0"><i class="bi bi-trash"></i> Hapus</button>
+                    </form>
+                @endif
                 <a href="{{ route('dipas.index') }}" class="dv-btn"><i class="bi bi-arrow-left"></i> Kembali</a>
             </div>
         </div>
