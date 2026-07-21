@@ -731,6 +731,10 @@ class PanduanRegistry
                         't' => 'Ada revisi DIPA. Apa yang harus saya lakukan?',
                         'j' => 'Perbarui data DIPA pada Master Data agar pagu dan sisa anggaran di aplikasi cocok dengan dokumen revisi.',
                     ],
+                    [
+                        't' => 'Bisakah DIPA dihapus?',
+                        'j' => 'Bisa, tetapi hanya DIPA yang benar-benar kosong — belum memiliki COA dan belum pernah dirujuk tagihan/kontrak (mis. salah ketik nomor saat membuat). Gunakan tombol hapus pada daftar atau detail DIPA; seluruh revisinya ikut terhapus permanen dan nomornya langsung bisa dipakai ulang. DIPA yang sudah terpakai tidak dapat dihapus — tombolnya otomatis nonaktif; gunakan status Nonaktif agar jejak audit anggaran tetap utuh.',
+                    ],
                 ],
             ],
 

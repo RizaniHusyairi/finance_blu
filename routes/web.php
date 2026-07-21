@@ -58,6 +58,7 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\NpiController;
 use App\Http\Controllers\PanduanController;
 use App\Http\Controllers\PemakaianGarbarataController;
+use App\Http\Controllers\PokImportController;
 use App\Http\Controllers\PembukuanSetupController;
 use App\Http\Controllers\PengajuanPenagihanGarbarataController;
 use App\Http\Controllers\PengecekanPembayaranPiutangController;
@@ -98,6 +99,7 @@ use App\Http\Controllers\TagihanJasaController;
 use App\Http\Controllers\TagihanJasaVerifikasiController;
 use App\Http\Controllers\TagihanKontrakEksternalController;
 use App\Http\Controllers\TagihanKontrakVerifikasiController;
+use App\Http\Controllers\TagihanHistorisController;
 use App\Http\Controllers\TagihanProsesController;
 use App\Http\Controllers\TagihanTteController;
 use App\Http\Controllers\TarifLayananController;
@@ -364,6 +366,15 @@ Route::middleware(['auth', 'account.active'])->group(function () use ($internalR
         ->name('proses-tagihan.')
         ->group(function () {
             Route::get('/', [TagihanProsesController::class, 'index'])->name('index');
+
+            // Input tagihan historis (arsip SILABI) — sebelum route {tagihan}
+            // agar "historis" tidak tertelan implicit binding.
+            Route::middleware('role:Super Admin|Operator BLU')->group(function () {
+                Route::get('/historis/create', [TagihanHistorisController::class, 'create'])->name('historis.create');
+                Route::post('/historis/baca-arsip', [TagihanHistorisController::class, 'bacaArsip'])->name('historis.baca-arsip');
+                Route::post('/historis', [TagihanHistorisController::class, 'store'])->name('historis.store');
+            });
+
             Route::get('/{tagihan}', [TagihanProsesController::class, 'show'])->name('show');
             Route::post('/{tagihan}/coa', [TagihanProsesController::class, 'simpanCoa'])->name('coa');
             Route::post('/{tagihan}/pajak-kontrak', [TagihanProsesController::class, 'simpanPajak'])->name('pajak-kontrak');
@@ -479,6 +490,7 @@ Route::middleware(['auth', 'account.active'])->group(function () use ($internalR
         Route::post('/dipas/{dipa}/revisions', [DipaController::class, 'storeRevision'])->name('dipas.revisions.store');
         Route::post('/dipas/{dipa}/toggle', [DipaController::class, 'toggle'])->name('dipas.toggle');
         Route::post('/dipas/{dipa}/items', [DipaController::class, 'storeItem'])->name('dipas.items.store');
+        Route::post('/dipas/parse-pok', [PokImportController::class, 'parse'])->name('dipas.parse-pok');
         Route::post('/dipas/{dipa}/items/{item}/toggle', [DipaController::class, 'toggleItem'])->name('dipas.items.toggle');
         Route::delete('/dipas/{dipa}/items/{item}', [DipaController::class, 'destroyItem'])->name('dipas.items.destroy');
         Route::post('/dipas/{dipa}/revisions/{revision}/activate', [DipaController::class, 'activateRevision'])->name('dipas.revisions.activate');

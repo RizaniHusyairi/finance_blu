@@ -270,6 +270,7 @@
         </div>
     </div>
 
+    @include('layouts._partials.del-tooltip')
 </div>
 @endsection
 

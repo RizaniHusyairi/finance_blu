@@ -27,7 +27,7 @@
 @keyframes dpSheen  { 0%,55%{left:-70%} 85%,100%{left:140%} }
 @keyframes dpPulseG { 0%,100%{box-shadow:0 0 0 0 rgba(16,185,129,.5)} 50%{box-shadow:0 0 0 8px rgba(16,185,129,0)} }
 @media (prefers-reduced-motion: reduce) {
-    .dipa-page * { animation-duration:.001s !important; animation-iteration-count:1 !important; transition-duration:.001s !important; }
+    .dipa-page * { animation-duration:.001s !important; animation-delay:0s !important; animation-iteration-count:1 !important; transition-duration:.001s !important; }
 }
 
 /* ---------- HERO ---------- */
@@ -184,7 +184,7 @@ tr:hover .dp-doc-tile { transform:scale(1.08) rotate(-4deg); }
                     <span class="dp-chip"><i class="bi bi-journal-bookmark-fill"></i> TA {{ now()->year }}</span>
                 </div>
                 <h4>Master Data DIPA 📘</h4>
-                <div class="lead-sub">Kelola dokumen DIPA, revisi anggaran, dan item pagu dalam satu tempat.</div>
+                <div class="lead-sub">Kelola dokumen DIPA, revisi anggaran, dan COA dalam satu tempat.</div>
             </div>
             <a href="{{ route('dipas.create') }}" class="dp-btn-add">
                 <i class="bi bi-plus-circle-fill"></i> Tambah DIPA
@@ -211,7 +211,7 @@ tr:hover .dp-doc-tile { transform:scale(1.08) rotate(-4deg); }
                     <div class="ic"><i class="bi bi-patch-check-fill"></i></div>
                     <div>
                         <div class="lbl">DIPA Aktif</div>
-                        <div class="val dp-countup" data-target="{{ $summary['dipa_aktif'] }}">0</div>
+                        <div class="val dp-countup" id="dpStatAktif" data-target="{{ $summary['dipa_aktif'] }}">0</div>
                     </div>
                 </div>
             </div>
@@ -304,6 +304,7 @@ tr:hover .dp-doc-tile { transform:scale(1.08) rotate(-4deg); }
         </div>
     </div>
 
+    @include('layouts._partials.del-tooltip')
 </div>
 @endsection
 
@@ -311,8 +312,13 @@ tr:hover .dp-doc-tile { transform:scale(1.08) rotate(-4deg); }
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             /* ── Count-up angka statistik ── */
+            const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
             document.querySelectorAll('.dp-countup').forEach(function (el) {
                 const target = parseInt(el.dataset.target || '0', 10);
+                if (reducedMotion || target <= 0) {
+                    el.textContent = target.toLocaleString('id-ID');
+                    return;
+                }
                 const dur = 1100, start = performance.now();
                 function step(now) {
                     const p = Math.min((now - start) / dur, 1);
@@ -425,6 +431,93 @@ tr:hover .dp-doc-tile { transform:scale(1.08) rotate(-4deg); }
 
             form.querySelectorAll('[data-auto-submit="change"]').forEach(function (field) {
                 field.addEventListener('change', triggerImmediate);
+            });
+
+            /* ── Toggle aktif/nonaktif DIPA secara asinkron ──
+               Delegated pada container agar tetap hidup setelah tabel
+               di-swap AJAX. Respons redirect+flash dikonversi JSON oleh
+               middleware AjaxFlashToJson (header X-Async-Form). */
+            tableContainer.addEventListener('submit', async function (event) {
+                const toggleForm = event.target.closest('form.js-dipa-toggle');
+                if (!toggleForm) return;
+                event.preventDefault();
+
+                if (toggleForm.dataset.busy) return;
+                toggleForm.dataset.busy = '1';
+
+                const btn = toggleForm.querySelector('button[type=submit]');
+                const wasAktif = btn && btn.classList.contains('dp-act-on');
+                let restore = null;
+                if (btn) {
+                    const orig = btn.innerHTML;
+                    btn.style.minWidth = Math.ceil(btn.getBoundingClientRect().width) + 'px';
+                    btn.disabled = true;
+                    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+                    restore = function () {
+                        btn.disabled = false;
+                        btn.innerHTML = orig;
+                        btn.style.removeProperty('min-width');
+                    };
+                }
+
+                function toast(level, text) {
+                    if (!window.SkyAlert) return;
+                    // Panggil lewat objeknya (SkyAlert[nama](...)) — mengambil
+                    // method ke variabel melepaskan `this` dan membuat
+                    // this.show di dalam SkyAlert gagal.
+                    var nama = level === 'danger' ? 'error' : level;
+                    if (typeof SkyAlert[nama] !== 'function') nama = 'info';
+                    SkyAlert[nama](text);
+                }
+
+                try {
+                    const response = await fetch(toggleForm.action, {
+                        method: 'POST',
+                        body: new FormData(toggleForm),
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'X-Async-Form': '1',
+                            'Accept': 'application/json',
+                        },
+                        credentials: 'same-origin',
+                    });
+
+                    if (response.status === 419) {
+                        if (restore) restore();
+                        toast('danger', 'Sesi Anda berakhir — muat ulang halaman lalu coba lagi.');
+                        return;
+                    }
+
+                    const data = response.ok ? await response.json() : null;
+                    if (!data) {
+                        throw new Error('HTTP ' + response.status);
+                    }
+
+                    (data.messages || []).forEach(function (m) { toast(m.level, m.text); });
+
+                    if (!data.ok) {
+                        if (restore) restore();
+                        return;
+                    }
+
+                    // Kartu "DIPA Aktif" ikut disesuaikan tanpa menunggu reload.
+                    const stat = document.getElementById('dpStatAktif');
+                    if (stat) {
+                        const nilai = parseInt(stat.textContent.replace(/\./g, ''), 10) || 0;
+                        stat.textContent = Math.max(0, nilai + (wasAktif ? -1 : 1)).toLocaleString('id-ID');
+                    }
+
+                    // Render ulang baris tabel (badge status, tombol hapus, dst.)
+                    // lewat mesin partial yang sudah ada — tombol lama ikut terganti.
+                    lastQueryString = null;
+                    await fetchTable();
+                } catch (err) {
+                    console.error(err);
+                    if (restore) restore();
+                    toast('danger', 'Gagal mengubah status DIPA — periksa koneksi lalu coba lagi.');
+                } finally {
+                    delete toggleForm.dataset.busy;
+                }
             });
         });
     </script>

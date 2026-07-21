@@ -45,6 +45,7 @@ final class TimelineAksi
         'UPLOAD_MANUAL_TTD' => ['label' => 'Scan TTD basah vendor diunggah manual', 'icon' => 'bi-upload',        'color' => 'info'],
 
         // ── Rantai dokumen pencairan ───────────────────────────────────
+        'IMPORT_HISTORIS' => ['label' => 'Tagihan historis diimpor dari arsip',      'icon' => 'bi-archive',       'color' => 'info'],
         'GENERATE_DRAFT_CHAIN' => ['label' => 'Draft SPP/SPM/NPI/SP2D diterbitkan', 'icon' => 'bi-collection',    'color' => 'primary'],
         'CANCEL_DRAFT_CHAIN' => ['label' => 'Rantai dokumen dibatalkan',          'icon' => 'bi-trash3',        'color' => 'danger'],
         'SUBMIT_SPP' => ['label' => 'SPP diajukan untuk verifikasi',               'icon' => 'bi-send',          'color' => 'primary'],

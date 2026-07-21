@@ -5,6 +5,7 @@
 @include('super_admin_jasa.laporan._styles')
 
 <style>
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .001s !important; animation-delay: 0s !important; animation-iteration-count: 1 !important; transition-duration: .001s !important; } }
     .rekap-day-card { border-radius: 14px; overflow: hidden; box-shadow: 0 8px 22px rgba(15, 47, 87, .08); }
     .rekap-day-header { background: linear-gradient(135deg, #0f2f57, #1d4ed8); color: #fff; padding: 14px 18px; cursor: pointer; --bs-heading-color: #fff; }
     .rekap-day-header.collapsed { background: linear-gradient(135deg, #1e293b, #334155); }

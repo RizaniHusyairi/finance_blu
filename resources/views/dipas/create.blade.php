@@ -43,6 +43,19 @@
             {{-- ════════ KOLOM FORM ════════ --}}
             <div class="col-lg-8">
 
+                {{-- Step 0: Dropzone POK — form terisi otomatis --}}
+                @include('dipas._partials.pok_dropzone', [
+                    'dzJudul' => 'Unggah POK / Dokumen DIPA — Form Terisi Otomatis',
+                    'dzSub' => 'Tahun, total pagu, dan saran nomor DIPA terisi sendiri; saat disimpan seluruh COA ikut dibuat dari POK.',
+                    'dzFlow' => [
+                        ['bi-file-earmark-arrow-up', 'Unggah PDF POK'],
+                        ['bi-eye', 'Dibaca otomatis'],
+                        ['bi-magic', 'Header terisi'],
+                        ['bi-table', 'Pratinjau COA tampil'],
+                        ['bi-database-add', 'Simpan → COA terbentuk'],
+                    ],
+                ])
+
                 {{-- Step 1: Header --}}
                 <div class="df-card mb-4" style="--d:.05s; --t:#4f46e5; --t2:#818cf8;">
                     <div class="df-card-head">
@@ -120,14 +133,8 @@
                                 </div>
                                 <div class="df-hint mt-1" id="dfPaguHint">Nilai pagu keseluruhan revisi awal.</div>
                             </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Dokumen DIPA (PDF)</label>
-                                <div class="df-drop" id="dfDrop">
-                                    <input type="file" name="file_dokumen_dipa" id="dfFile" accept=".pdf">
-                                    <div class="df-drop-ic"><i class="bi bi-cloud-arrow-up-fill" id="dfDropIcon"></i></div>
-                                    <div class="fw-bold small" id="dfDropText">Seret file ke sini atau klik untuk memilih</div>
-                                    <div class="df-hint" id="dfDropHint">Opsional · PDF · maks. 5 MB</div>
-                                </div>
+                            <div class="col-12">
+                                @include('dipas._partials.pok_preview')
                             </div>
                             <div class="col-12">
                                 <label class="form-label">Keterangan</label>
@@ -293,6 +300,7 @@ document.addEventListener('DOMContentLoaded', function () {
             text.textContent = f.name;
             hint.textContent = (f.size / 1024 / 1024).toFixed(2).replace('.', ',') + ' MB · klik untuk mengganti';
             pv.innerHTML = '<i class="bi bi-file-earmark-pdf-fill"></i> ' + escapeHtml(f.name);
+            bacaPok(f);
         } else {
             drop.classList.remove('has-file');
             icon.className = 'bi bi-cloud-arrow-up-fill';
@@ -301,6 +309,80 @@ document.addEventListener('DOMContentLoaded', function () {
             pv.innerHTML = '<i class="bi bi-paperclip"></i> Tanpa lampiran dokumen';
         }
     });
+
+    /* ── Baca POK otomatis: isi tahun, pagu, saran nomor + siapkan token impor COA ── */
+    var pokToken = document.getElementById('dfPokToken');
+    var pokInfo = document.getElementById('dfPokInfo');
+    var nomorInput = document.getElementById('dfNomor');
+    var tahunInput = document.getElementById('dfTahun');
+
+    function formatRpId(n) {
+        return new Intl.NumberFormat('id-ID', { maximumFractionDigits: 0 }).format(n || 0);
+    }
+
+    function tampilkanPokInfo(html, warna) {
+        pokInfo.classList.remove('d-none');
+        pokInfo.style.borderColor = warna === 'ok' ? '#a7f3d0' : (warna === 'err' ? '#fecdd3' : '#c7d2fe');
+        pokInfo.style.background = warna === 'ok' ? '#ecfdf5' : (warna === 'err' ? '#fff1f2' : '#eef2ff');
+        pokInfo.innerHTML = html;
+    }
+
+    function bacaPok(f) {
+        pokToken.value = '';
+        if (window.clearPokPreview) window.clearPokPreview();
+        drop.classList.remove('done');
+        drop.classList.add('reading');
+        tampilkanPokInfo('<i class="bi bi-hourglass-split me-1"></i>Membaca PDF sebagai POK…', 'info');
+
+        var fd = new FormData();
+        fd.append('file_pok', f);
+
+        fetch('{{ route('dipas.parse-pok') }}', {
+            method: 'POST',
+            body: fd,
+            credentials: 'same-origin',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content
+                    || '{{ csrf_token() }}',
+                'Accept': 'application/json'
+            }
+        })
+        .then(function (res) { return res.json().then(function (data) { return { status: res.status, data: data }; }); })
+        .then(function (r) {
+            drop.classList.remove('reading');
+            if (r.status !== 200 || !r.data.ok) {
+                tampilkanPokInfo('<i class="bi bi-info-circle me-1"></i>' + (r.data.pesan || 'File bukan POK — form diisi manual seperti biasa.'), 'err');
+                return;
+            }
+            drop.classList.add('done');
+
+            var d = r.data;
+            pokToken.value = d.token;
+
+            if (d.tahun) { tahunInput.value = d.tahun; tahunInput.dispatchEvent(new Event('input')); }
+            if (d.total != null) { pagu.value = formatRpId(d.total).replace(/,/g, '.'); pagu.dispatchEvent(new Event('input')); }
+            if (d.saran_nomor && !nomorInput.value.trim()) {
+                nomorInput.value = d.saran_nomor;
+                nomorInput.dispatchEvent(new Event('input'));
+            }
+
+            var kontrol = d.seimbang
+                ? '<span class="text-success fw-bold"><i class="bi bi-check-circle-fill"></i> SEIMBANG dengan alokasi header</span>'
+                : '<span class="text-danger fw-bold"><i class="bi bi-exclamation-triangle-fill"></i> tidak sama dengan alokasi header</span>';
+            tampilkanPokInfo(
+                '<div class="fw-bold mb-1"><i class="bi bi-magic me-1"></i>POK terbaca: ' + d.jumlah_baris + ' baris detil · Rp ' + formatRpId(d.total) + '</div>'
+                + '<div>' + kontrol + '</div>'
+                + '<div class="mt-1">Tahun, total pagu' + (d.saran_nomor ? ', dan saran nomor DIPA' : '') + ' sudah diisi otomatis. Saat disimpan, <b>' + d.jumlah_baris + ' COA + item revisi awal dibuat otomatis</b>. Rinciannya di tabel pratinjau bawah.</div>',
+                'ok'
+            );
+            if (window.renderPokPreview) window.renderPokPreview(d);
+        })
+        .catch(function () {
+            drop.classList.remove('reading');
+            tampilkanPokInfo('<i class="bi bi-info-circle me-1"></i>Gagal membaca file — form diisi manual seperti biasa.', 'err');
+        });
+    }
 
     /* ── Submit: un-format pagu + tombol loading ── */
     form.addEventListener('submit', function (e) {

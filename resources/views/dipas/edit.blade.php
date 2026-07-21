@@ -30,7 +30,7 @@
                     <span class="df-chip"><i class="bi bi-hash"></i> {{ $dipa->nomor_dipa }}</span>
                 </div>
                 <h4>Edit Header DIPA ✏️</h4>
-                <div class="sub">Perbarui informasi dokumen induk — pagu &amp; item anggaran dikelola lewat revisi DIPA.</div>
+                <div class="sub">Perbarui informasi dokumen induk — pagu &amp; COA dikelola lewat revisi DIPA.</div>
             </div>
             <div class="d-flex flex-wrap gap-2">
                 <a href="{{ route('dipas.show', $dipa) }}" class="df-btn-back"><i class="bi bi-eye"></i> Detail</a>

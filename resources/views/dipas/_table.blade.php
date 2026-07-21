@@ -9,7 +9,7 @@
                 <th width="10%">Revisi Aktif</th>
                 <th width="16%" class="text-end">Total Pagu Revisi Aktif</th>
                 <th width="9%" class="text-center">Status</th>
-                <th width="8%" class="text-center">Item</th>
+                <th width="8%" class="text-center">COA</th>
                 <th width="14%" class="text-center">Aksi</th>
             </tr>
         </thead>
@@ -68,7 +68,7 @@
                                title="Tambah revisi DIPA" aria-label="Tambah revisi DIPA">
                                 <i class="bi bi-file-earmark-plus"></i>
                             </a>
-                            <form action="{{ route('dipas.toggle', $dipa) }}" method="POST" class="d-inline">
+                            <form action="{{ route('dipas.toggle', $dipa) }}" method="POST" class="d-inline js-dipa-toggle">
                                 @csrf
                                 <button type="submit"
                                         class="dp-act {{ $dipa->status_aktif ? 'dp-act-on' : 'dp-act-off' }}"
@@ -83,16 +83,19 @@
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="dp-act dp-act-del"
-                                            title="Hapus DIPA" aria-label="Hapus DIPA">
+                                            data-deltip="ok" aria-label="Hapus DIPA">
                                         <i class="bi bi-trash"></i>
                                     </button>
                                 </form>
                             @else
-                                <button type="button" class="dp-act dp-act-del" disabled
-                                        title="Tidak bisa dihapus — sudah memiliki item anggaran. Gunakan Nonaktifkan."
-                                        aria-label="Tidak bisa dihapus">
-                                    <i class="bi bi-trash"></i>
-                                </button>
+                                {{-- Elemen disabled tidak memicu event mouse — tooltip
+                                     dipasang pada wrapper span. --}}
+                                <span class="d-inline-block" data-deltip="locked">
+                                    <button type="button" class="dp-act dp-act-del" disabled
+                                            aria-label="Tidak bisa dihapus" style="pointer-events:none;">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </span>
                             @endif
                         </div>
                     </td>

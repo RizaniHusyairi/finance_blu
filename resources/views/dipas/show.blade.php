@@ -173,6 +173,7 @@
     border:1px solid var(--dv-border); background:#fff; color:#64748b; font-size:.72rem; font-weight:700;
     cursor:pointer; text-decoration:none; transition:all .22s ease; white-space:nowrap; }
 .dv-act:hover { transform:translateY(-2px); }
+.dv-act-view:hover   { background:#4f46e5; border-color:#4f46e5; color:#fff; box-shadow:0 8px 18px -8px rgba(79,70,229,.6); }
 .dv-act-toggle:hover { background:#f59e0b; border-color:#f59e0b; color:#fff; box-shadow:0 8px 18px -8px rgba(245,158,11,.6); }
 .dv-act-del:hover { background:#e11d48; border-color:#e11d48; color:#fff; box-shadow:0 8px 18px -8px rgba(225,29,72,.6); }
 .dv-act-primary { border-color:#c7d2fe; color:#4338ca; background:#eef2ff; }
@@ -254,7 +255,7 @@
             </div>
             <div class="d-flex flex-wrap gap-2">
                 <button type="button" class="dv-btn solid" data-bs-toggle="modal" data-bs-target="#modalTambahItem">
-                    <i class="bi bi-plus-circle-fill"></i> Tambah Item
+                    <i class="bi bi-plus-circle-fill"></i> Tambah COA
                 </button>
                 <a href="{{ route('dipas.revisions.create', $dipa) }}" class="dv-btn"><i class="bi bi-files"></i> Tambah Revisi</a>
                 <a href="{{ route('dipas.edit', $dipa) }}" class="dv-btn"><i class="bi bi-pencil-square"></i> Edit Header</a>
@@ -263,7 +264,7 @@
                           onsubmit="return confirm('Hapus DIPA ini beserta seluruh revisinya secara permanen?');">
                         @csrf
                         @method('DELETE')
-                        <button type="submit" class="dv-btn danger border-0"><i class="bi bi-trash"></i> Hapus</button>
+                        <button type="submit" class="dv-btn danger border-0" data-deltip="ok"><i class="bi bi-trash"></i> Hapus</button>
                     </form>
                 @endif
                 <a href="{{ route('dipas.index') }}" class="dv-btn"><i class="bi bi-arrow-left"></i> Kembali</a>
@@ -280,19 +281,19 @@
         </div>
         <div class="dv-stat" style="--d:.07s; --t:#0891b2; --ts:#ecfeff;">
             <div class="ic"><i class="bi bi-list-ol"></i></div>
-            <div class="lbl">Total Item Anggaran</div>
+            <div class="lbl">Total COA</div>
             <div class="val">Rp <span class="dv-countup" data-target="{{ (int) $summary['total_item_anggaran'] }}">0</span></div>
         </div>
         <div class="dv-stat" style="--d:.12s; --t:#7c3aed; --ts:#f5f3ff;">
             <div class="ic"><i class="bi bi-check2-square"></i></div>
-            <div class="lbl">Jumlah Item Aktif</div>
+            <div class="lbl">Jumlah COA Aktif</div>
             <div class="val dv-countup" data-target="{{ $summary['jumlah_item_aktif'] }}">0</div>
         </div>
         <div class="dv-stat {{ $hasSelisih ? 'warn' : 'ok' }}" style="--d:.17s; --t:{{ $hasSelisih ? '#e11d48' : '#047857' }}; --ts:{{ $hasSelisih ? '#fff1f2' : '#ecfdf5' }};">
             <div class="ic"><i class="bi {{ $hasSelisih ? 'bi-exclamation-octagon' : 'bi-check-circle' }}"></i></div>
-            <div class="lbl" style="color:{{ $hasSelisih ? '#be123c' : '#059669' }};">Selisih Pagu vs Item</div>
+            <div class="lbl" style="color:{{ $hasSelisih ? '#be123c' : '#059669' }};">Selisih Pagu vs COA</div>
             <div class="val">Rp <span class="dv-countup" data-target="{{ (int) abs($selisih) }}">0</span></div>
-            <div class="sub">{{ $hasSelisih ? 'pagu & item belum sinkron' : 'pagu & item sudah sinkron' }}</div>
+            <div class="sub">{{ $hasSelisih ? 'pagu & COA belum sinkron' : 'pagu & COA sudah sinkron' }}</div>
         </div>
     </div>
 
@@ -300,11 +301,11 @@
         <div class="dv-warning mb-4" role="alert" data-sky-ignore>
             <div class="ic"><i class="bi bi-exclamation-triangle-fill"></i></div>
             <div class="small">
-                <div class="fw-bolder text-dark mb-1">Pagu Belum Sinkron dengan Item Anggaran</div>
+                <div class="fw-bolder text-dark mb-1">Pagu Belum Sinkron dengan COA</div>
                 <div class="text-secondary">
-                    Total pagu revisi aktif belum sama dengan penjumlahan seluruh item anggaran — selisih saat ini
+                    Total pagu revisi aktif belum sama dengan penjumlahan seluruh COA — selisih saat ini
                     <strong>Rp {{ number_format($selisih, 0, ',', '.') }}</strong>.
-                    Sesuaikan nilai item anggaran di bawah atau perbarui total pagu lewat revisi baru.
+                    Sesuaikan nilai COA di bawah atau perbarui total pagu lewat revisi baru.
                 </div>
             </div>
         </div>
@@ -316,7 +317,7 @@
             <span class="dv-card-ic" style="--t:#7c3aed; --t2:#a855f7;"><i class="bi bi-layers-fill"></i></span>
             <div>
                 <h6 class="dv-card-title">Informasi Revisi Aktif</h6>
-                <div class="dv-card-sub">Detail revisi yang saat ini dipakai sebagai dasar item anggaran.</div>
+                <div class="dv-card-sub">Detail revisi yang saat ini dipakai sebagai dasar COA.</div>
             </div>
             <a href="{{ route('dipas.revisions.create', $dipa) }}" class="dv-act dv-act-primary ms-auto text-decoration-none">
                 <i class="bi bi-file-earmark-plus"></i> Tambah Revisi Baru
@@ -387,11 +388,11 @@
         <div class="dv-card-head">
             <span class="dv-card-ic" style="--t:#0891b2; --t2:#22d3ee;"><i class="bi bi-list-check"></i></span>
             <div>
-                <h6 class="dv-card-title">Item Anggaran Revisi Aktif</h6>
-                <div class="dv-card-sub">Kelola item COA beserta pagu, realisasi, dan serapannya.</div>
+                <h6 class="dv-card-title">COA Revisi Aktif</h6>
+                <div class="dv-card-sub">Kelola COA beserta pagu, realisasi, dan serapannya.</div>
             </div>
             <button type="button" class="dv-act dv-act-primary ms-auto" data-bs-toggle="modal" data-bs-target="#modalTambahItem">
-                <i class="bi bi-plus-lg"></i> Tambah Item Anggaran
+                <i class="bi bi-plus-lg"></i> Tambah COA
             </button>
         </div>
         <div class="px-4 pb-2 pt-1">
@@ -434,8 +435,8 @@
         @if($items->isEmpty())
             <div class="dv-empty">
                 <div class="glyph"><i class="bi bi-inbox"></i></div>
-                <div class="fw-bold mb-1" style="color:#334155;">Belum ada item anggaran</div>
-                <div class="small">Belum ada item anggaran pada revisi aktif ini — tambahkan lewat tombol di atas.</div>
+                <div class="fw-bold mb-1" style="color:#334155;">Belum ada COA</div>
+                <div class="small">Belum ada COA pada revisi aktif ini — tambahkan lewat tombol di atas.</div>
             </div>
         @else
             <div class="table-responsive mt-2">
@@ -461,6 +462,9 @@
                                 $itemSisa = (float) $item->sisa_pagu;
                                 $itemPersen = $itemPagu > 0 ? round($itemRealisasi / $itemPagu * 100, 1) : 0;
                                 $serapWarna = $itemPersen >= 100 ? '#e11d48' : ($itemPersen >= 90 ? '#f59e0b' : '#4f46e5');
+                                // Selaras dengan guard destroyItem: terkunci bila ada
+                                // realisasi ATAU dirujuk tagihan (walau belum cair).
+                                $itemTerkunci = $itemRealisasi > 0 || ($itemDipakaiTagihan ?? collect())->contains($item->id);
                             @endphp
                             <tr style="--i: {{ $loop->index }};">
                                 <td class="text-center px-3 text-muted fw-semibold">{{ $loop->iteration }}</td>
@@ -475,7 +479,14 @@
                                     <div class="fw-semibold">{{ $item->coa->nama_akun ?? '-' }}</div>
                                     <div class="small text-muted">{{ $item->coa->jenis_akun ?? '-' }}</div>
                                 </td>
-                                <td class="text-end dv-num fw-semibold">Rp {{ number_format($itemPagu, 0, ',', '.') }}</td>
+                                <td class="text-end dv-num fw-semibold">
+                                    Rp {{ number_format($itemPagu, 0, ',', '.') }}
+                                    @if($item->volume !== null && $item->harga_satuan !== null)
+                                        <div class="small text-muted fw-normal" title="Rincian POK: Volume × Harga Satuan">
+                                            {{ rtrim(rtrim(number_format((float) $item->volume, 2, ',', '.'), '0'), ',') }} {{ $item->satuan ?: '' }} × Rp {{ number_format((float) $item->harga_satuan, 0, ',', '.') }}
+                                        </div>
+                                    @endif
+                                </td>
                                 <td class="text-end dv-num fw-semibold" style="color:#4338ca;">Rp {{ number_format($itemRealisasi, 0, ',', '.') }}</td>
                                 <td>
                                     <div class="dv-serap">
@@ -487,7 +498,9 @@
                                     {{ $itemSisa < 0 ? '−' : '' }}Rp {{ number_format(abs($itemSisa), 0, ',', '.') }}
                                 </td>
                                 <td class="text-center">
-                                    @if($item->status_aktif)
+                                    @if($item->blokir)
+                                        <span class="dv-badge" style="background:#fff1f2; color:#be123c; border:1px solid #fecdd3;" title="Item diblokir (tanda * pada POK) — tidak dapat dipilih pada tagihan"><i class="bi bi-slash-circle me-1"></i>Blokir</span>
+                                    @elseif($item->status_aktif)
                                         <span class="dv-badge dv-badge-success"><span class="dot"></span>Aktif</span>
                                     @else
                                         <span class="dv-badge dv-badge-neutral">Nonaktif</span>
@@ -495,20 +508,37 @@
                                 </td>
                                 <td class="text-center px-3">
                                     <div class="d-flex justify-content-center gap-1 flex-wrap">
+                                        @if($item->coa)
+                                            <a href="{{ route('coas.show', $item->coa) }}"
+                                               class="dv-act dv-act-view"
+                                               title="Lihat detail COA" aria-label="Lihat detail COA">
+                                                <i class="bi bi-eye"></i> Detail
+                                            </a>
+                                        @endif
                                         <form action="{{ route('dipas.items.toggle', [$dipa, $item]) }}" method="POST">
                                             @csrf
-                                            <button type="submit" class="dv-act dv-act-toggle" title="{{ $item->status_aktif ? 'Nonaktifkan item' : 'Aktifkan item' }}">
+                                            <button type="submit" class="dv-act dv-act-toggle" title="{{ $item->status_aktif ? 'Nonaktifkan COA' : 'Aktifkan COA' }}">
                                                 <i class="bi {{ $item->status_aktif ? 'bi-toggle-on' : 'bi-toggle-off' }}"></i>
                                                 {{ $item->status_aktif ? 'Nonaktifkan' : 'Aktifkan' }}
                                             </button>
                                         </form>
-                                        <form action="{{ route('dipas.items.destroy', [$dipa, $item]) }}" method="POST" onsubmit="return confirm('Hapus item ini dari revisi aktif?');">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="dv-act dv-act-del" title="Hapus item">
-                                                <i class="bi bi-trash"></i>
-                                            </button>
-                                        </form>
+                                        @if($itemTerkunci)
+                                            {{-- Elemen disabled tidak memicu event mouse — tooltip di wrapper. --}}
+                                            <span class="d-inline-block" data-deltip="item-locked">
+                                                <button type="button" class="dv-act dv-act-del" disabled
+                                                        style="pointer-events:none; opacity:.45;" aria-label="Tidak bisa dihapus">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </span>
+                                        @else
+                                            <form action="{{ route('dipas.items.destroy', [$dipa, $item]) }}" method="POST" onsubmit="return confirm('Hapus COA ini dari revisi aktif?');">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="dv-act dv-act-del" data-deltip="item-ok" aria-label="Hapus COA">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </form>
+                                        @endif
                                     </div>
                                 </td>
                             </tr>
@@ -578,6 +608,8 @@
         </div>
     </div>
 
+    @include('layouts._partials.del-tooltip')
+
     {{-- ════════ MODAL TAMBAH ITEM ════════ --}}
     <div class="modal fade" id="modalTambahItem" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-centered">
@@ -585,7 +617,7 @@
                 <form action="{{ route('dipas.items.store', $dipa) }}" method="POST">
                     @csrf
                     <div class="modal-header text-white">
-                        <h5 class="modal-title fw-bold"><i class="bi bi-plus-circle me-2"></i>Tambah Item Anggaran</h5>
+                        <h5 class="modal-title fw-bold"><i class="bi bi-plus-circle me-2"></i>Tambah COA</h5>
                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body p-4">
@@ -617,6 +649,29 @@
                                     <option value="0">Nonaktif</option>
                                 </select>
                             </div>
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold">Volume <span class="text-muted fw-normal">(ops.)</span></label>
+                                <input type="number" step="0.01" min="0" name="volume" id="item_volume" class="form-control" placeholder="mis. 12" value="{{ old('volume') }}">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold">Satuan <span class="text-muted fw-normal">(ops.)</span></label>
+                                <input type="text" name="satuan" maxlength="30" class="form-control" placeholder="PKT / bln / M2 / OH" value="{{ old('satuan') }}">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold">Harga Satuan <span class="text-muted fw-normal">(ops.)</span></label>
+                                <input type="hidden" name="harga_satuan" id="harga_satuan" value="{{ old('harga_satuan') }}">
+                                <input type="text" id="harga_satuan_display" class="form-control" inputmode="numeric" placeholder="Rp 0" value="{{ old('harga_satuan') ? 'Rp ' . number_format((float) old('harga_satuan'), 0, ',', '.') : '' }}">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold">Blokir (POK <code>*</code>)</label>
+                                <select name="blokir" class="form-select">
+                                    <option value="0">Tidak diblokir</option>
+                                    <option value="1" {{ old('blokir') === '1' ? 'selected' : '' }}>Diblokir</option>
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <small class="text-muted"><i class="bi bi-calculator me-1"></i>Bila Volume dan Harga Satuan diisi, Nilai Pagu dihitung otomatis (Volume × Harga Satuan) mengikuti aturan POK. COA yang diblokir tidak dapat dipilih pada tagihan.</small>
+                            </div>
                             <div class="col-12">
                                 <div class="border rounded-4 p-3" style="background:linear-gradient(180deg,#f8faff,#eef2ff55); border-color:#e0e7ff !important;">
                                     <div class="small text-muted mb-2"><i class="bi bi-eye me-1"></i>Preview COA</div>
@@ -644,7 +699,7 @@
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Tutup</button>
-                        <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i>Simpan Item</button>
+                        <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i>Simpan COA</button>
                     </div>
                 </form>
             </div>
@@ -744,6 +799,38 @@
 
         nilaiPaguDisplay.addEventListener('input', syncNilaiPagu);
         nilaiPaguDisplay.addEventListener('blur', syncNilaiPagu);
+
+        /* ── Rincian POK: harga satuan berformat rupiah + auto-kalkulasi pagu ── */
+        const volumeInput = document.getElementById('item_volume');
+        const hargaHidden = document.getElementById('harga_satuan');
+        const hargaDisplay = document.getElementById('harga_satuan_display');
+
+        const autoHitungPagu = () => {
+            const vol = parseFloat(volumeInput?.value || '');
+            const harga = parseInt(hargaHidden?.value || '', 10);
+            if (!isNaN(vol) && !isNaN(harga)) {
+                const jumlah = Math.round(vol * harga);
+                nilaiPaguHidden.value = jumlah;
+                nilaiPaguDisplay.value = formatRupiah(jumlah);
+                nilaiPaguDisplay.readOnly = true;
+            } else {
+                nilaiPaguDisplay.readOnly = false;
+            }
+        };
+
+        if (volumeInput && hargaHidden && hargaDisplay) {
+            const syncHarga = () => {
+                const numeric = hargaDisplay.value.replace(/[^\d]/g, '');
+                hargaHidden.value = numeric;
+                hargaDisplay.value = numeric ? formatRupiah(parseInt(numeric, 10)) : '';
+                autoHitungPagu();
+            };
+
+            hargaDisplay.addEventListener('input', syncHarga);
+            hargaDisplay.addEventListener('blur', syncHarga);
+            volumeInput.addEventListener('input', autoHitungPagu);
+            syncHarga();
+        }
 
         updatePreviewCoa();
         syncNilaiPagu();

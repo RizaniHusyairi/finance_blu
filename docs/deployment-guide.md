@@ -21,6 +21,7 @@ Catatan khusus Windows/Laragon ada di bagian akhir.
 | Git | terbaru | clone/pull kode |
 | Cron | bawaan OS | untuk Laravel Scheduler |
 | Supervisor | bawaan OS | untuk queue worker yang persisten |
+| Tesseract OCR | 5.x + bahasa `ind` | untuk auto-isi form Input Tagihan Historis dari scan (lihat Langkah 15) |
 
 ### 1.1 Ekstensi PHP wajib
 Aplikasi memakai DomPDF, QR (GD/Imagick), PhpSpreadsheet, dan MySQL. Pastikan ekstensi berikut aktif:
@@ -258,6 +259,45 @@ sudo apt install -y certbot python3-certbot-nginx
 sudo certbot --nginx -d sikeren.example.go.id
 ```
 
+### Langkah 15 — Tesseract OCR (fitur Input Tagihan Historis)
+
+Fitur **Input Tagihan Historis** (Proses Tagihan → Input Tagihan Historis) membaca
+bundel scan SILABI dengan OCR agar form terisi otomatis. Tanpa Tesseract, fitur
+tetap jalan (degradasi anggun: hanya nama file yang dibaca + pratinjau scan),
+tetapi auto-isi dari isi dokumen tidak aktif.
+
+1. **Instal Tesseract + data bahasa Indonesia:**
+   ```bash
+   sudo apt install -y tesseract-ocr tesseract-ocr-ind
+   tesseract --version        # verifikasi ≥ 5.x
+   tesseract --list-langs     # pastikan ada: eng, ind, osd
+   ```
+
+2. **Set path di `.env`** (lihat juga bagian 4):
+   ```dotenv
+   TESSERACT_PATH=/usr/bin/tesseract
+   TESSERACT_TESSDATA=/usr/share/tesseract-ocr/5/tessdata
+   ```
+   > Path tessdata bisa berbeda per distro — cek dengan
+   > `tesseract --list-langs` (baris pertama menampilkan foldernya).
+   > Konfigurasi dibaca dari `config/services.php` key `tesseract`;
+   > default-nya path Windows dev, jadi **di server Linux `.env` ini WAJIB diisi**.
+
+3. **Pastikan folder kerja OCR writable** (sudah tercakup Langkah 9 bila
+   `storage/` dimiliki `www-data`): file JPEG hasil ekstraksi scan ditulis
+   sementara ke `storage/app/historis-arsip/tmp/` lalu dihapus otomatis;
+   PDF arsip bertoken disimpan di `storage/app/historis-arsip/`.
+
+4. **Uji cepat setelah deploy:** login role Super Admin/Operator BLU →
+   Proses Tagihan → Input Tagihan Historis → unggah satu PDF bundel scan →
+   panel hijau "Form terisi otomatis dari hasil OCR" harus muncul beserta
+   pratinjau halaman 1. Bila muncul peringatan "OCR tidak aktif", periksa
+   `TESSERACT_PATH` dan jalankan `php artisan config:clear`.
+
+> Catatan kinerja: OCR 4 halaman pertama memakan ±5–15 detik per bundel dan
+> berjalan sinkron pada request `POST /proses-tagihan/historis/baca-arsip`.
+> Pastikan `max_execution_time` PHP-FPM ≥ 120 (sudah disarankan di Langkah 13).
+
 ---
 
 ## 4. Konfigurasi `.env` Produksi (poin penting)
@@ -315,6 +355,11 @@ DB_BACKUP_PATH=/var/backups/sikeren
 # Observability (MON-01/03) — token endpoint /health & ambang kesegaran backup
 MONITORING_HEALTH_TOKEN=isi_token_acak_kuat
 MONITORING_BACKUP_STALE_HOURS=26
+
+# OCR Tagihan Historis (Langkah 15) — WAJIB diisi di Linux; default config
+# menunjuk path Windows dev.
+TESSERACT_PATH=/usr/bin/tesseract
+TESSERACT_TESSDATA=/usr/share/tesseract-ocr/5/tessdata
 ```
 
 ---
@@ -427,6 +472,15 @@ php artisan serve            # atau akses via virtual host Laragon
 > Scheduler & queue di dev bisa dijalankan manual:
 > `php artisan schedule:work` dan `php artisan queue:work`.
 
+**OCR di Windows/Laragon:** Tesseract diinstal via
+`winget install --id UB-Mannheim.TesseractOCR -e` (default
+`C:\Program Files\Tesseract-OCR\tesseract.exe`). Karena Program Files tidak
+writable tanpa admin, salin `eng.traineddata` + `osd.traineddata` dari folder
+instalasi plus unduh `ind.traineddata`
+(github.com/tesseract-ocr/tessdata_fast) ke `storage/app/tessdata` —
+itulah default `TESSERACT_TESSDATA` di `config/services.php`, jadi di dev
+Windows tidak perlu mengisi `.env`.
+
 ---
 
 ## 8. Ringkasan Perintah Inti (Cheat Sheet)
@@ -440,4 +494,5 @@ php artisan storage:link                           # symlink file publik
 php artisan config:cache route:cache view:cache    # optimasi
 php artisan queue:work                             # worker (via Supervisor di prod)
 php artisan schedule:run                           # dipanggil cron tiap menit
+sudo apt install -y tesseract-ocr tesseract-ocr-ind  # OCR tagihan historis (+ .env TESSERACT_*)
 ```

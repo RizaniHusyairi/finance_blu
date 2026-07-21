@@ -106,6 +106,15 @@
                         <input type="text" name="jenis_akun" class="form-control" value="{{ old('jenis_akun') }}" maxlength="50" placeholder="Contoh: BELANJA BARANG">
                     </div>
                     <div class="col-md-3">
+                        <label class="form-label fw-semibold">Sumber Dana</label>
+                        <select name="sumber_dana" id="sumber_dana" class="form-select">
+                            <option value="" {{ old('sumber_dana') === null || old('sumber_dana') === '' ? 'selected' : '' }}>Otomatis (525xxx = BLU, lainnya RM)</option>
+                            <option value="BLU" {{ old('sumber_dana') === 'BLU' ? 'selected' : '' }}>BLU</option>
+                            <option value="RM" {{ old('sumber_dana') === 'RM' ? 'selected' : '' }}>RM (Rupiah Murni)</option>
+                        </select>
+                        <div class="small text-muted mt-1">Kolom SD pada POK — belanja BLU (525xxx) atau Rupiah Murni.</div>
+                    </div>
+                    <div class="col-md-3">
                         <label class="form-label fw-semibold d-block">Status Aktif</label>
                         <div class="border rounded-4 p-3 mt-1">
                             <input type="hidden" name="status_aktif" value="0">

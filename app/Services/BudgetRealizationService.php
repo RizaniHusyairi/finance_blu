@@ -70,7 +70,10 @@ class BudgetRealizationService
                     nominal: $spp->nominal_spp ?? $komponen->total_nominal, // Sebaiknya ikuti nominal akhir di SPP
                     tanggal: $lockedSp2d->tanggal_sp2d ?? now()
                 );
-            } elseif ($spp->tagihan_id && $spp->tagihan && $spp->tagihan->tipe_tagihan === 'PERJALDIN') {
+            } elseif ($spp->tagihan_id && $spp->tagihan && $spp->tagihan->tipe_tagihan === 'PERJALDIN'
+                // Perjaldin historis (arsip) tidak punya komponen — biarkan
+                // jatuh ke cabang generik yang memakai dipa_revision_item_id.
+                && ! $spp->tagihan->is_historis) {
                 // Perjaldin konsolidasi (alur terpadu): satu SPP untuk seluruh
                 // komponen — realisasi dicatat per komponen sesuai COA masing-masing.
                 $komponens = $spp->tagihan->komponenPerjaldin()

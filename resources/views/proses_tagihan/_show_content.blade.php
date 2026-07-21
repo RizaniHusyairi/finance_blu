@@ -69,6 +69,9 @@
             </div>
             <h2 class="fw-bolder mb-1 text-white" style="font-size: clamp(1.4rem, 3vw, 1.9rem); letter-spacing: -.5px;">
                 {{ $tagihan->nomor_tagihan }}
+                @if($tagihan->is_historis)
+                    <span class="badge align-middle" style="background:rgba(14,116,144,.35); border:1px solid rgba(165,243,252,.5); color:#a5f3fc; font-size:.6em; letter-spacing:1px;" title="Tagihan arsip yang direkam dari berkas — sudah selesai diproses di luar sistem, tanpa alur verifikasi ulang."><i class="bi bi-archive me-1"></i>HISTORIS</span>
+                @endif
             </h2>
             <div class="text-white opacity-75 fw-semibold"><i class="bi bi-building me-1"></i> {{ $pihak }}</div>
         </div>

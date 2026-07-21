@@ -4,6 +4,7 @@
 
 @push('css')
 <style>
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .001s !important; animation-delay: 0s !important; animation-iteration-count: 1 !important; transition-duration: .001s !important; } }
     /* Welcome banner */
     .welcome-banner {
         background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #db2777 100%);

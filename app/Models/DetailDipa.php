@@ -12,12 +12,19 @@ class DetailDipa extends Model
         'dipa_revision_id',
         'coa_id',
         'nilai_pagu',
+        'volume',
+        'satuan',
+        'harga_satuan',
         'status_aktif',
+        'blokir',
     ];
 
     protected $casts = [
         'nilai_pagu' => 'decimal:2',
+        'volume' => 'decimal:2',
+        'harga_satuan' => 'decimal:2',
         'status_aktif' => 'boolean',
+        'blokir' => 'boolean',
     ];
 
     public function dipaRevision()

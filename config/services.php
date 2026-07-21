@@ -2,6 +2,11 @@
 
 return [
 
+    'tesseract' => [
+        'path' => env('TESSERACT_PATH', 'C:\\Program Files\\Tesseract-OCR\\tesseract.exe'),
+        'tessdata' => env('TESSERACT_TESSDATA', storage_path('app/tessdata')),
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | Third Party Services

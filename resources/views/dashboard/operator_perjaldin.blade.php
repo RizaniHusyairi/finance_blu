@@ -4,6 +4,7 @@
 
 @push('css')
 <style>
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .001s !important; animation-delay: 0s !important; animation-iteration-count: 1 !important; transition-duration: .001s !important; } }
     /* ============== Modern Design System (Plus Jakarta Sans vibe) ============== */
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
 

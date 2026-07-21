@@ -112,6 +112,16 @@
                         <input type="text" name="jenis_akun" class="form-control" value="{{ old('jenis_akun', $coa->jenis_akun) }}" maxlength="50" placeholder="Contoh: BELANJA BARANG">
                     </div>
                     <div class="col-md-3">
+                        <label class="form-label fw-semibold">Sumber Dana</label>
+                        @php $sumberDana = old('sumber_dana', $coa->sumber_dana); @endphp
+                        <select name="sumber_dana" id="sumber_dana" class="form-select">
+                            <option value="" {{ $sumberDana === null || $sumberDana === '' ? 'selected' : '' }}>Otomatis (525xxx = BLU, lainnya RM)</option>
+                            <option value="BLU" {{ $sumberDana === 'BLU' ? 'selected' : '' }}>BLU</option>
+                            <option value="RM" {{ $sumberDana === 'RM' ? 'selected' : '' }}>RM (Rupiah Murni)</option>
+                        </select>
+                        <div class="small text-muted mt-1">Kolom SD pada POK — belanja BLU (525xxx) atau Rupiah Murni.</div>
+                    </div>
+                    <div class="col-md-3">
                         <label class="form-label fw-semibold d-block">Status Aktif</label>
                         <div class="form-check form-switch border rounded-4 px-3 py-3 mt-1">
                             <input class="form-check-input" type="checkbox" role="switch" id="status_aktif" name="status_aktif" value="1" {{ (string) $oldStatusAktif === '1' ? 'checked' : '' }}>

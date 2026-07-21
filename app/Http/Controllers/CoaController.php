@@ -97,6 +97,8 @@ class CoaController extends Controller
             'kode_mak_lengkap' => $kodeMakLengkap,
             'nama_akun' => trim($validated['nama_akun']),
             'jenis_akun' => $this->normalizeText($validated['jenis_akun'] ?? null),
+            'sumber_dana' => $validated['sumber_dana']
+                ?? (str_starts_with($this->normalizeCode($validated['kd_akun']) ?? '', '525') ? 'BLU' : 'RM'),
             'status_aktif' => (bool) ($validated['status_aktif'] ?? false),
         ]);
 
@@ -198,6 +200,8 @@ class CoaController extends Controller
             'kode_mak_lengkap' => $kodeMakLengkap,
             'nama_akun' => trim($validated['nama_akun']),
             'jenis_akun' => $this->normalizeText($validated['jenis_akun'] ?? null),
+            'sumber_dana' => $validated['sumber_dana']
+                ?? (str_starts_with($this->normalizeCode($validated['kd_akun']) ?? '', '525') ? 'BLU' : 'RM'),
             'status_aktif' => (bool) ($validated['status_aktif'] ?? false),
         ]);
 
@@ -451,6 +455,7 @@ class CoaController extends Controller
             'kd_item' => 'nullable|string|max:20',
             'nama_akun' => 'required|string|max:150',
             'jenis_akun' => 'nullable|string|max:50',
+            'sumber_dana' => 'nullable|string|in:RM,BLU',
             'status_aktif' => 'nullable|boolean',
             'redirect_action' => [
                 'nullable',

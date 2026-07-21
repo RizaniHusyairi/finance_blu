@@ -4,6 +4,7 @@
 
 @push('css')
 <style>
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .001s !important; animation-delay: 0s !important; animation-iteration-count: 1 !important; transition-duration: .001s !important; } }
     body[data-bs-theme="blue-theme"] .main-content { background: #f6f7fb; }
 
     /* ============ Welcome banner ============ */

@@ -390,6 +390,11 @@
             <div class="text-lg-end">
                 <div class="sub mb-1"><i class="bi bi-wallet2 me-1"></i>Total nominal (<span id="ptHeroCount">{{ $summary['total'] }}</span> tagihan)</div>
                 <div class="pt-amount">Rp <span id="ptHeroNominal" data-countup data-target="{{ (int) $summary['nominal'] }}">0</span></div>
+                @hasanyrole('Super Admin|Operator BLU')
+                    <a href="{{ route('proses-tagihan.historis.create') }}" class="pt-chip mt-2 d-inline-flex text-decoration-none" title="Rekam tagihan arsip yang sudah selesai diproses di luar sistem">
+                        <i class="bi bi-archive"></i> Input Tagihan Historis
+                    </a>
+                @endhasanyrole
             </div>
         </div>
 

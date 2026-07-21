@@ -84,6 +84,58 @@ class DipaDestroyTest extends TestCase
         $this->assertDatabaseHas('master_dipas', ['id' => $dipa->id]);
     }
 
+    public function test_item_coa_yang_dirujuk_tagihan_tidak_bisa_dihapus(): void
+    {
+        $dipa = $this->buatDipa();
+        $coa = MasterCoa::create(['kd_akun' => '525113', 'nama_akun' => 'Belanja Jasa Uji', 'status_aktif' => true]);
+        $item = DetailDipa::create([
+            'dipa_revision_id' => $dipa->revisions()->first()->id,
+            'coa_id' => $coa->id,
+            'nilai_pagu' => 500000,
+            'status_aktif' => true,
+        ]);
+        Tagihan::create([
+            'nomor_tagihan' => 'TAGIHAN-ITEM-UJI',
+            'tipe_tagihan' => 'KONTRAK',
+            'master_dipa_id' => $dipa->id,
+            'dipa_revision_item_id' => $item->id,
+            'deskripsi' => 'Tagihan uji rujukan item',
+            'total_bruto' => 100000,
+            'total_potongan' => 0,
+            'total_netto' => 100000,
+            'status' => 'DRAFT',
+            'created_by' => $this->admin->id,
+        ]);
+
+        // Sebelumnya jalur ini meledak 500 (FK ON DELETE RESTRICT) — kini
+        // ditolak rapi dengan flash error dan item tetap ada.
+        $this->actingAs($this->admin)
+            ->delete(route('dipas.items.destroy', [$dipa, $item]))
+            ->assertRedirect(route('dipas.show', $dipa))
+            ->assertSessionHas('error');
+
+        $this->assertDatabaseHas('dipa_revision_items', ['id' => $item->id]);
+    }
+
+    public function test_item_coa_tanpa_rujukan_bisa_dihapus(): void
+    {
+        $dipa = $this->buatDipa();
+        $coa = MasterCoa::create(['kd_akun' => '525114', 'nama_akun' => 'Belanja Modal Uji', 'status_aktif' => true]);
+        $item = DetailDipa::create([
+            'dipa_revision_id' => $dipa->revisions()->first()->id,
+            'coa_id' => $coa->id,
+            'nilai_pagu' => 500000,
+            'status_aktif' => true,
+        ]);
+
+        $this->actingAs($this->admin)
+            ->delete(route('dipas.items.destroy', [$dipa, $item]))
+            ->assertRedirect(route('dipas.show', $dipa))
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseMissing('dipa_revision_items', ['id' => $item->id]);
+    }
+
     public function test_dipa_yang_dirujuk_tagihan_ditolak(): void
     {
         $dipa = $this->buatDipa();

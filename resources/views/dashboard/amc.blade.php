@@ -68,6 +68,9 @@
 
 <style>
     /* ===== entrance animations ===== */
+    @media (prefers-reduced-motion: reduce) {
+        [class*="amc-"], [class*="amc-"] * { animation-duration: .001s !important; animation-delay: 0s !important; animation-iteration-count: 1 !important; transition-duration: .001s !important; }
+    }
     @keyframes amcUp { from { opacity: 0; transform: translateY(22px); } to { opacity: 1; transform: none; } }
     @keyframes amcFloat { 0%,100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translateY(-12px) rotate(-2deg); } }
     @keyframes amcSweep { 0% { transform: translateX(-130%) skewX(-18deg); opacity: 0; } 22% { opacity: .35; } 60%,100% { transform: translateX(240%) skewX(-18deg); opacity: 0; } }

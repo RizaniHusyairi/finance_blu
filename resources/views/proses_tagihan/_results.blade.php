@@ -108,7 +108,11 @@
                 <div class="tg-ident">
                     <div class="tg-icon"><i class="bi {{ $tone['icon'] }}"></i></div>
                     <div class="min-w-0">
-                        <div class="tg-no">{{ $tagihan->nomor_tagihan }}</div>
+                        <div class="tg-no">{{ $tagihan->nomor_tagihan }}
+                            @if($tagihan->is_historis)
+                                <span class="badge" style="background:#ecfeff; color:#0e7490; border:1px solid #a5f3fc; font-size:.62rem; letter-spacing:.5px;" title="Tagihan arsip — direkam dari berkas, tanpa alur verifikasi ulang."><i class="bi bi-archive"></i> HISTORIS</span>
+                            @endif
+                        </div>
                         <div class="tg-desc">{{ \Illuminate\Support\Str::limit($tagihan->deskripsi, 110) }}</div>
                         <div class="d-flex flex-wrap align-items-center gap-2">
                             <span class="tg-pihak"><i class="bi bi-building"></i>{{ $pihak }}</span>

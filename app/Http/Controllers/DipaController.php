@@ -86,9 +86,12 @@ class DipaController extends Controller
             'file_dokumen_dipa' => 'nullable|file|mimes:pdf|max:5120',
             'keterangan' => 'nullable|string',
             'redirect_action' => 'nullable|string|in:save,save_and_detail',
+            'pok_token' => 'nullable|uuid',
         ]);
 
-        $dipa = DB::transaction(function () use ($request, $validated) {
+        $rekapPok = null;
+
+        $dipa = DB::transaction(function () use ($request, $validated, &$rekapPok) {
             $dipa = MasterDipa::create([
                 'nomor_dipa' => $validated['nomor_dipa'],
                 'tahun_anggaran' => $validated['tahun_anggaran'],
@@ -101,7 +104,7 @@ class DipaController extends Controller
                 ? PdfCompressor::storeCompressed($request->file('file_dokumen_dipa'), 'dipa/documents', 'local')
                 : null;
 
-            RiwayatRevisiDipa::create([
+            $revision = RiwayatRevisiDipa::create([
                 'master_dipa_id' => $dipa->id,
                 'nomor_revisi' => 0,
                 'tanggal_revisi' => $validated['tanggal_revisi'] ?? $validated['tanggal_disahkan'],
@@ -111,10 +114,24 @@ class DipaController extends Controller
                 'is_active' => true,
             ]);
 
+            // Form Tambah DIPA dengan POK terunggah: seluruh baris detil POK
+            // langsung menjadi COA + item pada revisi awal.
+            if (! empty($validated['pok_token'])) {
+                $pokPath = 'pok-import/' . $validated['pok_token'] . '.pdf';
+                if (Storage::disk('local')->exists($pokPath)) {
+                    $hasil = (new \App\Support\Pok\PokPdfParser())->parse(Storage::disk('local')->path($pokPath));
+                    $rekapPok = (new \App\Support\Pok\PokImporter())->importRows($hasil['rows'], $revision);
+                    Storage::disk('local')->delete($pokPath);
+                }
+            }
+
             return $dipa;
         });
 
         $message = 'DIPA ' . $dipa->nomor_dipa . ' berhasil dibuat beserta revisi awal aktif.';
+        if ($rekapPok !== null) {
+            $message .= ' ' . $rekapPok['dibuat'] . ' COA hasil impor POK ikut dibuat otomatis.';
+        }
 
         if (($validated['redirect_action'] ?? 'save') === 'save_and_detail') {
             return redirect()
@@ -190,7 +207,17 @@ class DipaController extends Controller
             ->orderBy('kd_akun')
             ->pluck('kd_akun');
 
-        return view('dipas.show', compact('dipa', 'activeRevision', 'items', 'summary', 'coaOptions', 'kdAkunOptions'));
+        // ID item yang dirujuk tagihan — dipakai UI untuk menonaktifkan tombol
+        // hapus (selaras dengan guard destroyItem, termasuk tagihan yang masih
+        // berproses dan belum punya realisasi).
+        $allItemIds = collect(optional($activeRevision)->items ?? [])->pluck('id');
+        $itemDipakaiTagihan = $allItemIds->isEmpty()
+            ? collect()
+            : Tagihan::whereIn('dipa_revision_item_id', $allItemIds)
+                ->distinct()
+                ->pluck('dipa_revision_item_id');
+
+        return view('dipas.show', compact('dipa', 'activeRevision', 'items', 'summary', 'coaOptions', 'kdAkunOptions', 'itemDipakaiTagihan'));
     }
 
     public function createRevision(MasterDipa $dipa)
@@ -224,6 +251,7 @@ class DipaController extends Controller
             'keterangan' => 'nullable|string',
             'salin_item_anggaran' => 'nullable|boolean',
             'redirect_action' => 'nullable|string|in:save,save_and_manage',
+            'pok_token' => 'nullable|uuid',
             'nomor_revisi' => [
                 'required',
                 'integer',
@@ -239,7 +267,9 @@ class DipaController extends Controller
                 ->withErrors(['nomor_revisi' => 'Nomor revisi baru sudah berubah. Silakan muat ulang halaman dan coba lagi.']);
         }
 
-        $newRevision = DB::transaction(function () use ($request, $validated, $dipa) {
+        $rekapPok = null;
+
+        $newRevision = DB::transaction(function () use ($request, $validated, $dipa, &$rekapPok) {
             $filePath = $request->hasFile('file_dokumen_dipa')
                 ? PdfCompressor::storeCompressed($request->file('file_dokumen_dipa'), 'dipa/documents', 'local')
                 : null;
@@ -254,13 +284,31 @@ class DipaController extends Controller
                 'is_active' => false,
             ]);
 
+            // POK revisi terunggah: seluruh baris detil POK menjadi item revisi
+            // baru. Nilai POK otoritatif, jadi salin-item dilewati agar pagu
+            // lama tidak menimpa angka revisi.
+            if (! empty($validated['pok_token'])) {
+                $pokPath = 'pok-import/' . $validated['pok_token'] . '.pdf';
+                if (Storage::disk('local')->exists($pokPath)) {
+                    $hasil = (new \App\Support\Pok\PokPdfParser())->parse(Storage::disk('local')->path($pokPath));
+                    $rekapPok = (new \App\Support\Pok\PokImporter())->importRows($hasil['rows'], $revision);
+                    Storage::disk('local')->delete($pokPath);
+
+                    return $revision;
+                }
+            }
+
             if (! empty($validated['salin_item_anggaran']) && $dipa->activeRevision) {
                 $clonePayload = $dipa->activeRevision->items->map(function ($item) use ($revision) {
                     return [
                         'dipa_revision_id' => $revision->id,
                         'coa_id' => $item->coa_id,
                         'nilai_pagu' => $item->nilai_pagu,
+                        'volume' => $item->volume,
+                        'satuan' => $item->satuan,
+                        'harga_satuan' => $item->harga_satuan,
                         'status_aktif' => $item->status_aktif,
+                        'blokir' => $item->blokir,
                         'created_at' => now(),
                         'updated_at' => now(),
                     ];
@@ -274,16 +322,19 @@ class DipaController extends Controller
             return $revision;
         });
 
-        $copiedItemMessage = ! empty($validated['salin_item_anggaran'])
-            ? ' Item anggaran dari revisi aktif sebelumnya berhasil disalin.'
-            : '';
+        $copiedItemMessage = '';
+        if ($rekapPok !== null) {
+            $copiedItemMessage = ' ' . $rekapPok['dibuat'] . ' COA hasil impor POK ikut dibuat otomatis.';
+        } elseif (! empty($validated['salin_item_anggaran'])) {
+            $copiedItemMessage = ' COA dari revisi aktif sebelumnya berhasil disalin.';
+        }
 
         $message = 'Revisi DIPA ' . $dipa->nomor_dipa . ' nomor ' . $newRevision->nomor_revisi . ' berhasil dibuat sebagai draft nonaktif.' . $copiedItemMessage;
 
         if (($validated['redirect_action'] ?? 'save') === 'save_and_manage') {
             return redirect()
                 ->route('dipas.show', $dipa)
-                ->with('success', $message . ' Anda dapat meninjau histori revisi atau mengaktifkannya secara manual setelah item diverifikasi.');
+                ->with('success', $message . ' Anda dapat meninjau histori revisi atau mengaktifkannya secara manual setelah COA diverifikasi.');
         }
 
         return redirect()
@@ -339,7 +390,7 @@ class DipaController extends Controller
         if ($adaItem || $adaTagihan || $adaKontrak) {
             return redirect()
                 ->route('dipas.show', $dipa)
-                ->with('error', 'DIPA tidak dapat dihapus karena sudah memiliki item anggaran atau dipakai transaksi. Gunakan status Nonaktif.');
+                ->with('error', 'DIPA tidak dapat dihapus karena sudah memiliki COA atau dipakai transaksi. Gunakan status Nonaktif.');
         }
 
         $label = $dipa->nomor_dipa;
@@ -389,20 +440,36 @@ class DipaController extends Controller
 
         $validated = $request->validate([
             'coa_id' => 'required|exists:master_coas,id',
-            'nilai_pagu' => 'required|numeric|min:0',
+            'nilai_pagu' => 'required_without_all:volume,harga_satuan|nullable|numeric|min:0',
+            'volume' => 'nullable|numeric|min:0',
+            'satuan' => 'nullable|string|max:30',
+            'harga_satuan' => 'nullable|numeric|min:0',
             'status_aktif' => 'required|boolean',
+            'blokir' => 'nullable|boolean',
         ]);
+
+        // Aturan POK: Jumlah Biaya = Volume × Harga Satuan. Bila keduanya
+        // diisi, nilai pagu dihitung dari sana agar rinciannya selalu konsisten.
+        $volume = $validated['volume'] ?? null;
+        $hargaSatuan = $validated['harga_satuan'] ?? null;
+        $nilaiPagu = ($volume !== null && $hargaSatuan !== null)
+            ? round((float) $volume * (float) $hargaSatuan, 2)
+            : (float) ($validated['nilai_pagu'] ?? 0);
 
         DetailDipa::create([
             'dipa_revision_id' => $activeRevision->id,
             'coa_id' => $validated['coa_id'],
-            'nilai_pagu' => $validated['nilai_pagu'],
+            'nilai_pagu' => $nilaiPagu,
+            'volume' => $volume,
+            'satuan' => $validated['satuan'] ?? null,
+            'harga_satuan' => $hargaSatuan,
             'status_aktif' => (bool) $validated['status_aktif'],
+            'blokir' => (bool) ($validated['blokir'] ?? false),
         ]);
 
         return redirect()
             ->route('dipas.show', $dipa)
-            ->with('success', 'Item anggaran berhasil ditambahkan ke revisi aktif.');
+            ->with('success', 'COA berhasil ditambahkan ke revisi aktif.');
     }
 
     public function toggleItem(MasterDipa $dipa, DetailDipa $item)
@@ -415,18 +482,39 @@ class DipaController extends Controller
 
         return redirect()
             ->route('dipas.show', $dipa)
-            ->with('success', 'Status item anggaran berhasil diperbarui.');
+            ->with('success', 'Status COA berhasil diperbarui.');
     }
 
+    /**
+     * Hapus terjaga: COA (item revisi) yang sudah dirujuk tagihan atau punya
+     * realisasi tidak boleh dihapus — FK database memang menolaknya
+     * (ON DELETE RESTRICT), tapi tanpa guard user melihat error 500.
+     */
     public function destroyItem(MasterDipa $dipa, DetailDipa $item)
     {
         abort_unless($item->dipaRevision?->master_dipa_id === $dipa->id, 404);
 
-        $item->delete();
+        $dipakaiTagihan = Tagihan::where('dipa_revision_item_id', $item->id)->exists();
+        $adaRealisasi = \App\Models\RealisasiAnggaran::where('dipa_revision_item_id', $item->id)->exists();
+
+        if ($dipakaiTagihan || $adaRealisasi) {
+            return redirect()
+                ->route('dipas.show', $dipa)
+                ->with('error', 'COA ini tidak dapat dihapus karena sudah dipakai tagihan atau memiliki realisasi. Gunakan Nonaktifkan agar tidak dipilih pada tagihan baru.');
+        }
+
+        try {
+            $item->delete();
+        } catch (\Illuminate\Database\QueryException) {
+            // Jaring pengaman untuk rujukan lain (mis. dokumen pencairan/komponen).
+            return redirect()
+                ->route('dipas.show', $dipa)
+                ->with('error', 'COA ini tidak dapat dihapus karena masih dirujuk data lain. Gunakan Nonaktifkan.');
+        }
 
         return redirect()
             ->route('dipas.show', $dipa)
-            ->with('success', 'Item anggaran berhasil dihapus dari revisi aktif.');
+            ->with('success', 'COA berhasil dihapus dari revisi aktif.');
     }
 
     public function activateRevision(MasterDipa $dipa, RiwayatRevisiDipa $revision)

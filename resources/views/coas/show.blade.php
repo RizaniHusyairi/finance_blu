@@ -195,6 +195,9 @@
                     @if($coa->jenis_akun)
                         <span class="cp-chip"><i class="bi bi-bookmark-fill"></i> {{ $coa->jenis_akun }}</span>
                     @endif
+                    @if($coa->sumber_dana)
+                        <span class="cp-chip" title="Sumber dana (kolom SD pada POK)"><i class="bi bi-cash-coin"></i> {{ $coa->sumber_dana }}</span>
+                    @endif
                     <span class="cp-chip"><i class="bi bi-folder2-open"></i> {{ number_format($statistics['jumlah_dipa']) }} DIPA</span>
                 </div>
                 <div class="cp-kode" id="cpKodeCopy" data-copy="{{ $coa->kode_mak_lengkap ?: $coa->kd_akun }}" title="Klik untuk menyalin kode">
@@ -210,7 +213,7 @@
                     <form action="{{ route('coas.destroy', $coa) }}" method="POST" onsubmit="return confirm('Hapus COA ini secara permanen?');">
                         @csrf
                         @method('DELETE')
-                        <button type="submit" class="cp-btn danger border-0"><i class="bi bi-trash"></i> Hapus</button>
+                        <button type="submit" class="cp-btn danger border-0" data-deltip="coa-ok"><i class="bi bi-trash"></i> Hapus</button>
                     </form>
                 @endif
             </div>
@@ -487,6 +490,7 @@
         @endif
     </div>
 
+    @include('layouts._partials.del-tooltip')
 </div>
 @endsection
 

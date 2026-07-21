@@ -23,6 +23,7 @@ class MasterCoa extends Model
         'kode_mak_lengkap',
         'nama_akun',
         'jenis_akun',
+        'sumber_dana',
         'status_aktif',
     ];
 

@@ -37,6 +37,9 @@
                         @else
                             <span class="text-muted">—</span>
                         @endif
+                        @if($coa->sumber_dana)
+                            <span class="cl-badge" style="{{ $coa->sumber_dana === 'BLU' ? 'background:#ecfdf5; color:#047857;' : 'background:#fffbeb; color:#b45309;' }}" title="Sumber dana (kolom SD pada POK)">{{ $coa->sumber_dana }}</span>
+                        @endif
                     </td>
                     <td class="text-center">
                         @if($coa->dipa_revision_items_count > 0)
@@ -74,13 +77,16 @@
                                 </button>
                             </form>
                             @if($coa->dipa_revision_items_count > 0)
-                                <button type="button"
-                                        class="cl-act cl-act-del"
-                                        title="Tidak bisa dihapus (sudah dipakai di item DIPA)"
-                                        aria-label="Tidak bisa dihapus"
-                                        disabled>
-                                    <i class="bi bi-trash"></i>
-                                </button>
+                                {{-- Elemen disabled tidak memicu event mouse — tooltip
+                                     dipasang pada wrapper span. --}}
+                                <span class="d-inline-block" data-deltip="coa-locked">
+                                    <button type="button"
+                                            class="cl-act cl-act-del"
+                                            aria-label="Tidak bisa dihapus"
+                                            disabled style="pointer-events:none;">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </span>
                             @else
                                 <form action="{{ route('coas.destroy', $coa) }}" method="POST" class="d-inline"
                                       onsubmit="return confirm('Hapus COA ini secara permanen?');">
@@ -88,7 +94,7 @@
                                     @method('DELETE')
                                     <button type="submit"
                                             class="cl-act cl-act-del"
-                                            title="Hapus COA" aria-label="Hapus COA">
+                                            data-deltip="coa-ok" aria-label="Hapus COA">
                                         <i class="bi bi-trash"></i>
                                     </button>
                                 </form>

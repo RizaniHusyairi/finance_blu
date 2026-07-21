@@ -73,6 +73,20 @@
             {{-- ════════ KOLOM FORM ════════ --}}
             <div class="col-lg-8">
 
+                {{-- Step 0: Dropzone POK revisi — form terisi otomatis --}}
+                @include('dipas._partials.pok_dropzone', [
+                    'dzJudul' => 'Unggah POK Revisi — Form Terisi Otomatis',
+                    'dzSub' => 'Total pagu & tanggal revisi terisi sendiri; saat disimpan seluruh COA revisi dibuat dari POK (opsi salin dimatikan otomatis).',
+                    'dzWarna' => '#0891b2',
+                    'dzFlow' => [
+                        ['bi-file-earmark-arrow-up', 'Unggah PDF POK revisi'],
+                        ['bi-eye', 'Dibaca otomatis'],
+                        ['bi-magic', 'Pagu & tanggal terisi'],
+                        ['bi-table', 'Pratinjau COA tampil'],
+                        ['bi-database-add', 'Simpan → item revisi terbentuk'],
+                    ],
+                ])
+
                 {{-- Step 1: Ringkasan induk --}}
                 <div class="df-card mb-4" style="--d:.05s; --t:#0891b2; --t2:#22d3ee;">
                     <div class="df-card-head">
@@ -133,8 +147,8 @@
                                 <div class="df-tile" style="--t:#b45309; --ts:#fffbeb;">
                                     <span class="t-ic"><i class="bi bi-list-ol"></i></span>
                                     <div>
-                                        <div class="t-lbl">Item Anggaran</div>
-                                        <div class="t-val">{{ number_format($summary['jumlah_item_anggaran_revisi_aktif']) }} item</div>
+                                        <div class="t-lbl">COA</div>
+                                        <div class="t-val">{{ number_format($summary['jumlah_item_anggaran_revisi_aktif']) }} COA</div>
                                         <div class="df-hint">{{ number_format($summary['jumlah_item_anggaran_aktif']) }} berstatus aktif</div>
                                     </div>
                                 </div>
@@ -177,27 +191,21 @@
                                 </div>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Dokumen Revisi DIPA (PDF)</label>
-                                <div class="df-drop" id="dfDrop">
-                                    <input type="file" name="file_dokumen_dipa" id="dfFile" accept=".pdf,application/pdf">
-                                    <div class="df-drop-ic"><i class="bi bi-cloud-arrow-up-fill" id="dfDropIcon"></i></div>
-                                    <div class="fw-bold small" id="dfDropText">Seret file ke sini atau klik untuk memilih</div>
-                                    <div class="df-hint" id="dfDropHint">Opsional · PDF · maks. 5 MB</div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label d-block">Salin Item Anggaran</label>
+                                <label class="form-label d-block">Salin COA</label>
                                 <div class="df-switch {{ old('salin_item_anggaran', '1') ? 'on' : '' }}" id="dfSwitchWrap">
                                     <div class="form-check form-switch d-flex align-items-center gap-2 ps-0 mb-1">
                                         <input class="form-check-input ms-0 flex-shrink-0" type="checkbox" role="switch"
                                                id="salin_item_anggaran" name="salin_item_anggaran" value="1"
                                                {{ old('salin_item_anggaran', '1') ? 'checked' : '' }}>
                                         <label class="form-check-label fw-bold small" for="salin_item_anggaran" style="cursor:pointer;">
-                                            Salin item anggaran dari revisi aktif sebelumnya
+                                            Salin COA dari revisi aktif sebelumnya
                                         </label>
                                     </div>
-                                    <div class="df-hint">Jika aktif, {{ number_format($summary['jumlah_item_anggaran_revisi_aktif']) }} item anggaran dari revisi aktif saat ini akan dikloning ke revisi baru.</div>
+                                    <div class="df-hint">Jika aktif, {{ number_format($summary['jumlah_item_anggaran_revisi_aktif']) }} COA dari revisi aktif saat ini akan dikloning ke revisi baru.</div>
                                 </div>
+                            </div>
+                            <div class="col-12">
+                                @include('dipas._partials.pok_preview')
                             </div>
                             <div class="col-12">
                                 <label class="form-label">Keterangan Revisi</label>
@@ -216,7 +224,7 @@
                             <i class="bi bi-save"></i> Simpan Revisi
                         </button>
                         <button type="submit" name="redirect_action" value="save_and_manage" class="df-btn df-btn-success js-df-submit">
-                            <i class="bi bi-arrow-right-circle"></i> Simpan &amp; Kelola Item Anggaran
+                            <i class="bi bi-arrow-right-circle"></i> Simpan &amp; Kelola COA
                         </button>
                     </div>
                 </div>
@@ -243,8 +251,8 @@
                                 <div class="df-doc-val" id="pvTanggal">—</div>
                             </div>
                             <div class="col-6">
-                                <div class="df-doc-lbl">Item Disalin</div>
-                                <div class="df-doc-val" id="pvSalin">{{ number_format($summary['jumlah_item_anggaran_revisi_aktif']) }} item</div>
+                                <div class="df-doc-lbl">COA Disalin</div>
+                                <div class="df-doc-val" id="pvSalin">{{ number_format($summary['jumlah_item_anggaran_revisi_aktif']) }} COA</div>
                             </div>
                         </div>
 
@@ -343,7 +351,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         var salin = document.getElementById('salin_item_anggaran');
         document.getElementById('pvSalin').textContent = salin.checked
-            ? '{{ number_format($summary['jumlah_item_anggaran_revisi_aktif']) }} item'
+            ? '{{ number_format($summary['jumlah_item_anggaran_revisi_aktif']) }} COA'
             : 'Tidak disalin';
         document.getElementById('dfSwitchWrap').classList.toggle('on', salin.checked);
     }
@@ -379,6 +387,7 @@ document.addEventListener('DOMContentLoaded', function () {
             text.textContent = f.name;
             hint.textContent = (f.size / 1024 / 1024).toFixed(2).replace('.', ',') + ' MB · klik untuk mengganti';
             pv.innerHTML = '<i class="bi bi-file-earmark-pdf-fill"></i> ' + esc(f.name);
+            bacaPok(f);
         } else {
             drop.classList.remove('has-file');
             icon.className = 'bi bi-cloud-arrow-up-fill';
@@ -387,6 +396,84 @@ document.addEventListener('DOMContentLoaded', function () {
             pv.innerHTML = '<i class="bi bi-paperclip"></i> Tanpa lampiran dokumen';
         }
     });
+
+    /* ── Baca POK revisi otomatis: isi pagu + tanggal, siapkan token impor COA ── */
+    var pokToken = document.getElementById('dfPokToken');
+    var pokInfo = document.getElementById('dfPokInfo');
+    var tanggalInput = document.getElementById('dfTanggalRevisi');
+    var salinInput = document.getElementById('salin_item_anggaran');
+
+    function tampilkanPokInfo(html, warna) {
+        pokInfo.classList.remove('d-none');
+        pokInfo.style.borderColor = warna === 'ok' ? '#a7f3d0' : (warna === 'err' ? '#fecdd3' : '#c7d2fe');
+        pokInfo.style.background = warna === 'ok' ? '#ecfdf5' : (warna === 'err' ? '#fff1f2' : '#eef2ff');
+        pokInfo.innerHTML = html;
+    }
+
+    function bacaPok(f) {
+        pokToken.value = '';
+        if (window.clearPokPreview) window.clearPokPreview();
+        drop.classList.remove('done');
+        drop.classList.add('reading');
+        tampilkanPokInfo('<i class="bi bi-hourglass-split me-1"></i>Membaca PDF sebagai POK…', 'info');
+
+        var fd = new FormData();
+        fd.append('file_pok', f);
+
+        fetch('{{ route('dipas.parse-pok') }}', {
+            method: 'POST',
+            body: fd,
+            credentials: 'same-origin',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content
+                    || '{{ csrf_token() }}',
+                'Accept': 'application/json'
+            }
+        })
+        .then(function (res) { return res.json().then(function (data) { return { status: res.status, data: data }; }); })
+        .then(function (r) {
+            drop.classList.remove('reading');
+            if (r.status !== 200 || !r.data.ok) {
+                tampilkanPokInfo('<i class="bi bi-info-circle me-1"></i>' + (r.data.pesan || 'File bukan POK — form diisi manual seperti biasa.'), 'err');
+                return;
+            }
+            drop.classList.add('done');
+
+            var d = r.data;
+            pokToken.value = d.token;
+
+            if (d.total != null) {
+                pagu.value = fmt.format(d.total);
+                liveFormat(pagu);
+            }
+            if (d.tanggal_ttd) {
+                tanggalInput.value = d.tanggal_ttd;
+                tanggalInput.dispatchEvent(new Event('change'));
+            }
+            if (salinInput.checked) {
+                salinInput.checked = false;
+                salinInput.dispatchEvent(new Event('change'));
+            }
+            syncPreview();
+
+            var kontrol = d.seimbang
+                ? '<span class="text-success fw-bold"><i class="bi bi-check-circle-fill"></i> SEIMBANG dengan alokasi header</span>'
+                : '<span class="text-danger fw-bold"><i class="bi bi-exclamation-triangle-fill"></i> tidak sama dengan alokasi header</span>';
+
+            tampilkanPokInfo(
+                '<div class="fw-bold mb-1"><i class="bi bi-magic me-1"></i>POK terbaca: ' + d.jumlah_baris + ' baris detil · Rp ' + fmt.format(d.total) + '</div>'
+                + '<div>' + kontrol + '</div>'
+                + '<div class="mt-1">Total pagu' + (d.tanggal_ttd ? ' dan tanggal revisi' : '') + ' terisi otomatis. Saat disimpan, <b>' + d.jumlah_baris + ' COA + item revisi dibuat dari POK ini</b> — opsi salin COA dimatikan karena nilai POK yang dipakai. Rinciannya di tabel pratinjau bawah.</div>',
+                'ok'
+            );
+            if (window.renderPokPreview) window.renderPokPreview(d);
+        })
+        .catch(function () {
+            drop.classList.remove('reading');
+            tampilkanPokInfo('<i class="bi bi-info-circle me-1"></i>Gagal membaca file — form diisi manual seperti biasa.', 'err');
+        });
+    }
 
     /* ── Submit: un-format pagu + amankan redirect_action + loading ── */
     form.addEventListener('submit', function (e) {

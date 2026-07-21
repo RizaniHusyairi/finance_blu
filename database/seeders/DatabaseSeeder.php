@@ -13,8 +13,11 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             RoleAndPermissionSeeder::class,
-            MasterCoaSeeder::class,
-            MasterDipaSeeder::class,
+            // MasterCoaSeeder & MasterDipaSeeder dinonaktifkan: DIPA + COA kini
+            // diisi lewat fitur impor POK (unggah PDF di form Tambah DIPA/Revisi).
+            // Aktifkan kembali bila butuh data contoh tanpa file POK.
+            // MasterCoaSeeder::class,
+            // MasterDipaSeeder::class,
             MasterPegawaiSeeder::class,
             UserAccountSeeder::class,
             MasterLayananJasaSeeder::class,

@@ -3,6 +3,7 @@
 
 @push('css')
 <style>
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .001s !important; animation-delay: 0s !important; animation-iteration-count: 1 !important; transition-duration: .001s !important; } }
     .plt-banner {
         background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
         color: white;

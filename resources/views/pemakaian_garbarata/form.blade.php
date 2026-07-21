@@ -27,6 +27,7 @@
 @endphp
 
 <style>
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .001s !important; animation-delay: 0s !important; animation-iteration-count: 1 !important; transition-duration: .001s !important; } }
     /* ═══════════════ HERO ═══════════════ */
     .ib-hero {
         position: relative; overflow: hidden;

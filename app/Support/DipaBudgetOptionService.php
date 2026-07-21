@@ -17,7 +17,7 @@ class DipaBudgetOptionService
                 $revisionQuery
                     ->where('is_active', true)
                     ->whereHas('items', function ($itemQuery) {
-                        $itemQuery->where('status_aktif', true)->whereHas('coa');
+                        $itemQuery->where('status_aktif', true)->where('blokir', false)->whereHas('coa');
                     });
             })
             ->with([
@@ -28,6 +28,7 @@ class DipaBudgetOptionService
                             'items' => function ($itemQuery) {
                                 $itemQuery
                                     ->where('status_aktif', true)
+                                    ->where('blokir', false)
                                     ->with('coa')
                                     ->orderBy('id');
                             },
@@ -83,6 +84,7 @@ class DipaBudgetOptionService
         $item = DetailDipa::query()
             ->whereKey($id)
             ->where('status_aktif', true)
+            ->where('blokir', false)
             ->whereHas('coa')
             ->whereHas('dipaRevision', function ($revisionQuery) {
                 $revisionQuery
