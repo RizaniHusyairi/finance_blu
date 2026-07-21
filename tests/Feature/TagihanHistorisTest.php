@@ -368,6 +368,23 @@ class TagihanHistorisTest extends TestCase
         $this->assertNull($reader->cocokkanCoa('GA.4647.CDE.001.051.A.525114.000099'));
     }
 
+    public function test_arsip_bundel_dapat_diunduh_kembali_oleh_operator_blu(): void
+    {
+        Role::findOrCreate('Operator BLU', 'web');
+        $operator = User::factory()->create();
+        $operator->assignRole('Operator BLU');
+
+        $this->actingAs($this->admin)->post(route('proses-tagihan.historis.store'), $this->payloadBerkas0001([
+            'file_arsip' => \Illuminate\Http\UploadedFile::fake()->create('bundel-arsip-0001.pdf', 120, 'application/pdf'),
+        ]))->assertSessionMissing('error');
+
+        $arsip = \App\Models\ArsipDokumen::where('jenis_dokumen', 'BUKTI_TRANSFER_SP2D')->firstOrFail();
+
+        // Perekam (Operator BLU) dan Super Admin dapat melihat kembali bundelnya.
+        $this->actingAs($operator)->get(route('arsip-sensitif.download', $arsip->id))->assertOk();
+        $this->actingAs($this->admin)->get(route('arsip-sensitif.download', $arsip->id))->assertOk();
+    }
+
     public function test_netto_nol_atau_negatif_ditolak(): void
     {
         $response = $this->actingAs($this->admin)->post(
