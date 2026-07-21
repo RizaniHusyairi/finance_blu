@@ -380,9 +380,30 @@ class TagihanHistorisTest extends TestCase
 
         $arsip = \App\Models\ArsipDokumen::where('jenis_dokumen', 'BUKTI_TRANSFER_SP2D')->firstOrFail();
 
-        // Perekam (Operator BLU) dan Super Admin dapat melihat kembali bundelnya.
+        // SEMUA role yang boleh membuka detail Proses Tagihan dapat melihat
+        // kembali bundelnya (selaras middleware grup route proses-tagihan).
         $this->actingAs($operator)->get(route('arsip-sensitif.download', $arsip->id))->assertOk();
         $this->actingAs($this->admin)->get(route('arsip-sensitif.download', $arsip->id))->assertOk();
+
+        foreach ([
+            'PPK', 'PPSPM', 'Bendahara Pengeluaran', 'Bendahara Penerimaan',
+            'Koordinator Keuangan', 'Kepala Subbagian Keuangan dan Tata Usaha', 'KPA',
+        ] as $role) {
+            Role::findOrCreate($role, 'web');
+            $userRole = User::factory()->create();
+            $userRole->assignRole($role);
+            $this->actingAs($userRole)
+                ->get(route('arsip-sensitif.download', $arsip->id))
+                ->assertOk();
+        }
+
+        // Role di luar lingkup Proses Tagihan tetap ditolak.
+        Role::findOrCreate('Admin Jasa', 'web');
+        $luar = User::factory()->create();
+        $luar->assignRole('Admin Jasa');
+        $this->actingAs($luar)
+            ->get(route('arsip-sensitif.download', $arsip->id))
+            ->assertForbidden();
     }
 
     public function test_netto_nol_atau_negatif_ditolak(): void

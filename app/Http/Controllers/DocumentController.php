@@ -91,12 +91,14 @@ class DocumentController extends Controller
         abort_unless($user && in_array($arsip->jenis_dokumen, $jenisSensitif, true), 404, 'Dokumen tidak ditemukan.');
 
         $canDownloadAll = $user->hasRole(['Bendahara Pengeluaran', 'Super Admin']);
-        // Selaras dengan role yang boleh membuka detail Proses Tagihan —
-        // termasuk Operator BLU sebagai pengunggah bundel arsip historis.
+        // Bukti transfer / bundel arsip historis boleh dilihat SEMUA role yang
+        // dapat membuka detail Proses Tagihan (samakan dengan middleware grup
+        // route proses-tagihan di routes/web.php bila daftarnya berubah).
         $canDownloadBuktiTransfer = $arsip->jenis_dokumen === 'BUKTI_TRANSFER_SP2D'
             && $user->hasRole([
-                'PPK', 'PPSPM', 'Kepala Subbagian Keuangan dan Tata Usaha',
-                'Koordinator Keuangan', 'Operator BLU', 'KPA', 'Bendahara Penerimaan',
+                'Super Admin', 'Operator BLU', 'PPK', 'PPSPM',
+                'Bendahara Pengeluaran', 'Bendahara Penerimaan',
+                'Koordinator Keuangan', 'Kepala Subbagian Keuangan dan Tata Usaha', 'KPA',
             ]);
 
         abort_unless($canDownloadAll || $canDownloadBuktiTransfer, 403, 'Anda tidak berwenang mengunduh dokumen ini.');
