@@ -169,6 +169,14 @@ class TagihanHistorisTest extends TestCase
             'dokumen_id' => $tagihan->id,
             'aksi' => 'IMPORT_HISTORIS',
         ]);
+
+        // Progres pencairan tampil tuntas: KPA & seluruh dokumen dianggap
+        // disetujui walau tanpa workflow (regresi panel "7/9 tahap").
+        $chain = app(\App\Services\DokumenChainService::class);
+        $this->assertTrue($chain->isKpaApproved($tagihan->fresh()));
+        $this->assertTrue($chain->isDocumentApproved($spp));
+        $this->assertTrue($chain->isDocumentApproved($spp->spm));
+        $this->assertTrue($chain->isDocumentApproved($spp->spm->npi));
     }
 
     public function test_register_spp_melompati_nomor_historis(): void

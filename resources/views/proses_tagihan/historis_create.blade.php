@@ -259,7 +259,7 @@
                                 <div class="row g-2">
                                     <div class="col-md-4">
                                         <label class="form-label mb-1">NPWP</label>
-                                        <input type="text" name="pihak_npwp" class="form-control form-control-sm" placeholder="15–16 digit" value="{{ old('pihak_npwp') }}">
+                                        <input type="text" name="pihak_npwp" id="thPihakNpwp" class="form-control form-control-sm" inputmode="numeric" maxlength="21" placeholder="99.999.999.9-999.999" value="{{ old('pihak_npwp') }}">
                                     </div>
                                     <div class="col-md-4">
                                         <label class="form-label mb-1">Nama Direktur / Penanggung Jawab</label>
@@ -488,6 +488,20 @@ document.addEventListener('DOMContentLoaded', function () {
     tambahBaris();
     hitungNetto();
 
+    /* ── format NPWP standar: 99.999.999.9-999.999 ── */
+    function formatNpwp(v) {
+        var d = String(v || '').replace(/\D/g, '');
+        if (d.length === 16 && d.charAt(0) === '0') d = d.slice(1); // NPWP 16 digit berawalan 0 = NPWP 15 digit lama
+        if (d.length !== 15) return d; // 16 digit murni (NIK) / belum lengkap: tampil apa adanya
+        return d.slice(0, 2) + '.' + d.slice(2, 5) + '.' + d.slice(5, 8) + '.' + d.slice(8, 9)
+            + '-' + d.slice(9, 12) + '.' + d.slice(12, 15);
+    }
+
+    var npwpInput = document.getElementById('thPihakNpwp');
+    npwpInput.addEventListener('input', function () { npwpInput.value = formatNpwp(npwpInput.value); });
+    npwpInput.addEventListener('blur', function () { npwpInput.value = formatNpwp(npwpInput.value); });
+    if (npwpInput.value) npwpInput.value = formatNpwp(npwpInput.value);
+
     /* ── panel kelengkapan vendor baru: tampil saat nama pihak baru diisi ── */
     var pihakNamaBaru = document.getElementById('thPihakNamaBaru');
     var pihakDetail = document.getElementById('thPihakDetail');
@@ -627,7 +641,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 isi('pihak_id', d.pihak_id_cocok);
             } else if (fl.pihak_nama) {
                 isi('pihak_nama_baru', fl.pihak_nama);
-                isi('pihak_npwp', fl.pihak_npwp);
+                isi('pihak_npwp', formatNpwp(fl.pihak_npwp));
                 isi('pihak_alamat', fl.pihak_alamat);
                 isi('pihak_bank', fl.pihak_bank);
                 isi('pihak_norek', fl.pihak_rekening);

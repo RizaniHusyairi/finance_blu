@@ -233,6 +233,11 @@ class TagihanHistorisController extends Controller
                 'mekanisme_pembayaran' => MekanismePembayaran::LS_PIHAK_3->value,
                 'status' => 'SELESAI',
                 'is_historis' => true,
+                // Arsip sudah final: tandai persetujuan KPA agar progres
+                // pencairan tampil lengkap (bukan tahap tertunda).
+                'kpa_approval_status' => 'APPROVED',
+                'kpa_approved_at' => $validated['tanggal_spp'],
+                'kpa_approved_by' => Auth::id(),
                 'created_by' => Auth::id(),
             ]);
 

@@ -268,6 +268,17 @@ class DokumenChainService
             return false;
         }
 
+        // Status final dokumen = sudah disetujui — mencakup tagihan historis
+        // (arsip) yang dokumennya dibuat langsung final tanpa workflow.
+        $statusFinal = [
+            'DISETUJUI_FINAL',
+            DokumenSpm::STATUS_DISETUJUI_FINAL,
+            DokumenSp2d::STATUS_EXECUTED,
+        ];
+        if (in_array($document->status, $statusFinal, true)) {
+            return true;
+        }
+
         return WorkflowInstance::where('workflowable_type', $document->getMorphClass())
             ->where('workflowable_id', $document->getKey())
             ->where('status', 'APPROVED')
