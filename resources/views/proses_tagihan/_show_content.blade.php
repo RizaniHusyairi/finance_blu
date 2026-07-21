@@ -297,6 +297,36 @@
             </div>
         @endif
 
+        <!-- Bundel arsip historis (scan SILABI) — sumber perekaman tagihan ini -->
+        @if($tagihan->is_historis && $state['buktiTransfer'])
+            <div id="sec-arsip-historis" class="reveal">
+                <div class="process-card doc-card mb-4" style="--tone:#0e7490; --tone-soft:#ecfeff;">
+                    <div class="process-card-body p-4">
+                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="doc-icon-tile" style="background:linear-gradient(135deg,#0e7490,#22d3ee); color:#fff;">
+                                    <i class="bi bi-archive-fill"></i>
+                                </div>
+                                <div>
+                                    <div class="fw-bold text-dark">Bundel Arsip Historis (Scan SILABI)</div>
+                                    <div class="text-muted small">
+                                        Berkas sumber perekaman tagihan ini — SPP, SPM, NPI &amp; dokumen pendukung dalam satu PDF.
+                                        <span class="fw-semibold">{{ $state['buktiTransfer']->nama_file_asli }}</span>
+                                        · {{ number_format(($state['buktiTransfer']->ukuran_file ?? 0) / 1048576, 2, ',', '.') }} MB
+                                    </div>
+                                </div>
+                            </div>
+                            <a href="{{ route('arsip-sensitif.download', $state['buktiTransfer']->id) }}"
+                               class="btn fw-bold shadow-sm btn-pt-action text-white"
+                               style="background:linear-gradient(120deg,#0e7490,#0891b2);">
+                                <i class="bi bi-file-earmark-pdf"></i> Lihat / Unduh Arsip
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        @endif
+
         <!-- Dokumen yang diunggah / di-generate saat pembuatan tagihan -->
         <div id="sec-dokumen-tagihan" class="reveal">
             @include('proses_tagihan._dokumen_pendukung_card', ['dokumenPendukung' => $dokumenPendukung])
