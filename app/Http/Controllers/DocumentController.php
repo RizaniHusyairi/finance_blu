@@ -103,6 +103,12 @@ class DocumentController extends Controller
 
         abort_unless($canDownloadAll || $canDownloadBuktiTransfer, 403, 'Anda tidak berwenang mengunduh dokumen ini.');
 
+        // ?inline=1 → tampilkan di tab browser (mis. pratinjau bundel arsip
+        // historis) alih-alih memaksa unduh.
+        if (request()->boolean('inline')) {
+            return $this->documentArchiveService->view($arsip);
+        }
+
         return $this->documentArchiveService->download($arsip);
     }
 

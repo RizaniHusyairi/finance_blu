@@ -243,9 +243,15 @@ class TagihanHistorisTest extends TestCase
             $this->markTestSkipped('Tesseract tidak tersedia di mesin ini.');
         }
 
+        // Berkas contoh dicari rekursif — folder docs/tagihan ditata per bulan.
+        $kandidat = glob(__DIR__ . '/../../docs/tagihan/{,*/}0001.*.pdf', GLOB_BRACE) ?: [];
+        if ($kandidat === []) {
+            $this->markTestSkipped('Berkas contoh 0001 tidak ditemukan di docs/tagihan.');
+        }
+
         $pdf = new \Illuminate\Http\UploadedFile(
-            __DIR__ . '/../../docs/tagihan/0001. Pembayaran Belanja Barang Pekerjaan Pemotongan Rumput Sisi Udara Tahap I 1 (Satu) Paket_CV. Garuda Karya Bersama_Rp.196.697.855.pdf',
-            '0001. Pembayaran Belanja Barang Pekerjaan Pemotongan Rumput Sisi Udara Tahap I 1 (Satu) Paket_CV. Garuda Karya Bersama_Rp.196.697.855.pdf',
+            $kandidat[0],
+            basename($kandidat[0]),
             'application/pdf',
             null,
             true
@@ -380,6 +386,12 @@ class TagihanHistorisTest extends TestCase
 
         $arsip = \App\Models\ArsipDokumen::where('jenis_dokumen', 'BUKTI_TRANSFER_SP2D')->firstOrFail();
 
+        // Mode inline: PDF tampil di tab browser, bukan dipaksa unduh.
+        $inline = $this->actingAs($operator)
+            ->get(route('arsip-sensitif.download', ['arsip' => $arsip->id, 'inline' => 1]));
+        $inline->assertOk();
+        $this->assertStringNotContainsString('attachment', (string) $inline->headers->get('Content-Disposition'));
+
         // SEMUA role yang boleh membuka detail Proses Tagihan dapat melihat
         // kembali bundelnya (selaras middleware grup route proses-tagihan).
         $this->actingAs($operator)->get(route('arsip-sensitif.download', $arsip->id))->assertOk();
@@ -404,6 +416,324 @@ class TagihanHistorisTest extends TestCase
         $this->actingAs($luar)
             ->get(route('arsip-sensitif.download', $arsip->id))
             ->assertForbidden();
+    }
+
+    public function test_parser_peserta_membaca_nominatif_honor_dari_fixture(): void
+    {
+        $teks = file_get_contents(__DIR__ . '/../Fixtures/ocr-nominatif-0167.txt');
+        $rows = (new \App\Support\Historis\TagihanArsipReader())->parsePeserta($teks);
+
+        $this->assertGreaterThanOrEqual(6, count($rows));
+
+        $pertama = $rows[0];
+        $this->assertSame('Abdullah Hakim', $pertama['nama']);
+        $this->assertSame('530156', $pertama['nrp_nip']);
+        $this->assertSame(500000.0, $pertama['nilai_honor']);
+        $this->assertSame(25000.0, $pertama['pph']);
+        $this->assertSame('Bank Mandiri', $pertama['jenis_bank']);
+        $this->assertSame('081310998926', $pertama['no_hp']);
+
+        $namaSemua = array_column($rows, 'nama');
+        $this->assertContains('Muhammad Ikhlas', $namaSemua);
+        $this->assertContains('Asfiansyah', $namaSemua);
+    }
+
+    public function test_peserta_tersimpan_ke_detail_honorarium_dan_perjaldin(): void
+    {
+        // HONORARIUM → detail_honorarium.
+        $this->actingAs($this->admin)->post(route('proses-tagihan.historis.store'), $this->payloadBerkas0001([
+            'tipe_tagihan' => 'HONORARIUM',
+            'peserta_nama' => ['Abdullah Hakim', 'Asfiansyah', ''],
+            'peserta_nrp' => ['530156', '87061361', ''],
+            'peserta_pangkat' => ['Letda Pom', 'Bripka', ''],
+            'peserta_jabatan' => ['PS Danunitpaspom Satpom Lanud Dmb', 'Banit Samapta Polsek', ''],
+            'peserta_honor' => [500000, 500000, ''],
+            'peserta_pph' => [25000, 0, ''],
+            'peserta_rekening' => ['1290011244767', '012101107602503', ''],
+            'peserta_bank' => ['Bank Mandiri', 'Bank BRI', ''],
+            'peserta_nama_rekening' => ['Abdullah Hakim', 'Asfiansyah', ''],
+            'peserta_hp' => ['081310998926', '081216255131', ''],
+        ]))->assertSessionMissing('error');
+
+        $tagihan = Tagihan::where('nomor_tagihan', 'HIS/2026/0001')->firstOrFail();
+        $this->assertSame(2, $tagihan->detailHonorarium()->count());
+        $this->assertDatabaseHas('detail_honorarium', [
+            'tagihan_id' => $tagihan->id,
+            'nama_personel' => 'Abdullah Hakim',
+            'nrp_nip' => '530156',
+            'pangkat_korp' => 'Letda Pom',
+            'nilai_honor' => 500000.00,
+            'pph' => 25000.00,
+            'jenis_bank' => 'Bank Mandiri',
+        ]);
+
+        // PERJALDIN → detail_perjaldin.
+        $this->actingAs($this->admin)->post(route('proses-tagihan.historis.store'), $this->payloadBerkas0001([
+            'tipe_tagihan' => 'PERJALDIN',
+            'nomor_tagihan' => 'HIS/2026/0210',
+            'nomor_spp' => 'SPM-BLU/APTP-2026/0210',
+            'nomor_spm' => 'SPM-BLU/APTP-2026/0210-SPM',
+            'nomor_npi' => 'NPI-BLU/APTP-2026/0210',
+            'nomor_sp2d' => 'SP2D-BLU/APTP-2026/0210',
+            'register_nomor_urut' => 210,
+            'peserta_nama' => ['Budi Santoso'],
+            'peserta_nrp' => ['198411052007121001'],
+            'peserta_honor' => [170000],
+            'peserta_rekening' => ['1234567890'],
+        ]))->assertSessionMissing('error');
+
+        $perjaldin = Tagihan::where('nomor_tagihan', 'HIS/2026/0210')->firstOrFail();
+        $this->assertDatabaseHas('detail_perjaldin', [
+            'tagihan_id' => $perjaldin->id,
+            'nama_pegawai' => 'Budi Santoso',
+            'nip' => '198411052007121001',
+            'uang_harian' => 170000.00,
+        ]);
+    }
+
+    public function test_potongan_dengan_kode_akun_rusak_tetap_terbaca_nominalnya(): void
+    {
+        // Regresi berkas 0130: OCR merusak kode akun (411211 → "Tana2nt"),
+        // dulu seluruh potongan hilang → netto salah.
+        $teks = implode("\n", [
+            '| PENGELUARAN JUMLAH UANG',
+            '| GA.4647.CDE.001.055.B.525121.00002 11.669.500,00',
+            '| Jumlah Pengeluaran 11.669.500,00',
+            '| POTONGAN JUMLAH UANG',
+            '| Tana2nt 1.156.437,00',
+            '| latt122 157.696,00',
+            'Jumlah Potongan 1.314.133,00',
+            'TOTAL PEMBAYARAN 10.355.367,00',
+        ]);
+
+        $warnings = [];
+        $f = (new \App\Support\Historis\TagihanArsipReader())->parseTeks($teks, $warnings);
+
+        $this->assertCount(2, $f['potongan']);
+        $this->assertSame(1156437.0, $f['potongan'][0]['nominal']);
+        $this->assertSame(157696.0, $f['potongan'][1]['nominal']);
+        $this->assertSame('', $f['potongan'][0]['nama']); // akun rusak → dikosongkan
+        $this->assertNotEmpty(array_filter($warnings, fn ($w) => str_contains($w, 'Kode akun potongan')));
+    }
+
+    public function test_pihak_cocok_walau_nama_master_mengandung_artefak_ocr(): void
+    {
+        $kotor = MasterPihak::create([
+            'kategori' => 'PENGELUARAN',
+            'jenis_entitas' => 'BADAN_USAHA',
+            'kode_pihak' => 'VDR-KOTOR-1',
+            'nama_pihak' => '©: CV. GUNA AKHLAK SUKSES',
+            'status_aktif' => true,
+        ]);
+
+        // Endpoint mencocokkan longgar (huruf/angka saja).
+        $this->assertSame(
+            \App\Support\Historis\TagihanArsipReader::kunciNama('CV. GUNA AKHLAK SUKSES'),
+            \App\Support\Historis\TagihanArsipReader::kunciNama($kotor->nama_pihak)
+        );
+
+        // Store dengan "pihak baru" bernama sama → pakai vendor lama, tanpa duplikat.
+        $this->actingAs($this->admin)->post(route('proses-tagihan.historis.store'), $this->payloadBerkas0001([
+            'pihak_id' => null,
+            'pihak_nama_baru' => 'CV. GUNA AKHLAK SUKSES',
+        ]))->assertSessionMissing('error');
+
+        $this->assertSame(1, MasterPihak::where('kode_pihak', 'like', 'VDR-KOTOR%')->count());
+        $this->assertSame(0, MasterPihak::where('nama_pihak', 'CV. GUNA AKHLAK SUKSES')->count());
+        $this->assertSame(
+            $kotor->id,
+            Tagihan::where('nomor_tagihan', 'HIS/2026/0001')->value('pihak_id')
+        );
+    }
+
+    public function test_bundel_multi_spp_terdeteksi_sebagai_komponen(): void
+    {
+        $reader = new \App\Support\Historis\TagihanArsipReader();
+
+        // Ringkasan OCR nyata berkas "0135-0136": dua SPP dalam satu bundel.
+        $teks = "SURAT PERMINTAAN PEMBAYARAN BLU\n"
+            . "Nomor:  SPM-BLU/APTP-2026/0135 Tanggal : 12-Mei-2026\n"
+            . "Agar melakukan pembayaran tagihan sejumlah Rp2.970.000\n"
+            . "WA.4613.EBA.960.053.A.525115.00004 2.970.000,00\n"
+            . "TOTAL PEMBAYARAN 2.970.000,00\n"
+            . "Uraian : Belanja Barang Perjalanan Dinas Pegawai - Taxi\n"
+            . "SURAT PERMINTAAN PEMBAYARAN BLU\n"
+            . "Nomor:  SPM-BLU/APTP-2026/0136 Tanggal : 12-Mei-2026\n"
+            . "Agar melakukan pembayaran tagihan sejumlah Rp3.320.000\n"
+            . "WA.4613.EBA.960.053.A.525115.00001 3.320.000,00\n"
+            . "TOTAL PEMBAYARAN 3.320.000,00\n"
+            . "Uraian : Belanja Barang Perjalanan Dinas Pegawai - Uang Harian\n";
+
+        $komponen = $reader->deteksiKomponen($teks);
+        $this->assertCount(2, $komponen);
+        $this->assertSame('SPM-BLU/APTP-2026/0135', $komponen[0]['nomor_spp']);
+        $this->assertSame(135, $komponen[0]['urut']);
+        $this->assertSame('Taxi', $komponen[0]['nama']);
+        $this->assertSame(2970000.0, $komponen[0]['nominal']);
+        $this->assertSame(136, $komponen[1]['urut']);
+        $this->assertSame('Uang Harian', $komponen[1]['nama']);
+        $this->assertSame(3320000.0, $komponen[1]['nominal']);
+
+        // Satu SPP saja → bukan bundel gabungan.
+        $this->assertSame([], $reader->deteksiKomponen(
+            "SURAT PERMINTAAN PEMBAYARAN BLU\nNomor:  SPM-BLU/APTP-2026/0135\nsejumlah Rp2.970.000\n"
+        ));
+
+        // Nama file rentang "0135-0136." → urut pertama + bruto total bundel.
+        $nf = $reader->parseNamaFile('0135-0136. Belanja Barang Perjalanan Dinas Pegawai_Rp. 6.290.000.pdf');
+        $this->assertSame(135, $nf['urut']);
+        $this->assertSame(6290000.0, $nf['bruto']);
+    }
+
+    public function test_bundel_multi_spp_direkam_satu_tagihan_dengan_komponen(): void
+    {
+        $this->withoutExceptionHandling();
+
+        // Item DIPA kedua untuk komponen uang harian (COA berbeda dari taxi).
+        $coa2 = MasterCoa::create([
+            'kd_akun' => '525115',
+            'kode_mak_lengkap' => 'WA.4613.EBA.960.053.A.525115.00001',
+            'nama_akun' => 'Belanja Perjalanan Dinas BLU',
+            'sumber_dana' => 'BLU',
+            'status_aktif' => true,
+        ]);
+        $item2 = DetailDipa::create([
+            'dipa_revision_id' => $this->item->dipa_revision_id,
+            'coa_id' => $coa2->id,
+            'nilai_pagu' => 50000000,
+            'status_aktif' => true,
+        ]);
+
+        $this->actingAs($this->admin)->post(route('proses-tagihan.historis.store'), $this->payloadBerkas0001([
+            'tipe_tagihan' => 'PERJALDIN',
+            'nomor_tagihan' => 'HIS/2026/0135',
+            'deskripsi' => 'Belanja Barang Perjalanan Dinas Pegawai',
+            'total_bruto' => 6290000,
+            'potongan_nama' => [],
+            'potongan_nominal' => [],
+            'potongan_ntpn' => [],
+            'nomor_spp' => 'SPM-BLU/APTP-2026/0135',
+            'tanggal_spp' => '2026-05-12',
+            'nomor_spm' => 'SPM-BLU/APTP-2026/0135',
+            'tanggal_spm' => '2026-05-12',
+            'nomor_npi' => 'NPI-BLU/APTP-2026/0135',
+            'tanggal_npi' => '2026-05-12',
+            'nomor_sp2d' => 'SP2D-BLU/APTP-2026/0135',
+            'tanggal_sp2d' => '2026-05-12',
+            'register_nomor_urut' => 135,
+            'komponen_nama' => ['Taxi', 'Uang Harian'],
+            'komponen_nomor_spp' => ['SPM-BLU/APTP-2026/0135', 'SPM-BLU/APTP-2026/0136'],
+            'komponen_urut' => [135, 136],
+            'komponen_dipa_item_id' => [$this->item->id, $item2->id],
+            'komponen_nominal' => [2970000, 3320000],
+        ]))->assertSessionHasNoErrors();
+
+        $tagihan = Tagihan::where('nomor_tagihan', 'HIS/2026/0135')->firstOrFail();
+        $this->assertSame('SELESAI', $tagihan->status);
+
+        // Dua komponen tercatat final dengan COA masing-masing.
+        $this->assertDatabaseHas('tagihan_perjaldin_komponen', [
+            'tagihan_id' => $tagihan->id,
+            'nama_komponen' => 'Taxi (SPM-BLU/APTP-2026/0135)',
+            'dipa_revision_item_id' => $this->item->id,
+            'total_nominal' => 2970000.00,
+            'status_proses' => 'SELESAI',
+        ]);
+        $this->assertDatabaseHas('tagihan_perjaldin_komponen', [
+            'tagihan_id' => $tagihan->id,
+            'nama_komponen' => 'Uang Harian (SPM-BLU/APTP-2026/0136)',
+            'dipa_revision_item_id' => $item2->id,
+            'total_nominal' => 3320000.00,
+            'status_proses' => 'SELESAI',
+        ]);
+
+        // Realisasi dicatat per komponen sesuai COA masing-masing.
+        $this->assertDatabaseHas('realisasi_anggaran', [
+            'dipa_revision_item_id' => $this->item->id,
+            'nominal_cair' => 2970000.00,
+            'status' => 'TERCATAT',
+        ]);
+        $this->assertDatabaseHas('realisasi_anggaran', [
+            'dipa_revision_item_id' => $item2->id,
+            'nominal_cair' => 3320000.00,
+            'status' => 'TERCATAT',
+        ]);
+
+        // BKU terposting satu kali dengan nomor bukti SP2D bundel (BKU +
+        // buku pembantu berbagi tabel, jadi cukup pastikan postingnya ada).
+        $this->assertNotNull(BukuKasUmum::where('nomor_bukti', 'SP2D-BLU/APTP-2026/0135')->first());
+
+        // Kedua nomor register (135 & 136) terkonsumsi → nomor otomatis berikutnya 137.
+        $berikutnya = app(DocumentNumberService::class)->generateByKey('SPP_BLU', 2026);
+        $this->assertStringContainsString('0137', $berikutnya);
+    }
+
+    public function test_nominatif_perjaldin_dua_baris_per_orang_terbaca(): void
+    {
+        $reader = new \App\Support\Historis\TagihanArsipReader();
+
+        // Baris OCR nyata (PSM 4) halaman nominatif berkas 0145-0147:
+        // nama di baris atas, data (NIP terpecah + SPPD + nominal + rekening)
+        // di baris bawah; satu baris (Sugiyono) tergabung jadi satu.
+        $teks = "DAFTAR NOMINATIF PEMBAYARAN PERJALANAN DINAS\n"
+            . "Nomor: KU.201/3067/APTP/2026\n"
+            . "Heriyanto \$ 5\n"
+            . "19740714 201212 1004 KP.004/0665/APTP/2026 0666 Palembang 27 Januari 2026 47 (Diklat) 5,151,216 80,000 760,000 5,991,216 2001580030462\n"
+            . "udhy Prasetiyo \$ F\n"
+            . "2 19860604 200712 1001 KP.004/2658/APTP/2026 2741 Balikpapan 07 Mei 2026 1 283,500 430,000 713,500 2001580030234\n"
+            . "Muhammad Zuher Ammar Dzaki \u{2018}\n"
+            . "3 20001202 202310 1 002 | KP.004/2658/APTP/2026 2743 Balikpapan 07 Mei 2026 1 IN 430,000 2001580032595\n"
+            . "ai | Suniyono KP.004/2658/APTP/2026 | 2742 Balik 07 Mei 2026 1 | 430,000 |  2001580030226\n"
+            . "JUMLAH 5,151,216 363,500 - 7,564,716\n"
+            . "PEJABAT PEMBUAT KOMITMEN BENDAHARA PENGELUARAN\n"
+            . "NIP. 19920220 201012 2 001\n";
+
+        $rows = $reader->parsePesertaPerjaldin($teks);
+
+        $this->assertCount(4, $rows);
+        $this->assertSame('Heriyanto', $rows[0]['nama']);
+        $this->assertSame('197407142012121004', $rows[0]['nrp_nip']);
+        $this->assertSame(5991216.0, $rows[0]['nilai_honor']); // kolom JUMLAH
+        $this->assertSame('2001580030462', $rows[0]['rekening']);
+        $this->assertSame('KP.004/0665/APTP/2026', $rows[0]['no_sppd']);
+        $this->assertSame('Palembang', $rows[0]['tujuan']);
+        $this->assertSame('2026-01-27', $rows[0]['tgl_berangkat']);
+        $this->assertSame(47, $rows[0]['lama_hari']);
+        $this->assertSame('2026-05-07', $rows[1]['tgl_berangkat']);
+        $this->assertSame(1, $rows[1]['lama_hari']);
+        $this->assertSame('udhy Prasetiyo', $rows[1]['nama']);
+        $this->assertSame(713500.0, $rows[1]['nilai_honor']);
+        $this->assertSame('Muhammad Zuher Ammar Dzaki', $rows[2]['nama']);
+        $this->assertSame('200012022023101002', $rows[2]['nrp_nip']);
+        $this->assertSame('Suniyono', $rows[3]['nama']);
+        $this->assertSame('2001580030226', $rows[3]['rekening']);
+
+        // Total kolom JUMLAH seluruh peserta = bruto bundel (7.564.716).
+        $this->assertSame(7564716.0, array_sum(array_column($rows, 'nilai_honor')));
+    }
+
+    public function test_nama_direktur_terbaca_dari_tiga_pola_dokumen(): void
+    {
+        $reader = new \App\Support\Historis\TagihanArsipReader();
+        $w = [];
+
+        // Pola 1: blok "Nama : ... / Jabatan : Direktur ..." (BAPP/BAST) —
+        // ':' kadang ter-OCR sebagai '1'.
+        $f = $reader->parseTeks("Nama : YUARNO ARBI\nJabatan : Direktur PT. ANGKASA JAYA SERVIS\n", $w);
+        $this->assertSame('YUARNO ARBI', $f['pihak_direktur']);
+        $f = $reader->parseTeks("Nama : AHMAD\nJabatan 1 Direktur CV. GUNA AHKLAK SUKSES\n", $w);
+        $this->assertSame('AHMAD', $f['pihak_direktur']);
+
+        // Pola 2: kalimat naratif "..., dalam hal ini sebagai Penyedia".
+        $f = $reader->parseTeks("2. AHMAD, dalam hal ini sebagai Penyedia, bertindak sebagai Direktur mewakili CV. GUNA\n", $w);
+        $this->assertSame('AHMAD', $f['pihak_direktur']);
+
+        // Pola 3: nama sendirian di atas baris "Direktur" (blok tanda tangan);
+        // kata "Direktorat" tidak boleh ikut tertangkap.
+        $f = $reader->parseTeks("Samarinda, 6 Januari 2026\nYuarno Arbi\nDirektur\n", $w);
+        $this->assertSame('Yuarno Arbi', $f['pihak_direktur']);
+        $f = $reader->parseTeks("KEMENTERIAN PERHUBUNGAN\nDIREKTORAT JENDERAL\n", $w);
+        $this->assertNull($f['pihak_direktur']);
     }
 
     public function test_netto_nol_atau_negatif_ditolak(): void

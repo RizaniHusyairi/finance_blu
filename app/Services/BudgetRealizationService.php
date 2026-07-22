@@ -71,9 +71,11 @@ class BudgetRealizationService
                     tanggal: $lockedSp2d->tanggal_sp2d ?? now()
                 );
             } elseif ($spp->tagihan_id && $spp->tagihan && $spp->tagihan->tipe_tagihan === 'PERJALDIN'
-                // Perjaldin historis (arsip) tidak punya komponen — biarkan
-                // jatuh ke cabang generik yang memakai dipa_revision_item_id.
-                && ! $spp->tagihan->is_historis) {
+                // Perjaldin historis (arsip) tanpa komponen jatuh ke cabang
+                // generik; bundel gabungan multi-SPP punya komponen sendiri
+                // sehingga realisasinya dicatat per komponen seperti alur terpadu.
+                && (! $spp->tagihan->is_historis
+                    || $spp->tagihan->komponenPerjaldin()->where('total_nominal', '>', 0)->exists())) {
                 // Perjaldin konsolidasi (alur terpadu): satu SPP untuk seluruh
                 // komponen — realisasi dicatat per komponen sesuai COA masing-masing.
                 $komponens = $spp->tagihan->komponenPerjaldin()

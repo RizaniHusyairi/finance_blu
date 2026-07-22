@@ -294,7 +294,9 @@ tetapi auto-isi dari isi dokumen tidak aktif.
    pratinjau halaman 1. Bila muncul peringatan "OCR tidak aktif", periksa
    `TESSERACT_PATH` dan jalankan `php artisan config:clear`.
 
-> Catatan kinerja: OCR 4 halaman pertama memakan ±5–15 detik per bundel dan
+> Catatan kinerja: OCR hingga 20 halaman (bundel gabungan multi-SPP bisa 15+
+> halaman; termasuk deteksi rotasi + OCR ulang mode kolom untuk halaman
+> nominatif landscape) memakan ±10–60 detik per bundel dan
 > berjalan sinkron pada request `POST /proses-tagihan/historis/baca-arsip`.
 > Pastikan `max_execution_time` PHP-FPM ≥ 120 (sudah disarankan di Langkah 13).
 

@@ -123,8 +123,16 @@
 .th-info.ok { border-color:#a7f3d0; background:#ecfdf5; }
 .th-info.err { border-color:#fecdd3; background:#fff1f2; }
 
-/* preview kanan */
+/* panel kanan sticky ber-tab */
 .th-preview-card { position:sticky; top:1rem; }
+.th-tab { display:inline-flex; align-items:center; gap:.4rem; border:1.5px solid #e0e7ff; background:#fff;
+    border-radius:999px; padding:.35rem .85rem; font-size:.76rem; font-weight:800; color:#64748b;
+    transition:all .25s ease; cursor:pointer; }
+.th-tab:hover { border-color:#818cf8; color:#4338ca; transform:translateY(-1px); }
+.th-tab.active { color:#fff; border-color:transparent; background:linear-gradient(120deg,#0e7490,#0891b2);
+    box-shadow:0 8px 18px -8px rgba(14,116,144,.6); }
+.th-tab.active:hover { transform:none; }
+#thTabScan, #thTabTips { animation:thRise .35s ease both; }
 .th-preview-card .frame { border-radius:.7rem; border:1px solid #e2e8f0; max-height:70vh; overflow:auto;
     box-shadow:inset 0 0 0 1px rgba(67,56,202,.06); }
 .th-warn { border:1px solid #fde68a; background:#fffbeb; border-radius:.7rem; padding:.6rem .9rem; font-size:.78rem; color:#92400e; }
@@ -338,6 +346,52 @@
                     </div>
                 </div>
 
+                {{-- 02b · Peserta / Penerima (honor & perjaldin) --}}
+                <div class="th-card d-none" style="--d:.16s;" id="thPesertaCard">
+                    <div class="head">
+                        <span class="th-num" style="background:linear-gradient(135deg,#7c3aed,#a855f7);"><i class="bi bi-people-fill"></i></span>
+                        <span class="ttl">Peserta / Penerima <span class="text-muted fw-normal" id="thPesertaCount"></span></span>
+                        <span class="hint">dari halaman nominatif · semua bisa diedit</span>
+                    </div>
+                    <div class="body">
+                        <div class="small text-muted mb-2"><i class="bi bi-magic me-1"></i>Baris di bawah terbaca OCR dari lampiran nominatif — cocokkan dengan scan, perbaiki yang meleset, tambah yang terlewat. Tersimpan sebagai daftar penerima pada detail tagihan.</div>
+                        <div class="table-responsive">
+                            <table class="table table-sm align-middle" style="font-size:.78rem; min-width:900px;">
+                                {{-- Kolom mengikuti tipe tagihan: honorarium vs perjaldin (dirender JS). --}}
+                                <thead id="thPesertaHead"></thead>
+                                <tbody id="thPesertaRows"></tbody>
+                            </table>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-primary" id="thTambahPeserta"><i class="bi bi-person-plus me-1"></i>Tambah Peserta</button>
+                    </div>
+                </div>
+
+                {{-- 02c · Komponen biaya (bundel gabungan berisi beberapa SPP) --}}
+                <div class="th-card d-none" style="--d:.17s;" id="thKomponenCard">
+                    <div class="head">
+                        <span class="th-num" style="background:linear-gradient(135deg,#0891b2,#22d3ee);"><i class="bi bi-diagram-3-fill"></i></span>
+                        <span class="ttl">Komponen Biaya <span class="text-muted fw-normal" id="thKomponenCount"></span></span>
+                        <span class="hint">1 SPP arsip = 1 komponen · bruto = jumlah komponen</span>
+                    </div>
+                    <div class="body">
+                        <div class="small text-muted mb-2"><i class="bi bi-magic me-1"></i>Bundel yang memuat beberapa SPP (mis. taxi + uang harian, nama file "0135-0136. …") direkam sebagai <b>satu</b> tagihan historis — tiap SPP menjadi satu komponen dengan COA &amp; nominal sendiri; realisasi anggaran dicatat per komponen dan nomor urut register tiap SPP ikut ditandai terpakai. Kosongkan bila bundel hanya berisi satu SPP.</div>
+                        <div class="table-responsive">
+                            <table class="table table-sm align-middle" style="font-size:.78rem; min-width:860px;">
+                                <thead><tr class="text-uppercase" style="font-size:.64rem; letter-spacing:.5px; color:#475569;">
+                                    <th style="min-width:140px;">Nama Komponen</th>
+                                    <th style="min-width:180px;">Nomor SPP Arsip</th>
+                                    <th style="width:90px;">Urut Reg.</th>
+                                    <th style="min-width:260px;">COA / Item Anggaran</th>
+                                    <th class="text-end" style="min-width:120px;">Nominal (Rp)</th>
+                                    <th></th>
+                                </tr></thead>
+                                <tbody id="thKomponenRows"></tbody>
+                            </table>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-primary" id="thTambahKomponen"><i class="bi bi-plus-lg me-1"></i>Tambah Komponen</button>
+                    </div>
+                </div>
+
                 {{-- 03 · Rantai dokumen --}}
                 <div class="th-card" style="--d:.19s;">
                     <div class="head">
@@ -388,26 +442,29 @@
 
             {{-- ════════ PANEL KANAN ════════ --}}
             <div class="col-lg-5">
-                <div class="th-card th-preview-card d-none" style="--d:.1s;" id="thPreviewCard">
-                    <div class="head">
-                        <span class="th-num teal"><i class="bi bi-file-earmark-image"></i></span>
-                        <span class="ttl">Scan Halaman 1 (SPP)</span>
-                        <span class="hint">klik gambar untuk zoom</span>
+                {{-- Panel kanan tunggal & sticky: tab Scan ⇄ Cara Membaca —
+                     tidak ada dua kartu yang saling menimpa saat scroll. --}}
+                <div class="th-card th-preview-card" style="--d:.1s;" id="thPanelKanan">
+                    <div class="head" style="gap:.5rem;">
+                        <div class="th-tabs d-flex gap-1 me-auto" role="tablist">
+                            <button type="button" class="th-tab d-none" id="thTabScanBtn" data-target="thTabScan" role="tab">
+                                <i class="bi bi-file-earmark-image"></i> Scan Halaman 1
+                            </button>
+                            <button type="button" class="th-tab active" id="thTabTipsBtn" data-target="thTabTips" role="tab">
+                                <i class="bi bi-lightbulb"></i> Cara Membaca
+                            </button>
+                        </div>
+                        <span class="hint" id="thPanelHint">panduan singkat</span>
                     </div>
-                    <div class="body p-2">
+
+                    <div class="body p-2" id="thTabScan" style="display:none;">
                         <div id="thOcrWarnings" class="th-warn d-none mb-2"></div>
                         <div class="frame">
                             <img id="thPreviewImg" src="" alt="Pratinjau scan halaman 1" style="width:100%; display:block; cursor:zoom-in;" onclick="this.style.width = this.style.width === '160%' ? '100%' : '160%'; this.style.cursor = this.style.width === '160%' ? 'zoom-out' : 'zoom-in';">
                         </div>
                     </div>
-                </div>
 
-                <div class="th-card" style="--d:.17s;">
-                    <div class="head">
-                        <span class="th-num"><i class="bi bi-lightbulb"></i></span>
-                        <span class="ttl">Cara Membaca Berkas</span>
-                    </div>
-                    <div class="body small text-muted">
+                    <div class="body small text-muted" id="thTabTips">
                         <ul class="ps-3 mb-0 th-tips">
                             <li><b>Bruto</b> = "Jumlah Pengeluaran" pada SPP/SPM.</li>
                             <li><b>Potongan</b> = tabel POTONGAN (mis. akun 411211 = PPN, 411124 = PPh) — netto harus sama dengan "Total Pembayaran" pada berkas.</li>
@@ -488,6 +545,210 @@ document.addEventListener('DOMContentLoaded', function () {
     tambahBaris();
     hitungNetto();
 
+    /* ── panel kanan: tab Scan ⇄ Cara Membaca ── */
+    var tabScanBtn = document.getElementById('thTabScanBtn');
+    var tabTipsBtn = document.getElementById('thTabTipsBtn');
+    var tabScan = document.getElementById('thTabScan');
+    var tabTips = document.getElementById('thTabTips');
+    var panelHint = document.getElementById('thPanelHint');
+
+    function pilihTab(scan) {
+        tabScan.style.display = scan ? '' : 'none';
+        tabTips.style.display = scan ? 'none' : '';
+        tabScanBtn.classList.toggle('active', scan);
+        tabTipsBtn.classList.toggle('active', !scan);
+        panelHint.textContent = scan ? 'klik gambar untuk zoom' : 'panduan singkat';
+    }
+    tabScanBtn.addEventListener('click', function () { pilihTab(true); });
+    tabTipsBtn.addEventListener('click', function () { pilihTab(false); });
+
+    /* ── peserta/penerima: tabel dinamis + tampil untuk honor/perjaldin ── */
+    var pesertaCard = document.getElementById('thPesertaCard');
+    var pesertaRows = document.getElementById('thPesertaRows');
+    var pesertaCount = document.getElementById('thPesertaCount');
+    var tipeSelect = document.querySelector('[name="tipe_tagihan"]');
+
+    var pesertaHead = document.getElementById('thPesertaHead');
+
+    function pesertaModePerjaldin() { return tipeSelect.value === 'PERJALDIN'; }
+
+    function refreshPesertaCard() {
+        var relevan = ['HONORARIUM', 'PERJALDIN'].indexOf(tipeSelect.value) !== -1;
+        pesertaCard.classList.toggle('d-none', !relevan);
+        var n = pesertaRows.querySelectorAll('tr').length;
+        pesertaCount.textContent = n ? '(' + n + ' orang)' : '';
+    }
+
+    function inputCell(nama, nilai, lebar, kelas) {
+        return '<td><input type="text" name="' + nama + '[]" class="form-control form-control-sm ' + (kelas || '') + '"'
+            + (lebar ? ' style="min-width:' + lebar + 'px;"' : '') + ' value="' + String(nilai == null ? '' : nilai).replace(/"/g, '&quot;') + '"></td>';
+    }
+
+    function dateCell(nama, nilai) {
+        return '<td><input type="date" name="' + nama + '[]" class="form-control form-control-sm" style="min-width:135px;" value="'
+            + String(nilai == null ? '' : nilai).replace(/"/g, '&quot;') + '"></td>';
+    }
+
+    // Sel nominal berformat rupiah (30.012.634); angka polos dinormalisasi
+    // kembali saat submit (lihat listener submit thForm).
+    function rupiahCell(nama, nilai, lebar) {
+        var n = angka(nilai);
+        return inputCell(nama, n ? fmt.format(n) : '', lebar, 'text-end js-rupiah');
+    }
+
+    function pasangRupiahInline(el, setelah) {
+        el.addEventListener('input', function () {
+            var n = angka(el.value);
+            el.value = n ? fmt.format(n) : '';
+            if (setelah) setelah();
+        });
+    }
+
+    // Kolom tabel mengikuti tipe: honorarium (pangkat/jabatan/PPh/bank) vs
+    // perjaldin (SPT/SPPD/tujuan/tanggal/lama hari/uang harian).
+    function renderPesertaHead() {
+        var kolom = pesertaModePerjaldin()
+            ? ['Nama Pegawai', 'NIP', 'No. SPT', 'No. SPPD', 'Tujuan', 'Tgl Berangkat', 'Lama (hr)', 'Uang Harian', 'Rekening', '']
+            : ['Nama', 'NRP/NIP', 'Pangkat', 'Jabatan', 'Honor', 'PPh', 'Rekening', 'Bank', 'Nama Rek.', 'HP', ''];
+        pesertaHead.innerHTML = '<tr class="text-uppercase" style="font-size:.64rem; letter-spacing:.5px; color:#475569;">'
+            + kolom.map(function (k) {
+                var kanan = ['Honor', 'PPh', 'Uang Harian', 'Lama (hr)'].indexOf(k) !== -1;
+                return '<th' + (kanan ? ' class="text-end"' : '') + '>' + k + '</th>';
+            }).join('') + '</tr>';
+    }
+
+    function tambahPeserta(p) {
+        p = p || {};
+        var tr = document.createElement('tr');
+        if (pesertaModePerjaldin()) {
+            tr.innerHTML =
+                inputCell('peserta_nama', p.nama, 150) + inputCell('peserta_nrp', p.nrp_nip, 110)
+                + inputCell('peserta_no_spt', p.no_spt, 110) + inputCell('peserta_no_sppd', p.no_sppd, 150)
+                + inputCell('peserta_tujuan', p.tujuan, 110)
+                + dateCell('peserta_tgl_berangkat', p.tgl_berangkat)
+                + inputCell('peserta_lama_hari', p.lama_hari, 55, 'text-end')
+                + rupiahCell('peserta_honor', p.nilai_honor, 100)
+                + inputCell('peserta_rekening', p.rekening, 130)
+                + '<td><button type="button" class="btn btn-sm btn-outline-danger js-peserta-hapus"><i class="bi bi-x-lg"></i></button></td>';
+        } else {
+            tr.innerHTML =
+                inputCell('peserta_nama', p.nama, 150) + inputCell('peserta_nrp', p.nrp_nip, 110)
+                + inputCell('peserta_pangkat', p.pangkat, 80) + inputCell('peserta_jabatan', p.jabatan, 160)
+                + rupiahCell('peserta_honor', p.nilai_honor, 90)
+                + rupiahCell('peserta_pph', p.pph, 80)
+                + inputCell('peserta_rekening', p.rekening, 130) + inputCell('peserta_bank', p.jenis_bank, 100)
+                + inputCell('peserta_nama_rekening', p.nama_rekening, 130) + inputCell('peserta_hp', p.no_hp, 110)
+                + '<td><button type="button" class="btn btn-sm btn-outline-danger js-peserta-hapus"><i class="bi bi-x-lg"></i></button></td>';
+        }
+        pesertaRows.appendChild(tr);
+        tr.querySelectorAll('.js-rupiah').forEach(function (el) { pasangRupiahInline(el); });
+        tr.querySelector('.js-peserta-hapus').addEventListener('click', function () { tr.remove(); refreshPesertaCard(); });
+        refreshPesertaCard();
+    }
+
+    // Ganti tipe → susun ulang header + baris dengan membawa data yang ada.
+    function ambilNilai(tr, nama) {
+        var el = tr.querySelector('[name="' + nama + '[]"]');
+        return el ? el.value : null;
+    }
+
+    function susunUlangPeserta() {
+        var lama = Array.from(pesertaRows.querySelectorAll('tr')).map(function (tr) {
+            return {
+                nama: ambilNilai(tr, 'peserta_nama'),
+                nrp_nip: ambilNilai(tr, 'peserta_nrp'),
+                pangkat: ambilNilai(tr, 'peserta_pangkat'),
+                jabatan: ambilNilai(tr, 'peserta_jabatan'),
+                nilai_honor: ambilNilai(tr, 'peserta_honor'),
+                pph: ambilNilai(tr, 'peserta_pph'),
+                rekening: ambilNilai(tr, 'peserta_rekening'),
+                jenis_bank: ambilNilai(tr, 'peserta_bank'),
+                nama_rekening: ambilNilai(tr, 'peserta_nama_rekening'),
+                no_hp: ambilNilai(tr, 'peserta_hp'),
+                no_spt: ambilNilai(tr, 'peserta_no_spt'),
+                no_sppd: ambilNilai(tr, 'peserta_no_sppd'),
+                tujuan: ambilNilai(tr, 'peserta_tujuan'),
+                tgl_berangkat: ambilNilai(tr, 'peserta_tgl_berangkat'),
+                lama_hari: ambilNilai(tr, 'peserta_lama_hari')
+            };
+        });
+        renderPesertaHead();
+        pesertaRows.innerHTML = '';
+        lama.forEach(function (p) { tambahPeserta(p); });
+        refreshPesertaCard();
+    }
+
+    document.getElementById('thTambahPeserta').addEventListener('click', function () { tambahPeserta(); });
+    tipeSelect.addEventListener('change', susunUlangPeserta);
+    renderPesertaHead();
+    refreshPesertaCard();
+
+    /* ── komponen biaya: bundel gabungan berisi beberapa SPP perjaldin ── */
+    var komponenCard = document.getElementById('thKomponenCard');
+    var komponenRows = document.getElementById('thKomponenRows');
+    var komponenCount = document.getElementById('thKomponenCount');
+    var coaUtama = document.getElementById('dipa_revision_item_id');
+
+    function refreshKomponenCard() {
+        komponenCard.classList.toggle('d-none', tipeSelect.value !== 'PERJALDIN');
+        var n = komponenRows.querySelectorAll('tr').length;
+        komponenCount.textContent = n ? '(' + n + ' komponen)' : '';
+    }
+
+    // Saat ada baris komponen, bruto tagihan = jumlah nominal seluruh komponen.
+    function hitungBrutoKomponen() {
+        var inputs = komponenRows.querySelectorAll('[name="komponen_nominal[]"]');
+        if (!inputs.length) return;
+        var total = 0;
+        inputs.forEach(function (el) { total += angka(el.value); });
+        if (total > 0) {
+            brutoHidden.value = Math.round(total);
+            brutoDisplay.value = fmt.format(Math.round(total));
+            hitungNetto();
+        }
+    }
+
+    function tambahKomponen(k) {
+        k = k || {};
+        var tr = document.createElement('tr');
+        tr.innerHTML =
+            inputCell('komponen_nama', k.nama, 140)
+            + inputCell('komponen_nomor_spp', k.nomor_spp, 180)
+            + inputCell('komponen_urut', k.urut, 70)
+            + '<td class="js-komponen-coa"></td>'
+            + rupiahCell('komponen_nominal', k.nominal, 110)
+            + '<td><button type="button" class="btn btn-sm btn-outline-danger js-komponen-hapus"><i class="bi bi-x-lg"></i></button></td>';
+
+        // COA per komponen: klon opsi dari select COA utama.
+        var sel = coaUtama.cloneNode(true);
+        sel.removeAttribute('id');
+        sel.removeAttribute('required');
+        sel.name = 'komponen_dipa_item_id[]';
+        sel.className = 'form-select form-select-sm';
+        sel.style.minWidth = '260px';
+        sel.value = k.dipa_revision_item_id ? String(k.dipa_revision_item_id) : '';
+        tr.querySelector('.js-komponen-coa').appendChild(sel);
+
+        komponenRows.appendChild(tr);
+        tr.querySelector('.js-komponen-hapus').addEventListener('click', function () {
+            tr.remove(); refreshKomponenCard(); hitungBrutoKomponen();
+        });
+        pasangRupiahInline(tr.querySelector('[name="komponen_nominal[]"]'), hitungBrutoKomponen);
+        refreshKomponenCard();
+    }
+
+    document.getElementById('thTambahKomponen').addEventListener('click', function () { tambahKomponen(); });
+    tipeSelect.addEventListener('change', refreshKomponenCard);
+    refreshKomponenCard();
+
+    // Kirim angka polos ke server: buang pemisah ribuan pada kolom rupiah.
+    document.getElementById('thForm').addEventListener('submit', function () {
+        document.querySelectorAll('.js-rupiah').forEach(function (el) {
+            var n = angka(el.value);
+            el.value = n ? String(n) : '';
+        });
+    });
+
     /* ── format NPWP standar: 99.999.999.9-999.999 ── */
     function formatNpwp(v) {
         var d = String(v || '').replace(/\D/g, '');
@@ -545,7 +806,6 @@ document.addEventListener('DOMContentLoaded', function () {
     var dropIcon = document.getElementById('thDropIcon');
     var dropTitle = document.getElementById('thDropTitle');
     var dropSub = document.getElementById('thDropSub');
-    var previewCard = document.getElementById('thPreviewCard');
     var previewImg = document.getElementById('thPreviewImg');
     var ocrWarnings = document.getElementById('thOcrWarnings');
     var terisiOtomatis = 0;
@@ -642,12 +902,23 @@ document.addEventListener('DOMContentLoaded', function () {
             } else if (fl.pihak_nama) {
                 isi('pihak_nama_baru', fl.pihak_nama);
                 isi('pihak_npwp', formatNpwp(fl.pihak_npwp));
+                isi('pihak_direktur', fl.pihak_direktur);
                 isi('pihak_alamat', fl.pihak_alamat);
                 isi('pihak_bank', fl.pihak_bank);
                 isi('pihak_norek', fl.pihak_rekening);
                 isi('pihak_nama_rekening', fl.pihak_nama_rekening || fl.pihak_nama);
                 togglePihakDetail();
             }
+
+            // Bundel gabungan (≥2 SPP): isi kartu Komponen Biaya per SPP.
+            komponenRows.innerHTML = '';
+            if (d.komponen && d.komponen.length > 1) {
+                d.komponen.forEach(function (k) { tambahKomponen(k); });
+                if (!fl.dipa_revision_item_id && d.komponen[0].dipa_revision_item_id) {
+                    fl.dipa_revision_item_id = d.komponen[0].dipa_revision_item_id;
+                }
+            }
+            refreshKomponenCard();
 
             if (fl.dipa_revision_item_id) {
                 var coaSelect = document.querySelector('[name="dipa_revision_item_id"]');
@@ -661,9 +932,16 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             }
 
+            if (d.peserta && d.peserta.length) {
+                pesertaRows.innerHTML = '';
+                d.peserta.forEach(function (p) { tambahPeserta(p); });
+            }
+            refreshPesertaCard();
+
             if (d.preview) {
                 previewImg.src = d.preview;
-                previewCard.classList.remove('d-none');
+                tabScanBtn.classList.remove('d-none');
+                pilihTab(true); // langsung tampilkan scan untuk verifikasi
             }
             if (d.warnings && d.warnings.length) {
                 ocrWarnings.classList.remove('d-none');

@@ -316,15 +316,110 @@
                                     </div>
                                 </div>
                             </div>
-                            <a href="{{ route('arsip-sensitif.download', $state['buktiTransfer']->id) }}"
-                               class="btn fw-bold shadow-sm btn-pt-action text-white"
-                               style="background:linear-gradient(120deg,#0e7490,#0891b2);">
-                                <i class="bi bi-file-earmark-pdf"></i> Lihat / Unduh Arsip
-                            </a>
+                            <div class="d-flex gap-2 flex-wrap">
+                                <button type="button"
+                                        class="btn fw-bold shadow-sm btn-pt-action text-white"
+                                        style="background:linear-gradient(120deg,#0e7490,#0891b2);"
+                                        data-bs-toggle="modal" data-bs-target="#modalArsipHistoris">
+                                    <i class="bi bi-eye"></i> Lihat Arsip
+                                </button>
+                                <a href="{{ route('arsip-sensitif.download', $state['buktiTransfer']->id) }}"
+                                   class="btn btn-outline-secondary fw-bold btn-pt-action">
+                                    <i class="bi bi-download"></i> Unduh
+                                </a>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
+        @endif
+
+        {{-- Modal penampil bundel arsip historis --}}
+        @if($tagihan->is_historis && $state['buktiTransfer'])
+            @push('css')
+            <style>
+                @keyframes avSheen { 0%,55%{left:-70%} 90%,100%{left:140%} }
+                @keyframes avPulse { 0%,100%{transform:scale(1); opacity:.75} 50%{transform:scale(1.12); opacity:1} }
+                @media (prefers-reduced-motion: reduce) {
+                    #modalArsipHistoris * { animation-duration:.001s !important; transition-duration:.001s !important; }
+                }
+                #modalArsipHistoris .modal-dialog { max-width: min(1200px, 94vw); transition: transform .35s cubic-bezier(.22,.61,.36,1), opacity .35s ease; transform: translateY(26px) scale(.97); }
+                #modalArsipHistoris.show .modal-dialog { transform: none; }
+                #modalArsipHistoris .modal-content { border:0; border-radius:1.1rem; overflow:hidden; box-shadow:0 40px 90px -30px rgba(11,16,32,.75); }
+                #modalArsipHistoris .av-head { position:relative; overflow:hidden; display:flex; align-items:center; gap:.85rem;
+                    padding:1rem 1.35rem; color:#fff; background:linear-gradient(120deg,#0b1020,#155e75 55%,#0e7490); }
+                #modalArsipHistoris .av-head::after { content:''; position:absolute; top:0; bottom:0; width:40%; left:-70%;
+                    background:linear-gradient(100deg,transparent,rgba(255,255,255,.16),transparent); transform:skewX(-18deg);
+                    animation:avSheen 5.5s ease-in-out 1s infinite; pointer-events:none; }
+                #modalArsipHistoris .av-ic { display:inline-grid; place-items:center; width:40px; height:40px; border-radius:.85rem; flex-shrink:0;
+                    background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.25); font-size:1.05rem; color:#a5f3fc; }
+                #modalArsipHistoris .av-ttl { font-weight:800; letter-spacing:.2px; }
+                #modalArsipHistoris .av-sub { font-size:.74rem; color:#a5f3fc; }
+                #modalArsipHistoris .av-act { position:relative; z-index:2; display:inline-flex; align-items:center; gap:.4rem;
+                    padding:.42rem .9rem; border-radius:999px; font-size:.78rem; font-weight:700; color:#fff; text-decoration:none;
+                    background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.25); transition:background .2s, transform .2s; }
+                #modalArsipHistoris .av-act:hover { background:rgba(255,255,255,.22); transform:translateY(-1px); color:#fff; }
+                #modalArsipHistoris .av-body { position:relative; background:#0f172a; height:min(78vh, 900px); }
+                #modalArsipHistoris .av-body iframe { width:100%; height:100%; border:0; display:block; }
+                #modalArsipHistoris .av-loading { position:absolute; inset:0; display:grid; place-items:center; color:#a5f3fc;
+                    background:radial-gradient(ellipse at center, #12203a, #0f172a); }
+                #modalArsipHistoris .av-loading i { font-size:2.2rem; animation:avPulse 1.3s ease-in-out infinite; }
+            </style>
+            @endpush
+
+            <div class="modal fade" id="modalArsipHistoris" tabindex="-1" aria-labelledby="modalArsipHistorisLabel" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="av-head">
+                            <span class="av-ic"><i class="bi bi-archive-fill"></i></span>
+                            <div class="me-auto min-w-0">
+                                <div class="av-ttl" id="modalArsipHistorisLabel">Bundel Arsip Historis</div>
+                                <div class="av-sub text-truncate">{{ $state['buktiTransfer']->nama_file_asli }}</div>
+                            </div>
+                            <a class="av-act" href="{{ route('arsip-sensitif.download', ['arsip' => $state['buktiTransfer']->id, 'inline' => 1]) }}" target="_blank" rel="noopener" title="Buka di tab baru">
+                                <i class="bi bi-box-arrow-up-right"></i> Tab Baru
+                            </a>
+                            <a class="av-act" href="{{ route('arsip-sensitif.download', $state['buktiTransfer']->id) }}" title="Unduh PDF">
+                                <i class="bi bi-download"></i> Unduh
+                            </a>
+                            <button type="button" class="av-act" data-bs-dismiss="modal" aria-label="Tutup" style="cursor:pointer;">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
+                        </div>
+                        <div class="av-body">
+                            <div class="av-loading" id="avArsipLoading">
+                                <div class="text-center">
+                                    <i class="bi bi-file-earmark-pdf"></i>
+                                    <div class="small mt-2 fw-semibold">Memuat bundel arsip…</div>
+                                </div>
+                            </div>
+                            <iframe id="avArsipFrame" title="Pratinjau bundel arsip historis"
+                                    data-src="{{ route('arsip-sensitif.download', ['arsip' => $state['buktiTransfer']->id, 'inline' => 1]) }}"></iframe>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            @push('script')
+            <script>
+                // Delegasi di document agar tetap bekerja setelah konten halaman
+                // di-refresh async (partial re-render mengganti elemen modal).
+                if (!window.__avArsipInit) {
+                    window.__avArsipInit = true;
+                    document.addEventListener('shown.bs.modal', function (e) {
+                        if (!e.target || e.target.id !== 'modalArsipHistoris') return;
+                        var frame = e.target.querySelector('#avArsipFrame');
+                        var loading = e.target.querySelector('#avArsipLoading');
+                        if (frame && !frame.src) {
+                            frame.addEventListener('load', function () {
+                                if (loading) loading.style.display = 'none';
+                            }, { once: true });
+                            frame.src = frame.dataset.src;
+                        }
+                    });
+                }
+            </script>
+            @endpush
         @endif
 
         <!-- Dokumen yang diunggah / di-generate saat pembuatan tagihan -->

@@ -88,11 +88,15 @@ class TagihanHistorisController extends Controller
             @unlink($tmp);
         }
 
+        // Cocokkan pihak dengan kunci longgar (huruf/angka saja) agar artefak
+        // OCR pada nama tersimpan ("©: CV. ..." dsb.) tidak menggagalkan match.
         $cocokPihak = null;
         if (! empty($hasil['fields']['pihak_nama'])) {
+            $kunci = TagihanArsipReader::kunciNama($hasil['fields']['pihak_nama']);
             $cocokPihak = MasterPihak::where('kategori', 'PENGELUARAN')
-                ->whereRaw('UPPER(nama_pihak) = ?', [strtoupper($hasil['fields']['pihak_nama'])])
-                ->value('id');
+                ->get(['id', 'nama_pihak'])
+                ->first(fn ($p) => TagihanArsipReader::kunciNama($p->nama_pihak) === $kunci)
+                ?->id;
         }
 
         return response()->json([
@@ -100,6 +104,8 @@ class TagihanHistorisController extends Controller
             'token' => $token,
             'fields' => $hasil['fields'],
             'potongan' => $hasil['potongan'],
+            'peserta' => $hasil['peserta'],
+            'komponen' => $hasil['komponen'],
             'pihak_id_cocok' => $cocokPihak,
             'preview' => $previewBase64,
             'warnings' => $hasil['warnings'],
@@ -145,9 +151,74 @@ class TagihanHistorisController extends Controller
             'nomor_sp2d' => 'required|string|max:100',
             'tanggal_sp2d' => 'required|date|after_or_equal:tanggal_spp',
             'register_nomor_urut' => 'nullable|integer|min:1|max:9999',
+            'komponen_nama' => 'nullable|array',
+            'komponen_nama.*' => 'nullable|string|max:100',
+            'komponen_nomor_spp' => 'nullable|array',
+            'komponen_nomor_spp.*' => 'nullable|string|max:100',
+            'komponen_urut' => 'nullable|array',
+            'komponen_urut.*' => 'nullable|integer|min:1|max:9999',
+            'komponen_dipa_item_id' => 'nullable|array',
+            'komponen_dipa_item_id.*' => 'nullable|integer',
+            'komponen_nominal' => 'nullable|array',
+            'komponen_nominal.*' => 'nullable|numeric|min:0',
             'file_arsip' => 'nullable|file|mimes:pdf|max:25600',
             'arsip_token' => 'nullable|uuid',
+            'peserta_nama' => 'nullable|array',
+            'peserta_nama.*' => 'nullable|string|max:150',
+            'peserta_nrp' => 'nullable|array',
+            'peserta_nrp.*' => 'nullable|string|max:30',
+            'peserta_pangkat' => 'nullable|array',
+            'peserta_pangkat.*' => 'nullable|string|max:50',
+            'peserta_jabatan' => 'nullable|array',
+            'peserta_jabatan.*' => 'nullable|string|max:150',
+            'peserta_honor' => 'nullable|array',
+            'peserta_honor.*' => 'nullable|numeric|min:0',
+            'peserta_pph' => 'nullable|array',
+            'peserta_pph.*' => 'nullable|numeric|min:0',
+            'peserta_rekening' => 'nullable|array',
+            'peserta_rekening.*' => 'nullable|string|max:30',
+            'peserta_bank' => 'nullable|array',
+            'peserta_bank.*' => 'nullable|string|max:50',
+            'peserta_nama_rekening' => 'nullable|array',
+            'peserta_nama_rekening.*' => 'nullable|string|max:150',
+            'peserta_hp' => 'nullable|array',
+            'peserta_hp.*' => 'nullable|string|max:20',
+            'peserta_no_spt' => 'nullable|array',
+            'peserta_no_spt.*' => 'nullable|string|max:100',
+            'peserta_no_sppd' => 'nullable|array',
+            'peserta_no_sppd.*' => 'nullable|string|max:100',
+            'peserta_tujuan' => 'nullable|array',
+            'peserta_tujuan.*' => 'nullable|string|max:150',
+            'peserta_tgl_berangkat' => 'nullable|array',
+            'peserta_tgl_berangkat.*' => 'nullable|date',
+            'peserta_lama_hari' => 'nullable|array',
+            'peserta_lama_hari.*' => 'nullable|integer|min:1|max:365',
         ]);
+
+        // Rangkai peserta/penerima: baris tanpa nama diabaikan.
+        $peserta = [];
+        foreach ($validated['peserta_nama'] ?? [] as $i => $namaPeserta) {
+            if (trim((string) $namaPeserta) === '') {
+                continue;
+            }
+            $peserta[] = [
+                'nama' => trim($namaPeserta),
+                'nrp' => $validated['peserta_nrp'][$i] ?? null,
+                'pangkat' => $validated['peserta_pangkat'][$i] ?? null,
+                'jabatan' => $validated['peserta_jabatan'][$i] ?? null,
+                'honor' => (float) ($validated['peserta_honor'][$i] ?? 0),
+                'pph' => (float) ($validated['peserta_pph'][$i] ?? 0),
+                'rekening' => $validated['peserta_rekening'][$i] ?? null,
+                'bank' => $validated['peserta_bank'][$i] ?? null,
+                'nama_rekening' => $validated['peserta_nama_rekening'][$i] ?? null,
+                'hp' => $validated['peserta_hp'][$i] ?? null,
+                'no_spt' => trim((string) ($validated['peserta_no_spt'][$i] ?? '')) ?: null,
+                'no_sppd' => trim((string) ($validated['peserta_no_sppd'][$i] ?? '')) ?: null,
+                'tujuan' => trim((string) ($validated['peserta_tujuan'][$i] ?? '')) ?: null,
+                'tgl_berangkat' => $validated['peserta_tgl_berangkat'][$i] ?? null,
+                'lama_hari' => $validated['peserta_lama_hari'][$i] ?? null,
+            ];
+        }
 
         $item = DipaBudgetOptionService::resolveActiveItem($validated['dipa_revision_item_id']);
 
@@ -175,12 +246,59 @@ class TagihanHistorisController extends Controller
             ]);
         }
 
+        // Rangkai komponen biaya perjaldin (bundel gabungan berisi beberapa
+        // SPP → satu tagihan, satu komponen per SPP): baris kosong diabaikan.
+        $komponen = [];
+        if ($validated['tipe_tagihan'] === 'PERJALDIN') {
+            foreach ($validated['komponen_nama'] ?? [] as $i => $namaKomponen) {
+                $nominal = (float) ($validated['komponen_nominal'][$i] ?? 0);
+                if (trim((string) $namaKomponen) === '' || $nominal <= 0) {
+                    continue;
+                }
+
+                try {
+                    $itemKomponen = DipaBudgetOptionService::resolveActiveItem(
+                        (int) ($validated['komponen_dipa_item_id'][$i] ?? 0)
+                    );
+                } catch (\Throwable $e) {
+                    throw ValidationException::withMessages([
+                        'komponen_dipa_item_id' => 'Pilih COA/item anggaran untuk komponen "' . trim($namaKomponen) . '".',
+                    ]);
+                }
+
+                $komponen[] = [
+                    'nama' => trim($namaKomponen),
+                    'nominal' => $nominal,
+                    'item' => $itemKomponen,
+                    'urut' => ! empty($validated['komponen_urut'][$i]) ? (int) $validated['komponen_urut'][$i] : null,
+                    'nomor_spp' => trim((string) ($validated['komponen_nomor_spp'][$i] ?? '')) ?: null,
+                ];
+            }
+
+            if ($komponen !== [] && abs(array_sum(array_column($komponen, 'nominal')) - $bruto) > 1) {
+                throw ValidationException::withMessages([
+                    'total_bruto' => 'Jumlah nominal seluruh komponen tidak sama dengan bruto tagihan — periksa nominal per komponen.',
+                ]);
+            }
+        }
+
         try {
             $tagihan = DB::transaction(function () use (
-                $request, $validated, $item, $potongan, $bruto, $totalPotongan, $netto,
+                $request, $validated, $item, $potongan, $peserta, $komponen, $bruto, $totalPotongan, $netto,
                 $realizationService, $bkuPostingService, $numberService
             ) {
             $pihakId = $validated['pihak_id'] ?? null;
+
+            // Anti-duplikat: bila nama "pihak baru" ternyata sudah ada di master
+            // (dibandingkan longgar), pakai yang lama alih-alih membuat kembar.
+            if (! $pihakId && ! empty($validated['pihak_nama_baru'])) {
+                $kunci = TagihanArsipReader::kunciNama($validated['pihak_nama_baru']);
+                $pihakId = MasterPihak::where('kategori', 'PENGELUARAN')
+                    ->get(['id', 'nama_pihak'])
+                    ->first(fn ($p) => TagihanArsipReader::kunciNama($p->nama_pihak) === $kunci)
+                    ?->id;
+            }
+
             if (! $pihakId && ! empty($validated['pihak_nama_baru'])) {
                 $pihakBaru = MasterPihak::create([
                     'kategori' => 'PENGELUARAN',
@@ -209,14 +327,20 @@ class TagihanHistorisController extends Controller
                 $pihakId = $pihakBaru->id;
             }
 
-            // Konsumsi nomor urut pada register SPP_BLU agar penomoran otomatis
-            // berikutnya melompati nomor arsip ini.
-            if (! empty($validated['register_nomor_urut'])) {
+            // Konsumsi nomor urut pada register SPP_BLU — termasuk urut tiap
+            // SPP pada bundel gabungan — agar penomoran otomatis melompatinya.
+            $urutRegister = array_values(array_unique(array_filter(array_merge(
+                [(int) ($validated['register_nomor_urut'] ?? 0)],
+                array_map(fn ($k) => (int) ($k['urut'] ?? 0), $komponen)
+            ))));
+            if ($urutRegister !== []) {
                 $tahunSpp = (int) date('Y', strtotime($validated['tanggal_spp']));
-                try {
-                    $numberService->generateByKeyWithNumber('SPP_BLU', (int) $validated['register_nomor_urut'], $tahunSpp);
-                } catch (\InvalidArgumentException $e) {
-                    throw ValidationException::withMessages(['register_nomor_urut' => $e->getMessage()]);
+                foreach ($urutRegister as $urut) {
+                    try {
+                        $numberService->generateByKeyWithNumber('SPP_BLU', $urut, $tahunSpp);
+                    } catch (\InvalidArgumentException $e) {
+                        throw ValidationException::withMessages(['register_nomor_urut' => $e->getMessage()]);
+                    }
                 }
             }
 
@@ -241,6 +365,25 @@ class TagihanHistorisController extends Controller
                 'created_by' => Auth::id(),
             ]);
 
+            // Komponen biaya perjaldin (satu per SPP arsip pada bundel
+            // gabungan) — realisasi anggaran dicatat per komponen sesuai COA
+            // masing-masing, seperti alur perjaldin terpadu.
+            foreach ($komponen as $i => $k) {
+                \App\Models\TagihanPerjaldinKomponen::create([
+                    'tagihan_id' => $tagihan->id,
+                    'kode_komponen' => \Illuminate\Support\Str::limit(
+                        strtoupper(\Illuminate\Support\Str::slug($k['nama'], '_')), 40, ''
+                    ) . '_' . ($i + 1),
+                    'nama_komponen' => \Illuminate\Support\Str::limit(
+                        $k['nama'] . ($k['nomor_spp'] ? ' (' . $k['nomor_spp'] . ')' : ''), 100, ''
+                    ),
+                    'dipa_revision_item_id' => $k['item']->id,
+                    'total_nominal' => $k['nominal'],
+                    'jumlah_peserta' => 0,
+                    'status_proses' => \App\Models\TagihanPerjaldinKomponen::STATUS_SELESAI,
+                ]);
+            }
+
             foreach ($potongan as $p) {
                 PotonganTagihan::create([
                     'tagihan_id' => $tagihan->id,
@@ -251,6 +394,43 @@ class TagihanHistorisController extends Controller
                     'nominal_potongan' => $p['nominal'],
                     'ntpn' => $p['ntpn'] ?? 'ARSIP',
                 ]);
+            }
+
+            // Peserta/penerima dari nominatif arsip → tabel detail sesuai tipe,
+            // sehingga kartu penerima pada halaman detail ikut terisi.
+            foreach ($peserta as $p) {
+                if ($validated['tipe_tagihan'] === 'HONORARIUM') {
+                    \App\Models\DetailHonorarium::create([
+                        'tagihan_id' => $tagihan->id,
+                        'nama_personel' => $p['nama'],
+                        'nrp_nip' => $p['nrp'],
+                        'pangkat_korp' => $p['pangkat'],
+                        'jabatan' => $p['jabatan'],
+                        'nilai_honor' => $p['honor'],
+                        'pph' => $p['pph'],
+                        'rekening' => $p['rekening'],
+                        'jenis_bank' => $p['bank'],
+                        'nama_rekening' => $p['nama_rekening'],
+                        'no_hp' => $p['hp'],
+                    ]);
+                } elseif ($validated['tipe_tagihan'] === 'PERJALDIN') {
+                    // Kolom administratif SPT/SPPD wajib isi (NOT NULL) — bila
+                    // tidak terbaca dari arsip, ditandai 'ARSIP'; rinciannya
+                    // ada di bundel scan terlampir.
+                    \App\Models\DetailPerjaldin::create([
+                        'tagihan_id' => $tagihan->id,
+                        'nama_pegawai' => $p['nama'],
+                        'nip' => $p['nrp'],
+                        'rekening' => $p['rekening'],
+                        'uang_harian' => $p['honor'],
+                        'no_spt' => $p['no_spt'] ?? 'ARSIP',
+                        'no_sppd' => $p['no_sppd'] ?? 'ARSIP',
+                        'tujuan' => $p['tujuan'],
+                        'tipe_perjalanan' => 'luar_kota',
+                        'tgl_berangkat' => $p['tgl_berangkat'] ?? $validated['tanggal_spp'],
+                        'lama_hari' => $p['lama_hari'] ?? 1,
+                    ]);
+                }
             }
 
             $tahun = (int) date('Y', strtotime($validated['tanggal_spp']));
