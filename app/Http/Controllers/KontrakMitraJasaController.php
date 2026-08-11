@@ -153,7 +153,10 @@ class KontrakMitraJasaController extends Controller
             'tanggal_kontrak' => ['required', 'date'],
             'tanggal_mulai' => ['required', 'date'],
             'tanggal_selesai' => ['required', 'date', 'after_or_equal:tanggal_mulai'],
-            'file_kontrak' => [$isCreate ? 'required' : 'nullable', 'file', 'mimes:pdf', 'max:5120'],
+            // 20 MB: batas diterima di sisi unggah. PdfCompressor memperkecil berkas
+            // setelah lolos validasi, jadi batas ini soal apa yang boleh MASUK —
+            // bukan ukuran akhir tersimpan. Selaras dengan upload_max_filesize FPM (20M).
+            'file_kontrak' => [$isCreate ? 'required' : 'nullable', 'file', 'mimes:pdf', 'max:20480'],
             'status_kontrak' => ['required', 'in:DRAFT,AKTIF,BERAKHIR,DIBATALKAN'],
             'keterangan' => ['nullable', 'string'],
             'layanan_ids' => ['nullable', 'array'],
