@@ -34,52 +34,69 @@ class PdfCompressor
      *
      * Mengembalikan path relatif file tersimpan (kompres bila lebih kecil,
      * selain itu file asli) — drop-in pengganti UploadedFile::store().
+     *
+     * Butuh tahu APAKAH berkas jadi dikompres (mis. untuk diberitahukan ke
+     * pengguna)? Pakai store() yang mengembalikan PdfCompressionResult.
      */
     public static function storeCompressed(UploadedFile $file, string $directory, string $disk = 'local'): string|false
     {
+        return self::store($file, $directory, $disk)->path;
+    }
+
+    /**
+     * Sama seperti storeCompressed(), tetapi mengembalikan hasil lengkap:
+     * path, ukuran sebelum/sesudah, dan alasan bila kompresi dilewati.
+     */
+    public static function store(UploadedFile $file, string $directory, string $disk = 'local'): PdfCompressionResult
+    {
         $directory = trim($directory, '/');
         $config = config('pdf.compression', []);
+        $originalSize = (int) ($file->getSize() ?: 0);
 
         // Jalur aman: simpan apa adanya. Dipakai sebagai fallback semua cabang.
-        $storeOriginal = static fn () => $file->store($directory, $disk);
+        $storeOriginal = static fn (string $reason) => new PdfCompressionResult(
+            $file->store($directory, $disk),
+            $reason,
+            $originalSize,
+            $originalSize,
+        );
 
         if (! ($config['enabled'] ?? true)) {
-            return $storeOriginal();
+            return $storeOriginal(PdfCompressionResult::DISABLED);
         }
 
-        $originalSize = (int) ($file->getSize() ?: 0);
         if ($originalSize < (int) ($config['min_bytes'] ?? 51200)) {
-            return $storeOriginal();
+            return $storeOriginal(PdfCompressionResult::TOO_SMALL);
         }
 
         $source = $file->getRealPath();
         if ($source === false || ! is_file($source)) {
-            return $storeOriginal();
+            return $storeOriginal(PdfCompressionResult::FAILED);
         }
 
         // Hanya proses PDF asli (cek magic header). File lain — gambar, dll —
         // disimpan apa adanya, sehingga service ini aman dipakai pada field
         // campuran (mis. pdf,jpg,png) maupun lewat DocumentArchiveService.
         if (! self::isPdf($source)) {
-            return $storeOriginal();
+            return $storeOriginal(PdfCompressionResult::NOT_PDF);
         }
 
         // Jangan sentuh PDF bertanda tangan digital / e-Meterai: kompresi menulis
         // ulang PDF dan akan MEMBATALKAN tanda tangannya. Simpan file asli.
         if (self::hasDigitalSignature($source)) {
             Log::info('PdfCompressor: PDF bertanda tangan digital terdeteksi — disimpan tanpa kompresi.');
-            return $storeOriginal();
+            return $storeOriginal(PdfCompressionResult::SIGNED);
         }
 
         $binary = self::resolveBinary();
         if ($binary === null) {
             Log::info('PdfCompressor: Ghostscript tidak ditemukan — file disimpan tanpa kompresi.');
-            return $storeOriginal();
+            return $storeOriginal(PdfCompressionResult::NO_BINARY);
         }
 
         $compressed = self::compress($source, $binary, $config);
         if ($compressed === null) {
-            return $storeOriginal();
+            return $storeOriginal(PdfCompressionResult::FAILED);
         }
 
         try {
@@ -87,12 +104,12 @@ class PdfCompressor
 
             // Pakai hasil hanya bila valid (non-kosong) DAN benar-benar lebih kecil.
             if ($compressedSize <= 0 || $compressedSize >= $originalSize) {
-                return $storeOriginal();
+                return $storeOriginal(PdfCompressionResult::NOT_SMALLER);
             }
 
             $stored = Storage::disk($disk)->putFileAs($directory, new File($compressed), $file->hashName());
             if ($stored === false) {
-                return $storeOriginal();
+                return $storeOriginal(PdfCompressionResult::FAILED);
             }
 
             Log::info(sprintf(
@@ -102,7 +119,12 @@ class PdfCompressor
                 (int) round(($originalSize - $compressedSize) / $originalSize * 100)
             ));
 
-            return $stored;
+            return new PdfCompressionResult(
+                $stored,
+                PdfCompressionResult::COMPRESSED,
+                $originalSize,
+                $compressedSize,
+            );
         } finally {
             @unlink($compressed);
         }
@@ -138,8 +160,16 @@ class PdfCompressor
             $source,
         ];
 
+        // Ghostscript membuat berkas kerja sendiri dan membacanya dari TMPDIR/TEMP/TMP.
+        // Proses PHP web (PHP-FPM, php -S) sering berjalan tanpa variabel itu, dan
+        // Ghostscript lalu gagal dengan "Could not open temporary file ''" — kompresi
+        // diam-diam mati padahal di CLI berhasil. Set eksplisit agar sama di semua SAPI.
+        $tmp = sys_get_temp_dir();
+
         try {
-            $result = Process::timeout((float) ($config['timeout'] ?? 60))->run($command);
+            $result = Process::timeout((float) ($config['timeout'] ?? 60))
+                ->env(['TMPDIR' => $tmp, 'TEMP' => $tmp, 'TMP' => $tmp])
+                ->run($command);
         } catch (\Throwable $e) {
             Log::warning('PdfCompressor: Ghostscript gagal dijalankan — ' . $e->getMessage());
             @unlink($output);

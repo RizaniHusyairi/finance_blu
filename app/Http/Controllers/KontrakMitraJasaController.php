@@ -5,7 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\KontrakMitraJasa;
 use App\Models\LayananJasa;
 use App\Models\MitraJasa;
+use App\Services\KontrakStagingService;
 use App\Services\MitraLayananService;
+use App\Support\PdfCompressionResult;
 use App\Support\PdfCompressor;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -21,10 +23,53 @@ class KontrakMitraJasaController extends Controller
             'kontrak' => new KontrakMitraJasa(),
             'layanans' => $this->layanansForMitra($mitra),
             'selectedLayananIds' => [],
+            'ukuranFileKontrak' => null,
         ]);
     }
 
-    public function store(Request $request, MitraJasa $mitra)
+    /**
+     * Unggah + kompres berkas kontrak di latar belakang, sebelum form disimpan.
+     *
+     * Dipanggil lewat AJAX begitu pengguna memilih berkas, supaya panel di form
+     * bisa menampilkan hasil kompresi yang SEBENARNYA, dan penyimpanan nanti
+     * tinggal memindahkan berkas yang sudah diproses.
+     */
+    public function pratinjauKompresi(Request $request, MitraJasa $mitra, KontrakStagingService $staging)
+    {
+        $this->abortUnlessCanManageMitraMaster();
+
+        $request->validate([
+            'file_kontrak' => ['required', 'file', 'mimes:pdf', 'max:20480'],
+            // Token titipan sebelumnya (bila pengguna mengganti berkas) agar
+            // tidak menumpuk sampah di disk.
+            'token_lama' => ['nullable', 'string'],
+        ]);
+
+        $userId = (int) auth()->id();
+        $staging->buang($request->input('token_lama'), $userId);
+
+        ['token' => $token, 'hasil' => $hasil] = $staging->titipkan($request->file('file_kontrak'), $userId);
+
+        if ($token === '') {
+            return response()->json([
+                'ok' => false,
+                'pesan' => 'Berkas gagal disimpan sementara di server. Silakan coba lagi.',
+            ], 500);
+        }
+
+        return response()->json([
+            'ok' => true,
+            'token' => $token,
+            'dikompres' => $hasil->compressed(),
+            'alasan' => $hasil->reason,
+            'pesan' => $hasil->message(),
+            'ukuran_asli' => PdfCompressionResult::humanBytes($hasil->originalBytes),
+            'ukuran_akhir' => PdfCompressionResult::humanBytes($hasil->storedBytes),
+            'hemat_persen' => $hasil->savedPercent(),
+        ]);
+    }
+
+    public function store(Request $request, MitraJasa $mitra, KontrakStagingService $staging)
     {
         $this->abortUnlessCanManageMitraMaster();
 
@@ -33,12 +78,9 @@ class KontrakMitraJasaController extends Controller
         $validated['created_by'] = auth()->id();
         $validated['updated_by'] = auth()->id();
 
-        if ($request->hasFile('file_kontrak')) {
-            $validated['file_kontrak'] = PdfCompressor::storeCompressed(
-                $request->file('file_kontrak'),
-                'mitra-jasa/kontrak',
-                'local'
-            );
+        $path = $this->resolveFileKontrak($request, $staging);
+        if ($path !== null) {
+            $validated['file_kontrak'] = $path;
         }
 
         $kontrak = KontrakMitraJasa::create($validated);
@@ -68,10 +110,11 @@ class KontrakMitraJasaController extends Controller
             'kontrak' => $kontrak->load('layananJasa'),
             'layanans' => $this->layanansForMitra($mitra),
             'selectedLayananIds' => $kontrak->layananJasa->pluck('id')->all(),
+            'ukuranFileKontrak' => $this->ukuranFileKontrak($kontrak),
         ]);
     }
 
-    public function update(Request $request, MitraJasa $mitra, KontrakMitraJasa $kontrak)
+    public function update(Request $request, MitraJasa $mitra, KontrakMitraJasa $kontrak, KontrakStagingService $staging)
     {
         $this->abortUnlessCanManageMitraMaster();
         $this->ensureOwnedByMitra($mitra, $kontrak);
@@ -79,14 +122,10 @@ class KontrakMitraJasaController extends Controller
         $validated = $this->validateKontrak($request, false);
         $validated['updated_by'] = auth()->id();
 
-        if ($request->hasFile('file_kontrak')) {
+        $path = $this->resolveFileKontrak($request, $staging);
+        if ($path !== null) {
             $this->deleteFileKontrak($kontrak->file_kontrak);
-
-            $validated['file_kontrak'] = PdfCompressor::storeCompressed(
-                $request->file('file_kontrak'),
-                'mitra-jasa/kontrak',
-                'local'
-            );
+            $validated['file_kontrak'] = $path;
         }
 
         $kontrak->update($validated);
@@ -144,6 +183,58 @@ class KontrakMitraJasaController extends Controller
         Storage::disk($disk)->delete($path);
     }
 
+    /**
+     * Ukuran file kontrak tersimpan dalam format terbaca (mis. "1.72 MB"),
+     * atau null bila belum ada file / file hilang dari disk.
+     *
+     * Resolusi disk mengikuti download(): `local`, fallback `public` untuk
+     * file lama yang belum dimigrasi (INF-01).
+     */
+    private function ukuranFileKontrak(KontrakMitraJasa $kontrak): ?string
+    {
+        if (! $kontrak->file_kontrak) {
+            return null;
+        }
+
+        $disk = Storage::disk('local')->exists($kontrak->file_kontrak) ? 'local' : 'public';
+        if (! Storage::disk($disk)->exists($kontrak->file_kontrak)) {
+            return null;
+        }
+
+        return PdfCompressionResult::humanBytes((int) Storage::disk($disk)->size($kontrak->file_kontrak));
+    }
+
+    /**
+     * Tentukan path file kontrak untuk request ini.
+     *
+     * Prioritas: berkas titipan hasil pratinjau (sudah dikompres saat diunggah
+     * di latar belakang). Bila tidak ada — mis. JavaScript nonaktif atau
+     * pratinjaunya gagal — jatuh ke unggahan form biasa. Mengembalikan null
+     * bila memang tidak ada berkas baru pada request ini.
+     */
+    private function resolveFileKontrak(Request $request, KontrakStagingService $staging): ?string
+    {
+        $dariTitipan = $staging->tuntaskan(
+            $request->input('file_kontrak_token'),
+            (int) auth()->id(),
+            'mitra-jasa/kontrak'
+        );
+
+        if ($dariTitipan !== null) {
+            return $dariTitipan;
+        }
+
+        if ($request->hasFile('file_kontrak')) {
+            return PdfCompressor::storeCompressed(
+                $request->file('file_kontrak'),
+                'mitra-jasa/kontrak',
+                'local'
+            ) ?: null;
+        }
+
+        return null;
+    }
+
     private function validateKontrak(Request $request, bool $isCreate): array
     {
         return $request->validate([
@@ -156,7 +247,15 @@ class KontrakMitraJasaController extends Controller
             // 20 MB: batas diterima di sisi unggah. PdfCompressor memperkecil berkas
             // setelah lolos validasi, jadi batas ini soal apa yang boleh MASUK —
             // bukan ukuran akhir tersimpan. Selaras dengan upload_max_filesize FPM (20M).
-            'file_kontrak' => [$isCreate ? 'required' : 'nullable', 'file', 'mimes:pdf', 'max:20480'],
+            //
+            // Saat membuat, berkas wajib ada KECUALI sudah diunggah lebih dulu di
+            // latar belakang — yang menitipkan `file_kontrak_token` (lihat
+            // pratinjauKompresi + KontrakStagingService).
+            'file_kontrak' => [
+                $isCreate ? 'required_without:file_kontrak_token' : 'nullable',
+                'file', 'mimes:pdf', 'max:20480',
+            ],
+            'file_kontrak_token' => ['nullable', 'uuid'],
             'status_kontrak' => ['required', 'in:DRAFT,AKTIF,BERAKHIR,DIBATALKAN'],
             'keterangan' => ['nullable', 'string'],
             'layanan_ids' => ['nullable', 'array'],

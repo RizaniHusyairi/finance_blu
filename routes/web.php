@@ -550,6 +550,8 @@ Route::middleware(['auth', 'account.active'])->group(function () use ($internalR
         Route::post('/jasa/mitra/{mitra}/account', [MitraAccountController::class, 'store'])->name('jasa.mitra.account.store');
         Route::post('/jasa/mitra/{mitra}/account/reset', [MitraAccountController::class, 'reset'])->name('jasa.mitra.account.reset');
         Route::get('/jasa/mitra/{mitra}/kontrak/create', [KontrakMitraJasaController::class, 'create'])->name('jasa.mitra.kontrak.create');
+        // Unggah + kompres di latar belakang saat berkas dipilih, sebelum form disimpan.
+        Route::post('/jasa/mitra/{mitra}/kontrak/pratinjau-kompresi', [KontrakMitraJasaController::class, 'pratinjauKompresi'])->name('jasa.mitra.kontrak.pratinjau-kompresi');
         Route::post('/jasa/mitra/{mitra}/kontrak', [KontrakMitraJasaController::class, 'store'])->name('jasa.mitra.kontrak.store');
         Route::get('/jasa/mitra/{mitra}/kontrak/{kontrak}', [KontrakMitraJasaController::class, 'show'])->name('jasa.mitra.kontrak.show');
         Route::get('/jasa/mitra/{mitra}/kontrak/{kontrak}/edit', [KontrakMitraJasaController::class, 'edit'])->name('jasa.mitra.kontrak.edit');
