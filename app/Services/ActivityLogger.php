@@ -104,7 +104,7 @@ class ActivityLogger
     private static function sanitizedInput(Request $request): ?array
     {
         $input = collect($request->except(self::SENSITIVE_KEYS))
-            ->reject(fn ($v, $k) => Str::contains(strtolower((string) $k), ['password', 'token', 'secret']))
+            ->reject(fn ($v, $k) => Str::contains(strtolower((string) $k), ['password', 'token', 'secret', 'private_key']))
             ->map(function ($v) {
                 if (is_array($v)) {
                     return '[array:'.count($v).']';

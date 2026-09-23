@@ -119,6 +119,11 @@ Route::get('/health', HealthController::class)->name('health');
 Route::post('/integrations/btn/virtual-account/callback', BtnPaymentCallbackController::class)
     ->name('integrations.btn.virtual-account.callback')
     ->withoutMiddleware([ValidateCsrfToken::class]);
+
+Route::post('/snap/v1/transfer-va/inquiry', [\App\Http\Controllers\BtnSnapController::class, 'inquiry'])
+    ->name('integrations.btn.snap.inquiry')->withoutMiddleware([ValidateCsrfToken::class]);
+Route::post('/snap/v1/transfer-va/payment', [\App\Http\Controllers\BtnSnapController::class, 'payment'])
+    ->name('integrations.btn.snap.payment')->withoutMiddleware([ValidateCsrfToken::class]);
 // Route publik (signed URL) untuk scan QR di PDF SPP — menampilkan aktivitas tagihan
 Route::get('/aktivitas-tagihan/{id}', [PublicTagihanActivityController::class, 'show'])
     ->middleware('signed')

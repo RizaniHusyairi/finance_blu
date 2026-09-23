@@ -18,22 +18,17 @@ class BtnVirtualAccountService
         $expiryDays = (int) IntegrationSetting::getValue('btn.va_expiry_days', 30);
         $isActive = (bool) IntegrationSetting::getValue('btn.enabled', false);
 
-        if (! $isActive || $mode === 'mock') {
-            return $this->mockVirtualAccount($tagihan, $prefix, $expiryDays, 'BTN mock aktif atau credential belum lengkap.');
+        if (! $isActive) {
+            throw new \RuntimeException('VA otomatis BTN tidak aktif. Gunakan nomor VA manual.');
+        }
+        if ($mode === 'mock') {
+            if ($tagihan->btn_va_data) {
+                throw new \RuntimeException('VA SNAP tidak dapat digunakan sebagai VA simulasi.');
+            }
+            return $this->mockVirtualAccount($tagihan, $prefix, $expiryDays, 'Mode simulasi BTN aktif.');
         }
 
-        // Endpoint real BTN sengaja belum ditembak sebelum dokumen API resmi diisi.
-        // Begitu path dan skema signature BTN final tersedia, blok ini bisa diganti dengan request Http client.
-        $baseUrl = IntegrationSetting::getValue('btn.base_url');
-        $clientId = IntegrationSetting::getValue('btn.client_id');
-        $clientSecret = IntegrationSetting::getValue('btn.client_secret');
-        $merchantId = IntegrationSetting::getValue('btn.merchant_id');
-
-        if (! filled($baseUrl) || ! filled($clientId) || ! filled($clientSecret) || ! filled($merchantId)) {
-            return $this->mockVirtualAccount($tagihan, $prefix, $expiryDays, 'Credential BTN belum lengkap, sistem memakai VA mock.');
-        }
-
-        return $this->mockVirtualAccount($tagihan, $prefix, $expiryDays, 'Dokumen endpoint BTN belum dikonfigurasi, sistem memakai VA mock.');
+        return app(\App\Services\Btn\BtnSnapVirtualAccount::class)->create($tagihan);
     }
 
     public function handlePaymentCallback(array $payload): array
@@ -82,6 +77,10 @@ class BtnVirtualAccountService
         $tagihan = TagihanJasa::where('nomor_va', $virtualAccount)
             ->orWhere('va_reference', $externalReference)
             ->first();
+
+        if ($tagihan?->btn_va_data) {
+            throw new \RuntimeException('Pembayaran VA SNAP hanya dapat diproses melalui endpoint SNAP.');
+        }
 
         $callbackResult = DB::transaction(function () use ($tagihan, $payload, $virtualAccount, $externalReference, $amount, $paidAt, $channel) {
             // INT-02: kunci baris transaksi yang sudah ada untuk (provider, external_reference)

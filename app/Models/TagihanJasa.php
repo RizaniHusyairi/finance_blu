@@ -15,6 +15,7 @@ class TagihanJasa extends Model
     protected $table = 'tagihan_jasas';
     protected $guarded = ['id'];
     protected $casts = [
+        'btn_va_data' => 'array',
         'tanggal_tagihan' => 'date',
         'tanggal_publish' => 'date',
         'tanggal_jatuh_tempo' => 'date',

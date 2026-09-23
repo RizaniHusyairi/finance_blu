@@ -22,7 +22,7 @@ class JasaIntegrationSettingController extends Controller
 
     public function update(Request $request)
     {
-        $validated = $request->validate([
+        $validated = $request->validate(\App\Services\Btn\BtnSnapSettings::rules() + [
             'btn_enabled' => ['nullable', 'boolean'],
             'btn_mode' => ['required', 'in:mock,sandbox,production'],
             'btn_base_url' => ['nullable', 'url', 'max:255'],
@@ -55,6 +55,7 @@ class JasaIntegrationSettingController extends Controller
             'email_invoice_template' => ['nullable', 'string', 'max:4000'],
         ]);
 
+        \App\Services\Btn\BtnSnapSettings::save($validated);
         IntegrationSetting::setValue('btn.enabled', $request->boolean('btn_enabled'), 'btn', 'Status integrasi BTN', 'boolean');
         IntegrationSetting::setValue('btn.mode', $validated['btn_mode'], 'btn', 'Mode BTN');
         IntegrationSetting::setValue('btn.base_url', $validated['btn_base_url'] ?? null, 'btn', 'Base URL BTN');
@@ -121,7 +122,7 @@ class JasaIntegrationSettingController extends Controller
 
     private function settings(): array
     {
-        return [
+        return \App\Services\Btn\BtnSnapSettings::values() + [
             'btn_enabled' => (bool) IntegrationSetting::getValue('btn.enabled', false),
             'btn_mode' => IntegrationSetting::getValue('btn.mode', 'mock'),
             'btn_base_url' => IntegrationSetting::getValue('btn.base_url', ''),

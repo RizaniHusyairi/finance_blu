@@ -9,6 +9,7 @@ class PaymentTransaction extends Model
     protected $guarded = ['id'];
 
     protected $casts = [
+        'provider_response' => 'array',
         'amount' => 'decimal:2',
         'paid_at' => 'datetime',
         'payload' => 'array',

@@ -10,6 +10,8 @@ class BtnPaymentCallbackController extends Controller
 {
     public function __invoke(Request $request, BtnVirtualAccountService $service)
     {
+        // The legacy secret-only endpoint is for explicit mock testing only.
+        abort_unless(IntegrationSetting::getValue('btn.mode', 'mock') === 'mock', 403, 'Gunakan endpoint SNAP BTN.');
         // INT-01: secret callback WAJIB dikonfigurasi. Tanpa ini, pihak luar tanpa
         // kredensial dapat mengirim callback palsu dan menandai tagihan PNBP LUNAS.
         // Tolak total bila secret belum diisi — JANGAN proses callback tanpa verifikasi.

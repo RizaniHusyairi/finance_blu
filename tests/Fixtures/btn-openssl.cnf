@@ -1,0 +1,4 @@
+# Minimal portable configuration for ephemeral test keys, including Windows PHP.
+[req]
+distinguished_name = req_dn
+[req_dn]

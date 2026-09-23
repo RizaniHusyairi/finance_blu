@@ -94,6 +94,19 @@
         padding: 14px;
         color: #475569;
     }
+    .btn-settings-group {
+        border: 1px solid #dbe3ef;
+        border-radius: 13px;
+    }
+    .btn-settings-group summary {
+        cursor: pointer;
+        padding: 14px 16px;
+    }
+    .btn-settings-group summary:focus-visible {
+        outline: 2px solid #2563eb;
+        outline-offset: 2px;
+        border-radius: 13px;
+    }
 </style>
 @endpush
 
@@ -115,6 +128,9 @@
 @if(session('error'))
     <div class="alert alert-danger">{{ session('error') }}</div>
 @endif
+@if($errors->any())
+    <div class="alert alert-danger"><ul class="mb-0">@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>
+@endif
 
 <form method="POST" action="{{ route('jasa.integrasi.update') }}" class="integration-card mb-4">
     @csrf
@@ -132,60 +148,7 @@
             <label class="form-check-label fw-bold" for="btnEnabled">Aktif</label>
         </div>
     </div>
-    <div class="card-body p-4">
-        <div class="alert alert-light border small mb-4 d-flex align-items-start gap-2">
-            <i class="bi bi-info-circle text-primary mt-1"></i>
-            <span>
-                Saklar <strong>Aktif</strong> di kanan atas mengontrol <strong>Nomor Virtual Account</strong>:
-                <br><strong>OFF</strong> (saat ini) — nomor VA <strong>diketik manual</strong> oleh Admin Jasa ketika publish (sementara menunggu API BTN).
-                <br><strong>ON</strong> — nomor VA <strong>dibuat otomatis</strong> oleh sistem saat publish (via API BTN).
-            </span>
-        </div>
-        <div class="row g-3">
-            <div class="col-md-3">
-                <label class="form-label">Mode</label>
-                <select name="btn_mode" class="form-select">
-                    @foreach(['mock' => 'Mock/Simulasi', 'sandbox' => 'Sandbox', 'production' => 'Production'] as $value => $label)
-                        <option value="{{ $value }}" @selected($settings['btn_mode'] === $value)>{{ $label }}</option>
-                    @endforeach
-                </select>
-            </div>
-            <div class="col-md-5">
-                <label class="form-label">Base URL API BTN</label>
-                <input type="url" name="btn_base_url" class="form-control" value="{{ old('btn_base_url', $settings['btn_base_url']) }}" placeholder="https://sandbox-api.btn.co.id">
-            </div>
-            <div class="col-md-2">
-                <label class="form-label">Prefix VA</label>
-                <input type="text" name="btn_va_prefix" class="form-control" value="{{ old('btn_va_prefix', $settings['btn_va_prefix']) }}">
-            </div>
-            <div class="col-md-2">
-                <label class="form-label">Aktif (Hari)</label>
-                <input type="number" min="1" max="365" name="btn_va_expiry_days" class="form-control" value="{{ old('btn_va_expiry_days', $settings['btn_va_expiry_days']) }}">
-            </div>
-            <div class="col-md-4">
-                <label class="form-label">Client ID / Partner ID</label>
-                <input type="text" name="btn_client_id" class="form-control" value="{{ old('btn_client_id', $settings['btn_client_id']) }}">
-            </div>
-            <div class="col-md-4">
-                <label class="form-label">Client Secret</label>
-                <input type="password" name="btn_client_secret" class="form-control" placeholder="{{ $settings['btn_client_secret_masked'] ?: 'Isi untuk menyimpan secret' }}">
-                <div class="form-text">Kosongkan jika tidak ingin mengubah secret.</div>
-            </div>
-            <div class="col-md-4">
-                <label class="form-label">Merchant / Company Code</label>
-                <input type="text" name="btn_merchant_id" class="form-control" value="{{ old('btn_merchant_id', $settings['btn_merchant_id']) }}">
-            </div>
-            <div class="col-md-4">
-                <label class="form-label">Callback Secret</label>
-                <input type="password" name="btn_callback_secret" class="form-control" placeholder="{{ $settings['btn_callback_secret_masked'] ?: 'Wajib diisi untuk produksi' }}">
-                <div class="form-text">Verifikasi keaslian callback pembayaran BTN (header <code>X-Callback-Secret</code>). Kosongkan jika tidak ingin mengubah.</div>
-            </div>
-        </div>
-
-        <div class="integration-soft mt-4">
-            <strong>Catatan:</strong> saat saklar <strong>Aktif</strong> dimatikan, nomor VA diisi manual oleh Admin Jasa ketika publish. Saat diaktifkan, VA dibuat otomatis — namun mode real BTN belum menembak endpoint sebelum dokumen API BTN final dimasukkan, sehingga sementara sistem memakai VA mock berformat prefix + ID tagihan agar alur publish, invoice, dan pembayaran tetap bisa diuji.
-        </div>
-    </div>
+    @include('super_admin_jasa.integrasi.btn-settings')
 
     <div class="integration-card-header">
         <div class="integration-title">
@@ -409,6 +372,9 @@
 
 @push('script')
 <script>
+    document.querySelectorAll('.btn-settings-group').forEach(group => {
+        group.addEventListener('invalid', () => { group.open = true; }, true);
+    });
     (function () {
         const sel = document.getElementById('waProvider');
         if (! sel) return;

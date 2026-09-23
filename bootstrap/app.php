@@ -50,6 +50,7 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
+        $exceptions->dontFlash(['btn_private_key', 'btn_bank_public_key', 'btn_client_secret', 'btn_callback_secret']);
         // BE-01: di luar mode debug, jangan pernah membocorkan detail exception
         // (stack trace, query SQL, path server, dump environment/secret) ke
         // pengguna. Saat APP_DEBUG=true (pengembangan lokal) handler bawaan
