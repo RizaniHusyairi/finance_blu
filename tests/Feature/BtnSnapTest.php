@@ -178,6 +178,10 @@ class BtnSnapTest extends TestCase
             $info = $request->data()['additionalInfo'];
             $this->assertArrayHasKey('currentAccountNo', $info);
             $this->assertSame((string) $account, $info['currentAccountNo']);
+            $this->assertArrayHasKey('payment', $info);
+            $this->assertSame('', $info['payment']);
+            $this->assertArrayHasKey('paymentCode', $info);
+            $this->assertSame('', $info['paymentCode']);
 
             return Http::response(['responseCode' => '2002700', 'virtualAccountData' => $request->data()]);
         });
