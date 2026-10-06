@@ -51,6 +51,32 @@ class WhatsappGatewayTest extends TestCase
         $this->assertSame('sent', $log->status);
     }
 
+    public function test_gateway_respects_zero_device_id_even_with_environment_fallback(): void
+    {
+        $this->configureGateway();
+        IntegrationSetting::setValue('whatsapp.gateway_device_id', 0, 'whatsapp', 'Device ID WA Gateway', 'integer');
+
+        $environment = \Illuminate\Support\Env::getRepository();
+        $previousDeviceId = $environment->get('WA_DEVICE_ID');
+        $environment->set('WA_DEVICE_ID', '1');
+
+        try {
+            Http::fake([
+                'wg.aptpairport.id/*' => Http::response(['success' => true], 200),
+            ]);
+
+            $this->assertTrue(app(WhatsappService::class)->sendMessage('08123456789', 'test'));
+            Http::assertSent(fn ($request) => $request->url() === 'https://wg.aptpairport.id/api/v1/messages/send'
+                && ! array_key_exists('deviceId', $request->data()));
+        } finally {
+            if ($previousDeviceId === null) {
+                $environment->clear('WA_DEVICE_ID');
+            } else {
+                $environment->set('WA_DEVICE_ID', $previousDeviceId);
+            }
+        }
+    }
+
     public function test_gateway_marks_failed_when_success_flag_absent(): void
     {
         $this->configureGateway();

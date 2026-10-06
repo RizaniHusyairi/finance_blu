@@ -352,6 +352,39 @@ class BtnSnapTest extends TestCase
         }
     }
 
+    public function test_bank_validation_error_exposes_field_names_without_echoing_sensitive_values(): void
+    {
+        $this->fakeBank(fn () => Http::response([
+            'responseCode' => '4002702',
+            'responseMessage' => 'Invalid Mandatory Field {partnerServiceId}: never-echo-this-secret',
+        ], 400));
+        try {
+            app(BtnSnapClient::class)->request('create-va', []);
+            $this->fail('Expected bank validation rejection');
+        } catch (BtnSnapException $e) {
+            $this->assertSame('4002702', $e->responseCode);
+            $this->assertStringContainsString('partnerServiceId', $e->getMessage());
+            $this->assertStringNotContainsString('never-echo-this-secret', $e->getMessage());
+        }
+        $log = IntegrationLog::where('action', 'create-va')->latest('id')->firstOrFail();
+        $this->assertStringContainsString('partnerServiceId', $log->message);
+        $this->assertStringNotContainsString('never-echo-this-secret', json_encode($log->toArray()));
+    }
+
+    public function test_bank_validation_error_with_unknown_message_does_not_echo_it(): void
+    {
+        $this->fakeBank(fn () => Http::response([
+            'responseCode' => '4002702', 'responseMessage' => 'never-echo-this-secret',
+        ], 400));
+        try {
+            app(BtnSnapClient::class)->request('create-va', []);
+            $this->fail('Expected bank validation rejection');
+        } catch (BtnSnapException $e) {
+            $this->assertStringContainsString('BTN belum menyebutkan field', $e->getMessage());
+            $this->assertStringNotContainsString('never-echo-this-secret', $e->getMessage());
+        }
+    }
+
     public function test_token_is_refreshed_before_expiration(): void
     {
         $this->fakeBank();

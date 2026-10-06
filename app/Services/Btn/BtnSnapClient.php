@@ -90,21 +90,41 @@ class BtnSnapClient
         if ($code === '401'.$service.'01') {
             Cache::forget($this->tokenCacheKey());
         }
-        $this->log($path, $response->status(), $code, $ok ? 'success' : 'failed');
+        $detail = $this->validationDetail($code, is_array($data) ? ($data['responseMessage'] ?? null) : null);
+        $this->log($path, $response->status(), $code, $ok ? 'success' : 'failed', $detail);
         if (! $ok) {
-            throw new BtnSnapException('BTN menolak permintaan atau memberikan respons tidak valid (HTTP '.$response->status().', kode '.($code ?: '-').').', $code ?: '500'.$service.'00');
+            throw new BtnSnapException('BTN menolak permintaan atau memberikan respons tidak valid (HTTP '.$response->status().', kode '.($code ?: '-').').'.($detail ? ' '.$detail : ''), $code ?: '500'.$service.'00');
         }
 
         return $data;
     }
 
-    private function log(string $path, ?int $http, ?string $code, string $status): void
+    private function validationDetail(string $code, mixed $message): ?string
+    {
+        if (! preg_match('/^400\d{2}0[12]$/D', $code)) {
+            return null;
+        }
+        // Retain only known field names, never the bank's raw message or echoed values.
+        $fields = ['partnerServiceId', 'customerNo', 'virtualAccountNo', 'virtualAccountName',
+            'trxId', 'totalAmount', 'value', 'currency', 'virtualAccountTrxType', 'expiredDate',
+            'additionalInfo', 'description', 'payment', 'paymentCode', 'currentAccountNo',
+            'X-TIMESTAMP', 'X-CLIENT-KEY', 'X-SIGNATURE', 'X-PARTNER-ID', 'X-EXTERNAL-ID',
+            'CHANNEL-ID', 'Origin', 'Content-Type', 'Authorization', 'grantType'];
+        $found = is_string($message) ? array_values(array_filter($fields, fn ($field) =>
+            preg_match('/(?<![A-Za-z0-9_-])'.preg_quote($field, '/').'(?![A-Za-z0-9_-])/i', substr($message, 0, 1000)))) : [];
+
+        return ($code[6] === '2' ? 'Isian wajib hilang atau tidak valid.' : 'Format isian tidak valid.')
+            .($found ? ' Field dari respons BTN: '.implode(', ', $found).'.' : ' BTN belum menyebutkan field yang bermasalah.');
+    }
+
+    private function log(string $path, ?int $http, ?string $code, string $status, ?string $detail = null): void
     {
         // Do not log credentials, signatures, tokens or bank customer payloads.
         IntegrationLog::create([
             'provider' => 'btn', 'action' => basename($path), 'direction' => 'outbound',
             'endpoint' => $path, 'status' => $status, 'status_code' => $http,
-            'response_payload' => ['responseCode' => $code],
+            'response_payload' => array_filter(['responseCode' => $code, 'responseMessage' => $detail], fn ($value) => $value !== null),
+            'message' => $detail,
         ]);
     }
 }

@@ -73,9 +73,9 @@
     .kc-stat-lbl { font-size:10px; font-weight:900; letter-spacing:.04em; text-transform:uppercase; color:#94a3b8; }
     .kc-stat-val { font-size:20px; font-weight:900; color:#0f172a; line-height:1.15; }
 
-    .kc-card { border:1px solid rgba(15,23,42,.08); border-radius:18px; background:#fff; box-shadow:0 16px 40px rgba(15,23,42,.06); overflow:hidden; height:100%; }
-    .kc-card-head { display:flex; align-items:center; gap:10px; padding:13px 18px; border-bottom:1px solid #eef2f7; background:linear-gradient(90deg,#eef2ff,#fff); }
-    .kc-card-head .ic { width:34px; height:34px; border-radius:9px; display:inline-flex; align-items:center; justify-content:center; color:#fff; background:linear-gradient(140deg,var(--kc-accent),var(--kc-accent-2)); }
+    .kc-card { border:1px solid rgba(15,23,42,.08); border-radius:18px; background:#fff; box-shadow:0 16px 40px rgba(15,23,42,.06); overflow:hidden; }
+    .kc-card-head { display:flex; flex-wrap:wrap; align-items:center; gap:10px; padding:13px 18px; border-bottom:1px solid #eef2f7; background:linear-gradient(90deg,#eef2ff,#fff); }
+    .kc-card-head .ic { width:34px; height:34px; flex-shrink:0; border-radius:9px; display:inline-flex; align-items:center; justify-content:center; color:#fff; background:linear-gradient(140deg,var(--kc-accent),var(--kc-accent-2)); }
     .kc-card-head h6 { margin:0; font-weight:900; color:#1e1b4b; }
 
     .kc-info { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
@@ -94,11 +94,17 @@
 
     .kc-file { display:flex; align-items:center; gap:14px; border:1px dashed #c7d2fe; border-radius:14px; background:#eef2ff; padding:14px 16px; }
     .kc-file-ico { width:46px; height:46px; flex:0 0 46px; border-radius:12px; display:inline-flex; align-items:center; justify-content:center; font-size:1.4rem; color:#fff; background:linear-gradient(140deg,#ef4444,#dc2626); }
+    .kc-file-info { flex:1; min-width:0; }
+    .kc-file .btn { flex-shrink:0; }
 
-    .kc-svc { display:inline-flex; align-items:center; gap:8px; border:1px solid #e2e8f0; background:#fff; border-radius:11px; padding:8px 12px; font-weight:700; color:#1e293b; }
-    .kc-svc .kc-svc-code { font-family:ui-monospace,Menlo,Consolas,monospace; font-size:11px; color:#fff; background:var(--kc-accent); border-radius:6px; padding:2px 7px; }
+    .kc-svc { display:inline-flex; flex-wrap:wrap; align-items:center; gap:8px; max-width:100%; min-width:0; overflow-wrap:anywhere; border:1px solid #e2e8f0; background:#fff; border-radius:11px; padding:8px 12px; font-weight:700; color:#1e293b; }
+    .kc-svc .kc-svc-code { max-width:100%; white-space:normal; font-family:ui-monospace,Menlo,Consolas,monospace; font-size:11px; color:#fff; background:var(--kc-accent); border-radius:6px; padding:2px 7px; }
 
-    @media (max-width:575.98px){ .kc-info{ grid-template-columns:1fr; } }
+    @media (max-width:575.98px){
+        .kc-info{ grid-template-columns:1fr; }
+        .kc-file{ flex-wrap:wrap; }
+        .kc-file .btn{ width:100%; }
+    }
 </style>
 @endpush
 
@@ -188,7 +194,7 @@
     <div class="row g-4">
         {{-- ===== Informasi Kontrak ===== --}}
         <div class="col-lg-7">
-            <div class="kc-card">
+            <div class="kc-card h-100">
                 <div class="kc-card-head"><span class="ic"><i class="bi bi-info-circle"></i></span><h6>Informasi Kontrak / Dokumen</h6></div>
                 <div class="p-4">
                     <div class="kc-info">
@@ -253,7 +259,7 @@
                     @if($kontrak->file_kontrak)
                         <div class="kc-file">
                             <span class="kc-file-ico"><i class="bi bi-file-earmark-pdf"></i></span>
-                            <div class="flex-grow-1 min-w-0">
+                            <div class="kc-file-info">
                                 <div class="fw-bold text-dark">Dokumen Kontrak</div>
                                 <div class="small text-muted text-truncate">{{ basename($kontrak->file_kontrak) }}</div>
                             </div>

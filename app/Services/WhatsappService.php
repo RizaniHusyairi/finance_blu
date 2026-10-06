@@ -134,7 +134,7 @@ class WhatsappService
             '/'
         );
         $apiKey = IntegrationSetting::getValue('whatsapp.gateway_api_key') ?: env('WA_API_KEY');
-        $deviceId = (int) (IntegrationSetting::getValue('whatsapp.gateway_device_id') ?: env('WA_DEVICE_ID'));
+        $deviceId = (int) (IntegrationSetting::getValue('whatsapp.gateway_device_id') ?? env('WA_DEVICE_ID', 0));
         $countryCode = (string) (IntegrationSetting::getValue('whatsapp.default_country_code', '62'));
 
         if (empty($baseUrl) || empty($apiKey)) {

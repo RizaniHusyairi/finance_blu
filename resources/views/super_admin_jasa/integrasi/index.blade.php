@@ -194,11 +194,7 @@
                 <label class="form-label">API Key (X-API-Key)</label>
                 <input type="password" name="whatsapp_gateway_api_key" class="form-control" placeholder="{{ $settings['whatsapp_gateway_api_key_masked'] ?: 'wag_xxx.yyy' }}">
             </div>
-            <div class="col-md-2 wa-gateway-only d-none">
-                <label class="form-label">Device ID</label>
-                <input type="number" min="1" name="whatsapp_device_id" class="form-control" value="{{ old('whatsapp_device_id', $settings['whatsapp_device_id']) }}" placeholder="1">
-                <small class="text-muted">ID perangkat di gateway.</small>
-            </div>
+            <input type="hidden" name="whatsapp_device_id" value="0">
 
             <div class="col-md-6">
                 <label class="form-label">Template Invoice</label>
