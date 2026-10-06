@@ -27,7 +27,7 @@ class BtnSnapVirtualAccount
                 if ($stored['state'] === 'active') {
                     if (BtnSnapMoney::cents($stored['request']['totalAmount']['value'])
                         !== BtnSnapMoney::cents(number_format($tagihan->total_dengan_denda, 2, '.', ''))
-                        || Carbon::parse($stored['request']['expiredDate'])->isPast()) {
+                        || (filled($stored['request']['expiredDate']) && Carbon::parse($stored['request']['expiredDate'])->isPast())) {
                         throw new BtnSnapException('Nominal/masa berlaku VA perlu diperbarui ke BTN sebelum publish.');
                     }
 
@@ -220,7 +220,7 @@ class BtnSnapVirtualAccount
             'virtualAccountName' => $name,
             'totalAmount' => ['value' => $amount, 'currency' => 'IDR'],
             'virtualAccountTrxType' => $previous['virtualAccountTrxType'] ?? $type,
-            'expiredDate' => now('Asia/Jakarta')->addDays(max(1, (int) $this->config->get('va_expiry_days', 30)))->endOfDay()->format('Y-m-d\TH:i:sP'),
+            'expiredDate' => $this->config->mode() === 'sandbox' ? '' : now('Asia/Jakarta')->addDays(max(1, (int) $this->config->get('va_expiry_days', 30)))->endOfDay()->format('Y-m-d\TH:i:sP'),
             'additionalInfo' => [
                 'description' => mb_substr($tagihan->nomor_tagihan, 0, 60),
                 // Keep optional fields present; bank-specific values have not been assigned.
@@ -249,10 +249,13 @@ class BtnSnapVirtualAccount
             || BtnSnapMoney::cents(data_get($data, 'totalAmount.value')) !== BtnSnapMoney::cents($request['totalAmount']['value']))) {
             throw new BtnSnapException('Nominal VA pada respons BTN tidak cocok.');
         }
-        if ($amount && (($data['virtualAccountTrxType'] ?? null) !== $request['virtualAccountTrxType']
-            || blank($data['expiredDate'] ?? null)
-            || ! Carbon::parse($data['expiredDate'])->equalTo(Carbon::parse($request['expiredDate'])))) {
-            throw new BtnSnapException('Jenis transaksi atau masa berlaku pada respons BTN tidak cocok.');
+        if ($amount) {
+            $expiryMatches = ($request['expiredDate'] === '' && $this->config->mode() === 'sandbox')
+                ? ($data['expiredDate'] ?? null) === ''
+                : (filled($data['expiredDate'] ?? null) && Carbon::parse($data['expiredDate'])->equalTo(Carbon::parse($request['expiredDate'])));
+            if (($data['virtualAccountTrxType'] ?? null) !== $request['virtualAccountTrxType'] || ! $expiryMatches) {
+                throw new BtnSnapException('Jenis transaksi atau masa berlaku pada respons BTN tidak cocok.');
+            }
         }
     }
 
@@ -261,7 +264,7 @@ class BtnSnapVirtualAccount
         $tagihan->update([
             'btn_va_data' => $stored, 'nomor_va' => trim($stored['request']['virtualAccountNo']),
             'va_provider' => 'btn', 'va_reference' => $stored['request']['trxId'],
-            'va_expired_at' => Carbon::parse($stored['request']['expiredDate']),
+            'va_expired_at' => filled($stored['request']['expiredDate']) ? Carbon::parse($stored['request']['expiredDate']) : null,
         ]);
     }
 
@@ -269,7 +272,7 @@ class BtnSnapVirtualAccount
     {
         return [
             'provider' => 'btn', 'number' => trim($stored['request']['virtualAccountNo']),
-            'reference' => $stored['request']['trxId'], 'expired_at' => Carbon::parse($stored['request']['expiredDate']),
+            'reference' => $stored['request']['trxId'], 'expired_at' => filled($stored['request']['expiredDate']) ? Carbon::parse($stored['request']['expiredDate']) : null,
             'mode' => $this->config->mode(),
         ];
     }

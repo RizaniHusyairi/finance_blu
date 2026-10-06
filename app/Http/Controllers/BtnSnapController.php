@@ -70,7 +70,7 @@ class BtnSnapController extends Controller
                 $this->assertPayable($tagihan, '25', false);
                 $stored = $tagihan->btn_va_data['request'];
                 $paidAt = $this->date($payload['trxDateTime'], '25');
-                if ($paidAt->greaterThan(now()->addSeconds(120)) || $paidAt->greaterThan(Carbon::parse($stored['expiredDate']))) {
+                if ($paidAt->greaterThan(now()->addSeconds(120)) || (filled($stored['expiredDate']) && $paidAt->greaterThan(Carbon::parse($stored['expiredDate'])))) {
                     throw new BtnSnapException('Transaction Expired', '4032500');
                 }
                 $outstanding = $this->outstanding($tagihan);
@@ -114,11 +114,6 @@ class BtnSnapController extends Controller
                     // Existing bookkeeping service reports failures with null. Roll back the outer transaction too.
                     throw new BtnSnapException('Bookkeeping unavailable; retry payment', '5002500');
                 }
-                IntegrationLog::create([
-                    'provider' => 'btn', 'action' => 'snap_payment', 'direction' => 'inbound', 'status' => 'success',
-                    'reference_type' => TagihanJasa::class, 'reference_id' => $tagihan->id,
-                    'response_payload' => ['responseCode' => '2002500'],
-                ]);
                 if ($full) {
                     DB::afterCommit(function () use ($tagihan, $payment) {
                         try {
@@ -166,18 +161,39 @@ class BtnSnapController extends Controller
                 throw new BtnSnapException($missing ? 'Missing Mandatory Field' : 'Invalid Field Format', '400'.$service.($missing ? '02' : '01'));
             }
 
-            return response()->json($callback($payload));
+            return $this->inboundResponse($service, $callback($payload));
         } catch (BtnSnapException $e) {
             $code = $e->responseCode === '5000000' ? '500'.$service.'00' : $e->responseCode;
 
-            return response()->json(['responseCode' => $code, 'responseMessage' => $e->getMessage()], (int) substr($code, 0, 3));
+            return $this->inboundResponse($service, ['responseCode' => $code, 'responseMessage' => $e->getMessage()]);
         } catch (\JsonException) {
-            return response()->json(['responseCode' => '400'.$service.'00', 'responseMessage' => 'Parsing Error'], 400);
+            return $this->inboundResponse($service, ['responseCode' => '400'.$service.'00', 'responseMessage' => 'Parsing Error']);
         } catch (\Throwable $e) {
             Log::error('SNAP BTN gagal diproses.', ['service' => $service, 'exception' => $e::class]);
 
-            return response()->json(['responseCode' => '500'.$service.'00', 'responseMessage' => 'Internal Server Error'], 500);
+            return $this->inboundResponse($service, ['responseCode' => '500'.$service.'00', 'responseMessage' => 'Internal Server Error']);
         }
+    }
+
+    private function inboundResponse(string $service, array $data)
+    {
+        $http = (int) substr($data['responseCode'], 0, 3);
+        try {
+            // Log outcomes only, including failed authentication; never headers or raw bodies.
+            IntegrationLog::create([
+                'provider' => 'btn', 'action' => $service === '24' ? 'snap_inquiry' : 'snap_payment',
+                'direction' => 'inbound', 'status' => $http === 200 ? 'success' : 'failed',
+                'endpoint' => '/snap/v1/transfer-va/'.($service === '24' ? 'inquiry' : 'payment'),
+                'status_code' => $http,
+                'message' => $data['responseMessage'] ?? null,
+                'response_payload' => array_intersect_key($data, array_flip(['responseCode', 'responseMessage'])),
+            ]);
+        } catch (\Throwable) {
+            // A diagnostic failure must not change a committed payment response.
+            Log::warning('Log hasil callback SNAP BTN tidak dapat disimpan.', ['service' => $service, 'responseCode' => $data['responseCode']]);
+        }
+
+        return response()->json($data, $http);
     }
 
     private function authenticate(Request $request, string $service): void
@@ -248,7 +264,11 @@ class BtnSnapController extends Controller
         if ($tagihan->status !== 'PUBLISHED' || ($tagihan->btn_va_data['state'] ?? '') !== 'active') {
             throw new BtnSnapException('Invalid Transaction Status', '404'.$service.'00');
         }
-        if ($checkExpiry && Carbon::parse($tagihan->btn_va_data['request']['expiredDate'])->isPast()) {
+        $expiry = $tagihan->btn_va_data['request']['expiredDate'];
+        if (blank($expiry) && $this->config->mode() !== 'sandbox') {
+            throw new BtnSnapException('Invalid Transaction Status', '404'.$service.'00');
+        }
+        if ($checkExpiry && filled($expiry) && Carbon::parse($expiry)->isPast()) {
             throw new BtnSnapException('Transaction Expired', '403'.$service.'00');
         }
     }

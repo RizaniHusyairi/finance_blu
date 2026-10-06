@@ -205,6 +205,34 @@ class BtnSnapTest extends TestCase
         $this->assertSame(17, strlen($tagihan->fresh()->nomor_va));
     }
 
+    public function test_sandbox_empty_expiry_supports_create_inquiry_and_payment(): void
+    {
+        $this->fakeBank();
+        $this->bookkeeping();
+        $tagihan = $this->invoice(false);
+        app(BtnSnapVirtualAccount::class)->create($tagihan);
+        $tagihan->refresh();
+        $this->assertSame('', $tagihan->btn_va_data['request']['expiredDate']);
+        $this->assertNull($tagihan->va_expired_at);
+        app(BtnSnapVirtualAccount::class)->create($tagihan);
+        Http::assertSentCount(2);
+        $tagihan->update(['status' => 'PUBLISHED']);
+        $payload = $this->payment($tagihan);
+        $this->signed('/snap/v1/transfer-va/inquiry', $payload + ['inquiryRequestId' => 'INQEMPTY'])->assertOk();
+        $this->signed('/snap/v1/transfer-va/payment', $payload)->assertOk();
+        $this->assertSame('LUNAS', $tagihan->fresh()->status);
+    }
+
+    public function test_production_create_retains_expiry_timestamp(): void
+    {
+        IntegrationSetting::setValue('btn.mode', 'production', 'btn');
+        $this->fakeBank();
+        $tagihan = $this->invoice(false);
+        app(BtnSnapVirtualAccount::class)->create($tagihan);
+        $this->assertNotEmpty($tagihan->fresh()->btn_va_data['request']['expiredDate']);
+        $this->assertNotNull($tagihan->fresh()->va_expired_at);
+    }
+
     public static function giroValues(): array
     {
         return [[null], [''], ['001234567890']];
@@ -285,6 +313,8 @@ class BtnSnapTest extends TestCase
             ->assertJsonPath('virtualAccountData.totalAmount.value', '100000.00');
         $payload['customerNo'] = '999';
         $this->signed('/snap/v1/transfer-va/inquiry', $payload)->assertStatus(404)->assertJsonPath('responseCode', '4042412');
+        $this->assertDatabaseHas('integration_logs', ['action' => 'snap_inquiry', 'direction' => 'inbound', 'status_code' => 200, 'status' => 'success']);
+        $this->assertDatabaseHas('integration_logs', ['action' => 'snap_inquiry', 'direction' => 'inbound', 'status_code' => 404, 'status' => 'failed']);
     }
 
     public function test_payment_and_duplicate_credit_invoice_and_bookkeeping_exactly_once(): void
@@ -337,6 +367,11 @@ class BtnSnapTest extends TestCase
             $this->signed('/snap/v1/transfer-va/payment', $payload, $headers)->assertStatus(401);
         }
         $this->assertSame(0, PaymentTransaction::count());
+        $this->assertSame(3, IntegrationLog::where('action', 'snap_payment')->where('status_code', 401)->count());
+        $logs = IntegrationLog::where('direction', 'inbound')->get()->toJson();
+        foreach (['X-SIGNATURE', 'bank-test', 'Mitra BTN', 'paidAmount'] as $sensitive) {
+            $this->assertStringNotContainsString($sensitive, $logs);
+        }
     }
 
     public function test_invalid_currency_negative_missing_amount_and_underpaid_full_va_are_rejected(): void
