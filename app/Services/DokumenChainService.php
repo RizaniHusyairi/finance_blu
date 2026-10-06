@@ -589,10 +589,12 @@ class DokumenChainService
                 }
 
                 if ($tagihan->tipe_tagihan === 'KONTRAK') {
+                    $tagihan->detailKontrak?->kontrakTermin?->update(['status_termin' => 'LUNAS']);
                     $sp2d->unlockNextTerminKontrak();
                 }
 
                 if ($tagihan->tipe_tagihan === 'KONTRAK_EKSTERNAL') {
+                    $tagihan->detailKontrakEksternal?->kontrakEksternalTermin?->update(['status_termin' => 'LUNAS']);
                     $sp2d->unlockNextTerminKontrakEksternal();
                 }
 

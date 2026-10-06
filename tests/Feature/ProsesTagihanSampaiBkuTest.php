@@ -204,7 +204,11 @@ class ProsesTagihanSampaiBkuTest extends TestCase
         $this->ok($this->actingAs($this->users['pengadaan'])
             ->post(route('tagihan.kontrak.submit', $tagihan->id)));
         $this->assertSame('READY_FOR_SPP', $tagihan->fresh()->status);
-        $this->assertSame('SUDAH_DITAGIH', $termin->fresh()->status_termin);
+        $this->assertSame('DALAM_PROSES', $termin->fresh()->status_termin);
+        $this->assertSame(0.0, (float) $kontrak->fresh()->total_terserap);
+        $this->assertSame((float) $termin->nilai_bruto_termin, (float) $kontrak->fresh()->total_diajukan);
+        $this->actingAs($this->users['pengadaan'])->get(route('contracts.show', $kontrak->id))
+            ->assertOk()->assertSee('Dalam Proses')->assertSee('Lunas');
 
         // Setelah diajukan, tagihan terkunci dari pengeditan.
         $this->actingAs($this->users['pengadaan'])
@@ -337,6 +341,7 @@ class ProsesTagihanSampaiBkuTest extends TestCase
         $tagihan->refresh();
         $this->assertSame('SELESAI', $tagihan->status);
         $this->assertSame(DokumenSp2d::STATUS_EXECUTED, $this->sp2d($tagihan)->status);
+        $this->assertSame('LUNAS', $termin->fresh()->status_termin);
         $this->assertSame(0, BukuKasUmum::where('referensi_pengeluaran_id', $tagihan->id)->count(),
             'BKU kontrak seharusnya ditunda sampai pajak disetor (NTPN).');
 
@@ -702,11 +707,15 @@ class ProsesTagihanSampaiBkuTest extends TestCase
         ]));
         $this->assertSame('Pembayaran CCTV uji (revisi deskripsi).', $tagihan->fresh()->deskripsi);
 
-        // 3. Diajukan — langsung READY_FOR_SPP; termin master jadi SUDAH_DITAGIH.
+        // 3. Diajukan — langsung READY_FOR_SPP; termin masih dalam proses.
         $this->ok($this->actingAs($this->users['ppk'])
             ->post(route('tagihan-kontrak-eksternal.submit', $tagihan->id)));
         $this->assertSame('READY_FOR_SPP', $tagihan->fresh()->status);
-        $this->assertSame('SUDAH_DITAGIH', $termin->fresh()->status_termin);
+        $this->assertSame('DALAM_PROSES', $termin->fresh()->status_termin);
+        $this->assertSame(0.0, $kontrak->fresh()->total_terserap);
+        $this->assertSame((float) $termin->nilai_bruto_termin, $kontrak->fresh()->total_diajukan);
+        $this->actingAs($this->users['ppk'])->get(route('kontrak-eksternal.show', $kontrak->id))
+            ->assertOk()->assertSee('Dalam Proses')->assertSee('Lunas');
 
         // Setelah diajukan, terkunci dari pengeditan.
         $this->actingAs($this->users['ppk'])
@@ -765,6 +774,7 @@ class ProsesTagihanSampaiBkuTest extends TestCase
         $tagihan->refresh();
         $this->assertSame('SELESAI', $tagihan->status);
         $this->assertSame(DokumenSp2d::STATUS_EXECUTED, $this->sp2d($tagihan)->status);
+        $this->assertSame('LUNAS', $termin->fresh()->status_termin);
         $this->assertSame(0, BukuKasUmum::where('referensi_pengeluaran_id', $tagihan->id)->count(),
             'BKU kontrak eksternal seharusnya ditunda sampai pajak disetor (NTPN).');
 
@@ -863,9 +873,11 @@ class ProsesTagihanSampaiBkuTest extends TestCase
         $this->assertNotNull($tagihan->detailKontrakEksternal->file_surat_pesanan,
             'Arsip Surat Pesanan ter-resolve dari master.');
 
-        // Ajukan → termin 1 SUDAH_DITAGIH; jalankan rantai penuh sampai SP2D.
+        // Ajukan → termin 1 dalam proses; jalankan rantai penuh sampai SP2D.
         $this->ok($this->actingAs($this->users['ppk'])->post(route('tagihan-kontrak-eksternal.submit', $tagihan->id)));
-        $this->assertSame('SUDAH_DITAGIH', $termin1->fresh()->status_termin);
+        $this->assertSame('DALAM_PROSES', $termin1->fresh()->status_termin);
+        $this->assertSame(0.0, $kontrak->fresh()->total_terserap);
+        $this->assertSame(40_000_000.0, $kontrak->fresh()->total_diajukan);
 
         $this->ok($this->actingAs($this->users['ppk'])->post(route('proses-tagihan.coa', $tagihan->id), [
             'dipa_revision_item_id' => $this->budget->id,
@@ -881,6 +893,7 @@ class ProsesTagihanSampaiBkuTest extends TestCase
         ]));
         $this->approveChainDocument($tagihan, 'sp2d', ['ppk']);
         $this->assertSame('SELESAI', $tagihan->fresh()->status);
+        $this->assertSame('LUNAS', $termin1->fresh()->status_termin);
 
         // SP2D final → termin 2 terbuka otomatis; serapan master tercatat.
         $this->assertSame('READY_TO_BILL', $termin2->fresh()->status_termin,

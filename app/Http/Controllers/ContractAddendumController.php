@@ -514,8 +514,8 @@ class ContractAddendumController extends Controller
         return [
             'jumlah' => $termin->count(),
             'total' => $totalTermin,
-            'sudah_ditagih' => (float) $termin->where('status_termin', 'SUDAH_DITAGIH')->sum('nilai_bruto_termin'),
-            'belum_ditagih' => (float) $termin->where('status_termin', '!=', 'SUDAH_DITAGIH')->sum('nilai_bruto_termin'),
+            'sudah_ditagih' => (float) $termin->whereIn('status_termin', ['DALAM_PROSES', 'LUNAS'])->sum('nilai_bruto_termin'),
+            'belum_ditagih' => (float) $termin->whereNotIn('status_termin', ['DALAM_PROSES', 'LUNAS'])->sum('nilai_bruto_termin'),
             'selisih' => round($targetKontrak - $totalTermin, 2),
             'requires_review' => round($targetKontrak - $totalTermin, 2) !== 0.0,
         ];

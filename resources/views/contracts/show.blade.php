@@ -173,7 +173,7 @@
                     <div class="progress-label"><i class="bi bi-cash-coin"></i> Serapan Dana (Realisasi)</div>
                     <div>
                         <span class="progress-amount">Rp {{ number_format($kontrak->total_terserap, 0, ',', '.') }}</span>
-                        <span class="progress-amount-total">/ Rp {{ number_format($kontrak->nilai_total_kontrak, 0, ',', '.') }}</span>
+                        <span class="progress-amount-total">dibayar / Rp {{ number_format($kontrak->nilai_total_kontrak, 0, ',', '.') }}</span>
                     </div>
                 </div>
                 <div class="progress-percent-pill">
@@ -182,6 +182,11 @@
             </div>
             <div class="progress-track">
                 <div class="progress-fill" style="width: {{ $kontrak->persentase_serapan }}%"></div>
+            </div>
+            <div class="termin-finance-grid" aria-label="Ringkasan pembayaran termin">
+                <div class="termin-finance-item"><span>Diajukan</span><strong>Rp {{ number_format($kontrak->total_diajukan, 0, ',', '.') }}</strong></div>
+                <div class="termin-finance-item is-processing"><span>Dalam Proses</span><strong>Rp {{ number_format($kontrak->total_diajukan - $kontrak->total_terserap, 0, ',', '.') }}</strong></div>
+                <div class="termin-finance-item is-paid"><span>Lunas</span><strong>Rp {{ number_format($kontrak->total_terserap, 0, ',', '.') }}</strong></div>
             </div>
         </div>
 
@@ -708,7 +713,7 @@
                 <div class="tab-pane-c active" data-pane="termin">
                     <div class="hint-banner">
                         <i class="bi bi-lightbulb-fill"></i>
-                        <div><strong>Catatan Skema Termin:</strong> Hanya termin berstatus <span class="badge-mini bm-ready">READY_TO_BILL</span> yang dapat dibuat menjadi tagihan. Termin <span class="badge-mini bm-locked">LOCKED</span> belum bisa diproses, dan termin <span class="badge-mini bm-locked">DRAFT</span> atau <span class="badge-mini bm-billed">SUDAH_DITAGIH</span> telah terikat pada pengajuan tagihan di sistem.</div>
+                        <div><strong>Alur termin:</strong> Terkunci → Siap Ditagih → Draft → Dalam Proses → Lunas. Hanya termin <strong>Siap Ditagih</strong> yang dapat dibuatkan tagihan. <strong>Dalam Proses</strong> berarti tagihan diajukan tetapi dana belum cair. Termin berikutnya terbuka setelah SP2D termin ini dieksekusi.</div>
                     </div>
                     <div class="table-responsive">
                         <table class="termin-table">
@@ -734,13 +739,15 @@
                                     <td><span class="termin-money">Rp {{ number_format($termin->nilai_bruto_termin, 0, ',', '.') }}</span></td>
                                     <td class="text-center">
                                         @if($termin->status_termin == 'LOCKED')
-                                            <span class="termin-pill tp-locked"><i class="bi bi-lock-fill"></i> Locked</span>
+                                            <span class="termin-pill tp-locked"><i class="bi bi-lock-fill"></i> Terkunci</span>
                                         @elseif($termin->status_termin == 'READY_TO_BILL')
-                                            <span class="termin-pill tp-ready"><i class="bi bi-bell-fill"></i> Ready</span>
+                                            <span class="termin-pill tp-ready"><i class="bi bi-bell-fill"></i> Siap Ditagih</span>
                                         @elseif($termin->status_termin == 'DRAFT')
                                             <span class="termin-pill tp-draft"><i class="bi bi-file-earmark-text"></i> Draft</span>
-                                        @elseif($termin->status_termin == 'SUDAH_DITAGIH')
-                                            <span class="termin-pill tp-billed"><i class="bi bi-check-circle-fill"></i> Ditagih</span>
+                                        @elseif($termin->status_termin == 'DALAM_PROSES')
+                                            <span class="termin-pill tp-processing"><i class="bi bi-arrow-repeat"></i> Dalam Proses</span>
+                                        @elseif($termin->status_termin == 'LUNAS')
+                                            <span class="termin-pill tp-billed"><i class="bi bi-check-circle-fill"></i> Lunas</span>
                                         @endif
                                     </td>
                                     <td class="text-center">
@@ -761,7 +768,7 @@
                                             <button disabled class="btn-act-modern btn-act-soft" style="opacity:.55; cursor:not-allowed;" title="Termin masih terkunci">
                                                 <i class="bi bi-lock-fill"></i> Terkunci
                                             </button>
-                                        @elseif(in_array($termin->status_termin, ['DRAFT', 'SUDAH_DITAGIH']))
+                                        @elseif(in_array($termin->status_termin, ['DRAFT', 'DALAM_PROSES', 'LUNAS']))
                                             @php $tagihanLinked = $termin->detailKontrak->tagihan ?? null; @endphp
                                             @if($tagihanLinked)
                                                 <div class="d-inline-flex gap-1 flex-wrap justify-content-center">
@@ -964,7 +971,7 @@
     @php
         $tagihanLinked = $termin->detailKontrak->tagihan ?? null;
     @endphp
-    @if(in_array($termin->status_termin, ['DRAFT', 'SUDAH_DITAGIH']) && $tagihanLinked)
+    @if(in_array($termin->status_termin, ['DRAFT', 'DALAM_PROSES', 'LUNAS']) && $tagihanLinked)
         <div class="modal fade text-start" id="modalAktivitasTagihan{{ $tagihanLinked->id }}" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
                 <div class="modal-content">

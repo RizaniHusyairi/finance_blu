@@ -86,10 +86,15 @@ class KontrakEksternal extends Model
         return optional($arsip->firstWhere('is_active', true) ?? $arsip->first())->path_file;
     }
 
-    /** Σ bruto termin yang sudah ditagih. */
+    /** Σ bruto termin yang sudah dibayar melalui SP2D. */
     public function getTotalTerserapAttribute(): float
     {
-        return (float) $this->termin->where('status_termin', 'SUDAH_DITAGIH')->sum('nilai_bruto_termin');
+        return (float) $this->termin->where('status_termin', 'LUNAS')->sum('nilai_bruto_termin');
+    }
+
+    public function getTotalDiajukanAttribute(): float
+    {
+        return (float) $this->termin->whereIn('status_termin', ['DALAM_PROSES', 'LUNAS'])->sum('nilai_bruto_termin');
     }
 
     public function getPersentaseSerapanAttribute(): float

@@ -1,5 +1,10 @@
 # Alur Proses Tagihan Kontrak (BAST / Termin)
 
+> **Catatan pembaruan:** Diagram di bawah menggambarkan rancangan verifikasi tagihan lama.
+> Implementasi saat ini mengirim tagihan langsung ke `READY_FOR_SPP` setelah submit;
+> verifikasi berlangsung pada dokumen pencairan. Status termin dan arti serapan
+> yang berlaku sekarang ada di [Status Termin Kontrak dan SPK](../status-termin-kontrak.md).
+
 > Dokumen ini memetakan alur lengkap dari pembuatan tagihan kontrak BAST/Termin
 > sampai dana cair ke vendor dan tercatat di BKU.
 >

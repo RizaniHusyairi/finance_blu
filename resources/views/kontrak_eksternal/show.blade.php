@@ -40,7 +40,13 @@
     .kx-tstat.LOCKED { background: #f1f5f9; color: #64748b; }
     .kx-tstat.READY_TO_BILL { background: #d1fae5; color: #065f46; }
     .kx-tstat.DRAFT { background: #fef3c7; color: #92400e; }
-    .kx-tstat.SUDAH_DITAGIH { background: #e0e7ff; color: #3730a3; }
+    .kx-tstat.DALAM_PROSES { background: #dbeafe; color: #1d4ed8; border: 1px solid #93c5fd; }
+    .kx-tstat.LUNAS { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+    .kx-payment-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .4rem; margin-top: .65rem; }
+    .kx-payment-grid > div { background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.35); border-radius: .6rem; padding: .45rem .55rem; min-width: 0; }
+    .kx-payment-grid span { display: block; color: #fff; font-size: .65rem; font-weight: 800; text-transform: uppercase; }
+    .kx-payment-grid strong { display: block; color: #fff; font-size: .76rem; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+    @media (max-width: 575.98px) { .kx-payment-grid { grid-template-columns: 1fr; } }
     .kx-idx { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 10px; font-weight: 800; color: #fff; background: linear-gradient(135deg, #4f46e5, #818cf8); font-size: .78rem; }
 
     .kx-serap-track { height: 10px; border-radius: 999px; background: rgba(255,255,255,.25); overflow: hidden; }
@@ -119,7 +125,7 @@
 <div class="page-content">
     @php
         $totalTermin = $kontrak->termin->count();
-        $tertagih = $kontrak->termin->where('status_termin', 'SUDAH_DITAGIH')->count();
+        $tertagih = $kontrak->termin->where('status_termin', 'LUNAS')->count();
         $serapan = $kontrak->persentase_serapan;
     @endphp
 
@@ -141,9 +147,14 @@
                 </div>
                 <div class="mt-3" style="max-width: 420px;">
                     <div class="d-flex justify-content-between" style="font-size:.72rem; font-weight:700; color:rgba(255,255,255,.85);">
-                        <span>Serapan {{ $tertagih }}/{{ $totalTermin }} termin</span><span>{{ number_format($serapan, 0) }}%</span>
+                        <span>Dibayar {{ $tertagih }}/{{ $totalTermin }} termin</span><span>{{ number_format($serapan, 0) }}%</span>
                     </div>
                     <div class="kx-serap-track mt-1"><div class="kx-serap-fill" style="width: {{ min($serapan, 100) }}%;"></div></div>
+                    <div class="kx-payment-grid" aria-label="Ringkasan pembayaran termin">
+                        <div><span>Diajukan</span><strong>Rp {{ number_format($kontrak->total_diajukan, 0, ',', '.') }}</strong></div>
+                        <div><span>Dalam Proses</span><strong>Rp {{ number_format($kontrak->total_diajukan - $kontrak->total_terserap, 0, ',', '.') }}</strong></div>
+                        <div><span>Lunas</span><strong>Rp {{ number_format($kontrak->total_terserap, 0, ',', '.') }}</strong></div>
+                    </div>
                 </div>
             </div>
             <div class="d-flex flex-column gap-2">
@@ -189,6 +200,7 @@
                     </div>
                 </div>
                 <div class="kx-card-body">
+                    <div class="alert alert-info rounded-3 py-2 small"><strong>Alur termin:</strong> Terkunci → Siap Ditagih → Draft → Dalam Proses → Lunas. Dalam Proses berarti tagihan sudah diajukan tetapi belum dibayar; termin berikutnya terbuka setelah SP2D dieksekusi.</div>
                     <div class="table-responsive">
                         <table class="kx-termin-table">
                             <thead>
@@ -213,7 +225,7 @@
                                         <td class="num">{{ rtrim(rtrim(number_format((float) $termin->persentase, 4, '.', ''), '0'), '.') }}%</td>
                                         <td class="num text-success">Rp {{ number_format((float) $termin->nilai_bruto_termin, 0, ',', '.') }}</td>
                                         <td class="num" style="color:#b45309;">{{ (float) $termin->potongan_angsuran_uang_muka > 0 ? '− Rp ' . number_format((float) $termin->potongan_angsuran_uang_muka, 0, ',', '.') : '—' }}</td>
-                                        <td><span class="kx-tstat {{ $termin->status_termin }}">{{ str_replace('_', ' ', $termin->status_termin) }}</span></td>
+                                        <td><span class="kx-tstat {{ $termin->status_termin }}">{{ ['LOCKED' => 'Terkunci', 'READY_TO_BILL' => 'Siap Ditagih', 'DRAFT' => 'Draft', 'DALAM_PROSES' => 'Dalam Proses', 'LUNAS' => 'Lunas'][$termin->status_termin] ?? $termin->status_termin }}</span></td>
                                         <td class="text-end">
                                             @if($kontrak->status_kontrak === 'AKTIF' && $termin->status_termin === 'READY_TO_BILL')
                                                 <a href="{{ route('kontrak-eksternal.termin.bill', [$kontrak->id, $termin->id]) }}"

@@ -166,8 +166,7 @@ class TagihanKontrakEksternalController extends Controller
 
             $tagihan->update(['status' => 'READY_FOR_SPP']);
 
-            // Termin master resmi tertagih (pola TagihanController::submitKontrak).
-            $tagihan->detailKontrakEksternal?->kontrakEksternalTermin?->update(['status_termin' => 'SUDAH_DITAGIH']);
+            $tagihan->detailKontrakEksternal?->kontrakEksternalTermin?->update(['status_termin' => 'DALAM_PROSES']);
 
             LogStatusDokumen::create([
                 'dokumen_type' => Tagihan::class,

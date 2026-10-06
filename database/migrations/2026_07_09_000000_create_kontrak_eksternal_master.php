@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Schema;
 /**
  * Master data Kontrak Eksternal (pola Manajemen SPK): kontrak yang ditandatangani
  * di luar sistem disimpan sebagai master + skema termin, lalu tiap termin
- * ditagih satu per satu (LOCKED → READY_TO_BILL → DRAFT → SUDAH_DITAGIH).
+ * ditagih satu per satu (LOCKED → READY_TO_BILL → DRAFT → DALAM_PROSES → LUNAS).
  * Status disimpan sebagai string (bukan enum) demi kompatibilitas sqlite test.
  */
 return new class extends Migration
@@ -50,7 +50,7 @@ return new class extends Migration
             $table->decimal('nilai_bruto_termin', 18, 2);
             $table->decimal('potongan_angsuran_uang_muka', 18, 2)->default(0);
             $table->decimal('nilai_retensi', 18, 2)->default(0);
-            $table->string('status_termin', 20)->default('LOCKED'); // LOCKED|READY_TO_BILL|DRAFT|SUDAH_DITAGIH
+            $table->string('status_termin', 20)->default('LOCKED'); // LOCKED|READY_TO_BILL|DRAFT|DALAM_PROSES|LUNAS
             $table->softDeletes();
             $table->timestamps();
             $table->unique(['kontrak_eksternal_id', 'termin_ke'], 'ke_termin_unq');

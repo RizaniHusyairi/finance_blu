@@ -212,7 +212,12 @@ class KontrakPengadaan extends Model
 
     public function getTotalTerserapAttribute()
     {
-        return $this->termin()->where('status_termin', 'SUDAH_DITAGIH')->sum('nilai_bruto_termin');
+        return $this->termin()->where('status_termin', 'LUNAS')->sum('nilai_bruto_termin');
+    }
+
+    public function getTotalDiajukanAttribute()
+    {
+        return $this->termin()->whereIn('status_termin', ['DALAM_PROSES', 'LUNAS'])->sum('nilai_bruto_termin');
     }
 
     public function getPersentaseSerapanAttribute()

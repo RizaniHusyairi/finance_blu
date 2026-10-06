@@ -24,7 +24,7 @@ use Illuminate\Support\Facades\Storage;
  * Master Kontrak Eksternal (pola Manajemen SPK): kontrak/Surat Pesanan yang
  * ditandatangani di luar sistem didaftarkan dulu sebagai master + skema termin,
  * lalu tiap termin ditagih satu per satu dari halaman master. Progresi termin:
- * LOCKED → READY_TO_BILL → DRAFT (tagihan dibuat) → SUDAH_DITAGIH (diajukan);
+ * LOCKED → READY_TO_BILL → DRAFT → DALAM_PROSES → LUNAS;
  * SP2D selesai membuka termin berikutnya (DokumenSp2d::unlockNextTerminKontrakEksternal).
  */
 class KontrakEksternalController extends Controller

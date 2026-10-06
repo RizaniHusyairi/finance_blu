@@ -68,7 +68,8 @@
     @forelse($kontraks as $i => $kontrak)
         @php
             $totalTermin = $kontrak->termin->count();
-            $tertagih = $kontrak->termin->where('status_termin', 'SUDAH_DITAGIH')->count();
+            $tertagih = $kontrak->termin->where('status_termin', 'LUNAS')->count();
+            $dalamProses = $kontrak->termin->where('status_termin', 'DALAM_PROSES')->count();
             $serapan = $kontrak->persentase_serapan;
         @endphp
         <div class="ke-card mb-3 ke-reveal" style="--d:{{ .06 + $i * .04 }}s;">
@@ -96,9 +97,10 @@
                 </div>
                 <div class="col-lg-2 col-md-6">
                     <div class="d-flex justify-content-between ke-meta mb-1">
-                        <span>Serapan {{ $tertagih }}/{{ $totalTermin }}</span><span>{{ number_format($serapan, 0) }}%</span>
+                        <span>Dibayar {{ $tertagih }}/{{ $totalTermin }}</span><span>{{ number_format($serapan, 0) }}%</span>
                     </div>
                     <div class="ke-serap-track"><div class="ke-serap-fill" style="width: {{ min($serapan, 100) }}%;"></div></div>
+                    <div class="ke-meta mt-1" style="color:#1d4ed8;font-weight:800;">{{ $dalamProses }} termin dalam proses</div>
                 </div>
                 <div class="col-lg-2 text-lg-end">
                     <a href="{{ route('kontrak-eksternal.show', $kontrak->id) }}" class="btn btn-sm btn-primary rounded-3 fw-bold">

@@ -576,6 +576,14 @@
     .termin-pill.tp-locked   { background: rgba(100,116,139,.10); color: #475569; }
     .termin-pill.tp-ready    { background: linear-gradient(135deg, #fbbf24, #f59e0b); color: #fff; box-shadow: 0 4px 10px rgba(245,158,11,.30); }
     .termin-pill.tp-draft    { background: rgba(100,116,139,.10); color: #475569; }
+    .termin-pill.tp-processing { background: #dbeafe; color: #1d4ed8; border: 1px solid #93c5fd; }
+    .termin-finance-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .65rem; margin-top: 1rem; }
+    .termin-finance-item { display: flex; flex-direction: column; gap: .2rem; min-width: 0; padding: .7rem .8rem; border-radius: .7rem; background: #f8fafc; border: 1px solid #cbd5e1; color: #334155; }
+    .termin-finance-item.is-processing { background: #eff6ff; border-color: #93c5fd; color: #1d4ed8; }
+    .termin-finance-item.is-paid { background: #ecfdf5; border-color: #86efac; color: #166534; }
+    .termin-finance-item span { font-size: .7rem; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; }
+    .termin-finance-item strong { font-size: .96rem; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+    @media (max-width: 575.98px) { .termin-finance-grid { grid-template-columns: 1fr; } }
     .termin-pill.tp-billed   { background: linear-gradient(135deg, #34d399, #10b981); color: #fff; box-shadow: 0 4px 10px rgba(16,185,129,.30); }
 
     /* ============ Timeline (right column) ============ */

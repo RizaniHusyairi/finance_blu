@@ -175,7 +175,7 @@ class DokumenSp2d extends Model
 
         $kontrak = $termin->kontrak;
         if ($kontrak && $kontrak->status_kontrak === 'AKTIF'
-            && ! $kontrak->termin()->where('status_termin', '!=', 'SUDAH_DITAGIH')->exists()) {
+            && ! $kontrak->termin()->where('status_termin', '!=', 'LUNAS')->exists()) {
             $kontrak->update(['status_kontrak' => 'SELESAI']);
         }
     }

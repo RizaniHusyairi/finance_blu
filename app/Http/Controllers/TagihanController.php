@@ -449,9 +449,9 @@ class TagihanController extends Controller
         try {
             DB::beginTransaction();
 
-            // Mengikat termin menjadi SUDAH_DITAGIH
+            // Tagihan diajukan; pembayaran baru lunas setelah SP2D dieksekusi.
             if ($tagihan->detailKontrak && $tagihan->detailKontrak->termin) {
-                $tagihan->detailKontrak->termin->update(['status_termin' => 'SUDAH_DITAGIH']);
+                $tagihan->detailKontrak->termin->update(['status_termin' => 'DALAM_PROSES']);
             }
 
             // === Tanpa verifikasi 6 verifikator: tagihan termin langsung siap
@@ -920,11 +920,8 @@ class TagihanController extends Controller
             // --- Workflow Engine: request revision ---
             app(WorkflowService::class)->requestRevision($tagihan, Auth::id(), $request->catatan_revisi);
 
-            if ($tagihan->detailKontrak?->kontrak_termin_id) {
-                DB::table('kontrak_termin')
-                    ->where('id', $tagihan->detailKontrak->kontrak_termin_id)
-                    ->update(['status_termin' => 'READY_TO_BILL']);
-            }
+            // Termin tetap terikat pada tagihan yang direvisi; jangan buka peluang
+            // membuat tagihan kedua untuk termin yang sama.
 
             LogStatusDokumen::create([
                 'dokumen_type' => Tagihan::class,

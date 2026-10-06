@@ -7,8 +7,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
  * Termin milik master Kontrak Eksternal.
- * status_termin: LOCKED → READY_TO_BILL → DRAFT (tagihan dibuat) → SUDAH_DITAGIH
- * (tagihan diajukan); termin berikutnya terbuka saat SP2D termin ini selesai.
+ * status_termin: LOCKED → READY_TO_BILL → DRAFT → DALAM_PROSES → LUNAS.
+ * Termin berikutnya terbuka saat SP2D termin ini dieksekusi.
  */
 class KontrakEksternalTermin extends Model
 {
