@@ -43,7 +43,7 @@ Isi menu **Integrasi API** sebagai Super Admin. Aktifkan BTN untuk VA otomatis; 
 
 Merchant lama dan prefix mock tidak digunakan untuk membentuk identitas SNAP. Private key tidak ditampilkan kembali pada form, tidak dimasukkan ke audit request, dan tidak disimpan sebagai old input ketika validasi gagal. Pertahankan `APP_KEY` karena kredensial dan cache token bergantung pada enkripsi Laravel.
 
-Nomor pelanggan yang diusulkan implementasi: ID tagihan dipad nol menjadi 14 digit. VA = kode institusi 5 digit + customerNo, total 19 digit. `trxId` = `BTN` + ID tagihan dipad nol menjadi 16 digit. **BTN perlu menyetujui aturan ini saat UAT.** VA lama/manual/mock tidak otomatis diklaim sebagai VA SNAP.
+Sesuai konfirmasi BTN untuk APT Pranoto, VA berjumlah 17 digit termasuk kode institusi: ID tagihan dipad nol menjadi customerNo 12 digit, lalu VA = kode institusi 5 digit + customerNo. `trxId` = `BTN` + ID tagihan dipad nol menjadi 16 digit. Ini mengikuti konfirmasi integrasi, berbeda dari panjang 19 karakter pada tabel dokumen. Percobaan Create VA lama sepanjang 19 digit yang ditolak secara definitif akan disesuaikan saat retry; operasi yang belum pasti serta VA aktif tetap mempertahankan identitas tersimpan. VA lama/manual/mock tidak otomatis diklaim sebagai VA SNAP.
 
 ## Pemeriksaan dan operasi
 

@@ -40,6 +40,12 @@ class BtnSnapVirtualAccount
                 if ($stored['state'] === 'create_rejected') {
                     $identity = $this->identity($stored['request']);
                     $identity['partnerServiceId'] = trim($identity['partnerServiceId']);
+                    // Only rebuild legacy-length identities after a definitive rejection.
+                    // Unknown/active requests must retain the identity already sent to BTN.
+                    if (strlen(trim($identity['virtualAccountNo'])) === 19) {
+                        $identity['customerNo'] = str_pad((string) $tagihan->id, 12, '0', STR_PAD_LEFT);
+                        $identity['virtualAccountNo'] = $identity['partnerServiceId'].$identity['customerNo'];
+                    }
                     $stored['request'] = $this->build($tagihan, $identity);
                     $stored['state'] = 'creating';
                     $tagihan->update(['btn_va_data' => $stored]);
@@ -192,8 +198,8 @@ class BtnSnapVirtualAccount
         if (strlen($type) !== 1 || ! ctype_alnum($type)) {
             throw new BtnSnapException('Isi kode jenis transaksi VA satu karakter sesuai kesepakatan BTN.');
         }
-        $customerNo = str_pad((string) $tagihan->id, 14, '0', STR_PAD_LEFT);
-        if (strlen($customerNo) !== 14) {
+        $customerNo = str_pad((string) $tagihan->id, 12, '0', STR_PAD_LEFT);
+        if (strlen($customerNo) !== 12) {
             throw new BtnSnapException('ID tagihan melebihi panjang customerNo BTN.');
         }
         $amount = number_format($tagihan->total_dengan_denda, 2, '.', '');

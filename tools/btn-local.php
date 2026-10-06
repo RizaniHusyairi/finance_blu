@@ -120,7 +120,7 @@ try {
                 'total_tagihan' => '100000.00', 'jumlah_dibayar' => '0.00', 'sisa_tagihan' => '100000.00',
                 'status' => 'PUBLISHED', 'status_pembayaran' => 'belum_dibayar',
             ]);
-            $customer = str_pad((string) $invoice->id, 14, '0', STR_PAD_LEFT);
+            $customer = str_pad((string) $invoice->id, 12, '0', STR_PAD_LEFT);
             $request = [
                 'partnerServiceId' => '   93333', 'customerNo' => $customer, 'virtualAccountNo' => '93333'.$customer,
                 'virtualAccountName' => 'MITRA TES LOKAL BTN', 'trxId' => 'BTN'.str_pad((string) $invoice->id, 16, '0', STR_PAD_LEFT),

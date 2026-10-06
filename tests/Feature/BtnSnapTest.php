@@ -69,7 +69,7 @@ class BtnSnapTest extends TestCase
             'status' => $active ? 'PUBLISHED' : 'DRAFT', 'status_pembayaran' => 'belum_dibayar',
         ]);
         if ($active) {
-            $customer = str_pad((string) $tagihan->id, 14, '0', STR_PAD_LEFT);
+            $customer = str_pad((string) $tagihan->id, 12, '0', STR_PAD_LEFT);
             $data = [
                 'partnerServiceId' => '   93333', 'customerNo' => $customer, 'virtualAccountNo' => '93333'.$customer,
                 'virtualAccountName' => 'Mitra BTN', 'trxId' => 'BTN'.str_pad((string) $tagihan->id, 16, '0', STR_PAD_LEFT),
@@ -139,7 +139,7 @@ class BtnSnapTest extends TestCase
         $tagihan = $this->invoice(false);
         $result = app(BtnVirtualAccountService::class)->createVirtualAccount($tagihan);
         $this->assertSame('sandbox', $result['mode']);
-        $this->assertSame(19, strlen($result['number']));
+        $this->assertSame(17, strlen($result['number']));
         $this->assertSame('active', $tagihan->fresh()->btn_va_data['state']);
         app(BtnVirtualAccountService::class)->createVirtualAccount($tagihan);
         Http::assertSentCount(2);
@@ -182,6 +182,27 @@ class BtnSnapTest extends TestCase
         });
         app(BtnSnapVirtualAccount::class)->create($tagihan);
         $this->assertSame('active', $tagihan->fresh()->btn_va_data['state']);
+    }
+
+    public function test_definitively_rejected_19_digit_va_is_rebuilt_as_17_digits_on_retry(): void
+    {
+        $tagihan = $this->invoice();
+        $stored = $tagihan->btn_va_data;
+        $stored['state'] = 'create_rejected';
+        $stored['request']['customerNo'] = str_pad((string) $tagihan->id, 14, '0', STR_PAD_LEFT);
+        $stored['request']['virtualAccountNo'] = '93333'.$stored['request']['customerNo'];
+        $tagihan->update(['btn_va_data' => $stored, 'nomor_va' => null]);
+        $this->fakeBank(function ($request) use ($stored, $tagihan) {
+            $this->assertStringEndsWith('/create-va', $request->url());
+            $this->assertSame(str_pad((string) $tagihan->id, 12, '0', STR_PAD_LEFT), $request['customerNo']);
+            $this->assertSame('93333'.$request['customerNo'], $request['virtualAccountNo']);
+            $this->assertSame(17, strlen($request['virtualAccountNo']));
+            $this->assertSame($stored['request']['trxId'], $request['trxId']);
+
+            return Http::response(['responseCode' => '2002700', 'virtualAccountData' => $request->data()]);
+        });
+        app(BtnSnapVirtualAccount::class)->create($tagihan);
+        $this->assertSame(17, strlen($tagihan->fresh()->nomor_va));
     }
 
     public static function giroValues(): array
