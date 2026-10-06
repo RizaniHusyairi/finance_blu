@@ -40,11 +40,12 @@ class BtnSnapConfig
 
     public function partnerServiceId(): string
     {
-        return str_pad(trim($this->get('partner_service_id')), 8, ' ', STR_PAD_LEFT);
+        return trim((string) $this->get('partner_service_id'));
     }
 
     public function fingerprint(): string
     {
-        return hash('sha256', implode('|', [$this->mode(), $this->get('base_url'), $this->get('partner_id'), $this->partnerServiceId()]));
+        // Preserve existing environment fingerprints when only wire padding changes.
+        return hash('sha256', implode('|', [$this->mode(), $this->get('base_url'), $this->get('partner_id'), str_pad($this->partnerServiceId(), 8, ' ', STR_PAD_LEFT)]));
     }
 }

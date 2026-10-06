@@ -153,7 +153,7 @@ class BtnSnapTest extends TestCase
             return $request->header('X-SIGNATURE')[0] === $expected
                 && $request->header('X-PARTNER-ID')[0] === 'api-test'
                 && preg_match('/^[A-Z0-9]{16}$/D', $request->header('X-EXTERNAL-ID')[0])
-                && $request['partnerServiceId'] === '   93333' && $request['totalAmount']['value'] === '100000.00';
+                && $request['partnerServiceId'] === '93333' && $request['totalAmount']['value'] === '100000.00';
         });
         Http::assertSent(fn ($request) => str_ends_with($request->url(), '/b2b')
             && openssl_verify('oauth-test|'.$request->header('X-TIMESTAMP')[0], base64_decode($request->header('X-SIGNATURE')[0]), self::$publicKey, OPENSSL_ALGO_SHA256) === 1);
@@ -163,6 +163,25 @@ class BtnSnapTest extends TestCase
         foreach (['token-test', 'secret-test', 'PRIVATE KEY', 'Mitra BTN'] as $secret) {
             $this->assertStringNotContainsString($secret, $logs);
         }
+    }
+
+    public function test_rejected_create_retries_without_institution_padding_and_keeps_identity(): void
+    {
+        $tagihan = $this->invoice();
+        $stored = $tagihan->btn_va_data;
+        $stored['state'] = 'create_rejected';
+        $tagihan->update(['btn_va_data' => $stored, 'nomor_va' => null]);
+        $this->fakeBank(function ($request) use ($stored) {
+            $this->assertStringEndsWith('/create-va', $request->url());
+            $this->assertSame('93333', $request['partnerServiceId']);
+            foreach (['customerNo', 'virtualAccountNo', 'trxId'] as $field) {
+                $this->assertSame($stored['request'][$field], $request[$field]);
+            }
+
+            return Http::response(['responseCode' => '2002700', 'virtualAccountData' => $request->data()]);
+        });
+        app(BtnSnapVirtualAccount::class)->create($tagihan);
+        $this->assertSame('active', $tagihan->fresh()->btn_va_data['state']);
     }
 
     public static function giroValues(): array

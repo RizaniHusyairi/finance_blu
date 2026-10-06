@@ -38,7 +38,9 @@ class BtnSnapVirtualAccount
                     throw new BtnSnapException('VA memiliki operasi belum selesai atau sudah dihapus. Periksa melalui btn:va inquiry.');
                 }
                 if ($stored['state'] === 'create_rejected') {
-                    $stored['request'] = $this->build($tagihan, $this->identity($stored['request']));
+                    $identity = $this->identity($stored['request']);
+                    $identity['partnerServiceId'] = trim($identity['partnerServiceId']);
+                    $stored['request'] = $this->build($tagihan, $identity);
                     $stored['state'] = 'creating';
                     $tagihan->update(['btn_va_data' => $stored]);
                     $response = $this->sendMutation($tagihan, 'create-va', $stored['request'], $stored);

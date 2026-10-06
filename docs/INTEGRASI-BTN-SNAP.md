@@ -31,7 +31,7 @@ Isi menu **Integrasi API** sebagai Super Admin. Aktifkan BTN untuk VA otomatis; 
 | API Key ID / X-PARTNER-ID | API Key ID dari BTN |
 | API Key Secret | Apikey Secret dari BTN |
 | Private key aplikasi | PEM RSA minimal 2048 bit; private key disimpan terenkripsi, public key pasangannya didaftarkan ke BTN |
-| Kode institusi | Lima digit kode VA, dikirim sebagai `partnerServiceId` sepanjang 8 karakter dengan spasi di kiri |
+| Kode institusi | Lima digit kode VA, saat ini dikirim sebagai `partnerServiceId` tanpa spasi sesuai permintaan pengujian dev. Berbeda dari padding 8 karakter pada dokumen; penerimaan BTN belum dikonfirmasi. |
 | CHANNEL-ID | Lima digit dari BTN |
 | Origin | Domain yang didaftarkan ke BTN |
 | Giro tujuan | Opsional, maksimal 16 digit, sesuai penetapan BTN |
