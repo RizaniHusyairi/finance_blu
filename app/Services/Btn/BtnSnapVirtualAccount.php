@@ -213,10 +213,11 @@ class BtnSnapVirtualAccount
             'totalAmount' => ['value' => $amount, 'currency' => 'IDR'],
             'virtualAccountTrxType' => $previous['virtualAccountTrxType'] ?? $type,
             'expiredDate' => now('Asia/Jakarta')->addDays(max(1, (int) $this->config->get('va_expiry_days', 30)))->endOfDay()->format('Y-m-d\TH:i:sP'),
-            'additionalInfo' => array_filter([
+            'additionalInfo' => [
                 'description' => mb_substr($tagihan->nomor_tagihan, 0, 60),
-                'currentAccountNo' => $this->config->get('current_account_no'),
-            ], fn ($v) => $v !== ''),
+                // BTN dev requires the field to be present, with an empty string when unset.
+                'currentAccountNo' => (string) $this->config->get('current_account_no', ''),
+            ],
         ];
     }
 

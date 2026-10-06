@@ -165,6 +165,25 @@ class BtnSnapTest extends TestCase
         }
     }
 
+    public static function giroValues(): array
+    {
+        return [[null], [''], ['001234567890']];
+    }
+
+    #[\PHPUnit\Framework\Attributes\DataProvider('giroValues')]
+    public function test_create_sends_empty_giro_field_and_preserves_configured_giro(?string $account): void
+    {
+        IntegrationSetting::setValue('btn.current_account_no', $account, 'btn');
+        $this->fakeBank(function ($request) use ($account) {
+            $info = $request->data()['additionalInfo'];
+            $this->assertArrayHasKey('currentAccountNo', $info);
+            $this->assertSame((string) $account, $info['currentAccountNo']);
+
+            return Http::response(['responseCode' => '2002700', 'virtualAccountData' => $request->data()]);
+        });
+        app(BtnVirtualAccountService::class)->createVirtualAccount($this->invoice(false));
+    }
+
     public function test_production_missing_credentials_never_falls_back_to_mock(): void
     {
         IntegrationSetting::setValue('btn.mode', 'production', 'btn');
