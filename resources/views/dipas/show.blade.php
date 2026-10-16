@@ -464,7 +464,7 @@
                                 $serapWarna = $itemPersen >= 100 ? '#e11d48' : ($itemPersen >= 90 ? '#f59e0b' : '#4f46e5');
                                 // Selaras dengan guard destroyItem: terkunci bila ada
                                 // realisasi ATAU dirujuk tagihan (walau belum cair).
-                                $itemTerkunci = $itemRealisasi > 0 || ($itemDipakaiTagihan ?? collect())->contains($item->id);
+                                $itemTerkunci = (float) $item->realisasi_item > 0 ||($itemDipakaiTagihan ?? collect())->contains($item->id);
                             @endphp
                             <tr style="--i: {{ $loop->index }};">
                                 <td class="text-center px-3 text-muted fw-semibold">{{ $loop->iteration }}</td>
@@ -496,6 +496,11 @@
                                 </td>
                                 <td class="text-end dv-num fw-bold {{ $itemSisa < 0 ? 'text-danger' : 'text-success' }}">
                                     {{ $itemSisa < 0 ? '−' : '' }}Rp {{ number_format(abs($itemSisa), 0, ',', '.') }}
+                                    @if((float) $item->total_komitmen > 0)
+                                        <div class="small text-muted fw-normal" title="Tagihan berjalan yang sudah membebani COA ini tetapi belum SP2D">
+                                            Komitmen Rp {{ number_format((float) $item->total_komitmen, 0, ',', '.') }}
+                                        </div>
+                                    @endif
                                 </td>
                                 <td class="text-center">
                                     @if($item->blokir)

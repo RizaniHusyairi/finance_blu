@@ -38,6 +38,7 @@ class DipaBudgetOptionService
             ->orderByDesc('tahun_anggaran')
             ->orderBy('nomor_dipa')
             ->get()
+            ->each(fn (MasterDipa $dipa) => DetailDipa::muatPagu($dipa->activeRevision?->items ?? []))
             ->map(function (MasterDipa $dipa) {
                 $activeRevision = $dipa->activeRevision;
 
@@ -83,16 +84,7 @@ class DipaBudgetOptionService
     {
         $item = DetailDipa::query()
             ->whereKey($id)
-            ->where('status_aktif', true)
-            ->where('blokir', false)
-            ->whereHas('coa')
-            ->whereHas('dipaRevision', function ($revisionQuery) {
-                $revisionQuery
-                    ->where('is_active', true)
-                    ->whereHas('masterDipa', function ($dipaQuery) {
-                        $dipaQuery->where('status_aktif', true);
-                    });
-            })
+            ->dapatDipilih()
             ->with(['coa', 'dipaRevision.masterDipa'])
             ->first();
 

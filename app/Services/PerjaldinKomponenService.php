@@ -166,14 +166,13 @@ class PerjaldinKomponenService
         DB::transaction(function () use ($komponen, $dipaRevisionItemId) {
             // Lock baris item DIPA agar perhitungan sisa pagu konsisten
             // walau ada operator lain yang pilih COA sama bersamaan.
-            $item = DetailDipa::where('id', $dipaRevisionItemId)
-                ->where('status_aktif', true)
-                ->whereHas('coa')
+            $item = DetailDipa::whereKey($dipaRevisionItemId)
+                ->dapatDipilih()
                 ->lockForUpdate()
                 ->first();
 
             if (!$item) {
-                throw new \RuntimeException("Item DIPA/COA yang dipilih tidak valid atau tidak aktif.");
+                throw new \RuntimeException("Item DIPA/COA yang dipilih tidak valid: nonaktif, diblokir, atau bukan bagian dari revisi aktif DIPA yang aktif.");
             }
 
             // Validasi sisa pagu (lewati jika user re-save COA yang sama).
@@ -181,7 +180,7 @@ class PerjaldinKomponenService
             $totalNominal = (float) $komponen->total_nominal;
 
             if (!$isSameCoa && $totalNominal > 0) {
-                $sisaPagu = (float) $item->sisa_pagu;
+                $sisaPagu = $item->sisaPaguTersedia(kecualiKomponenId: $komponen->id);
                 if ($totalNominal > $sisaPagu) {
                     throw new \RuntimeException(sprintf(
                         'Total biaya komponen %s (Rp %s) melebihi sisa pagu COA %s (Sisa: Rp %s). Silakan pilih COA lain atau revisi anggaran.',
@@ -226,17 +225,17 @@ class PerjaldinKomponenService
 
         // Defense-in-depth: validasi sisa pagu lagi saat SPP dibuat (kondisi pagu
         // bisa berubah sejak COA dipilih jika SP2D dari komitmen lain terealisasi).
-        $detailDipa = DetailDipa::where('id', $komponen->dipa_revision_item_id)
-            ->where('status_aktif', true)
+        $detailDipa = DetailDipa::whereKey($komponen->dipa_revision_item_id)
+            ->dapatDipilih()
             ->lockForUpdate()
             ->first();
 
         if (!$detailDipa) {
-            throw new \RuntimeException("Item DIPA/COA komponen {$komponen->nama_komponen} tidak lagi aktif. Silakan pilih ulang COA.");
+            throw new \RuntimeException("Item DIPA/COA komponen {$komponen->nama_komponen} tidak lagi dapat dibebani (nonaktif, diblokir, atau bukan revisi aktif). Silakan pilih ulang COA.");
         }
 
         $totalNominal = (float) $komponen->total_nominal;
-        $sisaPagu = (float) $detailDipa->sisa_pagu;
+        $sisaPagu = $detailDipa->sisaPaguTersedia(kecualiKomponenId: $komponen->id);
         if ($totalNominal > $sisaPagu) {
             throw new \RuntimeException(sprintf(
                 'SPP tidak dapat dibuat: Total biaya komponen %s (Rp %s) melebihi sisa pagu COA %s (Sisa: Rp %s).',

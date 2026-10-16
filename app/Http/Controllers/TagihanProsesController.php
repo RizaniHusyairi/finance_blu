@@ -135,12 +135,11 @@ class TagihanProsesController extends Controller
         $state = $this->buildPipelineState($tagihan, Auth::user());
 
         $coaOptions = DetailDipa::with(['coa', 'dipaRevision.masterDipa'])
-            ->where('status_aktif', true)
-            ->whereHas('coa')
-            ->whereHas('dipaRevision', fn ($q) => $q->where('is_active', true))
+            ->dapatDipilih()
             ->get()
             ->sortBy(fn ($item) => $item->coa?->kode_mak_lengkap)
             ->values();
+        DetailDipa::muatPagu($coaOptions);
 
         // PPh 21 (honor per golongan) tidak relevan untuk potongan kontrak.
         $pajakOptions = in_array($tagihan->tipe_tagihan, ['KONTRAK', 'KONTRAK_EKSTERNAL'], true)
@@ -262,15 +261,21 @@ class TagihanProsesController extends Controller
             } else {
                 $request->validate(['dipa_revision_item_id' => 'required|integer|exists:dipa_revision_items,id']);
 
-                $item = DetailDipa::where('id', $request->dipa_revision_item_id)
-                    ->where('status_aktif', true)
-                    ->firstOrFail();
+                $item = DetailDipa::whereKey($request->dipa_revision_item_id)
+                    ->dapatDipilih()
+                    ->first();
 
-                if ((float) $tagihan->total_netto > (float) $item->sisa_pagu) {
+                if (! $item) {
+                    return back()->with('error', 'COA terpilih tidak dapat dibebani: nonaktif, diblokir, atau bukan bagian dari revisi aktif DIPA yang aktif.');
+                }
+
+                // Komitmen tagihan ini sendiri (bila COA dipilih ulang) tidak ikut dihitung.
+                $sisaPagu = $item->sisaPaguTersedia(kecualiTagihanId: $tagihan->id);
+                if ((float) $tagihan->total_netto > $sisaPagu) {
                     return back()->with('error', sprintf(
                         'Nominal tagihan (Rp %s) melebihi sisa pagu COA terpilih (Rp %s).',
                         number_format((float) $tagihan->total_netto, 0, ',', '.'),
-                        number_format((float) $item->sisa_pagu, 0, ',', '.')
+                        number_format($sisaPagu, 0, ',', '.')
                     ));
                 }
 

@@ -1136,15 +1136,16 @@ class DokumenChainService
 
         foreach ($perItem as $itemId => $totalNominal) {
             $item = DetailDipa::whereKey($itemId)
-                ->where('status_aktif', true)
+                ->dapatDipilih()
                 ->lockForUpdate()
                 ->first();
 
             if (! $item) {
-                throw new \RuntimeException('Item DIPA/COA yang dipilih tidak valid atau tidak lagi aktif.');
+                throw new \RuntimeException('Item DIPA/COA yang dipilih tidak lagi dapat dibebani (nonaktif, diblokir, atau bukan revisi aktif DIPA). Silakan pilih ulang COA.');
             }
 
-            $sisaPagu = (float) $item->sisa_pagu;
+            // Komitmen tagihan ini sendiri tidak dihitung sebagai pemakai pagu.
+            $sisaPagu = $item->sisaPaguTersedia(kecualiTagihanId: $tagihan->id);
             if ($totalNominal > $sisaPagu) {
                 throw new \RuntimeException(sprintf(
                     'Nominal Rp %s melebihi sisa pagu COA %s (sisa: Rp %s). Pilih COA lain atau revisi anggaran.',

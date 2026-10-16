@@ -439,8 +439,10 @@
                                 $revision = $item->dipaRevision;
                                 $dipa = $revision?->masterDipa;
                                 $itemPagu = (float) $item->nilai_pagu;
-                                $itemRealisasi = (float) $item->total_realisasi;
-                                $itemSisa = (float) $item->sisa_pagu;
+                                // Revisi aktif: serapan lintas revisi + komitmen tagihan berjalan.
+                                // Revisi lama: hanya riwayat baris itu sendiri.
+                                $itemRealisasi = (float) ($revision?->is_active ? $item->total_realisasi : $item->realisasi_item);
+                                $itemSisa = $revision?->is_active ? (float) $item->sisa_pagu : $itemPagu - $itemRealisasi;
                                 $itemPersen = $itemPagu > 0 ? round($itemRealisasi / $itemPagu * 100, 1) : 0;
                             @endphp
                             <tr style="--i: {{ $loop->index }};">

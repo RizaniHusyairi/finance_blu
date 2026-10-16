@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\DetailDipa;
 use App\Models\MasterCoa;
 use App\Models\Tagihan;
 use App\Models\TransaksiPenerimaan;
@@ -127,6 +128,7 @@ class CoaController extends Controller
         $usageItems = $coa->dipaRevisionItems
             ->filter(fn ($item) => $item->dipaRevision && $item->dipaRevision->masterDipa)
             ->values();
+        DetailDipa::muatPagu($usageItems->filter(fn ($item) => $item->dipaRevision->is_active));
 
         $uniqueRevisions = $usageItems
             ->pluck('dipa_revision_id')
@@ -138,8 +140,12 @@ class CoaController extends Controller
             ->filter()
             ->unique();
 
-        $totalNilaiPagu = (float) $usageItems->sum('nilai_pagu');
-        $totalRealisasi = (float) $usageItems->sum(fn ($item) => (float) $item->total_realisasi);
+        // Pagu dari revisi aktif saja (revisi lama hanya riwayat); realisasi
+        // per baris item agar serapan revisi lama tidak terhitung ganda.
+        $totalNilaiPagu = (float) $usageItems
+            ->filter(fn ($item) => $item->dipaRevision->is_active)
+            ->sum('nilai_pagu');
+        $totalRealisasi = (float) $usageItems->sum(fn ($item) => (float) $item->realisasi_item);
 
         $statistics = [
             'jumlah_item_dipa' => $usageItems->count(),

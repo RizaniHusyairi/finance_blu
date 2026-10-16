@@ -153,6 +153,7 @@ class DipaController extends Controller
         ]);
 
         $activeRevision = $dipa->activeRevision;
+        DetailDipa::muatPagu(optional($activeRevision)->items ?? []);
         $items = collect(optional($activeRevision)->items ?? [])
             ->filter(function ($item) {
                 if (request()->filled('search_coa')) {
@@ -521,14 +522,69 @@ class DipaController extends Controller
     {
         abort_unless($revision->master_dipa_id === $dipa->id, 404);
 
-        DB::transaction(function () use ($dipa, $revision) {
+        $pindah = DB::transaction(function () use ($dipa, $revision) {
             $dipa->revisions()->update(['is_active' => false]);
             $revision->update(['is_active' => true]);
             $dipa->update(['revisi_aktif_ke' => $revision->nomor_revisi]);
+
+            return $this->pindahkanBebanBerjalan($dipa, $revision);
         });
 
-        return redirect()
-            ->route('dipas.show', $dipa)
-            ->with('success', 'Revisi aktif DIPA berhasil diperbarui.');
+        $message = 'Revisi aktif DIPA berhasil diperbarui.';
+        if ($pindah['dipindahkan'] > 0) {
+            $message .= ' ' . $pindah['dipindahkan'] . ' tagihan/komponen berjalan dipindahkan ke COA padanan pada revisi ini.';
+        }
+
+        $redirect = redirect()->route('dipas.show', $dipa)->with('success', $message);
+
+        if ($pindah['tanpa_padanan'] > 0) {
+            $redirect->with('error', $pindah['tanpa_padanan'] . ' tagihan/komponen berjalan memakai COA yang tidak ada (atau nonaktif) di revisi ini — PPK perlu memilih ulang COA sebelum SPP dibuat.');
+        }
+
+        return $redirect;
+    }
+
+    /**
+     * Tagihan/komponen yang belum SP2D ikut pindah ke item revisi aktif dengan
+     * COA yang sama, agar tidak tertahan di revisi lama. Yang sudah terealisasi
+     * tetap pada item lamanya sebagai jejak audit.
+     *
+     * @return array{dipindahkan: int, tanpa_padanan: int}
+     */
+    private function pindahkanBebanBerjalan(MasterDipa $dipa, RiwayatRevisiDipa $revision): array
+    {
+        $itemBaruPerCoa = $revision->items()->where('status_aktif', true)->pluck('id', 'coa_id');
+        $coaItemLama = DetailDipa::query()
+            ->whereHas('dipaRevision', fn ($query) => $query
+                ->where('master_dipa_id', $dipa->id)
+                ->whereKeyNot($revision->id))
+            ->pluck('coa_id', 'id');
+
+        $hasil = ['dipindahkan' => 0, 'tanpa_padanan' => 0];
+        if ($coaItemLama->isEmpty()) {
+            return $hasil;
+        }
+
+        $berjalan = [
+            [Tagihan::class, DetailDipa::tagihanBerjalan($coaItemLama->keys()->all())->get(['id', 'dipa_revision_item_id'])],
+            [\App\Models\TagihanPerjaldinKomponen::class, DetailDipa::komponenBerjalan($coaItemLama->keys()->all())->get(['id', 'dipa_revision_item_id'])],
+        ];
+
+        foreach ($berjalan as [$model, $rows]) {
+            foreach ($rows->groupBy('dipa_revision_item_id') as $itemLamaId => $group) {
+                $itemBaruId = $itemBaruPerCoa[$coaItemLama[$itemLamaId]] ?? null;
+
+                if (! $itemBaruId) {
+                    $hasil['tanpa_padanan'] += $group->count();
+
+                    continue;
+                }
+
+                $model::whereKey($group->pluck('id'))->update(['dipa_revision_item_id' => $itemBaruId]);
+                $hasil['dipindahkan'] += $group->count();
+            }
+        }
+
+        return $hasil;
     }
 }
