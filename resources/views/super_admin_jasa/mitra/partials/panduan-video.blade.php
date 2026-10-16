@@ -290,6 +290,9 @@
                             <source src="{{ $panduanVideo }}" type="video/webm">
                             Browser Anda tidak mendukung pemutaran video ini.
                         </video>
+                        <div id="mjGuideStatus" class="small text-info mt-2 d-none">
+                            <span class="spinner-border spinner-border-sm me-1" role="status"></span>Menyiapkan video agar bisa melompat antarbab…
+                        </div>
                         <div class="small text-secondary mt-2">
                             <i class="bi bi-info-circle me-1"></i>Data pada video adalah contoh. Password awal disamarkan demi keamanan.
                         </div>
@@ -337,12 +340,71 @@
     });
 
     const chapters = Array.from(modal.querySelectorAll('[data-mj-seek]'));
-    chapters.forEach(function (btn) {
-        btn.addEventListener('click', function () {
-            video.currentTime = Number(btn.dataset.mjSeek);
+    const status = document.getElementById('mjGuideStatus');
+    let blobLoading = null;
+
+    // Server tanpa dukungan HTTP Range (mis. `php artisan serve`) membuat video
+    // tidak bisa di-seek: browser kembali ke 0. Fallback: unduh utuh sekali
+    // sebagai Blob agar lompat bab & scrubbing tetap berfungsi.
+    function isSeekable(target) {
+        for (let i = 0; i < video.seekable.length; i++) {
+            if (target >= video.seekable.start(i) && target <= video.seekable.end(i)) return true;
+        }
+        return false;
+    }
+
+    function loadAsBlob() {
+        if (blobLoading) return blobLoading;
+        if (status) status.classList.remove('d-none');
+        const src = video.currentSrc || video.querySelector('source').src;
+        blobLoading = fetch(src, { credentials: 'same-origin' })
+            .then(function (res) {
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                return res.blob();
+            })
+            .then(function (blob) {
+                const resumeAt = video.currentTime;
+                const wasPlaying = !video.paused;
+                return new Promise(function (resolve) {
+                    video.addEventListener('loadedmetadata', function () {
+                        video.currentTime = resumeAt;
+                        if (wasPlaying) video.play().catch(function () {});
+                        resolve();
+                    }, { once: true });
+                    video.src = URL.createObjectURL(blob);
+                    video.load();
+                });
+            })
+            .finally(function () {
+                if (status) status.classList.add('d-none');
+            });
+        return blobLoading;
+    }
+
+    function seekTo(target) {
+        const go = function () {
+            video.currentTime = target;
             video.play().catch(function () {});
-        });
+        };
+        if (isSeekable(target)) return go();
+        loadAsBlob().then(go).catch(go);
+    }
+
+    chapters.forEach(function (btn) {
+        btn.addEventListener('click', function () { seekTo(Number(btn.dataset.mjSeek)); });
     });
+
+    // Saat modal dibuka, siapkan fallback juga untuk scrubbing manual lewat kontrol bawaan.
+    function prepareSeeking() {
+        if (video.src.startsWith('blob:')) return;
+        if (video.readyState < 1) {
+            video.addEventListener('loadedmetadata', prepareSeeking, { once: true });
+            return;
+        }
+        if (isFinite(video.duration) && !isSeekable(video.duration - 1)) {
+            loadAsBlob().catch(function () {});
+        }
+    }
 
     video.addEventListener('timeupdate', function () {
         let active = chapters[0];
@@ -352,7 +414,10 @@
         chapters.forEach(function (btn) { btn.classList.toggle('is-active', btn === active); });
     });
 
-    modal.addEventListener('shown.bs.modal', function () { video.play().catch(function () {}); });
+    modal.addEventListener('shown.bs.modal', function () {
+        video.play().catch(function () {});
+        prepareSeeking();
+    });
     modal.addEventListener('hidden.bs.modal', function () { video.pause(); });
 })();
 </script>
