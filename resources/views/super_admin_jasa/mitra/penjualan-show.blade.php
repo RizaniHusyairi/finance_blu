@@ -62,6 +62,10 @@
     <div class="alert alert-danger">{{ session('error') }}</div>
 @endif
 
+@if($isPjp2u)
+    @include('super_admin_jasa.mitra.sipandai-reconciliation')
+@endif
+
 <div class="row g-4">
     {{-- Card Utama: Info Laporan --}}
     <div class="col-lg-8">

@@ -36,6 +36,9 @@
 @if(session('error'))
     <div class="alert alert-danger">{{ session('error') }}</div>
 @endif
+@error('sipandai')
+    <div class="alert alert-danger" role="alert">{{ $message }}</div>
+@enderror
 
 <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
     <div class="p-4 text-white" style="background: linear-gradient(135deg, #12355c, #1d65a6);">
@@ -140,6 +143,7 @@
                         </td>
                         <td>
                             <div class="d-flex gap-1 flex-wrap align-items-center">
+                                <a href="{{ route('jasa.mitra.penjualan.show', [$mitra, $penjualan]) }}#rekonsiliasi-sipandai" class="btn btn-sm btn-outline-primary">Rekonsiliasi Penumpang</a>
                                 <a href="{{ route('jasa.mitra.penjualan.show', [$mitra, $penjualan]) }}" class="btn btn-sm btn-light border text-primary fw-semibold jasa-icon-btn" title="Detail laporan" aria-label="Detail laporan"><i class="bi bi-eye"></i></a>
                                 @if($penjualan->status === 'diajukan' && $penjualan->can_be_verified)
                                     <form method="POST" action="{{ route('jasa.mitra.penjualan.verify', [$mitra, $penjualan]) }}">

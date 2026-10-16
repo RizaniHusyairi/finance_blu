@@ -409,6 +409,39 @@ class MitraJasaPenjualanController extends Controller
         return back()->with('success', 'Laporan penjualan berhasil diajukan.');
     }
 
+    public function mapSipandai(Request $request, MitraJasa $mitra, MitraJasaPenjualan $penjualan, \App\Services\SipandaiReconciliationService $service)
+    {
+        $this->ensureOwnedByMitra($mitra, $penjualan);
+        abort_unless(auth()->user()?->hasAnyRole(['Super Admin', 'Super Admin Jasa', 'Koordinator Jasa']), 403);
+        abort_unless($penjualan->layananJasa?->isPjp2u(), 404);
+        $data = $request->validate(['airline_code' => ['required', 'string', 'regex:/^[A-Za-z0-9]{2,3}$/']]);
+        $service->saveMapping($penjualan, $data['airline_code'], (int) auth()->id());
+        return back()->with('success', 'Pemetaan maskapai tersimpan. Ambil ulang data bila kode berubah.');
+    }
+
+    public function fetchSipandai(MitraJasa $mitra, MitraJasaPenjualan $penjualan, \App\Services\SipandaiReconciliationService $service)
+    {
+        $this->ensureOwnedByMitra($mitra, $penjualan);
+        $this->ensureCanVerifyPenjualan($mitra, $penjualan);
+        abort_unless($penjualan->layananJasa?->isPjp2u(), 404);
+        $service->fetch($penjualan, (int) auth()->id());
+        return back()->with('success', 'Data SIPANDAI berhasil diambil. Periksa selisih lalu simpan rekonsiliasi.');
+    }
+
+    public function acceptSipandai(Request $request, MitraJasa $mitra, MitraJasaPenjualan $penjualan, \App\Services\SipandaiReconciliationService $service)
+    {
+        $this->ensureOwnedByMitra($mitra, $penjualan);
+        $this->ensureCanVerifyPenjualan($mitra, $penjualan);
+        abort_unless($penjualan->layananJasa?->isPjp2u(), 404);
+        $data = $request->validate([
+            'snapshot_id' => ['required', 'integer', 'min:1'],
+            'note' => ['required', 'string', 'min:10', 'max:2000'],
+            'confirmed' => ['accepted'],
+        ]);
+        $service->accept($penjualan, (int) $data['snapshot_id'], (int) auth()->id(), $data['note']);
+        return back()->with('success', 'Rekonsiliasi tersimpan. Laporan dapat dilanjutkan ke verifikasi.');
+    }
+
     public function verify(MitraJasa $mitra, MitraJasaPenjualan $penjualan)
     {
         $this->ensureOwnedByMitra($mitra, $penjualan);
@@ -420,12 +453,18 @@ class MitraJasaPenjualanController extends Controller
             return back()->with('error', 'Laporan belum dapat diverifikasi. Verifikasi hanya dapat dilakukan setelah bulan pelaporan berakhir (berganti bulan).');
         }
 
-        $penjualan->update([
-            'status' => 'diverifikasi',
-            'verified_at' => now(),
-            'verified_by' => auth()->id(),
-            'updated_by' => auth()->id(),
-        ]);
+        \Illuminate\Support\Facades\DB::transaction(function () use ($penjualan) {
+            $locked = MitraJasaPenjualan::lockForUpdate()->findOrFail($penjualan->id);
+            abort_unless($locked->status === 'diajukan' && ! $locked->tagihan_jasa_id, 403);
+            app(\App\Services\SipandaiReconciliationService::class)->assertVerifiedBasis($locked);
+            $locked->update([
+                'status' => 'diverifikasi',
+                'verified_at' => now(),
+                'verified_by' => auth()->id(),
+                'updated_by' => auth()->id(),
+            ]);
+        });
+        $penjualan->refresh();
 
         $this->notifyMitraLaporan($penjualan, 'diverifikasi');
 

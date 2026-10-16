@@ -616,6 +616,9 @@ Route::middleware(['auth', 'account.active'])->group(function () use ($internalR
         Route::get('/jasa/mitra/{mitra}/penjualan/{penjualan}/edit', [MitraJasaPenjualanController::class, 'edit'])->name('jasa.mitra.penjualan.edit');
         Route::put('/jasa/mitra/{mitra}/penjualan/{penjualan}', [MitraJasaPenjualanController::class, 'update'])->name('jasa.mitra.penjualan.update');
         Route::post('/jasa/mitra/{mitra}/penjualan/{penjualan}/submit', [MitraJasaPenjualanController::class, 'submit'])->name('jasa.mitra.penjualan.submit');
+        Route::post('/jasa/mitra/{mitra}/penjualan/{penjualan}/sipandai/mapping', [MitraJasaPenjualanController::class, 'mapSipandai'])->name('jasa.mitra.penjualan.sipandai.mapping');
+        Route::post('/jasa/mitra/{mitra}/penjualan/{penjualan}/sipandai/fetch', [MitraJasaPenjualanController::class, 'fetchSipandai'])->middleware('throttle:10,1')->name('jasa.mitra.penjualan.sipandai.fetch');
+        Route::post('/jasa/mitra/{mitra}/penjualan/{penjualan}/sipandai/accept', [MitraJasaPenjualanController::class, 'acceptSipandai'])->name('jasa.mitra.penjualan.sipandai.accept');
         Route::post('/jasa/mitra/{mitra}/penjualan/{penjualan}/verify', [MitraJasaPenjualanController::class, 'verify'])->name('jasa.mitra.penjualan.verify');
         Route::post('/jasa/mitra/{mitra}/penjualan/{penjualan}/reject', [MitraJasaPenjualanController::class, 'reject'])->name('jasa.mitra.penjualan.reject');
     });
