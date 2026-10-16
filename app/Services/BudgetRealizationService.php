@@ -158,12 +158,8 @@ class BudgetRealizationService
      */
     private function createRealization($sp2d, $dipaItemId, $source, $nominal, $tanggal)
     {
-        // Try to find the master_coa_id from DetailDipa if possible
-        $masterCoaId = null;
-        $detailDipa = \App\Models\DetailDipa::find($dipaItemId);
-        if ($detailDipa && isset($detailDipa->master_coa_id)) {
-            $masterCoaId = $detailDipa->master_coa_id;
-        }
+        // COA item DIPA tersimpan di kolom coa_id (bukan master_coa_id).
+        $masterCoaId = \App\Models\DetailDipa::whereKey($dipaItemId)->value('coa_id');
 
         RealisasiAnggaran::create([
             'dokumen_sp2d_id' => $sp2d->id,

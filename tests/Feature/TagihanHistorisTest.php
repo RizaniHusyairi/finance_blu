@@ -155,6 +155,7 @@ class TagihanHistorisTest extends TestCase
         // Serapan anggaran tercatat pada item COA bertanggal arsip.
         $this->assertDatabaseHas('realisasi_anggaran', [
             'dipa_revision_item_id' => $this->item->id,
+            'master_coa_id' => $this->item->coa_id,
             'nominal_cair' => 196697855.00,
             'status' => 'TERCATAT',
         ]);

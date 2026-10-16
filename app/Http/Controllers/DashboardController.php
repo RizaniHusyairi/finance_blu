@@ -21,6 +21,7 @@ use App\Models\MitraJasa;
 use App\Models\PemakaianGarbarata;
 use App\Models\PermohonanNonSchedule;
 use App\Models\PotonganTagihan;
+use App\Models\RealisasiAnggaran;
 use App\Models\RekeningBank;
 use App\Models\RiwayatRevisiDipa;
 use App\Models\Tagihan;
@@ -145,7 +146,7 @@ class DashboardController extends Controller
 
         // Konteks anggaran (pagu vs realisasi DIPA aktif).
         $totalPagu = (float) RiwayatRevisiDipa::where('is_active', true)->sum('total_pagu');
-        $totalRealisasi = (float) DB::table('realisasi_anggaran')->where('status', 'TERCATAT')->sum('nominal_cair');
+        $totalRealisasi = (float) $this->totalRealisasi();
         $anggaran = [
             'pagu' => $totalPagu,
             'realisasi' => $totalRealisasi,
@@ -311,7 +312,7 @@ class DashboardController extends Controller
         // KPI CARDS
         // ============================================================
         $totalPagu = RiwayatRevisiDipa::where('is_active', true)->sum('total_pagu');
-        $totalRealisasi = DB::table('realisasi_anggaran')->sum('nominal_cair');
+        $totalRealisasi = $this->totalRealisasi();
         $sisaAnggaran = max(0, $totalPagu - $totalRealisasi);
         $persenRealisasi = $totalPagu > 0 ? round(($totalRealisasi / $totalPagu) * 100, 1) : 0;
 
@@ -342,16 +343,9 @@ class DashboardController extends Controller
         $chartBarRealisasi = [];
 
         foreach ($jenisAkun as $ja) {
-            $pagu = DB::table('dipa_revision_items')
-                ->join('master_coas', 'dipa_revision_items.coa_id', '=', 'master_coas.id')
-                ->where('master_coas.kd_akun', 'like', $ja['pattern'].'%')
-                ->sum('dipa_revision_items.nilai_pagu');
+            $pagu = $this->paguAkun($ja['pattern']);
 
-            $realisasi = DB::table('realisasi_anggaran')
-                ->join('dipa_revision_items', 'realisasi_anggaran.dipa_revision_item_id', '=', 'dipa_revision_items.id')
-                ->join('master_coas', 'dipa_revision_items.coa_id', '=', 'master_coas.id')
-                ->where('master_coas.kd_akun', 'like', $ja['pattern'].'%')
-                ->sum('realisasi_anggaran.nominal_cair');
+            $realisasi = $this->realisasiAkun($ja['pattern']);
 
             $chartBarLabels[] = $ja['label'];
             $chartBarPagu[] = (float) $pagu;
@@ -430,7 +424,7 @@ class DashboardController extends Controller
 
         // ===================== ANGGARAN (DIPA) =====================
         $totalPagu = (float) RiwayatRevisiDipa::where('is_active', true)->sum('total_pagu');
-        $totalRealisasi = (float) DB::table('realisasi_anggaran')->sum('nominal_cair');
+        $totalRealisasi = (float) $this->totalRealisasi();
         $sisaAnggaran = max(0, $totalPagu - $totalRealisasi);
         $persenRealisasi = $totalPagu > 0 ? round(($totalRealisasi / $totalPagu) * 100, 1) : 0;
 
@@ -496,15 +490,8 @@ class DashboardController extends Controller
         $chartBarPagu = [];
         $chartBarRealisasi = [];
         foreach ($jenisAkun as $ja) {
-            $pagu = DB::table('dipa_revision_items')
-                ->join('master_coas', 'dipa_revision_items.coa_id', '=', 'master_coas.id')
-                ->where('master_coas.kd_akun', 'like', $ja['pattern'].'%')
-                ->sum('dipa_revision_items.nilai_pagu');
-            $realisasi = DB::table('realisasi_anggaran')
-                ->join('dipa_revision_items', 'realisasi_anggaran.dipa_revision_item_id', '=', 'dipa_revision_items.id')
-                ->join('master_coas', 'dipa_revision_items.coa_id', '=', 'master_coas.id')
-                ->where('master_coas.kd_akun', 'like', $ja['pattern'].'%')
-                ->sum('realisasi_anggaran.nominal_cair');
+            $pagu = $this->paguAkun($ja['pattern']);
+            $realisasi = $this->realisasiAkun($ja['pattern']);
             $chartBarLabels[] = $ja['label'];
             $chartBarPagu[] = (float) $pagu;
             $chartBarRealisasi[] = (float) $realisasi;
@@ -522,7 +509,7 @@ class DashboardController extends Controller
             $m = $now->copy()->subMonths($i);
             $trenLabels[] = $m->translatedFormat('M');
             $trenTagihan[] = Tagihan::whereYear('created_at', $m->year)->whereMonth('created_at', $m->month)->count();
-            $trenRealisasi[] = (float) DB::table('realisasi_anggaran')
+            $trenRealisasi[] = (float) $this->realisasiTercatat()
                 ->whereYear('tanggal_pencairan', $m->year)->whereMonth('tanggal_pencairan', $m->month)->sum('nominal_cair');
         }
 
@@ -566,7 +553,7 @@ class DashboardController extends Controller
 
         // ===================== ANGGARAN (DIPA) =====================
         $totalPagu = (float) RiwayatRevisiDipa::where('is_active', true)->sum('total_pagu');
-        $totalRealisasi = (float) DB::table('realisasi_anggaran')->sum('nominal_cair');
+        $totalRealisasi = (float) $this->totalRealisasi();
         $sisaAnggaran = max(0, $totalPagu - $totalRealisasi);
         $persenRealisasi = $totalPagu > 0 ? round($totalRealisasi / $totalPagu * 100, 1) : 0;
 
@@ -663,15 +650,8 @@ class DashboardController extends Controller
         $chartBarRealisasi = [];
         foreach ($jenisAkun as $ja) {
             $chartBarLabels[] = $ja['label'];
-            $chartBarPagu[] = (float) DB::table('dipa_revision_items')
-                ->join('master_coas', 'dipa_revision_items.coa_id', '=', 'master_coas.id')
-                ->where('master_coas.kd_akun', 'like', $ja['pattern'].'%')
-                ->sum('dipa_revision_items.nilai_pagu');
-            $chartBarRealisasi[] = (float) DB::table('realisasi_anggaran')
-                ->join('dipa_revision_items', 'realisasi_anggaran.dipa_revision_item_id', '=', 'dipa_revision_items.id')
-                ->join('master_coas', 'dipa_revision_items.coa_id', '=', 'master_coas.id')
-                ->where('master_coas.kd_akun', 'like', $ja['pattern'].'%')
-                ->sum('realisasi_anggaran.nominal_cair');
+            $chartBarPagu[] = (float) $this->paguAkun($ja['pattern']);
+            $chartBarRealisasi[] = (float) $this->realisasiAkun($ja['pattern']);
         }
 
         // ===================== TREN 6 BULAN =====================
@@ -683,7 +663,7 @@ class DashboardController extends Controller
             $trenLabels[] = $m->translatedFormat('M y');
             $trenTagihan[] = Tagihan::whereYear('created_at', $m->year)
                 ->whereMonth('created_at', $m->month)->count();
-            $trenRealisasi[] = (float) DB::table('realisasi_anggaran')
+            $trenRealisasi[] = (float) $this->realisasiTercatat()
                 ->whereYear('tanggal_pencairan', $m->year)
                 ->whereMonth('tanggal_pencairan', $m->month)
                 ->sum('nominal_cair');
@@ -1160,20 +1140,13 @@ class DashboardController extends Controller
             $kpi_pencairan = $spp + $npi + $sp2d;
 
             // KPI 4: Sisa Pagu DIPA
-            $totalPaguDipa = DB::table('dipa_revisions')->where('is_active', true)->sum('total_pagu');
-            $totalRealisasi = DB::table('realisasi_anggaran')->sum('nominal_cair');
+            $totalPaguDipa = RiwayatRevisiDipa::where('is_active', true)->sum('total_pagu');
+            $totalRealisasi = $this->totalRealisasi();
             $sisaPagu = max(0, $totalPaguDipa - $totalRealisasi);
 
             // Alert Kritis Belanja Modal 53
-            $pagu53 = DB::table('dipa_revision_items')
-                ->join('master_coas', 'dipa_revision_items.coa_id', '=', 'master_coas.id')
-                ->where('master_coas.kode_mak_lengkap', 'like', '%53%')
-                ->sum('dipa_revision_items.nilai_pagu');
-            $realisasi53 = DB::table('realisasi_anggaran')
-                ->join('dipa_revision_items', 'realisasi_anggaran.dipa_revision_item_id', '=', 'dipa_revision_items.id')
-                ->join('master_coas', 'dipa_revision_items.coa_id', '=', 'master_coas.id')
-                ->where('master_coas.kode_mak_lengkap', 'like', '%53%')
-                ->sum('realisasi_anggaran.nominal_cair');
+            $pagu53 = $this->paguAkun('53');
+            $realisasi53 = $this->realisasiAkun('53');
 
             $alertModal = null;
             if ($pagu53 > 0) {
@@ -1192,11 +1165,11 @@ class DashboardController extends Controller
             ];
 
             // Bar: Serapan 51, 52, 53
-            $pagu51 = DB::table('dipa_revision_items')->join('master_coas', 'dipa_revision_items.coa_id', '=', 'master_coas.id')->where('master_coas.kode_mak_lengkap', 'like', '%51%')->sum('dipa_revision_items.nilai_pagu');
-            $pagu52 = DB::table('dipa_revision_items')->join('master_coas', 'dipa_revision_items.coa_id', '=', 'master_coas.id')->where('master_coas.kode_mak_lengkap', 'like', '%52%')->sum('dipa_revision_items.nilai_pagu');
+            $pagu51 = $this->paguAkun('51');
+            $pagu52 = $this->paguAkun('52');
 
-            $realisasi51 = DB::table('realisasi_anggaran')->join('dipa_revision_items', 'realisasi_anggaran.dipa_revision_item_id', '=', 'dipa_revision_items.id')->join('master_coas', 'dipa_revision_items.coa_id', '=', 'master_coas.id')->where('master_coas.kode_mak_lengkap', 'like', '%51%')->sum('realisasi_anggaran.nominal_cair');
-            $realisasi52 = DB::table('realisasi_anggaran')->join('dipa_revision_items', 'realisasi_anggaran.dipa_revision_item_id', '=', 'dipa_revision_items.id')->join('master_coas', 'dipa_revision_items.coa_id', '=', 'master_coas.id')->where('master_coas.kode_mak_lengkap', 'like', '%52%')->sum('realisasi_anggaran.nominal_cair');
+            $realisasi51 = $this->realisasiAkun('51');
+            $realisasi52 = $this->realisasiAkun('52');
 
             $chartBarLabels = ['Belanja Pegawai (51)', 'Belanja Barang (52)', 'Belanja Modal (53)'];
             $chartBarPagu = [$pagu51, $pagu52, $pagu53];
@@ -1821,7 +1794,7 @@ class DashboardController extends Controller
 
             // ===== Pipeline pencairan (gambaran umum koordinasi) =====
             $totalPagu = RiwayatRevisiDipa::where('is_active', true)->sum('total_pagu');
-            $totalRealisasi = DB::table('realisasi_anggaran')->sum('nominal_cair');
+            $totalRealisasi = $this->totalRealisasi();
             $sisaPagu = max(0, $totalPagu - $totalRealisasi);
             $persenRealisasi = $totalPagu > 0 ? round(($totalRealisasi / $totalPagu) * 100, 1) : 0;
 
@@ -1871,5 +1844,44 @@ class DashboardController extends Controller
         });
 
         return view('dashboard.koordinator_keuangan', $data);
+    }
+
+    /**
+     * Realisasi SP2D yang sah: status TERCATAT dan tidak dibatalkan
+     * (pembatalan SP2D men-soft-delete barisnya).
+     */
+    private function realisasiTercatat()
+    {
+        return RealisasiAnggaran::query()->where('realisasi_anggaran.status', 'TERCATAT');
+    }
+
+    private function totalRealisasi(): float
+    {
+        return (float) $this->realisasiTercatat()->sum('nominal_cair');
+    }
+
+    /**
+     * Pagu revisi aktif untuk akun berawalan $prefixAkun (mis. '52' atau '525').
+     * Revisi lama hanya riwayat — ikut dijumlah berarti pagu terhitung ganda.
+     */
+    private function paguAkun(string $prefixAkun): float
+    {
+        return (float) DetailDipa::query()
+            ->join('master_coas', 'dipa_revision_items.coa_id', '=', 'master_coas.id')
+            ->where('master_coas.kd_akun', 'like', $prefixAkun.'%')
+            ->whereHas('dipaRevision', fn ($revision) => $revision->where('is_active', true))
+            ->sum('dipa_revision_items.nilai_pagu');
+    }
+
+    /**
+     * Realisasi untuk akun berawalan $prefixAkun, lintas seluruh revisi DIPA.
+     */
+    private function realisasiAkun(string $prefixAkun): float
+    {
+        return (float) $this->realisasiTercatat()
+            ->join('dipa_revision_items', 'realisasi_anggaran.dipa_revision_item_id', '=', 'dipa_revision_items.id')
+            ->join('master_coas', 'dipa_revision_items.coa_id', '=', 'master_coas.id')
+            ->where('master_coas.kd_akun', 'like', $prefixAkun.'%')
+            ->sum('realisasi_anggaran.nominal_cair');
     }
 }
