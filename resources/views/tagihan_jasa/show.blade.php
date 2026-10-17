@@ -843,22 +843,6 @@
             </div>
         @endif
 
-        {{-- ARCH-01: Mode Cepat (auto-approve) hanya tampil di lingkungan pengembangan/testing. --}}
-        @if(app()->environment(['local', 'testing']) && Auth::user()->hasRole(['Super Admin', 'Admin Jasa']) && $wfInstance && $wfInstance->status === 'IN_PROGRESS')
-            <div class="card tj-card border-0 mb-4 border-start border-4 border-info">
-                <div class="card-body p-4 text-center">
-                    <h5 class="fw-bold mb-2"><i class="bi bi-lightning-charge text-info me-2"></i>Mode Cepat (Testing)</h5>
-                    <p class="small text-muted mb-3">Approve semua step verifikasi sekaligus tanpa perlu login satu-satu.</p>
-                    <form action="{{ route('tagihan-jasa.auto-approve', $tagihan->id) }}" method="POST">
-                        @csrf
-                        <button type="submit" class="btn btn-info text-white w-100 fw-bold" onclick="return confirm('Auto-approve semua step verifikasi yang tersisa?')">
-                            <i class="bi bi-fast-forward-fill me-1"></i> Auto-Approve Semua Step
-                        </button>
-                    </form>
-                </div>
-            </div>
-        @endif
-
         <div class="card tj-card border-0 mb-4">
             <div class="card-header bg-white p-3 border-bottom rounded-top-4 d-flex justify-content-between align-items-center">
                 <h6 class="mb-0 fw-bold"><i class="bi bi-envelope-paper text-primary me-2"></i>Surat Pengantar Tagihan</h6>

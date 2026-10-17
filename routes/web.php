@@ -697,7 +697,6 @@ Route::middleware(['auth', 'account.active'])->group(function () use ($internalR
         Route::post('/tagihan-jasa/{id}/mark-lunas', [TagihanJasaController::class, 'markAsPaid'])->name('tagihan-jasa.mark-lunas');
         Route::post('/tagihan-jasa/{id}/bukti-pembayaran/{proof}/terima', [TagihanJasaController::class, 'acceptPaymentProof'])->name('tagihan-jasa.bukti-pembayaran.terima');
         Route::post('/tagihan-jasa/{id}/bukti-pembayaran/{proof}/tolak', [TagihanJasaController::class, 'rejectPaymentProof'])->name('tagihan-jasa.bukti-pembayaran.tolak');
-        Route::post('/tagihan-jasa/{id}/auto-approve', [TagihanJasaController::class, 'autoApproveAll'])->name('tagihan-jasa.auto-approve');
         Route::delete('/tagihan-jasa/{id}', [TagihanJasaController::class, 'destroy'])->name('tagihan-jasa.destroy');
         Route::post('/tagihan-jasa/{id}/cancel', [TagihanJasaController::class, 'cancel'])->name('tagihan-jasa.cancel');
 
