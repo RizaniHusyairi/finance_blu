@@ -99,7 +99,7 @@ Ikuti dulu **[checklist §3 runbook penagihan](demo-penagihan-jasa.md)** (matika
 2. **Pastikan PT ABC punya minimal 1 layanan konsesi & 1 layanan PJP2U aktif** + 1 kontrak/dokumen dasar (sudah ada — PT ABC ter-assign seluruh layanan). Cek di Kelola Mitra.
 3. **Siapkan 1 laporan mitra status "diajukan"** (atau buat live di Babak 2) sebagai bahan verifikasi Admin Jasa.
 4. **Toggle VA BTN = OFF** (Integrasi API) agar VA diketik manual saat demo.
-5. **2 jendela browser** (normal + incognito) untuk berpindah peran cepat; manfaatkan **Auto-Approve Semua Step** untuk meloncati verifikasi berjenjang bila waktu mepet.
+5. **2 jendela browser** (normal + incognito) untuk berpindah peran cepat; siapkan akun keempat verifikator karena verifikasi berjenjang tidak dapat diloncati.
 
 ---
 
@@ -164,7 +164,7 @@ Alur listrik/air yang juga bermuara ke tagihan jasa:
 
 - **WhatsApp**: matikan sebelum demo (lihat [§3.1 runbook penagihan](demo-penagihan-jasa.md)) — agar publish/lunas tidak mengirim WA nyata & tidak menggantung.
 - **VA**: toggle **OFF** = manual (dipakai demo). Email `log` & VA BTN `mock` — aman.
-- **Loncat verifikasi**: gunakan **Auto-Approve Semua Step** bila salah satu akun verifikator bermasalah.
+- **Verifikasi tersendat**: gunakan tagihan cadangan yang sudah disiapkan di state berikutnya (fitur Auto-Approve sudah dihapus).
 - **Data ter-stage**: siapkan laporan mitra & tagihan di tiap state agar tidak bergantung input live.
 - **PDF tak terbuka**: jalankan `php artisan storage:link`.
 
@@ -177,7 +177,7 @@ Alur listrik/air yang juga bermuara ke tagihan jasa:
 | 1 | Super Admin Jasa | Master layanan → akun Admin Jasa → Mitra (akun, layanan, kontrak, konsesi/PJP2U) → Integrasi |
 | 2 | Mitra | Input & submit laporan konsesi / PAX |
 | 3 | Admin Jasa | Verifikasi laporan → buat tagihan → publish (VA manual) |
-| 4 | Koordinator → Kasi → Kasubbag → KPA | Verifikasi berjenjang + TTD (atau Auto-Approve) |
+| 4 | Koordinator → Kasi → Kasubbag → KPA | Verifikasi berjenjang + TTD |
 | 5 | Mitra | Lihat tagihan, unduh surat TTD |
 | 6 | Admin Jasa | Tandai Lunas |
 | 7 | Super Admin Jasa | Laporan & rekap |

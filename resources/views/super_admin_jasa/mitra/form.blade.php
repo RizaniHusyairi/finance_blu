@@ -21,6 +21,10 @@
     </div>
 </div>
 
+@unless($mitra->exists)
+    @include('super_admin_jasa.mitra.partials.panduan-video')
+@endunless
+
 @if($errors->any())
     <div class="alert alert-danger rounded-4">
         <ul class="mb-0">

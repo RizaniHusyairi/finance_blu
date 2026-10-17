@@ -1434,64 +1434,6 @@ class TagihanJasaController extends Controller
         return $freshTagihan;
     }
 
-    public function autoApproveAll($id)
-    {
-        // ARCH-01: endpoint pintas "auto-approve" hanya untuk pengembangan/testing.
-        // Di produksi ia akan mem-bypass SELURUH verifikasi berjenjang (KPA/PLT-PLH
-        // dst.) dan menerbitkan Surat Pengantar Final ber-TTE, sehingga harus
-        // diblokir total di lingkungan produksi.
-        abort_unless(
-            app()->environment(['local', 'testing']),
-            403,
-            'Fitur auto-approve hanya tersedia di lingkungan pengembangan/testing.'
-        );
-
-        abort_unless($this->canManageTagihanJasa(), 403);
-
-        $tagihan = TagihanJasa::with('workflowInstance.approvals')->findOrFail($id);
-        $this->abortIfAdminJasaCannotAccess($tagihan);
-
-        try {
-            DB::transaction(function () use ($tagihan) {
-                $instance = $tagihan->workflowInstance;
-
-                if (!$instance || $instance->status !== 'IN_PROGRESS') {
-                    throw new \RuntimeException('Workflow tidak sedang berjalan.');
-                }
-
-                $instance->approvals()
-                    ->whereIn('status', ['PENDING', 'WAITING'])
-                    ->update([
-                        'status' => 'APPROVED',
-                        'acted_by_user_id' => Auth::id(),
-                        'acted_at' => now(),
-                        'catatan' => 'Auto-approved untuk testing',
-                        'ip_address' => request()->ip(),
-                    ]);
-
-                $lastStep = (int) $instance->approvals()->max('urutan_step');
-                $instance->update([
-                    'step_saat_ini' => $lastStep,
-                    'status' => 'APPROVED',
-                ]);
-
-                $tagihan->update(['status' => 'DISETUJUI']);
-
-                $this->createSuratPengantarFinalTtd($tagihan->fresh([
-                    'mitra',
-                    'mitraLegacy',
-                    'kontrakMitraJasa',
-                    'details.layananJasa',
-                    'workflowInstance.approvals.actedByUser',
-                ]));
-            });
-
-            return back()->with('success', 'Semua step verifikasi berhasil di-auto-approve dan Surat Pengantar Final TTD sudah dibuat otomatis.');
-        } catch (\Throwable $e) {
-            return back()->with('error', 'Gagal auto-approve: ' . $e->getMessage());
-        }
-    }
-
     private function createSuratPengantarFinalTtd(TagihanJasa $tagihan): void
     {
         if ($tagihan->file_surat_pengantar_final && $tagihan->status_dokumen_pengantar === 'SUDAH_DITANDATANGANI') {

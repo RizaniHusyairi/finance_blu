@@ -569,6 +569,177 @@
             color: #64748b;
             margin-right: 6px;
         }
+
+        .svc-notes > summary { cursor: pointer; list-style: none; }
+        .svc-notes > summary::-webkit-details-marker { display: none; }
+        .svc-notes .svc-notes-toggle::after { content: "Tampilkan ▾"; }
+        .svc-notes[open] .svc-notes-toggle::after { content: "Sembunyikan ▴"; }
+
+        /* ===== Rincian layanan: tiap baris tampil sebagai kartu responsif =====
+           Elemen tr/td dipertahankan (JS memakai closest('tr')); hanya tata letaknya
+           yang diubah menjadi grid. */
+        #tableServices,
+        #tableServices tbody,
+        #tableServices tfoot { display: block; width: 100%; }
+        #tableServices { border: 0 !important; }
+        #tableServices thead { display: none; }
+        #tableServices tbody { counter-reset: svcrow; padding: 14px; background: #f8fafc; }
+        #tableServices td { border: 0 !important; padding: 0 !important; background: transparent; min-width: 0; }
+        #tableServices .svc-cell,
+        #tableServices .svc-cell .invoice-field,
+        #tableServices .svc-cell .smart-calc-wrapper { min-width: 0; max-width: 100%; overflow-wrap: anywhere; white-space: normal; }
+
+        #tableServices tr.service-row {
+            counter-increment: svcrow;
+            display: grid;
+            grid-template-columns: repeat(12, minmax(0, 1fr));
+            grid-template-areas:
+                "head head head head head head head head head head head aksi"
+                "lay  lay  lay  lay  lay  lay  kode kode kode sat  sat  sat"
+                "tar  tar  tar  vol  vol  vol  vol  vol  jml  jml  jml  jml"
+                "cat  cat  cat  cat  cat  cat  cat  cat  cat  cat  cat  cat";
+            gap: 14px 16px;
+            align-items: start;
+            margin-bottom: 14px;
+            padding: 16px 18px 18px;
+            border: 1px solid #dbe3ef;
+            border-left: 5px solid #2563eb;
+            border-radius: 18px;
+            background: #fff;
+            box-shadow: 0 8px 24px rgba(15, 23, 42, .06);
+        }
+        #tableServices tr.service-row:hover {
+            background: #fff;
+            border-color: #bfdbfe;
+            border-left-color: #2563eb;
+            box-shadow: 0 12px 30px rgba(37, 99, 235, .10);
+        }
+        #tableServices tr.service-row::before {
+            content: "Layanan #" counter(svcrow);
+            grid-area: head;
+            align-self: center;
+            justify-self: start;
+            padding: 4px 12px;
+            border-radius: 999px;
+            background: #eff6ff;
+            color: #1d4ed8;
+            font-size: .72rem;
+            font-weight: 900;
+            letter-spacing: .04em;
+            text-transform: uppercase;
+        }
+        #tableServices .svc-cell-check { display: none; }
+        #tableServices .svc-cell-layanan { grid-area: lay; }
+        #tableServices .svc-cell-kode { grid-area: kode; }
+        #tableServices .svc-cell-satuan { grid-area: sat; }
+        #tableServices .svc-cell-tarif { grid-area: tar; }
+        #tableServices .svc-cell-volume { grid-area: vol; }
+        #tableServices .svc-cell-jumlah { grid-area: jml; }
+        #tableServices .svc-cell-catatan { grid-area: cat; }
+        #tableServices .svc-cell-aksi { grid-area: aksi; justify-self: end; }
+
+        #tableServices .svc-cell .form-control,
+        #tableServices .svc-cell .form-select { min-height: 44px; font-size: .95rem; }
+        #tableServices .svc-cell .invoice-field-label { font-size: .72rem; }
+        #tableServices .svc-cell-layanan .jenis-penerimaan-input {
+            cursor: pointer;
+            font-weight: 700;
+            color: #0f172a;
+            background: #fff;
+        }
+        #tableServices .svc-cell-layanan .jenis-penerimaan-input::placeholder { color: #2563eb; font-weight: 600; }
+        #tableServices .svc-cell-layanan .btn-search-service { min-width: 52px; }
+        #tableServices .svc-layanan-info {
+            margin-top: 8px;
+            padding: 8px 12px;
+            border-radius: 12px;
+            background: #f0f9ff;
+            border: 1px solid #e0f2fe;
+        }
+        #tableServices .svc-layanan-nama { color: #0f172a; font-weight: 800; line-height: 1.35; }
+        #tableServices .svc-layanan-path { color: #64748b; font-size: .78rem; line-height: 1.35; margin-top: 2px; }
+        #tableServices .svc-layanan-path:empty { display: none; }
+        #tableServices .svc-cell-tarif .price-input,
+        #tableServices .svc-cell-volume .qty-input { font-weight: 800; }
+        #tableServices .svc-cell-jumlah .invoice-field {
+            height: 100%;
+            padding: 10px 14px;
+            border: 1px solid #bfdbfe;
+            border-radius: 14px;
+            background: linear-gradient(135deg, #eff6ff, #ffffff);
+        }
+        #tableServices .svc-cell-jumlah .subtotal-display {
+            min-height: 0;
+            padding: 0;
+            border: 0 !important;
+            background: transparent !important;
+            box-shadow: none !important;
+            font-size: 1.45rem;
+            text-align: left !important;
+        }
+        #tableServices .svc-cell-catatan .invoice-field {
+            display: grid;
+            grid-template-columns: minmax(170px, 220px) minmax(0, 1fr);
+            gap: 10px;
+            align-items: center;
+            padding-top: 12px;
+            border-top: 1px dashed #e2e8f0;
+        }
+        #tableServices .svc-cell-catatan .invoice-field-label { grid-column: 1 / -1; margin-bottom: 0; }
+        #tableServices .svc-cell-catatan .keterangan-bulan { margin-bottom: 0 !important; }
+        #tableServices .smart-calc-grid { grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); }
+
+        #tableServices tr.garbarata-detail-row:not(.d-none) { display: block; margin: -6px 0 14px; }
+        #tableServices tr.garbarata-detail-row > td { display: block; }
+
+        #tableServices tfoot tr {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 16px;
+            padding: 14px 18px;
+            border-top: 1px solid #e2e8f0;
+            background: #fff;
+        }
+        #tableServices tfoot td { display: block; }
+        #tableServices tfoot td:last-child { min-width: min(320px, 100%); }
+        #tableServices tfoot #grandTotal { font-size: 1.35rem; min-height: 48px; }
+
+        @media (max-width: 1199.98px) {
+            #tableServices tr.service-row {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                grid-template-areas:
+                    "head aksi"
+                    "lay  lay"
+                    "kode sat"
+                    "tar  vol"
+                    "jml  jml"
+                    "cat  cat";
+            }
+        }
+        @media (max-width: 767.98px) {
+            .tw-invoice-card > .p-5:has(#tableServices) { padding: 1rem !important; }
+        }
+        @media (max-width: 575.98px) {
+            .tw-invoice-card > .p-5:has(#tableServices) { padding: .75rem !important; }
+            #tableServices tbody { padding: 8px; }
+            #tableServices tr.service-row {
+                grid-template-columns: minmax(0, 1fr) auto;
+                grid-template-areas:
+                    "head aksi"
+                    "lay  lay"
+                    "kode kode"
+                    "sat  sat"
+                    "tar  tar"
+                    "vol  vol"
+                    "jml  jml"
+                    "cat  cat";
+                padding: 14px;
+            }
+            #tableServices .svc-cell-catatan .invoice-field { grid-template-columns: 1fr; }
+            #tableServices tfoot tr { flex-direction: column; align-items: stretch; gap: 8px; }
+            #tableServices tfoot td:first-child { text-align: left !important; }
+        }
     </style>
 @endpush
 
@@ -591,9 +762,15 @@
                 </p>
             </div>
         </div>
-        <a href="{{ route('admin-jasa.tagihan.log-bulanan') }}" class="inline-flex items-center justify-center rounded-xl border border-blue-200 bg-white px-4 py-2.5 text-sm font-bold text-blue-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-blue-50">
-            <i class="bi bi-arrow-left me-2"></i>Kembali
-        </a>
+        <div class="flex flex-wrap items-center gap-2">
+            {{-- Tab baru agar isian form tidak hilang. --}}
+            <a href="{{ route('panduan.index', ['role' => 'Admin Jasa']) }}#video-panduan" target="_blank" rel="noopener" class="inline-flex items-center justify-center rounded-xl bg-white/12 px-4 py-2.5 text-sm font-bold text-white ring-1 ring-white/30 transition hover:-translate-y-0.5 hover:bg-white/20" title="Video alur tagihan: dari Admin Jasa sampai Mitra">
+                <i class="bi bi-play-circle-fill me-2"></i>Tonton Panduan
+            </a>
+            <a href="{{ route('admin-jasa.tagihan.log-bulanan') }}" class="inline-flex items-center justify-center rounded-xl border border-blue-200 bg-white px-4 py-2.5 text-sm font-bold text-blue-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-blue-50">
+                <i class="bi bi-arrow-left me-2"></i>Kembali
+            </a>
+        </div>
     </div>
 </div>
 
@@ -1023,12 +1200,13 @@
                     </div>
                     @endif
 
-                    <div class="mb-4 rounded-2xl border border-blue-200 bg-gradient-to-br from-blue-50 to-sky-50 p-4 text-slate-700 shadow-sm">
-                        <div class="mb-2 flex items-center gap-2 font-black text-blue-800">
+                    <details class="svc-notes mb-4 rounded-2xl border border-blue-200 bg-gradient-to-br from-blue-50 to-sky-50 p-4 text-slate-700 shadow-sm" @if($isKonsesiMode || ! empty($pjp2uTariffChanges ?? [])) open @endif>
+                        <summary class="flex items-center gap-2 font-black text-blue-800">
                             <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600 text-white"><i class="bi bi-info-circle"></i></span>
                             Catatan Pengisian Tarif, Volume, dan Satuan
-                        </div>
-                        <ul class="mb-0 ps-3 text-sm leading-relaxed">
+                            <span class="svc-notes-toggle ms-auto text-xs font-bold text-blue-600"></span>
+                        </summary>
+                        <ul class="mb-0 mt-2 ps-3 text-sm leading-relaxed">
                             @if($isKonsesiMode)
                                 @if($isKonsesiSetupMode)
                                     <li>Mode ini hanya menetapkan layanan/persentase konsesi untuk mitra, belum membuka daftar tagihan final.</li>
@@ -1071,7 +1249,7 @@
                             <li>Untuk layanan konsesi/persentase, kolom tarif diisi persen dan volume diisi total omzet/nilai transaksi. Jumlah dihitung otomatis: omzet x persen.</li>
                             <li>Kolom keterangan dapat digunakan untuk mencatat dasar perhitungan, periode layanan, nomor berita acara, atau referensi dokumen pendukung.</li>
                         </ul>
-                    </div>
+                    </details>
 
                     <div class="mb-3 grid gap-3 md:grid-cols-3">
                         <div class="rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3">
@@ -1156,37 +1334,41 @@
 <!-- Template for new row -->
 <template id="rowTemplate">
     <tr class="service-row invoice-service-row" data-index="__INDEX__">
-        <td class="text-center align-middle">
+        <td class="svc-cell svc-cell-check text-center align-middle">
             <input type="checkbox" class="form-check-input row-check">
         </td>
-        <td>
+        <td class="svc-cell svc-cell-layanan">
             <input type="hidden" name="layanan[__INDEX__][id]" class="layanan-id-input" required>
             <input type="hidden" name="layanan[__INDEX__][mode]" class="calculation-mode-input" value="TARIF">
             <input type="hidden" name="layanan[__INDEX__][kurs]" class="kurs-input" value="1">
             <input type="hidden" name="layanan[__INDEX__][calculation_payload]" class="calculation-payload-input">
             <div class="invoice-field-label"><i class="bi bi-grid"></i>Layanan</div>
             <div class="input-group">
-                <input type="text" class="form-control jenis-penerimaan-input" readonly placeholder="Pilih layanan">
+                <input type="text" class="form-control jenis-penerimaan-input" readonly placeholder="Klik untuk memilih layanan / item tarif…">
                 <button type="button" class="btn invoice-search-button btn-search-service" title="Cari layanan">
                     <i class="bi bi-search"></i>
                 </button>
             </div>
+            <div class="svc-layanan-info d-none">
+                <div class="svc-layanan-nama"></div>
+                <div class="svc-layanan-path"></div>
+            </div>
             <div class="invalid-feedback d-none invalid-layanan-__INDEX__">Pilih layanan sampai level paling akhir (tarif/satuan).</div>
         </td>
-        <td>
+        <td class="svc-cell svc-cell-kode">
             <div class="invoice-field">
                 <div class="invoice-field-label"><i class="bi bi-bank"></i>Kode Pembayaran</div>
                 <input type="text" name="layanan[__INDEX__][kode_akun]" class="form-control invoice-muted-input kode-akun-input" readonly placeholder="Otomatis">
             </div>
         </td>
-        <td>
+        <td class="svc-cell svc-cell-tarif">
             <div class="invoice-field">
                 <div class="invoice-field-label"><i class="bi bi-cash-coin"></i>Tarif</div>
                 <input type="number" name="layanan[__INDEX__][harga_satuan]" class="form-control price-input text-end" value="0" step="1" min="0" required>
                 <div class="form-text calc-mode-help">Rp per satuan</div>
             </div>
         </td>
-        <td>
+        <td class="svc-cell svc-cell-volume">
             <div class="invoice-field">
                 <div class="invoice-field-label"><i class="bi bi-123"></i>Volume</div>
                 <input type="number" name="layanan[__INDEX__][qty]" class="form-control qty-input text-end" value="1" step="0.01" min="0.01" required>
@@ -1194,19 +1376,19 @@
                 <div class="form-text qty-mode-help">Volume</div>
             </div>
         </td>
-        <td>
+        <td class="svc-cell svc-cell-satuan">
             <div class="invoice-field">
                 <div class="invoice-field-label"><i class="bi bi-rulers"></i>Satuan</div>
                 <input type="text" class="form-control invoice-muted-input satuan-input" readonly placeholder="Otomatis">
             </div>
         </td>
-        <td>
+        <td class="svc-cell svc-cell-jumlah">
             <div class="invoice-field">
                 <div class="invoice-field-label"><i class="bi bi-calculator"></i>Jumlah</div>
                 <input type="text" class="form-control invoice-subtotal subtotal-display text-end" readonly value="0.00">
             </div>
         </td>
-        <td>
+        <td class="svc-cell svc-cell-catatan">
             <div class="invoice-field">
                 <div class="invoice-field-label"><i class="bi bi-pencil-square"></i>Catatan</div>
                 <select class="form-select form-select-sm keterangan-bulan mb-1" title="Tagihan untuk bulan">
@@ -1218,7 +1400,7 @@
                 <input type="text" name="layanan[__INDEX__][keterangan]" class="form-control keterangan-input" placeholder="Catatan">
             </div>
         </td>
-        <td class="text-center align-middle">
+        <td class="svc-cell svc-cell-aksi text-center align-middle">
             <button type="button" class="btn btn-sm btn-outline-danger invoice-remove-button btn-remove-service" title="Hapus baris layanan">
                 <i class="bi bi-trash"></i>
             </button>
@@ -2254,6 +2436,10 @@
 
             row.find('.layanan-id-input').val(service.id);
             row.find('.jenis-penerimaan-input').val(service.kode_layanan || padCode(service.id));
+            const servicePath = buildServicePath(service);
+            row.find('.svc-layanan-nama').text(service.nama_layanan || '').attr('title', servicePath);
+            row.find('.svc-layanan-path').text(servicePath.split(' > ').slice(0, -1).join(' › '));
+            row.find('.svc-layanan-info').removeClass('d-none');
             row.find('.kode-akun-input').val(servicePaymentCode(service));
             row.find('.price-input').val(serviceRateValue(service));
             row.find('.kurs-input').val(1);
@@ -2740,6 +2926,11 @@
             renderServiceTree();
             updateSelectedServiceInfo();
             $('#modalPilihLayanan').modal('show');
+        });
+
+        // Kolom layanan (readonly) ikut membuka pencarian tarif agar lebih jelas bagi pengguna.
+        $(document).on('click', '.jenis-penerimaan-input', function() {
+            $(this).closest('tr').find('.btn-search-service').trigger('click');
         });
 
         $(document).on('click', '.service-item', function() {

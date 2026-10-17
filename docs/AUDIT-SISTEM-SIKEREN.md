@@ -150,6 +150,7 @@ abort_unless($tagihan->isKpaApprover(Auth::user()), 403);
 - **Status Verifikasi:** **Terverifikasi**
 
 ### ARCH-01 — Endpoint `auto-approve "untuk testing"` aktif di produksi
+- **Status (17 Okt 2026):** **Selesai — fitur dihapus total.** Route `tagihan-jasa.auto-approve`, method `autoApproveAll`, dan kartu "Mode Cepat (Testing)" di detail tagihan dihapus dari seluruh environment (sebelumnya hanya dibatasi ke `local`/`testing`).
 - **Lokasi:** `app/Http/Controllers/TagihanJasaController.php:1437` (`autoApproveAll`); `routes/web.php:597`
 - **Modul/Area:** Arsitektur / Workflow Engine / Tagihan Jasa (PNBP)
 - **Risiko:** Satu `POST /tagihan-jasa/{id}/auto-approve` mengubah seluruh `WorkflowApproval` `PENDING/WAITING` → `APPROVED` (catatan *'Auto-approved untuk testing'*), men-set tagihan `DISETUJUI`, dan memanggil `createSuratPengantarFinalTtd()` (Surat Pengantar Final ber-TTE). Verifikasi berjenjang (KPA/PLT-PLH dst.) di-*bypass* total.

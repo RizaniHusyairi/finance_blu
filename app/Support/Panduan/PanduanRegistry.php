@@ -21,6 +21,9 @@ use Illuminate\Support\Str;
  *                  tips  = callout saran/peringatan singkat (opsional)
  *                  video = URL video tutorial langkah (opsional; tombol muncul otomatis bila diisi)
  *                  rincian = daftar langkah rinci (array string, opsional) — tampil sebagai poin
+ *  - 'video_utama' : video panduan unggulan peran (opsional) [judul, deskripsi, src, poster?, durasi, bab[]]
+ *                  src/poster = path relatif di public/ (mis. videos/panduan/x.webm)
+ *                  bab = [detik, judul] — daftar bab yang bisa diklik untuk melompat
  *  - 'faq'       : tanya-jawab singkat [t, j]
  *  - 'menus'     : daftar menu sidebar peran + kegunaannya, dikelompokkan per grup
  *
@@ -860,7 +863,7 @@ class PanduanRegistry
                     ],
                     [
                         't' => 'Ke mana tagihan setelah saya setujui?',
-                        'j' => 'Lanjut ke verifikator berikutnya sesuai urutan workflow sampai final, lalu Admin Jasa menerbitkan surat final dan mem-publish tagihan ke mitra.',
+                        'j' => 'Lanjut ke verifikator berikutnya sesuai urutan workflow sampai final. Setelah verifikator final menyetujui, Surat Final TTD terbentuk dan tagihan terbit otomatis ke mitra.',
                     ],
                 ],
             ],
@@ -956,6 +959,27 @@ class PanduanRegistry
                 'ikon' => 'receipt_long',
                 'warna' => '37,99,235',
                 'ringkasan' => 'Mengelola laporan jasa, membuat tagihan, mengurus surat pengantar & arsip, publish Virtual Account, dan memantau pembayaran mitra.',
+                'video_utama' => [
+                    'judul' => 'Alur Tagihan Jasa: dari Admin Jasa sampai Mitra',
+                    'deskripsi' => 'Ilustrasi lengkap dengan tampilan asli SIKEREN — membuat tagihan, 4 tahap verifikasi, terbit otomatis ke mitra, hingga lunas.',
+                    'src' => 'videos/panduan/alur-tagihan-jasa-ui-asli.webm',
+                    'poster' => 'videos/panduan/alur-tagihan-jasa-ui-asli-poster.jpg',
+                    'durasi' => '3:02',
+                    'bab' => [
+                        [0, 'Pengantar & peran yang terlibat'],
+                        [18, 'Admin Jasa membuat tagihan'],
+                        [48, 'Verifikasi Koordinator Jasa'],
+                        [63, 'Verifikasi Kasi Pelayanan & Kerjasama'],
+                        [71, 'Verifikasi Kasubbag TU'],
+                        [78, 'Persetujuan KPA + TTE'],
+                        [86, 'Revisi & penolakan'],
+                        [98, 'Terbit otomatis ke mitra'],
+                        [118, 'Mitra menerima tagihan'],
+                        [140, 'Pembayaran via VA BTN'],
+                        [151, 'Verifikasi bukti & lunas'],
+                        [167, 'Ringkasan'],
+                    ],
+                ],
                 'alur' => [
                     [
                         'ikon' => 'storage',
@@ -982,6 +1006,7 @@ class PanduanRegistry
                             'Simpan draf agar sistem membuat nomor tagihan dan draft surat pengantar.',
                         ],
                         'tips' => 'Untuk Garbarata, isi rincian penerbangan agar volume per 2 jam dihitung otomatis.',
+                        'video' => 'videos/panduan/buat-tagihan-jasa.webm',
                     ],
                     [
                         'ikon' => 'description',
@@ -1024,16 +1049,16 @@ class PanduanRegistry
                     ],
                     [
                         'ikon' => 'send',
-                        'judul' => 'Publish ke mitra',
-                        'detail' => 'Sistem membuat Virtual Account dan mengirim notifikasi WhatsApp ke mitra.',
+                        'judul' => 'Terbit ke mitra',
+                        'detail' => 'Begitu verifikator final menyetujui, tagihan terbit otomatis: Virtual Account, jatuh tempo, piutang, dan notifikasi ke mitra.',
                         'menu' => 'Tagihan › Detail',
                         'rincian' => [
-                            'Pastikan status workflow sudah final dan Surat Final TTD tersedia.',
-                            'Klik Publish pada detail tagihan.',
-                            'Sistem membuat Virtual Account dan link tagihan untuk mitra.',
-                            'Cek nomor VA dan pesan notifikasi sebelum dikirimkan ke mitra.',
+                            'Tidak perlu klik Publish — tagihan terbit otomatis setelah KPA/PLT-PLH menyetujui dan Surat Final TTD terbentuk.',
+                            'Sistem membuat Virtual Account BTN, menetapkan jatuh tempo, dan mencatat piutang.',
+                            'Mitra menerima notifikasi WhatsApp, email, dan Portal Mitra berisi tautan tagihan.',
+                            'Cek nomor VA dan isi pesan WA pada detail tagihan (status PUBLISHED).',
                         ],
-                        'tips' => 'Publish dikunci jika surat final TTD belum tersedia.',
+                        'tips' => 'Jika penerbitan otomatis gagal (mis. mode VA manual tanpa nomor VA), tagihan tetap DISETUJUI dan bisa di-publish manual dari detail tagihan.',
                     ],
                     [
                         'ikon' => 'payments',
@@ -1064,8 +1089,8 @@ class PanduanRegistry
                 ],
                 'faq' => [
                     [
-                        't' => 'Kenapa tombol Publish terkunci?',
-                        'j' => 'Publish hanya aktif setelah workflow disetujui final dan Surat Final TTD sudah tersedia. Selesaikan verifikasi lalu generate surat final dulu.',
+                        't' => 'Apakah saya perlu menekan Publish?',
+                        'j' => 'Tidak. Tagihan terbit otomatis setelah verifikator final menyetujui. Tombol Publish manual hanya diperlukan bila penerbitan otomatis gagal, dan baru aktif setelah workflow disetujui final serta Surat Final TTD tersedia.',
                     ],
                     [
                         't' => 'Apa beda QR draft dan QR final?',

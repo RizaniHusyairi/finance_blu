@@ -31,7 +31,7 @@ Tiga nilai jual yang ditekankan:
 
 **Alur verifikasi resmi:** Koordinator Jasa → Kepala Seksi → Kasubbag TU → KPA (Kabandara).
 
-> **Tip multi-login:** siapkan **2 jendela browser** (mis. Chrome normal untuk Admin Jasa + Chrome Incognito untuk verifikator) agar tidak perlu logout-login bolak-balik. Untuk 2 verifikator tengah, gunakan **"Mode Cepat → Auto-Approve Semua Step"** (lihat §6 Rencana Cadangan).
+> **Tip multi-login:** siapkan **2 jendela browser** (mis. Chrome normal untuk Admin Jasa + Chrome Incognito untuk verifikator) agar tidak perlu logout-login bolak-balik. Siapkan keempat akun verifikator (Koordinator, Kasi, Kasubbag, KPA) sebelum demo — tidak ada jalan pintas untuk meloncati verifikasi.
 
 ---
 
@@ -70,7 +70,7 @@ php artisan queue:work --stop-when-empty   # (opsional) proses notifikasi tertun
 ```
 
 ### 3.4 Smoke test menyeluruh (H-1)
-Lakukan **sekali** jalur penuh pada tagihan buangan: Buat → Verifikasi 4 lapis (boleh Auto-Approve) → Publish (**isi Nomor VA**, kirim ke **nomor WA milik sendiri** atau setelah WA dimatikan) → Tandai Lunas. Pastikan:
+Lakukan **sekali** jalur penuh pada tagihan buangan: Buat → Verifikasi 4 lapis → Publish (**isi Nomor VA**, kirim ke **nomor WA milik sendiri** atau setelah WA dimatikan) → Tandai Lunas. Pastikan:
 - Tidak ada halaman error / pesan merah.
 - PDF surat pengantar & invoice terbuka.
 - Status berubah benar di tiap langkah.
@@ -107,7 +107,7 @@ Login **Koordinator Jasa** → menu **Verifikasi Tagihan Jasa** → buka tagihan
 - Klik **Setujui Dokumen** → status naik ke verifikator berikutnya.
 - Tunjukkan **timeline "Riwayat Proses"** yang mencatat siapa & kapan.
 
-Lanjutkan ke **Kasi → Kasubbag → KPA** (login bergantian, atau pakai Auto-Approve untuk yang tengah).
+Lanjutkan ke **Kasi → Kasubbag → KPA** (login bergantian di jendela browser terpisah).
 
 ### Babak 3 — Skenario REVISI bertarget (3–4 menit) ⭐ *fitur baru*
 *Ini sorotan utama. Gunakan tagihan kedua yang masih di Koordinator.*
@@ -153,7 +153,7 @@ Login **Super Admin Jasa** → **Laporan**: rekap tagihan, rekap pembayaran, piu
 
 ## 6. Rencana Cadangan (anti-macet)
 
-- **Mode Cepat → "Auto-Approve Semua Step"** (tombol pada detail tagihan milik Admin Jasa): meloncati 4 verifikasi sekaligus + membuat surat pengantar TTD. Pakai bila waktu mepet atau salah satu akun verifikator bermasalah.
+- **Verifikasi tersendat:** fitur Auto-Approve sudah dihapus — gunakan tagihan cadangan yang sudah disiapkan di state berikutnya (lihat poin di bawah), atau login ulang akun verifikator terkait.
 - **Data ter-stage:** karena tiap babak punya tagihan yang sudah disiapkan di state-nya (lihat §3.2), bila pembuatan LIVE tersendat, langsung lanjut ke tagihan cadangan.
 - **Bila Publish/Lunas lambat:** pastikan WhatsApp sudah dimatikan (§3.1) — pengiriman jadi instan (mock) tanpa menggantung.
 - **Bila PDF tidak terbuka:** jalankan `php artisan storage:link` dan ulangi.
