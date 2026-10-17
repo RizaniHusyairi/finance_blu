@@ -762,9 +762,15 @@
                 </p>
             </div>
         </div>
-        <a href="{{ route('admin-jasa.tagihan.log-bulanan') }}" class="inline-flex items-center justify-center rounded-xl border border-blue-200 bg-white px-4 py-2.5 text-sm font-bold text-blue-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-blue-50">
-            <i class="bi bi-arrow-left me-2"></i>Kembali
-        </a>
+        <div class="flex flex-wrap items-center gap-2">
+            {{-- Tab baru agar isian form tidak hilang. --}}
+            <a href="{{ route('panduan.index', ['role' => 'Admin Jasa']) }}#video-panduan" target="_blank" rel="noopener" class="inline-flex items-center justify-center rounded-xl bg-white/12 px-4 py-2.5 text-sm font-bold text-white ring-1 ring-white/30 transition hover:-translate-y-0.5 hover:bg-white/20" title="Video alur tagihan: dari Admin Jasa sampai Mitra">
+                <i class="bi bi-play-circle-fill me-2"></i>Tonton Panduan
+            </a>
+            <a href="{{ route('admin-jasa.tagihan.log-bulanan') }}" class="inline-flex items-center justify-center rounded-xl border border-blue-200 bg-white px-4 py-2.5 text-sm font-bold text-blue-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-blue-50">
+                <i class="bi bi-arrow-left me-2"></i>Kembali
+            </a>
+        </div>
     </div>
 </div>
 

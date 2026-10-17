@@ -183,6 +183,11 @@
                 </div>
             </div>
 
+            {{-- Video panduan unggulan peran --}}
+            @if(!empty($guide['video_utama']))
+                @include('panduan.partials.video-utama', ['video' => $guide['video_utama']])
+            @endif
+
             {{-- Alur kerja --}}
             @if(!empty($guide['alur']))
                 <div class="pd-section-head">
@@ -222,7 +227,7 @@
                                 <div class="pd-step-tips"><i class="material-icons-outlined">lightbulb</i><span>{{ $s['tips'] }}</span></div>
                             @endif
                             @if(!empty($s['video']))
-                                <a href="{{ $s['video'] }}" target="_blank" rel="noopener" class="pd-step-video"><i class="material-icons-outlined">play_circle</i> Tonton video</a>
+                                <a href="{{ \Illuminate\Support\Str::startsWith($s['video'], ['http://', 'https://']) ? $s['video'] : asset($s['video']) }}" target="_blank" rel="noopener" class="pd-step-video"><i class="material-icons-outlined">play_circle</i> Tonton video</a>
                             @endif
                         </div>
                     @endforeach
