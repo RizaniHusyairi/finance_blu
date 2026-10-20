@@ -47,6 +47,24 @@ class PanduanVideoAdminJasaTest extends TestCase
         $this->assertFileExists(public_path('videos/panduan/buat-tagihan-jasa.webm'));
     }
 
+    public function test_pusat_panduan_operator_blu_menampilkan_video_dipa(): void
+    {
+        Role::findOrCreate('Operator BLU', 'web');
+        $operator = User::factory()->create();
+        $operator->assignRole('Operator BLU');
+        $video = PanduanRegistry::all()['Operator BLU']['video_utama'];
+
+        $this->actingAs($operator)
+            ->get(route('panduan.index', ['role' => 'Operator BLU']))
+            ->assertOk()
+            ->assertSee('id="video-panduan"', false)
+            ->assertSee($video['src'], false)
+            ->assertSee('Mengaktifkan revisi');
+
+        $this->assertFileExists(public_path($video['src']));
+        $this->assertFileExists(public_path($video['poster']));
+    }
+
     public function test_form_buat_tagihan_menautkan_ke_video_panduan(): void
     {
         $this->actingAs($this->admin)

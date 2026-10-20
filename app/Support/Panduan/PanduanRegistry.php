@@ -691,6 +691,25 @@ class PanduanRegistry
                 'ikon' => 'support_agent',
                 'warna' => '71,85,105',
                 'ringkasan' => 'Menatausahakan master data anggaran (DIPA, COA, pajak) dan mengawal kelengkapan tagihan pada proses pencairan.',
+                'video_utama' => [
+                    'judul' => 'Mengelola DIPA, Revisi DIPA & COA',
+                    'deskripsi' => 'Ilustrasi dengan tampilan asli SIKEREN — membuat DIPA dari PDF POK, COA terbentuk otomatis, merekam & mengaktifkan revisi, hingga mengelola COA.',
+                    'src' => 'videos/panduan/dipa-revisi-coa.webm',
+                    'poster' => 'videos/panduan/dipa-revisi-coa-poster.jpg',
+                    'durasi' => '2:57',
+                    'bab' => [
+                        [0, 'Pengantar'],
+                        [8, 'Konsep DIPA, revisi & COA'],
+                        [23, 'Anatomi kode COA'],
+                        [36, 'Tambah DIPA dari PDF POK'],
+                        [67, 'Detail DIPA & COA otomatis'],
+                        [84, 'Konsep revisi DIPA'],
+                        [97, 'Membuat revisi dari POK revisi'],
+                        [117, 'Mengaktifkan revisi'],
+                        [139, 'Master COA & tambah COA'],
+                        [162, 'Checklist Operator BLU'],
+                    ],
+                ],
                 'alur' => [
                     [
                         'ikon' => 'account_balance',
