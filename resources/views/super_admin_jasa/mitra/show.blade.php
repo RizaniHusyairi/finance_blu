@@ -932,6 +932,84 @@
         from { opacity: 0; transform: translateY(10px); }
         to   { opacity: 1; transform: translateY(0); }
     }
+    /* ============ Tata letak tab & ringkasan ============ */
+    .mitra-detail-page .min-w-0 { min-width: 0; }
+    .mitra-hero-contact { display: flex; flex-wrap: wrap; gap: .4rem 1.1rem; font-size: .85rem; font-weight: 600; }
+    .mitra-hero-contact a { color: rgba(255,255,255,.85); text-decoration: none; display: inline-flex; align-items: center; gap: .4rem; overflow-wrap: anywhere; }
+    .mitra-hero-contact a:hover { color: #fff; text-decoration: underline; }
+    .mitra-hero-btn { display: inline-flex; align-items: center; gap: .45rem; height: 40px; padding: 0 .9rem; white-space: nowrap; }
+    a.mitra-stat { display: block; position: relative; overflow: hidden; color: inherit; text-decoration: none; transition: transform .15s ease, box-shadow .15s ease; }
+    a.mitra-stat::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--st, #4f46e5); }
+    a.mitra-stat:hover { transform: translateY(-2px); box-shadow: 0 16px 34px rgba(15,23,42,.10); color: inherit; }
+    .mitra-stat-ico { width: 38px; height: 38px; flex-shrink: 0; border-radius: 11px; display: inline-flex; align-items: center; justify-content: center; font-size: 1.05rem; color: var(--st); background: var(--st-soft); }
+    .mitra-stat-sub { font-size: .75rem; color: #64748b; margin-top: .15rem; }
+    .mitra-alert { display: flex; gap: .75rem; align-items: flex-start; border: 1px solid; border-radius: 14px; padding: .75rem 1rem; }
+    .mitra-alert + .mitra-alert { margin-top: .6rem; }
+    .mitra-alert i.lead { font-size: 1.2rem; line-height: 1.2; }
+    .mitra-alert .t { font-weight: 800; }
+    .mitra-alert .d { font-size: .82rem; color: #334155; }
+    .mitra-alert .btn { flex-shrink: 0; }
+    .mitra-alert.danger { background: #fff1f2; border-color: #fecdd3; color: #9f1239; }
+    .mitra-alert.warning { background: #fffbeb; border-color: #fde68a; color: #92400e; }
+    .mitra-alert.info { background: #eff6ff; border-color: #bfdbfe; color: #1e40af; }
+    .mitra-tabs-wrap { position: sticky; top: 70px; z-index: 5; padding: .25rem 0 .5rem; }
+    .mitra-tabs { display: flex; gap: .35rem; overflow-x: auto; scrollbar-width: none; padding: .35rem; background: #fff; border: 1px solid rgba(15,23,42,.08); border-radius: 14px; box-shadow: 0 8px 22px rgba(15,23,42,.08); }
+    .mitra-tabs::-webkit-scrollbar { display: none; }
+    .mitra-tab { flex: 1 0 auto; display: inline-flex; align-items: center; justify-content: center; gap: .45rem; border: 0; background: transparent; color: #475569; font-weight: 800; font-size: .88rem; padding: .6rem 1rem; border-radius: 10px; white-space: nowrap; transition: background .15s ease, color .15s ease; }
+    .mitra-tab:hover { background: #f1f5f9; color: #1e3a8a; }
+    .mitra-tab.active { background: #1d4ed8; color: #fff; box-shadow: 0 8px 18px rgba(29,78,216,.25); }
+    .mitra-tab .cnt { font-size: .7rem; font-weight: 900; min-width: 22px; padding: .1rem .45rem; border-radius: 999px; background: #e2e8f0; color: #334155; }
+    .mitra-tab.active .cnt { background: rgba(255,255,255,.25); color: #fff; }
+    .mitra-pane[hidden] { display: none !important; }
+    .mitra-pane { animation: secInUp .25s ease both; }
+    .mitra-info-list { display: grid; }
+    .mitra-info-row { display: grid; grid-template-columns: 150px 1fr; gap: .75rem; padding: .7rem 0; border-bottom: 1px dashed #e2e8f0; }
+    .mitra-info-row:last-child { border-bottom: 0; }
+    .mitra-info-row dt { margin: 0; font-size: .75rem; font-weight: 800; text-transform: uppercase; color: #64748b; display: flex; align-items: center; gap: .45rem; }
+    .mitra-info-row dt i { color: #1d4ed8; font-size: .95rem; }
+    .mitra-info-row dd { margin: 0; font-weight: 700; color: #0f172a; overflow-wrap: anywhere; }
+    .mitra-info-empty { font-weight: 600; font-style: italic; color: #94a3b8; }
+    .mitra-count { font-size: .72rem; font-weight: 900; color: #fff; background: #1d4ed8; border-radius: 999px; padding: .1rem .55rem; }
+    .kontrak-row-modern a.krm-title { display: block; text-decoration: none; margin: 0; }
+    .kontrak-row-modern a.krm-title:hover { color: #4338ca; text-decoration: underline; }
+    .kontrak-row-modern .krm-no { font-size: .74rem; font-weight: 700; color: #6366f1; margin-bottom: .3rem; overflow-wrap: anywhere; }
+    .kontrak-row-modern .krm-scope.is-empty { color: #92400e; background: #fef3c7; }
+    .kontrak-status-pill.is-expired { background: #ffe4e6; color: #be123c; }
+    .la-group + .la-group { margin-top: .9rem; }
+    .la-group-head { display: flex; align-items: center; gap: .5rem; font-weight: 800; font-size: .85rem; color: #1e3a8a; margin-bottom: .5rem; }
+    .la-group-head .tt { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+    .la-group-head .n { font-size: .7rem; font-weight: 900; color: #1d4ed8; background: #dbeafe; border-radius: 999px; padding: .1rem .5rem; }
+    .la-items { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: .5rem; }
+    .la-item { display: flex; gap: .6rem; align-items: flex-start; border: 1px solid #e2e8f0; border-radius: 12px; padding: .6rem .75rem; background: #fff; min-width: 0; }
+    .la-item > i { color: #059669; font-size: 1.05rem; line-height: 1.2; }
+    .la-item .nm { font-weight: 700; font-size: .86rem; color: #0f172a; line-height: 1.3; overflow-wrap: anywhere; }
+    .la-item .mt { font-size: .72rem; color: #64748b; margin-top: .15rem; overflow-wrap: anywhere; }
+    .tagihan-ringkas { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .75rem; }
+    .tagihan-ringkas .tr-item { display: flex; gap: .7rem; align-items: center; padding: .8rem 1rem; border-radius: 14px; background: #fff; border: 1px solid rgba(15,23,42,.08); box-shadow: 0 8px 20px rgba(15,23,42,.05); color: inherit; text-decoration: none; transition: transform .15s ease; }
+    .tagihan-ringkas .tr-item:hover { transform: translateY(-2px); color: inherit; }
+    .tagihan-ringkas .tr-item.is-empty { opacity: .6; box-shadow: none; }
+    .tagihan-ringkas .tr-ico { width: 36px; height: 36px; flex-shrink: 0; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; color: #1d4ed8; background: #dbeafe; }
+    .tagihan-ringkas .tr-lbl { display: block; font-size: .75rem; font-weight: 800; text-transform: uppercase; color: #64748b; }
+    .tagihan-ringkas .tr-val { display: block; font-weight: 800; color: #0f172a; font-size: .88rem; overflow-wrap: anywhere; }
+    .tagihan-ringkas .tr-sub { display: block; font-size: .74rem; color: #64748b; }
+    .tagihan-stack { display: flex; flex-direction: column; gap: 1.5rem; }
+    @media (max-width: 991.98px) { .tagihan-ringkas { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    @media (max-width: 575.98px) {
+        .mitra-hero-btn .lbl { display: none; }
+        .mitra-hero-btn { width: 40px; padding: 0; justify-content: center; }
+        .mitra-tabs-wrap { top: 60px; }
+        .mitra-tab { flex: 0 0 auto; padding: .55rem .8rem; }
+        .mitra-info-row { grid-template-columns: 1fr; gap: .2rem; }
+        .mitra-alert { flex-wrap: wrap; }
+        .mitra-alert > .flex-grow-1 { flex: 1 1 0; }
+        .mitra-alert .btn { width: 100%; }
+        .mitra-stat-value { font-size: 1.05rem; overflow-wrap: anywhere; }
+        .kontrak-row-modern { flex-wrap: wrap; }
+        .kontrak-row-modern .krm-info { flex-basis: calc(100% - 48px); }
+        .kontrak-row-modern .krm-actions { width: 100%; padding-left: 48px; }
+        .kontrak-row-modern .krm-scope-prev { display: none; }
+        .la-items { grid-template-columns: 1fr; }
+    }
 </style>
 
 <div class="mitra-detail-page">
@@ -943,6 +1021,12 @@
                 Detail Mitra Jasa
             </div>
             <h4 class="mitra-hero-title mb-2 fw-bold text-white">{{ $mitra->nama_mitra }}</h4>
+            @if($mitra->email || $mitra->no_telepon)
+                <div class="mitra-hero-contact mb-3">
+                    @if($mitra->email)<a href="mailto:{{ $mitra->email }}"><i class="bi bi-envelope"></i>{{ $mitra->email }}</a>@endif
+                    @if($mitra->no_telepon)<a href="tel:{{ preg_replace('/[^0-9+]/', '', $mitra->no_telepon) }}"><i class="bi bi-telephone"></i>{{ $mitra->no_telepon }}</a>@endif
+                </div>
+            @endif
             <div class="d-flex flex-wrap gap-2">
                 <span class="mitra-chip"><i class="bi bi-upc-scan"></i>{{ $mitra->kode_mitra ?: 'Kode belum diisi' }}</span>
                 <span class="mitra-chip"><i class="bi bi-briefcase"></i>{{ str_replace('_', ' ', $mitra->jenis_mitra ?: 'Jenis belum diisi') }}</span>
@@ -954,40 +1038,56 @@
         </div>
         <div class="d-flex gap-2">
             @if($canManageMitraMaster)
-                <a href="{{ route('jasa.mitra.edit', $mitra) }}" class="btn btn-light mitra-action jasa-icon-btn" title="Edit" aria-label="Edit"><i class="bi bi-pencil-square"></i></a>
+                <a href="{{ route('jasa.mitra.edit', $mitra) }}" class="btn btn-light mitra-action mitra-hero-btn fw-bold" title="Edit data mitra"><i class="bi bi-pencil-square"></i><span class="lbl">Edit mitra</span></a>
             @endif
-            <a href="{{ route('jasa.mitra.index') }}" class="btn btn-outline-light mitra-action jasa-icon-btn" title="Kembali" aria-label="Kembali"><i class="bi bi-arrow-left"></i></a>
+            <a href="{{ route('jasa.mitra.index') }}" class="btn btn-outline-light mitra-action jasa-icon-btn" title="Kembali ke daftar mitra" aria-label="Kembali"><i class="bi bi-arrow-left"></i></a>
         </div>
     </div>
 </div>
 
+@php
+    $hariIni = now()->startOfDay();
+    $kontrakAktifList = $mitra->kontrak->filter(fn ($k) => strtoupper((string) $k->status_kontrak) === 'AKTIF');
+    $kontrakBerakhirMasihAktif = $kontrakAktifList->filter(fn ($k) => $k->tanggal_selesai && $k->tanggal_selesai->lt($hariIni));
+    $kontrakAktifTanpaScope = $kontrakAktifList->filter(fn ($k) => $k->layananJasa->isEmpty());
+    $jumlahTagihanSemua = $tagihanKonsesiCount + $tagihanPjp2uRows->count() + $tagihanUtilitasRows->count() + $tagihanPnbpCount;
+    $totalTagihanSemua = $totalTagihanKonsesi + $totalTagihanPjp2u + $totalTagihanUtilitas + $totalTagihanPnbp;
+    $hakCount = $mitra->konsesi->count() + $mitra->pjp2u->count();
+    $laporanUtilitasCount = ($mitra->laporanUtilitas ?? collect())->count();
+
+    // Hal yang perlu ditindaklanjuti, paling penting di atas.
+    $perhatianMitra = [];
+    foreach ($kontrakBerakhirMasihAktif as $k) {
+        $perhatianMitra[] = ['danger', 'bi-exclamation-octagon', 'Kontrak '.($k->nomor_kontrak ?: $k->nama_kontrak).' sudah lewat masa berlakunya, tetapi status masih AKTIF.', 'Layanannya masih dianggap aktif. Perpanjang tanggalnya atau ubah status menjadi BERAKHIR.', route('jasa.mitra.kontrak.edit', [$mitra, $k]), 'Perbarui kontrak'];
+    }
+    foreach ($kontrakAktifTanpaScope as $k) {
+        $perhatianMitra[] = ['warning', 'bi-diagram-3', 'Kontrak '.($k->nomor_kontrak ?: $k->nama_kontrak).' aktif tetapi scope layanannya kosong.', 'Kontrak ini belum memberi layanan apa pun ke mitra.', route('jasa.mitra.kontrak.edit', [$mitra, $k]).'#scope-layanan', 'Atur scope'];
+    }
+    if (! $mitra->user && $mitra->kontrak->isNotEmpty()) {
+        $perhatianMitra[] = ['info', 'bi-person-lock', 'Mitra belum memiliki akun login.', $mitra->email ? 'Buat akun agar mitra bisa melihat tagihan dan mengirim laporan.' : 'Isi email mitra terlebih dahulu, lalu buat akun login.', $mitra->email ? '#akun-mitra' : route('jasa.mitra.edit', $mitra), $mitra->email ? 'Lihat akun' : 'Isi email'];
+    }
+@endphp
 <div class="row g-3 mb-4">
-    <div class="col-6 col-xl-3">
-        <div class="mitra-stat">
-            <div class="mitra-stat-label">Layanan Aktif</div>
-            <div class="mitra-stat-value">{{ number_format($layananAktifCount, 0, ',', '.') }}</div>
+    @foreach([
+        ['Kontrak Aktif', $kontrakAktifList->count().' / '.$mitra->kontrak->count(), $mitra->kontrak->isEmpty() ? 'Belum ada kontrak' : 'dokumen kontrak aktif', 'bi-file-earmark-check', '#4f46e5', 'rgba(79,70,229,.12)', 'ringkasan', '#kontrak-mitra'],
+        ['Layanan Aktif', number_format($layananAktifCount, 0, ',', '.'), $layananAktifCount ? 'dari scope kontrak aktif' : 'Belum ada layanan', 'bi-diagram-3', '#0ea5e9', '#e0f2fe', 'ringkasan', '#layanan-aktif'],
+        ['Laporan', number_format($laporanCount + $laporanUtilitasCount, 0, ',', '.'), 'pendapatan, PAX & utilitas', 'bi-bar-chart-line', '#10b981', '#d1fae5', 'laporan', ''],
+        ['Total Tagihan', $rupiah($totalTagihanSemua), $jumlahTagihanSemua.' tagihan', 'bi-receipt-cutoff', '#d97706', '#fef3c7', 'tagihan', ''],
+    ] as [$lbl, $val, $sub, $ico, $c, $soft, $tab, $anchor])
+        <div class="col-6 col-xl-3">
+            <a href="#tab-{{ $tab }}" class="mitra-stat" data-mt-goto="{{ $tab }}" data-mt-anchor="{{ $anchor }}" style="--st:{{ $c }};--st-soft:{{ $soft }};">
+                <div class="d-flex align-items-start justify-content-between gap-2">
+                    <div class="min-w-0">
+                        <div class="mitra-stat-label">{{ $lbl }}</div>
+                        <div class="mitra-stat-value">{{ $val }}</div>
+                        <div class="mitra-stat-sub">{{ $sub }}</div>
+                    </div>
+                    <span class="mitra-stat-ico"><i class="bi {{ $ico }}"></i></span>
+                </div>
+            </a>
         </div>
-    </div>
-    <div class="col-6 col-xl-3">
-        <div class="mitra-stat">
-            <div class="mitra-stat-label">Konsesi Aktif</div>
-            <div class="mitra-stat-value">{{ number_format($konsesiAktifCount, 0, ',', '.') }}</div>
-        </div>
-    </div>
-    <div class="col-6 col-xl-3">
-        <div class="mitra-stat">
-            <div class="mitra-stat-label">Laporan</div>
-            <div class="mitra-stat-value">{{ number_format($laporanCount, 0, ',', '.') }}</div>
-        </div>
-    </div>
-    <div class="col-6 col-xl-3">
-        <div class="mitra-stat">
-            <div class="mitra-stat-label">Nilai Tagihan</div>
-            <div class="mitra-stat-value">{{ $rupiah($totalNilaiTagihan) }}</div>
-        </div>
-    </div>
+    @endforeach
 </div>
-
 @if(session('success'))
     <div class="alert alert-success">{{ session('success') }}</div>
 @endif
@@ -1002,54 +1102,81 @@
     $stepKontrakDone = $hasKontrak;
     $stepLayananDone = $hasKontrak && $layananAktifCount > 0;
 @endphp
+@if($perhatianMitra)
+    <div class="mb-4" id="perhatian-mitra">
+        @foreach($perhatianMitra as [$jenis, $ikon, $judul, $detail, $href, $label])
+            <div class="mitra-alert {{ $jenis }}" role="alert">
+                <i class="bi {{ $ikon }} lead"></i>
+                <div class="flex-grow-1 min-w-0">
+                    <div class="t">{{ $judul }}</div>
+                    <div class="d">{{ $detail }}</div>
+                </div>
+                @if($canManageMitraMaster || str_starts_with($href, '#'))
+                    <a href="{{ $href }}" class="btn btn-sm btn-light border fw-bold" @if(str_starts_with($href, '#')) data-mt-goto="ringkasan" data-mt-anchor="{{ $href }}" @endif>{{ $label }}</a>
+                @endif
+            </div>
+        @endforeach
+    </div>
+@endif
+<div class="mitra-tabs-wrap mb-4">
+    <div class="mitra-tabs" role="tablist" aria-label="Bagian detail mitra">
+        @foreach([
+            ['ringkasan', 'bi-grid-1x2', 'Ringkasan', null],
+            ['hak', 'bi-percent', 'Hak Konsesi & PJP2U', $hakCount],
+            ['laporan', 'bi-bar-chart-line', 'Laporan', $laporanCount + $laporanUtilitasCount],
+            ['tagihan', 'bi-receipt', 'Tagihan', $jumlahTagihanSemua],
+        ] as [$key, $ico, $lbl, $n])
+            <button type="button" class="mitra-tab {{ $loop->first ? 'active' : '' }}" role="tab" id="tabbtn-{{ $key }}" aria-controls="tab-{{ $key }}" aria-selected="{{ $loop->first ? 'true' : 'false' }}" data-mt-tab="{{ $key }}">
+                <i class="bi {{ $ico }}"></i><span>{{ $lbl }}</span>@if($n !== null)<span class="cnt">{{ $n }}</span>@endif
+            </button>
+        @endforeach
+    </div>
+</div>
+
+{{-- ===== Tab: Ringkasan ===== --}}
+<div class="mitra-pane active" id="tab-ringkasan" role="tabpanel" aria-labelledby="tabbtn-ringkasan" data-mt-pane="ringkasan">
 <div class="row g-4">
     <div class="col-lg-5">
+        @php
+            $dataMitra = [
+                ['NPWP', $mitra->npwp, 'bi-card-text'],
+                ['Email', $mitra->email, 'bi-envelope'],
+                ['No HP/WA', $mitra->no_telepon, 'bi-telephone'],
+                ['Penanggung Jawab', $mitra->nama_penanggung_jawab, 'bi-person'],
+                ['Jabatan PJ', $mitra->jabatan_penanggung_jawab, 'bi-briefcase'],
+                ['Alamat', $mitra->alamat, 'bi-geo-alt'],
+            ];
+            $dataKosong = collect($dataMitra)->filter(fn ($row) => blank($row[1]))->count();
+        @endphp
         <div class="card mitra-section-card overflow-hidden">
-            <div class="card-header">
+            <div class="card-header d-flex justify-content-between align-items-center gap-2 flex-wrap">
                 <h5 class="mitra-section-title"><span class="mitra-section-icon"><i class="bi bi-person-vcard"></i></span>Informasi Mitra</h5>
+                @if($canManageMitraMaster && $dataKosong > 0)
+                    <a href="{{ route('jasa.mitra.edit', $mitra) }}" class="btn btn-sm btn-light border text-primary fw-bold">Lengkapi {{ $dataKosong }} data</a>
+                @endif
             </div>
             <div class="card-body p-4">
-                <div class="row g-3">
-                    @foreach([
-                        ['NPWP', $mitra->npwp ?: '-', 'bi-card-text'],
-                        ['Email', $mitra->email ?: '-', 'bi-envelope'],
-                        ['No HP/WA', $mitra->no_telepon ?: '-', 'bi-telephone'],
-                        ['Penanggung Jawab', $mitra->nama_penanggung_jawab ?: '-', 'bi-person'],
-                        ['Jabatan PJ', $mitra->jabatan_penanggung_jawab ?: '-', 'bi-briefcase'],
-                    ] as $item)
-                        <div class="col-12">
-                            <div class="mitra-info-item">
-                                <div class="mitra-info-icon"><i class="bi {{ $item[2] }}"></i></div>
-                                <div class="flex-grow-1">
-                                    <div class="mitra-info-label">{{ $item[0] }}</div>
-                                    <div class="mitra-info-value">{{ $item[1] }}</div>
-                                </div>
-                            </div>
+                <dl class="mitra-info-list mb-0">
+                    @foreach($dataMitra as [$label, $nilai, $ikon])
+                        <div class="mitra-info-row">
+                            <dt><i class="bi {{ $ikon }}"></i>{{ $label }}</dt>
+                            <dd>@if(filled($nilai)){{ $nilai }}@else<span class="mitra-info-empty">Belum diisi</span>@endif</dd>
                         </div>
                     @endforeach
-                    <div class="col-12">
-                        <div class="mitra-info-item">
-                            <div class="mitra-info-icon"><i class="bi bi-geo-alt"></i></div>
-                            <div>
-                                <div class="mitra-info-label">Alamat</div>
-                                <div class="mitra-info-value">{{ $mitra->alamat ?: '-' }}</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                </dl>
             </div>
         </div>
-    </div>
-    <div class="col-lg-7">
-        <div class="card mitra-section-card mb-4">
+        <div class="card mitra-section-card mt-4" id="akun-mitra">
             <div class="card-header d-flex justify-content-between align-items-center gap-3 flex-wrap">
                 <h5 class="mitra-section-title"><span class="mitra-section-icon"><i class="bi bi-shield-lock"></i></span>Akun Mitra</h5>
                 @if($canManageMitraMaster)
-                    @if(!$mitra->user)
+                    @if(!$mitra->user && $mitra->email)
                         <form action="{{ route('jasa.mitra.account.store', $mitra) }}" method="POST">
                             @csrf
-                            <button class="btn btn-sm btn-primary fw-bold jasa-icon-btn" type="submit" title="Buat akun" aria-label="Buat akun"><i class="bi bi-person-plus"></i></button>
+                            <button class="btn btn-sm btn-primary fw-bold" type="submit" title="Buat akun login mitra"><i class="bi bi-person-plus me-1"></i>Buat akun</button>
                         </form>
+                    @elseif(!$mitra->user)
+                        <button type="button" class="btn btn-sm fw-bold jasa-icon-btn btn-add-disabled" title="Isi email mitra terlebih dahulu" aria-label="Buat akun (email belum diisi)"><i class="bi bi-person-plus"></i></button>
                     @else
                         <form action="{{ route('jasa.mitra.account.reset', $mitra) }}" method="POST" onsubmit="return confirm('Reset password akun mitra ini? Password baru akan ditampilkan setelah proses berhasil.');">
                             @csrf
@@ -1078,11 +1205,19 @@
                         </div>
                     @endif
                 @else
-                    <div class="mitra-empty"><i class="bi bi-person-lock"></i>Mitra belum memiliki akun login. Pastikan email mitra sudah diisi sebelum membuat akun.</div>
+                    @if($mitra->email)
+                        <div class="mitra-empty"><i class="bi bi-person-lock"></i>Mitra belum memiliki akun login.<br>Akun akan dibuat dengan email <strong>{{ $mitra->email }}</strong>@if($canManageMitraMaster) melalui tombol <b>Buat akun</b>@endif.</div>
+                    @else
+                        <div class="mitra-empty"><i class="bi bi-envelope-exclamation"></i>Email mitra belum diisi, jadi akun login belum bisa dibuat.
+                            @if($canManageMitraMaster)<div class="mt-2"><a href="{{ route('jasa.mitra.edit', $mitra) }}" class="btn btn-sm btn-outline-primary fw-bold">Isi email mitra</a></div>@endif
+                        </div>
+                    @endif
                 @endif
             </div>
         </div>
-
+    </div>
+    <div class="col-lg-7">
+        @unless($stepLayananDone)
         {{-- Workflow Pipeline --}}
         <div class="workflow-pipeline">
             <div class="wp-step is-done">
@@ -1109,6 +1244,7 @@
                 </div>
             </div>
         </div>
+        @endunless
 
         {{-- Kontrak: Priority Card (empty) atau Active Card --}}
         @if(! $hasKontrak)
@@ -1135,7 +1271,7 @@
                 @endif
             </div>
         @else
-            <div class="kontrak-active-card">
+            <div class="kontrak-active-card" id="kontrak-mitra">
                 <div class="kac-head">
                     <span class="kac-icon"><i class="bi bi-file-earmark-check-fill"></i></span>
                     <div>
@@ -1165,14 +1301,18 @@
                         <div class="kontrak-row-modern">
                             <span class="krm-num">{{ $loop->iteration }}</span>
                             <div class="krm-info">
-                                <div class="krm-title">{{ $kontrak->nomor_kontrak ?: '-' }} &middot; {{ $kontrak->nama_kontrak ?: 'Dokumen Mitra Jasa' }}</div>
+                                <a href="{{ route('jasa.mitra.kontrak.show', [$mitra, $kontrak]) }}" class="krm-title">{{ $kontrak->nama_kontrak ?: 'Dokumen Mitra Jasa' }}</a>
+                                <div class="krm-no">#{{ $kontrak->nomor_kontrak ?: '-' }}</div>
                                 <div class="krm-meta">
                                     <span><i class="bi bi-tag-fill me-1"></i>{{ str_replace('_', ' ', $kontrak->jenis_dokumen ?: '-') }}</span>
                                     <span><i class="bi bi-calendar3 me-1"></i>{{ optional($kontrak->tanggal_mulai)->format('d/m/Y') ?: '-' }} &mdash; {{ optional($kontrak->tanggal_selesai)->format('d/m/Y') ?: '-' }}</span>
                                     <span class="kontrak-status-pill {{ $statusCls }}">{{ $kontrak->status_kontrak }}</span>
+                                    @if($statusKey === 'aktif' && $kontrak->tanggal_selesai && $kontrak->tanggal_selesai->lt($hariIni))
+                                        <span class="kontrak-status-pill is-expired" title="Status AKTIF tetapi tanggal selesai sudah lewat"><i class="bi bi-exclamation-triangle-fill"></i>Masa berakhir</span>
+                                    @endif
                                 </div>
                                 @if($kontrak->layananJasa->isEmpty())
-                                    <span class="krm-scope"><i class="bi bi-diagram-3"></i> Berlaku untuk semua layanan aktif mitra</span>
+                                    <span class="krm-scope is-empty"><i class="bi bi-exclamation-circle"></i> Scope kosong — belum memberi layanan</span>
                                 @else
                                     @php
                                         $scope = $kontrak->layananJasa->sortBy('kode_layanan');
@@ -1180,7 +1320,7 @@
                                     <details class="krm-scope-acc">
                                         <summary>
                                             <i class="bi bi-diagram-3"></i>
-                                            <strong>{{ $scope->count() }} layanan</strong>
+                                            <strong class="text-nowrap">{{ $scope->count() }} layanan</strong>
                                             <span class="krm-scope-prev">— {{ $scope->take(2)->pluck('nama_layanan')->join(', ') }}{{ $scope->count() > 2 ? ', …' : '' }}</span>
                                             <i class="bi bi-chevron-down krm-scope-chev"></i>
                                         </summary>
@@ -1195,6 +1335,8 @@
                             <div class="krm-actions">
                                 <a href="{{ route('jasa.mitra.kontrak.show', [$mitra, $kontrak]) }}" class="btn btn-sm btn-light border jasa-icon-btn" title="Detail" aria-label="Detail"><i class="bi bi-eye"></i></a>
                                 @if($canManageMitraMaster)
+                                    {{-- Layanan aktif mitra diturunkan dari scope layanan kontrak aktif. --}}
+                                    <a href="{{ route('jasa.mitra.kontrak.edit', [$mitra, $kontrak]) }}#scope-layanan" class="btn btn-sm btn-light border text-primary jasa-icon-btn" title="Edit layanan (scope kontrak)" aria-label="Edit layanan"><i class="bi bi-diagram-3"></i></a>
                                     <form method="POST" action="{{ route('jasa.mitra.kontrak.destroy', [$mitra, $kontrak]) }}" onsubmit="return confirm('Hapus kontrak/dokumen ini? Data yang sudah dipakai tagihan tidak bisa dihapus.');">
                                         @csrf
                                         @method('DELETE')
@@ -1227,18 +1369,15 @@
             </div>
         @endunless
 
-        <div class="card mitra-section-card {{ ! $hasKontrak ? 'section-locked' : '' }}">
+        <div class="card mitra-section-card mt-4 {{ ! $hasKontrak ? 'section-locked' : '' }}" id="layanan-aktif">
             <div class="card-header d-flex justify-content-between align-items-center gap-3 flex-wrap">
                 <h5 class="mitra-section-title">
                     <span class="mitra-section-icon"><i class="bi {{ $hasKontrak ? 'bi-diagram-3' : 'bi-lock-fill' }}"></i></span>
                     Layanan Aktif
+                    @if($layananAktifCount)<span class="mitra-count">{{ $layananAktifCount }}</span>@endif
                 </h5>
-                @if($canManageMitraMaster)
-                    @if($hasKontrak)
-                        <a href="{{ route('jasa.mitra.layanan.edit', $mitra) }}" class="btn btn-sm btn-primary fw-bold jasa-icon-btn" title="Atur layanan" aria-label="Atur layanan"><i class="bi bi-sliders"></i></a>
-                    @else
-                        <button type="button" class="btn btn-sm fw-bold jasa-icon-btn btn-add-disabled" title="Tambah kontrak terlebih dahulu" aria-label="Terkunci"><i class="bi bi-lock-fill"></i></button>
-                    @endif
+                @if($canManageMitraMaster && ! $hasKontrak)
+                    <button type="button" class="btn btn-sm fw-bold jasa-icon-btn btn-add-disabled" title="Tambah kontrak terlebih dahulu" aria-label="Terkunci"><i class="bi bi-lock-fill"></i></button>
                 @endif
             </div>
             <div class="card-body">
@@ -1251,27 +1390,54 @@
                 @elseif($mitra->layananJasa->isEmpty())
                     <div class="mitra-empty"><i class="bi bi-diagram-3"></i>Belum ada layanan aktif untuk mitra ini.</div>
                 @else
-                    <div class="mb-3">
-                        <div class="fw-bold">Jenis Penerimaan</div>
-                        <div class="small text-muted">{{ number_format($layananAktifCount, 0, ',', '.') }} layanan terhubung ke mitra ini.</div>
-                    </div>
-                    <div class="layanan-tree-panel">
-                        @php
-                            $childrenByParent = $layananTreeItems->groupBy(fn ($item) => $item->parent_id ?: 'root');
-                        @endphp
-                        @include('super_admin_jasa.mitra.partials.layanan-tree-readonly', [
-                            'childrenByParent' => $childrenByParent,
-                            'parentId' => 'root',
-                            'depth' => 0,
-                            'selectedLayananIds' => $selectedLayananIds,
-                            'visibleLayananIds' => $visibleLayananIds,
-                        ])
-                    </div>
+                    @php
+                        // Kelompokkan layanan aktif per kategori puncak (jalur dari master layanan).
+                        $grupLayananAktif = $mitra->layananJasa
+                            ->map(function ($l) use ($layananTreeById) {
+                                $jalur = [];
+                                $p = $l->parent_id ? $layananTreeById->get($l->parent_id) : null;
+                                for ($g = 0; $p && $g < 10; $g++) {
+                                    array_unshift($jalur, $p->nama_layanan);
+                                    $p = $p->parent_id ? $layananTreeById->get($p->parent_id) : null;
+                                }
+
+                                return ['layanan' => $l, 'root' => $jalur[0] ?? 'Tanpa kategori', 'sub' => implode(' › ', array_slice($jalur, 1))];
+                            })
+                            ->sortBy(fn ($r) => $r['root'].'|'.$r['sub'].'|'.$r['layanan']->nama_layanan)
+                            ->groupBy('root');
+                    @endphp
+                    <p class="small text-muted mb-3"><i class="bi bi-info-circle me-1"></i>Diturunkan dari scope layanan kontrak aktif. Untuk mengubah, gunakan tombol <i class="bi bi-diagram-3"></i> pada kontrak.</p>
+                    @foreach($grupLayananAktif as $root => $rows)
+                        <div class="la-group">
+                            <div class="la-group-head"><i class="bi bi-folder2-open"></i><span class="tt">{{ $root }}</span><span class="n">{{ $rows->count() }}</span></div>
+                            <div class="la-items">
+                                @foreach($rows as $row)
+                                    <div class="la-item">
+                                        <i class="bi bi-check2-circle"></i>
+                                        <div class="min-w-0">
+                                            <div class="nm">{{ $row['layanan']->nama_layanan }}</div>
+                                            <div class="mt">{{ $row['layanan']->kode_layanan ?: '—' }}@if($row['sub']) · {{ $row['sub'] }}@endif</div>
+                                        </div>
+                                    </div>
+                                @endforeach
+                            </div>
+                        </div>
+                    @endforeach
                 @endif
             </div>
         </div>
+    </div>
+</div>
+</div>
 
-        <div class="card mitra-section-card mt-4 {{ ! $hasKontrak ? 'section-locked' : '' }}">
+{{-- ===== Tab: Hak Konsesi & PJP2U ===== --}}
+<div class="mitra-pane" id="tab-hak" role="tabpanel" aria-labelledby="tabbtn-hak" data-mt-pane="hak" hidden>
+    @unless($hasKontrak)
+        <div class="locked-banner mb-4"><span class="lb-icon"><i class="bi bi-lock-fill"></i></span><div><div class="lb-text"><strong>Modul terkunci.</strong> Tambahkan kontrak terlebih dahulu untuk mengatur hak konsesi dan PJP2U.</div></div></div>
+    @endunless
+    <div class="row g-4">
+        <div class="col-xxl-6">
+        <div class="card mitra-section-card h-100 {{ ! $hasKontrak ? 'section-locked' : '' }}">
             <div class="card-header d-flex justify-content-between align-items-center gap-3 flex-wrap">
                 <h5 class="mitra-section-title">
                     <span class="mitra-section-icon"><i class="bi {{ $hasKontrak ? 'bi-percent' : 'bi-lock-fill' }}"></i></span>
@@ -1344,8 +1510,9 @@
                 @endif
             </div>
         </div>
-
-        <div class="card mitra-section-card mt-4 {{ ! $hasKontrak ? 'section-locked' : '' }}">
+        </div>
+        <div class="col-xxl-6">
+        <div class="card mitra-section-card h-100 {{ ! $hasKontrak ? 'section-locked' : '' }}">
             <div class="card-header d-flex justify-content-between align-items-center gap-3 flex-wrap">
                 <h5 class="mitra-section-title">
                     <span class="mitra-section-icon"><i class="bi {{ $hasKontrak ? 'bi-airplane' : 'bi-lock-fill' }}"></i></span>
@@ -1418,13 +1585,13 @@
                 @endif
             </div>
         </div>
-
+        </div>
     </div>
 </div>
 
-<div class="row g-4 mt-1">
-    <div class="col-12">
-        <div class="card mitra-section-card mt-4">
+{{-- ===== Tab: Laporan ===== --}}
+<div class="mitra-pane" id="tab-laporan" role="tabpanel" aria-labelledby="tabbtn-laporan" data-mt-pane="laporan" hidden>
+        <div class="card mitra-section-card">
             <div class="card-header d-flex justify-content-between align-items-center gap-3 flex-wrap">
                 <h5 class="mitra-section-title"><span class="mitra-section-icon"><i class="bi bi-bar-chart-line"></i></span>Riwayat Laporan Pendapatan/Penjualan</h5>
                 @if($canManageMitraMaster)
@@ -1609,8 +1776,29 @@
                 </div>
             </div>
         </div>
+</div>
 
-        <div class="tw-scope mt-4">
+{{-- ===== Tab: Tagihan ===== --}}
+<div class="mitra-pane" id="tab-tagihan" role="tabpanel" aria-labelledby="tabbtn-tagihan" data-mt-pane="tagihan" hidden>
+    <div class="tagihan-ringkas mb-4">
+        @foreach([
+            ['konsesi', 'Konsesi', 'bi-percent', $tagihanKonsesiCount, $totalTagihanKonsesi],
+            ['utilitas', 'Air & Listrik', 'bi-droplet', $tagihanUtilitasRows->count(), $totalTagihanUtilitas],
+            ['pjp2u', 'PAX PJP2U', 'bi-airplane', $tagihanPjp2uRows->count(), $totalTagihanPjp2u],
+            ['pnbp', 'PNBP', 'bi-receipt', $tagihanPnbpCount, $totalTagihanPnbp],
+        ] as [$key, $lbl, $ico, $n, $tot])
+            <a href="#tagihan-{{ $key }}" class="tr-item {{ $n ? '' : 'is-empty' }}" data-mt-goto="tagihan" data-mt-anchor="#tagihan-{{ $key }}">
+                <span class="tr-ico"><i class="bi {{ $ico }}"></i></span>
+                <span class="min-w-0">
+                    <span class="tr-lbl">{{ $lbl }}</span>
+                    <span class="tr-val">{{ $rupiah($tot) }}</span>
+                    <span class="tr-sub">{{ $n }} tagihan</span>
+                </span>
+            </a>
+        @endforeach
+    </div>
+    <div class="tagihan-stack">
+        <div id="tagihan-konsesi" style="order: {{ $tagihanKonsesiCount > 0 ? 0 : 1 }}" class="tw-scope">
             <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_18px_45px_rgba(15,23,42,.08)]">
                 <div class="bg-gradient-to-r from-sky-600 via-cyan-600 to-teal-500 px-5 py-5 text-white sm:px-6">
                     <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -1700,7 +1888,7 @@
             </div>
         </div>
 
-        <div class="tw-scope mt-4">
+        <div id="tagihan-utilitas" style="order: {{ $tagihanUtilitasRows->count() > 0 ? 0 : 1 }}" class="tw-scope mt-4">
             <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_18px_45px_rgba(15,23,42,.08)]">
                 <div class="bg-gradient-to-r from-teal-700 via-cyan-600 to-blue-500 px-5 py-5 text-white sm:px-6">
                     <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -1790,7 +1978,7 @@
             </div>
         </div>
 
-        <div class="tw-scope mt-4">
+        <div id="tagihan-pjp2u" style="order: {{ $tagihanPjp2uRows->count() > 0 ? 0 : 1 }}" class="tw-scope mt-4">
             <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_18px_45px_rgba(15,23,42,.08)]">
                 <div class="bg-gradient-to-r from-blue-700 via-sky-600 to-cyan-500 px-5 py-5 text-white sm:px-6">
                     <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -1882,7 +2070,7 @@
             </div>
         </div>
 
-        <div class="tw-scope mt-4">
+        <div id="tagihan-pnbp" style="order: {{ $tagihanPnbpCount > 0 ? 0 : 1 }}" class="tw-scope mt-4">
             <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_18px_45px_rgba(15,23,42,.08)]">
                 <div class="bg-gradient-to-r from-indigo-600 via-violet-600 to-fuchsia-500 px-5 py-5 text-white sm:px-6">
                     <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -1980,3 +2168,53 @@
 </div>
 </div>
 @endsection
+
+@push('script')
+<script>
+// Tab detail mitra: dapat ditautkan lewat hash (#tab-laporan) dan otomatis membuka
+// tab yang memuat elemen tujuan (mis. #riwayat-pax-pjp2u dari halaman rekap).
+(function () {
+    const tombol = document.querySelectorAll('[data-mt-tab]');
+    const panel = document.querySelectorAll('[data-mt-pane]');
+    if (!tombol.length) return;
+
+    function buka(key, simpanHash) {
+        tombol.forEach((b) => {
+            const aktif = b.dataset.mtTab === key;
+            b.classList.toggle('active', aktif);
+            b.setAttribute('aria-selected', aktif ? 'true' : 'false');
+        });
+        panel.forEach((p) => {
+            const aktif = p.dataset.mtPane === key;
+            p.hidden = !aktif;
+            p.classList.toggle('active', aktif);
+        });
+        if (simpanHash) history.replaceState(null, '', '#tab-' + key);
+    }
+
+    function gulirKe(el) {
+        if (!el) return;
+        const y = el.getBoundingClientRect().top + window.scrollY - 140;
+        window.scrollTo({ top: y, behavior: 'smooth' });
+    }
+
+    tombol.forEach((b) => b.addEventListener('click', () => buka(b.dataset.mtTab, true)));
+
+    document.querySelectorAll('[data-mt-goto]').forEach((a) => a.addEventListener('click', (e) => {
+        e.preventDefault();
+        buka(a.dataset.mtGoto, true);
+        gulirKe(a.dataset.mtAnchor ? document.querySelector(a.dataset.mtAnchor) : document.querySelector('.mitra-tabs-wrap'));
+    }));
+
+    const hash = decodeURIComponent(location.hash || '');
+    if (hash.startsWith('#tab-')) {
+        const key = hash.slice(5);
+        if (document.querySelector('[data-mt-pane="' + key + '"]')) buka(key, false);
+    } else if (hash.length > 1) {
+        const target = document.getElementById(hash.slice(1));
+        const pane = target && target.closest('[data-mt-pane]');
+        if (pane) { buka(pane.dataset.mtPane, false); setTimeout(() => gulirKe(target), 50); }
+    }
+})();
+</script>
+@endpush

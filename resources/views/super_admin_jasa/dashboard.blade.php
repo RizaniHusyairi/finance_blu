@@ -823,7 +823,6 @@
                             <div class="fw-semibold">{{ $mitra->nama_mitra }}</div>
                             <small class="text-muted">{{ $mitra->email ?: '-' }}</small>
                         </div>
-                        <a href="{{ route('jasa.mitra.layanan.edit', $mitra) }}" class="btn btn-sm btn-outline-primary jasa-icon-btn" title="Atur layanan" aria-label="Atur layanan"><i class="bi bi-sliders"></i></a>
                     </div>
                 @empty
                     <div class="text-muted small">Semua mitra aktif sudah memiliki layanan.</div>
