@@ -1195,6 +1195,8 @@
                             <div class="krm-actions">
                                 <a href="{{ route('jasa.mitra.kontrak.show', [$mitra, $kontrak]) }}" class="btn btn-sm btn-light border jasa-icon-btn" title="Detail" aria-label="Detail"><i class="bi bi-eye"></i></a>
                                 @if($canManageMitraMaster)
+                                    {{-- Layanan aktif mitra diturunkan dari scope layanan kontrak aktif. --}}
+                                    <a href="{{ route('jasa.mitra.kontrak.edit', [$mitra, $kontrak]) }}#scope-layanan" class="btn btn-sm btn-light border text-primary jasa-icon-btn" title="Edit layanan (scope kontrak)" aria-label="Edit layanan"><i class="bi bi-diagram-3"></i></a>
                                     <form method="POST" action="{{ route('jasa.mitra.kontrak.destroy', [$mitra, $kontrak]) }}" onsubmit="return confirm('Hapus kontrak/dokumen ini? Data yang sudah dipakai tagihan tidak bisa dihapus.');">
                                         @csrf
                                         @method('DELETE')
@@ -1233,12 +1235,8 @@
                     <span class="mitra-section-icon"><i class="bi {{ $hasKontrak ? 'bi-diagram-3' : 'bi-lock-fill' }}"></i></span>
                     Layanan Aktif
                 </h5>
-                @if($canManageMitraMaster)
-                    @if($hasKontrak)
-                        <a href="{{ route('jasa.mitra.layanan.edit', $mitra) }}" class="btn btn-sm btn-primary fw-bold jasa-icon-btn" title="Atur layanan" aria-label="Atur layanan"><i class="bi bi-sliders"></i></a>
-                    @else
-                        <button type="button" class="btn btn-sm fw-bold jasa-icon-btn btn-add-disabled" title="Tambah kontrak terlebih dahulu" aria-label="Terkunci"><i class="bi bi-lock-fill"></i></button>
-                    @endif
+                @if($canManageMitraMaster && ! $hasKontrak)
+                    <button type="button" class="btn btn-sm fw-bold jasa-icon-btn btn-add-disabled" title="Tambah kontrak terlebih dahulu" aria-label="Terkunci"><i class="bi bi-lock-fill"></i></button>
                 @endif
             </div>
             <div class="card-body">
