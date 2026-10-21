@@ -1,16 +1,17 @@
-<div class="table-responsive">
-    <table class="table align-middle mb-0">
+{{-- Tabel di kontainer lebar; di kontainer sempit tiap baris menjadi kartu
+     (lihat @container di dipas/index). data-label dipakai sebagai label kartu. --}}
+<div class="dp-table-wrap">
+    <table class="table align-middle mb-0 dp-table">
         <thead>
             <tr>
-                <th class="text-center" width="4%">No</th>
-                <th width="24%">Nomor DIPA</th>
-                <th width="8%">Tahun</th>
-                <th width="12%">Tanggal Disahkan</th>
-                <th width="10%">Revisi Aktif</th>
-                <th width="16%" class="text-end">Total Pagu Revisi Aktif</th>
-                <th width="9%" class="text-center">Status</th>
-                <th width="8%" class="text-center">COA</th>
-                <th width="14%" class="text-center">Aksi</th>
+                <th class="dp-c-no text-center">No</th>
+                <th class="dp-c-dipa">Nomor DIPA</th>
+                <th class="dp-c-tahun">Tahun &amp; Pengesahan</th>
+                <th class="dp-c-rev">Revisi Aktif</th>
+                <th class="dp-c-pagu text-end">Total Pagu Revisi Aktif</th>
+                <th class="dp-c-status text-center">Status</th>
+                <th class="dp-c-coa text-center">COA</th>
+                <th class="dp-c-aksi text-center">Aksi</th>
             </tr>
         </thead>
         <tbody>
@@ -20,39 +21,45 @@
                     $activeItems = collect(optional($activeRevision)->items)->where('status_aktif', true);
                 @endphp
                 <tr>
-                    <td class="text-center text-muted fw-semibold">{{ $loop->iteration }}</td>
-                    <td>
+                    <td class="dp-c-no text-center text-muted fw-semibold">{{ $loop->iteration }}</td>
+                    <td class="dp-c-dipa">
                         <div class="d-flex align-items-center gap-3">
                             <div class="dp-doc-tile"><i class="bi bi-journal-bookmark-fill"></i></div>
-                            <div>
-                                <a href="{{ route('dipas.show', $dipa) }}" class="dp-nomor text-decoration-none">{{ $dipa->nomor_dipa }}</a>
+                            <div class="min-w-0">
+                                <a href="{{ route('dipas.show', $dipa) }}" class="dp-nomor text-decoration-none">{!! str_replace(['/', '.'], ['/<wbr>', '.<wbr>'], e($dipa->nomor_dipa)) !!}</a>
                                 <div class="small text-muted">Dokumen induk DIPA</div>
                             </div>
                         </div>
                     </td>
-                    <td><span class="dp-badge dp-badge-year"><i class="bi bi-calendar3"></i>{{ $dipa->tahun_anggaran }}</span></td>
-                    <td>
-                        <div class="fw-semibold">{{ optional($dipa->tanggal_disahkan)->format('d M Y') ?? '-' }}</div>
-                        @if($dipa->tanggal_disahkan)
-                            <div class="small text-muted">{{ $dipa->tanggal_disahkan->diffForHumans() }}</div>
-                        @endif
+                    <td class="dp-c-tahun" data-label="Tahun &amp; Pengesahan">
+                        <span class="dp-badge dp-badge-year"><i class="bi bi-calendar3"></i>TA {{ $dipa->tahun_anggaran }}</span>
+                        <div class="dp-tgl">
+                            <span class="fw-semibold">{{ optional($dipa->tanggal_disahkan)->format('d M Y') ?? '-' }}</span>
+                            @if($dipa->tanggal_disahkan)
+                                <span class="dp-tgl-rel text-muted">{{ $dipa->tanggal_disahkan->diffForHumans() }}</span>
+                            @endif
+                        </div>
                     </td>
-                    <td><span class="dp-badge dp-badge-rev"><i class="bi bi-arrow-repeat"></i>Revisi {{ $dipa->revisi_aktif_ke ?? 0 }}</span></td>
-                    <td class="text-end">
+                    <td class="dp-c-rev" data-label="Revisi Aktif">
+                        <span class="dp-badge dp-badge-rev"><i class="bi bi-arrow-repeat"></i>Revisi {{ $dipa->revisi_aktif_ke ?? 0 }}</span>
+                    </td>
+                    <td class="dp-c-pagu text-end" data-label="Total Pagu Revisi Aktif">
                         <div class="dp-pagu">Rp {{ number_format(optional($activeRevision)->total_pagu ?? 0, 0, ',', '.') }}</div>
                     </td>
-                    <td class="text-center">
+                    <td class="dp-c-status text-center">
                         @if($dipa->status_aktif)
                             <span class="dp-badge dp-badge-aktif"><span class="dot"></span>Aktif</span>
                         @else
                             <span class="dp-badge dp-badge-nonaktif"><i class="bi bi-pause-circle"></i>Nonaktif</span>
                         @endif
                     </td>
-                    <td class="text-center">
-                        <span class="dp-badge dp-badge-item"><i class="bi bi-list-ol"></i>{{ $activeItems->count() }}</span>
+                    <td class="dp-c-coa text-center" data-label="COA Aktif">
+                        <span class="dp-badge dp-badge-item" title="{{ $activeItems->count() }} COA aktif pada revisi aktif">
+                            <i class="bi bi-list-ol"></i>{{ number_format($activeItems->count(), 0, ',', '.') }}
+                        </span>
                     </td>
-                    <td class="text-center">
-                        <div class="d-inline-flex align-items-center justify-content-center gap-1 flex-wrap">
+                    <td class="dp-c-aksi text-center">
+                        <div class="dp-actions">
                             <a href="{{ route('dipas.show', $dipa) }}"
                                class="dp-act dp-act-view"
                                title="Lihat detail" aria-label="Lihat detail">
@@ -101,8 +108,8 @@
                     </td>
                 </tr>
             @empty
-                <tr>
-                    <td colspan="9">
+                <tr class="dp-row-empty">
+                    <td colspan="8">
                         <div class="dp-empty">
                             <div class="glyph"><i class="bi bi-journal-x"></i></div>
                             <div class="fw-bold mb-1" style="color:#334155;">Tidak ada DIPA ditemukan</div>

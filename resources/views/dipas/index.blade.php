@@ -124,7 +124,7 @@ tr:hover .dp-doc-tile { transform:scale(1.08) rotate(-4deg); }
 
 /* Badge modern */
 .dp-badge { display:inline-flex; align-items:center; gap:.35rem; font-size:.7rem; font-weight:700;
-    padding:.32rem .7rem; border-radius:999px; letter-spacing:.03em; }
+    padding:.32rem .7rem; border-radius:999px; letter-spacing:.03em; white-space:nowrap; line-height:1.2; }
 .dp-badge-year   { background:#f1f5f9; color:#334155; border:1px solid #e2e8f0; }
 .dp-badge-rev    { background:#ecfeff; color:#0e7490; border:1px solid #a5f3fc; }
 .dp-badge-item   { background:#eef2ff; color:#4338ca; border:1px solid #e0e7ff; }
@@ -148,6 +148,93 @@ tr:hover .dp-doc-tile { transform:scale(1.08) rotate(-4deg); }
 .dp-act-off:hover    { background:#64748b; border-color:#64748b; color:#fff; }
 .dp-act-del:hover:not(:disabled) { background:#e11d48; border-color:#e11d48; color:#fff; box-shadow:0 8px 18px -6px rgba(225,29,72,.55); }
 .dp-act:disabled     { opacity:.4; cursor:not-allowed; transform:none !important; }
+
+/* ---------- TATA LETAK TABEL ----------
+   Container query: lebar sidebar ikut menentukan ruang, jadi yang diukur
+   kartu tabelnya, bukan viewport. */
+.dp-table-card { container-type:inline-size; container-name:dptable; }
+.dp-table-wrap { overflow-x:auto; }
+.dp-table { width:100%; table-layout:auto; }
+/* Selektor sengaja spesifik: gaya global tema menimpa padding .table. */
+.main-content .dp-table-card .dp-table.table > :not(caption) > * > * { padding:.95rem .75rem !important; vertical-align:middle; overflow-wrap:normal; }
+.main-content .dp-table-card .dp-table.table > :not(caption) > * > :first-child { padding-left:1.25rem !important; }
+.main-content .dp-table-card .dp-table.table > :not(caption) > * > :last-child { padding-right:1.25rem !important; }
+.dp-table th { white-space:nowrap; }
+.dp-c-no { width:3rem; }
+.dp-c-dipa { min-width:13rem; }
+.dp-c-tahun, .dp-c-rev, .dp-c-pagu, .dp-c-status, .dp-c-coa, .dp-c-aksi { white-space:nowrap; width:1%; }
+.dp-nomor { overflow-wrap:break-word; line-height:1.35; }
+.min-w-0 { min-width:0; }
+.dp-tgl { display:flex; flex-direction:column; margin-top:.35rem; font-size:.85rem; line-height:1.3; }
+.dp-tgl-rel { font-size:.74rem; }
+.dp-actions { display:inline-flex; align-items:center; justify-content:center; gap:.3rem; flex-wrap:nowrap; }
+.dp-actions .dp-act { width:32px; height:32px; border-radius:10px; }
+
+/* Kontainer sedang: rapatkan, sembunyikan teks relatif tanggal. */
+@container dptable (max-width: 1200px) {
+    .main-content .dp-table-card .dp-table.table > :not(caption) > * > * { padding:.85rem .5rem !important; }
+    .main-content .dp-table-card .dp-table thead th { letter-spacing:.06em; white-space:normal; line-height:1.35; }
+    .dp-table .dp-c-no { display:none; }
+    .main-content .dp-table-card .dp-table.table > :not(caption) > * > .dp-c-dipa { padding-left:1.25rem !important; }
+    .dp-c-dipa { min-width:12rem; }
+    .dp-tgl-rel { display:none; }
+    .dp-doc-tile { width:36px; height:36px; font-size:.95rem; }
+}
+
+/* Kontainer sempit: tiap baris menjadi kartu. */
+@container dptable (max-width: 900px) {
+    .dp-table-wrap { overflow:visible; padding:.85rem; }
+    .dp-table, .dp-table tbody { display:block; }
+    .dp-table thead { display:none; }
+    .dp-table tbody { display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 330px), 1fr)); gap:.85rem; }
+    .dp-table tbody tr { display:grid; grid-template-columns:repeat(6, minmax(0, 1fr)); column-gap:.75rem;
+        grid-template-areas:
+            "dipa dipa dipa dipa dipa dipa"
+            "pagu pagu pagu pagu status status"
+            "tahun tahun rev rev coa coa"
+            "aksi aksi aksi aksi aksi aksi";
+        border:1px solid var(--dp-border); border-radius:1rem; background:#fff; padding:1rem;
+        box-shadow:0 10px 24px -20px rgba(30,27,75,.45); }
+    .dp-table tbody tr:hover { box-shadow:inset 3px 0 0 var(--dp-indigo), 0 16px 30px -22px rgba(79,70,229,.5); }
+    .main-content .dp-table-card .dp-table.table > :not(caption) > * > *,
+    .main-content .dp-table-card .dp-table.table > :not(caption) > * > :first-child,
+    .main-content .dp-table-card .dp-table.table > :not(caption) > * > :last-child { padding:0 !important; }
+    .main-content .dp-table-card .dp-table.table > tbody > tr > td.dp-c-dipa { padding:0 0 .85rem !important; }
+    .main-content .dp-table-card .dp-table.table > tbody > tr > td.dp-c-aksi { padding-top:.85rem !important; }
+    .dp-table tbody td { display:block; border:0; width:auto; min-width:0; text-align:left !important; }
+    .dp-table td.dp-c-no { display:none; }
+    .dp-c-dipa   { grid-area:dipa; margin-bottom:.85rem;
+        border-bottom:1px dashed var(--dp-border) !important; }
+    .dp-c-pagu   { grid-area:pagu; align-self:center; }
+    .dp-c-status { grid-area:status; justify-self:end; align-self:center; }
+    .dp-c-tahun  { grid-area:tahun; margin-top:.85rem; }
+    .dp-c-rev    { grid-area:rev; margin-top:.85rem; }
+    .dp-c-coa    { grid-area:coa; margin-top:.85rem; }
+    .dp-c-aksi   { grid-area:aksi; margin-top:1rem;
+        border-top:1px solid var(--dp-border) !important; }
+    .dp-table td[data-label]::before { content:attr(data-label); display:block; margin-bottom:.35rem;
+        font-size:.64rem; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:#7c8db5;
+        white-space:normal; }
+    .dp-c-pagu .dp-pagu { font-size:1.08rem; }
+    .dp-tgl-rel { display:block; }
+    .dp-actions { display:flex; justify-content:space-between; width:100%; }
+    .dp-actions > * { flex:1 1 0; }
+    .dp-actions .dp-act, .dp-actions form .dp-act, .dp-actions span .dp-act { width:100%; height:38px; }
+    .dp-actions form, .dp-actions > span { display:block !important; }
+    .dp-table tbody tr.dp-row-empty { display:block; grid-column:1 / -1; }
+    .dp-row-empty td { display:block; }
+}
+
+/* Kartu sangat sempit (ponsel kecil): meta jadi dua kolom. */
+@container dptable (max-width: 380px) {
+    .dp-table-wrap { padding:.6rem; }
+    .dp-table tbody tr { padding:.85rem; grid-template-areas:
+            "dipa dipa dipa dipa dipa dipa"
+            "pagu pagu pagu pagu status status"
+            "tahun tahun tahun rev rev rev"
+            "coa coa coa coa coa coa"
+            "aksi aksi aksi aksi aksi aksi"; }
+}
 
 /* Empty state */
 .dp-empty { padding:3.5rem 1rem; text-align:center; color:var(--dp-muted); }
