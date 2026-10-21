@@ -97,7 +97,12 @@ class KontrakMitraJasaController extends Controller
         $kontrak->load('layananJasa.parent.parent.parent.parent.parent')
             ->loadCount(['tagihanJasa', 'konsesi', 'penjualan', 'pjp2u']);
 
-        return view('super_admin_jasa.mitra.kontrak-show', compact('mitra', 'kontrak'));
+        // Ringkasan tagihan yang memakai kontrak ini (5 terbaru + total nilai).
+        $tagihanTerbaru = $kontrak->tagihanJasa()->latest('id')->limit(5)->get();
+        $totalNilaiTagihan = (float) $kontrak->tagihanJasa()->sum('total_tagihan');
+        $ukuranFileKontrak = $this->ukuranFileKontrak($kontrak);
+
+        return view('super_admin_jasa.mitra.kontrak-show', compact('mitra', 'kontrak', 'tagihanTerbaru', 'totalNilaiTagihan', 'ukuranFileKontrak'));
     }
 
     public function edit(MitraJasa $mitra, KontrakMitraJasa $kontrak)
@@ -136,7 +141,7 @@ class KontrakMitraJasaController extends Controller
             ->with('success', 'Kontrak Mitra Jasa berhasil diperbarui.');
     }
 
-    public function download(MitraJasa $mitra, KontrakMitraJasa $kontrak)
+    public function download(Request $request, MitraJasa $mitra, KontrakMitraJasa $kontrak)
     {
         $this->ensureOwnedByMitra($mitra, $kontrak);
 
@@ -145,7 +150,24 @@ class KontrakMitraJasaController extends Controller
         $disk = $kontrak->file_kontrak && Storage::disk('local')->exists($kontrak->file_kontrak) ? 'local' : 'public';
         abort_unless($kontrak->file_kontrak && Storage::disk($disk)->exists($kontrak->file_kontrak), 404);
 
-        return Storage::disk($disk)->download($kontrak->file_kontrak);
+        // ?inline=1 membuka dokumen langsung di tab browser (pratinjau) tanpa mengunduh.
+        $namaFile = $this->namaUnduhKontrak($kontrak);
+        if ($request->boolean('inline')) {
+            return Storage::disk($disk)->response($kontrak->file_kontrak, $namaFile, [], 'inline');
+        }
+
+        return Storage::disk($disk)->download($kontrak->file_kontrak, $namaFile);
+    }
+
+    /**
+     * Nama berkas yang ramah dibaca (nomor kontrak) alih-alih nama acak hasil unggah.
+     */
+    private function namaUnduhKontrak(KontrakMitraJasa $kontrak): string
+    {
+        $ext = pathinfo((string) $kontrak->file_kontrak, PATHINFO_EXTENSION) ?: 'pdf';
+        $dasar = preg_replace('/[^A-Za-z0-9._-]+/', '-', (string) ($kontrak->nomor_kontrak ?: $kontrak->nama_kontrak ?: 'kontrak-'.$kontrak->id));
+
+        return 'Kontrak-'.trim($dasar, '-').'.'.strtolower($ext);
     }
 
     public function destroy(MitraJasa $mitra, KontrakMitraJasa $kontrak)
