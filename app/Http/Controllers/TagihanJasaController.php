@@ -218,6 +218,8 @@ class TagihanJasaController extends Controller
 
         // Tarif efektif (termasuk diskon berjadwal) untuk tanggal tagihan default = hari ini.
         app(\App\Services\TarifLayananService::class)->attachTarifEfektif($layanans, now());
+        // Aturan perhitungan diputuskan backend; form hanya membaca calculation_rule.
+        app(TagihanJasaCalculationService::class)->attachCalculationMeta($layanans);
 
         $mitraLayananMap = [];
         foreach ($mitras as $mitra) {
@@ -652,6 +654,7 @@ class TagihanJasaController extends Controller
 
         // Tarif efektif (termasuk diskon berjadwal) untuk tanggal tagihan yang sedang diedit.
         app(\App\Services\TarifLayananService::class)->attachTarifEfektif($layanans, $tagihan->tanggal_tagihan ?? now());
+        app(TagihanJasaCalculationService::class)->attachCalculationMeta($layanans);
 
         $mitraLayananMap = [];
         foreach ($mitras as $mitra) {

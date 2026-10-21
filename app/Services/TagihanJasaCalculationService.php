@@ -72,15 +72,47 @@ class TagihanJasaCalculationService
         ];
     }
 
-    private function isGarbarataService(?LayananJasa $layanan): bool
+    /**
+     * Tempelkan keputusan aturan perhitungan ke setiap layanan supaya form tagihan
+     * memakai hasil backend, bukan mencocokkan teks satuan sendiri.
+     */
+    public function attachCalculationMeta(iterable $layanans): void
+    {
+        foreach ($layanans as $layanan) {
+            $range = $this->parseLandingWeightRange($layanan);
+
+            $layanan->setAttribute('calculation_rule', $this->ruleFor($layanan));
+            $layanan->setAttribute('is_garbarata', $this->isGarbarataService($layanan));
+            $layanan->setAttribute('landing_weight_range', $range ? [
+                'min' => $range['min'],
+                'max' => $range['max'],
+                'minExclusive' => $range['min_exclusive'],
+                'maxInclusive' => $range['max_inclusive'],
+                'label' => $range['label'],
+            ] : null);
+        }
+    }
+
+    public function ruleFor(?LayananJasa $layanan): ?string
+    {
+        return $this->definitionFor($layanan)['rule'] ?? null;
+    }
+
+    /**
+     * Pemakaian garbarata (aviobridge) ditagih per rentang 2 jam dari rincian docking/undocking.
+     * Layanan sewa yang sekadar menyebut "garbarata" di nama (mis. "Garbarata/ Bis Layanan
+     * Penumpang di Apron", per m2 per bulan) bukan pemakaian garbarata.
+     */
+    public function isGarbarataService(?LayananJasa $layanan): bool
     {
         if (! $layanan) {
             return false;
         }
 
-        $text = mb_strtolower($layanan->nama_lengkap . ' ' . $layanan->nama_layanan . ' ' . $layanan->satuan);
+        $name = $this->normalizeUnit($layanan->nama_layanan);
 
-        return str_contains($text, 'garbarata');
+        return (str_contains($name, 'garbarata') || str_contains($name, 'aviobridge'))
+            && str_contains($this->normalizeUnit($layanan->satuan), 'per 2 jam');
     }
 
     private function buildGarbarataPayload(array $postedPayload, float $price): array
@@ -243,27 +275,26 @@ class TagihanJasaCalculationService
         );
     }
 
-    private function parseLandingWeightRange(LayananJasa $layanan): ?array
+    public function parseLandingWeightRange(LayananJasa $layanan): ?array
     {
-        $text = mb_strtolower($layanan->nama_lengkap . ' ' . $layanan->nama_layanan);
+        $text = $this->normalizeUnit($layanan->nama_lengkap . ' ' . $layanan->nama_layanan);
         $unit = $this->normalizeUnit($layanan->satuan);
 
-        if (! str_contains($unit, 'tiap 1000 kg') || ! str_contains($text, 'bobot pesawat')) {
+        if (! str_contains($unit, 'tiap 1000 kg') || str_contains($unit, '12 jam') || ! str_contains($text, 'bobot pesawat')) {
             return null;
         }
 
-        if (str_contains($text, 's.d. 40.000 kg') || str_contains($text, 's.d. 40000 kg')) {
+        if (str_contains($text, 'diatas 100000 kg')) {
             return [
-                'min' => 0,
-                'max' => 40000,
-                'min_exclusive' => false,
-                'max_inclusive' => true,
-                'label' => 'bobot pesawat s.d. 40.000 kg',
+                'min' => 100000,
+                'max' => null,
+                'min_exclusive' => true,
+                'max_inclusive' => false,
+                'label' => 'bobot pesawat di atas 100.000 kg',
             ];
         }
 
-        if ((str_contains($text, 'diatas 40.000 kg') || str_contains($text, 'di atas 40.000 kg') || str_contains($text, 'diatas 40000 kg') || str_contains($text, 'di atas 40000 kg'))
-            && (str_contains($text, 's.d. 100.000 kg') || str_contains($text, 's.d. 100000 kg'))) {
+        if (str_contains($text, 'diatas 40000 kg') && str_contains($text, 'sd 100000 kg')) {
             return [
                 'min' => 40000,
                 'max' => 100000,
@@ -273,13 +304,13 @@ class TagihanJasaCalculationService
             ];
         }
 
-        if (str_contains($text, 'di atas 100.000 kg') || str_contains($text, 'diatas 100.000 kg') || str_contains($text, 'di atas 100000 kg') || str_contains($text, 'diatas 100000 kg')) {
+        if (str_contains($text, 'sd 40000 kg')) {
             return [
-                'min' => 100000,
-                'max' => null,
-                'min_exclusive' => true,
-                'max_inclusive' => false,
-                'label' => 'bobot pesawat di atas 100.000 kg',
+                'min' => 0,
+                'max' => 40000,
+                'min_exclusive' => false,
+                'max_inclusive' => true,
+                'label' => 'bobot pesawat s.d. 40.000 kg',
             ];
         }
 
@@ -304,7 +335,7 @@ class TagihanJasaCalculationService
             [
                 'rule' => 'WEIGHT_PER_1000_PER_12_HOURS_ROUND_UP',
                 'label' => 'Tiap 1000 kg per 12 jam',
-                'match' => fn (string $unit) => str_contains($unit, 'tiap 1000 kg per 12 jam'),
+                'match' => fn (string $unit) => str_contains($unit, 'tiap 1000 kg') && str_contains($unit, 'per 12 jam'),
                 'fields' => [
                     ['key' => 'berat_kg', 'label' => 'kg', 'default' => 1000],
                     ['key' => 'durasi_jam', 'label' => 'jam', 'default' => 12],
@@ -414,12 +445,30 @@ class TagihanJasaCalculationService
         return (string) ($definition['formula'])($inputs, $qty);
     }
 
-    private function normalizeUnit(?string $unit): string
+    /**
+     * Satu-satunya normalisasi teks satuan/nama layanan. Frontend tidak lagi
+     * menormalkan sendiri; ia memakai calculation_rule dari attachCalculationMeta().
+     */
+    public function normalizeUnit(?string $unit): string
     {
-        $unit = mb_strtolower((string) $unit);
-        $unit = preg_replace('/m(?:\x{00C2})?\x{00B2}/u', 'm2', $unit) ?? $unit;
+        $replacements = [
+            '/m(?:\x{00C2})?\x{00B2}/u' => 'm2',     // m² -> m2
+            '/(?<=\d)\.(?=\d{3}(?!\d))/' => '',      // 1.000 -> 1000, 100.000 -> 100000
+            '/(\d)kg\b/' => '$1 kg',                 // 1000kg -> 1000 kg
+            '/\bs\s*[.\/]\s*d\b\.?/' => 'sd',        // s.d. / s.d / s/d -> sd
+            '/\bdi atas\b/' => 'diatas',
+            '/\brekalme\b/' => 'reklame',            // typo data lama
+            '/\bpandag\b/' => 'pandang',             // typo data lama
+            '/,/' => ' ',
+            '/\s+/' => ' ',
+        ];
 
-        return trim(preg_replace('/\s+/', ' ', $unit) ?? '');
+        $unit = mb_strtolower((string) $unit);
+        foreach ($replacements as $pattern => $replacement) {
+            $unit = preg_replace($pattern, $replacement, $unit) ?? $unit;
+        }
+
+        return trim($unit);
     }
 
     private function positiveNumber(mixed $value): float
