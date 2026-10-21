@@ -1623,7 +1623,6 @@
             {
                 rule: 'WEIGHT_PER_1000_PER_12_HOURS_ROUND_UP',
                 label: 'Tiap 1000 kg per 12 jam',
-                match: unit => unit.includes('tiap 1000 kg') && unit.includes('12 jam'),
                 fields: [
                     { key: 'berat_kg', label: 'Bobot pesawat (kg)', defaultValue: 1000, step: 0.01 },
                     { key: 'durasi_jam', label: 'Durasi (jam)', defaultValue: 12, step: 0.01 },
@@ -1634,7 +1633,6 @@
             {
                 rule: 'WEIGHT_PER_1000_ROUND_UP',
                 label: 'Tiap 1000 kg',
-                match: unit => unit.includes('tiap 1000 kg') && !unit.includes('12 jam'),
                 fields: [
                     { key: 'berat_kg', label: 'Bobot pesawat (kg)', defaultValue: 1000, step: 0.01 },
                 ],
@@ -1644,7 +1642,6 @@
             {
                 rule: 'PACKAGE_100_EKSEMPLAR_ROUND_UP',
                 label: 'Per 100 eksemplar',
-                match: unit => unit.includes('per 100 eksemplar'),
                 fields: [
                     { key: 'jumlah_eksemplar', label: 'Eksemplar', defaultValue: 100, step: 1 },
                 ],
@@ -1654,111 +1651,96 @@
             {
                 rule: 'PACKAGE_25_BUKU_ROUND_UP',
                 label: 'Per 25 buku',
-                match: unit => unit.includes('per 25 buku'),
                 fields: [
                     { key: 'jumlah_buku', label: 'Buku', defaultValue: 25, step: 1 },
                 ],
                 compute: inputs => ceilPart(inputs.jumlah_buku, 25),
                 formula: (inputs, qty) => `ceil(${formatCleanNumber(inputs.jumlah_buku)} / 25) = ${formatCleanNumber(qty)}`,
             },
-            productRule('PER_UNIT_PER_BULAN_PER_SISI_PANDANG', 'Per unit/bulan/sisi', unit => unit.includes('per unit per bulan per sisi pandang'), [
+            productRule('PER_UNIT_PER_BULAN_PER_SISI_PANDANG', 'Per unit/bulan/sisi', [
                 ['unit', 'Unit'], ['bulan', 'Bulan'], ['sisi_pandang', 'Sisi pandang'],
             ]),
-            productRule('PER_UNIT_PER_HARI_PER_SISI_PANDANG', 'Per unit/hari/sisi', unit => unit.includes('per unit per hari per sisi pandang'), [
+            productRule('PER_UNIT_PER_HARI_PER_SISI_PANDANG', 'Per unit/hari/sisi', [
                 ['unit', 'Unit'], ['hari', 'Hari'], ['sisi_pandang', 'Sisi pandang'],
             ]),
-            productRule('PER_M2_REKLAME_PER_TAHUN', 'Per m2 reklame/tahun', unit => unit.includes('per m2 reklame per tahun'), [
+            productRule('PER_M2_REKLAME_PER_TAHUN', 'Per m2 reklame/tahun', [
                 ['luas_m2', 'Luas (m2)'], ['tahun', 'Tahun'],
             ]),
-            productRule('PER_SAMBUNGAN_CABANG_PER_BULAN', 'Per sambungan cabang/bulan', unit => unit.includes('per sambungan cabang per bulan'), [
+            productRule('PER_SAMBUNGAN_CABANG_PER_BULAN', 'Per sambungan cabang/bulan', [
                 ['sambungan_cabang', 'Sambungan'], ['bulan', 'Bulan'],
             ]),
-            productRule('PER_PESAWAT_PER_SEKALI_PENGGUNAAN', 'Per pesawat/penggunaan', unit => unit.includes('per pesawat per sekali penggunaan'), [
+            productRule('PER_PESAWAT_PER_SEKALI_PENGGUNAAN', 'Per pesawat/penggunaan', [
                 ['pesawat', 'Pesawat'], ['sekali_penggunaan', 'Penggunaan'],
             ]),
-            productRule('PER_KEGIATAN_PER_HARI', 'Per kegiatan/hari', unit => unit.includes('per kegiatan per hari'), [
+            productRule('PER_KEGIATAN_PER_HARI', 'Per kegiatan/hari', [
                 ['kegiatan', 'Kegiatan'], ['hari', 'Hari'],
             ]),
-            productRule('PER_JAM_PER_RUANGAN', 'Per jam/ruangan', unit => unit.includes('per jam per ruangan'), [
+            productRule('PER_JAM_PER_RUANGAN', 'Per jam/ruangan', [
                 ['jam', 'Jam'], ['ruangan', 'Ruangan'],
             ]),
-            productRule('PER_JAM_PER_TON', 'Per jam/ton', unit => unit.includes('per jam per ton'), [
+            productRule('PER_JAM_PER_TON', 'Per jam/ton', [
                 ['jam', 'Jam'], ['ton', 'Ton'],
             ]),
-            productRule('PER_KG_PER_HARI', 'Per kg/hari', unit => unit.includes('per kg per hari'), [
+            productRule('PER_KG_PER_HARI', 'Per kg/hari', [
                 ['kg', 'Kg'], ['hari', 'Hari'],
             ]),
-            productRule('PER_M2_PER_BULAN', 'Per m2/bulan', unit => unit.includes('per m2 per bulan'), [
+            productRule('PER_M2_PER_BULAN', 'Per m2/bulan', [
                 ['luas_m2', 'Luas (m2)'], ['bulan', 'Bulan'],
             ]),
-            productRule('PER_M2_PER_HARI', 'Per m2/hari', unit => unit.includes('per m2 per hari'), [
+            productRule('PER_M2_PER_HARI', 'Per m2/hari', [
                 ['luas_m2', 'Luas (m2)'], ['hari', 'Hari'],
             ]),
-            productRule('PER_KENDARAAN_PER_TAHUN', 'Per kendaraan/tahun', unit => unit.includes('per kendaraan per tahun'), [
+            productRule('PER_KENDARAAN_PER_TAHUN', 'Per kendaraan/tahun', [
                 ['kendaraan', 'Kendaraan'], ['tahun', 'Tahun'],
             ]),
-            productRule('PER_KENDARAAN_PER_BULAN', 'Per kendaraan/bulan', unit => unit.includes('per kendaraan per bulan'), [
+            productRule('PER_KENDARAAN_PER_BULAN', 'Per kendaraan/bulan', [
                 ['kendaraan', 'Kendaraan'], ['bulan', 'Bulan'],
             ]),
-            productRule('PER_KENDARAAN_PER_MINGGU', 'Per kendaraan/minggu', unit => unit.includes('per kendaraan per minggu'), [
+            productRule('PER_KENDARAAN_PER_MINGGU', 'Per kendaraan/minggu', [
                 ['kendaraan', 'Kendaraan'], ['minggu', 'Minggu'],
             ]),
-            productRule('PER_ORANG_PER_TAHUN', 'Per orang/tahun', unit => unit.includes('per orang per tahun'), [
+            productRule('PER_ORANG_PER_TAHUN', 'Per orang/tahun', [
                 ['orang', 'Orang'], ['tahun', 'Tahun'],
             ]),
-            productRule('PER_ORANG_PER_BULAN', 'Per orang/bulan', unit => unit.includes('per orang per bulan'), [
+            productRule('PER_ORANG_PER_BULAN', 'Per orang/bulan', [
                 ['orang', 'Orang'], ['bulan', 'Bulan'],
             ]),
-            productRule('PER_ORANG_PER_MINGGU', 'Per orang/minggu', unit => unit.includes('per orang per minggu'), [
+            productRule('PER_ORANG_PER_MINGGU', 'Per orang/minggu', [
                 ['orang', 'Orang'], ['minggu', 'Minggu'],
             ]),
-            productRule('PER_UNIT_PER_BULAN', 'Per unit/bulan', unit => unit.includes('per unit per bulan'), [
+            productRule('PER_UNIT_PER_BULAN', 'Per unit/bulan', [
                 ['unit', 'Unit'], ['bulan', 'Bulan'],
             ]),
-            productRule('PER_UNIT_PER_HARI', 'Per unit/hari', unit => unit.includes('per unit per hari'), [
+            productRule('PER_UNIT_PER_HARI', 'Per unit/hari', [
                 ['unit', 'Unit'], ['hari', 'Hari'],
             ]),
-            directRule('PER_SEKALI_LEPAS_LANDAS_PENDARATAN', 'Gerakan pesawat', unit => unit.includes('per sekali lepas landas') || unit.includes('pendaratan'), 'gerakan', 'Gerakan'),
-            directRule('PER_PENUMPANG', 'Per penumpang', unit => unit === 'per penumpang', 'penumpang', 'Penumpang'),
-            directRule('PER_JAM', 'Per jam', unit => unit === 'per jam', 'jam', 'Jam'),
-            directRule('PER_KG', 'Per kg', unit => unit === 'per kg', 'kg', 'Kg'),
-            directRule('PER_HARI', 'Per hari', unit => unit === 'per hari', 'hari', 'Hari'),
+            directRule('PER_SEKALI_LEPAS_LANDAS_PENDARATAN', 'Gerakan pesawat', 'gerakan', 'Gerakan'),
+            directRule('PER_PENUMPANG', 'Per penumpang', 'penumpang', 'Penumpang'),
+            directRule('PER_JAM', 'Per jam', 'jam', 'Jam'),
+            directRule('PER_KG', 'Per kg', 'kg', 'Kg'),
+            directRule('PER_HARI', 'Per hari', 'hari', 'Hari'),
         ];
 
-        function productRule(rule, label, match, fields) {
+        function productRule(rule, label, fields) {
             const mappedFields = fields.map(([key, fieldLabel]) => ({ key, label: fieldLabel, defaultValue: 1, step: 0.01 }));
 
             return {
                 rule,
                 label,
-                match,
                 fields: mappedFields,
                 compute: inputs => mappedFields.reduce((total, field) => total * positiveNumber(inputs[field.key]), 1),
                 formula: (inputs, qty) => mappedFields.map(field => `${formatCleanNumber(inputs[field.key])} ${field.label.toLowerCase()}`).join(' x ') + ` = ${formatCleanNumber(qty)}`,
             };
         }
 
-        function directRule(rule, label, match, key, fieldLabel) {
+        function directRule(rule, label, key, fieldLabel) {
             return {
                 rule,
                 label,
-                match,
                 fields: [{ key, label: fieldLabel, defaultValue: 1, step: 0.01 }],
                 compute: inputs => positiveNumber(inputs[key]),
                 formula: (inputs, qty) => `${formatCleanNumber(inputs[key])} ${fieldLabel.toLowerCase()} = ${formatCleanNumber(qty)}`,
             };
-        }
-
-        function normalizeUnit(value) {
-            return String(value || '')
-                .toLowerCase()
-                .replace(/m(?:\u00c2)?\u00b2/g, 'm2')
-                .replace(/1\.000/g, '1000')
-                .replace(/1000kg/g, '1000 kg')
-                .replace(/rekalme/g, 'reklame')
-                .replace(/,/g, '')
-                .replace(/\s+/g, ' ')
-                .trim();
         }
 
         function positiveNumber(value) {
@@ -1780,34 +1762,18 @@
             return number.toLocaleString('id-ID', { maximumFractionDigits: 2 });
         }
 
-        function isAutoCalculatorExcluded(service) {
-            if (!service || isPercentageService(service)) {
-                return true;
-            }
-
-            const text = `${buildServicePath(service)} ${service.satuan || ''}`.toLowerCase();
-            return text.includes('pjp2u')
-                || text.includes('pax pjp2u')
-                || text.includes('penggunaan listrik')
-                || text.includes('penggunaan air bandar');
-        }
-
+        // Aturan dipilih backend (TagihanJasaCalculationService::attachCalculationMeta),
+        // jadi form dan server selalu memakai rule yang sama.
         function getCalculationDefinition(service) {
-            if (!service || isAutoCalculatorExcluded(service)) {
+            if (!service || !service.calculation_rule || isPercentageService(service)) {
                 return null;
             }
 
-            const unit = normalizeUnit(service.satuan);
-            return calculatorDefinitions.find(definition => definition.match(unit)) || null;
+            return calculatorDefinitions.find(definition => definition.rule === service.calculation_rule) || null;
         }
 
         function isGarbarataService(service) {
-            if (!service) {
-                return false;
-            }
-
-            const text = `${buildServicePath(service)} ${service.nama_layanan || ''} ${service.satuan || ''}`.toLowerCase();
-            return text.includes('garbarata');
+            return Boolean(service && service.is_garbarata);
         }
 
         function garbarataDetailRow(row) {
@@ -1975,48 +1941,7 @@
         }
 
         function parseLandingWeightRange(service) {
-            if (!service) {
-                return null;
-            }
-
-            const text = `${buildServicePath(service)} ${service.nama_layanan || ''}`.toLowerCase();
-            const unit = normalizeUnit(service.satuan);
-            if (!unit.includes('tiap 1000 kg') || !text.includes('bobot pesawat')) {
-                return null;
-            }
-
-            if (text.includes('s.d. 40.000 kg') || text.includes('s.d. 40000 kg')) {
-                return {
-                    min: 0,
-                    max: 40000,
-                    minExclusive: false,
-                    maxInclusive: true,
-                    label: 'bobot pesawat s.d. 40.000 kg',
-                };
-            }
-
-            if ((text.includes('diatas 40.000 kg') || text.includes('di atas 40.000 kg') || text.includes('diatas 40000 kg') || text.includes('di atas 40000 kg'))
-                && (text.includes('s.d. 100.000 kg') || text.includes('s.d. 100000 kg'))) {
-                return {
-                    min: 40000,
-                    max: 100000,
-                    minExclusive: true,
-                    maxInclusive: true,
-                    label: 'bobot pesawat di atas 40.000 kg s.d. 100.000 kg',
-                };
-            }
-
-            if (text.includes('di atas 100.000 kg') || text.includes('diatas 100.000 kg') || text.includes('di atas 100000 kg') || text.includes('diatas 100000 kg')) {
-                return {
-                    min: 100000,
-                    max: null,
-                    minExclusive: true,
-                    maxInclusive: false,
-                    label: 'bobot pesawat di atas 100.000 kg',
-                };
-            }
-
-            return null;
+            return (service && service.landing_weight_range) || null;
         }
 
         function isWeightInRange(weight, range) {
