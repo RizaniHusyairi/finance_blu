@@ -2,15 +2,18 @@
 @php
     $panduanVideo = asset('videos/panduan/tambah-mitra-jasa.webm');
     $panduanPoster = asset('videos/panduan/tambah-mitra-jasa-poster.jpg');
+    $panduanDurasi = '2:29';
     $panduanBab = [
-        ['detik' => 0,   'judul' => 'Pengantar',                  'ket' => 'Gambaran 4 langkah utama'],
-        ['detik' => 9,   'judul' => 'Buka menu Mitra Jasa',       'ket' => 'Kelola Jasa → Mitra Jasa'],
-        ['detik' => 20,  'judul' => 'Tombol Tambah mitra',        'ket' => 'Dari halaman daftar mitra'],
-        ['detik' => 31,  'judul' => 'Isi formulir mitra',         'ket' => 'Identitas, kontak, penanggung jawab'],
-        ['detik' => 89,  'judul' => 'Simpan & halaman detail',    'ket' => 'Cek ringkasan data mitra'],
-        ['detik' => 103, 'judul' => 'Buat akun portal mitra',     'ket' => 'Email login & password awal'],
-        ['detik' => 127, 'judul' => 'Input kontrak dasar',        'ket' => 'Membuka layanan, konsesi, PJP2U'],
-        ['detik' => 153, 'judul' => 'Ringkasan',                  'ket' => 'Checklist akhir'],
+        ['detik' => 0,   'judul' => 'Pengantar',                  'ket' => 'Empat langkah sampai mitra siap ditagih'],
+        ['detik' => 13,  'judul' => 'Buka menu Mitra Jasa',       'ket' => 'Kelola Jasa → Mitra Jasa'],
+        ['detik' => 24,  'judul' => 'Tombol Tambah mitra',        'ket' => 'Dari halaman daftar mitra'],
+        ['detik' => 33,  'judul' => 'Isi identitas mitra',        'ket' => 'Kode, jenis, NPWP, status, nama'],
+        ['detik' => 56,  'judul' => 'Kontak & penanggung jawab',  'ket' => 'Email login, WhatsApp, PIC, alamat'],
+        ['detik' => 79,  'judul' => 'Simpan & halaman detail',    'ket' => 'Cek ringkasan data mitra'],
+        ['detik' => 92,  'judul' => 'Buat akun portal mitra',     'ket' => 'Email login & password awal'],
+        ['detik' => 104, 'judul' => 'Input kontrak dasar',        'ket' => 'Nomor, tanggal, berkas PDF'],
+        ['detik' => 124, 'judul' => 'Scope layanan kontrak',      'ket' => 'Cari & pilih semua per kategori'],
+        ['detik' => 138, 'judul' => 'Mitra siap ditagih',         'ket' => 'Layanan aktif terisi dari scope'],
     ];
 @endphp
 
@@ -241,7 +244,7 @@
         <button type="button" class="mj-guide-thumb" style="background-image:url('{{ $panduanPoster }}')"
                 data-bs-toggle="modal" data-bs-target="#mjGuideModal" aria-label="Putar video panduan">
             <span class="mj-guide-play"><i class="bi bi-play-fill"></i></span>
-            <span class="mj-guide-duration"><i class="bi bi-clock me-1"></i>2:42</span>
+            <span class="mj-guide-duration"><i class="bi bi-clock me-1"></i>{{ $panduanDurasi }}</span>
         </button>
 
         <div>
@@ -269,7 +272,7 @@
 
     <button type="button" class="mj-guide-mini btn btn-outline-primary btn-sm fw-bold rounded-pill align-items-center gap-1"
             data-bs-toggle="modal" data-bs-target="#mjGuideModal">
-        <i class="bi bi-play-circle-fill"></i> Tonton video panduan tambah mitra (2:42)
+        <i class="bi bi-play-circle-fill"></i> Tonton video panduan tambah mitra ({{ $panduanDurasi }})
     </button>
 </div>
 
@@ -294,7 +297,7 @@
                             <span class="spinner-border spinner-border-sm me-1" role="status"></span>Menyiapkan video agar bisa melompat antarbab…
                         </div>
                         <div class="small text-secondary mt-2">
-                            <i class="bi bi-info-circle me-1"></i>Data pada video adalah contoh. Password awal disamarkan demi keamanan.
+                            <i class="bi bi-info-circle me-1"></i>Data dan password pada video adalah contoh (mitra demo), bukan akun asli.
                         </div>
                     </div>
                     <div class="col-lg-4">
