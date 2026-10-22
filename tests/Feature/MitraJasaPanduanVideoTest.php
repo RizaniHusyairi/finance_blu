@@ -34,7 +34,10 @@ class MitraJasaPanduanVideoTest extends TestCase
             ->assertOk()
             ->assertSee('id="mjGuideModal"', false)
             ->assertSee('videos/panduan/tambah-mitra-jasa.webm', false)
-            ->assertSee('Buat akun portal mitra');
+            ->assertSee('Buat akun portal mitra')
+            ->assertSee('Scope layanan kontrak')     // bab baru: scope kontrak menentukan layanan aktif
+            ->assertSee('data-mj-seek="124"', false)
+            ->assertSee('2:29');
 
         $this->assertFileExists(public_path('videos/panduan/tambah-mitra-jasa.webm'));
         $this->assertFileExists(public_path('videos/panduan/tambah-mitra-jasa-poster.jpg'));
