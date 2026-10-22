@@ -2109,6 +2109,10 @@
             return names.join(' > ');
         }
 
+        // Layanan yang tagihannya bisa untuk penerbangan non-schedule (sumber pola: JasaAccessService::POLA_DATA_AMC).
+        @php($polaPanelPenerbangan = array_values(array_map(fn ($pola) => substr($pola, 1, -2), \App\Services\JasaAccessService::POLA_DATA_AMC)))
+        const POLA_PANEL_PENERBANGAN = @json($polaPanelPenerbangan).map((p) => new RegExp(p, 'i'));
+
         function isFlightTypeRelevantService(service) {
             if (!service) {
                 return false;
@@ -2116,9 +2120,10 @@
 
             const text = `${buildServicePath(service)} ${service.nama_layanan || ''} ${service.satuan || ''}`.toLowerCase();
             return text.includes('garbarata')
-                || text.includes('aviobridge')
                 || text.includes('non-schedule')
-                || text.includes('non schedule');
+                || text.includes('non schedule')
+                // pendaratan/penempatan/penyimpanan pesawat, luar jam operasi, pemakaian garbarata (JasaAccessService::POLA_DATA_AMC)
+                || POLA_PANEL_PENERBANGAN.some((pola) => pola.test(text));
         }
 
         function refreshFlightTypePanel() {

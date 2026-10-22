@@ -7,6 +7,7 @@ use App\Models\PemakaianGarbarata;
 use App\Models\PengajuanPenagihanGarbarata;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use App\Services\JasaAccessService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -368,13 +369,15 @@ class PengajuanPenagihanGarbarataController extends Controller
     private function canView(): bool
     {
         $user = Auth::user();
-        return $user && $user->hasAnyRole(['Super Admin', 'Super Admin Jasa', 'Admin Jasa', 'Koordinator Jasa', 'Operator BLU']);
+        return $user && $user->hasAnyRole(['Super Admin', 'Super Admin Jasa', 'Admin Jasa', 'Koordinator Jasa', 'Operator BLU'])
+            && app(JasaAccessService::class)->bolehGarbarata($user);   // Admin Jasa: hanya bila mengelola Pemakaian Garbarata
     }
 
     private function canCreate(): bool
     {
         $user = Auth::user();
-        return $user && $user->hasAnyRole(['Super Admin', 'Super Admin Jasa', 'Admin Jasa']);
+        return $user && $user->hasAnyRole(['Super Admin', 'Super Admin Jasa', 'Admin Jasa'])
+            && app(JasaAccessService::class)->bolehGarbarata($user);
     }
 
     private function canReview(): bool
@@ -393,6 +396,7 @@ class PengajuanPenagihanGarbarataController extends Controller
         ], true)) return false;
         if ($item->tagihan_jasa_id) return false;
         if ($user->hasAnyRole(['Super Admin', 'Super Admin Jasa'])) return true;
-        return $user->hasRole('Admin Jasa') && $item->created_by === $user->id;
+        return $user->hasRole('Admin Jasa') && $item->created_by === $user->id
+            && app(JasaAccessService::class)->bolehGarbarata($user);
     }
 }

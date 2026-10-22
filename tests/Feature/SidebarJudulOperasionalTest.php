@@ -26,7 +26,12 @@ class SidebarJudulOperasionalTest extends TestCase
 
     public function test_admin_jasa_melihat_judul_data_operasional(): void
     {
-        $this->actingAs($this->userDengan('Admin Jasa'))
+        // Admin Jasa hanya melihat seksi ini bila mengelola layanan yang memakai data AMC.
+        $admin = $this->userDengan('Admin Jasa');
+        $layanan = \App\Models\LayananJasa::create(['nama_layanan' => 'Jasa Pendaratan Pesawat Udara', 'level' => 1, 'is_leaf' => true, 'is_active' => true, 'tipe_layanan' => 'PNBP']);
+        $admin->layananJasaDikelola()->attach($layanan->id, ['status_aktif' => true]);
+
+        $this->actingAs($admin)
             ->get(route('permohonan-non-schedule.index'))
             ->assertOk()
             ->assertSee('Data Operasional (dari AMC)')

@@ -9,6 +9,7 @@ use App\Models\PemakaianGarbarata;
 use App\Models\PermohonanNonSchedule;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use App\Services\JasaAccessService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -404,7 +405,8 @@ class PemakaianGarbarataController extends Controller
     private function canView(): bool
     {
         $user = Auth::user();
-        return $user && $user->hasAnyRole(['Super Admin', 'Super Admin Jasa', 'Admin Jasa', 'Koordinator Jasa', 'AMC', 'Operator BLU']);
+        return $user && $user->hasAnyRole(['Super Admin', 'Super Admin Jasa', 'Admin Jasa', 'Koordinator Jasa', 'AMC', 'Operator BLU'])
+            && app(JasaAccessService::class)->bolehGarbarata($user);   // Admin Jasa: hanya bila mengelola Pemakaian Garbarata
     }
 
     /**
@@ -414,7 +416,8 @@ class PemakaianGarbarataController extends Controller
     private function canSeeBilling(): bool
     {
         $user = Auth::user();
-        return $user && $user->hasAnyRole(['Super Admin', 'Super Admin Jasa', 'Admin Jasa', 'Koordinator Jasa', 'Operator BLU']);
+        return $user && $user->hasAnyRole(['Super Admin', 'Super Admin Jasa', 'Admin Jasa', 'Koordinator Jasa', 'Operator BLU'])
+            && app(JasaAccessService::class)->bolehGarbarata($user);
     }
 
     private function canCreate(): bool

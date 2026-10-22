@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\MitraJasa;
 use App\Models\PermohonanNonSchedule;
 use Illuminate\Http\Request;
+use App\Services\JasaAccessService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 
@@ -158,7 +159,8 @@ class PermohonanNonScheduleController extends Controller
     private function canView(): bool
     {
         $user = Auth::user();
-        return $user && $user->hasAnyRole(['Super Admin', 'Super Admin Jasa', 'Admin Jasa', 'Koordinator Jasa', 'AMC', 'Operator BLU']);
+        return $user && $user->hasAnyRole(['Super Admin', 'Super Admin Jasa', 'Admin Jasa', 'Koordinator Jasa', 'AMC', 'Operator BLU'])
+            && app(JasaAccessService::class)->bolehNonSchedule($user);   // Admin Jasa: hanya bila mengelola layanan penerbangan
     }
 
     private function canCreate(): bool
@@ -179,6 +181,7 @@ class PermohonanNonScheduleController extends Controller
     private function canReview(): bool
     {
         $user = Auth::user();
-        return $user && $user->hasAnyRole(['Super Admin', 'Super Admin Jasa', 'Admin Jasa', 'Koordinator Jasa']);
+        return $user && $user->hasAnyRole(['Super Admin', 'Super Admin Jasa', 'Admin Jasa', 'Koordinator Jasa'])
+            && app(JasaAccessService::class)->bolehNonSchedule($user);
     }
 }
