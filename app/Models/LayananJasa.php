@@ -91,6 +91,21 @@ class LayananJasa extends Model
         return implode(' > ', $names);
     }
 
+    /**
+     * Layanan aeronautika (kelompok "Tarif Jasa Kebandarudaraan"). Bila kelompok_pnbp
+     * belum terisi (layanan yang ditambahkan belakangan), ikuti kelompok root-nya.
+     */
+    public function isAero(): bool
+    {
+        for ($node = $this, $i = 0; $node && $i < 8; $node = $node->parent, $i++) {
+            if (filled($node->kelompok_pnbp)) {
+                return $node->kelompok_pnbp === 'AERO';
+            }
+        }
+
+        return false;
+    }
+
     public function getKelompokPnbpLabelAttribute(): string
     {
         return match ($this->kelompok_pnbp) {

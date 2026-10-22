@@ -1000,7 +1000,7 @@
                         </div>
                     </div>
 
-                    <div class="invoice-date-card mb-4" style="background: linear-gradient(135deg, #eef2ff 0%, #faf5ff 100%); border: 1px solid #c7d2fe;">
+                    <div class="invoice-date-card mb-4" id="finalVerifierCard" style="background: linear-gradient(135deg, #eef2ff 0%, #faf5ff 100%); border: 1px solid #c7d2fe;">
                         <div class="row align-items-start g-3">
                             <div class="col-lg-4">
                                 <span class="invoice-section-kicker" style="color:#4338ca;"><i class="bi bi-patch-check-fill"></i> Verifikator Final</span>
@@ -1081,6 +1081,14 @@
                                     })();
                                 </script>
                             </div>
+                        </div>
+                    </div>
+
+                    {{-- Alur Kasi Jasa (aero, dipilih Super Admin): verifikator final tidak dipilih di sini. --}}
+                    <div class="invoice-date-card mb-4 d-none" id="alurKasiInfo" style="background: linear-gradient(135deg, #eff6ff 0%, #f0f9ff 100%); border: 1px solid #bfdbfe;">
+                        <span class="invoice-section-kicker" style="color:#1d4ed8;"><i class="bi bi-diagram-3-fill"></i> Alur Verifikasi Kasi Jasa (aero)</span>
+                        <div class="mt-1 text-sm font-semibold text-slate-700">
+                            Koordinator Jasa &rarr; Kasi Jasa &rarr; Kasubag TU. Setelah Kasubag TU menyetujui, surat pengantar otomatis ber-TTE Kasi Jasa dan Kasi Jasa yang menerbitkan tagihan ke mitra.
                         </div>
                     </div>
 
@@ -2126,7 +2134,37 @@
                 || POLA_PANEL_PENERBANGAN.some((pola) => pola.test(text));
         }
 
+        // Alur verifikasi: bila Super Admin memilih alur Kasi Jasa dan SEMUA layanan aero,
+        // kartu verifikator final (KPA / PLT-PLH) disembunyikan (lihat TagihanJasaAlurService).
+        @php($alurAeroPengaturan = app(\App\Services\TagihanJasaAlurService::class)->pengaturanAero())
+        const ALUR_AERO = @json($alurAeroPengaturan);
+
+        function isAeroService(service) {
+            for (let node = service, i = 0; node && i < 8; node = node.parent_id ? layanansById[node.parent_id] : null, i++) {
+                if (node.kelompok_pnbp) {
+                    return node.kelompok_pnbp === 'AERO';
+                }
+            }
+            return false;
+        }
+
+        function refreshAlurVerifikasi() {
+            const services = $('.service-row').map(function () {
+                const id = $(this).find('.layanan-id-input').val();
+                return id ? layanansById[id] : null;
+            }).get().filter(Boolean);
+            const alurKasi = ALUR_AERO === 'KASI_JASA' && services.length > 0 && services.every(isAeroService);
+
+            $('#finalVerifierCard').toggleClass('d-none', alurKasi);
+            $('#alurKasiInfo').toggleClass('d-none', !alurKasi);
+            if (alurKasi) {
+                // Nilai KPA tetap terkirim (diabaikan alur Kasi Jasa) agar validasi & field PLT/PLH tidak mengganjal.
+                $('input[name="final_verifier_role"][value="KPA"]').prop('checked', true).trigger('change');
+            }
+        }
+
         function refreshFlightTypePanel() {
+            refreshAlurVerifikasi();
             const card = $('#flightTypeCard');
             if (!card.length) {
                 return;

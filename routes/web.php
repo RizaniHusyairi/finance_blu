@@ -588,6 +588,9 @@ Route::middleware(['auth', 'account.active'])->group(function () use ($internalR
         Route::put('/jasa/integrasi', [JasaIntegrationSettingController::class, 'update'])->name('jasa.integrasi.update');
         Route::post('/jasa/integrasi/whatsapp/test', [JasaIntegrationSettingController::class, 'testWhatsapp'])->name('jasa.integrasi.whatsapp.test');
         Route::post('/jasa/integrasi/email/test', [JasaIntegrationSettingController::class, 'testEmail'])->name('jasa.integrasi.email.test');
+        // Alur verifikasi tagihan jasa layanan aero (Kabandara / Kasi Jasa)
+        Route::get('/jasa/alur-verifikasi', [\App\Http\Controllers\AlurVerifikasiTagihanController::class, 'edit'])->name('jasa.alur-verifikasi.edit');
+        Route::put('/jasa/alur-verifikasi', [\App\Http\Controllers\AlurVerifikasiTagihanController::class, 'update'])->name('jasa.alur-verifikasi.update');
     });
 
     // Monitoring Pelaporan — read-only, dibuka untuk oversight (KPA, PLT/PLH, Kasi PK, Kasubag TU) + pelaku verifikasi laporan.

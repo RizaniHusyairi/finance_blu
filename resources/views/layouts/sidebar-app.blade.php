@@ -215,6 +215,7 @@
           <ul>
             <li><a href="{{ route('admin.notifikasi-wa.index') }}"><i class="material-icons-outlined">arrow_right</i>Notifikasi WhatsApp</a></li>
             <li><a href="{{ route('jasa.integrasi.index') }}"><i class="material-icons-outlined">arrow_right</i>Integrasi API</a></li>
+            <li><a href="{{ route('jasa.alur-verifikasi.edit') }}"><i class="material-icons-outlined">arrow_right</i>Alur Verifikasi Tagihan</a></li>
           </ul>
         </li>
         @endhasrole

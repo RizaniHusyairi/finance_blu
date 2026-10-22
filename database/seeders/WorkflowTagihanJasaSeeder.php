@@ -65,5 +65,25 @@ class WorkflowTagihanJasaSeeder extends Seeder
                 $step
             );
         }
+        // Alur 2 (layanan aero, dipilih Super Admin): Koordinator -> Kasi Jasa -> Kasubag TU,
+        // lalu surat ber-TTE Kasi Jasa dan Kasi Jasa yang menerbitkan.
+        $workflowKasi = \App\Models\WorkflowDefinition::updateOrCreate(
+            ['kode' => 'TAGIHAN_JASA_KASI'],
+            [
+                'nama' => 'Alur Persetujuan Tagihan Jasa Aero (TTE Kasi Jasa)',
+                'target_type' => \App\Models\TagihanJasa::class,
+                'status_aktif' => true,
+            ]
+        );
+
+        foreach (array_slice($steps, 0, 3) as $step) {
+            if ($step['urutan_step'] === 3) {
+                $step['nama_step'] = 'Verifikasi KASUBBAG TU (TTE otomatis Kasi Jasa)';
+            }
+            \App\Models\WorkflowDefinitionStep::updateOrCreate(
+                ['workflow_definition_id' => $workflowKasi->id, 'urutan_step' => $step['urutan_step']],
+                $step
+            );
+        }
     }
 }
