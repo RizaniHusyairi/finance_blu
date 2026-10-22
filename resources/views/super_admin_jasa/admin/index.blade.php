@@ -215,8 +215,8 @@
                             <td class="text-center">
                                 <div class="btn-group">
                                     <a href="{{ route('jasa.admin.show', $admin) }}" class="btn btn-sm btn-light border sa-action jasa-icon-btn" title="Detail" aria-label="Detail"><i class="bi bi-eye"></i></a>
-                                    <a href="{{ route('jasa.admin.edit', $admin) }}" class="btn btn-sm btn-light border sa-action jasa-icon-btn" title="Edit" aria-label="Edit"><i class="bi bi-pencil"></i></a>
-                                    <a href="{{ route('jasa.admin.layanan.edit', $admin) }}" class="btn btn-sm btn-primary sa-action jasa-icon-btn" title="Atur layanan" aria-label="Atur layanan"><i class="bi bi-sliders"></i></a>
+                                    {{-- Edit mencakup profil, akun, dan layanan yang dikelola. --}}
+                                    <a href="{{ route('jasa.admin.edit', $admin) }}" class="btn btn-sm btn-primary sa-action jasa-icon-btn" title="Edit admin &amp; layanan" aria-label="Edit admin dan layanan"><i class="bi bi-pencil"></i></a>
                                     <form method="POST" action="{{ route('jasa.admin.destroy', $admin) }}" class="d-inline" onsubmit="return confirm('Hapus admin jasa ini? Assignment layanan admin akan dilepas.');">
                                         @csrf
                                         @method('DELETE')

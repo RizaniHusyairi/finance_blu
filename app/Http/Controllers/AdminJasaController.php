@@ -5,7 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\LayananJasa;
 use App\Models\MasterPegawai;
 use App\Models\User;
+use App\Services\AdminJasaLayananService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Role;
 
@@ -31,15 +33,19 @@ class AdminJasaController extends Controller
             'admin' => new User(),
             'pegawai' => new MasterPegawai(),
             'pegawaiOptions' => $this->pegawaiTanpaUser(),
+            'layanans' => $this->layananPilihan(),
+            'selectedLayananIds' => [],
         ]);
     }
 
-    public function store(Request $request)
+    public function store(Request $request, AdminJasaLayananService $layananService)
     {
         $validated = $request->validate([
             'pegawai_id' => ['required', 'integer', 'exists:master_pegawai,id'],
             'email'      => ['required', 'email', 'max:255', 'unique:users,email'],
             'password'   => ['required', 'string', 'min:6', 'max:100'],
+            'layanan_ids' => ['nullable', 'array'],
+            'layanan_ids.*' => ['integer', 'exists:layanan_jasas,id'],
         ]);
 
         $pegawai = MasterPegawai::findOrFail($validated['pegawai_id']);
@@ -56,13 +62,19 @@ class AdminJasaController extends Controller
 
         Role::findOrCreate('Admin Jasa', 'web');
 
-        $user = User::create([
-            'email'           => $validated['email'],
-            'password'        => Hash::make($validated['password']),
-            'profilable_type' => MasterPegawai::class,
-            'profilable_id'   => $pegawai->id,
-        ]);
-        $user->assignRole('Admin Jasa');
+        // Akun & layanan yang dikelola disimpan bersamaan agar admin baru langsung bisa bekerja.
+        $user = DB::transaction(function () use ($validated, $pegawai, $layananService) {
+            $user = User::create([
+                'email'           => $validated['email'],
+                'password'        => Hash::make($validated['password']),
+                'profilable_type' => MasterPegawai::class,
+                'profilable_id'   => $pegawai->id,
+            ]);
+            $user->assignRole('Admin Jasa');
+            $layananService->sync($user, $validated['layanan_ids'] ?? [], auth()->id());
+
+            return $user;
+        });
 
         return redirect()
             ->route('jasa.admin.show', $user)
@@ -101,39 +113,48 @@ class AdminJasaController extends Controller
         return view('super_admin_jasa.admin.form', [
             'admin' => $admin,
             'pegawai' => $admin->profilable instanceof MasterPegawai ? $admin->profilable : new MasterPegawai(),
+            'layanans' => $this->layananPilihan(),
+            'selectedLayananIds' => $admin->layananJasaDikelola()->wherePivot('status_aktif', true)->pluck('layanan_jasas.id')->all(),
         ]);
     }
 
-    public function update(Request $request, User $admin)
+    public function update(Request $request, User $admin, AdminJasaLayananService $layananService)
     {
         abort_unless($admin->hasRole('Admin Jasa'), 404);
 
         $validated = $this->validateAdmin($request, $admin->id, true);
 
-        $pegawai = $admin->profilable instanceof MasterPegawai
-            ? $admin->profilable
-            : MasterPegawai::create(['nama_lengkap' => $validated['nama_lengkap'], 'status_aktif' => true]);
+        DB::transaction(function () use ($request, $admin, $validated, $layananService) {
+            $pegawai = $admin->profilable instanceof MasterPegawai
+                ? $admin->profilable
+                : MasterPegawai::create(['nama_lengkap' => $validated['nama_lengkap'], 'status_aktif' => true]);
 
-        $pegawai->update([
-            'nip' => $validated['nip'] ?: null,
-            'nama_lengkap' => $validated['nama_lengkap'],
-            'jabatan' => $validated['jabatan'] ?: 'Admin Jasa',
-            'npwp' => $validated['npwp'] ?: null,
-            'status_aktif' => $request->boolean('status_aktif'),
-        ]);
+            $pegawai->update([
+                'nip' => ($validated['nip'] ?? null) ?: null,
+                'nama_lengkap' => $validated['nama_lengkap'],
+                'jabatan' => ($validated['jabatan'] ?? null) ?: 'Admin Jasa',
+                'npwp' => ($validated['npwp'] ?? null) ?: null,
+                'status_aktif' => $request->boolean('status_aktif'),
+            ]);
 
-        $userPayload = [
-            'email' => $validated['email'],
-            'profilable_type' => MasterPegawai::class,
-            'profilable_id' => $pegawai->id,
-        ];
+            $userPayload = [
+                'email' => $validated['email'],
+                'profilable_type' => MasterPegawai::class,
+                'profilable_id' => $pegawai->id,
+            ];
 
-        if (! empty($validated['password'])) {
-            $userPayload['password'] = Hash::make($validated['password']);
-        }
+            if (! empty($validated['password'])) {
+                $userPayload['password'] = Hash::make($validated['password']);
+            }
 
-        $admin->update($userPayload);
-        $admin->syncRoles(['Admin Jasa']);
+            $admin->update($userPayload);
+            // Peran lain milik user (mis. Koordinator Jasa) tidak boleh hilang saat profil diedit.
+            if (! $admin->hasRole('Admin Jasa')) {
+                $admin->assignRole('Admin Jasa');
+            }
+
+            $layananService->sync($admin, $validated['layanan_ids'] ?? [], auth()->id());
+        });
 
         return redirect()
             ->route('jasa.admin.show', $admin)
@@ -174,7 +195,20 @@ class AdminJasaController extends Controller
             'email' => ['required', 'email', 'max:255', 'unique:users,email,' . $ignoreUserId],
             'password' => [$isUpdate ? 'nullable' : 'required', 'string', 'min:6', 'max:100'],
             'status_aktif' => ['nullable', 'boolean'],
+            'layanan_ids' => ['nullable', 'array'],
+            'layanan_ids.*' => ['integer', 'exists:layanan_jasas,id'],
         ]);
+    }
+
+    /** Layanan daun aktif yang bisa dikelola Admin Jasa (untuk pohon pemilih layanan). */
+    private function layananPilihan()
+    {
+        return LayananJasa::query()
+            ->where('is_active', true)
+            ->where('is_leaf', true)
+            ->with('parent.parent.parent.parent.parent')
+            ->orderBy('nama_layanan')
+            ->get();
     }
 
     private function pegawaiTanpaUser()

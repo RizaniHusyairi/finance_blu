@@ -139,7 +139,7 @@
         <div class="card border-0 shadow-sm rounded-4">
             <div class="card-header bg-white fw-bold d-flex justify-content-between align-items-center">
                 <span>Layanan yang Dikelola</span>
-                <a href="{{ route('jasa.admin.layanan.edit', $admin) }}" class="btn btn-sm btn-primary fw-bold jasa-icon-btn" title="Atur layanan" aria-label="Atur layanan"><i class="bi bi-sliders"></i></a>
+                <a href="{{ route('jasa.admin.edit', $admin) }}#layanan-admin" class="btn btn-sm btn-primary fw-bold jasa-icon-btn" title="Edit layanan" aria-label="Edit layanan"><i class="bi bi-pencil"></i></a>
             </div>
             <div class="card-body">
                 @if($admin->layananJasaDikelola->isEmpty())
