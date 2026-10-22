@@ -223,7 +223,8 @@
              AMC — Operasional Penerbangan
              ════════════════════════════════════════════════════ --}}
         @hasanyrole('Super Admin|Super Admin Jasa|Admin Jasa|Koordinator Jasa|AMC')
-        <li class="menu-label">AMC &mdash; Operasional</li>
+        {{-- Bagi peran jasa, data ini bahan penagihan (bukan menu milik AMC), jadi judulnya dibedakan. --}}
+        <li class="menu-label">{!! auth()->user()?->hasAnyRole(['Super Admin', 'Super Admin Jasa', 'Admin Jasa', 'Koordinator Jasa']) ? 'Data Operasional (dari AMC)' : 'AMC &mdash; Operasional' !!}</li>
         <li>
           <a href="{{ route('permohonan-non-schedule.index') }}">
             <div class="parent-icon"><i class="material-icons-outlined">flight_takeoff</i></div>
