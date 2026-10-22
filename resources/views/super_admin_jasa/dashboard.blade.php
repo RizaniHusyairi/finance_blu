@@ -847,7 +847,7 @@
                             <div class="fw-semibold">{{ $admin->name }}</div>
                             <small class="text-muted">{{ $admin->email }}</small>
                         </div>
-                        <a href="{{ route('jasa.admin.layanan.edit', $admin) }}" class="btn btn-sm btn-outline-primary jasa-icon-btn" title="Atur layanan" aria-label="Atur layanan"><i class="bi bi-sliders"></i></a>
+                        <a href="{{ route('jasa.admin.edit', $admin) }}#layanan-admin" class="btn btn-sm btn-outline-primary jasa-icon-btn" title="Edit layanan admin" aria-label="Edit layanan admin"><i class="bi bi-pencil"></i></a>
                     </div>
                 @empty
                     <div class="text-muted small">Semua Admin Jasa sudah memiliki layanan.</div>

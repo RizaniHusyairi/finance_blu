@@ -190,7 +190,7 @@
             </span>
             <div>
                 <h4 class="mb-1 fw-black">{{ $admin->exists ? 'Edit Admin Jasa' : 'Tambah Admin Jasa' }}</h4>
-                <p class="mb-0 fw-semibold small">Admin Jasa mengelola layanan, mitra terkait, dan pembuatan tagihan sesuai scope tugas.</p>
+                <p class="mb-0 fw-semibold small">Profil, akun login, dan layanan yang dikelola Admin Jasa diatur dalam satu halaman.</p>
             </div>
         </div>
         <a href="{{ route('jasa.admin.index') }}" class="btn btn-light text-primary fw-bold shadow-sm jasa-icon-btn" title="Kembali" aria-label="Kembali">
@@ -309,17 +309,39 @@
                         <div class="form-text">Kosongkan jika password tidak diubah.</div>
                     @endif
                 </div>
-                <div class="col-12">
-                    <div class="jasa-helper-panel">
-                        <strong>Scope layanan</strong>
-                        <div class="small mt-1">Setelah akun dibuat, atur layanan yang dikelola admin melalui halaman detail Admin Jasa.</div>
-                    </div>
-                </div>
             </div>
         </div>
 
-        <div class="jasa-action-footer">
-            <div class="d-flex flex-column flex-sm-row justify-content-end gap-2">
+        {{-- Layanan yang dikelola: dulu halaman "Atur layanan" terpisah, kini satu form dengan profil & akun. --}}
+        <div class="jasa-form-section" id="layanan-admin" style="scroll-margin-top: 90px;">
+            <div class="jasa-section-title">
+                <span class="jasa-section-icon"><i class="bi bi-diagram-3"></i></span>
+                <div>
+                    <h6>Layanan yang Dikelola</h6>
+                    <p>Admin Jasa hanya dapat membuat tagihan untuk layanan yang dicentang di sini (dan yang aktif di kontrak mitra).</p>
+                </div>
+            </div>
+
+            <div class="jasa-helper-panel mb-3 small">
+                <i class="bi bi-info-circle me-1"></i>
+                Layanan juga menentukan menu <b>Data Operasional (dari AMC)</b>: layanan penerbangan (pendaratan, penempatan, penyimpanan pesawat, luar jam operasi) membuka <b>Permohonan Non-Schedule</b>, dan <b>Jasa Pemakaian Garbarata</b> membuka menu garbarata.
+            </div>
+
+            @include('super_admin_jasa.partials.pohon-layanan', [
+                'pohonLayanan' => $layanans,
+                'pohonTerpilih' => old('layanan_ids', $selectedLayananIds),
+                'labelHitung' => 'layanan dikelola',
+                'pesanKosong' => 'Belum ada layanan dipilih. Admin Jasa <b>belum dapat membuat tagihan</b> sampai layanan yang dikelolanya dipilih.',
+                'pesanMasterKosong' => 'Belum ada item tarif aktif di master layanan.',
+                'konfirmasiKosongkan' => 'Kosongkan semua layanan yang dikelola admin ini?',
+            ])
+        </div>
+
+        <div class="jasa-action-footer ks-sticky-footer">
+            <div class="d-flex flex-column flex-sm-row align-items-sm-center justify-content-end gap-2">
+                @if(collect($layanans)->isNotEmpty())
+                    <span class="ks-footer-count me-sm-auto" id="ksFooterCount"><i class="bi bi-diagram-3"></i> <b>{{ count(old('layanan_ids', $selectedLayananIds)) }}</b> layanan dikelola</span>
+                @endif
                 <a href="{{ route('jasa.admin.index') }}" class="btn btn-light fw-bold text-secondary border px-4">Batal</a>
                 <button class="btn btn-primary fw-bold px-4" type="submit">
                     <i class="bi bi-save me-1"></i>Simpan Admin Jasa
