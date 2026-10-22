@@ -118,7 +118,9 @@ class MasterLayananJasaController extends Controller
         if ($validated['parent_id']) {
             $parent = LayananJasa::find($validated['parent_id']);
             $validated['level'] = $parent->level + 1;
-            
+            // Kelompok AERO / NON_AERO mengikuti induknya (dipakai alur verifikasi & monitoring PNBP).
+            $validated['kelompok_pnbp'] = $parent->kelompok_pnbp;
+
             // Parent is no longer a leaf
             if ($parent->is_leaf) {
                 $parent->update(['is_leaf' => false]);

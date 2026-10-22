@@ -470,7 +470,7 @@ class TagihanJasaController extends Controller
                     ]);
                 }
 
-                $jasaInstance = $workflowService->startWorkflow('TAGIHAN_JASA', $tagihan);
+                $jasaInstance = $this->mulaiAlurVerifikasi($tagihan, $workflowService);
                 DB::afterCommit(function () use ($jasaInstance) {
                     if ($jasaInstance) {
                         app(\App\Services\WorkflowWaNotifier::class)->notifyPendingApprovals($jasaInstance->fresh());
@@ -883,7 +883,7 @@ class TagihanJasaController extends Controller
                     'status_dokumen_pengantar' => 'DRAFT',
                 ]);
 
-                $jasaInstance = $workflowService->startWorkflow('TAGIHAN_JASA', $tagihan->fresh());
+                $jasaInstance = $this->mulaiAlurVerifikasi($tagihan->fresh(), $workflowService);
                 DB::afterCommit(function () use ($jasaInstance) {
                     if ($jasaInstance) {
                         app(\App\Services\WorkflowWaNotifier::class)->notifyPendingApprovals($jasaInstance->fresh());
@@ -1180,7 +1180,8 @@ class TagihanJasaController extends Controller
 
     public function publish(Request $request, $id, TagihanJasaPublishService $publishService)
     {
-        abort_unless($this->canManageTagihanJasa(), 403);
+        // Pengelola tagihan, atau Kasi Jasa untuk tagihan alur Kasi Jasa (aero).
+        abort_unless(app(\App\Services\TagihanJasaAlurService::class)->bolehTerbitkan(Auth::user(), TagihanJasa::findOrFail($id)), 403);
 
         // Toggle "btn.enabled": ON = VA otomatis (API BTN), OFF = VA diisi manual oleh Admin Jasa.
         $vaOtomatis = (bool) \App\Models\IntegrationSetting::getValue('btn.enabled', false);
@@ -1894,6 +1895,20 @@ class TagihanJasaController extends Controller
 
         return $user?->hasRole('Super Admin') === true
             || ($user?->hasAnyRole(['Admin Jasa', 'Admin Konsesi']) === true && ! $user->hasRole('Super Admin Jasa'));
+    }
+
+    /**
+     * Tentukan alur verifikasi (Kabandara / Kasi Jasa untuk layanan aero, sesuai pengaturan
+     * Super Admin), simpan pada tagihan, lalu mulai workflow-nya. Dipanggil saat pengajuan
+     * pertama dan pengajuan ulang setelah revisi (alur dihitung ulang dari detail terbaru).
+     */
+    private function mulaiAlurVerifikasi(TagihanJasa $tagihan, WorkflowService $workflowService)
+    {
+        $alurService = app(\App\Services\TagihanJasaAlurService::class);
+        $alur = $alurService->tentukan($tagihan);
+        $tagihan->forceFill(['alur_verifikasi' => $alur])->save();
+
+        return $workflowService->startWorkflow($alurService->kodeWorkflow($alur), $tagihan);
     }
 
     private function canManageTagihanJasa(): bool

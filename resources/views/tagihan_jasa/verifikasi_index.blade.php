@@ -223,6 +223,50 @@
         </div>
     </div>
 
+    @if(($siapTerbit ?? collect())->isNotEmpty())
+        {{-- Alur Kasi Jasa (aero): surat sudah ber-TTE Kasi Jasa, tagihan menunggu diterbitkan Kasi. --}}
+        <div class="card border-0 vj-card overflow-hidden mb-4" id="siapTerbit">
+            <div class="vj-header">
+                <div class="vj-header-title">
+                    <span class="vj-header-icon"><i class="bi bi-send"></i></span>
+                    <div>
+                        <h6 class="mb-0 fw-bold text-primary">Siap Diterbitkan</h6>
+                        <small class="text-muted fw-bold">Sudah diverifikasi Kasubag TU dan ber-TTE Kasi Jasa. Periksa lalu terbitkan ke mitra.</small>
+                    </div>
+                </div>
+                <span class="vj-pill bg-primary text-white">{{ $siapTerbit->count() }} tagihan</span>
+            </div>
+            <div class="card-body p-4">
+                <div class="table-responsive">
+                    <table class="table align-middle w-100 vj-table">
+                        <thead>
+                            <tr>
+                                <th>No. Tagihan</th>
+                                <th>Mitra</th>
+                                <th>Total</th>
+                                <th class="text-center">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($siapTerbit as $tagihan)
+                                <tr>
+                                    <td><span class="vj-invoice">{{ $tagihan->nomor_tagihan }}</span></td>
+                                    <td><span class="fw-bold text-slate">{{ $tagihan->mitra?->nama_mitra ?? $tagihan->mitraLegacy?->nama_pihak ?? 'N/A' }}</span></td>
+                                    <td><span class="vj-amount">Rp {{ number_format($tagihan->total_tagihan, 0, ',', '.') }}</span></td>
+                                    <td class="text-center">
+                                        <a href="{{ route('tagihan-jasa.show', $tagihan->id) }}" class="btn btn-sm btn-success vj-action shadow-sm">
+                                            <i class="bi bi-rocket-takeoff me-1"></i> Periksa &amp; Terbitkan
+                                        </a>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    @endif
+
     <div class="card border-0 vj-card overflow-hidden">
         <div class="vj-header">
             <div class="vj-header-title">

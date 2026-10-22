@@ -9,6 +9,9 @@
     $canApprove = false;
     $workflowApproved = $wfInstance && $wfInstance->status === 'APPROVED';
     $canManageTagihanJasa = Auth::user()->hasAnyRole(['Super Admin', 'Super Admin Jasa', 'Admin Jasa']);
+    // Penerbit: pengelola tagihan, atau Kasi Jasa untuk tagihan alur Kasi Jasa (aero).
+    $canPublishTagihanJasa = app(\App\Services\TagihanJasaAlurService::class)->bolehTerbitkan(Auth::user(), $tagihan);
+    $alurKasiJasa = $tagihan->alur_verifikasi === \App\Services\TagihanJasaAlurService::KASI_JASA;
     // Toggle VA: ON = nomor VA dibuat otomatis (API BTN), OFF = diisi manual saat publish.
     $vaOtomatis = (bool) \App\Models\IntegrationSetting::getValue('btn.enabled', false);
     $suratFinalReady = ! empty($tagihan->file_surat_pengantar_final)
@@ -786,6 +789,10 @@
 
     <!-- Kolom Kanan: Approval & Timeline -->
     <div class="col-lg-4">
+        <div class="alert {{ $alurKasiJasa ? 'alert-primary' : 'alert-light border' }} small fw-semibold mb-3 py-2" id="alurVerifikasiInfo">
+            <i class="bi bi-diagram-3 me-1"></i>{{ \App\Services\TagihanJasaAlurService::LABEL[$tagihan->alur_verifikasi] ?? 'Alur Kabandara' }}:
+            {{ $alurKasiJasa ? 'Koordinator → Kasi Jasa → Kasubag TU, TTE & terbit oleh Kasi Jasa' : 'Koordinator → Kasi Jasa → Kasubag TU → KPA/PLT-PLH' }}
+        </div>
         <!-- Kotak Aksi Approval -->
         @if($canApprove)
             <div class="card tj-card border-0 mb-4 border-start border-4 border-warning">
@@ -978,11 +985,11 @@
             </div>
         </div>
 
-        @if($canManageTagihanJasa && $wfInstance && $wfInstance->status === 'APPROVED' && !in_array($tagihan->status, ['PUBLISHED', 'LUNAS']))
+        @if($canPublishTagihanJasa && $wfInstance && $wfInstance->status === 'APPROVED' && !in_array($tagihan->status, ['PUBLISHED', 'LUNAS']))
             <div class="card tj-card border-0 mb-4 border-start border-4 border-success">
                 <div class="card-body p-4">
                     <h5 class="fw-bold mb-3"><i class="bi bi-send text-success me-2"></i>Terbitkan Tagihan</h5>
-                    <p class="small text-muted mb-4">Tagihan telah disetujui sepenuhnya oleh Kabandara. Anda dapat mem-publish tagihan ini dengan mengisi <strong>Nomor Virtual Account</strong> dari BTN, lalu sistem mengirim notifikasi otomatis ke Mitra melalui WhatsApp dan email.</p>
+                    <p class="small text-muted mb-4">{{ $alurKasiJasa ? 'Tagihan telah diverifikasi Kasubag TU dan surat pengantar sudah ber-TTE Kasi Jasa.' : 'Tagihan telah disetujui sepenuhnya oleh Kabandara.' }} Anda dapat mem-publish tagihan ini dengan mengisi <strong>Nomor Virtual Account</strong> dari BTN, lalu sistem mengirim notifikasi otomatis ke Mitra melalui WhatsApp dan email.</p>
 
                     @if(! $suratFinalReady)
                         <div class="alert alert-warning small">

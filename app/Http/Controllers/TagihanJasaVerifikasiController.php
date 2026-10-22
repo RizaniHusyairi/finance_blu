@@ -12,6 +12,9 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use App\Services\WorkflowService;
 use App\Services\TagihanJasaPublishService;
+use App\Services\TagihanJasaAlurService;
+use App\Models\User;
+use App\Notifications\WorkflowNotification;
 
 class TagihanJasaVerifikasiController extends Controller
 {
@@ -44,7 +47,16 @@ class TagihanJasaVerifikasiController extends Controller
             return $workflowService->hasPendingApprovalForUser($tagihan, $user->id);
         });
 
-        return view('tagihan_jasa.verifikasi_index', ['tagihans' => $filteredTagihans]);
+        // Alur Kasi Jasa (aero): tagihan yang sudah ber-TTE Kasi dan kembali ke Kasi untuk diterbitkan.
+        $siapTerbit = $user->hasRole('Kepala Seksi Pelayanan dan Kerjasama')
+            ? TagihanJasa::with(['mitra', 'mitraLegacy'])
+                ->where('alur_verifikasi', TagihanJasaAlurService::KASI_JASA)
+                ->where('status', 'DISETUJUI')
+                ->latest()
+                ->get()
+            : collect();
+
+        return view('tagihan_jasa.verifikasi_index', ['tagihans' => $filteredTagihans, 'siapTerbit' => $siapTerbit]);
     }
 
     public function show($id)
@@ -74,6 +86,7 @@ class TagihanJasaVerifikasiController extends Controller
         }
 
         $finalApproved = false;
+        $kasiPenerbit = null;   // alur Kasi Jasa: tagihan kembali ke Kasi Jasa untuk diterbitkan
 
         try {
             DB::beginTransaction();
@@ -89,7 +102,15 @@ class TagihanJasaVerifikasiController extends Controller
                 ? $wfInstance->approvals()->where('urutan_step', $wfInstance->step_saat_ini)->first()
                 : null;
 
-            if ($wfInstance && $wfInstance->status === 'APPROVED') {
+            if ($wfInstance && $wfInstance->status === 'APPROVED' && $tagihan->alur_verifikasi === TagihanJasaAlurService::KASI_JASA) {
+                // Alur Kasi Jasa (aero): Kasubag TU adalah verifikator terakhir. Surat pengantar
+                // otomatis ber-TTE Kasi Jasa yang memverifikasi step 2, lalu tagihan kembali ke
+                // Kasi Jasa tersebut untuk diterbitkan (tidak terbit otomatis).
+                $tagihan->status = 'DISETUJUI';
+                $tagihan->save();
+                $kasiPenerbit = $this->kasiJasaAlur($wfInstance);
+                $this->generateFinalSuratPengantar($tagihan, $kasiPenerbit, 'Kepala Seksi Pelayanan dan Kerjasama');
+            } elseif ($wfInstance && $wfInstance->status === 'APPROVED') {
                 // Seluruh tahap verifikasi (termasuk KPA / Kabandara) sudah selesai.
                 $tagihan->status = 'DISETUJUI';
                 $tagihan->save();
@@ -115,6 +136,12 @@ class TagihanJasaVerifikasiController extends Controller
             return back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
         }
 
+        if ($tagihan->alur_verifikasi === TagihanJasaAlurService::KASI_JASA && $tagihan->fresh()->status === 'DISETUJUI') {
+            $this->beritahuKasiSiapTerbit($tagihan, $kasiPenerbit);
+
+            return back()->with('success', 'Tagihan disetujui. Surat pengantar otomatis ber-TTE Kasi Jasa dan tagihan dikembalikan ke Kasi Jasa untuk diterbitkan.');
+        }
+
         // Auto-publish: begitu verifikator final menyetujui, tagihan langsung diterbitkan
         // (VA, jatuh tempo, piutang, notifikasi WA + email) tanpa langkah publish manual.
         // Dijalankan setelah commit agar pengiriman notifikasi tidak menahan transaksi.
@@ -135,19 +162,51 @@ class TagihanJasaVerifikasiController extends Controller
         return back()->with('success', 'Tagihan Jasa berhasil disetujui.');
     }
 
-    private function generateFinalSuratPengantar(TagihanJasa $tagihan): void
+    /** Kasi Jasa yang menyetujui step 2 pada alur Kasi Jasa (penanda tangan & penerbit). */
+    private function kasiJasaAlur(WorkflowInstance $instance): ?User
     {
-        $approver = Auth::user();
+        $approval = $instance->approvals()
+            ->where('role_code', 'Kepala Seksi Pelayanan dan Kerjasama')
+            ->where('status', 'APPROVED')
+            ->orderByDesc('urutan_step')
+            ->first();
+
+        return $approval?->acted_by_user_id ? User::with('profilable')->find($approval->acted_by_user_id) : null;
+    }
+
+    private function beritahuKasiSiapTerbit(TagihanJasa $tagihan, ?User $kasi): void
+    {
+        try {
+            $penerima = $kasi ?: User::role('Kepala Seksi Pelayanan dan Kerjasama')->get();
+            \Illuminate\Support\Facades\Notification::send($penerima, new WorkflowNotification([
+                'title' => 'Tagihan Siap Diterbitkan',
+                'message' => 'Tagihan ' . $tagihan->nomor_tagihan . ' sudah diverifikasi Kasubag TU dan ber-TTE Kasi Jasa. Silakan periksa lalu terbitkan ke mitra.',
+                'url' => route('tagihan-jasa.show', $tagihan->id),
+                'icon' => 'send',
+                'color' => 'primary',
+            ]));
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Gagal memberi tahu Kasi Jasa: ' . $e->getMessage(), ['tagihan_id' => $tagihan->id]);
+        }
+    }
+
+    /**
+     * @param  User|null  $penandatangan  default: user yang menyetujui (verifikator final alur Kabandara)
+     * @param  string|null  $jabatanTetap  jabatan yang selalu dicetak (alur Kasi Jasa); default: jabatan pegawai
+     */
+    private function generateFinalSuratPengantar(TagihanJasa $tagihan, ?User $penandatangan = null, ?string $jabatanTetap = null): void
+    {
+        $approver = $penandatangan ?: Auth::user();
         $pegawai = $approver?->pegawai;
 
         // Untuk verifikator final PLT/PLH yang dipilih spesifik, pertahankan pejabat
         // & label (Plt./Plh.) yang sudah ditetapkan saat pembuatan tagihan.
-        $keepSigner = $tagihan->final_verifier_role === 'PLT/PLH' && filled($tagihan->pejabat_penandatangan_nama);
+        $keepSigner = ! $penandatangan && $tagihan->final_verifier_role === 'PLT/PLH' && filled($tagihan->pejabat_penandatangan_nama);
 
         $tagihan->forceFill([
             'pejabat_penandatangan_nama' => $keepSigner ? $tagihan->pejabat_penandatangan_nama : ($pegawai?->nama_lengkap ?: ($approver?->name ?: $tagihan->pejabat_penandatangan_nama)),
             'pejabat_penandatangan_nip' => $keepSigner ? $tagihan->pejabat_penandatangan_nip : ($pegawai?->nip ?: $tagihan->pejabat_penandatangan_nip),
-            'pejabat_penandatangan_jabatan' => $keepSigner ? $tagihan->pejabat_penandatangan_jabatan : ($pegawai?->jabatan
+            'pejabat_penandatangan_jabatan' => $keepSigner ? $tagihan->pejabat_penandatangan_jabatan : ($jabatanTetap ?: $pegawai?->jabatan
                 ?: ($approver?->hasRole('PLT/PLH') ? 'PLT/PLH Kepala Badan Layanan Umum' : ($tagihan->pejabat_penandatangan_jabatan ?: 'Kepala Badan Layanan Umum'))),
             'tanggal_surat_pengantar' => $tagihan->tanggal_surat_pengantar ?: $tagihan->tanggal_tagihan,
             'perihal_surat_pengantar' => $tagihan->perihal_surat_pengantar ?: 'Penyampaian Tagihan PNBP Jasa',
